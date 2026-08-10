@@ -979,14 +979,21 @@ function okrHtml(){
         var met = kr.metricKey.split('|')[2];
         h += '<span>'+fmt(kp.actual,met)+' / '+fmt(kr.target,met)+' · '+esc(t('auto from KPI'))+'</span><span>'+kp.pct+'%</span>';
       } else {
-        h += '<span>'+esc(t('manual'))+'</span><span><input type="number" class="manualIn" min="0" max="100" value="'+(Number(kr.manual)||0)+'" data-manual="'+o.id+'|'+ki+'"> %</span>';
+        h += '<span>'+esc(t('manual'))+'</span><span><input type="number" class="manualIn" min="0" max="100" value="'+(Number(kr.manual)||0)+'" data-manual="'+o.id+'|'+ki+'"'+(state.data.leader?'':' disabled')+'> %</span>';
       }
       h += '</div><div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div></div>';
     });
-    h += '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'+
-      '<button class="dangerBtn" data-del="'+o.id+'">'+esc(t('Delete'))+'</button>'+
-      '<button class="ghostBtn" data-edit="'+o.id+'">'+esc(t('Edit'))+'</button></div></div>';
+    if(state.data.leader){
+      h += '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'+
+        '<button class="dangerBtn" data-del="'+o.id+'">'+esc(t('Delete'))+'</button>'+
+        '<button class="ghostBtn" data-edit="'+o.id+'">'+esc(t('Edit'))+'</button></div>';
+    }
+    h += '</div>';
   });
+
+  if(!state.data.leader){
+    return h;
+  }
 
   if(state.okrFormOpen){
     var editing = null;

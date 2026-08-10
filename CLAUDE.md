@@ -47,11 +47,15 @@ all Khmer must come from `BUILTIN_KM` or be added by hand.
   site). `netlify.toml` sets `publish = "public"` and `functions = "netlify/functions"`.
   Nothing else to run by hand.
 - **Leadership gate:** `isLeader_` in `api.js` checks the caller's code against
-  `process.env.GP_LEADER_CODE` (Netlify env var; falls back to `'GP2026'` if unset).
-- **Seeding/migration:** `adminSeed(secret, bundle)` in `api.js` only runs if the
-  `GP_SEED_SECRET` Netlify env var is set and matches — it's meant for a one-time load
-  and should be removed (delete the env var) once done. Never commit real staff/survey
-  data (PIN hashes, photos, health-survey answers) to this repo.
+  `process.env.GP_LEADER_CODE` and fails closed — no hardcoded fallback, since this
+  repo is public and a literal in source would be a permanently known password. Gates
+  both reads of `SENSITIVE` metrics and all OKR writes (`saveObjective`/`deleteObjective`).
+  If the env var is ever missing, leader access is off for everyone until it's restored.
+- **One-time migration handler removed.** The Google-Sheet-to-Blobs migration used a
+  secret-gated `adminSeed` handler in `api.js`; it's been deleted now that the migration
+  is done. Never commit real staff/survey data (PIN hashes, photos, health-survey
+  answers) to this repo — if a future migration needs it again, write a throwaway
+  handler, use it once, and delete it.
 
 ## Conventions / must-preserve
 - **Khmer-first.** Khmer is never smaller/lighter than English. All KPI/ministry/department

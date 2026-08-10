@@ -7,15 +7,30 @@
     "gp-data" store. Concurrency: plain read-modify-write, no locking —
     an accepted trade-off at this team's scale (see CLAUDE.md).
 
-    Leadership tier: metrics in SENSITIVE are stripped unless the caller's
-    code matches process.env.GP_LEADER_CODE (falls back to 'GP2026' if unset
-    — set the real one as a Netlify env var).
+    Leadership tier: metrics in SENSITIVE are stripped, and OKR writes are
+    rejected, unless the caller's code matches process.env.GP_LEADER_CODE.
+    Fails closed — if that env var is ever unset, nobody gets leader access
+    (no hardcoded fallback; this repo is public, so a literal in source
+    would be a permanently known password).
 */
 
 import { getStore } from '@netlify/blobs';
 import crypto from 'node:crypto';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
+
+/* ---- lightweight input validation (reject junk, not a full taxonomy check —
+   the campus/dept/ministry/metric option lists live in the frontend and
+   would be costly to keep in sync here; this just stops garbage/oversized
+   values from corrupting the dataset). ---- */
+function str_(v, maxLen) {
+  const s = String(v == null ? '' : v).trim();
+  return (s && s.length <= maxLen) ? s : null;
+}
+function finiteNum_(v, min, max) {
+  const n = Number(v);
+  return (isFinite(n) && n >= min && n <= max) ? n : null;
+}
 
 function store() { return getStore('gp-data'); }
 async function readJSON(key, fallback) {
@@ -28,7 +43,8 @@ async function writeJSON(key, value) {
 }
 
 function isLeader_(code) {
-  const real = process.env.GP_LEADER_CODE || 'GP2026';
+  const real = process.env.GP_LEADER_CODE;
+  if (!real) return false;
   return String(code || '') === real;
 }
 
@@ -169,9 +185,12 @@ async function changePin(username, pin, newPin) {
   return { ok: true };
 }
 
+const PHOTO_MIME_ALLOWLIST = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
 async function uploadPhoto(username, pin, base64, mime) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
+  if (mime && PHOTO_MIME_ALLOWLIST.indexOf(mime) === -1) return { ok: false, err: 'bad_type' };
   const dataUri = 'data:' + (mime || 'image/jpeg') + ';base64,' + base64;
   if (dataUri.length > 200000) return { ok: false, err: 'too_large' };
   const rows = await getStaff_();
@@ -321,19 +340,28 @@ async function saveEntries(campus, updates, code) {
   const leader = isLeader_(code);
   const rows = await getEntries_();
   const now = new Date().toISOString();
+  campus = str_(campus, 40);
+  if (!campus) return getData(code);
   (updates || []).forEach(function (u) {
+    const dept = str_(u.dept, 80), ministry = str_(u.ministry, 80), metric = str_(u.metric, 80);
+    const week = finiteNum_(u.week, 1, 52);
+    if (!dept || !ministry || !metric || week == null) return;
     // Reads are already filtered by leader status in getData(); mirror that
     // here so a non-leader can't blindly overwrite a value they can't see.
-    if (!leader && SENSITIVE.indexOf(u.metric) > -1) return;
+    if (!leader && SENSITIVE.indexOf(metric) > -1) return;
     const idx = rows.findIndex(function (r) {
-      return r.campus === campus && r.dept === u.dept && r.ministry === u.ministry && r.metric === u.metric && String(r.week) === String(u.week);
+      return r.campus === campus && r.dept === dept && r.ministry === ministry && r.metric === metric && String(r.week) === String(week);
     });
     if (u.value === null || u.value === '' || u.value === undefined) {
       if (idx > -1) rows.splice(idx, 1);
-    } else if (idx > -1) {
-      rows[idx].value = Number(u.value); rows[idx].updated = now;
+      return;
+    }
+    const value = finiteNum_(u.value, -1e9, 1e9);
+    if (value == null) return;
+    if (idx > -1) {
+      rows[idx].value = value; rows[idx].updated = now;
     } else {
-      rows.push({ campus: campus, dept: u.dept, ministry: u.ministry, metric: u.metric, week: u.week, value: Number(u.value), updated: now });
+      rows.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: week, value: value, updated: now });
     }
   });
   await writeJSON('entries', rows);
@@ -341,14 +369,23 @@ async function saveEntries(campus, updates, code) {
 }
 
 async function saveObjective(obj, code) {
+  if (!isLeader_(code)) return getData(code);
+  const id = str_(obj && obj.id, 100);
+  const campus = str_(obj && obj.campus, 40);
+  const dept = str_(obj && obj.dept, 80);
+  const objective = str_(obj && obj.objective, 300);
+  const quarter = finiteNum_(obj && obj.quarter, 1, 4);
+  if (!id || !campus || !dept || !objective || quarter == null) return getData(code);
   let rows = await getOkrs_();
-  rows = rows.filter(function (r) { return String(r.id) !== String(obj.id); });
+  rows = rows.filter(function (r) { return String(r.id) !== id; });
   const now = new Date().toISOString();
-  (obj.krs || []).forEach(function (kr) {
-    if (!kr.text) return;
+  (Array.isArray(obj.krs) ? obj.krs.slice(0, 10) : []).forEach(function (kr) {
+    const text = str_(kr && kr.text, 300);
+    if (!text) return;
     rows.push({
-      campus: obj.campus, quarter: obj.quarter, dept: obj.dept, id: obj.id, objective: obj.objective,
-      kr: kr.text, metricKey: kr.metricKey || '', target: kr.target || 0, manualPct: kr.manual || 0, updated: now
+      campus: campus, quarter: quarter, dept: dept, id: id, objective: objective,
+      kr: text, metricKey: str_(kr.metricKey, 200) || '',
+      target: finiteNum_(kr.target, 0, 1e9) || 0, manualPct: finiteNum_(kr.manual, 0, 100) || 0, updated: now
     });
   });
   await writeJSON('okrs', rows);
@@ -356,6 +393,7 @@ async function saveObjective(obj, code) {
 }
 
 async function deleteObjective(id, code) {
+  if (!isLeader_(code)) return getData(code);
   let rows = await getOkrs_();
   rows = rows.filter(function (r) { return String(r.id) !== String(id); });
   await writeJSON('okrs', rows);
@@ -390,28 +428,8 @@ async function weeklyHealthFromLogs(campusId, week) {
   return { n: n, week: week, campus: campusId };
 }
 
-/* ---- one-time data migration from the old Google Sheet ----
-   Gated on GP_SEED_SECRET (a Netlify env var, not in source control).
-   Call once with { entries, okrs, survey, staff, dailyLogs }, then remove
-   the env var so the endpoint stops accepting writes. */
-async function adminSeed(secret, bundle) {
-  const real = process.env.GP_SEED_SECRET;
-  if (!real) throw new Error('seeding disabled');
-  if (String(secret || '') !== real) throw new Error('unauthorized');
-  const keys = ['entries', 'okrs', 'survey', 'staff', 'dailyLogs'];
-  const written = {};
-  for (const k of keys) {
-    if (Array.isArray(bundle && bundle[k])) {
-      await writeJSON(k, bundle[k]);
-      written[k] = bundle[k].length;
-    }
-  }
-  return { ok: true, written: written };
-}
-
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
-  adminSeed: function (a) { return adminSeed(a[0], a[1]); },
   getData: function (a) { return getData(a[0]); },
   saveEntries: function (a) { return saveEntries(a[0], a[1], a[2]); },
   saveObjective: function (a) { return saveObjective(a[0], a[1]); },
