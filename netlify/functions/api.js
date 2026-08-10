@@ -12,8 +12,8 @@
     — set the real one as a Netlify env var).
 */
 
-const { getStore } = require('@netlify/blobs');
-const crypto = require('crypto');
+import { getStore } from '@netlify/blobs';
+import crypto from 'node:crypto';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
 
@@ -432,22 +432,22 @@ const HANDLERS = {
   weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
 };
 
-exports.handler = async function (event) {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+export default async (req) => {
+  if (req.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
   }
   let body;
-  try { body = JSON.parse(event.body || '{}'); } catch (e) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: false, error: 'Bad JSON' }) };
+  try { body = await req.json(); } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: 'Bad JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   const fn = HANDLERS[body.fn];
   if (!fn) {
-    return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: false, error: 'Unknown function: ' + body.fn }) };
+    return new Response(JSON.stringify({ ok: false, error: 'Unknown function: ' + body.fn }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   try {
     const result = await fn(body.args || []);
-    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(result) };
+    return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: false, error: String((err && err.message) || err) }) };
+    return new Response(JSON.stringify({ ok: false, error: String((err && err.message) || err) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
