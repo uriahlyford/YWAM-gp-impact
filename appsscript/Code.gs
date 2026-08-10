@@ -143,6 +143,7 @@ function saveEntries(campus, updatesJson, code) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    var leader = isLeader_(code);
     var updates = JSON.parse(updatesJson);
     var sh = getSheet_();
     var last = sh.getLastRow();
@@ -155,6 +156,9 @@ function saveEntries(campus, updatesJson, code) {
     var toDelete = [];
     for (var j = 0; j < updates.length; j++) {
       var u = updates[j];
+      // Reads are already filtered by leader status in getData(); mirror that
+      // here so a non-leader can't blindly overwrite a value they can't see.
+      if (!leader && SENSITIVE.indexOf(u.metric) > -1) continue;
       var k = [campus, u.dept, u.ministry, u.metric, u.week].join('|');
       var row = index[k];
       if (u.value === null || u.value === '' || u.value === undefined) {
@@ -282,9 +286,25 @@ var PHOTO_FOLDER = 'GP Staff Photos';
 var DAILY_SENSITIVE = ['lonely', 'porn'];
 
 function getStaffSheet_() {
-  return sheetWithHeaders_(STAFF_SHEET,
+  var sh = sheetWithHeaders_(STAFF_SHEET,
     ['StaffID', 'Username', 'DisplayName', 'PinHash', 'PinSalt', 'Campus', 'Department', 'Role',
      'PhotoId', 'MentorID', 'Phone', 'JoinedYear', 'Debt', 'Active', 'Created', 'Updated']);
+  var hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  if (hdr.indexOf('MentorStatus') === -1) {
+    var beforeCols = sh.getLastColumn();
+    sh.insertColumnsAfter(beforeCols, 1);
+    var col = beforeCols + 1;
+    sh.getRange(1, col).setValue('MentorStatus');
+    // Grandfather existing mentor picks as approved so nobody loses access
+    // they already had before this column existed.
+    var last = sh.getLastRow();
+    if (last >= 2) {
+      var mentorVals = sh.getRange(2, 10, last - 1, 1).getValues();
+      var statusVals = mentorVals.map(function (r) { return [r[0] ? 'approved' : '']; });
+      sh.getRange(2, col, last - 1, 1).setValues(statusVals);
+    }
+  }
+  return sh;
 }
 function getDailySheet_() {
   return sheetWithHeaders_(DAILY_SHEET,
@@ -303,7 +323,7 @@ function staffRows_() {
   var sh = getStaffSheet_();
   var last = sh.getLastRow();
   if (last < 2) return { sheet: sh, rows: [] };
-  var rng = sh.getRange(2, 1, last - 1, 16).getValues();
+  var rng = sh.getRange(2, 1, last - 1, 17).getValues();
   var rows = [];
   for (var i = 0; i < rng.length; i++) {
     var r = rng[i];
@@ -312,7 +332,8 @@ function staffRows_() {
       pinHash: String(r[3]), pinSalt: String(r[4]), campus: String(r[5]), dept: String(r[6]),
       role: String(r[7]), photoId: String(r[8]), mentorId: String(r[9]), phone: String(r[10]),
       joined: String(r[11]), debt: (r[12] === true || r[12] === 1 || String(r[12]) === '1'),
-      active: !(r[13] === false || r[13] === 0 || String(r[13]) === '0')
+      active: !(r[13] === false || r[13] === 0 || String(r[13]) === '0'),
+      mentorStatus: String(r[16] || '')
     });
   }
   return { sheet: sh, rows: rows };
@@ -323,10 +344,48 @@ function findStaff_(username) {
   for (var i = 0; i < rows.length; i++) if (rows[i].username === u) return rows[i];
   return null;
 }
+var LOGIN_MAX_ATTEMPTS = 5;
+var LOGIN_LOCK_SECONDS = 900; // 15 minutes
+
+function loginThrottleKey_(username) { return 'loginfail:' + normUser_(username); }
+
+function isLoginLocked_(username) {
+  var raw = CacheService.getScriptCache().get(loginThrottleKey_(username));
+  if (!raw) return false;
+  var data = JSON.parse(raw);
+  return !!(data.lockedUntil && Date.now() < data.lockedUntil);
+}
+
+function recordFailedLogin_(username) {
+  var cache = CacheService.getScriptCache();
+  var key = loginThrottleKey_(username);
+  var raw = cache.get(key);
+  var data = raw ? JSON.parse(raw) : { attempts: 0 };
+  data.attempts = (data.attempts || 0) + 1;
+  var ttl = 1800; // remember attempts for 30 min before the count resets
+  if (data.attempts >= LOGIN_MAX_ATTEMPTS) {
+    data.lockedUntil = Date.now() + LOGIN_LOCK_SECONDS * 1000;
+    ttl = LOGIN_LOCK_SECONDS;
+  }
+  cache.put(key, JSON.stringify(data), ttl);
+}
+
+function clearLoginThrottle_(username) {
+  CacheService.getScriptCache().remove(loginThrottleKey_(username));
+}
+
+// Throttled: 5 wrong PINs for a username locks further attempts for 15
+// minutes, even with the correct PIN. Protects the 4-digit PIN space (10,000
+// combinations) from brute force through ANY endpoint that takes a PIN, since
+// they all route through this one check.
 function verifyStaff_(username, pin) {
+  if (isLoginLocked_(username)) return null;
   var s = findStaff_(username);
-  if (!s) return null;
-  if (hashPin_(pin, s.pinSalt) !== s.pinHash) return null;
+  if (!s || hashPin_(pin, s.pinSalt) !== s.pinHash) {
+    recordFailedLogin_(username);
+    return null;
+  }
+  clearLoginThrottle_(username);
   return s;
 }
 function photoUrl_(v) { if (!v) return ''; return (String(v).indexOf('data:') === 0) ? v : ('https://drive.google.com/thumbnail?id=' + v + '&sz=w400'); }
@@ -356,18 +415,19 @@ function staffRegister(payloadJson) {
     var salt = pinSalt_();
     var id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     sh.appendRow([id, u, p.name || u, hashPin_(p.pin, salt), salt, p.campus || '', p.dept || '',
-      p.role || '', '', p.mentorId || '', p.phone || '', p.joined || '', 0, 1, new Date(), new Date()]);
+      p.role || '', '', p.mentorId || '', p.phone || '', p.joined || '', 0, 1, new Date(), new Date(),
+      p.mentorId ? 'pending' : '']);
     return JSON.stringify({ ok: true, staff: publicStaff_({
       id: id, name: p.name || u, username: u, campus: p.campus || '', dept: p.dept || '',
       role: p.role || '', photoId: '', mentorId: p.mentorId || ''
-    }), profile: { phone: p.phone || '', joined: p.joined || '', debt: false } });
+    }), profile: { phone: p.phone || '', joined: p.joined || '', debt: false, mentorStatus: p.mentorId ? 'pending' : '' } });
   } finally { lock.releaseLock(); }
 }
 
 function staffLogin(username, pin) {
   var s = verifyStaff_(username, pin);
   if (!s) return JSON.stringify({ ok: false });
-  return JSON.stringify({ ok: true, staff: publicStaff_(s), profile: { phone: s.phone, joined: s.joined, debt: s.debt } });
+  return JSON.stringify({ ok: true, staff: publicStaff_(s), profile: { phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus } });
 }
 
 /* ---- profile ---- */
@@ -382,13 +442,19 @@ function updateProfile(username, pin, payloadJson) {
     if (p.campus !== undefined) sh.getRange(s.rowNum, 6).setValue(p.campus);
     if (p.dept !== undefined) sh.getRange(s.rowNum, 7).setValue(p.dept);
     if (p.role !== undefined) sh.getRange(s.rowNum, 8).setValue(p.role);
-    if (p.mentorId !== undefined) sh.getRange(s.rowNum, 10).setValue(p.mentorId);
+    if (p.mentorId !== undefined) {
+      var newMentorId = p.mentorId || '';
+      sh.getRange(s.rowNum, 10).setValue(newMentorId);
+      // Picking a new/different mentor always resets to pending — the mentor
+      // must accept before they get access to this person's private data.
+      if (newMentorId !== s.mentorId) sh.getRange(s.rowNum, 17).setValue(newMentorId ? 'pending' : '');
+    }
     if (p.phone !== undefined) sh.getRange(s.rowNum, 11).setValue(p.phone);
     if (p.joined !== undefined) sh.getRange(s.rowNum, 12).setValue(p.joined);
     if (p.debt !== undefined) sh.getRange(s.rowNum, 13).setValue(p.debt ? 1 : 0);
     sh.getRange(s.rowNum, 16).setValue(new Date());
     var ns = findStaff_(username);
-    return JSON.stringify({ ok: true, staff: publicStaff_(ns), profile: { phone: ns.phone, joined: ns.joined, debt: ns.debt } });
+    return JSON.stringify({ ok: true, staff: publicStaff_(ns), profile: { phone: ns.phone, joined: ns.joined, debt: ns.debt, mentorStatus: ns.mentorStatus } });
   } finally { lock.releaseLock(); }
 }
 
@@ -478,12 +544,13 @@ function getMyLogs(username, pin) {
   return JSON.stringify({ ok: true, logs: logsFor_(s.id), profile: { debt: s.debt } });
 }
 
-/* ---- mentor view (sensitive fields flow only to the chosen mentor) ---- */
+/* ---- mentor view (sensitive fields flow only to the chosen mentor, and
+   only once the mentor has explicitly accepted — see MentorStatus) ---- */
 function getMyMentees(username, pin) {
   var s = verifyStaff_(username, pin);
   if (!s) return JSON.stringify({ ok: false });
   var mine = staffRows_().rows
-    .filter(function (x) { return x.active && x.mentorId === s.id; })
+    .filter(function (x) { return x.active && x.mentorId === s.id && x.mentorStatus === 'approved'; })
     .map(publicStaff_);
   return JSON.stringify({ ok: true, mentees: mine });
 }
@@ -492,8 +559,37 @@ function getMenteeLogs(username, pin, menteeId) {
   if (!s) return JSON.stringify({ ok: false });
   var rows = staffRows_().rows, m = null;
   for (var i = 0; i < rows.length; i++) if (rows[i].id === menteeId) m = rows[i];
-  if (!m || m.mentorId !== s.id) return JSON.stringify({ ok: false, err: 'not_your_mentee' });
+  if (!m || m.mentorId !== s.id || m.mentorStatus !== 'approved') return JSON.stringify({ ok: false, err: 'not_your_mentee' });
   return JSON.stringify({ ok: true, mentee: publicStaff_(m), logs: logsFor_(m.id), profile: { debt: m.debt } });
+}
+
+/* ---- mentor requests: a mentee picking a mentor doesn't grant access by
+   itself — the mentor must accept it here first. ---- */
+function getMyMentorRequests(username, pin) {
+  var s = verifyStaff_(username, pin);
+  if (!s) return JSON.stringify({ ok: false });
+  var pending = staffRows_().rows
+    .filter(function (x) { return x.active && x.mentorId === s.id && x.mentorStatus === 'pending'; })
+    .map(publicStaff_);
+  return JSON.stringify({ ok: true, requests: pending });
+}
+function respondToMentorRequest(username, pin, menteeId, approve) {
+  var lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    var s = verifyStaff_(username, pin);
+    if (!s) return JSON.stringify({ ok: false });
+    var rows = staffRows_().rows, target = null;
+    for (var i = 0; i < rows.length; i++) if (rows[i].id === menteeId) target = rows[i];
+    if (!target || target.mentorId !== s.id) return JSON.stringify({ ok: false, err: 'not_found' });
+    var sh = getStaffSheet_();
+    if (approve) {
+      sh.getRange(target.rowNum, 17).setValue('approved');
+    } else {
+      sh.getRange(target.rowNum, 10).setValue('');
+      sh.getRange(target.rowNum, 17).setValue('');
+    }
+    return getMyMentorRequests(username, pin);
+  } finally { lock.releaseLock(); }
 }
 
 /* ---- bridge for later: weekly health composite derived from daily logs ----

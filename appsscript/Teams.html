@@ -130,7 +130,7 @@ var MOODS = [
 
 var S = {
   url:'', auth:{user:'', pin:''}, me:null, profile:null,
-  logs:[], roster:[], mentees:[], view:'today',
+  logs:[], roster:[], mentees:[], mentorRequests:[], view:'today',
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], busy:false
 };
 
@@ -200,6 +200,7 @@ function afterLogin(){
   run('teamRoster', [], function(r){ S.roster = Array.isArray(r)?r:[]; render(); });
   run('getMyLogs', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.logs=d.logs; if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile); } render(); });
   run('getMyMentees', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentees=d.mentees; } render(); });
+  run('getMyMentorRequests', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentorRequests=d.requests; } render(); });
   S.view='today'; render();
 }
 function logout(){ localStorage.removeItem('gp-staff'); S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[]; render(); }
@@ -217,7 +218,8 @@ function render(){
   }
   hb.innerHTML = '<button class="hbtn" id="backBtn">← Dashboard</button>';
   var tabs=[['today','Today','✍️'],['me','Me','💚'],['team','Team','👥'],['profile','Profile','⚙️']];
-  if(S.mentees.length) tabs.splice(3,0,['mentor','Mentor','🤝']);
+  var reqN=S.mentorRequests?S.mentorRequests.length:0;
+  if(S.mentees.length || reqN) tabs.splice(3,0,['mentor','Mentor'+(reqN?' ('+reqN+')':''),'🤝']);
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(t){
     return '<button class="'+(S.view===t[0]?'on':'')+'" data-tab="'+t[0]+'"><span class="ic">'+t[2]+'</span>'+t[1]+'</button>';
@@ -377,8 +379,19 @@ function mentorHtml(){
     h+='</div>';
     return h;
   }
-  var h='<h2>My mentees <small>· '+S.mentees.length+'</small></h2>'+
-    '<p class="sub">People who chose you as their mentor. You can see their private check-ins.</p><div class="dir">';
+  var h='';
+  if(S.mentorRequests && S.mentorRequests.length){
+    h+='<h2>Mentor requests <small>· '+S.mentorRequests.length+'</small></h2>'+
+      '<p class="sub">These people chose you as their mentor. Accepting gives you access to their private check-ins — decline if that’s not a fit.</p><div class="dir">';
+    S.mentorRequests.forEach(function(p){
+      h+='<div class="dircard" style="cursor:default">'+avatarHtml(p)+'<div class="pname">'+esc(p.name)+'</div><div class="pmeta">'+esc(p.dept)+'</div>'+
+        '<div style="display:flex;gap:6px;margin-top:10px"><button class="btn" style="margin:0;padding:8px 4px;font-size:13px" data-accept="'+esc(p.id)+'">Accept</button>'+
+        '<button class="btn ghost" style="margin:0;padding:8px 4px;font-size:13px" data-decline="'+esc(p.id)+'">Decline</button></div></div>';
+    });
+    h+='</div>';
+  }
+  h+='<h2>My mentees <small>· '+S.mentees.length+'</small></h2>'+
+    '<p class="sub">People who chose you as their mentor and you’ve accepted. You can see their private check-ins.</p><div class="dir">';
   S.mentees.forEach(function(p){
     h+='<div class="dircard" data-mentee="'+esc(p.id)+'">'+avatarHtml(p)+'<div class="pname">'+esc(p.name)+'</div><div class="pmeta">'+esc(p.dept)+'</div></div>';
   });
@@ -402,6 +415,7 @@ function profileHtml(){
     '<label class="f">Department</label><select id="p_dept">'+DEPTS.map(function(d){return '<option'+(S.me.dept===d?' selected':'')+'>'+d+'</option>';}).join('')+'</select>'+
     '<label class="f">Role / team</label><input type="text" id="p_role" value="'+esc(S.me.role)+'">'+
     '<label class="f">My mentor <span class="lock">🔒 sees my private check-ins</span></label><select id="p_mentor"><option value="">— none —</option>'+opts+'</select>'+
+    (p.mentorStatus==='pending' ? '<div class="hint">⏳ Waiting for them to accept</div>' : p.mentorStatus==='approved' ? '<div class="hint">✓ Accepted — they can see your private check-ins</div>' : '')+
     '<label class="f">Phone</label><input type="tel" id="p_phone" value="'+esc(p.phone||'')+'">'+
     '<label class="f">Year joined</label><input type="number" id="p_joined" value="'+esc(p.joined||'')+'">'+
     '<label class="f">Staff debt <span class="lock">🔒 private</span></label><div class="seg" style="max-width:220px">'+
@@ -512,6 +526,24 @@ function bind(){
     };
   });
   var mBack=document.getElementById('menteeBack'); if(mBack) mBack.onclick=function(){ S.mentee=null; render(); };
+  document.querySelectorAll('[data-accept]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-accept');
+      run('respondToMentorRequest',[S.auth.user,S.auth.pin,id,true],function(d){
+        if(d.ok) S.mentorRequests=d.requests;
+        run('getMyMentees',[S.auth.user,S.auth.pin],function(r){ if(r.ok) S.mentees=r.mentees; render(); });
+      });
+    };
+  });
+  document.querySelectorAll('[data-decline]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-decline');
+      run('respondToMentorRequest',[S.auth.user,S.auth.pin,id,false],function(d){
+        if(d.ok) S.mentorRequests=d.requests;
+        render();
+      });
+    };
+  });
 
   // profile
   var pb=document.getElementById('photoBtn'), pi=document.getElementById('photoInput');
