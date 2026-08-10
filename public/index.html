@@ -3,9 +3,10 @@
 <html>
 <head>
 <meta charset="utf-8">
-<link rel="apple-touch-icon" sizes="180x180" href="https://drive.google.com/file/d/1ndnNGe1tv3MnMRenmyb-dQpEhoIlWlkw/view?usp=sharing">
-<link rel="icon" type="image/png" sizes="192x192" href="https://drive.google.com/file/d/1ndnNGe1tv3MnMRenmyb-dQpEhoIlWlkw/view?usp=sharing">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='47' fill='%231F44FF'/%3E%3Ctext x='50' y='64' font-family='Arial' font-weight='bold' font-size='40' fill='%23FAF6F0' text-anchor='middle'%3EGP%3C/text%3E%3Cpath d='M76 12 L78.6 19.4 L86 22 L78.6 24.6 L76 32 L73.4 24.6 L66 22 L73.4 19.4 Z' fill='%23FFB323'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap');
 * { box-sizing: border-box; margin: 0; }
@@ -471,63 +472,14 @@ function qOf(w){ return Math.min(3, Math.floor((w-1)/13)); }
 /* ---------- i18n ---------- */
 function t(s){ if(state.lang==='en') return s; return BUILTIN_KM[s] || state.km[s] || s; }
 
-function collectStrings(){
-  var set = {};
-  function add(s){ set[s]=1; }
-  ['Dashboard','Log Numbers','OKRs','Health','All Campuses — Combined Impact','SALVATIONS — YTD',
-   'Salvations by department','By campus','Base health','Media reach','Platforms','Total Pages',
-   'Total Followers','Views YTD','Total Volunteer Hours','Department','Ministry','Oversees','Week','Quarter',
-   'Saved','Saving…','Save Week','New objective','Edit objective','Objective','Owner','Key result',
-   'Measure by','Target (if linked to a KPI)','Manual progress (%)','Add objective','Save changes','Cancel',
-   '+ New Objective','Edit','Delete','manual','auto from KPI','salvations','served','Staff Health Score',
-   'Staff Health Score (from survey)','This is anonymous — no names are stored.','Submit my check-in','Responses',
-   'Loneliness (avg, lower is better)','Clarity (avg)','Looked at porn','Had a one-on-one','Exercised 3+ days',
-   'Regular quiet time','Have staff debt','Language study (avg hrs)','Community ministry (avg hrs)',
-   'Yes','No','Results','My check-in','Update my check-in','Leadership','Enter leadership code',
-   'Leadership unlocked','Wrong code','Lock leadership view','Leadership detail','Staff debt by department',
-   'Every number is a person. The goal is people knowing Jesus.',
-   'No objectives yet. Set 2–3 per department — each with measurable key results.',
-   'Entries save to the shared GP Impact Data sheet — every leader sees the same live numbers.',
-   'staff health'].forEach(add);
-  CAMPUSES.forEach(function(c){ add(c.name); add(c.short); });
-  ['poipet','siemreap'].forEach(function(cid){
-    var deps = getDepartments(cid);
-    Object.keys(deps).forEach(function(d){
-      add(d);
-      Object.keys(deps[d]).forEach(function(m){
-        add(m);
-        deps[d][m].forEach(add);
-      });
-    });
-  });
-  SCALE_QS.forEach(function(q){ add(q.text); });
-  YESNO_QS.forEach(function(q){ add(q.text); });
-  NUM_QS.forEach(function(q){ add(q.text); });
-  return Object.keys(set);
-}
-
 function toggleLang(){
-  if(state.lang === 'km'){
-    state.lang = 'en'; localStorage.setItem('gp-lang','en'); render(); return;
-  }
-  // Anything not already in the built-in dictionary gets machine-translated as fallback.
-  var missing = collectStrings().filter(function(s){ return !BUILTIN_KM[s] && !state.km[s]; });
-  if(!missing.length){
-    state.lang='km'; localStorage.setItem('gp-lang','km'); render(); return;
-  }
-  document.getElementById('langBtn').textContent = '…';
-  google.script.run
-    .withSuccessHandler(function(json){
-      var add = JSON.parse(json);
-      for(var k in add) state.km[k]=add[k];
-      localStorage.setItem('gp-km-v2', JSON.stringify(state.km));
-      state.lang='km'; localStorage.setItem('gp-lang','km'); render();
-    })
-    .withFailureHandler(function(){
-      // fall back to built-in only
-      state.lang='km'; localStorage.setItem('gp-lang','km'); render();
-    })
-    .translateBatch(JSON.stringify(missing));
+  // No live machine-translation fallback here (that needed Apps Script's
+  // LanguageApp, which doesn't exist outside it). Untranslated strings just
+  // show in English via t()'s existing fallback — BUILTIN_KM already covers
+  // the vast majority of what's on screen.
+  state.lang = state.lang==='km' ? 'en' : 'km';
+  localStorage.setItem('gp-lang', state.lang);
+  render();
 }
 
 /* ---------- aggregation ---------- */
@@ -1123,6 +1075,17 @@ function hasSubmitted(campus, week){
 }
 
 /* ---------- events & server ---------- */
+function apiCall(fn, args){
+  return fetch('/.netlify/functions/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fn: fn, args: args || [] })
+  }).then(function(res){
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return res.json();
+  });
+}
+
 function toggleLeader(){
   if(state.data.leader){
     state.leaderCode=''; localStorage.removeItem('gp-leadercode');
@@ -1130,18 +1093,14 @@ function toggleLeader(){
   }
   var code = prompt(t('Enter leadership code'));
   if(!code) return;
-  google.script.run
-    .withSuccessHandler(function(json){
-      var d = JSON.parse(json);
-      if(d.leader){
-        state.leaderCode = code; localStorage.setItem('gp-leadercode', code);
-        state.data = d; render();
-      } else {
-        showError(t('Wrong code'));
-      }
-    })
-    .withFailureHandler(function(){ showError(t('Wrong code')); })
-    .getData(code);
+  apiCall('getData', [code]).then(function(d){
+    if(d.leader){
+      state.leaderCode = code; localStorage.setItem('gp-leadercode', code);
+      state.data = d; render();
+    } else {
+      showError(t('Wrong code'));
+    }
+  }).catch(function(){ showError(t('Wrong code')); });
 }
 
 function bindEvents(){
@@ -1217,7 +1176,7 @@ function bindEvents(){
       var okr=null; state.data.okrs.forEach(function(o){ if(o.id===parts[0]) okr=o; });
       if(!okr) return;
       okr.krs[Number(parts[1])].manual = Number(inp.value)||0;
-      serverCall('saveObjective', [JSON.stringify(okr), state.leaderCode]);
+      serverCall('saveObjective', [okr, state.leaderCode]);
     };
   });
 
@@ -1244,10 +1203,8 @@ function bindEvents(){
 
 function serverCall(fn, args){
   hideError();
-  var runner = google.script.run
-    .withSuccessHandler(function(json){ state.data=JSON.parse(json); render(); })
-    .withFailureHandler(function(){ showError("Couldn't save. Check your connection and try again."); });
-  runner[fn].apply(runner, args);
+  apiCall(fn, args).then(function(d){ state.data=d; render(); })
+    .catch(function(){ showError("Couldn't save. Check your connection and try again."); });
 }
 
 function saveCard(btn){
@@ -1257,16 +1214,13 @@ function saveCard(btn){
       week:state.week, value: inp.value==='' ? null : Number(inp.value) });
   });
   btn.disabled=true; btn.textContent=t('Saving…'); hideError();
-  google.script.run
-    .withSuccessHandler(function(json){
-      state.data = JSON.parse(json); btn.innerHTML='<span class="savedSpark">✦</span> '+t('Saved');
-      setTimeout(function(){ render(); }, 900);
-    })
-    .withFailureHandler(function(){
-      btn.disabled=false; btn.textContent=t('Save Week')+' '+state.week;
-      showError("Couldn't save. Check your connection and press Save again.");
-    })
-    .saveEntries(state.campus, JSON.stringify(updates), state.leaderCode);
+  apiCall('saveEntries', [state.campus, updates, state.leaderCode]).then(function(d){
+    state.data = d; btn.innerHTML='<span class="savedSpark">✦</span> '+t('Saved');
+    setTimeout(function(){ render(); }, 900);
+  }).catch(function(){
+    btn.disabled=false; btn.textContent=t('Save Week')+' '+state.week;
+    showError("Couldn't save. Check your connection and press Save again.");
+  });
 }
 
 function saveOkrForm(btn){
@@ -1292,15 +1246,12 @@ function saveOkrForm(btn){
   var obj = { id: state.editingId || ('o'+Date.now()), campus: state.campus, quarter: state.okrQuarter,
     dept: document.getElementById('objDept').value, objective: text, krs: krs };
   btn.disabled=true; btn.textContent=t('Saving…');
-  google.script.run
-    .withSuccessHandler(function(json){
-      state.data=JSON.parse(json); state.okrFormOpen=false; state.editingId=null; render();
-    })
-    .withFailureHandler(function(){
-      btn.disabled=false; btn.textContent=t('Add objective');
-      showError("Couldn't save. Check your connection and try again.");
-    })
-    .saveObjective(JSON.stringify(obj), state.leaderCode);
+  apiCall('saveObjective', [obj, state.leaderCode]).then(function(d){
+    state.data=d; state.okrFormOpen=false; state.editingId=null; render();
+  }).catch(function(){
+    btn.disabled=false; btn.textContent=t('Add objective');
+    showError("Couldn't save. Check your connection and try again.");
+  });
 }
 
 function submitSurvey(btn){
@@ -1314,57 +1265,39 @@ function submitSurvey(btn){
     sharedFaith: d.sharedFaith, sabbath: d.sabbath,
     langHours: d.langHours||0, minHours: d.minHours||0 };
   btn.disabled=true; btn.textContent=t('Saving…'); hideError();
-  google.script.run
-    .withSuccessHandler(function(json){
-      state.data=JSON.parse(json); state.surveyDraft={}; render();
-    })
-    .withFailureHandler(function(){
-      btn.disabled=false; btn.textContent=t('Submit my check-in');
-      showError("Couldn't save. Check your connection and try again.");
-    })
-    .saveSurvey(JSON.stringify(payload), state.leaderCode);
+  apiCall('saveSurvey', [payload, state.leaderCode]).then(function(d){
+    state.data=d; state.surveyDraft={}; render();
+  }).catch(function(){
+    btn.disabled=false; btn.textContent=t('Submit my check-in');
+    showError("Couldn't save. Check your connection and try again.");
+  });
 }
 
 function showError(msg){ var e=document.getElementById('errorBar'); e.textContent=msg; e.classList.remove('hidden'); }
 function hideError(){ document.getElementById('errorBar').classList.add('hidden'); }
 
 function loadRoster(){
-  google.script.run
-    .withSuccessHandler(function(json){ try{ state.roster=JSON.parse(json)||[]; }catch(e){ state.roster=[]; } render(); })
-    .withFailureHandler(function(){})
-    .teamRoster();
+  apiCall('teamRoster', []).then(function(r){ state.roster=Array.isArray(r)?r:[]; render(); })
+    .catch(function(){});
 }
 function fetchData(){
   loadRoster();
-  google.script.run
-    .withSuccessHandler(function(json){
-      state.data=JSON.parse(json); state.loaded=true;
-      if(state.lang==='km'){
-        var cached = localStorage.getItem('gp-km-v2');
-        if(cached) state.km = JSON.parse(cached); else state.lang='en';
-      }
-      render();
-    })
-    .withFailureHandler(function(){ showError("Couldn't load data. Pull down to refresh."); })
-    .getData(state.leaderCode);
+  apiCall('getData', [state.leaderCode]).then(function(d){
+    state.data=d; state.loaded=true;
+    if(state.lang==='km'){
+      var cached = localStorage.getItem('gp-km-v2');
+      if(cached) state.km = JSON.parse(cached); else state.lang='en';
+    }
+    render();
+  }).catch(function(){ showError("Couldn't load data. Pull down to refresh."); });
 }
-// ✦ Teams link + shell bridge (keeps nav inside the PWA on iOS)
-window.__gpShell=false;
-window.addEventListener('message',function(e){ if(e.data && e.data.gpPong) window.__gpShell=true; });
-(function ping(){ try{ window.top.postMessage({gpPing:1},'*'); }catch(e){} })();
-setTimeout(function(){ try{ window.top.postMessage({gpPing:1},'*'); }catch(e){} },600);
-google.script.run.withSuccessHandler(function(u){
+
+(function(){
   var b=document.getElementById('teamsBtn');
-  if(b) b.onclick=function(){
-    if(window.__gpShell){ window.top.postMessage({gpNav:'teams'},'*'); return; }
-    window.top.location.href = u + '?p=teams';
-  };
+  if(b) b.onclick=function(){ window.location.href='teams.html'; };
   var hb=document.getElementById('helpBtn');
-  if(hb) hb.onclick=function(){
-    if(window.__gpShell){ window.top.postMessage({gpNav:'help'},'*'); return; }
-    window.top.location.href = u + '?p=help';
-  };
-}).getAppUrl();
+  if(hb) hb.onclick=function(){ window.location.href='help.html'; };
+})();
 
 render(); fetchData();
 </script>

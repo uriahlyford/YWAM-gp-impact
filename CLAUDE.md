@@ -4,59 +4,62 @@ A mobile-first, bilingual (Khmer-first) web app for YWAM GonPreah (កូនព�
 It tracks ministry KPIs, OKRs, a staff health survey, and per-staff daily logging
 across the Poipet and Siem Reap campuses.
 
-## Architecture (two deploy targets)
-1. **Apps Script web app** (`appsscript/`) — the actual app. Google Apps Script
-   (`Code.gs`) serving three HTML pages, backed by one Google Sheet ("GP Impact Data").
-2. **Netlify shell** (`shell/`) — a tiny static site that wraps the Apps Script
-   `/exec` URL in a full-screen iframe so it installs as a home-screen PWA. Deployed
-   via GitHub → Netlify.
+## Architecture (single deploy target)
+Everything lives in this repo and deploys as one Netlify site — push to `main`,
+Netlify builds and goes live. No Google Apps Script, no Google Sheet, no separate
+shell/app split. (Previously the app ran as an Apps Script web app wrapped in a
+Netlify iframe "shell" — that setup is retired; see git history if you need it.)
+
+- **`public/`** — the static frontend, served directly by Netlify (`netlify.toml`:
+  `publish = "public"`).
+- **`netlify/functions/api.js`** — the backend, a single Netlify Function replacing
+  `Code.gs`. One POST endpoint (`/.netlify/functions/api`) dispatched by a `{fn, args}`
+  body through the `HANDLERS` map, same function names/signatures the frontend already
+  expects. No RPC marshalling quirks (unlike `google.script.run`, this is a plain `fetch`).
+- **Storage: Netlify Blobs** (`@netlify/blobs`, store `"gp-data"`), one JSON array per
+  former "sheet": `entries`, `okrs`, `survey`, `staff`, `dailyLogs`, plus a `loginThrottle`
+  map. Read-modify-write, no locking — an accepted trade-off at this team's scale.
 
 ## Files
-### appsscript/ (auto-deployed by GitHub Actions on push to main — see Deploy rules below)
-- `Code.gs` — backend. Routing in `doGet` serves `Index` (default), `Teams` (`?p=teams`),
-  or `Help` (`?p=help`). Functions: getData, saveEntries, saveObjective, deleteObjective,
-  saveSurvey, translateBatch, teamRoster, staff register/login, updateProfile, changePin,
-  uploadPhoto, saveDaily, getMyLogs, getMyMentees, getMenteeLogs, getAppUrl.
-- `Index.html` — leadership dashboard (KPIs, OKRs, health survey). Contains an embedded
+### public/
+- `index.html` — leadership dashboard (KPIs, OKRs, health survey). Contains an embedded
   259×108 header logo (base64) and a 266-entry reviewed Khmer dictionary (`BUILTIN_KM`).
-  Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state, and the ✦ Teams / 📖 buttons.
-- `Teams.html` — per-staff space: username + 4-digit PIN, profile + photo, daily logging,
-  streaks, mentor view.
-- `Help.html` — bilingual clickable KPI guide (job focus + KPI explanations per ministry).
+  Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state, click-through
+  drill-down on dashboard totals, and the ✦ Teams / 📖 buttons (plain page nav now, not
+  postMessage). Calls the backend via the `apiCall(fn, args)` helper.
+- `teams.html` — per-staff space: username + 4-digit PIN, profile + photo, daily logging,
+  streaks, mentor view + mentor-request approval.
+- `help.html` — bilingual clickable KPI guide (job focus + KPI explanations per ministry).
+- `manifest.json`, `icon-180.png`, `icon-512.png` — PWA assets. **The icons are
+  placeholders** (cobalt circle + "GP" wordmark) — swap in real ones when available.
 
-### shell/ (Netlify site; GitHub → Netlify auto-deploy)
-- `index.html` — splash screen (GonPreah seal + motto "ចាប់ផ្តើមជាមួយខ្លួនឯង / It starts
-  with you") → loads the app; message router keeps Teams/Help inside the PWA; viewport locked.
-- `manifest.json`, `icon-180.png`, `icon-512.png` — PWA assets.
+### netlify/functions/api.js
+Handlers: getData, saveEntries, saveObjective, deleteObjective, saveSurvey, teamRoster,
+staffRegister, staffLogin, updateProfile, changePin, uploadPhoto, saveDaily, getMyLogs,
+getMyMentees, getMenteeLogs, getMyMentorRequests, respondToMentorRequest,
+weeklyHealthFromLogs, adminSeed (one-time data-migration handler, secret-gated —
+see below). No `translateBatch` equivalent (was `LanguageApp.translate`, not
+available outside Apps Script) — Khmer strings machine-translation fallback is gone;
+all Khmer must come from `BUILTIN_KM` or be added by hand.
 
 ## Deploy rules — do not break
-- **Apps Script:** pushing to `main` with changes under `appsscript/**` triggers
-  `.github/workflows/deploy-apps-script.yml`, which runs `clasp push` then
-  `clasp deploy -i <deploymentId>` against the **existing** deployment ID (hardcoded
-  in the workflow — not a secret, it's the same ID embedded in the live `/exec` URL).
-  This always creates a **new version of the existing deployment**, never a new
-  deployment — so the `/exec` URL never changes and the shell never breaks. If you
-  ever need to do it by hand instead: Apps Script editor → Deploy → Manage deployments
-  → ✏️ → New version on that same deployment. NEVER create a new deployment. Keep
-  `setXFrameOptionsMode(ALLOWALL)` in `doGet` so the shell can embed the app.
-- **Auth for the auto-deploy:** a `CLASP_CREDENTIALS` GitHub Actions secret holds the
-  owner's `clasp login` OAuth token (`~/.clasprc.json` contents). If it expires/is
-  revoked, re-run `clasp login` locally and update the secret.
-- **clasp file mapping:** `appsscript/Code.gs` is the source of truth in the repo (for
-  readability/history), but clasp expects server-side files with a `.js` extension
-  locally. The workflow copies it to `Code.js` in a throwaway `.clasp-push/` staging
-  dir before pushing — don't rename `Code.gs` itself.
-- **Shell → Apps Script link:** the only connection is the `EXEC = "…/exec"` line at the
-  top of `shell/index.html`. It must point at the deployment the shell is meant to load.
-- **Netlify:** the shell repo publishes the `shell/` folder root; push to redeploy.
+- **Netlify:** push to `main` → auto-deploy (GitHub integration on the `transcendent-crostata-c9b7f4`
+  site). `netlify.toml` sets `publish = "public"` and `functions = "netlify/functions"`.
+  Nothing else to run by hand.
+- **Leadership gate:** `isLeader_` in `api.js` checks the caller's code against
+  `process.env.GP_LEADER_CODE` (Netlify env var; falls back to `'GP2026'` if unset).
+- **Seeding/migration:** `adminSeed(secret, bundle)` in `api.js` only runs if the
+  `GP_SEED_SECRET` Netlify env var is set and matches — it's meant for a one-time load
+  and should be removed (delete the env var) once done. Never commit real staff/survey
+  data (PIN hashes, photos, health-survey answers) to this repo.
 
 ## Conventions / must-preserve
 - **Khmer-first.** Khmer is never smaller/lighter than English. All KPI/ministry/department
   NAMES come from the reviewed `BUILTIN_KM` dictionary in `Index.html`.
 - **Khmer prose needs human review** (native speakers Sreilea / Leakha) before going wide;
   machine translation is fallback only. New Khmer strings should be flagged for review.
-- **Never reconstruct `Index.html` from memory** — it holds the embedded logo and the 266-entry
-  Khmer dictionary. Edit it in place (targeted find/replace); don't regenerate those blobs.
+- **Never reconstruct `public/index.html` from memory** — it holds the embedded logo and the
+  266-entry Khmer dictionary. Edit it in place (targeted find/replace); don't regenerate those blobs.
 - Uploaded files from macOS TextEdit may arrive as RTF — convert to plain text first.
 - Brand: Paper #FAF6F0, Ink #17150F, Cobalt #1F44FF, Marigold #FFB323. Fonts: Koulen +
   Kantumruy Pro (Khmer), Archivo + Hanken Grotesk (Latin). Motif: ✦ spark.

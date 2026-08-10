@@ -129,7 +129,7 @@ var MOODS = [
 ];
 
 var S = {
-  url:'', auth:{user:'', pin:''}, me:null, profile:null,
+  auth:{user:'', pin:''}, me:null, profile:null,
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'today',
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], busy:false
 };
@@ -154,13 +154,14 @@ function showMsg(t){
 }
 
 function run(fn, args, onOk){
-  var r = google.script.run
-    .withSuccessHandler(function(json){
-      var d; try { d=JSON.parse(json); } catch(e){ d=json; }
-      onOk(d);
-    })
-    .withFailureHandler(function(){ showMsg("Connection problem — try again."); S.busy=false; render(); });
-  r[fn].apply(r, args);
+  fetch('/.netlify/functions/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fn: fn, args: args })
+  }).then(function(res){
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return res.json();
+  }).then(onOk).catch(function(){ showMsg("Connection problem — try again."); S.busy=false; render(); });
 }
 
 /* consecutive-day streak ending today or yesterday */
@@ -184,7 +185,6 @@ function count(rows, f){ var n=0; rows.forEach(function(r){ if(f(r)) n++; }); re
 
 /* ---------- boot ---------- */
 function boot(){
-  google.script.run.withSuccessHandler(function(u){ S.url=u; }).getAppUrl();
   var saved = null;
   try { saved = JSON.parse(localStorage.getItem('gp-staff')||'null'); } catch(e){}
   if(saved && saved.user && saved.pin){
@@ -491,7 +491,7 @@ function bind(){
     if(!/^[a-z0-9._-]{2,20}$/.test(payload.username.toLowerCase())){ showMsg('Username: lowercase letters/numbers, 2–20'); return; }
     if(!/^\d{4}$/.test(payload.pin)){ showMsg('PIN must be 4 digits'); return; }
     rb.disabled=true; rb.textContent='…';
-    run('staffRegister',[JSON.stringify(payload)],function(d){
+    run('staffRegister',[payload],function(d){
       if(d.ok){ S.auth={user:payload.username.toLowerCase(),pin:payload.pin}; S.me=d.staff; S.profile=d.profile; S.regMode=false; afterLogin(); showMsg('Profile created — add a photo!'); S.view='profile'; render(); }
       else { rb.disabled=false; rb.textContent='Create profile'; showMsg(d.err==='taken'?'That username is taken':'Check your details'); }
     });
@@ -509,7 +509,7 @@ function bind(){
     if(nl) d.langHours=nl.value===''?null:Number(nl.value);
     if(nm) d.minHours=nm.value===''?null:Number(nm.value);
     sd.disabled=true; sd.textContent='Saving…';
-    run('saveDaily',[S.auth.user,S.auth.pin,todayStr(),JSON.stringify(d)],function(res){
+    run('saveDaily',[S.auth.user,S.auth.pin,todayStr(),d],function(res){
       if(res.ok){ S.logs=res.logs; showMsg('✦ Saved for today'); S.view='me'; render(); }
       else { sd.disabled=false; sd.textContent='Save today'; showMsg('Could not save'); }
     });
@@ -563,7 +563,7 @@ function bind(){
       debt:S.profile&&S.profile.debt?true:false
     };
     sp.disabled=true; sp.textContent='Saving…';
-    run('updateProfile',[S.auth.user,S.auth.pin,JSON.stringify(payload)],function(d){
+    run('updateProfile',[S.auth.user,S.auth.pin,payload],function(d){
       if(d.ok){ S.me=d.staff; S.profile=d.profile; showMsg('Profile saved'); run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();}); }
       else { sp.disabled=false; sp.textContent='Save profile'; showMsg('Could not save'); }
     });
@@ -580,15 +580,8 @@ function bind(){
   var lo=document.getElementById('logoutBtn'); if(lo) lo.onclick=logout;
 }
 
-/* ---- shell bridge: keep cross-page nav inside the Netlify PWA ---- */
-window.__gpShell=false;
-window.addEventListener('message',function(e){ if(e.data && e.data.gpPong) window.__gpShell=true; });
-function gpPing(){ try{ window.top.postMessage({gpPing:1},'*'); }catch(e){} }
-gpPing(); setTimeout(gpPing,400); setTimeout(gpPing,1000);
 function gpGo(p){
-  if(window.__gpShell){ window.top.postMessage({gpNav:p},'*'); return; }
-  var base = S.url || '';
-  if(base) window.top.location.href = base + (p==='teams'?'?p=teams':'');
+  window.location.href = p==='teams' ? 'teams.html' : 'index.html';
 }
 
 boot();

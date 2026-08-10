@@ -257,17 +257,8 @@ apply();
 </script>
 <script>
 (function(){
-  var APPURL='';
-  try{ google.script.run.withSuccessHandler(function(u){APPURL=u;}).getAppUrl(); }catch(e){}
-  window.__gpShell=false;
-  window.addEventListener('message',function(e){ if(e.data&&e.data.gpPong) window.__gpShell=true; });
-  function ping(){ try{ window.top.postMessage({gpPing:1},'*'); }catch(e){} }
-  ping(); setTimeout(ping,500);
   var b=document.getElementById('backBtn');
-  if(b) b.onclick=function(){
-    if(window.__gpShell){ window.top.postMessage({gpNav:'index'},'*'); return; }
-    if(APPURL) window.top.location.href=APPURL; else history.back();
-  };
+  if(b) b.onclick=function(){ window.location.href='index.html'; };
 })();
 </script>
 </body>
