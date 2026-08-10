@@ -144,6 +144,8 @@ button:active { transform: scale(.95); }
 .trend.up { color:#0a7d3c; background:#e3f6ea; }
 .trend.down { color:#b3261e; background:#fbe6e6; }
 .trend.flat { color:#6b6557; background:#efeae0; }
+.newTot { font-weight:700; color:#1F44FF; }
+input[data-carried] { color:#6b6557; background:#F5F0E6; }
 .heroTrend { margin-top:6px; font-size:13px; color:#c9c3b6; }
 .statTrend { display:block; margin-top:4px; }
 
@@ -404,7 +406,10 @@ var LATEST_SET = ['Total Staff','Staff Debt ($)','Base Finances ($)','Total in B
   'Students Given Food & Housing','Current Coaches','Coaches in Training','Musicians in Training',
   'Students Struggling','Potential Staff','Total Kids','Churches Being Led',
   'Improvement Projects in Progress','Projects in Process','Base Plants in Planning',
-  'Youth Enrolled','Highest Viewed Video Views','Trainees in Track'];
+  'Youth Enrolled','Highest Viewed Video Views','Trainees in Track',
+  // Ongoing headcounts, not weekly events — summing them double-counted the
+  // same people every week they were re-entered.
+  'Students in Discipleship','Players Being Discipled'];
 
 function modeOf(metric){
   if (metric.indexOf('(1-10)')>-1 || metric.indexOf('(%)')>-1) return 'avg';
@@ -503,6 +508,20 @@ function aggregate(entries, mode, quarter){
   if(mode==='avg'){ var s=0; pairs.forEach(function(p){s+=p[1];}); return s/pairs.length; }
   if(mode==='latest') return pairs[pairs.length-1][1];
   var tt=0; pairs.forEach(function(p){tt+=p[1];}); return tt;
+}
+
+/* Most recent recorded value STRICTLY BEFORE a given week. Used by the log
+   form to carry a headcount forward so nobody retypes an unchanged number
+   every week. */
+function lastBefore(weeks, week){
+  if(!weeks) return null;
+  var best = null;
+  for(var w in weeks){
+    var wk = Number(w), v = Number(weeks[w]);
+    if(isNaN(v) || wk >= Number(week)) continue;
+    if(!best || wk > best.week) best = { week:wk, value:v };
+  }
+  return best;
 }
 
 function fmt(v, metric){
@@ -911,11 +930,36 @@ function logHtml(){
   visibleMetrics(deps[state.dept][state.ministry]).forEach(function(metric){
     var key = state.dept+'|'+state.ministry+'|'+metric;
     var mode = modeOf(metric);
-    var agg = aggregate(entries[key], mode);
-    var lbl = mode==='latest'?'now':(mode==='avg'?'avg':'YTD');
-    var cur = entries[key] && entries[key][state.week]!==undefined ? entries[key][state.week] : '';
-    h += '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div><div class="rowSub">'+lbl+' '+fmt(agg,metric)+'</div></div>'+
-      '<input type="number" inputmode="decimal" placeholder="0" data-metric="'+esc(metric)+'" value="'+cur+'"></div>';
+    var wks = entries[key] || {};
+    var agg = aggregate(wks, mode);
+    var cur = wks[state.week]!==undefined ? wks[state.week] : '';
+    var sub, extra = '';
+    if(mode==='latest'){
+      // Headcounts (students enrolled, staff, schools…) rarely change week to
+      // week, so carry the last figure forward already filled in instead of
+      // making someone retype it. Still editable, so real growth or decline
+      // still registers — and the ▲/▼ badge shows the change.
+      var prev = lastBefore(wks, state.week);
+      var isCarried = (cur==='' && prev!==null);
+      if(isCarried){ cur = prev.value; extra = ' data-carried="1"'; }
+      sub = esc(t('now'))+' '+fmt(agg,metric);
+      if(prev!==null){
+        sub += ' · ' + (isCarried
+          ? esc(t('carried from week'))+' '+prev.week
+          : esc(t('week'))+' '+prev.week+': '+fmt(prev.value,metric));
+        var d = Number(cur)-prev.value;
+        if(d) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d),metric)+'</span>';
+      }
+    } else if(mode==='avg'){
+      sub = esc(t('avg'))+' '+fmt(agg,metric);
+    } else {
+      // Running totals: this box is the week's ADDITION, not the new total.
+      // Spelling that out stops people entering "105" when they mean "+5".
+      sub = esc(t('total so far'))+' '+fmt(agg,metric)+'<span class="newTot"></span>';
+      extra = ' data-run="'+(agg===null?0:agg)+'"';
+    }
+    h += '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div><div class="rowSub">'+sub+'</div></div>'+
+      '<input type="number" inputmode="decimal" placeholder="'+(mode==='sum'?'+0':'0')+'" data-metric="'+esc(metric)+'" data-mode="'+mode+'" value="'+cur+'"'+extra+'></div>';
   });
   h += '<button class="saveBtn" id="saveBtn">'+esc(t('Save Week'))+' '+state.week+'</button></div>';
   h += '<p class="note">'+esc(t('Entries save to the shared GP Impact Data sheet — every leader sees the same live numbers.'))+'</p>';
@@ -1163,6 +1207,19 @@ function bindEvents(){
   if(ws) ws.onchange=function(){ state.week=Number(ws.value); render(); };
   var sb=document.getElementById('saveBtn');
   if(sb) sb.onclick=function(){ saveCard(sb); };
+  // Running-total metrics: show what the total becomes as you type the week's
+  // addition, so "+5" on top of 100 visibly reads as 105.
+  document.querySelectorAll('#logCard input[data-mode="sum"]').forEach(function(inp){
+    inp.oninput=function(){
+      var row = inp.parentNode;
+      var out = row.querySelector('.newTot');
+      if(!out) return;
+      var add = Number(inp.value);
+      if(inp.value==='' || isNaN(add) || add===0){ out.textContent=''; return; }
+      var base = Number(inp.getAttribute('data-run'))||0;
+      out.textContent = ' → '+fmt(base+add, inp.getAttribute('data-metric'));
+    };
+  });
 
   var dds=document.getElementById('dashDeptSel');
   if(dds) dds.onchange=function(){ state.dashDept=dds.value; render(); };
