@@ -12,7 +12,7 @@ across the Poipet and Siem Reap campuses.
    via GitHub → Netlify.
 
 ## Files
-### appsscript/ (paste each into the Apps Script editor; deploy with New version)
+### appsscript/ (auto-deployed by GitHub Actions on push to main — see Deploy rules below)
 - `Code.gs` — backend. Routing in `doGet` serves `Index` (default), `Teams` (`?p=teams`),
   or `Help` (`?p=help`). Functions: getData, saveEntries, saveObjective, deleteObjective,
   saveSurvey, translateBatch, teamRoster, staff register/login, updateProfile, changePin,
@@ -30,9 +30,22 @@ across the Poipet and Siem Reap campuses.
 - `manifest.json`, `icon-180.png`, `icon-512.png` — PWA assets.
 
 ## Deploy rules — do not break
-- **Apps Script:** always Deploy → Manage deployments → ✏️ → **New version** on the
-  EXISTING deployment. NEVER create a new deployment — it mints a new `/exec` URL and
-  breaks the shell. Keep `setXFrameOptionsMode(ALLOWALL)` so the shell can embed the app.
+- **Apps Script:** pushing to `main` with changes under `appsscript/**` triggers
+  `.github/workflows/deploy-apps-script.yml`, which runs `clasp push` then
+  `clasp deploy -i <deploymentId>` against the **existing** deployment ID (hardcoded
+  in the workflow — not a secret, it's the same ID embedded in the live `/exec` URL).
+  This always creates a **new version of the existing deployment**, never a new
+  deployment — so the `/exec` URL never changes and the shell never breaks. If you
+  ever need to do it by hand instead: Apps Script editor → Deploy → Manage deployments
+  → ✏️ → New version on that same deployment. NEVER create a new deployment. Keep
+  `setXFrameOptionsMode(ALLOWALL)` in `doGet` so the shell can embed the app.
+- **Auth for the auto-deploy:** a `CLASP_CREDENTIALS` GitHub Actions secret holds the
+  owner's `clasp login` OAuth token (`~/.clasprc.json` contents). If it expires/is
+  revoked, re-run `clasp login` locally and update the secret.
+- **clasp file mapping:** `appsscript/Code.gs` is the source of truth in the repo (for
+  readability/history), but clasp expects server-side files with a `.js` extension
+  locally. The workflow copies it to `Code.js` in a throwaway `.clasp-push/` staging
+  dir before pushing — don't rename `Code.gs` itself.
 - **Shell → Apps Script link:** the only connection is the `EXEC = "…/exec"` line at the
   top of `shell/index.html`. It must point at the deployment the shell is meant to load.
 - **Netlify:** the shell repo publishes the `shell/` folder root; push to redeploy.
