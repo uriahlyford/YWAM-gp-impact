@@ -37,10 +37,28 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
 Handlers: getData, saveEntries, saveObjective, deleteObjective, saveSurvey, teamRoster,
 staffRegister, staffLogin, updateProfile, changePin, uploadPhoto, saveDaily, getMyLogs,
 getMyMentees, getMenteeLogs, getMyMentorRequests, respondToMentorRequest,
-weeklyHealthFromLogs, adminSeed (one-time data-migration handler, secret-gated —
-see below). No `translateBatch` equivalent (was `LanguageApp.translate`, not
+getMyWeekly, saveGoals, saveMyHabits, getMyMinistry, saveMyMinistry, saveMyKpiDay,
+weeklyHealthFromLogs. No `translateBatch` equivalent (was `LanguageApp.translate`, not
 available outside Apps Script) — Khmer strings machine-translation fallback is gone;
 all Khmer must come from `BUILTIN_KM` or be added by hand.
+
+**Enter each number once — everything weekly is derived.** Two rules matter here:
+- **Weekly health** is computed from that week's daily logs by `syncWeekSurvey_`,
+  called automatically at the end of `saveDaily`. There is no weekly survey form
+  any more; it asked the same eleven questions as the daily check-in. Thresholds
+  (`WEEK_EXERCISE_DAYS` 3, `WEEK_QUIETTIME_DAYS` 4) match what the old form asked in
+  words; yes/no fields are "did this happen at all this week", 1-10 scales average
+  the days logged. Rows land in the same `survey` blob the anonymous device survey
+  uses, so the base health score needs no extra plumbing.
+- **Ministry KPIs** are typed per day into the `kpiDaily` blob; `saveMyKpiDay` then
+  recomputes that week's figure into `entries` (the array the dashboard reads) using
+  the metric's own sum/latest/avg rule. Correcting Tuesday only changes Tuesday.
+  The aggregation rule lives in the frontend taxonomy, so the client sends it and the
+  server validates it's one of the three — a wrong mode can only misaggregate that
+  ministry's own metric.
+  **Consequence to know:** for a ministry+week that has daily rows, those days are
+  the source of truth. A leader editing the same weekly cell on the dashboard will
+  be overwritten the next time someone logs a day for it.
 
 ## Deploy rules — do not break
 - **Netlify:** push to `main` → auto-deploy (GitHub integration on the `transcendent-crostata-c9b7f4`
@@ -81,5 +99,13 @@ all Khmer must come from `BUILTIN_KM` or be added by hand.
   (still loggable in their ministries, just not shown on the dashboard summary).
 
 ## On the horizon (not yet built)
-- Wiring the health score to the daily logs (`weeklyHealthFromLogs` hook exists) so the
-  score comes from individual entries, then optionally retiring the anonymous survey.
+- **The Bible Recap readings.** `public/bible-plan.js` ships with `days: []` on purpose.
+  The plan is the Blue Letter Bible chronological one; paste the 365 readings in order
+  and the card starts showing "day N — next: John 4". Until then the Bible habit is a
+  plain daily tick. Don't fill this from memory — real people follow it daily.
+- **Retiring the anonymous device survey.** Staff weekly health is now derived from
+  daily logs (done), so the device-based survey on the dashboard is the only remaining
+  path into `survey`. It can go once everyone has a profile.
+- **Real PWA icons.** `icon-180.png` / `icon-512.png` are still generated placeholders.
+- **Web push for the daily nudge.** iOS 16.4+ supports it for installed PWAs; one
+  reminder at a chosen time is the difference between a daily tool and a forgotten one.

@@ -294,7 +294,11 @@ async function saveDaily(username, pin, dateStr, payload) {
   };
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('dailyLogs', rows);
-  return getMyLogs(username, pin);
+  // The week's health row follows from the days — no second form to fill in.
+  const week = await syncWeekSurvey_(s, rec.week, rows);
+  const out = await getMyLogs(username, pin);
+  out.week = week;
+  return out;
 }
 
 /* habitConfig: pass the person's habit config for the MENTOR view and results
@@ -583,46 +587,73 @@ async function saveGoals(username, pin, week, items) {
   return { ok: true, goals: goalsFor_(rows, s.id) };
 }
 
-/* ==================== weekly check-in → base health survey ====================
-   Feeds the same 'survey' blob the anonymous device-based survey writes to, so
-   the base health score picks it up with no extra plumbing. Identified by a
-   random per-staff token stored on the staff row and never exposed through
+/* ==================== weekly health, derived from the daily log ====================
+   There is no separate weekly survey form any more: it asked the same eleven
+   questions as the daily check-in, just summarised, so people were entering
+   the same information twice. The week's row is now computed from that week's
+   daily logs every time a day is saved.
+
+   It writes into the same 'survey' blob the anonymous device survey uses, so
+   the base health score picks it up with no extra plumbing. Rows are keyed by
+   a random per-staff token held on the staff record and never exposed through
    publicStaff_ — one person is one row per week, but nobody reading the survey
-   can tie a row back to a name. */
+   can tie a row back to a name.
+
+   Thresholds match what the old form asked in words ("exercised 3+ days",
+   "regular quiet time"); the yes/no ones are "did this happen at all this
+   week", and the 1-10 scales average the days actually logged. */
+const WEEK_EXERCISE_DAYS = 3;
+const WEEK_QUIETTIME_DAYS = 4;
+
 function surveyTokenFor_(rec) {
   if (!rec.surveyToken) rec.surveyToken = 'st' + crypto.randomBytes(9).toString('hex');
   return rec.surveyToken;
 }
 
-async function saveWeeklyCheckin(username, pin, week, payload) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
-  const wk = finiteNum_(week, 1, 52);
-  if (wk == null) return { ok: false, err: 'bad_week' };
+function weekSurveyFrom_(logs, s, token, wk) {
+  const days = logs.filter(function (r) { return Number(r.week) === wk; });
+  const anyOf = function (k) { return days.some(function (r) { return !!r[k]; }) ? 1 : 0; };
+  const countOf = function (k) { return days.filter(function (r) { return !!r[k]; }).length; };
+  const meanOf = function (k) {
+    const vals = days.map(function (r) { return r[k]; }).filter(function (v) { return v != null && !isNaN(Number(v)); });
+    if (!vals.length) return 0;
+    return Math.round(vals.reduce(function (a, b) { return a + Number(b); }, 0) / vals.length);
+  };
+  const sumOf = function (k) {
+    return days.reduce(function (a, r) { return a + (Number(r[k]) || 0); }, 0);
+  };
+  return {
+    campus: s.campus, week: wk, device: token,
+    lonely: meanOf('lonely'), clarity: meanOf('clarity'), growth: meanOf('growth'),
+    porn: anyOf('porn'), oneOnOne: anyOf('oneOnOne'), sharedFaith: anyOf('sharedFaith'),
+    sabbath: anyOf('sabbath'),
+    exercise: countOf('workout') >= WEEK_EXERCISE_DAYS ? 1 : 0,
+    quietTime: countOf('quietTime') >= WEEK_QUIETTIME_DAYS ? 1 : 0,
+    debt: s.debt ? 1 : 0,
+    langHours: sumOf('langHours'), minHours: sumOf('minHours'),
+    days: days.length,
+    updated: new Date().toISOString()
+  };
+}
+
+/* Recompute and store the week's survey row. Returns it so the UI can show
+   what the base will see without asking for any of it again. */
+async function syncWeekSurvey_(s, wk, dailyRows) {
   const staffRows = await getStaff_();
   const si = staffRows.findIndex(function (r) { return r.id === s.id; });
-  if (si === -1) return { ok: false };
+  if (si === -1) return null;
   const token = surveyTokenFor_(staffRows[si]);
   await saveStaff_(staffRows);
 
-  const p = payload || {};
+  const mine = dailyRows.filter(function (r) { return r.staffId === s.id; });
+  const rec = weekSurveyFrom_(mine, staffRows[si], token, wk);
   const rows = await getSurvey_();
   const idx = rows.findIndex(function (r) {
     return r.campus === s.campus && Number(r.week) === wk && r.device === token;
   });
-  const rec = {
-    campus: s.campus, week: wk, device: token,
-    lonely: finiteNum_(p.lonely, 1, 10) || 0, clarity: finiteNum_(p.clarity, 1, 10) || 0,
-    porn: p.porn ? 1 : 0, oneOnOne: p.oneOnOne ? 1 : 0, exercise: p.exercise ? 1 : 0,
-    quietTime: p.quietTime ? 1 : 0, debt: p.debt ? 1 : 0,
-    langHours: finiteNum_(p.langHours, 0, 200) || 0, minHours: finiteNum_(p.minHours, 0, 200) || 0,
-    sharedFaith: p.sharedFaith ? 1 : 0, sabbath: p.sabbath ? 1 : 0,
-    growth: finiteNum_(p.growth, 1, 10) || 0,
-    updated: new Date().toISOString()
-  };
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('survey', rows);
-  return { ok: true, week: wk };
+  return rec;
 }
 
 /* One call for everything the staff home page needs beyond the daily logs. */
@@ -630,6 +661,7 @@ async function getMyWeekly(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   const goals = goalsFor_(await getGoals_(), s.id);
+  // Read-only now — these are derived from the daily logs, not filled in.
   let checkins = [];
   if (s.surveyToken) {
     checkins = (await getSurvey_())
@@ -639,7 +671,7 @@ async function getMyWeekly(username, pin) {
           week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
           oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
           langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
-          sabbath: r.sabbath, growth: r.growth
+          sabbath: r.sabbath, growth: r.growth, days: r.days || 0
         };
       })
       .sort(function (a, b) { return b.week - a.week; });
@@ -654,7 +686,7 @@ async function getMyWeekly(username, pin) {
 async function getMyMinistry(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  const out = {};
+  const out = {}, daily = {};
   if (s.ministry) {
     (await getEntries_()).forEach(function (r) {
       if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
@@ -662,8 +694,15 @@ async function getMyMinistry(username, pin) {
       if (!out[r.metric]) out[r.metric] = {};
       out[r.metric][String(r.week)] = Number(r.value);
     });
+    // Per-day values so the UI can show what's already logged for today and
+    // for the rest of this week.
+    (await getKpiDaily_()).forEach(function (r) {
+      if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
+      if (!daily[r.metric]) daily[r.metric] = {};
+      daily[r.metric][r.date] = Number(r.value);
+    });
   }
-  return { ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '', entries: out };
+  return { ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '', entries: out, daily: daily };
 }
 
 async function saveMyMinistry(username, pin, week, updates) {
@@ -694,6 +733,86 @@ async function saveMyMinistry(username, pin, week, updates) {
   return getMyMinistry(username, pin);
 }
 
+/* ==================== ministry KPIs, logged day by day ====================
+   Staff asked to stop entering a weekly figure on top of daily work. So the
+   day is what gets typed, and the week's number in `entries` — the one the
+   dashboard reads — is recomputed from those days. One place to enter, and
+   the weekly total follows.
+
+   Daily rows live in their own blob so a correction to Tuesday just changes
+   Tuesday. The weekly figure is always derived, never typed twice.
+
+   Aggregation has to match how the dashboard reads each metric, and that rule
+   (sum / latest / avg) lives in the frontend taxonomy, so the client sends it
+   and the server validates it's one of the three. Worst case a wrong mode
+   misaggregates that ministry's own metric — it can't reach anything else. */
+const KPI_MODES = ['sum', 'latest', 'avg'];
+
+async function getKpiDaily_() { return readJSON('kpiDaily', []); }
+
+function rollUpKpi_(dayRows, mode) {
+  const vals = dayRows.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+  if (!vals.length) return null;
+  if (mode === 'latest') return Number(vals[vals.length - 1].value);
+  const nums = vals.map(function (r) { return Number(r.value) || 0; });
+  if (mode === 'avg') return Math.round((nums.reduce(function (a, b) { return a + b; }, 0) / nums.length) * 10) / 10;
+  return nums.reduce(function (a, b) { return a + b; }, 0);
+}
+
+async function saveMyKpiDay(username, pin, dateStr, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  const date = str_(dateStr, 10);
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, err: 'bad_date' };
+  const wk = isoWeek_(date);
+
+  const daily = await getKpiDaily_();
+  const touched = {};
+  (Array.isArray(updates) ? updates : []).forEach(function (u) {
+    const metric = str_(u && u.metric, 80);
+    if (!metric || SENSITIVE.indexOf(metric) > -1) return;
+    const mode = KPI_MODES.indexOf(u && u.mode) > -1 ? u.mode : 'sum';
+    touched[metric] = mode;
+    const idx = daily.findIndex(function (r) {
+      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+        r.metric === metric && r.date === date;
+    });
+    if (u.value === null || u.value === '' || u.value === undefined) {
+      if (idx > -1) daily.splice(idx, 1);
+      return;
+    }
+    const value = finiteNum_(u.value, -1e9, 1e9);
+    if (value == null) return;
+    const rec = {
+      campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric,
+      date: date, week: wk, value: value, staffId: s.id, updated: new Date().toISOString()
+    };
+    if (idx > -1) daily[idx] = rec; else daily.push(rec);
+  });
+  await writeJSON('kpiDaily', daily);
+
+  // Push the derived weekly totals into the shared entries the dashboard reads.
+  const entries = await getEntries_();
+  const now = new Date().toISOString();
+  Object.keys(touched).forEach(function (metric) {
+    const days = daily.filter(function (r) {
+      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+        r.metric === metric && Number(r.week) === wk;
+    });
+    const total = rollUpKpi_(days, touched[metric]);
+    const ei = entries.findIndex(function (r) {
+      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+        r.metric === metric && String(r.week) === String(wk);
+    });
+    if (total === null) { if (ei > -1) entries.splice(ei, 1); return; }
+    if (ei > -1) { entries[ei].value = total; entries[ei].updated = now; }
+    else entries.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, value: total, updated: now });
+  });
+  await writeJSON('entries', entries);
+  return getMyMinistry(username, pin);
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getData: function (a) { return getData(a[0]); },
@@ -715,9 +834,9 @@ const HANDLERS = {
   getMyWeekly: function (a) { return getMyWeekly(a[0], a[1]); },
   saveMyHabits: function (a) { return saveMyHabits(a[0], a[1], a[2], a[3]); },
   saveGoals: function (a) { return saveGoals(a[0], a[1], a[2], a[3]); },
-  saveWeeklyCheckin: function (a) { return saveWeeklyCheckin(a[0], a[1], a[2], a[3]); },
   getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
   saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
+  saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
 };

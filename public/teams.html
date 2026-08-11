@@ -143,6 +143,13 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .trend.up { color:#0a7d3c; background:#e3f6ea; }
 .trend.down { color:#b3261e; background:#fbe6e6; }
 .trend.flat { color:#6b6557; background:#efeae0; }
+/* collapsed sections — keep the front page short */
+.discloseBtn { display:flex; width:100%; align-items:center; justify-content:space-between; gap:12px;
+  background:transparent; border:0; border-top:1px solid #f0eadf; padding:13px 0 4px; margin-top:6px;
+  font-family:inherit; font-size:14.5px; text-align:left; color:#17150F; cursor:pointer; }
+.card.slim .discloseBtn { border-top:0; padding-top:2px; margin-top:0; }
+.discloseBtn .chev { color:#6b6557; font-size:13px; }
+.card.slim { padding:12px 14px; }
 .linkbtn.inline { display:inline; width:auto; padding:0; text-decoration:underline; }
 .msg { position:fixed; left:50%; bottom:86px; transform:translateX(-50%); background:#17150F; color:#FAF6F0;
   padding:10px 18px; border-radius:999px; font-size:14px; z-index:20; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90%; }
@@ -256,14 +263,9 @@ function metricsFor(campusId, dept, ministry){
   return list.filter(function(m){ return SENSITIVE.indexOf(m) === -1; });
 }
 
-var TOGGLES = [
-  {id:'workout',    text:'Did I work out today?'},
-  {id:'bible',      text:'Did I read my Bible today?'},
-  {id:'quietTime',  text:'Did I have a quiet time / prayer today?'},
-  {id:'oneOnOne',   text:'Did I have a one-on-one today?'},
-  {id:'sharedFaith',text:'Did I share my faith today?'},
-  {id:'sabbath',    text:'Is today a sabbath / rest day?'}
-];
+/* The yes/no dailies are habit tiles now (see HABIT_LIBRARY) — one tap each
+   instead of a list of questions. Only the 1-10 scales still need asking, and
+   they sit in the collapsed part of the Today card. */
 var MOODS = [
   {id:'clarity', text:'How clear am I on what to do today?'},
   {id:'growth',  text:'How would I rate my growth today?'}
@@ -274,7 +276,8 @@ var S = {
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'home',
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], goalDraft:null, ministry:null, kpiDraft:{}, weekDraft:{},
-  habits:null, bibleDay:0, habitEdit:false, sharedHabits:[]
+  habits:null, bibleDay:0, habitEdit:false, sharedHabits:[],
+  todayOpen:false, weekOpen:false
 };
 
 var HABIT_LIBRARY = [
@@ -481,7 +484,6 @@ function render(){
   var m=document.getElementById('main');
   if(S.view==='home') m.innerHTML=homeHtml();
   else if(S.view==='week') m.innerHTML=weekHtml();
-  else if(S.view==='today') m.innerHTML=todayHtml();
   else if(S.view==='me') m.innerHTML=meHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
@@ -516,9 +518,10 @@ function phaseBanner(phase, wk){
     if(hasGoals && done<tot)
       return '<div class="banner big">✅ <strong>End of the week.</strong> You’ve marked '+done+' of '+tot+
         ' goals done. <button class="linkbtn inline" id="jumpGoals">Close out week '+wk+'</button></div>';
-    if(!checkinForWeek(wk))
-      return '<div class="banner big">💚 <strong>End of the week.</strong> Two minutes on your weekly check-in?'+
-        ' <button class="linkbtn inline" id="jumpCheckin">Do it now</button></div>';
+    if(!thisWeekLogs().length)
+      return '<div class="banner big">💚 <strong>End of the week.</strong> No days logged yet — '+
+        'your week’s health figures come straight from these.'+
+        ' <button class="linkbtn inline" id="jumpToday">Log today</button></div>';
   }
   return '';
 }
@@ -550,10 +553,49 @@ function homeHtml(){
   /* Today's habits and Bible reading come first on ordinary days; on planning
      and review days the weekly cards lead instead. */
   var daily = bibleCardHtml() + habitsCardHtml();
-  var weekly = goalsCardHtml(wk) + weeklyCheckinCardHtml(wk);
+  var weekly = goalsCardHtml(wk);
   h += (phase==='work') ? (daily + weekly) : (weekly + daily);
   h += kpiCardHtml(wk);
+  h += weekSummaryHtml(wk);
   return h;
+}
+
+/* One line, not a form. The week's health figures are computed from the daily
+   check-ins — the old weekly survey asked the same eleven questions over
+   again, so it's gone. Tap to see what the base will actually receive. */
+function weekSummaryHtml(wk){
+  var c=checkinForWeek(wk);
+  var wl=thisWeekLogs();
+  if(!c && !wl.length) return '';
+  var open=S.weekOpen;
+  var h='<div class="card slim"><button class="discloseBtn" id="weekToggle">'+
+    '<span><strong>💚 Week '+wk+' health</strong>'+
+    '<div class="pmeta">'+(wl.length? wl.length+' day'+(wl.length===1?'':'s')+' logged — this rolls up on its own'
+                                    : 'log a day and this fills itself in')+'</div></span>'+
+    '<span class="chev">'+(open?'▴':'▾')+'</span></button>';
+  if(open && c){
+    var yn=function(v){ return v? 'yes':'no'; };
+    var rows=[
+      ['Loneliness (avg)', c.lonely||'—'],
+      ['Clarity (avg)', c.clarity||'—'],
+      ['Growth (avg)', c.growth||'—'],
+      ['Exercised 3+ days', yn(c.exercise)],
+      ['Regular quiet time', yn(c.quietTime)],
+      ['One-on-one', yn(c.oneOnOne)],
+      ['Shared faith', yn(c.sharedFaith)],
+      ['Sabbath', yn(c.sabbath)],
+      ['Language hours', c.langHours||0],
+      ['Ministry hours', c.minHours||0]
+    ];
+    h+='<div style="margin-top:10px">';
+    rows.forEach(function(r){
+      h+='<div class="row"><span class="rowName">'+esc(r[0])+'</span><span class="pctSm">'+esc(String(r[1]))+'</span></div>';
+    });
+    h+='<p class="hint" style="margin-top:8px">Leaders only ever see these pooled with everyone else’s — never your name.</p></div>';
+  } else if(open){
+    h+='<p class="sub" style="margin:10px 0 0">Nothing yet for this week. It appears once you log a day.</p>';
+  }
+  return h+'</div>';
 }
 
 /* --- today's habits: the daily tool --- */
@@ -598,9 +640,51 @@ function habitsCardHtml(){
       '<span class="hRun">'+(run>0?'🔥 '+run:'&nbsp;')+'</span></button>';
   });
   h+='</div>';
-  h+='<button class="linkbtn" id="editHabits" style="margin-top:4px">Choose my habits</button>';
-  h+='<div class="pmeta" style="margin-top:6px">Hours, mood and the private questions are on <button class="linkbtn inline" id="goToday">the full daily check-in</button>.</div>';
+
+  /* Hours, mood and the private questions used to live on a separate Today
+     screen. They're the same daily entry, so they're folded in here behind a
+     disclosure — one place to log the day, without a wall of inputs. */
+  var d=S.todayDraft;
+  if(log && !d._loaded){
+    ['langHours','minHours','clarity','growth','lonely','porn'].forEach(function(k){
+      if(d[k]===undefined && log[k]!==undefined && log[k]!==null) d[k]=log[k];
+    });
+    d._loaded=true;
+  }
+  h+='<button class="discloseBtn" id="moreToday"><span><strong>Hours, mood &amp; private</strong>'+
+     '<div class="pmeta">'+todaySummaryLine(log)+'</div></span>'+
+     '<span class="chev">'+(S.todayOpen?'▴':'▾')+'</span></button>';
+  if(S.todayOpen){
+    h+='<div class="qBlock"><div class="qText">Language study today</div><div class="numIn">'+
+       '<input type="number" inputmode="decimal" min="0" step="0.5" id="n_langHours" value="'+(d.langHours!=null?d.langHours:'')+'"> hours</div></div>'+
+       '<div class="qBlock"><div class="qText">Community ministry today</div><div class="numIn">'+
+       '<input type="number" inputmode="decimal" min="0" step="0.5" id="n_minHours" value="'+(d.minHours!=null?d.minHours:'')+'"> hours</div></div>';
+    MOODS.forEach(function(q){
+      h+='<div class="qBlock"><div class="qText">'+esc(q.text)+'</div><div class="scale">';
+      for(var i=1;i<=10;i++) h+='<button data-scale="'+q.id+'|'+i+'" class="'+(Number(d[q.id])===i?'on':'')+'">'+i+'</button>';
+      h+='</div></div>';
+    });
+    h+='<div class="privateWrap"><p class="hint" style="margin:0 0 6px">🔒 Only you'+
+       (S.me.mentorId?' and '+esc(nameOf(S.me.mentorId)):'')+'. Leaders see anonymous totals only.</p>'+
+       '<div class="qBlock"><div class="qText">How lonely do I feel today? <span class="hint">(1 = not at all, 10 = very)</span></div><div class="scale">';
+    for(var j=1;j<=10;j++) h+='<button data-scale="lonely|'+j+'" class="'+(Number(d.lonely)===j?'on':'')+'">'+j+'</button>';
+    h+='</div></div><div class="qBlock"><div class="qText">Did I look at porn today?</div><div class="seg">'+
+       '<button data-yn="porn|1" class="'+(d.porn===true||d.porn===1?'on bad':'')+'">Yes</button>'+
+       '<button data-yn="porn|0" class="'+(d.porn===false||d.porn===0?'on':'')+'">No</button></div></div></div>';
+    h+='<button class="btn" id="saveDayBtn">Save today</button>';
+  }
+  h+='<button class="linkbtn" id="editHabits" style="margin-top:8px">Choose my habits</button>';
   return h+'</div>';
+}
+
+function todaySummaryLine(log){
+  if(!log) return 'Not logged yet';
+  var bits=[];
+  if(log.langHours) bits.push(log.langHours+'h language');
+  if(log.minHours) bits.push(log.minHours+'h ministry');
+  if(log.clarity!=null) bits.push('clarity '+log.clarity);
+  if(log.growth!=null) bits.push('growth '+log.growth);
+  return bits.length ? bits.join(' · ') : 'Nothing added yet';
 }
 
 /* --- Bible reading plan: position, not just a checkbox --- */
@@ -635,13 +719,13 @@ function bibleCardHtml(){
   return h+'</div>';
 }
 
-/* --- Week tab: goals, check-in, KPIs, all the weekly rhythm in one place --- */
+/* --- Week tab: goals, KPIs and the derived health summary --- */
 function weekHtml(){
   var wk=thisWeek();
   var h='<h2>Week '+wk+' <small>· '+esc(campusName(S.me.campus))+'</small></h2>';
   h+=goalsCardHtml(wk);
-  h+=weeklyCheckinCardHtml(wk);
   h+=kpiCardHtml(wk);
+  h+=weekSummaryHtml(wk);
   return h;
 }
 
@@ -718,44 +802,6 @@ function pastGoalsHtml(wk){
   return h+'</div>';
 }
 
-/* --- weekly check-in: feeds the base health survey anonymously --- */
-var WEEK_TOGGLES=[
-  {id:'exercise',   text:'Did you exercise this week?'},
-  {id:'quietTime',  text:'Regular quiet time this week?'},
-  {id:'oneOnOne',   text:'Had a one-on-one this week?'},
-  {id:'sharedFaith',text:'Shared your faith this week?'},
-  {id:'sabbath',    text:'Took a sabbath / rest day?'}
-];
-function weeklyCheckinCardHtml(wk){
-  var saved=checkinForWeek(wk);
-  var d=S.weekDraft;
-  if(saved && !d._loaded){ Object.keys(saved).forEach(function(k){ if(k!=='week') d[k]=saved[k]; }); d._loaded=true; }
-
-  var h='<h3>💚 Weekly check-in · week '+wk+'</h3>'+
-    '<div class="card"><p class="sub" style="margin:4px 0 10px">'+
-    (saved?'Saved for this week — you can update it any time. ':'')+
-    'This rolls into the base health score. Leaders only ever see anonymous totals, never your name.</p>';
-  WEEK_TOGGLES.forEach(function(q){
-    h+='<div class="qBlock"><div class="qText">'+esc(q.text)+'</div><div class="seg">'+
-      '<button data-wyn="'+q.id+'|1" class="'+(d[q.id]==1?'on':'')+'">Yes</button>'+
-      '<button data-wyn="'+q.id+'|0" class="'+(d[q.id]!=null&&d[q.id]==0?'on':'')+'">No</button></div></div>';
-  });
-  [['clarity','How clear are you on what to do?'],['growth','How would you rate your growth?']].forEach(function(q){
-    h+='<div class="qBlock"><div class="qText">'+esc(q[1])+'</div><div class="scale">';
-    for(var i=1;i<=10;i++) h+='<button data-wscale="'+q[0]+'|'+i+'" class="'+(Number(d[q[0]])===i?'on':'')+'">'+i+'</button>';
-    h+='</div></div>';
-  });
-  h+='<div class="privateWrap"><p class="hint" style="margin:0 0 6px">🔒 Private — pooled into anonymous totals only.</p>'+
-     '<div class="qBlock"><div class="qText">How lonely have you felt this week? <span class="hint">(1 = not at all, 10 = very)</span></div><div class="scale">';
-  for(var j=1;j<=10;j++) h+='<button data-wscale="lonely|'+j+'" class="'+(Number(d.lonely)===j?'on':'')+'">'+j+'</button>';
-  h+='</div></div>'+
-     '<div class="qBlock"><div class="qText">Any porn this week?</div><div class="seg">'+
-     '<button data-wyn="porn|1" class="'+(d.porn==1?'on bad':'')+'">Yes</button>'+
-     '<button data-wyn="porn|0" class="'+(d.porn!=null&&d.porn==0?'on':'')+'">No</button></div></div></div>';
-  h+='<button class="btn" id="saveWeekBtn">'+(saved?'Update check-in':'Save check-in')+'</button></div>';
-  return h;
-}
-
 /* --- your ministry's KPIs, editable without leaving this page --- */
 function kpiCardHtml(wk){
   if(!S.me.ministry){
@@ -768,26 +814,27 @@ function kpiCardHtml(wk){
     return '<h3>📊 My ministry KPIs</h3><div class="card"><p class="sub" style="margin:4px 0">'+
       'No KPIs are defined for '+esc(S.me.ministry)+' yet.</p></div>';
   }
+  /* Enter today; the week's figure is derived from the days on the server, so
+     there's no separate weekly number to keep in step. */
   var entries=(S.ministry&&S.ministry.entries)||{};
-  var h='<h3>📊 '+esc(S.me.ministry)+' KPIs · week '+wk+'</h3>'+
-    '<div class="card"><p class="sub" style="margin:4px 0 10px">The same numbers leadership sees — log them here instead of hunting through the dashboard.</p>';
+  var daily=(S.ministry&&S.ministry.daily)||{};
+  var today=todayStr();
+  var h='<h3>📊 '+esc(S.me.ministry)+' <small>· today</small></h3>'+
+    '<div class="card"><p class="sub" style="margin:4px 0 10px">Log today’s numbers — week '+wk+
+    ' adds up on its own.</p>';
   metrics.forEach(function(metric){
-    var wks=entries[metric]||{};
     var mode=modeOf(metric);
+    var days=daily[metric]||{};
     var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
-      : (wks[String(wk)]!==undefined ? wks[String(wk)] : '');
-    var totals=Object.keys(wks).map(function(k){return Number(wks[k]);}).filter(function(n){return !isNaN(n);});
-    var ctx='—';
-    if(totals.length){
-      if(mode==='latest'){ var lastW=Math.max.apply(null,Object.keys(wks).map(Number)); ctx='now '+wks[String(lastW)]; }
-      else if(mode==='avg'){ ctx='avg '+(totals.reduce(function(a,b){return a+b;},0)/totals.length).toFixed(1); }
-      else ctx='total '+totals.reduce(function(a,b){return a+b;},0);
-    }
-    h+='<div class="row"><span class="rowName">'+esc(metric)+'<div class="pmeta">'+esc(ctx)+
-      (mode==='sum'?' · enter this week only':'')+'</div></span>'+
-      '<input type="number" inputmode="decimal" class="kpiIn" data-kpi="'+esc(metric)+'" value="'+esc(String(cur))+'"></div>';
+      : (days[today]!==undefined ? days[today] : '');
+    var weekVal=(entries[metric]||{})[String(wk)];
+    var label = mode==='latest' ? 'now' : (mode==='avg' ? 'week avg' : 'week total');
+    h+='<div class="row"><span class="rowName">'+esc(metric)+
+      '<div class="pmeta">'+label+' '+(weekVal===undefined?'—':weekVal)+'</div></span>'+
+      '<input type="number" inputmode="decimal" class="kpiIn" data-kpi="'+esc(metric)+
+      '" data-kpimode="'+mode+'" value="'+esc(String(cur))+'"></div>';
   });
-  h+='<button class="btn" id="saveKpiBtn">Save week '+wk+'</button></div>';
+  h+='<button class="btn" id="saveKpiBtn">Save today</button></div>';
   return h;
 }
 
@@ -818,42 +865,6 @@ function registerHtml(){
     '<button class="linkbtn" id="toLogin">I already have a profile</button></div>';
 }
 
-/* ---------- today ---------- */
-function todayHtml(){
-  var d=S.todayDraft;
-  var existing=null; S.logs.forEach(function(l){ if(l.date===todayStr()) existing=l; });
-  if(existing && !d._loaded){ Object.keys(existing).forEach(function(k){ if(k!=='date'&&k!=='week') d[k]=existing[k]; }); d._loaded=true; }
-  var h='<h2>Today <small>· '+esc(todayStr())+'</small></h2><p class="sub">A quick daily check-in. Your hours and habits build your streaks.</p>';
-
-  h+='<div class="card"><div class="qBlock"><div class="qText">Language study today</div><div class="numIn"><input type="number" inputmode="decimal" min="0" step="0.5" id="n_langHours" value="'+(d.langHours!=null?d.langHours:'')+'"> hours</div></div>'+
-     '<div class="qBlock"><div class="qText">Community ministry today</div><div class="numIn"><input type="number" inputmode="decimal" min="0" step="0.5" id="n_minHours" value="'+(d.minHours!=null?d.minHours:'')+'"> hours</div></div></div>';
-
-  h+='<div class="card">';
-  TOGGLES.forEach(function(q){
-    h+='<div class="qBlock"><div class="qText">'+esc(q.text)+'</div><div class="seg">'+
-      '<button data-yn="'+q.id+'|1" class="'+(d[q.id]===true||d[q.id]===1?'on':'')+'">Yes</button>'+
-      '<button data-yn="'+q.id+'|0" class="'+(d[q.id]===false||d[q.id]===0?'on':'')+'">No</button></div></div>';
-  });
-  MOODS.forEach(function(q){
-    h+='<div class="qBlock"><div class="qText">'+esc(q.text)+'</div><div class="scale">';
-    for(var i=1;i<=10;i++) h+='<button data-scale="'+q.id+'|'+i+'" class="'+(Number(d[q.id])===i?'on':'')+'">'+i+'</button>';
-    h+='</div></div>';
-  });
-  h+='</div>';
-
-  // private block
-  h+='<div class="privateWrap"><h3 style="margin:10px 0 2px">🔒 Private</h3>'+
-     '<p class="hint" style="margin-bottom:4px">Only you'+(S.me.mentorId?' and '+esc(nameOf(S.me.mentorId)):'')+' can see these. Leaders only ever see anonymous totals.</p>';
-  h+='<div class="qBlock"><div class="qText">How lonely do I feel today? <span class="hint">(1 = not at all, 10 = very)</span></div><div class="scale">';
-  for(var j=1;j<=10;j++) h+='<button data-scale="lonely|'+j+'" class="'+(Number(d.lonely)===j?'on':'')+'">'+j+'</button>';
-  h+='</div></div>';
-  h+='<div class="qBlock"><div class="qText">Did I look at porn today?</div><div class="seg">'+
-     '<button data-yn="porn|1" class="'+(d.porn===true||d.porn===1?'on bad':'')+'">Yes</button>'+
-     '<button data-yn="porn|0" class="'+(d.porn===false||d.porn===0?'on':'')+'">No</button></div></div></div>';
-
-  h+='<button class="btn" id="saveDayBtn">'+(existing?'Update today':'Save today')+'</button>';
-  return h;
-}
 
 /* ---------- me ---------- */
 function meHtml(){
@@ -1134,6 +1145,13 @@ function saveTodayHabits(map){
     render();
   });
 }
+/* Keep the locally-held derived week row in step with what the server just
+   recomputed, so the summary updates without another round trip. */
+function upsertCheckin(week){
+  if(!week) return;
+  S.checkins=(S.checkins||[]).filter(function(c){ return Number(c.week)!==Number(week.week); });
+  S.checkins.unshift(week);
+}
 function todayHabitMap(){
   var log=logForDate(todayStr());
   var map={};
@@ -1142,14 +1160,62 @@ function todayHabitMap(){
 }
 
 function bindHome(){
-  var gt=document.getElementById('goToday');
-  if(gt) gt.onclick=function(){ S.view='today'; render(); };
   var gp=document.getElementById('goProfile');
   if(gp) gp.onclick=function(){ S.view='profile'; render(); };
   var jg=document.getElementById('jumpGoals');
   if(jg) jg.onclick=function(){ S.view='week'; render(); };
-  var jc=document.getElementById('jumpCheckin');
-  if(jc) jc.onclick=function(){ S.view='week'; render(); };
+  var jt=document.getElementById('jumpToday');
+  if(jt) jt.onclick=function(){ S.view='home'; S.todayOpen=true; render(); };
+  var mt=document.getElementById('moreToday');
+  if(mt) mt.onclick=function(){ S.todayOpen=!S.todayOpen; render(); };
+  var wt=document.getElementById('weekToggle');
+  if(wt) wt.onclick=function(){ S.weekOpen=!S.weekOpen; render(); };
+
+  // hours / mood / private — same daily record as the habit tiles.
+  // Keep typed hours in the draft as they're typed: tapping a mood scale
+  // re-renders the card and would otherwise blank a half-entered number.
+  ['langHours','minHours'].forEach(function(k){
+    var el=document.getElementById('n_'+k);
+    if(el) el.oninput=function(){ S.todayDraft[k] = el.value===''? undefined : Number(el.value); };
+  });
+  document.querySelectorAll('[data-scale]').forEach(function(b){
+    b.onclick=function(){ var p=b.getAttribute('data-scale').split('|'); S.todayDraft[p[0]]=Number(p[1]); render(); };
+  });
+  document.querySelectorAll('[data-yn]').forEach(function(b){
+    b.onclick=function(){ var p=b.getAttribute('data-yn').split('|'); S.todayDraft[p[0]]=Number(p[1])===1; render(); };
+  });
+  var sdb=document.getElementById('saveDayBtn');
+  if(sdb) sdb.onclick=function(){
+    if(S.busy) return;
+    var d=S.todayDraft;
+    var lh=document.getElementById('n_langHours'), mh=document.getElementById('n_minHours');
+    if(lh) d.langHours = lh.value===''? 0 : Number(lh.value);
+    if(mh) d.minHours  = mh.value===''? 0 : Number(mh.value);
+    S.busy=true; sdb.disabled=true; sdb.textContent='…';
+    var map=todayHabitMap();
+    var log=logForDate(todayStr())||{};
+    var payload={
+      langHours:d.langHours||0, minHours:d.minHours||0,
+      workout:log.workout, bible:log.bible, quietTime:log.quietTime,
+      oneOnOne:log.oneOnOne, sharedFaith:log.sharedFaith, sabbath:log.sabbath,
+      clarity:d.clarity, growth:d.growth, lonely:d.lonely, porn:d.porn,
+      habits:map
+    };
+    ['workout','bible','quietTime','oneOnOne','sharedFaith','sabbath'].forEach(function(k){
+      if(map[k]!==undefined) payload[k]=map[k];
+    });
+    run('saveDaily',[S.auth.user,S.auth.pin,todayStr(),payload],function(r){
+      S.busy=false;
+      if(r.ok){
+        S.logs=r.logs;
+        if(r.habits) S.habits=r.habits;
+        // The week's health row is recomputed server-side from the days.
+        if(r.week) upsertCheckin(r.week);
+        S.todayDraft={}; showMsg('Saved');
+      } else showMsg('Could not save');
+      render();
+    });
+  };
 
   // --- daily habits ---
   document.querySelectorAll('[data-habit]').forEach(function(b){
@@ -1275,35 +1341,6 @@ function bindHome(){
     };
   });
 
-  // --- weekly check-in ---
-  document.querySelectorAll('[data-wyn]').forEach(function(b){
-    b.onclick=function(){
-      var p=b.getAttribute('data-wyn').split('|');
-      S.weekDraft[p[0]]=Number(p[1]); render();
-    };
-  });
-  document.querySelectorAll('[data-wscale]').forEach(function(b){
-    b.onclick=function(){
-      var p=b.getAttribute('data-wscale').split('|');
-      S.weekDraft[p[0]]=Number(p[1]); render();
-    };
-  });
-  var swb=document.getElementById('saveWeekBtn');
-  if(swb) swb.onclick=function(){
-    if(S.busy) return;
-    S.busy=true; swb.disabled=true; swb.textContent='…';
-    run('saveWeeklyCheckin',[S.auth.user,S.auth.pin,thisWeek(),S.weekDraft],function(d){
-      S.busy=false;
-      if(d.ok){
-        showMsg('Check-in saved — thank you');
-        run('getMyWeekly',[S.auth.user,S.auth.pin],function(w){
-          if(w.ok){ S.goals=w.goals||[]; S.checkins=w.checkins||[]; }
-          S.weekDraft={}; render();
-        });
-      } else { showMsg('Could not save check-in'); render(); }
-    });
-  };
-
   // --- ministry KPIs ---
   document.querySelectorAll('[data-kpi]').forEach(function(inp){
     inp.oninput=function(){ S.kpiDraft[inp.getAttribute('data-kpi')]=inp.value; };
@@ -1313,13 +1350,18 @@ function bindHome(){
     if(S.busy) return;
     var updates=[];
     document.querySelectorAll('[data-kpi]').forEach(function(inp){
-      updates.push({ metric:inp.getAttribute('data-kpi'), value: inp.value==='' ? null : Number(inp.value) });
+      updates.push({
+        metric:inp.getAttribute('data-kpi'),
+        mode:inp.getAttribute('data-kpimode')||'sum',
+        value: inp.value==='' ? null : Number(inp.value)
+      });
     });
     S.busy=true; skb.disabled=true; skb.textContent='…';
-    run('saveMyMinistry',[S.auth.user,S.auth.pin,thisWeek(),updates],function(d){
+    // Saves the DAY; the server rolls the week up from the days it holds.
+    run('saveMyKpiDay',[S.auth.user,S.auth.pin,todayStr(),updates],function(d){
       S.busy=false;
-      if(d.ok){ S.ministry=d; S.kpiDraft={}; showMsg('KPIs saved'); }
-      else showMsg('Could not save KPIs');
+      if(d.ok){ S.ministry=d; S.kpiDraft={}; showMsg('Saved — week total updated'); }
+      else showMsg('Could not save');
       render();
     });
   };
@@ -1378,24 +1420,6 @@ function bind(){
     run('staffRegister',[payload],function(d){
       if(d.ok){ S.auth={user:payload.username.toLowerCase(),pin:payload.pin}; S.me=d.staff; S.profile=d.profile; S.regMode=false; afterLogin(); showMsg('Profile created — add a photo!'); S.view='profile'; render(); }
       else { rb.disabled=false; rb.textContent='Create profile'; showMsg(d.err==='taken'?'That username is taken':'Check your details'); }
-    });
-  };
-
-  // today toggles/scales/nums
-  document.querySelectorAll('[data-yn]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-yn').split('|'); S.todayDraft[p[0]]=Number(p[1])===1; render(); }; });
-  document.querySelectorAll('[data-scale]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-scale').split('|'); S.todayDraft[p[0]]=Number(p[1]); render(); }; });
-  var nl=document.getElementById('n_langHours'); if(nl) nl.onchange=function(){ S.todayDraft.langHours=nl.value===''?null:Number(nl.value); };
-  var nm=document.getElementById('n_minHours'); if(nm) nm.onchange=function(){ S.todayDraft.minHours=nm.value===''?null:Number(nm.value); };
-  var sd=document.getElementById('saveDayBtn');
-  if(sd) sd.onclick=function(){
-    var d=S.todayDraft;
-    // capture any unblurred number inputs
-    if(nl) d.langHours=nl.value===''?null:Number(nl.value);
-    if(nm) d.minHours=nm.value===''?null:Number(nm.value);
-    sd.disabled=true; sd.textContent='Saving…';
-    run('saveDaily',[S.auth.user,S.auth.pin,todayStr(),d],function(res){
-      if(res.ok){ S.logs=res.logs; showMsg('✦ Saved for today'); S.view='me'; render(); }
-      else { sd.disabled=false; sd.textContent='Save today'; showMsg('Could not save'); }
     });
   };
 
