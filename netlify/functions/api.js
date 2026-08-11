@@ -602,8 +602,23 @@ async function saveGoals(username, pin, week, items) {
    Thresholds match what the old form asked in words ("exercised 3+ days",
    "regular quiet time"); the yes/no ones are "did this happen at all this
    week", and the 1-10 scales average the days actually logged. */
-const WEEK_EXERCISE_DAYS = 3;
-const WEEK_QUIETTIME_DAYS = 4;
+/* Thresholds are RATES over the days actually logged, not absolute day counts.
+   Counting absolute days conflated "didn't do it" with "didn't log it": someone
+   logging two days a week could never reach 3 workout days, so they scored zero
+   on exercise even having worked out both days — and that depressed score fed
+   the base health total, making the base look unhealthy when it was only
+   under-logged. Rates ask "how much of your logged week looked like this",
+   which is answerable however often you log.
+   (3/7 and 4/7 are the old "3+ days" and "regular" bars expressed as rates.) */
+const WEEK_EXERCISE_RATE = 3 / 7;
+const WEEK_QUIETTIME_RATE = 4 / 7;
+
+/* …but a rate off one or two days is noise, and one enthusiastic Monday
+   shouldn't speak for a whole week in the base total. Below this many logged
+   days the week is treated as not yet reportable: no survey row is written, and
+   any existing row for that week is removed. Tune freely — it's the one knob
+   that decides how much logging counts as "a week". */
+const MIN_WEEK_DAYS = 3;
 
 function surveyTokenFor_(rec) {
   if (!rec.surveyToken) rec.surveyToken = 'st' + crypto.randomBytes(9).toString('hex');
@@ -627,8 +642,8 @@ function weekSurveyFrom_(logs, s, token, wk) {
     lonely: meanOf('lonely'), clarity: meanOf('clarity'), growth: meanOf('growth'),
     porn: anyOf('porn'), oneOnOne: anyOf('oneOnOne'), sharedFaith: anyOf('sharedFaith'),
     sabbath: anyOf('sabbath'),
-    exercise: countOf('workout') >= WEEK_EXERCISE_DAYS ? 1 : 0,
-    quietTime: countOf('quietTime') >= WEEK_QUIETTIME_DAYS ? 1 : 0,
+    exercise: days.length && countOf('workout') / days.length >= WEEK_EXERCISE_RATE ? 1 : 0,
+    quietTime: days.length && countOf('quietTime') / days.length >= WEEK_QUIETTIME_RATE ? 1 : 0,
     debt: s.debt ? 1 : 0,
     langHours: sumOf('langHours'), minHours: sumOf('minHours'),
     days: days.length,
@@ -651,6 +666,17 @@ async function syncWeekSurvey_(s, wk, dailyRows) {
   const idx = rows.findIndex(function (r) {
     return r.campus === s.campus && Number(r.week) === wk && r.device === token;
   });
+
+  // Too few days to speak for a week: publish nothing, and withdraw anything
+  // published earlier for this week so a thin week can't sit in the base total.
+  if (rec.days < MIN_WEEK_DAYS) {
+    if (idx > -1) {
+      rows.splice(idx, 1);
+      await writeJSON('survey', rows);
+    }
+    return { pending: true, week: wk, days: rec.days, need: MIN_WEEK_DAYS };
+  }
+
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('survey', rows);
   return rec;

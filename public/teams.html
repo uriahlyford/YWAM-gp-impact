@@ -291,6 +291,9 @@ function myHabits(){
 }
 
 /* ---------- week helpers (must match isoWeek_ in netlify/functions/api.js) ---------- */
+/* Mirrors MIN_WEEK_DAYS in the API: below this many logged days the week isn't
+   scored or reported. Kept in step by hand — if you change one, change both. */
+var MIN_WEEK_DAYS = 3;
 function isoWeekOf(d){
   var y=d.getFullYear();
   var jan1=new Date(y,0,1);
@@ -556,17 +559,23 @@ function weekSummaryHtml(wk){
   // the pooled data — so the chain daily → your week → base health is visible
   // rather than something that happens off-screen.
   var score = c ? compositeOf(c) : null;
+  // No score until there's enough of a week to mean anything — showing a low
+  // number built from one day would just be wrong, and it isn't sent to the
+  // base either. Say how many more days instead.
+  var short = MIN_WEEK_DAYS - wl.length;
+  var sub = score!==null ? wl.length+' of 7 days logged'
+    : (wl.length===0 ? 'log a day and this starts filling in'
+                     : wl.length+' day'+(wl.length===1?'':'s')+' logged · '+short+' more for your score');
   var h='<div class="card slim"><button class="discloseBtn" id="weekToggle">'+
     '<span><strong>💚 My week '+wk+'</strong>'+
-    '<div class="pmeta">'+(wl.length? wl.length+' of 7 days logged — adds itself up'
-                                    : 'log a day and this fills itself in')+'</div></span>'+
+    '<div class="pmeta">'+esc(sub)+'</div></span>'+
     '<span class="'+(score===null?'chev':'pctBig')+'">'+
       (score===null ? (open?'▴':'▾') : score.toFixed(1))+'</span></button>';
   if(score!==null){
     h+='<div class="bar" style="margin-top:8px"><div class="barFill'+(score>=8?' done':'')+
        '" style="width:'+Math.round(score*10)+'%"></div></div>'+
-       '<div class="pmeta">Health score out of 10 · feeds the base total for '+
-       esc(campusName(S.me.campus))+'</div>';
+       '<div class="pmeta">Health score out of 10, from the '+wl.length+' day'+(wl.length===1?'':'s')+
+       ' you logged · feeds the base total for '+esc(campusName(S.me.campus))+'</div>';
   }
   if(open && c){
     var yn=function(v){ return v? 'yes':'no'; };
