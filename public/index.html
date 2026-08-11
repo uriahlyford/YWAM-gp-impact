@@ -636,15 +636,6 @@ function avg(rows, id){
   var s=0; v.forEach(function(r){ s+=Number(r[id])||0; });
   return s/v.length;
 }
-function compositeOf(r){
-  var parts = [ 10-(Number(r.lonely)||0), Number(r.clarity)||0,
-    r.porn?0:10, r.oneOnOne?10:0, r.exercise?10:0, r.quietTime?10:0, r.debt?0:10 ];
-  if(r.growth!==null && r.growth!==undefined) parts.push(Number(r.growth)||0);
-  if(r.sharedFaith!==null && r.sharedFaith!==undefined) parts.push(r.sharedFaith?10:0);
-  if(r.sabbath!==null && r.sabbath!==undefined) parts.push(r.sabbath?10:0);
-  var s=0; parts.forEach(function(p){s+=p;});
-  return s/parts.length;
-}
 function healthScore(ids, week){
   var rows = surveyRows(ids, week);
   if(!rows.length) return null;

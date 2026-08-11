@@ -138,3 +138,16 @@ function modeOf(metric){
   if (last==='Pages' || last==='Followers') return 'latest';
   return 'sum';
 }
+
+/* Weekly health composite for one survey row. Shared so the staff page can
+   show a person their own weekly score using exactly the maths the base
+   dashboard uses — loneliness inverted, porn/debt count as zero. */
+function compositeOf(r){
+  var parts = [ 10-(Number(r.lonely)||0), Number(r.clarity)||0,
+    r.porn?0:10, r.oneOnOne?10:0, r.exercise?10:0, r.quietTime?10:0, r.debt?0:10 ];
+  if(r.growth!==null && r.growth!==undefined) parts.push(Number(r.growth)||0);
+  if(r.sharedFaith!==null && r.sharedFaith!==undefined) parts.push(r.sharedFaith?10:0);
+  if(r.sabbath!==null && r.sabbath!==undefined) parts.push(r.sabbath?10:0);
+  var s=0; parts.forEach(function(p){s+=p;});
+  return s/parts.length;
+}
