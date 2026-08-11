@@ -104,10 +104,13 @@ async function verifyStaff_(username, pin) {
   return s;
 }
 
+/* Deliberately narrow: this is what every staff member can see about every
+   other one. surveyToken must never appear here — it's what keeps weekly
+   check-ins anonymous in the base survey. */
 function publicStaff_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
-    role: s.role, photo: s.photo || '', mentorId: s.mentorId || ''
+    ministry: s.ministry || '', role: s.role, photo: s.photo || '', mentorId: s.mentorId || ''
   };
 }
 
@@ -127,7 +130,8 @@ async function staffRegister(payload) {
   const now = new Date().toISOString();
   const rec = {
     id: id, username: u, name: payload.name || u, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
-    campus: payload.campus || '', dept: payload.dept || '', role: payload.role || '', photo: '',
+    campus: payload.campus || '', dept: payload.dept || '', ministry: payload.ministry || '',
+    role: payload.role || '', photo: '',
     mentorId: payload.mentorId || '', mentorStatus: payload.mentorId ? 'pending' : '',
     phone: payload.phone || '', joined: payload.joined || '', debt: false, active: true,
     created: now, updated: now
@@ -155,6 +159,7 @@ async function updateProfile(username, pin, payload) {
   if (payload.name !== undefined) rec.name = payload.name;
   if (payload.campus !== undefined) rec.campus = payload.campus;
   if (payload.dept !== undefined) rec.dept = payload.dept;
+  if (payload.ministry !== undefined) rec.ministry = payload.ministry;
   if (payload.role !== undefined) rec.role = payload.role;
   if (payload.mentorId !== undefined) {
     const newMentorId = payload.mentorId || '';
@@ -269,7 +274,10 @@ async function getMenteeLogs(username, pin, menteeId) {
   const m = rows.find(function (x) { return x.id === menteeId; });
   if (!m || m.mentorId !== s.id || m.mentorStatus !== 'approved') return { ok: false, err: 'not_your_mentee' };
   const dailyRows = await getDaily_();
-  return { ok: true, mentee: publicStaff_(m), logs: logsFor_(dailyRows, m.id), profile: { debt: m.debt } };
+  return {
+    ok: true, mentee: publicStaff_(m), logs: logsFor_(dailyRows, m.id),
+    goals: goalsFor_(await getGoals_(), m.id), profile: { debt: m.debt }
+  };
 }
 async function getMyMentorRequests(username, pin) {
   const s = await verifyStaff_(username, pin);
@@ -428,6 +436,160 @@ async function weeklyHealthFromLogs(campusId, week) {
   return { n: n, week: week, campus: campusId };
 }
 
+/* ==================== weekly goals ====================
+   Three goals a week, written at the start and checked off at the end. Keyed
+   by ISO week number to match how entries/survey already store weeks (no
+   year component — same convention, same caveat at a year boundary). */
+const MAX_GOALS = 3;
+
+async function getGoals_() { return readJSON('goals', []); }
+
+function goalsFor_(rows, staffId) {
+  return rows.filter(function (r) { return r.staffId === staffId; })
+    .slice()
+    .sort(function (a, b) { return Number(b.week) - Number(a.week); })
+    .map(function (r) {
+      const items = (r.items || []).map(function (i) { return { text: i.text || '', done: !!i.done }; });
+      return { week: Number(r.week), items: items, pct: goalPct_(items), updated: r.updated };
+    });
+}
+
+/* null (not 0%) when nothing was written, so "no goals set" and "set none
+   of them" stay distinguishable in the mentor view. */
+function goalPct_(items) {
+  const written = (items || []).filter(function (i) { return i && i.text; });
+  if (!written.length) return null;
+  const done = written.filter(function (i) { return i.done; }).length;
+  return Math.round(done / written.length * 100);
+}
+
+async function saveGoals(username, pin, week, items) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const wk = finiteNum_(week, 1, 52);
+  if (wk == null) return { ok: false, err: 'bad_week' };
+  const clean = (Array.isArray(items) ? items.slice(0, MAX_GOALS) : []).map(function (i) {
+    return { text: str_(i && i.text, 200) || '', done: !!(i && i.done) };
+  });
+  const rows = await getGoals_();
+  const idx = rows.findIndex(function (r) { return r.staffId === s.id && Number(r.week) === wk; });
+  const rec = { staffId: s.id, week: wk, items: clean, updated: new Date().toISOString() };
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('goals', rows);
+  return { ok: true, goals: goalsFor_(rows, s.id) };
+}
+
+/* ==================== weekly check-in → base health survey ====================
+   Feeds the same 'survey' blob the anonymous device-based survey writes to, so
+   the base health score picks it up with no extra plumbing. Identified by a
+   random per-staff token stored on the staff row and never exposed through
+   publicStaff_ — one person is one row per week, but nobody reading the survey
+   can tie a row back to a name. */
+function surveyTokenFor_(rec) {
+  if (!rec.surveyToken) rec.surveyToken = 'st' + crypto.randomBytes(9).toString('hex');
+  return rec.surveyToken;
+}
+
+async function saveWeeklyCheckin(username, pin, week, payload) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const wk = finiteNum_(week, 1, 52);
+  if (wk == null) return { ok: false, err: 'bad_week' };
+  const staffRows = await getStaff_();
+  const si = staffRows.findIndex(function (r) { return r.id === s.id; });
+  if (si === -1) return { ok: false };
+  const token = surveyTokenFor_(staffRows[si]);
+  await saveStaff_(staffRows);
+
+  const p = payload || {};
+  const rows = await getSurvey_();
+  const idx = rows.findIndex(function (r) {
+    return r.campus === s.campus && Number(r.week) === wk && r.device === token;
+  });
+  const rec = {
+    campus: s.campus, week: wk, device: token,
+    lonely: finiteNum_(p.lonely, 1, 10) || 0, clarity: finiteNum_(p.clarity, 1, 10) || 0,
+    porn: p.porn ? 1 : 0, oneOnOne: p.oneOnOne ? 1 : 0, exercise: p.exercise ? 1 : 0,
+    quietTime: p.quietTime ? 1 : 0, debt: p.debt ? 1 : 0,
+    langHours: finiteNum_(p.langHours, 0, 200) || 0, minHours: finiteNum_(p.minHours, 0, 200) || 0,
+    sharedFaith: p.sharedFaith ? 1 : 0, sabbath: p.sabbath ? 1 : 0,
+    growth: finiteNum_(p.growth, 1, 10) || 0,
+    updated: new Date().toISOString()
+  };
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('survey', rows);
+  return { ok: true, week: wk };
+}
+
+/* One call for everything the staff home page needs beyond the daily logs. */
+async function getMyWeekly(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const goals = goalsFor_(await getGoals_(), s.id);
+  let checkins = [];
+  if (s.surveyToken) {
+    checkins = (await getSurvey_())
+      .filter(function (r) { return r.device === s.surveyToken; })
+      .map(function (r) {
+        return {
+          week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
+          oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
+          langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
+          sabbath: r.sabbath, growth: r.growth
+        };
+      })
+      .sort(function (a, b) { return b.week - a.week; });
+  }
+  return { ok: true, goals: goals, checkins: checkins };
+}
+
+/* ==================== a staff member's own ministry KPIs ====================
+   Scoped harder than the leader path on purpose: a staff member can only read
+   and write their OWN campus + department + ministry, and never a SENSITIVE
+   metric, regardless of what the client sends. */
+async function getMyMinistry(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const out = {};
+  if (s.ministry) {
+    (await getEntries_()).forEach(function (r) {
+      if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
+      if (SENSITIVE.indexOf(r.metric) > -1) return;
+      if (!out[r.metric]) out[r.metric] = {};
+      out[r.metric][String(r.week)] = Number(r.value);
+    });
+  }
+  return { ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '', entries: out };
+}
+
+async function saveMyMinistry(username, pin, week, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  const wk = finiteNum_(week, 1, 52);
+  if (wk == null) return { ok: false, err: 'bad_week' };
+  const rows = await getEntries_();
+  const now = new Date().toISOString();
+  (Array.isArray(updates) ? updates : []).forEach(function (u) {
+    const metric = str_(u && u.metric, 80);
+    if (!metric || SENSITIVE.indexOf(metric) > -1) return;
+    const idx = rows.findIndex(function (r) {
+      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+        r.metric === metric && String(r.week) === String(wk);
+    });
+    if (u.value === null || u.value === '' || u.value === undefined) {
+      if (idx > -1) rows.splice(idx, 1);
+      return;
+    }
+    const value = finiteNum_(u.value, -1e9, 1e9);
+    if (value == null) return;
+    if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; }
+    else rows.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, value: value, updated: now });
+  });
+  await writeJSON('entries', rows);
+  return getMyMinistry(username, pin);
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getData: function (a) { return getData(a[0]); },
@@ -446,6 +608,11 @@ const HANDLERS = {
   getMyMentees: function (a) { return getMyMentees(a[0], a[1]); },
   getMenteeLogs: function (a) { return getMenteeLogs(a[0], a[1], a[2]); },
   getMyMentorRequests: function (a) { return getMyMentorRequests(a[0], a[1]); },
+  getMyWeekly: function (a) { return getMyWeekly(a[0], a[1]); },
+  saveGoals: function (a) { return saveGoals(a[0], a[1], a[2], a[3]); },
+  saveWeeklyCheckin: function (a) { return saveWeeklyCheckin(a[0], a[1], a[2], a[3]); },
+  getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
+  saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
 };

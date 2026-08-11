@@ -99,6 +99,21 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .banner { background:#FFF1D6; border:1px solid #ffd98a; border-radius:10px; padding:11px 13px; font-size:13px; line-height:1.45; color:#5c4a1e; margin-bottom:14px; }
 .privateWrap { border:1.5px dashed #ffd98a; border-radius:12px; padding:4px 14px 8px; margin-top:12px; background:#fffdf8; }
 .privateWrap .qBlock { border-color:#f4e7c8; }
+
+/* weekly goals */
+.pctBig { font-family:'Koulen',sans-serif; font-size:27px; color:#1F44FF; white-space:nowrap; }
+.pctSm { font-family:'Koulen',sans-serif; font-size:18px; color:#1F44FF; white-space:nowrap; }
+.bar { height:8px; background:#f0eadf; border-radius:99px; overflow:hidden; margin:2px 0 12px; }
+.barFill { height:100%; background:#1F44FF; border-radius:99px; transition:width .25s ease; }
+.barFill.done { background:#FFB323; }
+.goalRow { display:flex; align-items:flex-start; gap:11px; padding:11px 0; border-bottom:1px solid #f0eadf; }
+.goalRow:last-of-type { border-bottom:none; }
+.goalText { font-size:14.5px; line-height:1.35; padding-top:3px; }
+.goalRow.done .goalText { color:#6b6557; text-decoration:line-through; }
+.tick { flex:0 0 auto; width:28px; height:28px; border-radius:8px; border:1.5px solid #c9c3b6;
+  background:#FAF6F0; font-size:15px; font-weight:700; color:#fff; cursor:pointer; line-height:1; }
+.tick.on { background:#0a7d3c; border-color:#0a7d3c; }
+.kpiIn { width:88px !important; text-align:right; }
 .msg { position:fixed; left:50%; bottom:86px; transform:translateX(-50%); background:#17150F; color:#FAF6F0;
   padding:10px 18px; border-radius:999px; font-size:14px; z-index:20; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90%; }
 .msg.show { opacity:1; }
@@ -120,9 +135,23 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 <nav class="bottom hidden" id="bottomNav"></nav>
 <div class="msg" id="msg"></div>
 
+<script src="taxonomy.js"></script>
 <script>
-var CAMPUSES = [{id:'poipet',name:'YWAM Poipet',short:'Poipet'},{id:'siemreap',name:'YWAM Siem Reap',short:'Siem Reap'}];
-var DEPTS = ['Community Service','Youth Education','Leadership Development','Skills Training','Base Leadership'];
+/* CAMPUSES, getDepartments(), modeOf() and the metric lists come from
+   taxonomy.js — the same file the dashboard uses, so a staff member's KPI
+   card always matches what leadership sees. */
+function deptsFor(campusId){ return Object.keys(getDepartments(campusId||'poipet')); }
+function ministriesFor(campusId, dept){
+  var d = getDepartments(campusId||'poipet')[dept];
+  return d ? Object.keys(d) : [];
+}
+function metricsFor(campusId, dept, ministry){
+  var d = getDepartments(campusId||'poipet')[dept];
+  var list = (d && d[ministry]) ? d[ministry] : [];
+  // Staff never see or edit the leadership-only financial metrics; the server
+  // enforces this too, this just keeps them off the screen.
+  return list.filter(function(m){ return SENSITIVE.indexOf(m) === -1; });
+}
 
 var TOGGLES = [
   {id:'workout',    text:'Did I work out today?'},
@@ -139,9 +168,27 @@ var MOODS = [
 
 var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
-  logs:[], roster:[], mentees:[], mentorRequests:[], view:'today',
-  todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], busy:false
+  logs:[], roster:[], mentees:[], mentorRequests:[], view:'home',
+  todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
+  goals:[], checkins:[], goalDraft:null, ministry:null, kpiDraft:{}, weekDraft:{}
 };
+
+/* ---------- week helpers (must match isoWeek_ in netlify/functions/api.js) ---------- */
+function isoWeekOf(d){
+  var y=d.getFullYear();
+  var jan1=new Date(y,0,1);
+  var monW1=new Date(y,0,1-((jan1.getDay()+6)%7));
+  return Math.max(1, Math.min(52, Math.floor((d-monW1)/(7*86400000))+1));
+}
+function thisWeek(){ return isoWeekOf(new Date()); }
+function goalsForWeek(week){
+  for(var i=0;i<S.goals.length;i++) if(Number(S.goals[i].week)===Number(week)) return S.goals[i];
+  return null;
+}
+function checkinForWeek(week){
+  for(var i=0;i<S.checkins.length;i++) if(Number(S.checkins[i].week)===Number(week)) return S.checkins[i];
+  return null;
+}
 
 /* ---------- helpers ---------- */
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
@@ -210,7 +257,9 @@ function afterLogin(){
   run('getMyLogs', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.logs=d.logs; if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile); } render(); });
   run('getMyMentees', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentees=d.mentees; } render(); });
   run('getMyMentorRequests', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentorRequests=d.requests; } render(); });
-  S.view='today'; render();
+  run('getMyWeekly', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.goals=d.goals||[]; S.checkins=d.checkins||[]; } render(); });
+  run('getMyMinistry', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.ministry=d; } render(); });
+  S.view='home'; render();
 }
 function logout(){ localStorage.removeItem('gp-staff'); S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[]; render(); }
 
@@ -226,20 +275,191 @@ function render(){
     return;
   }
   hb.innerHTML = '<button class="hbtn" id="backBtn">← Dashboard</button>';
-  var tabs=[['today','Today','✍️'],['me','Me','💚'],['team','Team','👥'],['profile','Profile','⚙️']];
+  var tabs=[['home','Home','🏠'],['today','Today','✍️'],['me','Me','💚'],['team','Team','👥'],['profile','Profile','⚙️']];
   var reqN=S.mentorRequests?S.mentorRequests.length:0;
-  if(S.mentees.length || reqN) tabs.splice(3,0,['mentor','Mentor'+(reqN?' ('+reqN+')':''),'🤝']);
+  if(S.mentees.length || reqN) tabs.splice(4,0,['mentor','Mentor'+(reqN?' ('+reqN+')':''),'🤝']);
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(t){
     return '<button class="'+(S.view===t[0]?'on':'')+'" data-tab="'+t[0]+'"><span class="ic">'+t[2]+'</span>'+t[1]+'</button>';
   }).join('');
   var m=document.getElementById('main');
-  if(S.view==='today') m.innerHTML=todayHtml();
+  if(S.view==='home') m.innerHTML=homeHtml();
+  else if(S.view==='today') m.innerHTML=todayHtml();
   else if(S.view==='me') m.innerHTML=meHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else m.innerHTML=profileHtml();
   bind();
+}
+
+/* ---------- home: the first thing you see after logging in ---------- */
+function greeting(){
+  var h=new Date().getHours();
+  return h<12 ? 'Good morning' : (h<18 ? 'Good afternoon' : 'Good evening');
+}
+
+function homeHtml(){
+  var wk=thisWeek();
+  var first=String(S.me.name||'').trim().split(/\s+/)[0];
+  var wl=thisWeekLogs();
+  var loggedToday=false;
+  S.logs.forEach(function(l){ if(l.date===todayStr()) loggedToday=true; });
+
+  /* --- who you are --- */
+  var h='<div class="card"><div class="pcard">'+avatarHtml(S.me,'lg')+
+    '<div><div class="pmeta">'+esc(greeting())+'</div>'+
+    '<div class="pname">'+esc(first)+'</div>'+
+    '<div class="pmeta">'+esc(S.me.role||S.me.dept)+
+      (S.me.ministry?' · '+esc(S.me.ministry):'')+'</div>'+
+    '<div class="pmeta">'+esc(campusName(S.me.campus))+' · week '+wk+'</div></div></div>';
+  var st=streak(function(){return true;});
+  h+='<div class="chips" style="margin-top:12px">'+
+    (st>0?'<span class="chip">🔥 '+st+'-day streak</span>':'')+
+    '<span class="chip blue">'+sum(wl,function(r){return r.minHours;}).toFixed(1)+'h ministry</span>'+
+    '<span class="chip blue">'+sum(wl,function(r){return r.langHours;}).toFixed(1)+'h language</span>'+
+    '</div></div>';
+
+  if(!loggedToday){
+    h+='<div class="banner">✍️ You haven’t logged today yet — <button class="linkbtn" id="goToday" style="display:inline;width:auto;padding:0">do it now</button></div>';
+  }
+
+  h+=goalsCardHtml(wk);
+  h+=weeklyCheckinCardHtml(wk);
+  h+=kpiCardHtml(wk);
+  return h;
+}
+
+/* --- three weekly goals --- */
+function goalsCardHtml(wk){
+  var rec=goalsForWeek(wk);
+  var editing = S.goalDraft !== null;
+  var items = editing ? S.goalDraft
+    : (rec && rec.items && rec.items.length ? rec.items : []);
+  var written = items.filter(function(i){ return i && i.text; });
+
+  var h='<h3>🎯 My 3 goals · week '+wk+'</h3>';
+
+  if(!written.length && !editing){
+    h+='<div class="card"><p class="sub" style="margin:4px 0 10px">No goals set for this week yet. Three is the whole point — pick the three that matter.</p>'+
+      '<button class="btn" id="editGoals">Set this week’s goals</button></div>';
+    h+=pastGoalsHtml(wk);
+    return h;
+  }
+
+  h+='<div class="card">';
+  if(editing){
+    for(var i=0;i<3;i++){
+      var t=(items[i]&&items[i].text)||'';
+      h+='<label class="f">Goal '+(i+1)+'</label>'+
+        '<input type="text" maxlength="200" data-goaltext="'+i+'" value="'+esc(t)+'" placeholder="'+(i===0?'e.g. Finish the cafe rota':'')+'">';
+    }
+    h+='<button class="btn" id="saveGoals">Save goals</button>'+
+       '<button class="linkbtn" id="cancelGoals">Cancel</button>';
+  } else {
+    var pct=rec?rec.pct:null;
+    h+='<div class="row" style="border:0;padding-top:0"><span class="rowName">End of week — did you get them done?</span>'+
+       '<span class="pctBig">'+(pct===null?'—':pct+'%')+'</span></div>';
+    h+='<div class="bar"><div class="barFill'+(pct>=100?' done':'')+'" style="width:'+(pct||0)+'%"></div></div>';
+    written.forEach(function(g,i){
+      h+='<div class="goalRow'+(g.done?' done':'')+'">'+
+        '<button class="tick'+(g.done?' on':'')+'" data-goaltick="'+i+'" aria-label="Toggle goal '+(i+1)+'">'+(g.done?'✓':'')+'</button>'+
+        '<span class="goalText">'+esc(g.text)+'</span></div>';
+    });
+    h+='<button class="btn ghost" id="editGoals" style="margin-top:12px">Edit goals</button>';
+  }
+  h+='</div>';
+  h+=pastGoalsHtml(wk);
+  return h;
+}
+
+function pastGoalsHtml(wk){
+  var past=S.goals.filter(function(g){ return Number(g.week)!==Number(wk) && g.items.some(function(i){return i.text;}); });
+  if(!past.length) return '';
+  var hit=past.filter(function(g){ return g.pct!==null; });
+  var avg=hit.length ? Math.round(hit.reduce(function(a,g){return a+g.pct;},0)/hit.length) : null;
+  var h='<div class="card"><div class="row" style="border:0;padding-top:0"><span class="rowName">Previous weeks'+
+    '<div class="pmeta">'+past.length+' week'+(past.length===1?'':'s')+' tracked</div></span>'+
+    '<span class="pctBig">'+(avg===null?'—':avg+'%')+'</span></div>';
+  past.slice(0,6).forEach(function(g){
+    var done=g.items.filter(function(i){return i.text&&i.done;}).length;
+    var tot=g.items.filter(function(i){return i.text;}).length;
+    h+='<div class="row"><span class="rowName">Week '+g.week+'<div class="pmeta">'+done+' of '+tot+' done</div></span>'+
+      '<span class="pctSm">'+(g.pct===null?'—':g.pct+'%')+'</span></div>';
+  });
+  return h+'</div>';
+}
+
+/* --- weekly check-in: feeds the base health survey anonymously --- */
+var WEEK_TOGGLES=[
+  {id:'exercise',   text:'Did you exercise this week?'},
+  {id:'quietTime',  text:'Regular quiet time this week?'},
+  {id:'oneOnOne',   text:'Had a one-on-one this week?'},
+  {id:'sharedFaith',text:'Shared your faith this week?'},
+  {id:'sabbath',    text:'Took a sabbath / rest day?'}
+];
+function weeklyCheckinCardHtml(wk){
+  var saved=checkinForWeek(wk);
+  var d=S.weekDraft;
+  if(saved && !d._loaded){ Object.keys(saved).forEach(function(k){ if(k!=='week') d[k]=saved[k]; }); d._loaded=true; }
+
+  var h='<h3>💚 Weekly check-in · week '+wk+'</h3>'+
+    '<div class="card"><p class="sub" style="margin:4px 0 10px">'+
+    (saved?'Saved for this week — you can update it any time. ':'')+
+    'This rolls into the base health score. Leaders only ever see anonymous totals, never your name.</p>';
+  WEEK_TOGGLES.forEach(function(q){
+    h+='<div class="qBlock"><div class="qText">'+esc(q.text)+'</div><div class="seg">'+
+      '<button data-wyn="'+q.id+'|1" class="'+(d[q.id]==1?'on':'')+'">Yes</button>'+
+      '<button data-wyn="'+q.id+'|0" class="'+(d[q.id]!=null&&d[q.id]==0?'on':'')+'">No</button></div></div>';
+  });
+  [['clarity','How clear are you on what to do?'],['growth','How would you rate your growth?']].forEach(function(q){
+    h+='<div class="qBlock"><div class="qText">'+esc(q[1])+'</div><div class="scale">';
+    for(var i=1;i<=10;i++) h+='<button data-wscale="'+q[0]+'|'+i+'" class="'+(Number(d[q[0]])===i?'on':'')+'">'+i+'</button>';
+    h+='</div></div>';
+  });
+  h+='<div class="privateWrap"><p class="hint" style="margin:0 0 6px">🔒 Private — pooled into anonymous totals only.</p>'+
+     '<div class="qBlock"><div class="qText">How lonely have you felt this week? <span class="hint">(1 = not at all, 10 = very)</span></div><div class="scale">';
+  for(var j=1;j<=10;j++) h+='<button data-wscale="lonely|'+j+'" class="'+(Number(d.lonely)===j?'on':'')+'">'+j+'</button>';
+  h+='</div></div>'+
+     '<div class="qBlock"><div class="qText">Any porn this week?</div><div class="seg">'+
+     '<button data-wyn="porn|1" class="'+(d.porn==1?'on bad':'')+'">Yes</button>'+
+     '<button data-wyn="porn|0" class="'+(d.porn!=null&&d.porn==0?'on':'')+'">No</button></div></div></div>';
+  h+='<button class="btn" id="saveWeekBtn">'+(saved?'Update check-in':'Save check-in')+'</button></div>';
+  return h;
+}
+
+/* --- your ministry's KPIs, editable without leaving this page --- */
+function kpiCardHtml(wk){
+  if(!S.me.ministry){
+    return '<h3>📊 My ministry KPIs</h3><div class="card"><p class="sub" style="margin:4px 0 10px">'+
+      'Set your ministry on the Profile tab and your team’s KPIs will show up here, ready to log.</p>'+
+      '<button class="btn ghost" id="goProfile">Choose my ministry</button></div>';
+  }
+  var metrics=metricsFor(S.me.campus, S.me.dept, S.me.ministry);
+  if(!metrics.length){
+    return '<h3>📊 My ministry KPIs</h3><div class="card"><p class="sub" style="margin:4px 0">'+
+      'No KPIs are defined for '+esc(S.me.ministry)+' yet.</p></div>';
+  }
+  var entries=(S.ministry&&S.ministry.entries)||{};
+  var h='<h3>📊 '+esc(S.me.ministry)+' KPIs · week '+wk+'</h3>'+
+    '<div class="card"><p class="sub" style="margin:4px 0 10px">The same numbers leadership sees — log them here instead of hunting through the dashboard.</p>';
+  metrics.forEach(function(metric){
+    var wks=entries[metric]||{};
+    var mode=modeOf(metric);
+    var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
+      : (wks[String(wk)]!==undefined ? wks[String(wk)] : '');
+    var totals=Object.keys(wks).map(function(k){return Number(wks[k]);}).filter(function(n){return !isNaN(n);});
+    var ctx='—';
+    if(totals.length){
+      if(mode==='latest'){ var lastW=Math.max.apply(null,Object.keys(wks).map(Number)); ctx='now '+wks[String(lastW)]; }
+      else if(mode==='avg'){ ctx='avg '+(totals.reduce(function(a,b){return a+b;},0)/totals.length).toFixed(1); }
+      else ctx='total '+totals.reduce(function(a,b){return a+b;},0);
+    }
+    h+='<div class="row"><span class="rowName">'+esc(metric)+'<div class="pmeta">'+esc(ctx)+
+      (mode==='sum'?' · enter this week only':'')+'</div></span>'+
+      '<input type="number" inputmode="decimal" class="kpiIn" data-kpi="'+esc(metric)+'" value="'+esc(String(cur))+'"></div>';
+  });
+  h+='<button class="btn" id="saveKpiBtn">Save week '+wk+'</button></div>';
+  return h;
 }
 
 /* ---------- login / register ---------- */
@@ -259,7 +479,8 @@ function registerHtml(){
     '<label class="f">Username</label><input type="text" id="r_user" autocapitalize="none" placeholder="lowercase, no spaces"><div class="hint">Letters, numbers, . _ - (2\u201320 chars)</div>'+
     '<label class="f">PIN (4 digits)</label><input type="password" id="r_pin" inputmode="numeric" maxlength="4" placeholder="••••">'+
     '<label class="f">Campus</label><select id="r_campus">'+CAMPUSES.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>';}).join('')+'</select>'+
-    '<label class="f">Department</label><select id="r_dept">'+DEPTS.map(function(d){return '<option>'+d+'</option>';}).join('')+'</select>'+
+    '<label class="f">Department</label><select id="r_dept">'+deptsFor('poipet').map(function(d){return '<option>'+esc(d)+'</option>';}).join('')+'</select>'+
+    '<label class="f">Ministry</label><select id="r_ministry"></select><div class="hint">This is what puts your team’s KPIs on your home page.</div>'+
     '<label class="f">Role / team</label><input type="text" id="r_role" placeholder="e.g. Cafe barista, DTS staff">'+
     '<label class="f">My mentor <span class="lock">🔒 sees my private check-ins</span></label><select id="r_mentor"><option value="">— choose later —</option>'+opts+'</select>'+
     '<label class="f">Phone (optional)</label><input type="tel" id="r_phone" placeholder="">'+
@@ -375,6 +596,30 @@ function mentorHtml(){
     h+='<div class="card"><div class="pcard">'+avatarHtml(m,'lg')+'<div><div class="pname">'+esc(m.name)+'</div><div class="pmeta">'+esc(m.dept)+(m.role?' · '+esc(m.role):'')+'</div></div></div></div>';
     h+='<div class="banner">🔒 Shared with you as '+esc(m.name.split(' ')[0])+'\u2019s mentor. Hold it with care and prayer — this is trust, not surveillance.</div>';
     if(S.menteeProfile && S.menteeProfile.debt) h+='<div class="banner">💰 Currently carrying staff debt.</div>';
+
+    // weekly goals + how they're tracking against them
+    var mg=(S.menteeGoals||[]).filter(function(g){ return g.items.some(function(i){return i.text;}); });
+    h+='<h3>🎯 Weekly goals</h3>';
+    if(!mg.length){
+      h+='<div class="card"><p class="sub" style="margin:6px 0">No goals written yet.</p></div>';
+    } else {
+      var scored=mg.filter(function(g){ return g.pct!==null; });
+      var avg=scored.length ? Math.round(scored.reduce(function(a,g){return a+g.pct;},0)/scored.length) : null;
+      h+='<div class="card"><div class="row" style="border:0;padding-top:0"><span class="rowName">Goals completed'+
+        '<div class="pmeta">across '+mg.length+' week'+(mg.length===1?'':'s')+'</div></span>'+
+        '<span class="pctBig">'+(avg===null?'—':avg+'%')+'</span></div>';
+      h+='<div class="bar"><div class="barFill'+(avg>=100?' done':'')+'" style="width:'+(avg||0)+'%"></div></div></div>';
+      mg.slice(0,4).forEach(function(g){
+        h+='<div class="card"><div class="row" style="border:0;padding-top:0"><span class="rowName">Week '+g.week+'</span>'+
+          '<span class="pctSm">'+(g.pct===null?'—':g.pct+'%')+'</span></div>';
+        g.items.filter(function(i){return i.text;}).forEach(function(i){
+          h+='<div class="goalRow'+(i.done?' done':'')+'"><button class="tick'+(i.done?' on':'')+'" disabled>'+(i.done?'✓':'')+'</button>'+
+            '<span class="goalText">'+esc(i.text)+'</span></div>';
+        });
+        h+='</div>';
+      });
+    }
+
     h+='<h3>Recent check-ins</h3><div class="card">';
     if(!wl.length) h+='<p class="sub" style="margin:6px 0">No entries yet.</p>';
     wl.slice(0,14).forEach(function(l){
@@ -421,7 +666,8 @@ function profileHtml(){
   h+='<div class="card">'+
     '<label class="f">Full name</label><input type="text" id="p_name" value="'+esc(S.me.name)+'">'+
     '<label class="f">Campus</label><select id="p_campus">'+CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(S.me.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
-    '<label class="f">Department</label><select id="p_dept">'+DEPTS.map(function(d){return '<option'+(S.me.dept===d?' selected':'')+'>'+d+'</option>';}).join('')+'</select>'+
+    '<label class="f">Department</label><select id="p_dept">'+deptsFor(S.me.campus).map(function(d){return '<option'+(S.me.dept===d?' selected':'')+'>'+esc(d)+'</option>';}).join('')+'</select>'+
+    '<label class="f">Ministry</label><select id="p_ministry"></select><div class="hint">Sets which KPIs show on your home page.</div>'+
     '<label class="f">Role / team</label><input type="text" id="p_role" value="'+esc(S.me.role)+'">'+
     '<label class="f">My mentor <span class="lock">🔒 sees my private check-ins</span></label><select id="p_mentor"><option value="">— none —</option>'+opts+'</select>'+
     (p.mentorStatus==='pending' ? '<div class="hint">⏳ Waiting for them to accept</div>' : p.mentorStatus==='approved' ? '<div class="hint">✓ Accepted — they can see your private check-ins</div>' : '')+
@@ -459,13 +705,154 @@ function handlePhoto(file){
 }
 
 /* ---------- bind ---------- */
+/* Ministry dropdowns depend on the chosen department, so repopulate them in
+   place rather than re-rendering the whole form and losing typed input. */
+function fillMinistrySelect(selId, campusSelId, deptSelId, current){
+  var sel=document.getElementById(selId);
+  if(!sel) return;
+  var campus=(document.getElementById(campusSelId)||{}).value||(S.me?S.me.campus:'poipet');
+  var dept=(document.getElementById(deptSelId)||{}).value||'';
+  var list=ministriesFor(campus, dept);
+  var keep=sel.value||current||'';
+  sel.innerHTML='<option value="">— none yet —</option>'+list.map(function(m){
+    return '<option value="'+esc(m)+'"'+(keep===m?' selected':'')+'>'+esc(m)+'</option>';
+  }).join('');
+}
+function bindMinistrySelects(){
+  if(document.getElementById('r_ministry')){
+    fillMinistrySelect('r_ministry','r_campus','r_dept','');
+    ['r_campus','r_dept'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.onchange=function(){ fillMinistrySelect('r_ministry','r_campus','r_dept',''); };
+    });
+  }
+  if(document.getElementById('p_ministry')){
+    fillMinistrySelect('p_ministry','p_campus','p_dept', S.me?S.me.ministry:'');
+    ['p_campus','p_dept'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.onchange=function(){
+        var s=document.getElementById('p_ministry'); if(s) s.value='';
+        fillMinistrySelect('p_ministry','p_campus','p_dept','');
+      };
+    });
+  }
+}
+
+function bindHome(){
+  var gt=document.getElementById('goToday');
+  if(gt) gt.onclick=function(){ S.view='today'; render(); };
+  var gp=document.getElementById('goProfile');
+  if(gp) gp.onclick=function(){ S.view='profile'; render(); };
+
+  // --- goals ---
+  var eg=document.getElementById('editGoals');
+  if(eg) eg.onclick=function(){
+    var rec=goalsForWeek(thisWeek());
+    var items=(rec&&rec.items)?rec.items.slice():[];
+    while(items.length<3) items.push({text:'',done:false});
+    S.goalDraft=items; render();
+  };
+  var cg=document.getElementById('cancelGoals');
+  if(cg) cg.onclick=function(){ S.goalDraft=null; render(); };
+  document.querySelectorAll('[data-goaltext]').forEach(function(inp){
+    inp.oninput=function(){
+      var i=Number(inp.getAttribute('data-goaltext'));
+      if(!S.goalDraft) return;
+      S.goalDraft[i]=S.goalDraft[i]||{text:'',done:false};
+      S.goalDraft[i].text=inp.value;
+    };
+  });
+  var sg=document.getElementById('saveGoals');
+  if(sg) sg.onclick=function(){
+    if(S.busy) return;
+    var items=(S.goalDraft||[]).map(function(g){ return {text:(g.text||'').trim(), done:!!g.done}; });
+    if(!items.some(function(g){return g.text;})){ showMsg('Write at least one goal'); return; }
+    S.busy=true; sg.disabled=true; sg.textContent='…';
+    run('saveGoals',[S.auth.user,S.auth.pin,thisWeek(),items],function(d){
+      S.busy=false;
+      if(d.ok){ S.goals=d.goals||[]; S.goalDraft=null; showMsg('Goals saved'); }
+      else showMsg('Could not save goals');
+      render();
+    });
+  };
+  document.querySelectorAll('[data-goaltick]').forEach(function(b){
+    b.onclick=function(){
+      if(S.busy) return;
+      var rec=goalsForWeek(thisWeek());
+      if(!rec) return;
+      var i=Number(b.getAttribute('data-goaltick'));
+      var written=rec.items.filter(function(x){ return x.text; });
+      if(!written[i]) return;
+      written[i].done=!written[i].done;
+      S.busy=true;
+      run('saveGoals',[S.auth.user,S.auth.pin,thisWeek(),written],function(d){
+        S.busy=false;
+        if(d.ok) S.goals=d.goals||[];
+        render();
+      });
+    };
+  });
+
+  // --- weekly check-in ---
+  document.querySelectorAll('[data-wyn]').forEach(function(b){
+    b.onclick=function(){
+      var p=b.getAttribute('data-wyn').split('|');
+      S.weekDraft[p[0]]=Number(p[1]); render();
+    };
+  });
+  document.querySelectorAll('[data-wscale]').forEach(function(b){
+    b.onclick=function(){
+      var p=b.getAttribute('data-wscale').split('|');
+      S.weekDraft[p[0]]=Number(p[1]); render();
+    };
+  });
+  var swb=document.getElementById('saveWeekBtn');
+  if(swb) swb.onclick=function(){
+    if(S.busy) return;
+    S.busy=true; swb.disabled=true; swb.textContent='…';
+    run('saveWeeklyCheckin',[S.auth.user,S.auth.pin,thisWeek(),S.weekDraft],function(d){
+      S.busy=false;
+      if(d.ok){
+        showMsg('Check-in saved — thank you');
+        run('getMyWeekly',[S.auth.user,S.auth.pin],function(w){
+          if(w.ok){ S.goals=w.goals||[]; S.checkins=w.checkins||[]; }
+          S.weekDraft={}; render();
+        });
+      } else { showMsg('Could not save check-in'); render(); }
+    });
+  };
+
+  // --- ministry KPIs ---
+  document.querySelectorAll('[data-kpi]').forEach(function(inp){
+    inp.oninput=function(){ S.kpiDraft[inp.getAttribute('data-kpi')]=inp.value; };
+  });
+  var skb=document.getElementById('saveKpiBtn');
+  if(skb) skb.onclick=function(){
+    if(S.busy) return;
+    var updates=[];
+    document.querySelectorAll('[data-kpi]').forEach(function(inp){
+      updates.push({ metric:inp.getAttribute('data-kpi'), value: inp.value==='' ? null : Number(inp.value) });
+    });
+    S.busy=true; skb.disabled=true; skb.textContent='…';
+    run('saveMyMinistry',[S.auth.user,S.auth.pin,thisWeek(),updates],function(d){
+      S.busy=false;
+      if(d.ok){ S.ministry=d; S.kpiDraft={}; showMsg('KPIs saved'); }
+      else showMsg('Could not save KPIs');
+      render();
+    });
+  };
+}
+
 function bind(){
   var back=document.getElementById('backBtn');
   if(back) back.onclick=function(){ gpGo('index'); };
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
-    b.onclick=function(){ S.view=b.getAttribute('data-tab'); S.mentee=null; render(); };
+    b.onclick=function(){ S.view=b.getAttribute('data-tab'); S.mentee=null; S.goalDraft=null; render(); };
   });
+
+  bindHome();
+  bindMinistrySelects();
 
   // login
   var lb=document.getElementById('loginBtn');
@@ -491,6 +878,7 @@ function bind(){
       pin:document.getElementById('r_pin').value.trim(),
       campus:document.getElementById('r_campus').value,
       dept:document.getElementById('r_dept').value,
+      ministry:(document.getElementById('r_ministry')||{}).value||'',
       role:document.getElementById('r_role').value.trim(),
       mentorId:document.getElementById('r_mentor').value,
       phone:document.getElementById('r_phone').value.trim(),
@@ -529,7 +917,7 @@ function bind(){
     c.onclick=function(){
       var id=c.getAttribute('data-mentee');
       run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(d){
-        if(d.ok){ S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeProfile=d.profile; render(); }
+        if(d.ok){ S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[]; S.menteeProfile=d.profile; render(); }
         else showMsg('Not available');
       });
     };
@@ -565,6 +953,7 @@ function bind(){
       name:document.getElementById('p_name').value.trim(),
       campus:document.getElementById('p_campus').value,
       dept:document.getElementById('p_dept').value,
+      ministry:(document.getElementById('p_ministry')||{}).value||'',
       role:document.getElementById('p_role').value.trim(),
       mentorId:document.getElementById('p_mentor').value,
       phone:document.getElementById('p_phone').value.trim(),
@@ -590,6 +979,9 @@ function bind(){
 }
 
 function gpGo(p){
+  // Asking for the dashboard means asking not to be redirected back here for
+  // the rest of this browser session (see the guard at the top of index.html).
+  if(p!=='teams'){ try { sessionStorage.setItem('gp-skip-teams','1'); } catch(e){} }
   window.location.href = p==='teams' ? 'teams.html' : 'index.html';
 }
 
