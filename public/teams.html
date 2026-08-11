@@ -165,9 +165,81 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 <nav class="bottom hidden" id="bottomNav"></nav>
 <div class="msg" id="msg"></div>
 
+<script>
+/*  Error boundary — must come first, before any other script.
+
+    This page is the app's front door for signed-in staff, so a failure here
+    used to be inescapable: index.html redirects here, and a blank screen gave
+    no way back to the dashboard. The fallback always offers that way out. */
+(function(){
+  var shown = false;
+  function fallback(what){
+    if(shown) return; shown = true;
+    // Latch it so a later render() can't paint over the message.
+    window.gpDead = true;
+    var html =
+      '<div style="max-width:420px;margin:12vh auto;padding:0 22px;text-align:center;'+
+      'font-family:system-ui,sans-serif;color:#17150F">'+
+      '<div style="font-size:40px;line-height:1">✦</div>'+
+      '<h2 style="font-size:19px;margin:14px 0 8px">This didn’t load properly</h2>'+
+      '<p style="font-size:14.5px;line-height:1.5;color:#6b6557;margin:0 0 18px">'+
+      'Usually a connection hiccup. Nothing you’ve logged was lost.</p>'+
+      '<button id="gpReload" style="width:100%;padding:14px;border:0;border-radius:12px;'+
+      'background:#1F44FF;color:#fff;font-size:16px;font-weight:700;cursor:pointer">Try again</button>'+
+      '<button id="gpDash" style="width:100%;padding:13px;margin-top:9px;border:1.5px solid #c9c3b6;'+
+      'border-radius:12px;background:transparent;color:#17150F;font-size:15px;cursor:pointer">Open the dashboard</button>'+
+      '<div style="font-size:11px;color:#a09a8c;margin-top:20px">'+String(what||'').slice(0,140)+'</div>'+
+      '</div>';
+    function paint(){
+      var host = document.getElementById('main') || document.body;
+      if(!host) return;
+      host.innerHTML = html;
+      var nav = document.getElementById('bottomNav');
+      if(nav) nav.classList.add('hidden');
+      var r = document.getElementById('gpReload');
+      if(r) r.onclick = function(){ location.reload(); };
+      var d = document.getElementById('gpDash');
+      if(d) d.onclick = function(){
+        // Break the auto-redirect so the dashboard is actually reachable.
+        try { sessionStorage.setItem('gp-skip-teams','1'); } catch(e){}
+        location.href = 'index.html';
+      };
+    }
+    if(document.body) paint();
+    else document.addEventListener('DOMContentLoaded', paint);
+  }
+  window.addEventListener('error', function(e){
+    if(e && e.target && e.target.tagName === 'SCRIPT'){
+      var src = e.target.src || '';
+      // The reading plan is optional — the guard below stubs it and the Bible
+      // habit falls back to a plain daily tick. Don't take the page down for it.
+      if(src.indexOf('bible-plan.js') > -1) return;
+      fallback('could not load ' + (src||'a script'));
+      return;
+    }
+    if(e && e.message) fallback(e.message);
+  }, true);
+  window.addEventListener('unhandledrejection', function(e){
+    fallback((e && e.reason && e.reason.message) || 'unexpected error');
+  });
+  window.gpBootFailed = fallback;
+})();
+</script>
 <script src="taxonomy.js"></script>
 <script src="bible-plan.js"></script>
 <script>
+if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
+  window.gpBootFailed('taxonomy.js did not load');
+  // Throwing stops the rest of this script, so nothing paints over the message.
+  throw new Error('taxonomy.js missing');
+}
+if(typeof BIBLE_PLAN === 'undefined'){
+  // Non-fatal: the reading card just degrades to a plain daily tick.
+  var BIBLE_PLAN = { name:'Bible reading', subtitle:'', days:[] };
+  window.bibleReadingFor = function(){ return ''; };
+  window.biblePlanLoaded = function(){ return false; };
+  window.biblePlanLength = function(){ return 365; };
+}
 /* CAMPUSES, getDepartments(), modeOf() and the metric lists come from
    taxonomy.js — the same file the dashboard uses, so a staff member's KPI
    card always matches what leadership sees. */
@@ -385,6 +457,7 @@ function logout(){
 
 /* ---------- render root ---------- */
 function render(){
+  if(window.gpDead) return;   // an error message is on screen; leave it there
   var hb=document.getElementById('hbtns');
   var nav=document.getElementById('bottomNav');
   if(!S.me){

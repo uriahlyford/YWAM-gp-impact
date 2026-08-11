@@ -209,8 +209,61 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
 <footer id="footerLine">✦ Every number is a person. The goal is people knowing Jesus.</footer>
 <div id="ddRoot"></div>
 
+<script>
+/*  Error boundary — must come first, before any other script.
+
+    The page depends on taxonomy.js loading; if that request fails (flaky
+    connection, cache miss) the app's globals are missing and everything after
+    it dies, which used to mean a silent blank screen with no way out. Show
+    something honest and recoverable instead.  */
+(function(){
+  var shown = false;
+  function fallback(what){
+    if(shown) return; shown = true;
+    // Latch it so a later render() can't paint over the message.
+    window.gpDead = true;
+    var html =
+      '<div style="max-width:420px;margin:14vh auto;padding:0 22px;text-align:center;'+
+      'font-family:system-ui,sans-serif;color:#17150F">'+
+      '<div style="font-size:40px;line-height:1">✦</div>'+
+      '<h2 style="font-size:19px;margin:14px 0 8px">This didn’t load properly</h2>'+
+      '<p style="font-size:14.5px;line-height:1.5;color:#6b6557;margin:0 0 18px">'+
+      'Usually a connection hiccup. Your data is safe — nothing was lost.</p>'+
+      '<button id="gpReload" style="width:100%;padding:14px;border:0;border-radius:12px;'+
+      'background:#1F44FF;color:#fff;font-size:16px;font-weight:700;cursor:pointer">Try again</button>'+
+      '<div style="font-size:11px;color:#a09a8c;margin-top:20px">'+String(what||'').slice(0,140)+'</div>'+
+      '</div>';
+    function paint(){
+      var host = document.getElementById('main') || document.body;
+      if(!host) return;
+      host.innerHTML = html;
+      var r = document.getElementById('gpReload');
+      if(r) r.onclick = function(){ location.reload(); };
+    }
+    if(document.body) paint();
+    else document.addEventListener('DOMContentLoaded', paint);
+  }
+  window.addEventListener('error', function(e){
+    // A failed <script src> fires an error event on the element itself.
+    if(e && e.target && e.target.tagName === 'SCRIPT'){ fallback('could not load ' + (e.target.src||'a script')); return; }
+    if(e && e.message) fallback(e.message);
+  }, true);
+  window.addEventListener('unhandledrejection', function(e){
+    fallback((e && e.reason && e.reason.message) || 'unexpected error');
+  });
+  window.gpBootFailed = fallback;
+})();
+</script>
 <script src="taxonomy.js"></script>
 <script>
+/* If taxonomy.js didn't land, stop here with a real message rather than
+   throwing halfway through rendering. */
+if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
+  window.gpBootFailed('taxonomy.js did not load');
+  // Throwing stops the rest of this script, so nothing paints over the message.
+  throw new Error('taxonomy.js missing');
+}
+
 /* Staff who've logged in get their own page as the app's front door — opening
    the PWA drops them straight into their Teams home instead of the leadership
    dashboard. Tapping "← Dashboard" over there sets gp-skip-teams for the rest
@@ -613,6 +666,7 @@ function loadingHtml(){
   '</div>';
 }
 function render(){
+  if(window.gpDead) return;   // an error message is on screen; leave it there
   renderCampusRow(); renderNav();
   document.getElementById('langBtn').textContent = state.lang==='km' ? 'EN' : 'ខ្មែរ';
   document.getElementById('lockBtn').textContent = state.data.leader ? '🔓' : '🔒';
