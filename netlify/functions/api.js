@@ -205,6 +205,66 @@ async function uploadPhoto(username, pin, base64, mime) {
   return { ok: true, photo: dataUri };
 }
 
+/* ==================== personal habits ====================
+   Each person picks the handful they're actually working on. A fixed list of
+   ten becomes guilt and then abandonment, so the set is per-staff and each
+   habit carries its own mentorVisible flag — you choose what your mentor
+   sees, which is what makes people log honestly. */
+const HABIT_LIBRARY = [
+  { id: 'bible',       label: 'Bible reading' },
+  { id: 'quietTime',   label: 'Quiet time / prayer' },
+  { id: 'workout',     label: 'Workout' },
+  { id: 'ateWell',     label: 'Ate well' },
+  { id: 'sleptWell',   label: 'Slept well' },
+  { id: 'language',    label: 'Language study' },
+  { id: 'gratitude',   label: 'Wrote down something I’m grateful for' },
+  { id: 'oneOnOne',    label: 'One-on-one' },
+  { id: 'sharedFaith', label: 'Shared my faith' },
+  { id: 'sabbath',     label: 'Sabbath / rest' }
+];
+const HABIT_IDS = HABIT_LIBRARY.map(function (h) { return h.id; });
+const DEFAULT_HABITS = [
+  { id: 'bible',     mentorVisible: true },
+  { id: 'quietTime', mentorVisible: true },
+  { id: 'workout',   mentorVisible: true }
+];
+const MAX_HABITS = 6;
+
+function cleanHabitConfig_(list) {
+  const seen = {};
+  return (Array.isArray(list) ? list : []).filter(function (h) {
+    if (!h || HABIT_IDS.indexOf(h.id) === -1 || seen[h.id]) return false;
+    seen[h.id] = 1; return true;
+  }).slice(0, MAX_HABITS).map(function (h) {
+    return { id: h.id, mentorVisible: !!h.mentorVisible };
+  });
+}
+function habitsOf_(s) {
+  const cfg = cleanHabitConfig_(s.habits);
+  return cfg.length ? cfg : DEFAULT_HABITS.slice();
+}
+/* Only the ids this person actually tracks get stored, so turning a habit off
+   doesn't quietly keep recording it. */
+function cleanHabitMap_(map, cfg) {
+  const out = {};
+  cfg.forEach(function (h) { if (map && map[h.id] !== undefined) out[h.id] = !!map[h.id]; });
+  return out;
+}
+
+async function saveMyHabits(username, pin, habits, bibleDay) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === s.id; });
+  if (idx === -1) return { ok: false };
+  if (habits !== undefined) rows[idx].habits = cleanHabitConfig_(habits);
+  const day = finiteNum_(bibleDay, 0, 365);
+  if (day !== null) rows[idx].bibleDay = day;
+  rows[idx].updated = new Date().toISOString();
+  await saveStaff_(rows);
+  return { ok: true, habits: habitsOf_(rows[idx]), bibleDay: rows[idx].bibleDay || 0 };
+}
+
 /* ---- daily log ---- */
 function isoWeek_(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -229,6 +289,7 @@ async function saveDaily(username, pin, dateStr, payload) {
     workout: b(payload.workout), bible: b(payload.bible), quietTime: b(payload.quietTime),
     oneOnOne: b(payload.oneOnOne), sharedFaith: b(payload.sharedFaith), sabbath: b(payload.sabbath),
     clarity: n(payload.clarity), growth: n(payload.growth), lonely: n(payload.lonely), porn: b(payload.porn),
+    habits: cleanHabitMap_(payload.habits, habitsOf_(s)),
     updated: new Date().toISOString()
   };
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
@@ -236,18 +297,46 @@ async function saveDaily(username, pin, dateStr, payload) {
   return getMyLogs(username, pin);
 }
 
-function logsFor_(rows, staffId) {
+/* habitConfig: pass the person's habit config for the MENTOR view and results
+   are narrowed to what they chose to share. Omit it for someone's own data and
+   everything comes back.
+
+   Several habits also have a legacy fixed column (bible, workout, quietTime…)
+   from before habits were configurable, and those are written in step with the
+   habit map — so the same column has to be masked too, or "keep this one
+   private" would leak straight through the old field. Habits absent from the
+   config aren't masked: loneliness and porn are governed by the mentor
+   relationship itself, not per-habit consent. */
+const LEGACY_HABIT_COLS = ['workout', 'bible', 'quietTime', 'oneOnOne', 'sharedFaith', 'sabbath'];
+
+function logsFor_(rows, staffId, habitConfig) {
+  let shared = null, hidden = [];
+  if (habitConfig) {
+    shared = habitConfig.filter(function (h) { return h.mentorVisible; }).map(function (h) { return h.id; });
+    hidden = habitConfig.filter(function (h) { return !h.mentorVisible; }).map(function (h) { return h.id; });
+  }
   return rows.filter(function (r) { return r.staffId === staffId; })
     .slice()
     .sort(function (a, b) { return a.date < b.date ? 1 : -1; })
     .map(function (r) {
-      return {
+      let habits = r.habits || {};
+      if (shared) {
+        const filtered = {};
+        Object.keys(habits).forEach(function (k) { if (shared.indexOf(k) > -1) filtered[k] = habits[k]; });
+        habits = filtered;
+      }
+      const out = {
         date: r.date, week: r.week, langHours: r.langHours || 0, minHours: r.minHours || 0,
         workout: !!r.workout, bible: !!r.bible, quietTime: !!r.quietTime, oneOnOne: !!r.oneOnOne,
         sharedFaith: !!r.sharedFaith, sabbath: !!r.sabbath,
         clarity: r.clarity == null ? null : r.clarity, growth: r.growth == null ? null : r.growth,
-        lonely: r.lonely == null ? null : r.lonely, porn: !!r.porn
+        lonely: r.lonely == null ? null : r.lonely, porn: !!r.porn,
+        habits: habits
       };
+      hidden.forEach(function (id) {
+        if (LEGACY_HABIT_COLS.indexOf(id) > -1) delete out[id];
+      });
+      return out;
     });
 }
 
@@ -255,7 +344,10 @@ async function getMyLogs(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   const rows = await getDaily_();
-  return { ok: true, logs: logsFor_(rows, s.id), profile: { debt: s.debt } };
+  return {
+    ok: true, logs: logsFor_(rows, s.id), profile: { debt: s.debt },
+    habits: habitsOf_(s), bibleDay: s.bibleDay || 0
+  };
 }
 
 /* ---- mentor requests: picking a mentor doesn't grant access by itself —
@@ -274,9 +366,14 @@ async function getMenteeLogs(username, pin, menteeId) {
   const m = rows.find(function (x) { return x.id === menteeId; });
   if (!m || m.mentorId !== s.id || m.mentorStatus !== 'approved') return { ok: false, err: 'not_your_mentee' };
   const dailyRows = await getDaily_();
+  // Only the habits this person chose to share, and they're told which those are.
+  const cfg = habitsOf_(m);
   return {
-    ok: true, mentee: publicStaff_(m), logs: logsFor_(dailyRows, m.id),
-    goals: goalsFor_(await getGoals_(), m.id), profile: { debt: m.debt }
+    ok: true, mentee: publicStaff_(m),
+    logs: logsFor_(dailyRows, m.id, cfg),
+    sharedHabits: cfg.filter(function (h) { return h.mentorVisible; }),
+    goals: goalsFor_(await getGoals_(), m.id),
+    profile: { debt: m.debt }
   };
 }
 async function getMyMentorRequests(username, pin) {
@@ -449,7 +546,9 @@ function goalsFor_(rows, staffId) {
     .slice()
     .sort(function (a, b) { return Number(b.week) - Number(a.week); })
     .map(function (r) {
-      const items = (r.items || []).map(function (i) { return { text: i.text || '', done: !!i.done }; });
+      const items = (r.items || []).map(function (i) {
+        return { text: i.text || '', done: !!i.done, metricKey: i.metricKey || '' };
+      });
       return { week: Number(r.week), items: items, pct: goalPct_(items), updated: r.updated };
     });
 }
@@ -469,7 +568,12 @@ async function saveGoals(username, pin, week, items) {
   const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   const clean = (Array.isArray(items) ? items.slice(0, MAX_GOALS) : []).map(function (i) {
-    return { text: str_(i && i.text, 200) || '', done: !!(i && i.done) };
+    return {
+      text: str_(i && i.text, 200) || '', done: !!(i && i.done),
+      // Optional "dept|ministry|metric" — links a goal to the KPI it moves, so
+      // personal follow-through and ministry output read as one thing.
+      metricKey: str_(i && i.metricKey, 200) || ''
+    };
   });
   const rows = await getGoals_();
   const idx = rows.findIndex(function (r) { return r.staffId === s.id && Number(r.week) === wk; });
@@ -609,6 +713,7 @@ const HANDLERS = {
   getMenteeLogs: function (a) { return getMenteeLogs(a[0], a[1], a[2]); },
   getMyMentorRequests: function (a) { return getMyMentorRequests(a[0], a[1]); },
   getMyWeekly: function (a) { return getMyWeekly(a[0], a[1]); },
+  saveMyHabits: function (a) { return saveMyHabits(a[0], a[1], a[2], a[3]); },
   saveGoals: function (a) { return saveGoals(a[0], a[1], a[2], a[3]); },
   saveWeeklyCheckin: function (a) { return saveWeeklyCheckin(a[0], a[1], a[2], a[3]); },
   getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
