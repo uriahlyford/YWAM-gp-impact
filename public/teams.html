@@ -217,11 +217,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   }
   window.addEventListener('error', function(e){
     if(e && e.target && e.target.tagName === 'SCRIPT'){
-      var src = e.target.src || '';
-      // The reading plan is optional — the guard below stubs it and the Bible
-      // habit falls back to a plain daily tick. Don't take the page down for it.
-      if(src.indexOf('bible-plan.js') > -1) return;
-      fallback('could not load ' + (src||'a script'));
+      fallback('could not load ' + (e.target.src || 'a script'));
       return;
     }
     if(e && e.message) fallback(e.message);
@@ -233,19 +229,11 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 })();
 </script>
 <script src="taxonomy.js"></script>
-<script src="bible-plan.js"></script>
 <script>
 if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
   window.gpBootFailed('taxonomy.js did not load');
   // Throwing stops the rest of this script, so nothing paints over the message.
   throw new Error('taxonomy.js missing');
-}
-if(typeof BIBLE_PLAN === 'undefined'){
-  // Non-fatal: the reading card just degrades to a plain daily tick.
-  var BIBLE_PLAN = { name:'Bible reading', subtitle:'', days:[] };
-  window.bibleReadingFor = function(){ return ''; };
-  window.biblePlanLoaded = function(){ return false; };
-  window.biblePlanLength = function(){ return 365; };
 }
 /* CAMPUSES, getDepartments(), modeOf() and the metric lists come from
    taxonomy.js — the same file the dashboard uses, so a staff member's KPI
@@ -276,7 +264,7 @@ var S = {
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'home',
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], goalDraft:null, ministry:null, kpiDraft:{}, weekDraft:{},
-  habits:null, bibleDay:0, habitEdit:false, sharedHabits:[],
+  habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false
 };
 
@@ -439,7 +427,6 @@ function afterLogin(){
     if(d.ok){
       S.logs=d.logs;
       if(d.habits) S.habits=d.habits;
-      if(d.bibleDay!==undefined) S.bibleDay=d.bibleDay;
       if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile);
     }
     render();
@@ -550,9 +537,9 @@ function homeHtml(){
 
   h+=phaseBanner(phase, wk);
 
-  /* Today's habits and Bible reading come first on ordinary days; on planning
-     and review days the weekly cards lead instead. */
-  var daily = bibleCardHtml() + habitsCardHtml();
+  /* Today's habits come first on ordinary days; on planning and review days
+     the weekly cards lead instead. */
+  var daily = habitsCardHtml();
   var weekly = goalsCardHtml(wk);
   h += (phase==='work') ? (daily + weekly) : (weekly + daily);
   h += kpiCardHtml(wk);
@@ -685,38 +672,6 @@ function todaySummaryLine(log){
   if(log.clarity!=null) bits.push('clarity '+log.clarity);
   if(log.growth!=null) bits.push('growth '+log.growth);
   return bits.length ? bits.join(' · ') : 'Nothing added yet';
-}
-
-/* --- Bible reading plan: position, not just a checkbox --- */
-function bibleCardHtml(){
-  var tracked=myHabits().some(function(hb){ return hb.id==='bible'; });
-  if(!tracked) return '';
-  var day=Number(S.bibleDay)||0;
-  var today=todayStr();
-  var log=logForDate(today);
-  var readToday=!!(log && didHabit(log,'bible'));
-  var total=biblePlanLength();
-
-  var h='<h3>📖 '+esc(BIBLE_PLAN.name)+'</h3><div class="card">';
-  if(!biblePlanLoaded()){
-    h+='<p class="sub" style="margin:4px 0 10px">The '+esc(BIBLE_PLAN.subtitle)+
-       ' readings aren’t loaded yet, so this is a plain daily tick for now.</p>';
-  } else {
-    var next=day+1>total?null:bibleReadingFor(day+1);
-    h+='<div class="row" style="border:0;padding-top:0"><span class="rowName">'+
-      (readToday
-        ? 'Day '+day+' done — next up '+esc(bibleReadingFor(day+1)||'you’ve finished the plan!')
-        : (next ? 'Today’s reading' : 'You’ve finished the whole plan 🎉'))+
-      '<div class="pmeta">'+esc(BIBLE_PLAN.subtitle)+' · day '+Math.min(day+(readToday?0:1),total)+' of '+total+'</div></span>'+
-      '<span class="pctSm">'+Math.round(day/total*100)+'%</span></div>';
-    if(next && !readToday) h+='<div class="reading">'+esc(next)+'</div>';
-    h+='<div class="bar"><div class="barFill'+(day>=total?' done':'')+'" style="width:'+Math.min(100,day/total*100)+'%"></div></div>';
-  }
-  h+='<div class="seg">'+
-    '<button id="bibleDone" class="'+(readToday?'on':'')+'">'+(readToday?'✓ Read today':'Mark today read')+'</button>'+
-    '</div>';
-  if(biblePlanLoaded()) h+='<button class="linkbtn" id="bibleSetDay" style="margin-top:8px">I’m on a different day</button>';
-  return h+'</div>';
 }
 
 /* --- Week tab: goals, KPIs and the derived health summary --- */
@@ -1112,9 +1067,9 @@ function bindMinistrySelects(){
 }
 
 /* Persist the habit set (and Bible-plan position) without blocking the UI. */
-function pushHabits(bibleDay){
-  run('saveMyHabits',[S.auth.user,S.auth.pin,myHabits(),bibleDay],function(d){
-    if(d && d.ok){ S.habits=d.habits; S.bibleDay=d.bibleDay; }
+function pushHabits(){
+  run('saveMyHabits',[S.auth.user,S.auth.pin,myHabits()],function(d){
+    if(d && d.ok){ S.habits=d.habits; }
     render();
   });
 }
@@ -1140,7 +1095,6 @@ function saveTodayHabits(map){
     if(d.ok){
       S.logs=d.logs;
       if(d.habits) S.habits=d.habits;
-      if(d.bibleDay!==undefined) S.bibleDay=d.bibleDay;
     }
     render();
   });
@@ -1256,31 +1210,6 @@ function bindHome(){
       render();
     };
   });
-
-  // --- bible plan ---
-  var bd=document.getElementById('bibleDone');
-  if(bd) bd.onclick=function(){
-    if(S.busy) return;
-    var map=todayHabitMap();
-    var wasRead=!!map.bible;
-    map.bible=!wasRead;
-    // Advance the plan when marking read, step back when un-marking.
-    var day=Number(S.bibleDay)||0;
-    var newDay=wasRead ? Math.max(0,day-1) : Math.min(biblePlanLength(), day+1);
-    S.busy=true;
-    if(navigator.vibrate){ try{ navigator.vibrate(8); }catch(e){} }
-    S.bibleDay=newDay;
-    pushHabits(newDay);
-    saveTodayHabits(map);
-  };
-  var bs=document.getElementById('bibleSetDay');
-  if(bs) bs.onclick=function(){
-    var cur=Number(S.bibleDay)||0;
-    var v=prompt('Which day of the plan did you last finish? (0–'+biblePlanLength()+')', String(cur));
-    if(v===null) return;
-    var n=Math.max(0, Math.min(biblePlanLength(), Math.floor(Number(v))||0));
-    S.bibleDay=n; pushHabits(n);
-  };
 
   // --- goals ---
   var eg=document.getElementById('editGoals');

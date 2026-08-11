@@ -98,11 +98,13 @@ all Khmer must come from `BUILTIN_KM` or be added by hand.
 - The dashboard intentionally omits "New Churches Planted" and "Base Plants in Planning"
   (still loggable in their ministries, just not shown on the dashboard summary).
 
+## Deliberately NOT built
+- **No Bible reading plan.** The team works through The Bible Recap together in a
+  dedicated Bible app, so tracking day-by-day readings here would only duplicate it.
+  Bible reading is simply one of the habit tiles with its own streak. A `bible-plan.js`
+  with position tracking existed briefly and was removed — don't rebuild it.
+
 ## On the horizon (not yet built)
-- **The Bible Recap readings.** `public/bible-plan.js` ships with `days: []` on purpose.
-  The plan is the Blue Letter Bible chronological one; paste the 365 readings in order
-  and the card starts showing "day N — next: John 4". Until then the Bible habit is a
-  plain daily tick. Don't fill this from memory — real people follow it daily.
 - **Retiring the anonymous device survey.** Staff weekly health is now derived from
   daily logs (done), so the device-based survey on the dashboard is the only remaining
   path into `survey`. It can go once everyone has a profile.
