@@ -28,6 +28,15 @@ header { background:#17150F; color:#FAF6F0; padding:18px 16px 14px; }
 .brandEn { font-size:10px; letter-spacing:3px; color:#FFB323; font-weight:700; }
 .langBtn { border:1px solid #4a463d; background:transparent; color:#FAF6F0; border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; }
 .hbtns { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+/* Who you are, top right — the way in to your own page (or to signing in). */
+.userChip { display:flex; align-items:center; gap:7px; border:1px solid #4a463d; background:transparent;
+  color:#FAF6F0; border-radius:999px; padding:4px 12px 4px 4px; font-size:13px; font-family:inherit;
+  cursor:pointer; max-width:46vw; }
+.userChip.guest { padding:6px 13px; gap:5px; border-color:#FFB323; color:#FFB323; font-weight:700; }
+.userChip .uAv { width:26px; height:26px; border-radius:50%; flex:0 0 auto; object-fit:cover;
+  background:#1F44FF; color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; letter-spacing:.3px; overflow:hidden; }
+.userChip .uName { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media (max-width:480px){
   header { padding:14px 12px 12px; }
   .brandKh { font-size:22px; }
@@ -189,7 +198,7 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
       <div class="brandKh">កូនព្រះ</div>
       
     </div>
-    <div class="hbtns"><button class="langBtn" id="teamsBtn">✦ Teams</button><button class="langBtn" id="helpBtn" aria-label="Guide">📖</button><button class="langBtn" id="refreshBtn" aria-label="Refresh">↻</button><button class="langBtn" id="lockBtn">🔒</button><button class="langBtn" id="langBtn">ខ្មែរ</button></div>
+    <div class="hbtns"><button class="langBtn" id="helpBtn" aria-label="Guide">📖</button><button class="langBtn" id="refreshBtn" aria-label="Refresh">↻</button><button class="langBtn" id="lockBtn">🔒</button><button class="langBtn" id="langBtn">ខ្មែរ</button><button class="userChip" id="userChip"></button></div>
   </div>
   <div class="campusRow" id="campusRow"></div>
 </header>
@@ -608,6 +617,7 @@ function render(){
   document.getElementById('langBtn').textContent = state.lang==='km' ? 'EN' : 'ខ្មែរ';
   document.getElementById('lockBtn').textContent = state.data.leader ? '🔓' : '🔒';
   document.getElementById('refreshBtn').textContent = '\u21bb';
+  renderUserChip();
   document.getElementById('footerLine').textContent = '✦ '+t('Every number is a person. The goal is people knowing Jesus.');
   var m = document.getElementById('main');
   if(!state.loaded){ m.innerHTML = loadingHtml(); return; }
@@ -1264,9 +1274,47 @@ function fetchData(){
   }).catch(function(){ showError("Couldn't load data. Pull down to refresh."); });
 }
 
+/* The dashboard is the public face of the app — anyone can read it without an
+   account. The chip in the top right is the one place that changes: it's your
+   face and a door to your own page if you're signed in, and an invitation to
+   sign in if you're not. */
+function renderUserChip(){
+  var chip=document.getElementById('userChip');
+  if(!chip) return;
+  var card=null, session=null;
+  try {
+    session = JSON.parse(localStorage.getItem('gp-staff')||'null');
+    card = JSON.parse(localStorage.getItem('gp-staff-card')||'null');
+  } catch(e){}
+  var signedIn = !!(session && session.user);
+
+  if(!signedIn){
+    chip.className='userChip guest';
+    chip.innerHTML='<span aria-hidden="true">✦</span> '+esc(t('Sign in'));
+    chip.setAttribute('aria-label', t('Sign in to your staff page'));
+  } else {
+    var name=(card&&card.name)||session.user;
+    var first=String(name).trim().split(/\s+/)[0];
+    var av=(card&&card.photo)
+      ? '<img class="uAv" src="'+esc(card.photo)+'" alt="">'
+      : '<span class="uAv">'+esc(initialsOf(name))+'</span>';
+    chip.className='userChip';
+    chip.innerHTML=av+'<span class="uName">'+esc(first)+'</span>';
+    chip.setAttribute('aria-label', t('Open my page'));
+  }
+  chip.onclick=function(){
+    // Going to my own page means I want to be taken there next time too.
+    try { sessionStorage.removeItem('gp-skip-teams'); } catch(e){}
+    window.location.href='teams.html';
+  };
+}
+function initialsOf(name){
+  return String(name||'?').trim().split(/\s+/).map(function(w){return w[0];})
+    .slice(0,2).join('').toUpperCase();
+}
+
 (function(){
-  var b=document.getElementById('teamsBtn');
-  if(b) b.onclick=function(){ window.location.href='teams.html'; };
+  renderUserChip();
   var hb=document.getElementById('helpBtn');
   if(hb) hb.onclick=function(){ window.location.href='help.html'; };
 })();

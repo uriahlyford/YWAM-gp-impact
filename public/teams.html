@@ -251,8 +251,19 @@ function boot(){
     });
   } else { render(); }
 }
+/* Small public snapshot so the dashboard's top-right chip can show your face
+   and name without needing your PIN. Nothing private goes in here. */
+function saveStaffCard(){
+  try {
+    localStorage.setItem('gp-staff-card', JSON.stringify({
+      name: S.me.name, photo: S.me.photo || '', ministry: S.me.ministry || ''
+    }));
+  } catch(e){}
+}
+
 function afterLogin(){
   localStorage.setItem('gp-staff', JSON.stringify(S.auth));
+  saveStaffCard();
   run('teamRoster', [], function(r){ S.roster = Array.isArray(r)?r:[]; render(); });
   run('getMyLogs', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.logs=d.logs; if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile); } render(); });
   run('getMyMentees', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentees=d.mentees; } render(); });
@@ -261,7 +272,13 @@ function afterLogin(){
   run('getMyMinistry', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.ministry=d; } render(); });
   S.view='home'; render();
 }
-function logout(){ localStorage.removeItem('gp-staff'); S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[]; render(); }
+function logout(){
+  localStorage.removeItem('gp-staff');
+  localStorage.removeItem('gp-staff-card');
+  S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
+  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalDraft=null; S.weekDraft={}; S.kpiDraft={};
+  render();
+}
 
 /* ---------- render root ---------- */
 function render(){
@@ -696,7 +713,8 @@ function handlePhoto(file){
       var data=cv.toDataURL('image/jpeg',0.7).split(',')[1];
       showMsg('Uploading photo…');
       run('uploadPhoto',[S.auth.user,S.auth.pin,data,'image/jpeg'],function(d){
-        if(d.ok){ S.me.photo=d.photo; showMsg('Photo updated'); render(); } else showMsg(d && d.err==='too_large' ? 'Photo too large \u2014 try a smaller one' : 'Upload failed');
+        if(d.ok){ S.me.photo=d.photo; saveStaffCard(); showMsg('Photo updated'); render(); }
+        else showMsg(d && d.err==='bad_type' ? 'That image type isn\u2019t supported' : (d && d.err==='too_large' ? 'Photo too large \u2014 try a smaller one' : 'Upload failed'));
       });
     };
     img.src=e.target.result;
@@ -962,7 +980,12 @@ function bind(){
     };
     sp.disabled=true; sp.textContent='Saving…';
     run('updateProfile',[S.auth.user,S.auth.pin,payload],function(d){
-      if(d.ok){ S.me=d.staff; S.profile=d.profile; showMsg('Profile saved'); run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();}); }
+      if(d.ok){
+        S.me=d.staff; S.profile=d.profile; saveStaffCard(); showMsg('Profile saved');
+        // Ministry may have changed, so re-pull the KPI set for the new one.
+        run('getMyMinistry',[S.auth.user,S.auth.pin],function(mn){ if(mn.ok) S.ministry=mn; render(); });
+        run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();});
+      }
       else { sp.disabled=false; sp.textContent='Save profile'; showMsg('Could not save'); }
     });
   };
