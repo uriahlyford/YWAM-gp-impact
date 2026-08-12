@@ -30,11 +30,14 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   Username + 4-digit PIN, profile + photo, daily logging, streaks, mentor view +
   mentor-request approval, days away from campus. `?reg=1` opens the create-profile form
   directly (the front door links straight to it).
-  **Base leads on purpose** — signing in shows how the base is doing (the dashboard's own
-  figures for that person's campus, via `rollup.js`), not a to-do list. The personal cards
-  live on My week. Base fetches `getData` with an empty leader code, so the two money
-  metrics leadership can see never reach it. This is step one of moving the dashboard into
-  the personal page; the full dashboard is still one tap away.
+  **Base leads on purpose** — signing in shows who you are and then how the base is doing,
+  not a to-do list. The personal cards live on My week. Base fetches `getData` with an
+  empty leader code, so the two money metrics leadership can see never reach it.
+  Base now carries **the whole dashboard**, section for section: your profile card on top,
+  then the hero, salvations by department, both school groups, outreach, churches, the
+  gospel totals, media, base health, the department explorer and this quarter's OKRs
+  (read-only — editing stays on the dashboard). A test asserts Base and the dashboard
+  render the same section list, so the two can't quietly drift apart.
 - `logo.js` — the two brand marks as base64 data URIs, shared by both pages:
   `GP_LOGO_WIDE` (259×108 header wordmark) and `GP_LOGO` (the square mark that spins in
   the loading coin and pull-to-refresh). **Never regenerate these blobs** — they are the
@@ -45,8 +48,18 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   and the ministry emoji, shared by both pages.
 - `rollup.js` — **the roll-up engine: the maths behind every dashboard figure.**
   `gpRollup({entries, survey, roster, week})` returns the read-only questions
-  (`headlineFor`, `ministryRollup`, `healthScore`, `totalStaff`, `trendFor`, …) plus the
-  pure globals `aggregate`, `lastBefore`, `fmt`, `qOf`, `addKnown`, `trendBadge`.
+  (`headlineFor`, `ministryRollup`, `healthScore`, `totalStaff`, `trendFor`, `drillRows`,
+  `objProgress`, …) plus the pure globals `aggregate`, `lastBefore`, `fmt`, `qOf`,
+  `addKnown`, `trendBadge`.
+  It also owns **the drill-down sheet** — the only part of the file that touches the DOM.
+  `gpDrillAttrs(metric, ids, dept, ministry, quarter)` on an element makes that figure
+  tappable; `gpBindDrill(R)` after a render wires them all; the sheet lists every ministry
+  that fed the total with its week-by-week values. Both pages use it, so a number means
+  the same thing and opens the same way wherever it appears. It mounts itself (`#ddRoot` is
+  created if absent), needs only `t()` and `CAMPUSES` from the page, and each page supplies
+  its own `.dd*` CSS. Figures with no single source — a school count derived from several
+  metrics, a health score built from check-ins — are deliberately left un-tappable rather
+  than opening an empty sheet.
   index.html keeps thin one-line wrappers over it (`R().headlineFor(...)`) so its call
   sites read unchanged; teams.html builds its own instance for the Base tab. **Change a
   roll-up rule here and it changes for both pages — that is the point.** `week` is passed

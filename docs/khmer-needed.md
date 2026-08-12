@@ -55,7 +55,7 @@ the first screen a staff member sees after logging in — so they went from
 "leadership reads them" to "everyone reads them, every day". That moves them up
 the priority list, alongside list 0.
 
-## 0c. The Base tab (7 needed)
+## 0c. The Base tab (11 needed)
 
 The staff page opens on the base's own figures. These are its labels.
 
@@ -68,6 +68,15 @@ The staff page opens on the base's own figures. These are its labels.
 | yours |  |
 | Loading your base… |  |
 | See the full dashboard |  |
+| week |  |
+| Tap any number to see which ministries and weeks it came from. |  |
+| Nothing logged for this yet. |  |
+| Close |  |
+
+_Lowercase "week" is the one in the profile card at the top ("YWAM Poipet · week 33");
+uppercase "WEEK" is the heading next to the campus name in the black card — the two
+may well want different Khmer. "Nothing logged for this yet." and "Close" belong to
+the tap-a-number breakdown sheet, which is now on this page too._
 
 _"WEEK" is a short heading next to the campus name (YWAM SIEM REAP · WEEK 33),
 not a sentence. "yours" is the small tag marking which department is the reader's

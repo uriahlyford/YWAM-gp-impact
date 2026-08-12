@@ -367,6 +367,49 @@ function gpRollup(D){
     return s/rows.length;
   }
 
+  /* ---------- where a number came from ----------
+     Every total on the dashboard is a sum over (department | ministry | metric)
+     keys. drillRows walks the same entries and hands back the rows that fed one,
+     so tapping a figure can show its parts week by week instead of asking
+     somebody to trust it. */
+  function drillRows(filterFn){
+    var rows = [];
+    Object.keys(ENTRIES).forEach(function(campus){
+      var entries = ENTRIES[campus];
+      Object.keys(entries).forEach(function(key){
+        var parts = key.split('|');
+        var dept = parts[0], ministry = parts[1], metric = parts[2];
+        if(!filterFn(campus, dept, ministry, metric)) return;
+        var weeks = entries[key];
+        var total = aggregate(weeks, modeOf(metric));
+        if(total===null) return;
+        rows.push({ campus:campus, dept:dept, ministry:ministry, metric:metric, weeks:weeks, total:total });
+      });
+    });
+    return rows;
+  }
+
+  /* ---------- OKR progress ----------
+     A key result is either tied to a metric — in which case progress is the
+     quarter's actual against the target — or tracked by hand. Shared so the
+     dashboard and a staff member's Base tab agree on how far along something is. */
+  function krProgress(o, kr){
+    if(kr.metricKey){
+      var parts = kr.metricKey.split('|');
+      var actual = aggregate(entriesOf(o.campus)[kr.metricKey], modeOf(parts[2]), Number(o.quarter)-1);
+      if(actual===null) return { pct:0, actual:null };
+      var p = kr.target>0 ? Math.round(actual/kr.target*100) : 0;
+      return { pct:Math.max(0,p), actual:actual };
+    }
+    return { pct:Math.max(0,Math.min(100,Number(kr.manual)||0)), actual:null };
+  }
+  function objProgress(o){
+    var pcts = (o.krs||[]).map(function(kr){ return krProgress(o,kr).pct; });
+    if(!pcts.length) return 0;
+    var s=0; pcts.forEach(function(p){ s+=p; });
+    return Math.round(s/pcts.length);
+  }
+
   return {
     entryWeeks:entryWeeks, aggregate:aggregate,
     lastTwo:lastTwo, trendB:trendB, trendFor:trendFor,
@@ -380,6 +423,110 @@ function gpRollup(D){
     communityDiscipled:communityDiscipled,
     outreachRollup:outreachRollup, partnerChurches:partnerChurches,
     rosterCount:rosterCount, totalStaff:totalStaff, checkinRate:checkinRate,
-    surveyRows:surveyRows, pct:pct, avg:avg, healthScore:healthScore
+    surveyRows:surveyRows, pct:pct, avg:avg, healthScore:healthScore,
+    drillRows:drillRows, krProgress:krProgress, objProgress:objProgress
   };
+}
+
+/* ================= the drill-down sheet =================
+   "Where did this number come from?" — shared so a figure means the same thing,
+   and opens the same way, on the leadership dashboard and on a staff member's
+   Base tab. Tapping a total lists every ministry that fed it, each with its
+   week-by-week values.
+
+   This is the only part of rollup.js that touches the DOM. It needs t() and
+   CAMPUSES from the page (both pages define them); everything else is here, and
+   it creates its own mount point, so a page needs no extra markup. */
+function gpDrillEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+function gpDrillT(s){ return (typeof t === 'function') ? t(s) : s; }
+function gpCampusShort(id){
+  if(typeof CAMPUSES !== 'undefined'){
+    for(var i=0;i<CAMPUSES.length;i++) if(CAMPUSES[i].id===id) return CAMPUSES[i].short;
+  }
+  return id;
+}
+function gpMinEmoji(name){
+  return (typeof MIN_EMOJI !== 'undefined' && MIN_EMOJI[name]) ? MIN_EMOJI[name]+' ' : '';
+}
+
+/* Put these on any element to make it open its own breakdown. `ids` is the list
+   of campuses the figure covers; dept/ministry narrow it the way the total was
+   narrowed; quarter limits it to one quarter. */
+function gpDrillAttrs(metric, ids, dept, ministry, quarter){
+  return ' data-drill-metric="'+gpDrillEsc(metric)+'" data-drill-ids="'+gpDrillEsc(ids.join(','))+'"'+
+    (dept ? ' data-drill-dept="'+gpDrillEsc(dept)+'"' : '')+
+    (ministry ? ' data-drill-ministry="'+gpDrillEsc(ministry)+'"' : '')+
+    (quarter!==undefined && quarter!==null ? ' data-drill-quarter="'+quarter+'"' : '');
+}
+
+function gpDrillRoot(){
+  var r = document.getElementById('ddRoot');
+  if(!r){ r = document.createElement('div'); r.id = 'ddRoot'; document.body.appendChild(r); }
+  return r;
+}
+function gpCloseDrill(){ var r = document.getElementById('ddRoot'); if(r) r.innerHTML = ''; }
+
+function gpOpenDrill(title, rows){
+  rows = rows.slice().sort(function(a,b){ return b.total-a.total; });
+  var h = '<div class="ddOverlay" id="ddOverlay"><div class="ddModal" role="dialog" aria-modal="true">'+
+    '<div class="ddHead"><h3>'+gpDrillEsc(title)+'</h3>'+
+    '<button class="ddClose" id="ddClose" aria-label="'+gpDrillEsc(gpDrillT('Close'))+'">✕</button></div>';
+  if(!rows.length){
+    h += '<p class="ddSub">'+gpDrillEsc(gpDrillT('Nothing logged for this yet.'))+'</p>';
+  } else {
+    rows.forEach(function(r){
+      var weeks = Object.keys(r.weeks).map(Number).sort(function(a,b){ return a-b; });
+      h += '<div class="ddRow"><div class="ddRowHead"><span>'+
+        gpDrillEsc(gpDrillT(gpCampusShort(r.campus)))+' · '+gpMinEmoji(r.dept)+gpDrillEsc(gpDrillT(r.dept))+
+        ' · '+gpDrillEsc(gpDrillT(r.ministry))+'</span>'+
+        '<span class="ddRowVal">'+fmt(r.total, r.metric)+'</span></div>'+
+        '<div class="ddWeeks">'+weeks.map(function(w){
+          return 'W'+w+': '+fmt(r.weeks[w], r.metric);
+        }).join(' · ')+'</div></div>';
+    });
+  }
+  h += '</div></div>';
+  gpDrillRoot().innerHTML = h;
+  document.getElementById('ddClose').onclick = gpCloseDrill;
+  document.getElementById('ddOverlay').onclick = function(e){ if(e.target.id==='ddOverlay') gpCloseDrill(); };
+}
+
+/* Wire every element carrying gpDrillAttrs(). Call it after each render, with
+   the rollup instance whose numbers are on screen. */
+function gpBindDrill(R){
+  if(!R || !R.drillRows) return;
+  document.querySelectorAll('[data-drill-metric]').forEach(function(el){
+    el.onclick = function(){
+      var metric   = el.getAttribute('data-drill-metric');
+      var ids      = el.getAttribute('data-drill-ids').split(',');
+      var dept     = el.getAttribute('data-drill-dept');
+      var ministry = el.getAttribute('data-drill-ministry');
+      var qAttr    = el.getAttribute('data-drill-quarter');
+      var quarter  = (qAttr===null || qAttr==='') ? null : Number(qAttr);
+
+      var rows = R.drillRows(function(campus, d, min, met){
+        if(ids.indexOf(campus)===-1 || met!==metric) return false;
+        if(dept && d!==dept) return false;
+        if(ministry && min!==ministry) return false;
+        // Matches how the totals are computed: base-wide figures skip Base
+        // Leadership, which reports the same metric names about its own work.
+        if(!dept && typeof BL_DEPT !== 'undefined' && d===BL_DEPT) return false;
+        return true;
+      });
+      if(quarter!==null){
+        rows = rows.map(function(r){
+          var w = {};
+          Object.keys(r.weeks).forEach(function(wk){ if(qOf(Number(wk))===quarter) w[wk]=r.weeks[wk]; });
+          var total = aggregate(w, modeOf(r.metric));
+          return total===null ? null : { campus:r.campus, dept:r.dept, ministry:r.ministry, metric:r.metric, weeks:w, total:total };
+        }).filter(Boolean);
+      }
+      var title = gpDrillT(metric) +
+        (dept ? ' · '+gpDrillT(ministry||dept) : '') +
+        (quarter!==null ? ' · Q'+(quarter+1) : '');
+      gpOpenDrill(title, rows);
+    };
+  });
 }

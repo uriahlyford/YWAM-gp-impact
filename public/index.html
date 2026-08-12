@@ -685,56 +685,21 @@ function renderNav(){
   }).join('');
 }
 
-/* ---------- drill-down: click a total to see what it's made of ---------- */
-function campusShort_(id){ for(var i=0;i<CAMPUSES.length;i++) if(CAMPUSES[i].id===id) return CAMPUSES[i].short; return id; }
-
-function drillDownRows(filterFn){
-  var rows = [];
-  Object.keys(state.data.entries).forEach(function(campus){
-    var entries = state.data.entries[campus];
-    Object.keys(entries).forEach(function(key){
-      var parts = key.split('|');
-      var dept = parts[0], ministry = parts[1], metric = parts[2];
-      if(!filterFn(campus, dept, ministry, metric)) return;
-      var weeks = entries[key];
-      var total = aggregate(weeks, modeOf(metric));
-      if(total===null) return;
-      rows.push({ campus:campus, dept:dept, ministry:ministry, metric:metric, weeks:weeks, total:total });
-    });
-  });
-  return rows;
+/* ---------- drill-down: click a total to see what it's made of ----------
+   The sheet itself lives in rollup.js so the staff page's Base tab opens the
+   same breakdown from the same numbers. These stay as thin wrappers so the call
+   sites below read unchanged. */
+function drillDownRows(filterFn){ return R().drillRows(filterFn); }
+function openDrillDown(title, rows){ return gpOpenDrill(title, rows); }
+function closeDrillDown(){ return gpCloseDrill(); }
+function drillAttrs(metric, ids, dept, ministry, quarter){
+  return gpDrillAttrs(metric, ids, dept, ministry, quarter);
 }
-
-function openDrillDown(title, rows){
-  rows = rows.slice().sort(function(a,b){ return b.total-a.total; });
-  var h = '<div class="ddOverlay" id="ddOverlay"><div class="ddModal">'+
-    '<div class="ddHead"><h3>'+esc(title)+'</h3><button class="ddClose" id="ddClose">✕</button></div>';
-  if(!rows.length){
-    h += '<p class="ddSub">Nothing logged for this yet.</p>';
-  } else {
-    rows.forEach(function(r){
-      var weeksList = Object.keys(r.weeks).map(Number).sort(function(a,b){ return a-b; });
-      h += '<div class="ddRow"><div class="ddRowHead"><span>'+esc(t(campusShort_(r.campus)))+' · '+emj(r.dept)+esc(t(r.dept))+' · '+esc(t(r.ministry))+'</span><span class="ddRowVal">'+fmt(r.total, r.metric)+'</span></div>'+
-        '<div class="ddWeeks">'+weeksList.map(function(w){ return 'W'+w+': '+fmt(r.weeks[w], r.metric); }).join(' · ')+'</div></div>';
-    });
-  }
-  h += '</div></div>';
-  document.getElementById('ddRoot').innerHTML = h;
-  document.getElementById('ddClose').onclick = closeDrillDown;
-  document.getElementById('ddOverlay').onclick = function(e){ if(e.target.id==='ddOverlay') closeDrillDown(); };
-}
-function closeDrillDown(){ var r=document.getElementById('ddRoot'); if(r) r.innerHTML=''; }
 
 /* ---------- dashboard tiles ----------
    statTile keeps the count-up animation contract in one place: render the
    number as "0" with a data-count for animateCounts() to drive, or an em dash
    when nothing has been logged. */
-function drillAttrs(metric, ids, dept, ministry, quarter){
-  return ' data-drill-metric="'+esc(metric)+'" data-drill-ids="'+ids.join(',')+'"'+
-    (dept ? ' data-drill-dept="'+esc(dept)+'"' : '')+
-    (ministry ? ' data-drill-ministry="'+esc(ministry)+'"' : '')+
-    (quarter!==undefined && quarter!==null ? ' data-drill-quarter="'+quarter+'"' : '');
-}
 function statTile(label, value, opts){
   opts = opts || {};
   var known = (value!==null && value!==undefined && !isNaN(value));
@@ -1024,24 +989,8 @@ function logHtml(){
 }
 
 /* ---------- OKR ---------- */
-function objProgress(o){
-  var pcts = o.krs.map(function(kr){ return krProgress(o, kr).pct; }).filter(function(p){ return p!==null; });
-  if(!pcts.length) return 0;
-  var s=0; pcts.forEach(function(p){s+=p;});
-  return Math.round(s/pcts.length);
-}
-
-function krProgress(o, kr){
-  if(kr.metricKey){
-    var parts = kr.metricKey.split('|');
-    var mode = modeOf(parts[2]);
-    var actual = aggregate((state.data.entries[o.campus]||{})[kr.metricKey], mode, Number(o.quarter)-1);
-    if(actual===null) return { pct:0, actual:null };
-    var p = kr.target>0 ? Math.round(actual/kr.target*100) : 0;
-    return { pct:Math.max(0,p), actual:actual };
-  }
-  return { pct:Math.max(0,Math.min(100,Number(kr.manual)||0)), actual:null };
-}
+function objProgress(o){ return R().objProgress(o); }
+function krProgress(o, kr){ return R().krProgress(o, kr); }
 
 function metricOptions(selected){
   var deps = getDepartments(state.campus);
@@ -1233,33 +1182,7 @@ function bindEvents(){
   if(gc) gc.onclick=function(){ window.location.href='teams.html?reg=1'; };
   var gl=document.getElementById('gLogin');
   if(gl) gl.onclick=function(){ window.location.href='teams.html'; };
-  document.querySelectorAll('[data-drill-metric]').forEach(function(el){
-    el.onclick = function(){
-      var metric = el.getAttribute('data-drill-metric');
-      var ids = el.getAttribute('data-drill-ids').split(',');
-      var dept = el.getAttribute('data-drill-dept');
-      var ministry = el.getAttribute('data-drill-ministry');
-      var qAttr = el.getAttribute('data-drill-quarter');
-      var quarter = (qAttr===null || qAttr==='') ? null : Number(qAttr);
-      var rows = drillDownRows(function(campus, d, min, met){
-        if(ids.indexOf(campus)===-1 || met!==metric) return false;
-        if(dept && d!==dept) return false;
-        if(ministry && min!==ministry) return false;
-        if(!dept && d===BL_DEPT) return false; // matches how the totals above are computed
-        return true;
-      });
-      if(quarter!==null){
-        rows = rows.map(function(r){
-          var w={};
-          Object.keys(r.weeks).forEach(function(wk){ if(qOf(Number(wk))===quarter) w[wk]=r.weeks[wk]; });
-          var total = aggregate(w, modeOf(r.metric));
-          return total===null ? null : { campus:r.campus, dept:r.dept, ministry:r.ministry, metric:r.metric, weeks:w, total:total };
-        }).filter(Boolean);
-      }
-      var title = t(metric) + (dept ? ' · '+t(ministry||dept) : '') + (quarter!==null ? ' · Q'+(quarter+1) : '');
-      openDrillDown(title, rows);
-    };
-  });
+  gpBindDrill(R());
   var ds=document.getElementById('deptSel');
   if(ds) ds.onchange=function(){ state.dept=ds.value; state.ministry=Object.keys(getDepartments(state.campus)[state.dept])[0]; render(); };
   var ms=document.getElementById('minSel');

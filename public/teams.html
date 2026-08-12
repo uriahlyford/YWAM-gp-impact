@@ -206,6 +206,42 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .msg { position:fixed; left:50%; bottom:86px; transform:translateX(-50%); background:#17150F; color:#FAF6F0;
   padding:10px 18px; border-radius:999px; font-size:14px; z-index:20; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90%; }
 .msg.show { opacity:1; }
+/* ---- the drill-down sheet (rollup.js renders it; these are its clothes) ----
+   Same sheet the dashboard uses, so "where did this number come from" looks the
+   same wherever you tap a figure. */
+.drillable { cursor:pointer; }
+.ddOverlay { position:fixed; inset:0; background:rgba(23,21,15,.55); z-index:50; display:flex; align-items:flex-end; justify-content:center; }
+.ddModal { background:#FAF6F0; border-radius:16px 16px 0 0; max-width:640px; width:100%; max-height:78vh; overflow-y:auto; padding:16px; animation:ddUp .18s ease both; }
+@keyframes ddUp { 0%{transform:translateY(24px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+@media (prefers-reduced-motion: reduce){ .ddModal { animation:none } }
+.ddHead { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px;
+  position:sticky; top:0; background:#FAF6F0; padding-bottom:10px; border-bottom:1px solid #e4ddd0; }
+.ddHead h3 { font-family:'Koulen',sans-serif; font-size:18px; letter-spacing:.5px; margin:0; }
+.ddSub { font-size:12px; color:#6b6557; margin-top:10px; }
+.ddClose { background:transparent; border:none; font-size:20px; cursor:pointer; color:#6b6557; padding:4px 8px; line-height:1; }
+.ddRow { padding:10px 0; border-bottom:1px solid #f0eadf; }
+.ddRowHead { display:flex; justify-content:space-between; gap:10px; font-size:14px; }
+.ddRowVal { font-family:'Koulen',sans-serif; color:#1F44FF; white-space:nowrap; }
+.ddWeeks { font-size:12px; color:#6b6557; margin-top:4px; line-height:1.5; }
+
+/* Q1-Q4 chips under a section heading, matching the dashboard */
+.qRow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0 2px; font-size:12.5px; color:#6b6557; }
+.qRow > span { background:#fff; border:1px solid #e4ddd0; border-radius:8px; padding:4px 9px; }
+.qRow .qRowLabel { background:transparent; border:none; padding:0 2px 0 0; font-size:11px;
+  letter-spacing:1.2px; text-transform:uppercase; font-weight:700; }
+.qRow b { color:#1F44FF; font-family:'Koulen',sans-serif; font-size:14px; margin-left:2px; }
+
+/* department picker on Base, matching the dashboard's */
+.pickerRow { margin:8px 0 10px; }
+.pick { display:block; max-width:300px; }
+.pick span { display:block; font-size:11px; letter-spacing:1.5px; font-weight:700; color:#6b6557;
+  text-transform:uppercase; margin-bottom:4px; }
+
+/* the profile card that leads the Base tab */
+.baseMe { display:flex; align-items:center; gap:14px; }
+.baseMe .pname { font-size:20px; line-height:1.15; }
+.baseMe .pmeta { line-height:1.4; }
+
 footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 </style>
 </head>
@@ -343,7 +379,8 @@ var S = {
   goals:[], checkins:[], goalDraft:null, ministry:null, kpiDraft:{}, weekDraft:{},
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
-  trips:null, tripRequests:[], tripForm:false, tripDraft:null
+  trips:null, tripRequests:[], tripForm:false, tripDraft:null,
+  baseDept:null
 };
 
 var HABIT_LIBRARY = [
@@ -605,21 +642,45 @@ function baseR(){
   return _baseRoll.api;
 }
 
-/* One tile. `metric` only decides formatting ($ / 1-10 / plain), and a trend is
-   passed in already rendered because only the caller knows what to compare. */
-function bstat(label, value, metric, trend){
-  return '<div class="stat"><div class="statNum">'+fmt(value, metric)+'</div>'+
+/* One tile. `metric` only decides formatting ($ / 1-10 / plain); a trend is
+   passed in already rendered because only the caller knows what to compare; and
+   `drill` carries the attributes that make the figure open its own breakdown.
+
+   Every figure that came from logged entries gets a drill. A few can't have one
+   — a school count is derived from several metrics at once, and the health score
+   comes from check-ins rather than entries — and those stay plain rather than
+   opening an empty sheet. */
+function bstat(label, value, metric, trend, drill){
+  return '<div class="stat'+(drill?' drillable':'')+'"'+(drill||'')+'>'+
+    '<div class="statNum">'+fmt(value, metric)+'</div>'+
     '<div class="statLabel">'+esc(t(label))+(trend||'')+'</div></div>';
+}
+
+/* Q1-Q4 chips under a heading, so "per quarter" is answerable without leaving
+   the page. Each chip drills into that quarter alone. */
+function bquarters(label, valFn, drillFn){
+  var h = '<div class="qRow"><span class="qRowLabel">'+esc(t(label))+'</span>';
+  for(var q=0;q<4;q++){
+    var d = drillFn ? drillFn(q) : '';
+    h += '<span'+(d?' class="drillable"'+d:'')+'>Q'+(q+1)+' <b>'+fmt(valFn(q))+'</b></span>';
+  }
+  return h+'</div>';
 }
 
 function baseHtml(){
   var wk=thisWeek();
-  var first=String(S.me.name||'').trim().split(/\s+/)[0];
   var ids=[S.me.campus];
   var R=baseR();
+  var LD=LD_DEPT, CS=CS_DEPT;
 
-  var h='<div class="pmeta" style="margin:2px 0 10px">'+esc(t(greeting()))+', '+esc(first)+
-    (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>';
+  /* --- who you are, first --- */
+  var h='<div class="card"><div class="baseMe">'+avatarHtml(S.me,'lg')+
+    '<div><div class="pmeta">'+esc(t(greeting()))+'</div>'+
+    '<div class="pname">'+esc(S.me.name)+'</div>'+
+    '<div class="pmeta">'+esc(t(S.me.role||S.me.dept))+
+      (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>'+
+    '<div class="pmeta">'+esc(t(campusName(S.me.campus)))+' · '+esc(t('week'))+' '+wk+'</div>'+
+    '</div></div></div>';
 
   if(!S.base){
     return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
@@ -640,11 +701,14 @@ function baseHtml(){
     h+='<div class="heroTrend">'+esc(t('Staff Health Score'))+' <b class="heroFig">'+hs.toFixed(1)+'</b>/10 '+
        R.trendFor(function(w){return R.healthScore(ids,w);}, null)+'</div>';
   }
-  h+='<div class="heroSub"><div class="heroSubRow">'+
+  h+='<div class="heroSub"><div class="heroSubRow drillable"'+gpDrillAttrs('Salvations', ids)+'>'+
      '<span class="heroSubLabel">'+esc(t('SALVATIONS — YTD'))+'</span>'+
      '<span class="heroSubNum">'+fmt(R.headlineFor(ids,'Salvations'))+'</span></div>'+
      '<div class="heroQ">';
-  for(var q=0;q<4;q++) h+='<span>Q'+(q+1)+' <b>'+fmt(R.headlineFor(ids,'Salvations',q))+'</b></span>';
+  for(var q=0;q<4;q++){
+    h+='<span class="drillable"'+gpDrillAttrs('Salvations', ids, null, null, q)+'>Q'+(q+1)+
+       ' <b>'+fmt(R.headlineFor(ids,'Salvations',q))+'</b></span>';
+  }
   h+='</div></div></div>';
 
   /* --- where this person sits in it: their department, against the others --- */
@@ -653,52 +717,160 @@ function baseHtml(){
   h+='<h3>🙌 '+esc(t('Salvations by department'))+'</h3><div class="card">';
   Object.keys(bd).forEach(function(d){
     var isMine=(d===myDept);
-    h+='<div class="row"><span class="rowName">'+(MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+
+    h+='<div class="row drillable"'+gpDrillAttrs('Salvations', ids, d)+'>'+
+       '<span class="rowName">'+(MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+
        (isMine?' <span class="chip blue" style="padding:1px 8px;font-size:11px">'+esc(t('yours'))+'</span>':'')+
        '</span><span class="'+(isMine?'pctSm':'rowVal')+'">'+fmt(bd[d])+'</span></div>';
   });
   h+='</div>';
 
-  /* --- the schools --- */
+  /* --- leadership development schools --- */
   h+='<h3>🌱 '+esc(t('Leadership Development schools'))+'</h3><div class="grid">'+
      bstat('Schools', R.ldSchools(ids))+
-     bstat('Students Enrolled', R.ldStudents(ids))+
+     bstat('Students Enrolled', R.ldStudents(ids), null, '', gpDrillAttrs('Students Enrolled', ids, LD))+
      bstat('Students Graduated', R.ldGraduates(ids), null,
-       R.trendFor(function(w){return R.ministryRollupWeek(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Students Graduated', w);}, 'Students Graduated'))+
+       R.trendFor(function(w){return R.ministryRollupWeek(ids, LD, LD_SCHOOL_MINISTRIES, 'Students Graduated', w);}, 'Students Graduated'),
+       gpDrillAttrs('Students Graduated', ids, LD))+
+     bstat('Potential Staff', R.ministryRollup(ids, LD, LD_SCHOOL_MINISTRIES, 'Potential Staff'), null, '',
+       gpDrillAttrs('Potential Staff', ids, LD))+
      '</div>';
+  h+=bquarters('Students Enrolled', function(q){ return R.ldStudents(ids,q); },
+     function(q){ return gpDrillAttrs('Students Enrolled', ids, LD, null, q); });
+
+  /* --- community schools --- */
   h+='<h3>📚 '+esc(t('Community schools'))+'</h3><div class="grid">'+
      bstat('Schools', R.communitySchools(ids))+
      bstat('Students Enrolled', R.communityStudents(ids))+
      bstat('Students in Discipleship', R.communityDiscipled(ids))+
+     bstat('Students Supported Financially',
+       R.ministryRollup(ids, CS, CS_SCHOOL_MINISTRIES, 'Students Supported Financially'), null, '',
+       gpDrillAttrs('Students Supported Financially', ids, CS))+
      '</div>';
+  h+=bquarters('Students Enrolled', function(q){ return R.communityStudents(ids,q); });
 
   /* --- outreach teams --- */
   h+='<h3>🙌 '+esc(t('Outreach teams'))+'</h3><div class="grid">'+
      bstat('Teams Hosted', R.outreachRollup(ids,'Teams Hosted'), null,
-       R.trendFor(function(w){return R.ministryRollupWeek(ids, CS_DEPT, ['Outreach Teams'], 'Teams Hosted', w);}, 'Teams Hosted'))+
-     bstat('Volunteers Mobilized', R.outreachRollup(ids,'Volunteers Mobilized'))+
-     bstat('People Served', R.headlineFor(ids,'People Served'), null,
-       R.trendFor(function(w){return R.metricWeekSum(ids,'People Served',w);}, 'People Served'))+
+       R.trendFor(function(w){return R.ministryRollupWeek(ids, CS, ['Outreach Teams'], 'Teams Hosted', w);}, 'Teams Hosted'),
+       gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams'))+
+     bstat('Volunteers Mobilized', R.outreachRollup(ids,'Volunteers Mobilized'), null, '',
+       gpDrillAttrs('Volunteers Mobilized', ids, CS, 'Outreach Teams'))+
      bstat('Total Volunteer Hours', R.volunteerHours(ids))+
+     bstat('People Served', R.headlineFor(ids,'People Served'), null,
+       R.trendFor(function(w){return R.metricWeekSum(ids,'People Served',w);}, 'People Served'),
+       gpDrillAttrs('People Served', ids))+
+     bstat('Salvations', R.outreachRollup(ids,'Salvations'), null, '',
+       gpDrillAttrs('Salvations', ids, CS, 'Outreach Teams'))+
+     bstat('Baptisms', R.outreachRollup(ids,'Baptisms'), null, '',
+       gpDrillAttrs('Baptisms', ids, CS, 'Outreach Teams'))+
+     bstat('People Connected to Local Church', R.outreachRollup(ids,'People Connected to Local Church'), null, '',
+       gpDrillAttrs('People Connected to Local Church', ids, CS, 'Outreach Teams'))+
      '</div>';
+  h+=bquarters('Teams Hosted', function(q){ return R.outreachRollup(ids,'Teams Hosted',q); },
+     function(q){ return gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams', q); });
 
   /* --- churches --- */
   h+='<h3>⛪ '+esc(t('Local church partnerships'))+'</h3><div class="grid">'+
      bstat('Local Churches Partnered', R.partnerChurches(ids))+
-     bstat('Combined Congregation Attendance', R.ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Combined Congregation Attendance'))+
-     bstat('People Connected to Local Church', R.headlineFor(ids,'People Connected to Local Church'))+
+     bstat('Partner Churches Supported',
+       R.ministryRollup(ids, LD, ['Church Partnerships'], 'Partner Churches Supported'), null, '',
+       gpDrillAttrs('Partner Churches Supported', ids, LD, 'Church Partnerships'))+
+     bstat('Churches Being Led',
+       R.ministryRollup(ids, LD, ['Church Partnerships'], 'Churches Being Led'), null, '',
+       gpDrillAttrs('Churches Being Led', ids, LD, 'Church Partnerships'))+
+     bstat('Combined Congregation Attendance',
+       R.ministryRollup(ids, LD, ['Church Partnerships'], 'Combined Congregation Attendance'), null, '',
+       gpDrillAttrs('Combined Congregation Attendance', ids, LD, 'Church Partnerships'))+
+     bstat('People Connected to Local Church', R.headlineFor(ids,'People Connected to Local Church'), null,
+       R.trendFor(function(w){return R.metricWeekSum(ids,'People Connected to Local Church',w);}, 'People Connected to Local Church'),
+       gpDrillAttrs('People Connected to Local Church', ids))+
+     bstat('Spoke at Churches', R.blAggAll(ids,'Spoke at Churches'))+
      '</div>';
 
   /* --- the gospel totals, every ministry pooled --- */
   h+='<h3>🕊️ '+esc(t('Across every ministry'))+'</h3><div class="grid">';
   ['Baptisms','People Heard the Gospel','Healings'].forEach(function(m){
     h+=bstat(m, R.headlineFor(ids,m), m,
-      R.trendFor(function(w){return R.metricWeekSum(ids,m,w);}, m));
+      R.trendFor(function(w){return R.metricWeekSum(ids,m,w);}, m),
+      gpDrillAttrs(m, ids));
   });
   h+='</div>';
 
+  /* --- media --- */
+  var ms=R.mediaSummary(ids);
+  h+='<h3>📱 '+esc(t('Media reach'))+'</h3><div class="grid">'+
+     bstat('Platforms', ms?ms.platforms:null)+
+     bstat('Total Pages', ms?ms.pages:null)+
+     bstat('Total Followers', ms?ms.followers:null)+
+     bstat('Views YTD', ms?ms.views:null)+
+     '</div>';
+
+  /* --- base health: the department leaders' own figures ---
+     These come from Base Leadership, where each department reports on how it is
+     being led rather than what it produced. The two money metrics are stripped
+     server-side for anyone without the leadership code, so they simply read as
+     "no figure" here. */
+  h+='<h3>🏠 '+esc(t('Base health'))+'</h3><div class="grid">';
+  ['Staff Debt ($)','One-on-Ones Held','Partner Connections','Spoke at YWAM Bases',
+   'Hours Sharing the Gospel','Base Vision (1-10)','Communications (1-10)',
+   'Partner Relationships (1-10)'].forEach(function(m){
+    h+='<div class="stat"><div class="statNum">'+fmt(R.blAgg(S.me.campus,m),m)+'</div>'+
+       '<div class="statLabel">'+esc(t(m).replace(' ($)','').replace(' (1-10)',''))+'</div></div>';
+  });
+  h+='</div>';
+
+  /* --- this quarter's OKRs, read-only ---
+     Progress is the shared calculation the dashboard uses, so a staff member and
+     their leader see the same percentage. Editing stays on the dashboard. */
+  var qNow=Math.min(4, Math.floor((wk-1)/13)+1);
+  var okrs=(S.base.okrs||[]).filter(function(o){ return o.campus===S.me.campus && Number(o.quarter)===qNow; });
+  if(okrs.length){
+    h+='<h3>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>';
+    okrs.forEach(function(o){
+      var p=R.objProgress(o);
+      h+='<div class="card slim"><div class="okrHead"><div>'+
+         '<div class="okrObj">'+esc(o.objective)+'</div>'+
+         '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+'</div></div>'+
+         '<div class="pctSm">'+p+'%</div></div>'+
+         '<div class="bar"><div class="barFill'+(p>=100?' done':'')+'" style="width:'+Math.min(100,p)+'%"></div></div>'+
+         '</div>';
+    });
+  }
+
+  /* --- every metric, by department ---
+     The tiles above are the roll-ups; this is the raw ledger behind them, one
+     card per ministry. Same picker the dashboard uses, scoped to this campus. */
+  var deps=getDepartments(S.me.campus);
+  if(!S.baseDept || !deps[S.baseDept]) S.baseDept = (deps[myDept] ? myDept : Object.keys(deps)[0]);
+  var entries=(S.base.entries||{})[S.me.campus]||{};
+  h+='<h3>🗂️ '+esc(t('Department dashboards'))+'</h3>';
+  h+='<div class="pickerRow"><label class="pick"><span>'+esc(t('Department'))+'</span>'+
+     '<select id="baseDeptSel">'+Object.keys(deps).map(function(d){
+       return '<option value="'+esc(d)+'"'+(S.baseDept===d?' selected':'')+'>'+
+         (MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+'</option>';
+     }).join('')+'</select></label></div>';
+  Object.keys(deps[S.baseDept]).forEach(function(min){
+    h+='<div class="card"><div class="row" style="border-bottom:2px solid #17150F">'+
+       '<span class="rowName" style="font-weight:700">'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span><span></span></div>';
+    deps[S.baseDept][min].forEach(function(metric){
+      var mode=modeOf(metric);
+      var mkey=S.baseDept+'|'+min+'|'+metric;
+      var v=aggregate(entries[mkey], mode);
+      var lbl=mode==='latest'?'now':(mode==='avg'?'avg':'YTD');
+      var tr=R.trendFor(function(w){
+        var en=entries[mkey];
+        return (en && en[w]!==undefined && en[w]!==null && !isNaN(Number(en[w]))) ? Number(en[w]) : null;
+      }, metric);
+      h+='<div class="row drillable"'+gpDrillAttrs(metric, ids, S.baseDept, min)+'>'+
+         '<span class="rowName">'+esc(t(metric))+' <span style="color:#a39c8d;font-size:11px">'+lbl+'</span></span>'+
+         '<span class="rowVal">'+fmt(v,metric)+tr+'</span></div>';
+    });
+    h+='</div>';
+  });
+
   h+='<p class="hint" style="margin-top:14px">'+
      esc(t('Every figure here is built from what each ministry logs each week — including yours.'))+
+     ' '+esc(t('Tap any number to see which ministries and weeks it came from.'))+
      ' <button class="linkbtn inline" id="goFullDash">'+esc(t('See the full dashboard'))+' →</button></p>';
   return h;
 }
@@ -1837,6 +2009,12 @@ function bind(){
   document.querySelectorAll('[data-tab]').forEach(function(b){
     b.onclick=function(){ S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; S.goalDraft=null; S.tripForm=false; render(); };
   });
+
+  /* Every figure on Base opens its own breakdown, from the same sheet the
+     dashboard uses. Only bound when the base's numbers are actually on screen. */
+  if(S.base) gpBindDrill(baseR());
+  var bds=document.getElementById('baseDeptSel');
+  if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
 
   bindHome();
   bindMinistrySelects();
