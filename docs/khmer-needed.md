@@ -83,7 +83,7 @@ not a sentence. "yours" is the small tag marking which department is the reader'
 own in the salvations list — so it needs to work as a label, not a pronoun.
 "Base" and "My week" are bottom-tab labels with about 9 characters of room._
 
-## 0c-2. OKRs on Me, and on a teammate's page (8 needed)
+## 0c-2. OKRs on Me, and on a teammate's page (13 needed)
 
 Objectives live on **Me** (your own) and on a **teammate's page** in Team (theirs).
 Both open with the job the objectives belong to, so the same block is written twice —
@@ -99,6 +99,26 @@ once addressed to you, once about them.
 | Nothing logged yet |  |
 | tracked by hand |  |
 | Progress comes from what your ministry logs each week, not from ticking a box here. |  |
+
+### The editor (5 needed)
+
+Staff can now write their own department's objectives from Me. Every form label
+the editor uses is already translated (Objective, Key result, Measure by, Target,
+Cancel, Save changes, Add objective, Delete, Edit, Saved, Saving…) — these five
+are the new ones.
+
+| English | ខ្មែរ |
+|---|---|
+| What are we aiming at this quarter? |  |
+| Give the objective a name first. |  |
+| Add at least one key result. |  |
+| Delete this objective? |  |
+| That didn't save — try again. |  |
+
+_The first is placeholder text inside the objective box. The next two are the
+messages shown when someone taps Save with something missing. "Delete this
+objective?" is a confirm dialog, so it has to read as a yes/no question. The last
+appears when the server refuses a write._
 
 _"OKRs" is already in km.js as an untranslated acronym — leave it as-is if that is
 what the team says out loud. "Your focus" / "Their focus" is the label on the black

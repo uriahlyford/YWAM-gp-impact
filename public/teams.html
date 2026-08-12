@@ -249,6 +249,12 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .krMeta { font-size:12px; color:#6b6557; margin-top:2px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .krBar { height:5px; background:#f0eadf; border-radius:99px; margin-top:6px; overflow:hidden; }
 .mineTag { background:#e8ecff; border:1px solid #b9c4ff; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:700; }
+.okrActions { display:flex; gap:12px; justify-content:flex-end; align-items:center;
+  border-top:1px solid #f0eadf; margin-top:12px; padding-top:10px; }
+.manualIn { width:62px; text-align:right; font-size:14px; padding:4px 7px; border-radius:8px;
+  border:1.5px solid #c9c3b6; background:#FAF6F0; }
+#okrForm .formBlock { border-top:1px dashed #d8d2c6; padding-top:10px; margin-top:12px; }
+#okrForm .btn { margin-top:12px; }
 
 /* department picker on Base, matching the dashboard's */
 .pickerRow { margin:8px 0 10px; }
@@ -400,7 +406,7 @@ var S = {
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
-  baseDept:null
+  baseDept:null, okrForm:false, okrEditId:null
 };
 
 var HABIT_LIBRARY = [
@@ -891,30 +897,92 @@ function baseHtml(){
 
    Read-only. Writing an objective is a leadership act and stays on the dashboard
    behind the leader code; this is for the people carrying them. */
-function okrCardHtml(o, R){
+function okrCardHtml(o, R, editable){
   var p = R.objProgress(o);
   var h = '<div class="okrCard">'+
     '<div class="okrHead"><div><div class="okrObj">'+esc(o.objective)+'</div>'+
     '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+'</div></div>'+
     '<div class="okrPct'+(p>=100?' done':'')+'">'+p+'%</div></div>'+
     '<div class="bar"><div class="barFill'+(p>=100?' done':'')+'" style="width:'+Math.min(100,p)+'%"></div></div>';
-  (o.krs||[]).forEach(function(kr){
+  (o.krs||[]).forEach(function(kr, ki){
     var kp = R.krProgress(o, kr);
     /* A key result tied to a KPI shows the quarter's real figure against the
-       target, so it is obvious the number came from what the ministry logged. */
-    var meta = kr.metricKey
-      ? (kp.actual===null ? esc(t('Nothing logged yet'))
-          : fmt(kp.actual, kr.metricKey.split('|')[2])+' / '+fmt(kr.target, kr.metricKey.split('|')[2]))
-      : esc(t('tracked by hand'));
+       target, so it is obvious the number came from what the ministry logged —
+       and there is nothing to type. One tracked by hand is the only kind with a
+       box, because it is the only kind nothing else can answer. */
+    var meta, right = kp.pct+'%';
+    if(kr.metricKey){
+      var met = kr.metricKey.split('|')[2];
+      meta = (kp.actual===null) ? esc(t('Nothing logged yet'))
+        : fmt(kp.actual, met)+' / '+fmt(kr.target, met);
+    } else if(editable){
+      meta = esc(t('tracked by hand'));
+      right = '<input type="number" class="manualIn" min="0" max="100" value="'+(Number(kr.manual)||0)+
+        '" data-okr-manual="'+esc(o.id)+'|'+ki+'">%';
+    } else {
+      meta = esc(t('tracked by hand'));
+    }
     h += '<div class="kr"><div class="krText">'+esc(kr.text)+'</div>'+
-      '<div class="krMeta"><span>'+meta+'</span><span>'+kp.pct+'%</span></div>'+
+      '<div class="krMeta"><span>'+meta+'</span><span>'+right+'</span></div>'+
       '<div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div></div>';
   });
+  if(editable){
+    h += '<div class="okrActions">'+
+      '<button class="danger" data-okr-del="'+esc(o.id)+'">'+esc(t('Delete'))+'</button>'+
+      '<button class="linkbtn inline" data-okr-edit="'+esc(o.id)+'">'+esc(t('Edit'))+'</button></div>';
+  }
   return h+'</div>';
 }
 
+/* Every metric on this campus, for tying a key result to a real KPI. Grouped by
+   department so the list is navigable — a key result can measure any ministry's
+   number, not just your own. */
+function okrMetricOptions(selected){
+  var deps = getDepartments(S.me.campus);
+  var h = '<option value="">'+esc(t('Manual progress (%)'))+'</option>';
+  Object.keys(deps).forEach(function(d){
+    h += '<optgroup label="'+esc(t(d))+'">';
+    Object.keys(deps[d]).forEach(function(min){
+      deps[d][min].forEach(function(met){
+        var key = d+'|'+min+'|'+met;
+        h += '<option value="'+esc(key)+'"'+(selected===key?' selected':'')+'>'+
+          esc(t(min)+' · '+t(met))+'</option>';
+      });
+    });
+    h += '</optgroup>';
+  });
+  return h;
+}
+
+/* The write form. Three key-result slots, same as the dashboard's — enough to be
+   useful, few enough that an objective stays an objective. */
+function okrFormHtml(editing){
+  var krs = editing ? (editing.krs||[]) : [];
+  var h = '<div class="okrCard" id="okrForm"><div class="okrObj">'+
+    esc(t(editing?'Edit objective':'New objective'))+'</div>';
+  h += '<label class="f">'+esc(t('Objective'))+'</label>'+
+    '<input type="text" id="okrObjText" value="'+(editing?esc(editing.objective):'')+'" '+
+    'placeholder="'+esc(t('What are we aiming at this quarter?'))+'">';
+  for(var k=0;k<3;k++){
+    var kr = krs[k] || { text:'', metricKey:'', target:'' };
+    h += '<div class="formBlock"><label class="f">'+esc(t('Key result'))+' '+(k+1)+'</label>'+
+      '<input type="text" id="okrKrText'+k+'" value="'+esc(kr.text)+'">'+
+      '<label class="f">'+esc(t('Measure by'))+'</label>'+
+      '<select id="okrKrMetric'+k+'">'+okrMetricOptions(kr.metricKey)+'</select>'+
+      '<label class="f">'+esc(t('Target (if linked to a KPI)'))+'</label>'+
+      '<input type="number" id="okrKrTarget'+k+'" inputmode="decimal" placeholder="0" value="'+
+        (kr.target||'')+'" style="width:130px">'+
+      '</div>';
+  }
+  h += '<button class="btn" id="okrSaveBtn">'+esc(t(editing?'Save changes':'Add objective'))+'</button>'+
+    '<button class="btn ghost" id="okrCancelBtn">'+esc(t('Cancel'))+'</button></div>';
+  return h;
+}
+
 /* One person's objectives, with the job they belong to on top. `who` is any
-   staff record — yourself or a teammate. `mine` only changes the wording. */
+   staff record — yourself or a teammate. `mine` turns on the wording addressed
+   to you, and the editing controls: you may write your own department's
+   objectives, never another department's, which the server enforces too. */
 function okrSectionHtml(who, mine){
   var wk = thisWeek();
   var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
@@ -936,15 +1004,111 @@ function okrSectionHtml(who, mine){
   var theirs = (S.base.okrs||[]).filter(function(o){
     return o.campus===who.campus && Number(o.quarter)===qNow && o.dept===dept;
   });
-  if(!theirs.length){
+
+  if(!theirs.length && !(mine && S.okrForm)){
     h += '<div class="card"><p class="sub" style="margin:0">'+
       esc(t(mine ? 'No objectives set for your department this quarter.'
                  : 'No objectives set for their department this quarter.'))+'</p></div>';
-    return h;
   }
-  theirs.forEach(function(o){ h += okrCardHtml(o, R); });
-  h += '<p class="hint">'+esc(t('Progress comes from what your ministry logs each week, not from ticking a box here.'))+'</p>';
+  theirs.forEach(function(o){
+    h += okrCardHtml(o, R, mine);
+  });
+
+  if(mine){
+    if(S.okrForm){
+      var editing = null;
+      if(S.okrEditId) theirs.forEach(function(o){ if(o.id===S.okrEditId) editing=o; });
+      h += okrFormHtml(editing);
+    } else {
+      h += '<button class="btn ghost" id="okrNewBtn">+ '+esc(t('New objective'))+'</button>';
+    }
+  }
+
+  if(theirs.length){
+    h += '<p class="hint">'+esc(t('Progress comes from what your ministry logs each week, not from ticking a box here.'))+'</p>';
+  }
   return h;
+}
+
+/* Writing an objective. The server re-checks everything: it takes the campus and
+   department from the staff record rather than from this payload, and refuses an
+   id that belongs to another department. So the worst a bad request here can do
+   is fail. */
+function okrSave(btn){
+  var text = (document.getElementById('okrObjText').value||'').trim();
+  if(!text){ showMsg(t('Give the objective a name first.')); return; }
+  var krs = [];
+  for(var k=0;k<3;k++){
+    var tx = (document.getElementById('okrKrText'+k).value||'').trim();
+    if(!tx) continue;
+    krs.push({ text:tx,
+      metricKey: document.getElementById('okrKrMetric'+k).value,
+      target: Number(document.getElementById('okrKrTarget'+k).value)||0,
+      manual: 0 });
+  }
+  if(!krs.length){ showMsg(t('Add at least one key result.')); return; }
+
+  /* Keep the hand-tracked percentages already entered: the form does not show
+     them, so re-saving an objective must not silently reset them to zero. */
+  if(S.okrEditId){
+    (S.base.okrs||[]).forEach(function(o){
+      if(o.id!==S.okrEditId) return;
+      krs.forEach(function(nk){
+        if(nk.metricKey) return;
+        (o.krs||[]).forEach(function(ok){
+          if(ok.text===nk.text && !ok.metricKey) nk.manual = Number(ok.manual)||0;
+        });
+      });
+    });
+  }
+
+  var myDept = S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
+  var obj = {
+    id: S.okrEditId || ('o'+Date.now()),
+    campus: S.me.campus,
+    quarter: Math.min(4, Math.floor((thisWeek()-1)/13)+1),
+    dept: myDept,
+    objective: text,
+    krs: krs
+  };
+  btn.disabled = true; btn.textContent = t('Saving…');
+  run('saveObjective', [obj, '', S.auth.user, S.auth.pin], function(d){
+    // saveObjective answers with the whole getData payload; if it didn't, the
+    // write was refused, so say so rather than blanking the page.
+    if(d && d.entries){ S.base = d; S.okrForm = false; S.okrEditId = null; showMsg(t('Saved')); }
+    else { btn.disabled = false; btn.textContent = t('Save changes'); showMsg(t('That didn’t save — try again.')); }
+    render();
+  });
+}
+
+function okrDelete(id){
+  run('deleteObjective', [id, '', S.auth.user, S.auth.pin], function(d){
+    if(d && d.entries){ S.base = d; S.okrForm = false; S.okrEditId = null; }
+    else showMsg(t('That didn’t save — try again.'));
+    render();
+  });
+}
+
+/* A hand-tracked key result is the one number a person moves themselves, so it
+   saves on change rather than making them open the form for it. */
+function okrSetManual(id, index, pct){
+  var target = null;
+  (S.base.okrs||[]).forEach(function(o){ if(o.id===id) target=o; });
+  if(!target || !target.krs || !target.krs[index]) return;
+  var copy = {
+    id: target.id, campus: target.campus, quarter: target.quarter,
+    dept: target.dept, objective: target.objective,
+    krs: target.krs.map(function(kr, i){
+      return { text:kr.text, metricKey:kr.metricKey||'',
+        target:Number(kr.target)||0,
+        manual: i===index ? Math.max(0, Math.min(100, Number(pct)||0)) : (Number(kr.manual)||0) };
+    })
+  };
+  run('saveObjective', [copy, '', S.auth.user, S.auth.pin], function(d){
+    if(d && d.entries){ S.base = d; showMsg(t('Saved')); }
+    else showMsg(t('That didn’t save — try again.'));
+    render();
+  });
 }
 
 /* ---------- my week: the personal page ---------- */
@@ -2097,6 +2261,29 @@ function bind(){
   if(S.base) gpBindDrill(baseR());
   var bds=document.getElementById('baseDeptSel');
   if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
+
+  /* --- OKR editing, on Me only --- */
+  var onb=document.getElementById('okrNewBtn');
+  if(onb) onb.onclick=function(){ S.okrForm=true; S.okrEditId=null; render(); };
+  var ocb=document.getElementById('okrCancelBtn');
+  if(ocb) ocb.onclick=function(){ S.okrForm=false; S.okrEditId=null; render(); };
+  var osb=document.getElementById('okrSaveBtn');
+  if(osb) osb.onclick=function(){ okrSave(osb); };
+  document.querySelectorAll('[data-okr-edit]').forEach(function(b){
+    b.onclick=function(){ S.okrEditId=b.getAttribute('data-okr-edit'); S.okrForm=true; render(); };
+  });
+  document.querySelectorAll('[data-okr-del]').forEach(function(b){
+    b.onclick=function(){
+      if(!confirm(t('Delete this objective?'))) return;
+      okrDelete(b.getAttribute('data-okr-del'));
+    };
+  });
+  document.querySelectorAll('[data-okr-manual]').forEach(function(inp){
+    inp.onchange=function(){
+      var parts=inp.getAttribute('data-okr-manual').split('|');
+      okrSetManual(parts[0], Number(parts[1]), inp.value);
+    };
+  });
 
   bindHome();
   bindMinistrySelects();

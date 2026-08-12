@@ -44,9 +44,12 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   twice: on **Me** (your own) and on a **teammate's page** when you tap them in Team
   (theirs). Neither shows the rest of the base's objectives — these pages are about one
   person's work. Key results tied to a KPI show the quarter's real figure against the
-  target, so it is visible the number came from what the ministry logged. Read-only:
-  writing an objective is a leadership act and stays on the dashboard behind the leader
-  code. 🎯 means "objectives" throughout, which is why weekly goals use 🗒️.
+  target, so it is visible the number came from what the ministry logged — nothing to type.
+  🎯 means "objectives" throughout, which is why weekly goals use 🗒️.
+  **Your own are editable, a teammate's are not.** On Me you can add, edit and delete
+  your department's objectives, and type the percentage for a key result that has no KPI
+  behind it (the only kind with a box — the rest are answered by what the ministry logs).
+  A teammate's page has no controls at all.
 - `logo.js` — the two brand marks as base64 data URIs, shared by both pages:
   `GP_LOGO_WIDE` (259×108 header wordmark) and `GP_LOGO` (the square mark that spins in
   the loading coin and pull-to-refresh). **Never regenerate these blobs** — they are the
@@ -119,8 +122,19 @@ all Khmer must come from `BUILTIN_KM` or be added by hand.
 - **Leadership gate:** `isLeader_` in `api.js` checks the caller's code against
   `process.env.GP_LEADER_CODE` and fails closed — no hardcoded fallback, since this
   repo is public and a literal in source would be a permanently known password. Gates
-  both reads of `SENSITIVE` metrics and all OKR writes (`saveObjective`/`deleteObjective`).
-  If the env var is ever missing, leader access is off for everyone until it's restored.
+  reads of `SENSITIVE` metrics. If the env var is ever missing, leader access is off for
+  everyone until it's restored.
+- **OKR writes have two doors** (`okrWriter_`): the leader code writes any objective, and
+  a signed-in staff member (username + PIN) writes **their own campus and department
+  only**. Two things make that a real boundary rather than a hopeful one — the campus and
+  department are taken from the **staff record**, never from the payload, so a crafted
+  request cannot claim another department; and an existing objective is only writable if it
+  already belongs to that campus and department, so an id cannot be used to hijack another
+  team's. 13 checks in the test suite cover it against the real handler.
+  **Consequence to know:** this is department-level, so any staff member in a department
+  can edit or delete that department's objectives — there is no per-person ownership,
+  because the OKR record has no owner field. Narrowing it (to department leaders only, or
+  per-ministry objectives) means adding a field to the record and to the dashboard's form.
 - **One-time migration handler removed.** The Google-Sheet-to-Blobs migration used a
   secret-gated `adminSeed` handler in `api.js`; it's been deleted now that the migration
   is done. Never commit real staff/survey data (PIN hashes, photos, health-survey

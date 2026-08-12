@@ -7,11 +7,14 @@
     "gp-data" store. Concurrency: plain read-modify-write, no locking —
     an accepted trade-off at this team's scale (see CLAUDE.md).
 
-    Leadership tier: metrics in SENSITIVE are stripped, and OKR writes are
-    rejected, unless the caller's code matches process.env.GP_LEADER_CODE.
-    Fails closed — if that env var is ever unset, nobody gets leader access
-    (no hardcoded fallback; this repo is public, so a literal in source
-    would be a permanently known password).
+    Leadership tier: metrics in SENSITIVE are stripped unless the caller's code
+    matches process.env.GP_LEADER_CODE. Fails closed — if that env var is ever
+    unset, nobody gets leader access (no hardcoded fallback; this repo is public,
+    so a literal in source would be a permanently known password).
+
+    OKR writes have two doors: the leader code writes anything, and a signed-in
+    staff member (username + PIN) writes their OWN campus and department only.
+    See okrWriter_ for how that boundary is held.
 */
 
 import { getStore } from '@netlify/blobs';
@@ -503,15 +506,51 @@ async function saveEntries(campus, updates, code) {
   return getData(code);
 }
 
-async function saveObjective(obj, code) {
-  if (!isLeader_(code)) return getData(code);
+/* ---------- who may write an objective ----------
+   Two callers, two rules. Leadership (the leader code, from the dashboard) may
+   write any objective. A signed-in staff member (username + PIN, from their own
+   Me page) may write objectives for THEIR OWN campus and department and nothing
+   else — a staff member editing their team's objectives is the point of the
+   feature, editing another team's is not.
+
+   Two things make that a real boundary rather than a hopeful one:
+     - the campus and department are taken from the STAFF RECORD, never from the
+       payload, so a crafted request cannot claim someone else's department;
+     - an existing objective is only writable if it already belongs to that
+       campus and department, so an id cannot be used to hijack another team's.
+
+   'Base Director' is the old name for what is now the Base Leadership
+   department; profiles created before the rename still carry it. */
+function deptOf_(s) { return s.dept === 'Base Director' ? 'Base Leadership' : s.dept; }
+
+async function okrWriter_(code, username, pin) {
+  if (isLeader_(code)) return { leader: true };
+  const s = await verifyStaff_(username, pin);
+  if (!s) return null;
+  return { leader: false, campus: s.campus, dept: deptOf_(s) };
+}
+
+async function saveObjective(obj, code, username, pin) {
+  const who = await okrWriter_(code, username, pin);
+  if (!who) return getData(code);
+
   const id = str_(obj && obj.id, 100);
-  const campus = str_(obj && obj.campus, 40);
-  const dept = str_(obj && obj.dept, 80);
   const objective = str_(obj && obj.objective, 300);
   const quarter = finiteNum_(obj && obj.quarter, 1, 4);
+  // Staff are pinned to their own campus and department; leaders say which.
+  const campus = who.leader ? str_(obj && obj.campus, 40) : who.campus;
+  const dept = who.leader ? str_(obj && obj.dept, 80) : who.dept;
   if (!id || !campus || !dept || !objective || quarter == null) return getData(code);
+
   let rows = await getOkrs_();
+  if (!who.leader) {
+    // Editing an existing objective is only allowed if it is already theirs.
+    const existing = rows.filter(function (r) { return String(r.id) === id; });
+    const foreign = existing.some(function (r) {
+      return r.campus !== who.campus || deptOf_(r) !== who.dept;
+    });
+    if (foreign) return getData(code);
+  }
   rows = rows.filter(function (r) { return String(r.id) !== id; });
   const now = new Date().toISOString();
   (Array.isArray(obj.krs) ? obj.krs.slice(0, 10) : []).forEach(function (kr) {
@@ -527,9 +566,18 @@ async function saveObjective(obj, code) {
   return getData(code);
 }
 
-async function deleteObjective(id, code) {
-  if (!isLeader_(code)) return getData(code);
+async function deleteObjective(id, code, username, pin) {
+  const who = await okrWriter_(code, username, pin);
+  if (!who) return getData(code);
   let rows = await getOkrs_();
+  if (!who.leader) {
+    const existing = rows.filter(function (r) { return String(r.id) === String(id); });
+    if (!existing.length) return getData(code);
+    const foreign = existing.some(function (r) {
+      return r.campus !== who.campus || deptOf_(r) !== who.dept;
+    });
+    if (foreign) return getData(code);
+  }
   rows = rows.filter(function (r) { return String(r.id) !== String(id); });
   await writeJSON('okrs', rows);
   return getData(code);
@@ -1061,8 +1109,8 @@ async function staffProfile(username, pin, staffId) {
 const HANDLERS = {
   getData: function (a) { return getData(a[0]); },
   saveEntries: function (a) { return saveEntries(a[0], a[1], a[2]); },
-  saveObjective: function (a) { return saveObjective(a[0], a[1]); },
-  deleteObjective: function (a) { return deleteObjective(a[0], a[1]); },
+  saveObjective: function (a) { return saveObjective(a[0], a[1], a[2], a[3]); },
+  deleteObjective: function (a) { return deleteObjective(a[0], a[1], a[2], a[3]); },
   saveSurvey: function (a) { return saveSurvey(a[0], a[1]); },
   teamRoster: function () { return teamRoster(); },
   staffRegister: function (a) { return staffRegister(a[0]); },
