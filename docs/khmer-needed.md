@@ -128,6 +128,37 @@ separately. "tracked by hand" marks a key result with no KPI behind it. The two
 "No objectives set..." lines differ only in whose department it is, which Khmer may
 well handle in one sentence — if so, use the same text twice._
 
+## 0c-3. The Health tab (14 needed)
+
+The weekly health section moved off the dashboard onto its own tab in My GP —
+your own weekly score and its detail, your recent weeks, then the base total your
+week feeds. Most of its labels were already translated for the dashboard; these
+are the new ones.
+
+| English | ខ្មែរ |
+|---|---|
+| Health score out of 10 |  |
+| from the days you logged |  |
+| this week |  |
+| My recent weeks |  |
+| days logged |  |
+| Nothing logged for this week yet — log a day and this fills in. |  |
+| Logged so far |  |
+| needs |  |
+| more |  |
+| Loneliness (avg) |  |
+| Growth (avg) |  |
+| Language hours |  |
+| Ministry hours |  |
+| Base figures are totals only — no names, and nobody sees an individual answer. |  |
+
+_"needs" and "more" are fragments in one line — "Logged so far: 2 · needs 3 (1 more)".
+If Khmer would rather say that as a whole sentence, write it in the "Logged so far"
+row and leave the other two blank; the code can be reworked to match. The short
+"(avg)" labels are the reader's own figures averaged across the days they logged —
+not across people — which is why "My health" uses them while the base section keeps
+the longer dashboard wording._
+
 ## 0d. One sentence for the Base tab (1)
 
 | English | ខ្មែរ |

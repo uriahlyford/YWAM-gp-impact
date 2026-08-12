@@ -387,16 +387,6 @@ function ring(p, size){
     '<text x="'+cx+'" y="'+(cx+5)+'" text-anchor="middle" font-size="'+(size*0.28)+'">'+p+'%</text></svg>';
 }
 
-function checkinStreak(campus){
-  var id = deviceId(), weeks = {};
-  state.data.survey.forEach(function(r){ if(r.campus===campus && r.device===id) weeks[Number(r.week)]=1; });
-  var w = currentWeek();
-  if(!weeks[w]) w--;
-  var n = 0;
-  while(w>=1 && weeks[w]){ n++; w--; }
-  return n;
-}
-
 
 var VERSES = [
  {en:'Go and make disciples of all nations.', km:'\u1785\u17bc\u179a\u1791\u17c5 \u1794\u1784\u17d2\u1780\u17be\u178f\u179f\u17b7\u179f\u17d2\u179f\u1782\u17d2\u179a\u1794\u17cb\u1787\u17b6\u178f\u17b7\u179f\u17b6\u179f\u1793\u17cd\u17d4', ref:'Matthew 28:19'},
@@ -420,25 +410,6 @@ function totalStaff(ids){ return R().totalStaff(ids); }
 function checkinRate(ids, week){ return R().checkinRate(ids, week); }
 
 
-var SCALE_QS = [
-  { id:'lonely',  text:'How lonely do I feel this week?', invert:true },
-  { id:'clarity', text:'How clear am I on what to work on this week?', invert:false },
-  { id:'growth',  text:'How would I rate my personal growth this week?', invert:false }
-];
-var YESNO_QS = [
-  { id:'porn',      text:'Did I look at porn this week?', bad:true },
-  { id:'oneOnOne',  text:'Did I have a one-on-one this week?', bad:false },
-  { id:'exercise',  text:'Did I exercise at least 3 days this week?', bad:false },
-  { id:'quietTime', text:'Did I have regular quiet times this week?', bad:false },
-  { id:'debt',      text:'Do I have staff debt?', bad:true },
-  { id:'sharedFaith', text:'Did I share my faith with someone this week?', bad:false },
-  { id:'sabbath',   text:'Did I take a sabbath this week?', bad:false }
-];
-var NUM_QS = [
-  { id:'langHours', text:'Hours spent on language study this week' },
-  { id:'minHours',  text:'Hours doing ministry in the local community this week' }
-];
-
 /* Open on your own campus when we know which one it is. A staff member logging
    their week shouldn't have to notice the selector is pointed at the other base
    — that is exactly how a week of Poipet numbers lands on Siem Reap. Still
@@ -460,7 +431,7 @@ var state = {
   week:1, dept:'Community Service', ministry:'Outreach Teams', loaded:false,
   okrQuarter: Math.floor(new Date().getMonth()/3)+1, okrFormOpen:false, editingId:null,
   lang: localStorage.getItem('gp-lang') || 'en', km: {},
-  surveyDraft:{}, surveyWeek:1, dashDept:'Community Service',
+  dashDept:'Community Service',
   leaderCode: localStorage.getItem('gp-leadercode') || ''
 };
 
@@ -489,7 +460,6 @@ function currentWeek(){
   return Math.max(1, Math.min(52, diff));
 }
 state.week = currentWeek();
-state.surveyWeek = currentWeek();
 /* qOf(), fmt(), aggregate() and lastBefore() are shared globals from rollup.js. */
 
 /* ---------- i18n ---------- */
@@ -551,8 +521,6 @@ function outreachRollup(ids, metric, quarter){ return R().outreachRollup(ids, me
 function partnerChurches(ids){ return R().partnerChurches(ids); }
 
 /* survey */
-function surveyRows(ids, week){ return R().surveyRows(ids, week); }
-function pct(rows, id){ return R().pct(rows, id); }
 function avg(rows, id){ return R().avg(rows, id); }
 function healthScore(ids, week){ return R().healthScore(ids, week); }
 
@@ -586,10 +554,9 @@ function render(){
   if(!state.loaded){ m.innerHTML = loadingHtml(); return; }
   if(state.view==='all') m.innerHTML = dashboardHtml(t('All Campuses — Combined Impact'), CAMPUSES.map(function(c){return c.id;}), true);
   else if(state.view==='dashboard') m.innerHTML = dashboardHtml(t(campusName()), [state.campus], false);
-  else if(isWriteView(state.view) && !canEnterData()) m.innerHTML = gateHtml(state.view);
+  else if(isWriteView(state.view) && !canEnterData()) m.innerHTML = gateHtml();
   else if(state.view==='log') m.innerHTML = logHtml();
-  else if(state.view==='okr') m.innerHTML = okrHtml();
-  else m.innerHTML = healthHtml();
+  else m.innerHTML = okrHtml();
   bindEvents();
   animateCounts();
 }
@@ -601,9 +568,11 @@ function render(){
    somebody else's figures.
 
    So the front door asks once — create a profile, log in, or browse as a guest
-   — and guests get every screen except the two that write: Log Numbers and the
-   health check-in. This is the first half of tying logging to your own campus;
-   the campus lock itself waits until everyone has an account.
+   — and guests get every screen except the one that writes: Log Numbers. (The
+   health check-in was the other; it lives on the staff page now, derived from
+   your daily logs rather than typed a second time.) This is the first half of
+   tying logging to your own campus; the campus lock itself waits until everyone
+   has an account.
 
    Note this is a UI gate, not a server one. `saveEntries` still accepts an
    unauthenticated POST, so this stops the accident, not a determined person.
@@ -615,7 +584,8 @@ function staffSession(){
 function isSignedIn(){ var s=staffSession(); return !!(s && s.user && s.pin); }
 function isGuest(){ try { return sessionStorage.getItem('gp-guest')==='1'; } catch(e){ return false; } }
 function canEnterData(){ return isSignedIn(); }
-var WRITE_VIEWS = ['log','health'];
+/* Health moved to the staff page, which owns the personal half of it. */
+var WRITE_VIEWS = ['log'];
 function isWriteView(v){ return WRITE_VIEWS.indexOf(v)>-1; }
 
 function welcomeHtml(){
@@ -650,10 +620,8 @@ function renderWelcome(){
 
 /* Shown in place of a form a guest can't use. Says what's missing and gives the
    two ways to fix it, rather than a disabled screen with no explanation. */
-function gateHtml(view){
-  var why = view==='health'
-    ? t('The health check-in is tied to you, so your week can build a streak and reach your mentor.')
-    : t('Numbers are logged against a person and a campus, so we can tell whose week they are.');
+function gateHtml(){
+  var why = t('Numbers are logged against a person and a campus, so we can tell whose week they are.');
   return '<div class="gate"><div class="gateIcon">\u2726</div>'+
     '<h3>'+esc(t('This part needs an account'))+'</h3>'+
     '<p>'+esc(why)+'</p>'+
@@ -675,7 +643,7 @@ function renderCampusRow(){
 function renderNav(){
   var n = document.getElementById('nav');
   if(state.view==='all'){ n.innerHTML=''; return; }
-  var tabs=[['dashboard','Dashboard','\ud83d\udcca'],['log','Log Numbers','\u270f\ufe0f'],['okr','OKRs','\ud83c\udfaf'],['health','Health','\ud83d\udc9a']];
+  var tabs=[['dashboard','Dashboard','\ud83d\udcca'],['log','Log Numbers','\u270f\ufe0f'],['okr','OKRs','\ud83c\udfaf']];
   /* Locked tabs stay visible with a padlock rather than disappearing — a guest
      should be able to see what an account would get them. */
   var locked = !canEnterData();
@@ -1070,73 +1038,6 @@ function okrHtml(){
 }
 
 /* ---------- Health survey ---------- */
-function healthHtml(){
-  var h = '<h2>'+esc(t('Health'))+' <small>· '+esc(t(campusName()))+'</small></h2>';
-  h += '<div class="pickerRow"><label class="pick" style="max-width:260px"><span>'+esc(t('Week'))+'</span>'+
-    '<select id="svWeekSel">'+weekOptions(state.surveyWeek)+'</select></label></div>';
-
-  var rows = surveyRows([state.campus], state.surveyWeek);
-  var hsWeek = healthScore([state.campus], state.surveyWeek);
-  var hsYtd = healthScore([state.campus]);
-  h += '<h3>\ud83d\udcca '+esc(t('Results'))+'</h3>';
-  h += '<div class="grid" style="margin-bottom:12px">';
-  var hsWkTrend = trendFor(function(w){return healthScore([state.campus],w);}, null, state.surveyWeek);
-  h += '<div class="stat gold"><div class="statNum">'+(hsWeek===null?'—':hsWeek.toFixed(1)+'/10')+'</div><div class="statLabel">'+esc(t('Staff Health Score'))+' · W'+state.surveyWeek+(hsWkTrend?'<span class="statTrend">'+hsWkTrend+'</span>':'')+'</div></div>';
-  h += '<div class="stat"><div class="statNum">'+(hsYtd===null?'—':hsYtd.toFixed(1)+'/10')+'</div><div class="statLabel">'+esc(t('Staff Health Score'))+' · YTD</div></div>';
-  var crH = checkinRate([state.campus], state.surveyWeek);
-  h += '<div class="stat"><div class="statNum">'+crH.n+(crH.total?' / '+crH.total:'')+'</div><div class="statLabel">'+esc(t('Checked in this week'))+' · W'+state.surveyWeek+(crH.total&&crH.total>0?' · '+Math.round(crH.n/crH.total*100)+'%':'')+'</div></div>';
-  h += '</div>';
-  h += '<div class="card">';
-  var tr_lonely=trendB(function(w){var r=surveyRows([state.campus],w); return r.length?avg(r,'lonely'):null;}, false, state.surveyWeek);
-  h += '<div class="row"><span class="rowName">'+esc(t('Loneliness (avg, lower is better)'))+'</span><span class="rowVal">'+(rows.length?avg(rows,'lonely').toFixed(1)+'/10':'—')+tr_lonely+'</span></div>';
-  var tr_clarity=trendB(function(w){var r=surveyRows([state.campus],w); return r.length?avg(r,'clarity'):null;}, true, state.surveyWeek);
-  h += '<div class="row"><span class="rowName">'+esc(t('Clarity (avg)'))+'</span><span class="rowVal">'+(rows.length?avg(rows,'clarity').toFixed(1)+'/10':'—')+tr_clarity+'</span></div>';
-  var tr_langHours=trendB(function(w){var r=surveyRows([state.campus],w); return r.length?avg(r,'langHours'):null;}, true, state.surveyWeek);
-  h += '<div class="row"><span class="rowName">'+esc(t('Language study (avg hrs)'))+'</span><span class="rowVal">'+(rows.length?avg(rows,'langHours').toFixed(1):'—')+tr_langHours+'</span></div>';
-  var tr_minHours=trendB(function(w){var r=surveyRows([state.campus],w); return r.length?avg(r,'minHours'):null;}, true, state.surveyWeek);
-  h += '<div class="row"><span class="rowName">'+esc(t('Community ministry (avg hrs)'))+'</span><span class="rowVal">'+(rows.length?avg(rows,'minHours').toFixed(1):'—')+tr_minHours+'</span></div>';
-  var tr_growth=trendB(function(w){var r=surveyRows([state.campus],w); return r.length?avg(r,'growth'):null;}, true, state.surveyWeek);
-  h += '<div class="row"><span class="rowName">'+esc(t('Personal growth (avg)'))+'</span><span class="rowVal">'+(avg(rows,'growth')!==null?avg(rows,'growth').toFixed(1)+'/10':'—')+tr_growth+'</span></div>';
-  [['sharedFaith','Shared their faith',true],['sabbath','Took a sabbath',true],['porn','Looked at porn',false],['oneOnOne','Had a one-on-one',true],['exercise','Exercised 3+ days',true],['quietTime','Regular quiet time',true],['debt','Have staff debt',false]].forEach(function(pair){
-    var p = pct(rows, pair[0]);
-    var tr = trendB(function(w){ var r=surveyRows([state.campus],w); return r.length?pct(r,pair[0]):null; }, pair[2], state.surveyWeek);
-    h += '<div class="row"><span class="rowName">'+esc(t(pair[1]))+'</span><span class="rowVal">'+(p===null?'—':p+'%')+tr+'</span></div>';
-  });
-  h += '</div>';
-
-  var d = state.surveyDraft;
-  var stk = checkinStreak(state.campus);
-  h += '<h3>\u2705 '+esc(t('My check-in'))+(stk>0?'<span class="streak">\ud83d\udd25 '+stk+' '+esc(t('week streak'))+'</span>':'')+'</h3><div class="card" id="svForm" style="padding:6px 14px 14px">';
-  SCALE_QS.forEach(function(q){
-    h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div><div class="scale">';
-    for(var i=1;i<=10;i++) h += '<button data-scale="'+q.id+'|'+i+'" class="'+(Number(d[q.id])===i?'on':'')+'">'+i+'</button>';
-    h += '</div></div>';
-  });
-  NUM_QS.forEach(function(q){
-    h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div>'+
-      '<input type="number" inputmode="decimal" min="0" placeholder="0" data-num="'+q.id+'" value="'+(d[q.id]!==undefined?d[q.id]:'')+'"></div>';
-  });
-  YESNO_QS.forEach(function(q){
-    h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div><div class="seg">'+
-      '<button data-yn="'+q.id+'|1" class="'+(d[q.id]===1?'on':'')+'">'+esc(t('Yes'))+'</button>'+
-      '<button data-yn="'+q.id+'|0" class="'+(d[q.id]===0?'on':'')+'">'+esc(t('No'))+'</button></div></div>';
-  });
-  var already = hasSubmitted(state.campus, state.surveyWeek);
-  h += '<button class="saveBtn" id="svSubmit">'+esc(t(already?'Update my check-in':'Submit my check-in'))+'</button>';
-  h += '<p class="note">'+esc(t('This is anonymous — no names are stored.'))+'</p></div>';
-  return h;
-}
-
-function deviceId(){
-  var id = localStorage.getItem('gp-device');
-  if(!id){ id = 'd'+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('gp-device', id); }
-  return id;
-}
-function hasSubmitted(campus, week){
-  var id = deviceId();
-  return state.data.survey.some(function(r){ return r.campus===campus && Number(r.week)===Number(week) && r.device===id; });
-}
-
 /* ---------- events & server ---------- */
 function apiCall(fn, args){
   return fetch('/.netlify/functions/api', {
@@ -1171,7 +1072,7 @@ function bindEvents(){
   document.getElementById('refreshBtn').onclick = function(){ this.textContent='…'; fetchData(); };
   document.getElementById('lockBtn').onclick = toggleLeader;
   document.querySelectorAll('[data-campus]').forEach(function(b){
-    b.onclick = function(){ state.campus=b.getAttribute('data-campus'); state.surveyDraft={}; if(state.view==='all') state.view='dashboard'; render(); };
+    b.onclick = function(){ state.campus=b.getAttribute('data-campus'); if(state.view==='all') state.view='dashboard'; render(); };
   });
   var all = document.querySelector('[data-all]');
   if(all) all.onclick = function(){ state.view='all'; render(); };
@@ -1234,25 +1135,6 @@ function bindEvents(){
     };
   });
 
-  var svw=document.getElementById('svWeekSel');
-  if(svw) svw.onchange=function(){ state.surveyWeek=Number(svw.value); state.surveyDraft={}; render(); };
-  document.querySelectorAll('[data-scale]').forEach(function(b){
-    b.onclick=function(){
-      var p=b.getAttribute('data-scale').split('|');
-      state.surveyDraft[p[0]]=Number(p[1]); render();
-    };
-  });
-  document.querySelectorAll('[data-yn]').forEach(function(b){
-    b.onclick=function(){
-      var p=b.getAttribute('data-yn').split('|');
-      state.surveyDraft[p[0]]=Number(p[1]); render();
-    };
-  });
-  document.querySelectorAll('[data-num]').forEach(function(inp){
-    inp.onchange=function(){ state.surveyDraft[inp.getAttribute('data-num')] = inp.value===''?undefined:Number(inp.value); };
-  });
-  var svs=document.getElementById('svSubmit');
-  if(svs) svs.onclick=function(){ submitSurvey(svs); };
 }
 
 function serverCall(fn, args){
@@ -1304,25 +1186,6 @@ function saveOkrForm(btn){
     state.data=d; state.okrFormOpen=false; state.editingId=null; render();
   }).catch(function(){
     btn.disabled=false; btn.textContent=t('Add objective');
-    showError("Couldn't save. Check your connection and try again.");
-  });
-}
-
-function submitSurvey(btn){
-  var d = state.surveyDraft;
-  var missing = SCALE_QS.some(function(q){ return d[q.id]===undefined; }) ||
-                YESNO_QS.some(function(q){ return d[q.id]===undefined; });
-  if(missing){ showError(t('My check-in')+': '+t('Yes')+'/'+t('No')+' + 1–10'); return; }
-  var payload = { campus: state.campus, week: state.surveyWeek, device: deviceId(),
-    lonely: d.lonely, clarity: d.clarity, growth: d.growth, porn: d.porn, oneOnOne: d.oneOnOne,
-    exercise: d.exercise, quietTime: d.quietTime, debt: d.debt,
-    sharedFaith: d.sharedFaith, sabbath: d.sabbath,
-    langHours: d.langHours||0, minHours: d.minHours||0 };
-  btn.disabled=true; btn.textContent=t('Saving…'); hideError();
-  apiCall('saveSurvey', [payload, state.leaderCode]).then(function(d){
-    state.data=d; state.surveyDraft={}; render();
-  }).catch(function(){
-    btn.disabled=false; btn.textContent=t('Submit my check-in');
     showError("Couldn't save. Check your connection and try again.");
   });
 }

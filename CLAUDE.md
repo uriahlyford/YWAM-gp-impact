@@ -22,11 +22,11 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
 
 ## Files
 ### public/
-- `index.html` — leadership dashboard (KPIs, OKRs, health survey), and the app's front
-  door. Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state,
+- `index.html` — leadership dashboard (KPIs, OKRs), and the app's front door. Three tabs:
+  Dashboard, Log Numbers, OKRs — **Health moved to the staff page** (see below). Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state,
   click-through drill-down on dashboard totals, and the ✦ Teams / 📖 buttons (plain
   page nav now, not postMessage). Calls the backend via the `apiCall(fn, args)` helper.
-- `teams.html` — per-staff space ("My GP"), four tabs: **Base · My week · Team · Me**.
+- `teams.html` — per-staff space ("My GP"), five tabs: **Base · My week · Team · Me · Health**.
   Username + 4-digit PIN, profile + photo, daily logging, streaks, mentor view +
   mentor-request approval, days away from campus. `?reg=1` opens the create-profile form
   directly (the front door links straight to it).
@@ -176,6 +176,29 @@ Poipet's log form. Still switchable — reading across campuses is normal. The h
 lock ("you may only log your own campus") waits until everyone has an account;
 until then it would shut real people out.
 
+## Health lives on the staff page
+The weekly health section moved off the dashboard onto My GP's **Health** tab, in the
+order that matters to the person reading it: **my own week** (score, the ten items behind
+it, and how many logged days fed it), **my recent weeks**, then **the base total** my week
+feeds — score for the week and YTD, check-in rate, and the per-question averages and
+shares. The base half is aggregate only; names never cross that line, exactly as before.
+
+**The anonymous device survey did not come with it, deliberately.** A signed-in staff
+member's weekly health is already derived from their daily logs — `syncWeekSurvey_` writes
+it into the same `survey` blob keyed by their own token — so a second form on a signed-in
+page would put two rows in for the same person in the same week, inflating the response
+count and skewing the base average. Since the account gate landed, that form was only
+reachable by signed-in staff, which is exactly the group it double-counts. **Logging your
+days is the check-in now.** This closes the "retiring the anonymous device survey" item.
+`saveSurvey` still exists server-side and nothing calls it — left in place in case the
+device survey is ever wanted back, e.g. for staff who never get an account.
+
+**Consequence to know:** the dashboard no longer shows the per-question health breakdown,
+and there is no longer an all-campuses view of it — a staff member's Health tab shows their
+own campus. The base health *score* is still on the dashboard hero and on Base. If
+leadership needs the combined-campus breakdown back, it wants adding to the dashboard as a
+read-only block.
+
 ## What the dashboard leads with
 The dashboard answers the questions leadership actually asks, in this order — each
 section is a roll-up over existing weekly entries, nothing new is stored:
@@ -248,10 +271,6 @@ inferred from volunteer counts.
   username + PIN through `saveEntries` and check them in `api.js`, so an unattributed
   number can't reach the blob at all. This is also what makes the campus lock real
   rather than cosmetic.
-- **Retiring the anonymous device survey.** Staff weekly health is now derived from
-  daily logs (done), so the device-based survey on the dashboard is the only remaining
-  path into `survey`. It can go once everyone has a profile — and the front door's
-  account gate is the step that makes that realistic.
 - **Real PWA icons.** `icon-180.png` / `icon-512.png` are still generated placeholders.
   `logo.js` now holds the real marks, so these can be generated from `GP_LOGO`.
 - **Web push for the daily nudge.** iOS 16.4+ supports it for installed PWAs; one

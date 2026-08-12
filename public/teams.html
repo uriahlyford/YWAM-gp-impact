@@ -406,7 +406,7 @@ var S = {
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
-  baseDept:null, okrForm:false, okrEditId:null
+  baseDept:null, okrForm:false, okrEditId:null, healthWeek:null
 };
 
 var HABIT_LIBRARY = [
@@ -630,7 +630,7 @@ function render(){
      Your own week is one tap away, Profile is folded into Me, and Mentor is
      reached from Team. */
   var reqN=S.mentorRequests?S.mentorRequests.length:0;
-  var tabs=[['base','Base','🏠'],['week','My week','✅'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','💚']];
+  var tabs=[['base','Base','🏠'],['week','My week','✅'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','🙋'],['health','Health','💚']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+tab[2]+'</span>'+t(tab[1])+'</button>';
@@ -639,6 +639,7 @@ function render(){
   if(S.view==='base') m.innerHTML=baseHtml();
   else if(S.view==='week') m.innerHTML=homeHtml();
   else if(S.view==='me') m.innerHTML=meHtml();
+  else if(S.view==='health') m.innerHTML=healthHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else m.innerHTML=profileHtml();
@@ -1541,6 +1542,153 @@ function meHtml(){
   return h;
 }
 
+/* ---------- Health: mine, and the base's ----------
+   Migrated here from the dashboard. Two halves, in the order that matters to the
+   person reading: your own weekly health first, then the base total your week
+   feeds into.
+
+   The anonymous device survey that used to sit under this section on the
+   dashboard did NOT come with it, on purpose. A signed-in staff member's weekly
+   health is already derived from their daily logs — `syncWeekSurvey_` writes it
+   into the same `survey` blob keyed by their own token — so filling in a second
+   form here would put two rows in for the same person in the same week,
+   inflating the response count and skewing the base average. Since the account
+   gate landed, the form was only reachable by signed-in staff anyway, which is
+   exactly the group it double-counts. Logging your days IS the check-in now.
+   (`saveSurvey` still exists server-side; nothing calls it.) */
+function healthWeeksMine(){
+  var weeks = {}, cur = thisWeek();
+  weeks[cur] = 1;
+  (S.checkins||[]).forEach(function(c){ weeks[Number(c.week)] = 1; });
+  return Object.keys(weeks).map(Number).sort(function(a,b){ return b-a; });
+}
+
+function healthHtml(){
+  var cur = thisWeek();
+  var wk = Number(S.healthWeek || cur);
+  var h = '<h2>'+esc(t('Health'))+'</h2>';
+
+  /* --- my own week --- */
+  var weeks = healthWeeksMine();
+  h += '<div class="pickerRow"><label class="pick"><span>'+esc(t('Week'))+'</span>'+
+    '<select id="healthWeekSel">'+weeks.map(function(w){
+      return '<option value="'+w+'"'+(w===wk?' selected':'')+'>'+esc(t('Week'))+' '+w+
+        (w===cur?' · '+esc(t('this week')):'')+'</option>';
+    }).join('')+'</select></label></div>';
+
+  var c = checkinForWeek(wk);
+  var score = c ? compositeOf(c) : null;
+  var days = c ? (Number(c.days)||0) : (wk===cur ? thisWeekLogs().length : 0);
+
+  h += '<h3>💚 '+esc(t('My health'))+'</h3><div class="card">';
+  if(score===null){
+    var short = Math.max(0, MIN_WEEK_DAYS - days);
+    h += '<div class="pctBig">—</div>'+
+      '<p class="sub" style="margin:4px 0 0">'+
+      (days===0
+        ? esc(t('Nothing logged for this week yet — log a day and this fills in.'))
+        : esc(t('Logged so far'))+': '+days+' · '+esc(t('needs'))+' '+MIN_WEEK_DAYS+
+          ' ('+short+' '+esc(t('more'))+')')+'</p>';
+  } else {
+    h += '<div class="row" style="border:0;padding-top:0">'+
+      '<span class="rowName"><strong>'+esc(t('Health score out of 10'))+'</strong>'+
+      '<div class="pmeta">'+esc(t('from the days you logged'))+' · '+days+' '+
+        esc(days===1?'day':'days')+'</div></span>'+
+      '<span class="pctBig">'+score.toFixed(1)+'</span></div>'+
+      '<div class="bar"><div class="barFill'+(score>=8?' done':'')+'" style="width:'+
+        Math.round(score*10)+'%"></div></div>';
+    var yn = function(v){ return v ? esc(t('Yes')) : esc(t('No')); };
+    /* Same labels the My week card uses, in the first person and without the
+       aggregate's "their". The 1-10 figures really are averages — across the days
+       you logged, not across people — so "(avg)" is accurate here. */
+    [[esc(t('Loneliness (avg)')), (c.lonely||c.lonely===0)?c.lonely+'/10':'—'],
+     [esc(t('Clarity (avg)')), (c.clarity||c.clarity===0)?c.clarity+'/10':'—'],
+     [esc(t('Growth (avg)')), (c.growth||c.growth===0)?c.growth+'/10':'—'],
+     [esc(t('Exercised 3+ days')), yn(c.exercise)],
+     [esc(t('Regular quiet time')), yn(c.quietTime)],
+     [esc(t('One-on-one')), yn(c.oneOnOne)],
+     [esc(t('Shared my faith')), yn(c.sharedFaith)],
+     [esc(t('Sabbath / rest')), yn(c.sabbath)],
+     [esc(t('Language hours')), (Number(c.langHours)||0)],
+     [esc(t('Ministry hours')), (Number(c.minHours)||0)]
+    ].forEach(function(r){
+      h += '<div class="row"><span class="rowName">'+r[0]+'</span><span class="rowVal">'+r[1]+'</span></div>';
+    });
+  }
+  h += '</div>';
+
+  /* --- my recent weeks, so a run of them is visible at a glance --- */
+  var past = (S.checkins||[]).slice(0, 8);
+  if(past.length){
+    h += '<h3>📈 '+esc(t('My recent weeks'))+'</h3><div class="card">';
+    past.forEach(function(row){
+      var sc = compositeOf(row);
+      h += '<div class="row"><span class="rowName">'+esc(t('Week'))+' '+row.week+
+        '<div class="pmeta">'+(Number(row.days)||0)+' '+esc(t('days logged'))+'</div></span>'+
+        '<span class="pctSm">'+sc.toFixed(1)+'</span></div>';
+    });
+    h += '</div>';
+  }
+
+  /* --- the base total this feeds ---
+     Aggregate only: names never cross this line, exactly as on the dashboard. */
+  if(!S.base){
+    return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
+  }
+  var R = baseR(), ids = [S.me.campus];
+  var rows = R.surveyRows(ids, wk);
+  var hsWeek = R.healthScore(ids, wk), hsYtd = R.healthScore(ids);
+  var cr = R.checkinRate(ids, wk);
+
+  h += '<h3>🏠 '+esc(t('Base health'))+' · '+esc(t(campusName(S.me.campus)))+'</h3>';
+  h += '<div class="grid">'+
+    '<div class="stat gold"><div class="statNum">'+(hsWeek===null?'—':hsWeek.toFixed(1)+'/10')+'</div>'+
+      '<div class="statLabel">'+esc(t('Staff Health Score'))+' · W'+wk+
+      R.trendB(function(w){ return R.healthScore(ids,w); }, true, wk)+'</div></div>'+
+    '<div class="stat"><div class="statNum">'+(hsYtd===null?'—':hsYtd.toFixed(1)+'/10')+'</div>'+
+      '<div class="statLabel">'+esc(t('Staff Health Score'))+' · YTD</div></div>'+
+    '<div class="stat"><div class="statNum">'+cr.n+(cr.total?' / '+cr.total:'')+'</div>'+
+      '<div class="statLabel">'+esc(t('Checked in this week'))+' · W'+wk+
+      (cr.total&&cr.total>0?' · '+Math.round(cr.n/cr.total*100)+'%':'')+'</div></div>'+
+    '</div>';
+
+  h += '<div class="card" style="margin-top:12px">';
+  /* Averages first, then the yes/no shares. "Lower is better" flips the trend
+     colour — the same rule the dashboard applies. */
+  [['lonely','Loneliness (avg, lower is better)', false],
+   ['clarity','Clarity (avg)', true],
+   ['growth','Personal growth (avg)', true],
+   ['langHours','Language study (avg hrs)', true],
+   ['minHours','Community ministry (avg hrs)', true]
+  ].forEach(function(q){
+    var v = rows.length ? R.avg(rows, q[0]) : null;
+    var tr = R.trendB(function(w){
+      var r = R.surveyRows(ids, w); return r.length ? R.avg(r, q[0]) : null;
+    }, q[2], wk);
+    var suffix = (q[0]==='langHours'||q[0]==='minHours') ? '' : '/10';
+    h += '<div class="row"><span class="rowName">'+esc(t(q[1]))+'</span>'+
+      '<span class="rowVal">'+(v===null?'—':v.toFixed(1)+suffix)+tr+'</span></div>';
+  });
+  [['sharedFaith','Shared their faith', true],
+   ['sabbath','Took a sabbath', true],
+   ['porn','Looked at porn', false],
+   ['oneOnOne','Had a one-on-one', true],
+   ['exercise','Exercised 3+ days', true],
+   ['quietTime','Regular quiet time', true],
+   ['debt','Have staff debt', false]
+  ].forEach(function(q){
+    var p = R.pct(rows, q[0]);
+    var tr = R.trendB(function(w){
+      var r = R.surveyRows(ids, w); return r.length ? R.pct(r, q[0]) : null;
+    }, q[2], wk);
+    h += '<div class="row"><span class="rowName">'+esc(t(q[1]))+'</span>'+
+      '<span class="rowVal">'+(p===null?'—':p+'%')+tr+'</span></div>';
+  });
+  h += '</div>';
+  h += '<p class="hint">'+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
+  return h;
+}
+
 /* --- away from campus ---
    Doubles as the mentor check-in: submitting a trip is how you tell your mentor
    you're going. The annual split (work vs personal) is the number the base
@@ -2261,6 +2409,8 @@ function bind(){
   if(S.base) gpBindDrill(baseR());
   var bds=document.getElementById('baseDeptSel');
   if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
+  var hws=document.getElementById('healthWeekSel');
+  if(hws) hws.onchange=function(){ S.healthWeek=Number(hws.value); render(); };
 
   /* --- OKR editing, on Me only --- */
   var onb=document.getElementById('okrNewBtn');
