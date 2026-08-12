@@ -231,6 +231,25 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
   letter-spacing:1.2px; text-transform:uppercase; font-weight:700; }
 .qRow b { color:#1F44FF; font-family:'Koulen',sans-serif; font-size:14px; margin-left:2px; }
 
+/* ---- OKRs tab ----
+   Your job first, then the objectives your department is working on. */
+.focusCard { background:#17150F; color:#FAF6F0; border-radius:14px; padding:15px 17px; margin-bottom:14px; }
+.focusCard .fLabel { font-size:10px; letter-spacing:2.4px; text-transform:uppercase; font-weight:700; color:#FFB323; }
+.focusCard .fMin { font-family:'Koulen',sans-serif; font-size:20px; letter-spacing:.5px; margin:4px 0 6px; }
+.focusCard p { font-size:14px; line-height:1.55; margin:0; color:#e6e0d4; }
+.okrCard { background:#fff; border:1px solid #e4ddd0; border-radius:12px; padding:14px; margin-bottom:12px; }
+.okrCard.other { background:#faf7f1; }
+.okrHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.okrObj { font-size:15.5px; font-weight:700; line-height:1.35; }
+.okrDept { font-size:11px; letter-spacing:1px; color:#6b6557; text-transform:uppercase; margin-top:2px; }
+.okrPct { font-family:'Koulen',sans-serif; font-size:26px; color:#1F44FF; white-space:nowrap; }
+.okrPct.done { color:#c98700; }
+.kr { padding:9px 0 2px; border-top:1px solid #f0eadf; margin-top:9px; }
+.krText { font-size:13.5px; line-height:1.35; }
+.krMeta { font-size:12px; color:#6b6557; margin-top:2px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.krBar { height:5px; background:#f0eadf; border-radius:99px; margin-top:6px; overflow:hidden; }
+.mineTag { background:#e8ecff; border:1px solid #b9c4ff; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:700; }
+
 /* department picker on Base, matching the dashboard's */
 .pickerRow { margin:8px 0 10px; }
 .pick { display:block; max-width:300px; }
@@ -336,6 +355,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   var p=document.getElementById('ptrLogo'); if(p) p.src=GP_LOGO; })();
 </script>
 <script src="km.js" data-optional></script>
+<script src="jobfocus.js" data-optional></script>
 <script src="taxonomy.js"></script>
 <script src="rollup.js"></script>
 <script>
@@ -380,7 +400,7 @@ var S = {
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
-  baseDept:null
+  baseDept:null, okrOtherOpen:false
 };
 
 var HABIT_LIBRARY = [
@@ -604,7 +624,7 @@ function render(){
      Your own week is one tap away, Profile is folded into Me, and Mentor is
      reached from Team. */
   var reqN=S.mentorRequests?S.mentorRequests.length:0;
-  var tabs=[['base','Base','🏠'],['week','My week','✅'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','💚']];
+  var tabs=[['base','Base','🏠'],['week','My week','✅'],['okr','OKRs','🎯'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','💚']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+tab[2]+'</span>'+t(tab[1])+'</button>';
@@ -612,6 +632,7 @@ function render(){
   var m=document.getElementById('main');
   if(S.view==='base') m.innerHTML=baseHtml();
   else if(S.view==='week') m.innerHTML=homeHtml();
+  else if(S.view==='okr') m.innerHTML=okrHtml();
   else if(S.view==='me') m.innerHTML=meHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
@@ -819,24 +840,6 @@ function baseHtml(){
   });
   h+='</div>';
 
-  /* --- this quarter's OKRs, read-only ---
-     Progress is the shared calculation the dashboard uses, so a staff member and
-     their leader see the same percentage. Editing stays on the dashboard. */
-  var qNow=Math.min(4, Math.floor((wk-1)/13)+1);
-  var okrs=(S.base.okrs||[]).filter(function(o){ return o.campus===S.me.campus && Number(o.quarter)===qNow; });
-  if(okrs.length){
-    h+='<h3>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>';
-    okrs.forEach(function(o){
-      var p=R.objProgress(o);
-      h+='<div class="card slim"><div class="okrHead"><div>'+
-         '<div class="okrObj">'+esc(o.objective)+'</div>'+
-         '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+'</div></div>'+
-         '<div class="pctSm">'+p+'%</div></div>'+
-         '<div class="bar"><div class="barFill'+(p>=100?' done':'')+'" style="width:'+Math.min(100,p)+'%"></div></div>'+
-         '</div>';
-    });
-  }
-
   /* --- every metric, by department ---
      The tiles above are the roll-ups; this is the raw ledger behind them, one
      card per ministry. Same picker the dashboard uses, scoped to this campus. */
@@ -872,6 +875,84 @@ function baseHtml(){
      esc(t('Every figure here is built from what each ministry logs each week — including yours.'))+
      ' '+esc(t('Tap any number to see which ministries and weeks it came from.'))+
      ' <button class="linkbtn inline" id="goFullDash">'+esc(t('See the full dashboard'))+' →</button></p>';
+  return h;
+}
+
+/* ---------- OKRs: what my job is, and what we are aiming at ----------
+   Objectives are stored per campus, quarter and department — department is the
+   only handle the data gives us on "whose objective is this", and it is the right
+   one: a department's objectives are the ones a person in it is actually working
+   toward.
+
+   So the tab reads top-down as a job description: what this ministry is for,
+   then the objectives that belong to it, then — folded away — what the rest of
+   the base is aiming at, because knowing that is useful but it is not your work.
+
+   Read-only by design. Writing an objective is a leadership act and stays on the
+   dashboard behind the leader code; this tab is for the people carrying them. */
+function okrProgressCard(o, R, mine){
+  var p = R.objProgress(o);
+  var h = '<div class="okrCard'+(mine?'':' other')+'">'+
+    '<div class="okrHead"><div><div class="okrObj">'+esc(o.objective)+'</div>'+
+    '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+
+      (mine?' <span class="mineTag">'+esc(t('yours'))+'</span>':'')+'</div></div>'+
+    '<div class="okrPct'+(p>=100?' done':'')+'">'+p+'%</div></div>'+
+    '<div class="bar"><div class="barFill'+(p>=100?' done':'')+'" style="width:'+Math.min(100,p)+'%"></div></div>';
+  (o.krs||[]).forEach(function(kr){
+    var kp = R.krProgress(o, kr);
+    /* A key result tied to a KPI shows the real figure against the target, so it
+       is obvious the number came from what the ministry logged — not typed here. */
+    var meta = kr.metricKey
+      ? (kp.actual===null ? esc(t('Nothing logged yet'))
+          : fmt(kp.actual, kr.metricKey.split('|')[2])+' / '+fmt(kr.target, kr.metricKey.split('|')[2]))
+      : esc(t('tracked by hand'));
+    h += '<div class="kr"><div class="krText">'+esc(kr.text)+'</div>'+
+      '<div class="krMeta"><span>'+meta+'</span><span>'+kp.pct+'%</span></div>'+
+      '<div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div></div>';
+  });
+  return h+'</div>';
+}
+
+function okrHtml(){
+  var wk = thisWeek();
+  var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
+  var myDept = S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
+  var h = '<h2>Q'+qNow+' '+esc(t('OKRs'))+'</h2>';
+
+  /* --- the job description this tab is built around --- */
+  var focus = (typeof jobFocus==='function') ? jobFocus(myDept, S.me.ministry) : null;
+  h += '<div class="focusCard"><div class="fLabel">'+esc(t('Your focus'))+'</div>'+
+    '<div class="fMin">'+esc(t(S.me.ministry || myDept))+'</div>'+
+    '<p>'+(focus ? esc(focus) : esc(t('Your ministry’s focus has not been written up yet.')))+'</p></div>';
+
+  if(!S.base){
+    return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
+  }
+  var R = baseR();
+  var all = (S.base.okrs||[]).filter(function(o){
+    return o.campus===S.me.campus && Number(o.quarter)===qNow;
+  });
+  var mine = all.filter(function(o){ return o.dept===myDept; });
+  var rest = all.filter(function(o){ return o.dept!==myDept; });
+
+  h += '<h3>🎯 '+esc(t(myDept))+'</h3>';
+  if(!mine.length){
+    h += '<div class="card"><p class="sub" style="margin:0">'+
+      esc(t('No objectives set for your department this quarter.'))+'</p></div>';
+  } else {
+    mine.forEach(function(o){ h += okrProgressCard(o, R, true); });
+  }
+
+  if(rest.length){
+    h += '<button class="discloseBtn" id="okrOtherBtn">'+
+      '<span>'+esc(t('The rest of the base'))+' ('+rest.length+')</span>'+
+      '<span class="chev">'+(S.okrOtherOpen?'▲':'▼')+'</span></button>';
+    if(S.okrOtherOpen) rest.forEach(function(o){ h += okrProgressCard(o, R, false); });
+  }
+
+  h += '<p class="hint" style="margin-top:14px">'+
+    esc(t('Progress comes from what your ministry logs each week, not from ticking a box here.'))+
+    ' <button class="linkbtn inline" id="okrFullDash">'+esc(t('See the full dashboard'))+' →</button></p>';
   return h;
 }
 
@@ -2015,6 +2096,10 @@ function bind(){
   if(S.base) gpBindDrill(baseR());
   var bds=document.getElementById('baseDeptSel');
   if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
+  var oob=document.getElementById('okrOtherBtn');
+  if(oob) oob.onclick=function(){ S.okrOtherOpen=!S.okrOtherOpen; render(); };
+  var ofd=document.getElementById('okrFullDash');
+  if(ofd) ofd.onclick=function(){ gpGo('index'); };
 
   bindHome();
   bindMinistrySelects();

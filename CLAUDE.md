@@ -35,15 +35,28 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   empty leader code, so the two money metrics leadership can see never reach it.
   Base now carries **the whole dashboard**, section for section: your profile card on top,
   then the hero, salvations by department, both school groups, outreach, churches, the
-  gospel totals, media, base health, the department explorer and this quarter's OKRs
-  (read-only — editing stays on the dashboard). A test asserts Base and the dashboard
-  render the same section list, so the two can't quietly drift apart.
+  gospel totals, media, base health and the department explorer. A test asserts Base and
+  the dashboard render the same section list, so the two can't quietly drift apart.
+  **OKRs are their own tab**, framed as a job description: the reader's ministry focus
+  (from `jobfocus.js`) on a black card, then the objectives belonging to **their
+  department** — the only handle the OKR data gives on "whose objective is this", and the
+  right one — with the rest of the base folded away underneath. Key results tied to a KPI
+  show the quarter's real figure against the target, so it is visible the number came from
+  what the ministry logged. Read-only: writing an objective is a leadership act and stays
+  on the dashboard behind the leader code.
 - `logo.js` — the two brand marks as base64 data URIs, shared by both pages:
   `GP_LOGO_WIDE` (259×108 header wordmark) and `GP_LOGO` (the square mark that spins in
   the loading coin and pull-to-refresh). **Never regenerate these blobs** — they are the
   real assets. Both marks are white, drawn for the black header, so on the paper
   background they need a dark coin behind them or they vanish.
 - `km.js` — the 266-entry reviewed Khmer dictionary (`BUILTIN_KM`), shared by both pages.
+- `jobfocus.js` — `JOB_FOCUS` / `jobFocus(dept, ministry)`: what each of the 28 ministries
+  is for, in one paragraph — the "job description" the OKRs tab is built around. Extracted
+  verbatim from `help.html`, which still carries the same paragraphs inline so it needs no
+  script to render. **Two copies, so they can drift** — a test compares them and also
+  asserts every ministry in the taxonomy has a focus written for it. Edit one, edit both.
+  Lookups take the department because Base Leadership's "ministries" are named after the
+  departments they oversee.
 - `taxonomy.js` — campuses, departments, ministries, metric lists, `modeOf()`, `compositeOf()`
   and the ministry emoji, shared by both pages.
 - `rollup.js` — **the roll-up engine: the maths behind every dashboard figure.**
