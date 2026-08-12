@@ -26,15 +26,32 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   door. Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state,
   click-through drill-down on dashboard totals, and the ✦ Teams / 📖 buttons (plain
   page nav now, not postMessage). Calls the backend via the `apiCall(fn, args)` helper.
-- `teams.html` — per-staff space: username + 4-digit PIN, profile + photo, daily logging,
-  streaks, mentor view + mentor-request approval. `?reg=1` opens the create-profile form
+- `teams.html` — per-staff space ("My GP"), four tabs: **Base · My week · Team · Me**.
+  Username + 4-digit PIN, profile + photo, daily logging, streaks, mentor view +
+  mentor-request approval, days away from campus. `?reg=1` opens the create-profile form
   directly (the front door links straight to it).
+  **Base leads on purpose** — signing in shows how the base is doing (the dashboard's own
+  figures for that person's campus, via `rollup.js`), not a to-do list. The personal cards
+  live on My week. Base fetches `getData` with an empty leader code, so the two money
+  metrics leadership can see never reach it. This is step one of moving the dashboard into
+  the personal page; the full dashboard is still one tap away.
 - `logo.js` — the two brand marks as base64 data URIs, shared by both pages:
   `GP_LOGO_WIDE` (259×108 header wordmark) and `GP_LOGO` (the square mark that spins in
   the loading coin and pull-to-refresh). **Never regenerate these blobs** — they are the
   real assets. Both marks are white, drawn for the black header, so on the paper
   background they need a dark coin behind them or they vanish.
 - `km.js` — the 266-entry reviewed Khmer dictionary (`BUILTIN_KM`), shared by both pages.
+- `taxonomy.js` — campuses, departments, ministries, metric lists, `modeOf()`, `compositeOf()`
+  and the ministry emoji, shared by both pages.
+- `rollup.js` — **the roll-up engine: the maths behind every dashboard figure.**
+  `gpRollup({entries, survey, roster, week})` returns the read-only questions
+  (`headlineFor`, `ministryRollup`, `healthScore`, `totalStaff`, `trendFor`, …) plus the
+  pure globals `aggregate`, `lastBefore`, `fmt`, `qOf`, `addKnown`, `trendBadge`.
+  index.html keeps thin one-line wrappers over it (`R().headlineFor(...)`) so its call
+  sites read unchanged; teams.html builds its own instance for the Base tab. **Change a
+  roll-up rule here and it changes for both pages — that is the point.** `week` is passed
+  in because the two pages compute "this week" differently (index counts from the Monday
+  of week 1, teams mirrors the API's ISO week); the engine only uses it to bound trends.
 - `help.html` — bilingual clickable KPI guide (job focus + KPI explanations per ministry).
 - `manifest.json`, `icon-180.png`, `icon-512.png` — PWA assets. **The icons are
   placeholders** (cobalt circle + "GP" wordmark) — swap in real ones when available.

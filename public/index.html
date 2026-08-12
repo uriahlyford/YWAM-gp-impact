@@ -315,13 +315,18 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
 (function(){ var b=document.getElementById('brandLogo'); if(b && typeof GP_LOGO_WIDE==='string') b.src=GP_LOGO_WIDE; })();
 </script>
 <script src="taxonomy.js"></script>
+<script src="rollup.js"></script>
 <script>
-/* If taxonomy.js didn't land, stop here with a real message rather than
-   throwing halfway through rendering. */
+/* If taxonomy.js or rollup.js didn't land, stop here with a real message rather
+   than throwing halfway through rendering. */
 if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
   window.gpBootFailed('taxonomy.js did not load');
   // Throwing stops the rest of this script, so nothing paints over the message.
   throw new Error('taxonomy.js missing');
+}
+if(typeof gpRollup !== 'function'){
+  window.gpBootFailed('rollup.js did not load');
+  throw new Error('rollup.js missing');
 }
 
 /* Staff who've logged in get their own page as the app's front door — opening
@@ -409,35 +414,10 @@ function verseOfWeek(){
   return '<div class="verse">\ud83d\udcd6 \u201c'+text+'\u201d — <b>'+v.ref+'</b></div>';
 }
 
-function rosterCount(ids){
-  if(!state.roster) return null;
-  var n=0; state.roster.forEach(function(r){ if(ids.indexOf(r.campus)>-1) n++; });
-  return n;
-}
-function totalStaff(ids){
-  var rc = rosterCount(ids);
-  if(rc!==null && rc>0) return rc;
-  var t=0, any=false;
-  ids.forEach(function(cid){ var v=blAgg(cid,'Total Staff'); if(v!==null){ t+=v; any=true; } });
-  if(any) return t;
-  return (rc!==null) ? rc : null;
-}
-function checkinRate(ids, week){
-  var responses = surveyRows(ids, week).length;
-  var t = totalStaff(ids);
-  return { n:responses, total:(t!==null && t>0)?Math.round(t):null };
-}
-function blAgg2(campus, metric){
-  var vals=[];
-  Object.keys(getDepartments(campus)[BL_DEPT]).forEach(function(min){
-    var e = (state.data.entries[campus]||{})[BL_DEPT+'|'+min+'|'+metric];
-    var v = aggregate(e, modeOf(metric));
-    if(v!==null) vals.push(v);
-  });
-  if(!vals.length) return null;
-  var tt=0; vals.forEach(function(v){tt+=v;});
-  return modeOf(metric)==='avg' ? tt/vals.length : tt;
-}
+/* Staff counts and check-in rates come from the shared engine (rollup.js) —
+   accounts first, the logged 'Total Staff' figure as the fallback. */
+function totalStaff(ids){ return R().totalStaff(ids); }
+function checkinRate(ids, week){ return R().checkinRate(ids, week); }
 
 
 var SCALE_QS = [
@@ -510,7 +490,7 @@ function currentWeek(){
 }
 state.week = currentWeek();
 state.surveyWeek = currentWeek();
-function qOf(w){ return Math.min(3, Math.floor((w-1)/13)); }
+/* qOf(), fmt(), aggregate() and lastBefore() are shared globals from rollup.js. */
 
 /* ---------- i18n ---------- */
 function t(s){ if(state.lang==='en') return s; return BUILTIN_KM[s] || state.km[s] || s; }
@@ -525,304 +505,56 @@ function toggleLang(){
   render();
 }
 
-/* ---------- aggregation ---------- */
-function aggregate(entries, mode, quarter){
-  if(!entries) return null;
-  var pairs = [];
-  for(var w in entries){
-    var wk = Number(w), v = Number(entries[w]);
-    if(isNaN(v)) continue;
-    if(quarter !== undefined && quarter !== null && qOf(wk) !== quarter) continue;
-    pairs.push([wk, v]);
+/* ---------- the roll-up engine ----------
+   Every figure on this page is computed in rollup.js, which teams.html shares
+   so a staff member sees their base's numbers built by exactly this arithmetic.
+   What stays here is the wiring: R() hands the engine whatever data is loaded
+   right now, and the one-liners below keep this page's call sites unchanged.
+
+   The instance is rebuilt only when the data object itself is replaced, which
+   is what a load does — so a render costs one engine, not one per figure. */
+var _roll = null;
+function R(){
+  var d = state.data;
+  if(!_roll || _roll.e!==d.entries || _roll.s!==d.survey || _roll.r!==state.roster){
+    _roll = { e:d.entries, s:d.survey, r:state.roster,
+      api: gpRollup({ entries:d.entries, survey:d.survey, roster:state.roster, week:currentWeek() }) };
   }
-  if(!pairs.length) return null;
-  pairs.sort(function(a,b){ return a[0]-b[0]; });
-  if(mode==='avg'){ var s=0; pairs.forEach(function(p){s+=p[1];}); return s/pairs.length; }
-  if(mode==='latest') return pairs[pairs.length-1][1];
-  var tt=0; pairs.forEach(function(p){tt+=p[1];}); return tt;
+  return _roll.api;
 }
 
-/* Most recent recorded value STRICTLY BEFORE a given week. Used by the log
-   form to carry a headcount forward so nobody retypes an unchanged number
-   every week. */
-function lastBefore(weeks, week){
-  if(!weeks) return null;
-  var best = null;
-  for(var w in weeks){
-    var wk = Number(w), v = Number(weeks[w]);
-    if(isNaN(v) || wk >= Number(week)) continue;
-    if(!best || wk > best.week) best = { week:wk, value:v };
-  }
-  return best;
-}
-
-function fmt(v, metric){
-  if(v===null||v===undefined) return '—';
-  var money = metric && metric.indexOf('($)')>-1;
-  if(metric && (metric.indexOf('(1-10)')>-1)) return v.toFixed(1);
-  if(metric && metric.indexOf('(%)')>-1) return Math.round(v)+'%';
-  var n = Math.round(v).toLocaleString();
-  return money ? '$'+n : n;
-}
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 
-/* ---------- weekly trend (vs the week before) ---------- */
-var LOWER_BETTER = {'Staff Debt ($)':1,'Weekly Expenses ($)':1,'Students Struggling':1};
-function pctChange(prev,cur){
-  if(prev===null||cur===null||prev===undefined||cur===undefined||isNaN(prev)||isNaN(cur)) return null;
-  if(prev===0) return null;
-  return Math.round((cur-prev)/Math.abs(prev)*100);
-}
-function lastTwo(valFn, maxW){
-  maxW = maxW || currentWeek();
-  var arr=[];
-  for(var w=1; w<=maxW; w++){ var v=valFn(w); if(v!==null && v!==undefined && !isNaN(v)) arr.push(v); }
-  if(arr.length<2) return null;
-  return [arr[arr.length-2], arr[arr.length-1]];
-}
-function trendBadge(pct, higherBetter){
-  if(pct===null||pct===undefined) return '';
-  if(pct===0) return '<span class="trend flat">— 0%</span>';
-  var up = pct>0, good = up ? higherBetter : !higherBetter;
-  return '<span class="trend '+(good?'up':'down')+'">'+(up?'▲':'▼')+' '+Math.abs(pct)+'%</span>';
-}
-function trendB(valFn, higherBetter, maxW){
-  var lt=lastTwo(valFn, maxW); if(!lt) return '';
-  return trendBadge(pctChange(lt[0],lt[1]), higherBetter!==false);
-}
-function trendFor(valFn, metric, maxW){
-  return trendB(valFn, (metric && LOWER_BETTER[metric]) ? false : true, maxW);
-}
-function metricWeekSum(ids, metric, w){
-  var total=0, any=false;
-  ids.forEach(function(cid){
-    var entries = state.data.entries[cid]||{};
-    for(var k in entries){ var parts=k.split('|'); if(parts[0]===BL_DEPT) continue;
-      if(parts[2]===metric){ var v=entries[k][w]; if(v!==undefined && v!==null && !isNaN(Number(v))){ total+=Number(v); any=true; } } }
-  });
-  return any ? total : null;
-}
+/* trend badges */
+function trendB(valFn, higherBetter, maxW){ return R().trendB(valFn, higherBetter, maxW); }
+function trendFor(valFn, metric, maxW){ return R().trendFor(valFn, metric, maxW); }
 
-function headlineFor(ids, metric, quarter){
-  var total=0, any=false;
-  ids.forEach(function(cid){
-    var entries = state.data.entries[cid]||{};
-    for(var k in entries){
-      var parts = k.split('|');
-      if(parts[0]===BL_DEPT) continue;
-      if(parts[2]===metric){
-        var v = aggregate(entries[k],'sum',quarter);
-        if(v!==null){ total+=v; any=true; }
-      }
-    }
-  });
-  return any ? total : null;
-}
+/* base-wide totals */
+function metricWeekSum(ids, metric, w){ return R().metricWeekSum(ids, metric, w); }
+function headlineFor(ids, metric, quarter){ return R().headlineFor(ids, metric, quarter); }
+function volunteerHours(ids, quarter){ return R().volunteerHours(ids, quarter); }
+function salvByDept(ids){ return R().salvByDept(ids); }
+function blAgg(campus, metric){ return R().blAgg(campus, metric); }
+function blAggAll(ids, metric){ return R().blAggAll(ids, metric); }
+function mediaSummary(ids){ return R().mediaSummary(ids); }
 
-/* Community Service Hours × Volunteers Mobilized, per week, summed */
-function volunteerHours(ids, quarter){
-  var total=0, any=false;
-  ids.forEach(function(cid){
-    var entries = state.data.entries[cid]||{};
-    for(var k in entries){
-      var parts = k.split('|');
-      if(parts[0]===BL_DEPT || parts[2]!=='Community Service Hours') continue;
-      var hours = entries[k];
-      var vols = entries[parts[0]+'|'+parts[1]+'|Volunteers Mobilized'] || {};
-      for(var w in hours){
-        if(quarter!==undefined && quarter!==null && qOf(Number(w))!==quarter) continue;
-        var hv = Number(hours[w]); if(isNaN(hv)) continue;
-        var vv = Number(vols[w]); if(isNaN(vv) || vv<=0) vv = 1;
-        total += hv*vv; any=true;
-      }
-    }
-  });
-  return any ? total : null;
-}
+/* schools, teams, churches */
+function ministryRollup(ids, dept, ministries, metric, quarter){ return R().ministryRollup(ids, dept, ministries, metric, quarter); }
+function ministryRollupWeek(ids, dept, ministries, metric, week){ return R().ministryRollupWeek(ids, dept, ministries, metric, week); }
+function ldSchools(ids){ return R().ldSchools(ids); }
+function ldStudents(ids, quarter){ return R().ldStudents(ids, quarter); }
+function ldGraduates(ids, quarter){ return R().ldGraduates(ids, quarter); }
+function communitySchools(ids){ return R().communitySchools(ids); }
+function communityStudents(ids, quarter){ return R().communityStudents(ids, quarter); }
+function communityDiscipled(ids){ return R().communityDiscipled(ids); }
+function outreachRollup(ids, metric, quarter){ return R().outreachRollup(ids, metric, quarter); }
+function partnerChurches(ids){ return R().partnerChurches(ids); }
 
-function salvByDept(ids){
-  var out={ 'Community Service':null, 'Youth Education':null, 'Leadership Development':null, 'Skills Training':null };
-  ids.forEach(function(cid){
-    var entries = state.data.entries[cid]||{};
-    for(var k in entries){
-      var parts = k.split('|');
-      if(parts[0]===BL_DEPT || out[parts[0]]===undefined) continue;
-      if(parts[2]==='Salvations'){
-        var v = aggregate(entries[k],'sum');
-        if(v!==null) out[parts[0]] = (out[parts[0]]||0)+v;
-      }
-    }
-  });
-  return out;
-}
-
-function blAgg(campus, metric){
-  var mode = modeOf(metric), vals=[];
-  Object.keys(getDepartments(campus)[BL_DEPT]).forEach(function(min){
-    var e = (state.data.entries[campus]||{})[BL_DEPT+'|'+min+'|'+metric];
-    var v = aggregate(e, mode);
-    if(v!==null) vals.push(v);
-  });
-  if(!vals.length) return null;
-  var tt=0; vals.forEach(function(v){tt+=v;});
-  return mode==='avg' ? tt/vals.length : tt;
-}
-
-/* Media roll-up across campuses */
-function mediaSummary(ids){
-  var pages=0, followers=0, views=0, platCount=0, any=false;
-  PLATFORMS.forEach(function(p){
-    var pPages=0, pAny=false;
-    ids.forEach(function(cid){
-      var e = state.data.entries[cid]||{};
-      var pg = aggregate(e['Youth Education|GP Media|'+p+' Pages'],'latest');
-      var fl = aggregate(e['Youth Education|GP Media|'+p+' Followers'],'latest');
-      var vw = aggregate(e['Youth Education|GP Media|'+p+' Views'],'sum');
-      if(pg!==null){ pPages+=pg; pAny=true; }
-      if(fl!==null){ followers+=fl; any=true; }
-      if(vw!==null){ views+=vw; any=true; }
-    });
-    if(pAny && pPages>0){ platCount++; pages+=pPages; any=true; }
-  });
-  return any ? { platforms:platCount, pages:pages, followers:followers, views:views } : null;
-}
-
-/* ---------- headline roll-ups: schools, teams, churches ----------
-   Nothing new is stored for these. They read the same weekly entries as every
-   other figure on the page; the only new thing is which
-   (department | ministry | metric) triples get added together. The ministry
-   groups live in taxonomy.js so the log form and the dashboard stay in step.
-
-   Each metric keeps its own aggregation rule, so headcounts ('Students
-   Enrolled', 'Partner Churches Supported') take the latest week rather than
-   summing the same people every week, while events ('Teams Hosted',
-   'Students Graduated') accumulate across the year. */
-
-function entryWeeks(campus, dept, ministry, metric){
-  return (state.data.entries[campus]||{})[dept+'|'+ministry+'|'+metric];
-}
-
-/* null + null stays null — "nothing logged yet" is different from zero, and the
-   dashboard shows an em dash for it rather than a misleading 0. */
-function addKnown(vals){
-  var total=0, any=false;
-  vals.forEach(function(v){ if(v!==null && v!==undefined && !isNaN(v)){ total+=v; any=true; } });
-  return any ? total : null;
-}
-
-/* One metric added across a named set of ministries in one department. */
-function ministryRollup(ids, dept, ministries, metric, quarter){
-  var mode = modeOf(metric), vals = [];
-  ids.forEach(function(cid){
-    ministries.forEach(function(min){
-      vals.push(aggregate(entryWeeks(cid, dept, min, metric), mode, quarter));
-    });
-  });
-  return addKnown(vals);
-}
-
-/* The same roll-up for a single week, which is what the ▲/▼ trend badges
-   compare. Reads the raw week rather than aggregating, so a 'latest' metric
-   gives that week's level and a 'sum' metric that week's events. */
-function ministryRollupWeek(ids, dept, ministries, metric, week){
-  var vals = [];
-  ids.forEach(function(cid){
-    ministries.forEach(function(min){
-      var weeks = entryWeeks(cid, dept, min, metric);
-      var v = weeks ? Number(weeks[week]) : NaN;
-      vals.push(isNaN(v) ? null : v);
-    });
-  });
-  return addKnown(vals);
-}
-
-/* Has anything at all been logged for this ministry? Lets a school count as
-   running without asking anyone to type a "1" every week. */
-function ministryLogged(campus, dept, ministry){
-  var entries = state.data.entries[campus]||{}, pre = dept+'|'+ministry+'|';
-  for(var k in entries){
-    if(k.indexOf(pre)!==0) continue;
-    for(var w in entries[k]) if(!isNaN(Number(entries[k][w]))) return true;
-  }
-  return false;
-}
-
-/* How many schools a group of ministries is running. A ministry reporting its
-   own 'Schools' figure contributes that number; otherwise a ministry with any
-   data at all is the one school it is — YDC is one school, and nobody should
-   have to log that separately. */
-function schoolCount(ids, dept, ministries){
-  var n=0, any=false;
-  ids.forEach(function(cid){
-    ministries.forEach(function(min){
-      var reported = aggregate(entryWeeks(cid, dept, min, 'Schools'), 'latest');
-      if(reported!==null && reported>0){ n += reported; any=true; return; }
-      if(ministryLogged(cid, dept, min)){ n += 1; any=true; }
-    });
-  });
-  return any ? n : null;
-}
-
-var LD_DEPT = 'Leadership Development';
-var CS_DEPT = 'Community Service';
-var YE_DEPT = 'Youth Education';
-
-function ldSchools(ids){ return schoolCount(ids, LD_DEPT, LD_SCHOOL_MINISTRIES); }
-function ldStudents(ids, quarter){ return ministryRollup(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Students Enrolled', quarter); }
-function ldGraduates(ids, quarter){ return ministryRollup(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Students Graduated', quarter); }
-
-function communitySchools(ids){
-  return addKnown([ schoolCount(ids, CS_DEPT, CS_SCHOOL_MINISTRIES),
-                    schoolCount(ids, YE_DEPT, YE_SCHOOL_MINISTRIES) ]);
-}
-function communityStudents(ids, quarter){
-  return addKnown([ ministryRollup(ids, CS_DEPT, CS_SCHOOL_MINISTRIES, 'Students Enrolled', quarter),
-                    ministryRollup(ids, YE_DEPT, YE_SCHOOL_MINISTRIES, 'Youth Enrolled', quarter) ]);
-}
-function communityDiscipled(ids){
-  return addKnown([ ministryRollup(ids, CS_DEPT, CS_SCHOOL_MINISTRIES, 'Students in Discipleship'),
-                    ministryRollup(ids, YE_DEPT, YE_SCHOOL_MINISTRIES, 'Students in Discipleship') ]);
-}
-
-function outreachRollup(ids, metric, quarter){
-  return ministryRollup(ids, CS_DEPT, ['Outreach Teams'], metric, quarter);
-}
-
-/* Every local church we are in relationship with: the ones we support as
-   partners plus the ones our people are actually leading. */
-function partnerChurches(ids){
-  return addKnown([ ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Partner Churches Supported'),
-                    ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Churches Being Led') ]);
-}
-/* Base Leadership metric across several campuses — blAgg() is one campus only. */
-function blAggAll(ids, metric){
-  return addKnown(ids.map(function(cid){ return blAgg(cid, metric); }));
-}
-
-/* ---------- survey ---------- */
-function surveyRows(ids, week){
-  return state.data.survey.filter(function(r){
-    return ids.indexOf(r.campus)>-1 && (week===undefined || Number(r.week)===Number(week));
-  });
-}
-function pct(rows, id){
-  var v = rows.filter(function(r){ return r[id]!==null && r[id]!==undefined; });
-  if(!v.length) return null;
-  var y=0; v.forEach(function(r){ if(r[id]) y++; });
-  return Math.round(y/v.length*100);
-}
-function avg(rows, id){
-  var v = rows.filter(function(r){ return r[id]!==null && r[id]!==undefined; });
-  if(!v.length) return null;
-  var s=0; v.forEach(function(r){ s+=Number(r[id])||0; });
-  return s/v.length;
-}
-function healthScore(ids, week){
-  var rows = surveyRows(ids, week);
-  if(!rows.length) return null;
-  var s=0; rows.forEach(function(r){ s+=compositeOf(r); });
-  return s/rows.length;
-}
+/* survey */
+function surveyRows(ids, week){ return R().surveyRows(ids, week); }
+function pct(rows, id){ return R().pct(rows, id); }
+function avg(rows, id){ return R().avg(rows, id); }
+function healthScore(ids, week){ return R().healthScore(ids, week); }
 
 /* ---------- rendering ---------- */
 function visibleMetrics(list){

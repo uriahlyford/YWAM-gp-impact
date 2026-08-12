@@ -868,6 +868,139 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
   return getMyMinistry(username, pin);
 }
 
+/* ==================== away from campus ====================
+   Staff record the days they're off base and what for, and it doubles as the
+   check-in with their mentor: if they have an approved mentor the trip lands as
+   'pending' for that mentor to acknowledge; if they don't, it's simply 'noted'
+   so nobody is blocked from recording their own days by not having a mentor.
+
+   Two kinds only — work and personal — because that's what the annual total
+   needs to separate. The reason is finer detail for context, not a third
+   category, so adding reasons later never breaks the totals.
+
+   Days are whole and inclusive: leaving Friday and back Sunday is 3 days. No
+   half-days; the annual figure is for planning, not payroll. */
+const AWAY_KINDS = ['work', 'personal'];
+const AWAY_REASONS = {
+  work:     ['Outreach', 'Conference or training', 'Ministry travel', 'Base business', 'Other work'],
+  personal: ['Fundraising / home ministry', 'Visiting family', 'Medical', 'Holiday / rest', 'Other personal']
+};
+const MAX_TRIP_DAYS = 365;
+
+async function getTrips_() { return readJSON('trips', []); }
+
+function isDate_(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); }
+function tripDays_(from, to) {
+  const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
+  return Math.round((b - a) / 86400000) + 1;
+}
+
+/* Totals per calendar year, split by kind. Declined trips never count; a trip
+   is attributed to the year it starts in so a New Year crossing lands in one
+   place rather than being split. */
+function awayTotals_(trips) {
+  const out = {};
+  trips.forEach(function (r) {
+    if (r.status === 'declined') return;
+    const year = String(r.from).slice(0, 4);
+    if (!out[year]) out[year] = { work: 0, personal: 0, trips: 0 };
+    if (AWAY_KINDS.indexOf(r.kind) === -1) return;
+    out[year][r.kind] += Number(r.days) || 0;
+    out[year].trips += 1;
+  });
+  return out;
+}
+
+function tripOut_(r) {
+  return {
+    id: r.id, from: r.from, to: r.to, days: r.days, kind: r.kind,
+    reason: r.reason || '', where: r.where || '', note: r.note || '',
+    status: r.status, decidedAt: r.decidedAt || ''
+  };
+}
+
+async function getMyTrips(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const mine = (await getTrips_()).filter(function (r) { return r.staffId === s.id; })
+    .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
+  return {
+    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine),
+    reasons: AWAY_REASONS,
+    hasMentor: !!(s.mentorId && s.mentorStatus === 'approved')
+  };
+}
+
+async function saveTrip(username, pin, trip) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const t = trip || {};
+  if (!isDate_(t.from) || !isDate_(t.to)) return { ok: false, err: 'bad_dates' };
+  if (t.to < t.from) return { ok: false, err: 'end_before_start' };
+  const days = tripDays_(t.from, t.to);
+  if (days < 1 || days > MAX_TRIP_DAYS) return { ok: false, err: 'bad_span' };
+  const kind = AWAY_KINDS.indexOf(t.kind) > -1 ? t.kind : 'work';
+  const reason = (AWAY_REASONS[kind].indexOf(t.reason) > -1) ? t.reason : AWAY_REASONS[kind][0];
+
+  const rows = await getTrips_();
+  const now = new Date().toISOString();
+  const mentored = !!(s.mentorId && s.mentorStatus === 'approved');
+  // Editing an existing trip re-opens it for the mentor rather than keeping a
+  // stale approval for dates that have since changed.
+  const existingIdx = t.id ? rows.findIndex(function (r) { return r.id === t.id && r.staffId === s.id; }) : -1;
+  const rec = {
+    id: existingIdx > -1 ? rows[existingIdx].id : ('tr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    staffId: s.id, campus: s.campus,
+    from: t.from, to: t.to, days: days, kind: kind, reason: reason,
+    where: str_(t.where, 120) || '', note: str_(t.note, 300) || '',
+    mentorId: mentored ? s.mentorId : '',
+    status: mentored ? 'pending' : 'noted',
+    decidedBy: '', decidedAt: '',
+    created: existingIdx > -1 ? rows[existingIdx].created : now, updated: now
+  };
+  if (existingIdx > -1) rows[existingIdx] = rec; else rows.push(rec);
+  await writeJSON('trips', rows);
+  return getMyTrips(username, pin);
+}
+
+async function deleteTrip(username, pin, tripId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  let rows = await getTrips_();
+  rows = rows.filter(function (r) { return !(r.id === tripId && r.staffId === s.id); });
+  await writeJSON('trips', rows);
+  return getMyTrips(username, pin);
+}
+
+/* Mentor side: the trips waiting on you, and each mentee's year to date. */
+async function getTripRequests(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const staff = await getStaff_();
+  const trips = await getTrips_();
+  const pending = trips.filter(function (r) { return r.mentorId === s.id && r.status === 'pending'; })
+    .sort(function (a, b) { return a.from < b.from ? -1 : 1; })
+    .map(function (r) {
+      const who = staff.find(function (x) { return x.id === r.staffId; });
+      return Object.assign(tripOut_(r), { staffId: r.staffId, name: who ? who.name : '—' });
+    });
+  return { ok: true, requests: pending };
+}
+
+async function respondToTrip(username, pin, tripId, approve) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getTrips_();
+  const idx = rows.findIndex(function (r) { return r.id === tripId && r.mentorId === s.id; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  rows[idx].status = approve ? 'approved' : 'declined';
+  rows[idx].decidedBy = s.id;
+  rows[idx].decidedAt = new Date().toISOString();
+  rows[idx].updated = rows[idx].decidedAt;
+  await writeJSON('trips', rows);
+  return getTripRequests(username, pin);
+}
+
 /* ==================== a teammate's public profile ====================
    What one staff member may see about another: who they are, what ministry
    they're in, and their weekly goals — work commitments the team is meant to
@@ -898,6 +1031,18 @@ async function staffProfile(username, pin, staffId) {
   mine.forEach(function (r) { weeks[String(r.week)] = 1; });
   const dates = mine.map(function (r) { return r.date; }).sort();
 
+  /* Days away, work only. Whether someone travels a lot for ministry is team
+     information — it explains why they're not around. Personal days (family,
+     medical, fundraising) are nobody else's business, so only the count of
+     WORK days crosses this line, and never the reasons or dates. */
+  const myTrips = (await getTrips_()).filter(function (r) {
+    return r.staffId === p.id && r.status !== 'declined' && r.kind === 'work';
+  });
+  const awayWork = {};
+  Object.keys(awayTotals_(myTrips)).forEach(function (y) {
+    awayWork[y] = awayTotals_(myTrips)[y].work;
+  });
+
   return {
     ok: true,
     staff: publicStaff_(p),
@@ -907,6 +1052,7 @@ async function staffProfile(username, pin, staffId) {
       daysLogged: mine.length,
       lastLogged: dates.length ? dates[dates.length - 1] : ''
     },
+    awayWork: awayWork,
     isMe: p.id === me.id
   };
 }
@@ -937,6 +1083,11 @@ const HANDLERS = {
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   saveMyKpiPins: function (a) { return saveMyKpiPins(a[0], a[1], a[2]); },
   staffProfile: function (a) { return staffProfile(a[0], a[1], a[2]); },
+  getMyTrips: function (a) { return getMyTrips(a[0], a[1]); },
+  saveTrip: function (a) { return saveTrip(a[0], a[1], a[2]); },
+  deleteTrip: function (a) { return deleteTrip(a[0], a[1], a[2]); },
+  getTripRequests: function (a) { return getTripRequests(a[0], a[1]); },
+  respondToTrip: function (a) { return respondToTrip(a[0], a[1], a[2], a[3]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
 };

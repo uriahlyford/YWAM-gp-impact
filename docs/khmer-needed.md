@@ -50,6 +50,40 @@ already translates.
 _Note: "Teams Hosted" is also a KPI leaders type into the log form, so it needs
 to read naturally as a column label as well as on a dashboard tile._
 
+These same headings now appear on the **Base tab of the staff page** as well —
+the first screen a staff member sees after logging in — so they went from
+"leadership reads them" to "everyone reads them, every day". That moves them up
+the priority list, alongside list 0.
+
+## 0c. The Base tab (7 needed)
+
+The staff page opens on the base's own figures. These are its labels.
+
+| English | ខ្មែរ |
+|---|---|
+| Base |  |
+| My week |  |
+| My health |  |
+| WEEK |  |
+| yours |  |
+| Loading your base… |  |
+| See the full dashboard |  |
+
+_"WEEK" is a short heading next to the campus name (YWAM SIEM REAP · WEEK 33),
+not a sentence. "yours" is the small tag marking which department is the reader's
+own in the salvations list — so it needs to work as a label, not a pronoun.
+"Base" and "My week" are bottom-tab labels with about 9 characters of room._
+
+## 0d. One sentence for the Base tab (1)
+
+| English | ខ្មែរ |
+|---|---|
+| Every figure here is built from what each ministry logs each week — including yours. |  |
+
+_This is the line under the base figures that tells a staff member their own
+weekly numbers are part of what they are looking at. Worth getting right rather
+than literal._
+
 ## 1. Words and labels (53 needed)
 
 Fill the right column:
