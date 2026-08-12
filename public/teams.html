@@ -121,6 +121,14 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .deptHead .deptN { margin-left:auto; font-family:'Koulen',sans-serif; font-size:17px; color:#1F44FF; }
 .minLabel { font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:#6b6557;
   font-weight:700; margin:14px 0 7px; }
+
+/* days away from campus */
+.awaySplit { display:flex; gap:10px; margin:10px 0 4px; }
+.awayHalf { flex:1; border:1px solid #b9c4ff; background:#e8ecff; border-radius:12px; padding:11px 8px; text-align:center; }
+.awayHalf.personal { border-color:#ffd98a; background:#FFF1D6; }
+.awayHalf .awayN { font-family:'Koulen',sans-serif; font-size:25px; line-height:1.1; color:#17150F; }
+.awayHalf .awayL { font-size:11px; letter-spacing:.6px; text-transform:uppercase; color:#6b6557; font-weight:700; }
+.tripDel { border:0; background:none; color:#b3261e; font-size:14px; cursor:pointer; padding:2px 0 2px 8px; }
 .goalLink { font-size:12px; color:#1F44FF; margin-top:5px; }
 
 /* today's habits */
@@ -289,7 +297,8 @@ var S = {
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], goalDraft:null, ministry:null, kpiDraft:{}, weekDraft:{},
   habits:null, habitEdit:false, sharedHabits:[],
-  todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null
+  todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
+  trips:null, tripRequests:[], tripForm:false, tripDraft:null
 };
 
 var HABIT_LIBRARY = [
@@ -475,6 +484,8 @@ function afterLogin(){
   run('getMyMentees', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentees=d.mentees; } render(); });
   run('getMyMentorRequests', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentorRequests=d.requests; } render(); });
   run('getMyWeekly', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.goals=d.goals||[]; S.checkins=d.checkins||[]; } render(); });
+  run('getMyTrips', [S.auth.user, S.auth.pin], function(d){ if(d.ok) S.trips=d; render(); });
+  run('getTripRequests', [S.auth.user, S.auth.pin], function(d){ if(d.ok) S.tripRequests=d.requests||[]; render(); });
   run('getMyMinistry', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.ministry=d; } render(); });
   S.view='home'; render();
 }
@@ -946,9 +957,73 @@ function meHtml(){
     h+='<div class="row"><span class="rowName">'+esc(l.date)+'<div class="pmeta">'+(bits.join(' · ')||'—')+'</div></span></div>';
   });
   h+='</div>';
+  h+=awayCardHtml();
+
   // Profile and settings live under Me now rather than owning a tab of their own.
   h+='<button class="btn ghost" id="goProfileFromMe">Profile &amp; settings</button>';
   return h;
+}
+
+/* --- away from campus ---
+   Doubles as the mentor check-in: submitting a trip is how you tell your mentor
+   you're going. The annual split (work vs personal) is the number the base
+   actually needs for planning. */
+function awayCardHtml(){
+  var d=S.trips;
+  var h='<h3>✈️ '+esc(t('Away from campus'))+'</h3>';
+  if(!d){ return h+'<div class="card"><p class="sub" style="margin:6px 0">'+esc(t('Loading…'))+'</p></div>'; }
+
+  var year=String(new Date().getFullYear());
+  var yt=(d.totals&&d.totals[year])||{work:0,personal:0,trips:0};
+  h+='<div class="card">';
+  h+='<div class="row" style="border:0;padding-top:0"><span class="rowName">'+esc(t('This year'))+
+     '<div class="pmeta">'+yt.trips+' '+esc(t('trips'))+' · '+year+'</div></span>'+
+     '<span class="pctBig">'+(yt.work+yt.personal)+'</span></div>';
+  h+='<div class="awaySplit">'+
+     '<div class="awayHalf"><div class="awayN">'+yt.work+'</div><div class="awayL">'+esc(t('work days'))+'</div></div>'+
+     '<div class="awayHalf personal"><div class="awayN">'+yt.personal+'</div><div class="awayL">'+esc(t('personal days'))+'</div></div>'+
+     '</div>';
+
+  if(S.tripForm){
+    var f=S.tripDraft;
+    var reasons=(d.reasons&&d.reasons[f.kind])||[];
+    h+='<div class="formBlock">'+
+      '<label class="f">'+esc(t('First day away'))+'</label><input type="date" id="tr_from" value="'+esc(f.from||'')+'">'+
+      '<label class="f">'+esc(t('Last day away'))+'</label><input type="date" id="tr_to" value="'+esc(f.to||'')+'">'+
+      '<div class="hint">'+esc(t('Whole days, including the first and last.'))+'</div>'+
+      '<label class="f">'+esc(t('Is this work or personal?'))+'</label><div class="seg">'+
+        '<button data-trkind="work" class="'+(f.kind==='work'?'on':'')+'">'+esc(t('Work'))+'</button>'+
+        '<button data-trkind="personal" class="'+(f.kind==='personal'?'on':'')+'">'+esc(t('Personal'))+'</button>'+
+      '</div>'+
+      '<label class="f">'+esc(t('Reason'))+'</label><select id="tr_reason">'+
+        reasons.map(function(r){ return '<option'+(f.reason===r?' selected':'')+'>'+esc(t(r))+'</option>'; }).join('')+'</select>'+
+      '<label class="f">'+esc(t('Where'))+'</label><input type="text" id="tr_where" maxlength="120" value="'+esc(f.where||'')+'" placeholder="'+esc(t('e.g. Phnom Penh'))+'">'+
+      '<label class="f">'+esc(t('Anything your mentor should know'))+'</label><input type="text" id="tr_note" maxlength="300" value="'+esc(f.note||'')+'">'+
+      '<button class="btn" id="saveTrip">'+esc(t(d.hasMentor?'Send to my mentor':'Save these days'))+'</button>'+
+      '<button class="linkbtn" id="cancelTrip">'+esc(t('Cancel'))+'</button>'+
+      '</div>';
+  } else {
+    h+='<button class="btn" id="newTrip" style="margin-top:12px">'+
+       esc(t(d.hasMentor?'Tell my mentor I’m going away':'Log days away'))+'</button>';
+    if(!d.hasMentor) h+='<div class="hint">'+esc(t('Pick a mentor on your profile and these go to them for a quick yes.'))+'</div>';
+  }
+
+  if(d.trips.length){
+    h+='<div style="margin-top:14px">';
+    d.trips.slice(0,8).forEach(function(r){
+      var badge = r.status==='approved' ? '<span class="trend up">✓</span>'
+                : r.status==='pending'  ? '<span class="trend flat">'+esc(t('waiting'))+'</span>'
+                : r.status==='declined' ? '<span class="trend down">'+esc(t('declined'))+'</span>' : '';
+      h+='<div class="row"><span class="rowName">'+esc(r.from)+(r.to!==r.from?' → '+esc(r.to):'')+' '+badge+
+        '<div class="pmeta">'+esc(t(r.kind==='work'?'Work':'Personal'))+' · '+esc(t(r.reason))+
+        (r.where?' · '+esc(r.where):'')+'</div></span>'+
+        '<span class="pctSm">'+r.days+'d <button class="tripDel" data-trdel="'+esc(r.id)+'" aria-label="'+esc(t('Remove'))+'">✕</button></span></div>';
+    });
+    h+='</div>';
+  }
+  h+='<p class="hint" style="margin-top:10px">🔒 '+
+     esc(t('Your team can see how many WORK days you’re away. Personal days and reasons stay between you and your mentor.'))+'</p>';
+  return h+'</div>';
 }
 
 /* ---------- team directory ---------- */
@@ -1040,7 +1115,7 @@ function personHtml(){
 
 /* Mentor entry point lives at the top of Team rather than as its own tab. */
 function mentorEntryHtml(){
-  var reqN=S.mentorRequests?S.mentorRequests.length:0;
+  var reqN=(S.mentorRequests?S.mentorRequests.length:0)+(S.tripRequests?S.tripRequests.length:0);
   if(!S.mentees.length && !reqN) return '';
   var label = reqN
     ? reqN+' mentor request'+(reqN===1?'':'s')+' waiting'
@@ -1113,6 +1188,27 @@ function mentorHtml(){
     return h;
   }
   var h='';
+
+  /* Trips waiting on you as mentor. Sits above mentee requests because it's
+     time-sensitive — someone is asking about days that are coming up. */
+  if(S.tripRequests && S.tripRequests.length){
+    h+='<h2>'+esc(t('Away requests'))+' <small>· '+S.tripRequests.length+'</small></h2>'+
+       '<p class="sub">'+esc(t('People you mentor letting you know they’ll be off campus.'))+'</p>';
+    S.tripRequests.forEach(function(r){
+      h+='<div class="card"><div class="row" style="border:0;padding-top:0">'+
+        '<span class="rowName"><strong>'+esc(r.name)+'</strong>'+
+        '<div class="pmeta">'+esc(r.from)+(r.to!==r.from?' → '+esc(r.to):'')+' · '+
+          esc(t(r.kind==='work'?'Work':'Personal'))+' · '+esc(t(r.reason))+'</div>'+
+        (r.where?'<div class="pmeta">'+esc(r.where)+'</div>':'')+
+        (r.note?'<div class="pmeta">“'+esc(r.note)+'”</div>':'')+
+        '</span><span class="pctSm">'+r.days+'d</span></div>'+
+        '<div style="display:flex;gap:8px;margin-top:10px">'+
+        '<button class="btn" style="margin:0;padding:9px 4px;font-size:13px" data-trok="'+esc(r.id)+'">'+esc(t('Approve'))+'</button>'+
+        '<button class="btn ghost" style="margin:0;padding:9px 4px;font-size:13px" data-trno="'+esc(r.id)+'">'+esc(t('Not yet'))+'</button>'+
+        '</div></div>';
+    });
+  }
+
   if(S.mentorRequests && S.mentorRequests.length){
     h+='<h2>Mentor requests <small>· '+S.mentorRequests.length+'</small></h2>'+
       '<p class="sub">These people chose you as their mentor. Accepting gives you access to their private check-ins — decline if that’s not a fit.</p><div class="dir">';
@@ -1263,6 +1359,91 @@ function todayHabitMap(){
   var map={};
   myHabits().forEach(function(hb){ map[hb.id]= !!(log && didHabit(log,hb.id)); });
   return map;
+}
+
+/* Hold the trip form's fields in the draft as they change, so the re-render
+   caused by switching work/personal doesn't discard half-typed input. */
+function captureTrip(){
+  if(!S.tripDraft) return;
+  var g=function(id){ var e=document.getElementById(id); return e? e.value : undefined; };
+  ['from','to','where','note'].forEach(function(k){
+    var v=g('tr_'+k); if(v!==undefined) S.tripDraft[k]=v;
+  });
+  var r=g('tr_reason'); if(r!==undefined) S.tripDraft.reason=r;
+}
+
+function bindAway(){
+  var nt=document.getElementById('newTrip');
+  if(nt) nt.onclick=function(){
+    var today=todayStr();
+    S.tripDraft={ from:today, to:today, kind:'work',
+      reason:(S.trips&&S.trips.reasons)?S.trips.reasons.work[0]:'', where:'', note:'' };
+    S.tripForm=true; render();
+  };
+  var ct=document.getElementById('cancelTrip');
+  if(ct) ct.onclick=function(){ S.tripForm=false; S.tripDraft=null; render(); };
+
+  document.querySelectorAll('[data-trkind]').forEach(function(b){
+    b.onclick=function(){
+      if(!S.tripDraft) return;
+      captureTrip();
+      var k=b.getAttribute('data-trkind');
+      S.tripDraft.kind=k;
+      // the two kinds have different reason lists, so reset to the first one
+      S.tripDraft.reason=(S.trips&&S.trips.reasons)?S.trips.reasons[k][0]:'';
+      render();
+    };
+  });
+  ['tr_from','tr_to','tr_where','tr_note','tr_reason'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){ el.oninput=captureTrip; el.onchange=captureTrip; }
+  });
+
+  var st=document.getElementById('saveTrip');
+  if(st) st.onclick=function(){
+    if(S.busy) return;
+    captureTrip();
+    var f=S.tripDraft||{};
+    if(!f.from || !f.to){ showMsg('Pick both dates'); return; }
+    if(f.to<f.from){ showMsg('The last day can’t be before the first'); return; }
+    S.busy=true; st.disabled=true; st.textContent='…';
+    run('saveTrip',[S.auth.user,S.auth.pin,f],function(d){
+      S.busy=false;
+      if(d && d.ok){
+        S.trips=d; S.tripForm=false; S.tripDraft=null;
+        showMsg(d.hasMentor ? 'Sent to your mentor' : 'Saved');
+      } else showMsg('Could not save');
+      render();
+    });
+  };
+
+  document.querySelectorAll('[data-trdel]').forEach(function(b){
+    b.onclick=function(){
+      if(S.busy) return;
+      if(!confirm('Remove these days?')) return;
+      S.busy=true;
+      run('deleteTrip',[S.auth.user,S.auth.pin,b.getAttribute('data-trdel')],function(d){
+        S.busy=false;
+        if(d && d.ok) S.trips=d;
+        render();
+      });
+    };
+  });
+
+  // mentor decisions on someone's days away
+  [['trok',true],['trno',false]].forEach(function(pair){
+    document.querySelectorAll('[data-'+pair[0]+']').forEach(function(b){
+      b.onclick=function(){
+        if(S.busy) return;
+        S.busy=true; b.disabled=true;
+        run('respondToTrip',[S.auth.user,S.auth.pin,b.getAttribute('data-'+pair[0]),pair[1]],function(d){
+          S.busy=false;
+          if(d && d.ok) S.tripRequests=d.requests||[];
+          render();
+        });
+      };
+    });
+  });
 }
 
 function bindHome(){
@@ -1488,11 +1669,13 @@ function bind(){
   if(back) back.onclick=function(){ gpGo('index'); };
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
-    b.onclick=function(){ S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; S.goalDraft=null; render(); };
+    b.onclick=function(){ S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; S.goalDraft=null; S.tripForm=false; render(); };
   });
 
   bindHome();
   bindMinistrySelects();
+
+  bindAway();
 
   var gpm=document.getElementById('goProfileFromMe');
   if(gpm) gpm.onclick=function(){ S.view='profile'; render(); };
@@ -1651,7 +1834,9 @@ function refreshAll(){
     runP('getMyWeekly',[u,k]).then(function(d){ if(d&&d.ok){ S.goals=d.goals||[]; S.checkins=d.checkins||[]; } }),
     runP('getMyMinistry',[u,k]).then(function(d){ if(d&&d.ok) S.ministry=d; }),
     runP('getMyMentees',[u,k]).then(function(d){ if(d&&d.ok) S.mentees=d.mentees; }),
-    runP('getMyMentorRequests',[u,k]).then(function(d){ if(d&&d.ok) S.mentorRequests=d.requests; })
+    runP('getMyMentorRequests',[u,k]).then(function(d){ if(d&&d.ok) S.mentorRequests=d.requests; }),
+    runP('getMyTrips',[u,k]).then(function(d){ if(d&&d.ok) S.trips=d; }),
+    runP('getTripRequests',[u,k]).then(function(d){ if(d&&d.ok) S.tripRequests=d.requests||[]; })
   ]).then(function(){ render(); });
 }
 
