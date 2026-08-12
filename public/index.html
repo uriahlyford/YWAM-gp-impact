@@ -52,7 +52,12 @@ header { background:#17150F; color:#FAF6F0; padding:18px 16px 14px; }
 .cbtn.all.on { background:#FFB323; color:#17150F; font-weight:700; }
 
 nav { display:flex; border-bottom:2px solid #17150F; background:#FAF6F0; position:sticky; top:0; z-index:5; }
-nav button { flex:1; padding:12px 2px; background:transparent; border:none; font-size:13.5px; cursor:pointer; color:#17150F; border-bottom:3px solid transparent; }
+nav button { flex:1; padding:12px 2px; background:transparent; border:none; font-size:13.5px; cursor:pointer;
+  color:#17150F; border-bottom:3px solid transparent; white-space:nowrap; }
+/* Four tabs plus a padlock is tight on a 390px phone — shrink the label rather
+   than letting "Log Numbers" wrap onto two lines. */
+@media (max-width:430px){ nav button { font-size:12.5px; letter-spacing:-.1px; } }
+@media (max-width:380px){ nav button { font-size:11.5px; } }
 nav button.on { border-bottom-color:#1F44FF; font-weight:700; color:#1F44FF; }
 
 main { padding:18px 16px; max-width:640px; margin:0 auto; }
@@ -204,7 +209,7 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
 .wGuest { width:100%; background:none; border:none; color:#1F44FF; font-size:14.5px; cursor:pointer;
   text-decoration:underline; padding:10px; font-family:inherit; }
 .wNote { font-size:12px; color:#a39c8d; line-height:1.5; margin:8px 0 0; }
-.navLock { font-size:10px; opacity:.75; }
+.navLock { font-size:9.5px; opacity:.75; margin-left:-1px; }
 .gate { max-width:400px; margin:4vh auto 0; text-align:center; }
 .gate .gateIcon { font-size:38px; line-height:1; }
 .gate h3 { margin:12px 0 8px; font-size:19px; }
@@ -227,7 +232,7 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
 </head>
 <body>
 
-<div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin"><img id="ptrLogo" src="" alt=""></div></div>
+<div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin"><img id="ptrLogo" alt=""></div></div>
 
 <header>
   <div class="topRow">
@@ -282,8 +287,19 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
     else document.addEventListener('DOMContentLoaded', paint);
   }
   window.addEventListener('error', function(e){
-    // A failed <script src> fires an error event on the element itself.
-    if(e && e.target && e.target.tagName === 'SCRIPT'){ fallback('could not load ' + (e.target.src||'a script')); return; }
+  /* A failed <script src> fires an error event on the element itself.
+
+     Only some scripts are load-bearing. logo.js and km.js are marked
+     data-optional because the page works without them — a missing logo is a
+     missing image, and a missing dictionary just leaves the text in English.
+     Killing the whole app for either is far worse than the thing it prevents,
+     and on the patchy phone connections this is built for, a third request is a
+     third chance to fail. taxonomy.js has no fallback and stays fatal. */
+    if(e && e.target && e.target.tagName === 'SCRIPT'){
+      if(e.target.hasAttribute('data-optional')) return;
+      fallback('could not load ' + (e.target.src||'a script'));
+      return;
+    }
     if(e && e.message) fallback(e.message);
   }, true);
   window.addEventListener('unhandledrejection', function(e){
@@ -292,8 +308,8 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
   window.gpBootFailed = fallback;
 })();
 </script>
-<script src="logo.js"></script>
-<script src="km.js"></script>
+<script src="logo.js" data-optional></script>
+<script src="km.js" data-optional></script>
 <script>
 /* Paint the header mark the moment logo.js is in — no flash of a bare header. */
 (function(){ var b=document.getElementById('brandLogo'); if(b && typeof GP_LOGO_WIDE==='string') b.src=GP_LOGO_WIDE; })();
@@ -324,6 +340,14 @@ if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
 
 
 function emj(name){ return MIN_EMOJI[name] ? '<span class="mEmoji">'+MIN_EMOJI[name]+'</span>' : ''; }
+
+/* logo.js is loaded data-optional (see the error boundary), so every use of the
+   marks has to survive it being absent. Emit no <img> at all rather than one
+   with an empty src — the coin is still a coin, just without the logo in it. */
+function logoImg(cls){
+  if(typeof GP_LOGO !== 'string') return '';
+  return '<img class="'+cls+'" src="'+GP_LOGO+'" alt="">';
+}
 
 /* count-up animation for big dashboard numbers */
 function animateCounts(){
@@ -808,7 +832,7 @@ function visibleMetrics(list){
 
 function loadingHtml(){
   return '<div class="loadingBox">'+
-    '<div class="loadCoin"><img class="loadLogo" src="'+GP_LOGO+'" alt=""></div>'+
+    '<div class="loadCoin">'+logoImg('loadLogo')+'</div>'+
     '<div class="loadText">Impact Loading<span class="ldots"></span></div>'+
   '</div>';
 }
@@ -864,7 +888,7 @@ function isWriteView(v){ return WRITE_VIEWS.indexOf(v)>-1; }
 
 function welcomeHtml(){
   return '<div class="welcome">'+
-    '<div class="wCoin"><img class="wLogo" src="'+GP_LOGO+'" alt=""></div>'+
+    '<div class="wCoin">'+logoImg('wLogo')+'</div>'+
     '<h2>'+esc(t('GP Impact'))+'</h2>'+
     '<p class="wSub">'+esc(t('Ministry numbers for YWAM GonPreah \u2014 Poipet and Siem Reap.'))+'</p>'+
     '<button class="wBtn" id="wCreate">'+esc(t('Create my profile'))+'</button>'+
@@ -1722,7 +1746,7 @@ function initialsOf(name){
   var ptr = document.getElementById('ptr');
   if(!ptr || !('ontouchstart' in window)) return;
   var logo = document.getElementById('ptrLogo');
-  if(logo) logo.src = GP_LOGO;
+  if(logo && typeof GP_LOGO === 'string') logo.src = GP_LOGO;
 
   var THRESHOLD = 68;   // pull needed to arm a refresh
   var MAX = 108;        // furthest the coin travels

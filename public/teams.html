@@ -188,7 +188,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 </head>
 <body>
 
-<div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin"><img id="ptrLogo" src="" alt=""></div></div>
+<div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin"><img id="ptrLogo" alt=""></div></div>
 
 <header>
   <div class="brand">
@@ -198,7 +198,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   <div class="hbtns" id="hbtns"></div>
 </header>
 
-<main id="main"><div class="loadingBox"><div class="loadCoin"><img class="loadLogo" id="bootLogo" src="" alt=""></div><div class="loadText">Impact Loading<span class="ldots"></span></div></div></main>
+<main id="main"><div class="loadingBox"><div class="loadCoin"><img class="loadLogo" id="bootLogo" alt=""></div><div class="loadText">Impact Loading<span class="ldots"></span></div></div></main>
 <nav class="bottom hidden" id="bottomNav"></nav>
 <div class="msg" id="msg"></div>
 
@@ -246,7 +246,16 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
     else document.addEventListener('DOMContentLoaded', paint);
   }
   window.addEventListener('error', function(e){
+  /* A failed <script src> fires an error event on the element itself.
+
+     Only some scripts are load-bearing. logo.js and km.js are marked
+     data-optional because the page works without them — a missing logo is a
+     missing image, and a missing dictionary just leaves the text in English.
+     Killing the whole app for either is far worse than the thing it prevents,
+     and on the patchy phone connections this is built for, a third request is a
+     third chance to fail. taxonomy.js has no fallback and stays fatal. */
     if(e && e.target && e.target.tagName === 'SCRIPT'){
+      if(e.target.hasAttribute('data-optional')) return;
       fallback('could not load ' + (e.target.src || 'a script'));
       return;
     }
@@ -258,7 +267,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   window.gpBootFailed = fallback;
 })();
 </script>
-<script src="logo.js"></script>
+<script src="logo.js" data-optional></script>
 <script>
 /* Paint the header mark and the boot coin as soon as logo.js is in — the first
    thing you see is the real logo, not a bare header. */
@@ -267,7 +276,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   var l=document.getElementById('bootLogo'); if(l) l.src=GP_LOGO;
   var p=document.getElementById('ptrLogo'); if(p) p.src=GP_LOGO; })();
 </script>
-<script src="km.js"></script>
+<script src="km.js" data-optional></script>
 <script src="taxonomy.js"></script>
 <script>
 if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
