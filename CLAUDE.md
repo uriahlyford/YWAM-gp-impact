@@ -22,14 +22,19 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
 
 ## Files
 ### public/
-- `index.html` — leadership dashboard (KPIs, OKRs, health survey). Contains an embedded
-  259×108 header logo (base64). Has weekly ▲/▼ trend badges, a spinning-logo "Impact
-  Loading" state, click-through drill-down on dashboard totals, and the ✦ Teams / 📖
-  buttons (plain page nav now, not postMessage). Calls the backend via the
-  `apiCall(fn, args)` helper. (The 266-entry reviewed Khmer dictionary `BUILTIN_KM` now
-  lives in `public/km.js`, shared with the staff page.)
+- `index.html` — leadership dashboard (KPIs, OKRs, health survey), and the app's front
+  door. Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state,
+  click-through drill-down on dashboard totals, and the ✦ Teams / 📖 buttons (plain
+  page nav now, not postMessage). Calls the backend via the `apiCall(fn, args)` helper.
 - `teams.html` — per-staff space: username + 4-digit PIN, profile + photo, daily logging,
-  streaks, mentor view + mentor-request approval.
+  streaks, mentor view + mentor-request approval. `?reg=1` opens the create-profile form
+  directly (the front door links straight to it).
+- `logo.js` — the two brand marks as base64 data URIs, shared by both pages:
+  `GP_LOGO_WIDE` (259×108 header wordmark) and `GP_LOGO` (the square mark that spins in
+  the loading coin and pull-to-refresh). **Never regenerate these blobs** — they are the
+  real assets. Both marks are white, drawn for the black header, so on the paper
+  background they need a dark coin behind them or they vanish.
+- `km.js` — the 266-entry reviewed Khmer dictionary (`BUILTIN_KM`), shared by both pages.
 - `help.html` — bilingual clickable KPI guide (job focus + KPI explanations per ministry).
 - `manifest.json`, `icon-180.png`, `icon-512.png` — PWA assets. **The icons are
   placeholders** (cobalt circle + "GP" wordmark) — swap in real ones when available.
@@ -78,20 +83,48 @@ all Khmer must come from `BUILTIN_KM` or be added by hand.
 
 ## Conventions / must-preserve
 - **Khmer-first.** Khmer is never smaller/lighter than English. All KPI/ministry/department
-  NAMES come from the reviewed `BUILTIN_KM` dictionary in `Index.html`.
+  NAMES come from the reviewed `BUILTIN_KM` dictionary in `public/km.js`.
 - **Khmer prose needs human review** (native speakers Sreilea / Leakha) before going wide;
-  machine translation is fallback only. New Khmer strings should be flagged for review.
-- **Never reconstruct `public/index.html` from memory** — it holds the embedded logo and the
-  266-entry Khmer dictionary. Edit it in place (targeted find/replace); don't regenerate those blobs.
+  machine translation is fallback only. New Khmer strings go in `docs/khmer-needed.md`
+  for review — never machine-translated into `km.js`.
+- **Never regenerate the base64 blobs in `logo.js`** — they are the real brand assets, not
+  placeholder art. Edit in place; don't "tidy" or re-encode them.
 - Uploaded files from macOS TextEdit may arrive as RTF — convert to plain text first.
 - Brand: Paper #FAF6F0, Ink #17150F, Cobalt #1F44FF, Marigold #FFB323. Fonts: Koulen +
   Kantumruy Pro (Khmer), Archivo + Hanken Grotesk (Latin). Motif: ✦ spark.
+
+## The front door (index.html)
+Anyone not signed in, who hasn't chosen to browse as a guest, gets a welcome screen
+first: **Create my profile** → `teams.html?reg=1`, **I already have a profile** →
+`teams.html`, or **View as guest** (sets `sessionStorage['gp-guest']`, lasts the
+browser session). It renders before the data arrives, so the dashboard never flashes
+behind it.
+
+Guests get every reading screen. The two writing views — **Log Numbers** and
+**Health** — show a "this part needs an account" panel instead of the form, and carry
+a 🔒 in the tab bar. Locked tabs stay visible on purpose: a guest should see what an
+account would get them.
+
+**This is a UI gate, not a server one.** `saveEntries` in `api.js` still accepts an
+unauthenticated POST. It stops the accident — a number logged by nobody, against
+nobody's campus — not a determined person. Closing it properly means passing staff
+credentials into `saveEntries` and checking them server-side.
+
+**Campus is a default, not yet a lock.** `saveStaffCard` records your campus and the
+dashboard opens on it (`myCampus()`), so a Siem Reap staff member doesn't land on
+Poipet's log form. Still switchable — reading across campuses is normal. The hard
+lock ("you may only log your own campus") waits until everyone has an account;
+until then it would shut real people out.
 
 ## What the dashboard leads with
 The dashboard answers the questions leadership actually asks, in this order — each
 section is a roll-up over existing weekly entries, nothing new is stored:
 
-1. **The base at a glance** — Total Staff, Staff Health Score, checked in this week.
+1. **The hero** — Total Staff is the headline number, with check-in rate and health
+   score under it. Salvations YTD sits in the same black card as the sub-figure,
+   quarters and all. Staff leads because it is the number every other figure on the
+   page is produced by; salvations were the headline before and stayed in the card
+   rather than being demoted to a tile.
 2. **Leadership Development schools** — schools running, students enrolled, graduated
    YTD, potential staff, plus Q1–Q4 enrolment chips. Rolls up
    `LD_SCHOOL_MINISTRIES` (GPDTS/DTS, DBS, SMS, BCS, SOMD).
@@ -141,9 +174,25 @@ inferred from volunteer counts.
   with position tracking existed briefly and was removed — don't rebuild it.
 
 ## On the horizon (not yet built)
+- **One page instead of two.** `index.html` and `teams.html` are converging: they now
+  share `logo.js`, `km.js` and `taxonomy.js`, the same loading coin, the same header
+  mark, and the front door hands off between them. The end state is a single page where
+  the dashboard and your own space are two views, not two files. Whenever you touch
+  chrome on one page, do the same on the other — the visible gap between them is the
+  thing being closed.
+- **The campus lock.** Logging is currently *defaulted* to your own campus, not locked
+  to it (see The front door). Turning the default into a rule is blocked on staff who
+  have no account yet: today it would lock them out entirely. Revisit once the roster
+  is close to complete.
+- **Server-side auth on `saveEntries`.** The account gate is UI-only. Pass the staff
+  username + PIN through `saveEntries` and check them in `api.js`, so an unattributed
+  number can't reach the blob at all. This is also what makes the campus lock real
+  rather than cosmetic.
 - **Retiring the anonymous device survey.** Staff weekly health is now derived from
   daily logs (done), so the device-based survey on the dashboard is the only remaining
-  path into `survey`. It can go once everyone has a profile.
+  path into `survey`. It can go once everyone has a profile — and the front door's
+  account gate is the step that makes that realistic.
 - **Real PWA icons.** `icon-180.png` / `icon-512.png` are still generated placeholders.
+  `logo.js` now holds the real marks, so these can be generated from `GP_LOGO`.
 - **Web push for the daily nudge.** iOS 16.4+ supports it for installed PWAs; one
   reminder at a chosen time is the difference between a daily tool and a forgotten one.

@@ -11,15 +11,34 @@ translates. What is missing is the vocabulary of the personal page itself.
 one line in `public/km.js`. Partial is fine: translate ten rows and those ten start
 appearing in Khmer straight away, with the rest still in English.
 
-## 0. Dashboard section headings and new KPIs (8 needed)
+## 0. The front door (9 needed) — translate these first
 
-These are the new headings and metrics on the leadership dashboard. Everything
-else on that page already translates. Highest priority of the three lists here —
-these are the first thing a leader sees.
+This is now the **first screen anyone sees** who is not signed in, so it is the
+most valuable thing on this list to get right. Until it is translated, the very
+first impression of the app is in English.
 
 | English | ខ្មែរ |
 |---|---|
-| The base at a glance |  |
+| GP Impact |  |
+| Ministry numbers for YWAM GonPreah — Poipet and Siem Reap. |  |
+| I already have a profile |  |
+| View as guest |  |
+| Guests can see everything. Logging numbers needs an account. |  |
+| This part needs an account |  |
+| Numbers are logged against a person and a campus, so we can tell whose week they are. |  |
+| The health check-in is tied to you, so your week can build a streak and reach your mentor. |  |
+| STAFF |  |
+
+_"STAFF" is the label above the big number on the dashboard — a short heading,
+not a sentence. "Create my profile" is already in list 1 below._
+
+## 0b. Dashboard section headings and new KPIs (7 needed)
+
+Headings and metrics on the leadership dashboard. Everything else on that page
+already translates.
+
+| English | ខ្មែរ |
+|---|---|
 | Leadership Development schools |  |
 | Community schools |  |
 | Outreach teams |  |
