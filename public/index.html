@@ -172,6 +172,13 @@ input[data-carried] { color:#6b6557; background:#F5F0E6; }
 .heroTrend { margin-top:6px; font-size:13px; color:#c9c3b6; }
 .statTrend { display:block; margin-top:4px; }
 
+/* Q1–Q4 chips under a section heading — "per quarter" without leaving the page */
+.qRow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0 2px; font-size:12.5px; color:#6b6557; }
+.qRow > span { background:#fff; border:1px solid #e4ddd0; border-radius:8px; padding:4px 9px; }
+.qRow .qRowLabel { background:transparent; border:none; padding:0 2px 0 0; font-size:11px;
+  letter-spacing:1.2px; text-transform:uppercase; font-weight:700; }
+.qRow b { color:#1F44FF; font-family:'Koulen',sans-serif; font-size:14px; margin-left:2px; }
+
 .drillable { cursor:pointer; }
 .ddOverlay { position:fixed; inset:0; background:rgba(23,21,15,.55); z-index:50; display:flex; align-items:flex-end; justify-content:center; }
 .ddModal { background:#FAF6F0; border-radius:16px 16px 0 0; max-width:640px; width:100%; max-height:78vh; overflow-y:auto; padding:16px; animation:ddUp .18s ease both; }
@@ -372,9 +379,6 @@ function blAgg2(campus, metric){
   return modeOf(metric)==='avg' ? tt/vals.length : tt;
 }
 
-
-var HEADLINE = ['Salvations','Baptisms','People Served','Volunteers Mobilized',
-  'People Connected to Local Church'];
 
 var SCALE_QS = [
   { id:'lonely',  text:'How lonely do I feel this week?', invert:true },
@@ -608,6 +612,118 @@ function mediaSummary(ids){
   return any ? { platforms:platCount, pages:pages, followers:followers, views:views } : null;
 }
 
+/* ---------- headline roll-ups: schools, teams, churches ----------
+   Nothing new is stored for these. They read the same weekly entries as every
+   other figure on the page; the only new thing is which
+   (department | ministry | metric) triples get added together. The ministry
+   groups live in taxonomy.js so the log form and the dashboard stay in step.
+
+   Each metric keeps its own aggregation rule, so headcounts ('Students
+   Enrolled', 'Partner Churches Supported') take the latest week rather than
+   summing the same people every week, while events ('Teams Hosted',
+   'Students Graduated') accumulate across the year. */
+
+function entryWeeks(campus, dept, ministry, metric){
+  return (state.data.entries[campus]||{})[dept+'|'+ministry+'|'+metric];
+}
+
+/* null + null stays null — "nothing logged yet" is different from zero, and the
+   dashboard shows an em dash for it rather than a misleading 0. */
+function addKnown(vals){
+  var total=0, any=false;
+  vals.forEach(function(v){ if(v!==null && v!==undefined && !isNaN(v)){ total+=v; any=true; } });
+  return any ? total : null;
+}
+
+/* One metric added across a named set of ministries in one department. */
+function ministryRollup(ids, dept, ministries, metric, quarter){
+  var mode = modeOf(metric), vals = [];
+  ids.forEach(function(cid){
+    ministries.forEach(function(min){
+      vals.push(aggregate(entryWeeks(cid, dept, min, metric), mode, quarter));
+    });
+  });
+  return addKnown(vals);
+}
+
+/* The same roll-up for a single week, which is what the ▲/▼ trend badges
+   compare. Reads the raw week rather than aggregating, so a 'latest' metric
+   gives that week's level and a 'sum' metric that week's events. */
+function ministryRollupWeek(ids, dept, ministries, metric, week){
+  var vals = [];
+  ids.forEach(function(cid){
+    ministries.forEach(function(min){
+      var weeks = entryWeeks(cid, dept, min, metric);
+      var v = weeks ? Number(weeks[week]) : NaN;
+      vals.push(isNaN(v) ? null : v);
+    });
+  });
+  return addKnown(vals);
+}
+
+/* Has anything at all been logged for this ministry? Lets a school count as
+   running without asking anyone to type a "1" every week. */
+function ministryLogged(campus, dept, ministry){
+  var entries = state.data.entries[campus]||{}, pre = dept+'|'+ministry+'|';
+  for(var k in entries){
+    if(k.indexOf(pre)!==0) continue;
+    for(var w in entries[k]) if(!isNaN(Number(entries[k][w]))) return true;
+  }
+  return false;
+}
+
+/* How many schools a group of ministries is running. A ministry reporting its
+   own 'Schools' figure contributes that number; otherwise a ministry with any
+   data at all is the one school it is — YDC is one school, and nobody should
+   have to log that separately. */
+function schoolCount(ids, dept, ministries){
+  var n=0, any=false;
+  ids.forEach(function(cid){
+    ministries.forEach(function(min){
+      var reported = aggregate(entryWeeks(cid, dept, min, 'Schools'), 'latest');
+      if(reported!==null && reported>0){ n += reported; any=true; return; }
+      if(ministryLogged(cid, dept, min)){ n += 1; any=true; }
+    });
+  });
+  return any ? n : null;
+}
+
+var LD_DEPT = 'Leadership Development';
+var CS_DEPT = 'Community Service';
+var YE_DEPT = 'Youth Education';
+
+function ldSchools(ids){ return schoolCount(ids, LD_DEPT, LD_SCHOOL_MINISTRIES); }
+function ldStudents(ids, quarter){ return ministryRollup(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Students Enrolled', quarter); }
+function ldGraduates(ids, quarter){ return ministryRollup(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Students Graduated', quarter); }
+
+function communitySchools(ids){
+  return addKnown([ schoolCount(ids, CS_DEPT, CS_SCHOOL_MINISTRIES),
+                    schoolCount(ids, YE_DEPT, YE_SCHOOL_MINISTRIES) ]);
+}
+function communityStudents(ids, quarter){
+  return addKnown([ ministryRollup(ids, CS_DEPT, CS_SCHOOL_MINISTRIES, 'Students Enrolled', quarter),
+                    ministryRollup(ids, YE_DEPT, YE_SCHOOL_MINISTRIES, 'Youth Enrolled', quarter) ]);
+}
+function communityDiscipled(ids){
+  return addKnown([ ministryRollup(ids, CS_DEPT, CS_SCHOOL_MINISTRIES, 'Students in Discipleship'),
+                    ministryRollup(ids, YE_DEPT, YE_SCHOOL_MINISTRIES, 'Students in Discipleship') ]);
+}
+
+function outreachRollup(ids, metric, quarter){
+  return ministryRollup(ids, CS_DEPT, ['Outreach Teams'], metric, quarter);
+}
+
+/* Every local church we are in relationship with: the ones we support as
+   partners plus the ones our people are actually leading. */
+function partnerChurches(ids){
+  return addKnown([ ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Partner Churches Supported'),
+                    ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Churches Being Led') ]);
+}
+/* Base Leadership metric across several campuses — blAgg() is one campus only. */
+function blAggAll(ids, metric){
+  return addKnown(ids.map(function(cid){ return blAgg(cid, metric); }));
+}
+
 /* ---------- survey ---------- */
 function surveyRows(ids, week){
   return state.data.survey.filter(function(r){
@@ -725,6 +841,41 @@ function openDrillDown(title, rows){
 }
 function closeDrillDown(){ var r=document.getElementById('ddRoot'); if(r) r.innerHTML=''; }
 
+/* ---------- dashboard tiles ----------
+   statTile keeps the count-up animation contract in one place: render the
+   number as "0" with a data-count for animateCounts() to drive, or an em dash
+   when nothing has been logged. */
+function drillAttrs(metric, ids, dept, ministry, quarter){
+  return ' data-drill-metric="'+esc(metric)+'" data-drill-ids="'+ids.join(',')+'"'+
+    (dept ? ' data-drill-dept="'+esc(dept)+'"' : '')+
+    (ministry ? ' data-drill-ministry="'+esc(ministry)+'"' : '')+
+    (quarter!==undefined && quarter!==null ? ' data-drill-quarter="'+quarter+'"' : '');
+}
+function statTile(label, value, opts){
+  opts = opts || {};
+  var known = (value!==null && value!==undefined && !isNaN(value));
+  var attrs = '';
+  if(known){
+    attrs = ' data-count="'+value+'"';
+    if(opts.dec) attrs += ' data-dec="1"';
+    if(opts.prefix) attrs += ' data-prefix="'+esc(opts.prefix)+'"';
+    if(opts.suffix) attrs += ' data-suffix="'+esc(opts.suffix)+'"';
+  }
+  return '<div class="stat'+(opts.cls?' '+opts.cls:'')+(opts.drill?' drillable':'')+'"'+(opts.drill||'')+'>'+
+    '<div class="statNum"'+attrs+'>'+(known?'0':'—')+'</div>'+
+    '<div class="statLabel">'+esc(label)+(opts.trend?'<span class="statTrend">'+opts.trend+'</span>':'')+'</div></div>';
+}
+/* Q1–Q4 chips under a section heading, so "per quarter" is answerable without
+   leaving the dashboard. valFn(quarter) returns that quarter's figure. */
+function quarterChips(label, valFn, drillFn){
+  var h = '<div class="qRow"><span class="qRowLabel">'+esc(label)+'</span>';
+  for(var q=0;q<4;q++){
+    var d = drillFn ? drillFn(q) : '';
+    h += '<span'+(d?' class="drillable"'+d:'')+'>Q'+(q+1)+' <b>'+fmt(valFn(q))+'</b></span>';
+  }
+  return h+'</div>';
+}
+
 function dashboardHtml(title, ids, perCampus){
   var salv = headlineFor(ids,'Salvations');
   var h = '<h2>'+esc(title)+'</h2>';
@@ -737,19 +888,84 @@ function dashboardHtml(title, ids, perCampus){
   h += '</div></div>';
   h += verseOfWeek();
 
+  /* ---- who we are: staff, and whether they're doing OK ---- */
+  h += '<h3>✦ '+esc(t('The base at a glance'))+'</h3><div class="grid">';
+  h += statTile(t('Total Staff'), totalStaff(ids));
   var hs = healthScore(ids);
-  h += '<div class="grid">';
-  var hsTrend = trendFor(function(w){return healthScore(ids,w);}, null);
-  h += '<div class="stat gold"><div class="statNum"'+(hs===null?'':' data-count="'+hs+'" data-dec="1" data-suffix="/10"')+'>'+(hs===null?'—':'0')+'</div><div class="statLabel">'+esc(t('Staff Health Score'))+(hsTrend?'<span class="statTrend">'+hsTrend+'</span>':'')+'</div></div>';
-  var vh = volunteerHours(ids);
-  h += '<div class="stat"><div class="statNum"'+(vh===null?'':' data-count="'+vh+'"')+'>'+(vh===null?'—':'0')+'</div><div class="statLabel">'+esc(t('Total Volunteer Hours'))+'</div></div>';
+  h += statTile(t('Staff Health Score'), hs, { cls:'gold', dec:true, suffix:'/10',
+    trend: trendFor(function(w){return healthScore(ids,w);}, null) });
   var cr = checkinRate(ids, currentWeek());
-  h += '<div class="stat"><div class="statNum">'+cr.n+(cr.total?' / '+cr.total:'')+'</div><div class="statLabel">'+esc(t('Checked in this week'))+(cr.total&&cr.total>0?' · '+Math.round(cr.n/cr.total*100)+'%':'')+'</div></div>';
-  HEADLINE.forEach(function(m){
-    if(m==='Salvations') return;
-    var hv = headlineFor(ids,m);
-    var tr = trendFor(function(w){return metricWeekSum(ids,m,w);}, m);
-    h += '<div class="stat drillable" data-drill-metric="'+esc(m)+'" data-drill-ids="'+ids.join(',')+'"><div class="statNum"'+(hv===null?'':' data-count="'+hv+'"')+'>'+(hv===null?'—':'0')+'</div><div class="statLabel">'+esc(t(m))+(tr?'<span class="statTrend">'+tr+'</span>':'')+'</div></div>';
+  h += '<div class="stat"><div class="statNum">'+cr.n+(cr.total?' / '+cr.total:'')+'</div><div class="statLabel">'+
+    esc(t('Checked in this week'))+(cr.total&&cr.total>0?' · '+Math.round(cr.n/cr.total*100)+'%':'')+'</div></div>';
+  h += '</div>';
+
+  /* ---- leadership development: the YWAM training schools ---- */
+  h += '<h3>🌱 '+esc(t('Leadership Development schools'))+'</h3><div class="grid">';
+  h += statTile(t('Schools'), ldSchools(ids));
+  h += statTile(t('Students Enrolled'), ldStudents(ids),
+    { drill: drillAttrs('Students Enrolled', ids, LD_DEPT) });
+  h += statTile(t('Students Graduated'), ldGraduates(ids),
+    { drill: drillAttrs('Students Graduated', ids, LD_DEPT),
+      trend: trendFor(function(w){return ministryRollupWeek(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Students Graduated', w);}, 'Students Graduated') });
+  h += statTile(t('Potential Staff'), ministryRollup(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Potential Staff'),
+    { drill: drillAttrs('Potential Staff', ids, LD_DEPT) });
+  h += '</div>';
+  h += quarterChips(t('Students Enrolled'), function(q){ return ldStudents(ids,q); },
+    function(q){ return drillAttrs('Students Enrolled', ids, LD_DEPT, null, q); });
+
+  /* ---- community schools: GP Education / Ponlork / LTN / Sry Noi + YDC ---- */
+  h += '<h3>📚 '+esc(t('Community schools'))+'</h3><div class="grid">';
+  h += statTile(t('Schools'), communitySchools(ids));
+  h += statTile(t('Students Enrolled'), communityStudents(ids));
+  h += statTile(t('Students in Discipleship'), communityDiscipled(ids));
+  h += statTile(t('Students Supported Financially'),
+    ministryRollup(ids, CS_DEPT, CS_SCHOOL_MINISTRIES, 'Students Supported Financially'),
+    { drill: drillAttrs('Students Supported Financially', ids, CS_DEPT) });
+  h += '</div>';
+  h += quarterChips(t('Students Enrolled'), function(q){ return communityStudents(ids,q); });
+
+  /* ---- outreach teams: teams hosted, and what they did while here ---- */
+  h += '<h3>🙌 '+esc(t('Outreach teams'))+'</h3><div class="grid">';
+  h += statTile(t('Teams Hosted'), outreachRollup(ids,'Teams Hosted'),
+    { drill: drillAttrs('Teams Hosted', ids, CS_DEPT, 'Outreach Teams'),
+      trend: trendFor(function(w){return ministryRollupWeek(ids, CS_DEPT, ['Outreach Teams'], 'Teams Hosted', w);}, 'Teams Hosted') });
+  h += statTile(t('Volunteers Mobilized'), outreachRollup(ids,'Volunteers Mobilized'),
+    { drill: drillAttrs('Volunteers Mobilized', ids, CS_DEPT, 'Outreach Teams') });
+  h += statTile(t('Total Volunteer Hours'), volunteerHours(ids));
+  h += statTile(t('People Served'), headlineFor(ids,'People Served'),
+    { drill: drillAttrs('People Served', ids),
+      trend: trendFor(function(w){return metricWeekSum(ids,'People Served',w);}, 'People Served') });
+  h += statTile(t('Salvations'), outreachRollup(ids,'Salvations'),
+    { drill: drillAttrs('Salvations', ids, CS_DEPT, 'Outreach Teams') });
+  h += statTile(t('Baptisms'), outreachRollup(ids,'Baptisms'),
+    { drill: drillAttrs('Baptisms', ids, CS_DEPT, 'Outreach Teams') });
+  h += statTile(t('People Connected to Local Church'), outreachRollup(ids,'People Connected to Local Church'),
+    { drill: drillAttrs('People Connected to Local Church', ids, CS_DEPT, 'Outreach Teams') });
+  h += '</div>';
+  h += quarterChips(t('Teams Hosted'), function(q){ return outreachRollup(ids,'Teams Hosted',q); },
+    function(q){ return drillAttrs('Teams Hosted', ids, CS_DEPT, 'Outreach Teams', q); });
+
+  /* ---- local church partnerships ---- */
+  h += '<h3>⛪ '+esc(t('Local church partnerships'))+'</h3><div class="grid">';
+  h += statTile(t('Local Churches Partnered'), partnerChurches(ids));
+  h += statTile(t('Partner Churches Supported'), ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Partner Churches Supported'),
+    { drill: drillAttrs('Partner Churches Supported', ids, LD_DEPT, 'Church Partnerships') });
+  h += statTile(t('Churches Being Led'), ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Churches Being Led'),
+    { drill: drillAttrs('Churches Being Led', ids, LD_DEPT, 'Church Partnerships') });
+  h += statTile(t('Combined Congregation Attendance'), ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Combined Congregation Attendance'),
+    { drill: drillAttrs('Combined Congregation Attendance', ids, LD_DEPT, 'Church Partnerships') });
+  h += statTile(t('People Connected to Local Church'), headlineFor(ids,'People Connected to Local Church'),
+    { drill: drillAttrs('People Connected to Local Church', ids),
+      trend: trendFor(function(w){return metricWeekSum(ids,'People Connected to Local Church',w);}, 'People Connected to Local Church') });
+  h += statTile(t('Spoke at Churches'), blAggAll(ids,'Spoke at Churches'));
+  h += '</div>';
+
+  /* ---- base-wide gospel totals ---- */
+  h += '<h3>🕊️ '+esc(t('Across every ministry'))+'</h3><div class="grid">';
+  ['Baptisms','People Heard the Gospel','Healings'].forEach(function(m){
+    h += statTile(t(m), headlineFor(ids,m),
+      { drill: drillAttrs(m, ids),
+        trend: trendFor(function(w){return metricWeekSum(ids,m,w);}, m) });
   });
   h += '</div>';
 
@@ -779,11 +995,13 @@ function dashboardHtml(title, ids, perCampus){
     h += '</div>';
   } else {
     h += '<h3>\ud83c\udfe0 '+esc(t('Base health'))+'</h3><div class="grid">';
-    var blShow = ['Total Staff','Staff Debt ($)','One-on-Ones Held','Partner Connections',
-      'Spoke at Churches','Spoke at YWAM Bases','Hours Sharing the Gospel','Base Vision (1-10)',
+    /* Total Staff now leads "at a glance", and Spoke at Churches sits with the
+       church partnerships — no need to print either of them twice. */
+    var blShow = ['Staff Debt ($)','One-on-Ones Held','Partner Connections',
+      'Spoke at YWAM Bases','Hours Sharing the Gospel','Base Vision (1-10)',
       'Communications (1-10)','Partner Relationships (1-10)'];
     blShow.forEach(function(m){
-      var val = (m==='Total Staff') ? totalStaff([state.campus]) : blAgg(state.campus,m);
+      var val = blAgg(state.campus,m);
       h += '<div class="stat"><div class="statNum">'+fmt(val,m)+'</div><div class="statLabel">'+
         esc(t(m).replace(' ($)','').replace(' (1-10)',''))+'</div></div>';
     });

@@ -23,10 +23,11 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
 ## Files
 ### public/
 - `index.html` — leadership dashboard (KPIs, OKRs, health survey). Contains an embedded
-  259×108 header logo (base64) and a 266-entry reviewed Khmer dictionary (`BUILTIN_KM`).
-  Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state, click-through
-  drill-down on dashboard totals, and the ✦ Teams / 📖 buttons (plain page nav now, not
-  postMessage). Calls the backend via the `apiCall(fn, args)` helper.
+  259×108 header logo (base64). Has weekly ▲/▼ trend badges, a spinning-logo "Impact
+  Loading" state, click-through drill-down on dashboard totals, and the ✦ Teams / 📖
+  buttons (plain page nav now, not postMessage). Calls the backend via the
+  `apiCall(fn, args)` helper. (The 266-entry reviewed Khmer dictionary `BUILTIN_KM` now
+  lives in `public/km.js`, shared with the staff page.)
 - `teams.html` — per-staff space: username + 4-digit PIN, profile + photo, daily logging,
   streaks, mentor view + mentor-request approval.
 - `help.html` — bilingual clickable KPI guide (job focus + KPI explanations per ministry).
@@ -85,6 +86,41 @@ all Khmer must come from `BUILTIN_KM` or be added by hand.
 - Uploaded files from macOS TextEdit may arrive as RTF — convert to plain text first.
 - Brand: Paper #FAF6F0, Ink #17150F, Cobalt #1F44FF, Marigold #FFB323. Fonts: Koulen +
   Kantumruy Pro (Khmer), Archivo + Hanken Grotesk (Latin). Motif: ✦ spark.
+
+## What the dashboard leads with
+The dashboard answers the questions leadership actually asks, in this order — each
+section is a roll-up over existing weekly entries, nothing new is stored:
+
+1. **The base at a glance** — Total Staff, Staff Health Score, checked in this week.
+2. **Leadership Development schools** — schools running, students enrolled, graduated
+   YTD, potential staff, plus Q1–Q4 enrolment chips. Rolls up
+   `LD_SCHOOL_MINISTRIES` (GPDTS/DTS, DBS, SMS, BCS, SOMD).
+3. **Community schools** — `CS_SCHOOL_MINISTRIES` (GP Education, Ponlork, LTN,
+   Sry Noi) counting `Students Enrolled` + `YE_SCHOOL_MINISTRIES` (YDC) counting
+   `Youth Enrolled`. **Poipet runs two** (GP Education = GP Kids, YDC); **Siem Reap
+   five**. A ministry reporting its own `Schools` number contributes that instead of 1,
+   so a multi-site ministry counts honestly; otherwise any ministry with data at all
+   counts as the one school it is — nobody should have to log "1" every week for YDC.
+4. **Outreach teams** — `Teams Hosted`, volunteers, volunteer hours, people served,
+   and outreach-scoped salvations / baptisms / church connections, plus Q1–Q4 chips.
+5. **Local church partnerships** — `Partner Churches Supported` + `Churches Being Led`
+   as one "Local Churches Partnered" figure, then congregation attendance, people
+   connected to a local church, and `Spoke at Churches` from Base Leadership.
+6. **Across every ministry** — base-wide baptisms, gospel hearings, healings.
+
+The group constants live in `taxonomy.js` so the log form and the dashboard cannot
+drift apart. Adding a school means adding its ministry to one of those three arrays.
+`ministryRollup` respects each metric's own `modeOf` rule, which is what keeps
+enrolment from being summed week after week.
+
+Two aggregation corrections came with this: `Partner Churches Supported` and
+`Combined Congregation Attendance` moved into `LATEST_SET`. Both are levels, not
+weekly events — summing them counted the same church (and the same congregation)
+again every week it was re-entered.
+
+`Teams Hosted` is a **new** metric on Community Service → Outreach Teams. It sums,
+so it answers "how many teams did we host this year" directly rather than being
+inferred from volunteer counts.
 
 ## Key behaviors
 - **Health score** (`compositeOf` in Index.html): averages per-item scores; loneliness is
