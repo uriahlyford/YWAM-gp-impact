@@ -749,6 +749,11 @@ function goalsCardHtml(wk){
 
   h+='<div class="card">';
   if(editing){
+    /* Said plainly at the point of writing, not buried in settings. Goals are
+       free text and the whole team can open them from the directory — that
+       should be a known norm, never a surprise. */
+    h+='<p class="hint" style="margin:2px 0 10px">👀 '+
+       esc(t('Your team can see these on your profile. Anything personal belongs in the private check-in instead.'))+'</p>';
     var mOpts=S.me.ministry ? metricsFor(S.me.campus,S.me.dept,S.me.ministry) : [];
     for(var i=0;i<3;i++){
       var gtext=(items[i]&&items[i].text)||'';

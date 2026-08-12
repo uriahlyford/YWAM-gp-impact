@@ -11,12 +11,13 @@ translates. What is missing is the vocabulary of the personal page itself.
 one line in `public/km.js`. Partial is fine: translate ten rows and those ten start
 appearing in Khmer straight away, with the rest still in English.
 
-## 1. Words and labels (52 needed)
+## 1. Words and labels (53 needed)
 
 Fill the right column:
 
 | English | ខ្មែរ |
 |---|---|
+| Your team can see these on your profile. Anything personal belongs in the private check-in instead. |  |
 | Home |  |
 | Team |  |
 | Me |  |
