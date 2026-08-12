@@ -83,29 +83,30 @@ not a sentence. "yours" is the small tag marking which department is the reader'
 own in the salvations list — so it needs to work as a label, not a pronoun.
 "Base" and "My week" are bottom-tab labels with about 9 characters of room._
 
-## 0c-2. The OKRs tab (9 needed)
+## 0c-2. OKRs on Me, and on a teammate's page (8 needed)
 
-OKRs moved off Base onto their own tab, which opens with the reader's own job
-description and then the objectives their department is working on.
+Objectives live on **Me** (your own) and on a **teammate's page** in Team (theirs).
+Both open with the job the objectives belong to, so the same block is written twice —
+once addressed to you, once about them.
 
 | English | ខ្មែរ |
 |---|---|
 | OKRs |  |
 | Your focus |  |
-| yours |  |
+| Their focus |  |
 | No objectives set for your department this quarter. |  |
-| The rest of the base |  |
+| No objectives set for their department this quarter. |  |
 | Nothing logged yet |  |
 | tracked by hand |  |
-| Your ministry's focus has not been written up yet. |  |
 | Progress comes from what your ministry logs each week, not from ticking a box here. |  |
 
 _"OKRs" is already in km.js as an untranslated acronym — leave it as-is if that is
-what the team says out loud. "Your focus" is the label on the black card naming the
-reader's ministry; the focus paragraphs themselves live in `public/jobfocus.js` and
-in the KPI guide, and are a much bigger translation job — worth doing, but separately.
-"tracked by hand" marks a key result with no KPI behind it. "yours" is the same tag
-used on the Base tab._
+what the team says out loud. "Your focus" / "Their focus" is the label on the black
+card naming the ministry; the focus paragraphs themselves live in `public/jobfocus.js`
+and in the KPI guide, and are a much bigger translation job — worth doing, but
+separately. "tracked by hand" marks a key result with no KPI behind it. The two
+"No objectives set..." lines differ only in whose department it is, which Khmer may
+well handle in one sentence — if so, use the same text twice._
 
 ## 0d. One sentence for the Base tab (1)
 

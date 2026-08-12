@@ -400,7 +400,7 @@ var S = {
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
-  baseDept:null, okrOtherOpen:false
+  baseDept:null
 };
 
 var HABIT_LIBRARY = [
@@ -624,7 +624,7 @@ function render(){
      Your own week is one tap away, Profile is folded into Me, and Mentor is
      reached from Team. */
   var reqN=S.mentorRequests?S.mentorRequests.length:0;
-  var tabs=[['base','Base','🏠'],['week','My week','✅'],['okr','OKRs','🎯'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','💚']];
+  var tabs=[['base','Base','🏠'],['week','My week','✅'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','💚']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+tab[2]+'</span>'+t(tab[1])+'</button>';
@@ -632,7 +632,6 @@ function render(){
   var m=document.getElementById('main');
   if(S.view==='base') m.innerHTML=baseHtml();
   else if(S.view==='week') m.innerHTML=homeHtml();
-  else if(S.view==='okr') m.innerHTML=okrHtml();
   else if(S.view==='me') m.innerHTML=meHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
@@ -878,30 +877,31 @@ function baseHtml(){
   return h;
 }
 
-/* ---------- OKRs: what my job is, and what we are aiming at ----------
-   Objectives are stored per campus, quarter and department — department is the
-   only handle the data gives us on "whose objective is this", and it is the right
-   one: a department's objectives are the ones a person in it is actually working
-   toward.
+/* ---------- OKRs: the objectives that belong to somebody's job ----------
+   Objectives are stored per campus, quarter and department, so a person's
+   objectives are their department's — that is the only handle the data gives on
+   "whose objective is this", and it is the right one: a department's objectives
+   are what someone in it is working toward.
 
-   So the tab reads top-down as a job description: what this ministry is for,
-   then the objectives that belong to it, then — folded away — what the rest of
-   the base is aiming at, because knowing that is useful but it is not your work.
+   Rendered for two readers: yourself, on Me, and a teammate, when you tap them in
+   the Team directory. Both get the same thing — the job first, then what that job
+   is aiming at this quarter — because an objective means little without the job it
+   belongs to. Nobody's page shows the rest of the base's objectives; this is about
+   one person's work.
 
-   Read-only by design. Writing an objective is a leadership act and stays on the
-   dashboard behind the leader code; this tab is for the people carrying them. */
-function okrProgressCard(o, R, mine){
+   Read-only. Writing an objective is a leadership act and stays on the dashboard
+   behind the leader code; this is for the people carrying them. */
+function okrCardHtml(o, R){
   var p = R.objProgress(o);
-  var h = '<div class="okrCard'+(mine?'':' other')+'">'+
+  var h = '<div class="okrCard">'+
     '<div class="okrHead"><div><div class="okrObj">'+esc(o.objective)+'</div>'+
-    '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+
-      (mine?' <span class="mineTag">'+esc(t('yours'))+'</span>':'')+'</div></div>'+
+    '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+'</div></div>'+
     '<div class="okrPct'+(p>=100?' done':'')+'">'+p+'%</div></div>'+
     '<div class="bar"><div class="barFill'+(p>=100?' done':'')+'" style="width:'+Math.min(100,p)+'%"></div></div>';
   (o.krs||[]).forEach(function(kr){
     var kp = R.krProgress(o, kr);
-    /* A key result tied to a KPI shows the real figure against the target, so it
-       is obvious the number came from what the ministry logged — not typed here. */
+    /* A key result tied to a KPI shows the quarter's real figure against the
+       target, so it is obvious the number came from what the ministry logged. */
     var meta = kr.metricKey
       ? (kp.actual===null ? esc(t('Nothing logged yet'))
           : fmt(kp.actual, kr.metricKey.split('|')[2])+' / '+fmt(kr.target, kr.metricKey.split('|')[2]))
@@ -913,46 +913,37 @@ function okrProgressCard(o, R, mine){
   return h+'</div>';
 }
 
-function okrHtml(){
+/* One person's objectives, with the job they belong to on top. `who` is any
+   staff record — yourself or a teammate. `mine` only changes the wording. */
+function okrSectionHtml(who, mine){
   var wk = thisWeek();
   var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
-  var myDept = S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
-  var h = '<h2>Q'+qNow+' '+esc(t('OKRs'))+'</h2>';
+  var dept = who.dept==='Base Director' ? 'Base Leadership' : who.dept;
+  var h = '<h3>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>';
 
-  /* --- the job description this tab is built around --- */
-  var focus = (typeof jobFocus==='function') ? jobFocus(myDept, S.me.ministry) : null;
-  h += '<div class="focusCard"><div class="fLabel">'+esc(t('Your focus'))+'</div>'+
-    '<div class="fMin">'+esc(t(S.me.ministry || myDept))+'</div>'+
-    '<p>'+(focus ? esc(focus) : esc(t('Your ministry’s focus has not been written up yet.')))+'</p></div>';
+  var focus = (typeof jobFocus==='function') ? jobFocus(dept, who.ministry) : null;
+  if(focus){
+    h += '<div class="focusCard"><div class="fLabel">'+
+      esc(t(mine ? 'Your focus' : 'Their focus'))+'</div>'+
+      '<div class="fMin">'+esc(t(who.ministry || dept))+'</div>'+
+      '<p>'+esc(focus)+'</p></div>';
+  }
 
   if(!S.base){
     return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
   }
   var R = baseR();
-  var all = (S.base.okrs||[]).filter(function(o){
-    return o.campus===S.me.campus && Number(o.quarter)===qNow;
+  var theirs = (S.base.okrs||[]).filter(function(o){
+    return o.campus===who.campus && Number(o.quarter)===qNow && o.dept===dept;
   });
-  var mine = all.filter(function(o){ return o.dept===myDept; });
-  var rest = all.filter(function(o){ return o.dept!==myDept; });
-
-  h += '<h3>🎯 '+esc(t(myDept))+'</h3>';
-  if(!mine.length){
+  if(!theirs.length){
     h += '<div class="card"><p class="sub" style="margin:0">'+
-      esc(t('No objectives set for your department this quarter.'))+'</p></div>';
-  } else {
-    mine.forEach(function(o){ h += okrProgressCard(o, R, true); });
+      esc(t(mine ? 'No objectives set for your department this quarter.'
+                 : 'No objectives set for their department this quarter.'))+'</p></div>';
+    return h;
   }
-
-  if(rest.length){
-    h += '<button class="discloseBtn" id="okrOtherBtn">'+
-      '<span>'+esc(t('The rest of the base'))+' ('+rest.length+')</span>'+
-      '<span class="chev">'+(S.okrOtherOpen?'▲':'▼')+'</span></button>';
-    if(S.okrOtherOpen) rest.forEach(function(o){ h += okrProgressCard(o, R, false); });
-  }
-
-  h += '<p class="hint" style="margin-top:14px">'+
-    esc(t('Progress comes from what your ministry logs each week, not from ticking a box here.'))+
-    ' <button class="linkbtn inline" id="okrFullDash">'+esc(t('See the full dashboard'))+' →</button></p>';
+  theirs.forEach(function(o){ h += okrCardHtml(o, R); });
+  h += '<p class="hint">'+esc(t('Progress comes from what your ministry logs each week, not from ticking a box here.'))+'</p>';
   return h;
 }
 
@@ -1376,6 +1367,11 @@ function meHtml(){
   h+='</div>';
   h+=awayCardHtml();
 
+  /* What my job is aiming at this quarter. Me is the page about my own work, so
+     my objectives belong here rather than on a tab of their own — and only mine,
+     not the rest of the base's. */
+  h+=okrSectionHtml(S.me, true);
+
   // Profile and settings live under Me now rather than owning a tab of their own.
   h+='<button class="btn ghost" id="goProfileFromMe">Profile &amp; settings</button>';
   return h;
@@ -1507,7 +1503,7 @@ function personHtml(){
   h+='</div>';
 
   var withGoals=(d.goals||[]).filter(function(g){ return g.items.some(function(i){return i.text;}); });
-  h+='<h3>🎯 '+esc(t('Weekly goals'))+'</h3>';
+  h+='<h3>🗒️ '+esc(t('Weekly goals'))+'</h3>';
   if(!withGoals.length){
     h+='<div class="card"><p class="sub" style="margin:6px 0">'+
        esc(t('No goals written yet.'))+'</p></div>';
@@ -1526,6 +1522,11 @@ function personHtml(){
       h+='</div>';
     });
   }
+  /* Their objectives too — tapping a teammate should answer "what is this person
+     working toward", not just "did they tick their boxes". Department-level, so
+     nothing here is private to them. */
+  h+=okrSectionHtml(p, false);
+
   h+='<p class="hint">🔒 '+esc(t('Daily check-ins, health answers and anything private stay between this person and their mentor.'))+'</p>';
   return h;
 }
@@ -2096,10 +2097,6 @@ function bind(){
   if(S.base) gpBindDrill(baseR());
   var bds=document.getElementById('baseDeptSel');
   if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
-  var oob=document.getElementById('okrOtherBtn');
-  if(oob) oob.onclick=function(){ S.okrOtherOpen=!S.okrOtherOpen; render(); };
-  var ofd=document.getElementById('okrFullDash');
-  if(ofd) ofd.onclick=function(){ gpGo('index'); };
 
   bindHome();
   bindMinistrySelects();

@@ -37,13 +37,16 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   then the hero, salvations by department, both school groups, outreach, churches, the
   gospel totals, media, base health and the department explorer. A test asserts Base and
   the dashboard render the same section list, so the two can't quietly drift apart.
-  **OKRs are their own tab**, framed as a job description: the reader's ministry focus
-  (from `jobfocus.js`) on a black card, then the objectives belonging to **their
-  department** — the only handle the OKR data gives on "whose objective is this", and the
-  right one — with the rest of the base folded away underneath. Key results tied to a KPI
-  show the quarter's real figure against the target, so it is visible the number came from
-  what the ministry logged. Read-only: writing an objective is a leadership act and stays
-  on the dashboard behind the leader code.
+  **OKRs belong to a person, not to a tab.** `okrSectionHtml(who, mine)` renders one
+  person's objectives, framed as a job description: that ministry's focus (from
+  `jobfocus.js`) on a black card, then the objectives for **their department** — the only
+  handle the OKR data gives on "whose objective is this", and the right one. It appears
+  twice: on **Me** (your own) and on a **teammate's page** when you tap them in Team
+  (theirs). Neither shows the rest of the base's objectives — these pages are about one
+  person's work. Key results tied to a KPI show the quarter's real figure against the
+  target, so it is visible the number came from what the ministry logged. Read-only:
+  writing an objective is a leadership act and stays on the dashboard behind the leader
+  code. 🎯 means "objectives" throughout, which is why weekly goals use 🗒️.
 - `logo.js` — the two brand marks as base64 data URIs, shared by both pages:
   `GP_LOGO_WIDE` (259×108 header wordmark) and `GP_LOGO` (the square mark that spins in
   the loading coin and pull-to-refresh). **Never regenerate these blobs** — they are the
