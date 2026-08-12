@@ -251,6 +251,32 @@ function cleanHabitMap_(map, cfg) {
   return out;
 }
 
+/* Which KPIs a person logs day to day. Some ministries carry 29 metrics —
+   GP Media does — and a 29-row form daily gets filled in never. Pinning a
+   handful keeps the daily card short; the rest stay available behind "show
+   all" for the occasional ones. Empty list = show everything, which is the
+   right default before anyone has chosen. */
+const MAX_KPI_PINS = 8;
+
+async function saveMyKpiPins(username, pin, pins) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === s.id; });
+  if (idx === -1) return { ok: false };
+  const seen = {};
+  rows[idx].kpiPins = (Array.isArray(pins) ? pins : [])
+    .map(function (m) { return str_(m, 80); })
+    .filter(function (m) {
+      if (!m || seen[m] || SENSITIVE.indexOf(m) > -1) return false;
+      seen[m] = 1; return true;
+    })
+    .slice(0, MAX_KPI_PINS);
+  rows[idx].updated = new Date().toISOString();
+  await saveStaff_(rows);
+  return getMyMinistry(username, pin);
+}
+
 async function saveMyHabits(username, pin, habits, bibleDay) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
@@ -728,7 +754,10 @@ async function getMyMinistry(username, pin) {
       daily[r.metric][r.date] = Number(r.value);
     });
   }
-  return { ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '', entries: out, daily: daily };
+  return {
+    ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '',
+    entries: out, daily: daily, pins: Array.isArray(s.kpiPins) ? s.kpiPins : []
+  };
 }
 
 async function saveMyMinistry(username, pin, week, updates) {
@@ -863,6 +892,7 @@ const HANDLERS = {
   getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
   saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
+  saveMyKpiPins: function (a) { return saveMyKpiPins(a[0], a[1], a[2]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
 };
