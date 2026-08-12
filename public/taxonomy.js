@@ -49,7 +49,7 @@ var BL_DEPT_EXTRA = ['Total Staff','Staff Debt ($)','Funds Raised ($)'];
 function getDepartments(campusId){
   var d = {
     'Community Service': {
-      'Outreach Teams': ['Gospel Presentations Given','People Heard the Gospel',
+      'Outreach Teams': ['Teams Hosted','Gospel Presentations Given','People Heard the Gospel',
         'People Served','Volunteers Mobilized','Community Service Hours','Healings',
         'Kids Classes Run','Total Kids','Salvations','Baptisms','People Connected to Local Church'],
       'Cafe': ['Days Open','Cups Sold','Customers Served','Gospel Conversations','Salvations',
@@ -128,7 +128,25 @@ var LATEST_SET = ['Total Staff','Staff Debt ($)','Base Finances ($)','Total in B
   'Youth Enrolled','Highest Viewed Video Views','Trainees in Track',
   // Ongoing headcounts, not weekly events — summing them double-counted the
   // same people every week they were re-entered.
-  'Students in Discipleship','Players Being Discipled'];
+  'Students in Discipleship','Players Being Discipled',
+  // Same reason: a partner church stays a partner church week to week, and a
+  // congregation's size is a level, not something you accumulate.
+  'Partner Churches Supported','Combined Congregation Attendance'];
+
+/*  Which ministries are "schools", for the dashboard roll-ups.
+
+    Leadership Development = the YWAM training schools (a student goes through
+    one of these). Community schools are split across two departments: the
+    GP Education / Ponlork / LTN / Sry Noi side counts 'Students Enrolled',
+    while YDC counts 'Youth Enrolled' — one school either way.
+
+    Poipet therefore runs two community schools (GP Education + YDC); Siem Reap
+    runs five (GP Education, Ponlork, LTN, Sry Noi + YDC). A ministry that
+    reports its own 'Schools' number contributes that instead of 1, so a
+    multi-site ministry is counted honestly. */
+var LD_SCHOOL_MINISTRIES = ['GPDTS','DTS','DBS','SMS','BCS','SOMD'];
+var CS_SCHOOL_MINISTRIES = ['GP Education','Ponlork School','LTN','Sry Noi'];
+var YE_SCHOOL_MINISTRIES = ['YDC'];
 
 function modeOf(metric){
   if (metric.indexOf('(1-10)')>-1 || metric.indexOf('(%)')>-1) return 'avg';

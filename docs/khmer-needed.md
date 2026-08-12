@@ -11,6 +11,26 @@ translates. What is missing is the vocabulary of the personal page itself.
 one line in `public/km.js`. Partial is fine: translate ten rows and those ten start
 appearing in Khmer straight away, with the rest still in English.
 
+## 0. Dashboard section headings and new KPIs (8 needed)
+
+These are the new headings and metrics on the leadership dashboard. Everything
+else on that page already translates. Highest priority of the three lists here —
+these are the first thing a leader sees.
+
+| English | ខ្មែរ |
+|---|---|
+| The base at a glance |  |
+| Leadership Development schools |  |
+| Community schools |  |
+| Outreach teams |  |
+| Local church partnerships |  |
+| Across every ministry |  |
+| Teams Hosted |  |
+| Local Churches Partnered |  |
+
+_Note: "Teams Hosted" is also a KPI leaders type into the log form, so it needs
+to read naturally as a column label as well as on a dashboard tile._
+
 ## 1. Words and labels (53 needed)
 
 Fill the right column:
