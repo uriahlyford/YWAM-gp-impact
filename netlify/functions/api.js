@@ -401,11 +401,30 @@ async function getMenteeLogs(username, pin, menteeId) {
   const dailyRows = await getDaily_();
   // Only the habits this person chose to share, and they're told which those are.
   const cfg = habitsOf_(m);
+  /* Their weekly check-ins, by name, to their ONE approved mentor. Survey rows
+     are keyed by token, so this join — token back to person — happens nowhere
+     else; the base average never sees it. */
+  let checkins = [];
+  if (m.surveyToken) {
+    checkins = (await getSurvey_())
+      .filter(function (r) { return r.device === m.surveyToken; })
+      .map(function (r) {
+        return {
+          week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
+          oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
+          langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
+          sabbath: r.sabbath, growth: r.growth, days: r.days || 0,
+          source: r.source || 'daily'
+        };
+      })
+      .sort(function (a, b) { return b.week - a.week; });
+  }
   return {
     ok: true, mentee: publicStaff_(m),
     logs: logsFor_(dailyRows, m.id, cfg),
     sharedHabits: cfg.filter(function (h) { return h.mentorVisible; }),
     goals: goalsFor_(await getGoals_(), m.id),
+    checkins: checkins,
     profile: { debt: m.debt }
   };
 }
@@ -751,9 +770,77 @@ async function syncWeekSurvey_(s, wk, dailyRows) {
     return { pending: true, week: wk, days: rec.days, need: MIN_WEEK_DAYS };
   }
 
+  /* A week answered by hand wins over one derived from days. Filling in the
+     weekly form is a deliberate statement about the week; the daily roll-up is
+     an inference from however many days got logged. So the sync leaves a
+     hand-entered row alone rather than quietly overwriting it. */
+  if (idx > -1 && rows[idx].source === 'weekly') return rows[idx];
+
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('survey', rows);
   return rec;
+}
+
+/* ---------- the weekly check-in, filled in by hand ----------
+   Daily logging turned out not to be sustainable, so this is the primary way a
+   week gets answered. It writes to the SAME survey row the daily roll-up would
+   have written — one row per person per week, keyed by their survey token — so
+   the two paths can never double-count somebody.
+
+   The token is what makes the base average anonymous and the mentor view
+   possible at the same time: survey rows carry a token, never a name, so
+   anything pooled across the base is nameless by construction; and only the
+   person's own record maps their token back to them, which is how their ONE
+   approved mentor — and nobody else — can be shown their answers. */
+const WEEK_SCALES = ['lonely', 'clarity', 'growth'];
+const WEEK_FLAGS = ['porn', 'oneOnOne', 'exercise', 'quietTime', 'debt', 'sharedFaith', 'sabbath'];
+const WEEK_HOURS = ['langHours', 'minHours'];
+
+async function saveMyWeek(username, pin, week, payload) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const wk = finiteNum_(week, 1, 53);
+  if (wk == null) return { ok: false, err: 'bad_week' };
+  const p = payload || {};
+
+  const staffRows = await getStaff_();
+  const si = staffRows.findIndex(function (r) { return r.id === s.id; });
+  if (si === -1) return { ok: false };
+  const token = surveyTokenFor_(staffRows[si]);
+  await saveStaff_(staffRows);
+
+  const rec = { campus: s.campus, week: wk, device: token, source: 'weekly',
+    days: 7, updated: new Date().toISOString() };
+  WEEK_SCALES.forEach(function (k) { rec[k] = finiteNum_(p[k], 1, 10); });
+  WEEK_FLAGS.forEach(function (k) { rec[k] = p[k] ? 1 : 0; });
+  WEEK_HOURS.forEach(function (k) { rec[k] = finiteNum_(p[k], 0, 168) || 0; });
+  // Every 1-10 question has to be answered, or the composite is built on gaps.
+  if (WEEK_SCALES.some(function (k) { return rec[k] == null; })) return { ok: false, err: 'incomplete' };
+
+  // Staff debt is part of the profile, not just this week's answer.
+  staffRows[si].debt = !!p.debt;
+  await saveStaff_(staffRows);
+
+  const rows = await getSurvey_();
+  const idx = rows.findIndex(function (r) {
+    return r.campus === s.campus && Number(r.week) === wk && r.device === token;
+  });
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('survey', rows);
+  return getMyWeekly(username, pin);
+}
+
+async function deleteMyWeek(username, pin, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s || !s.surveyToken) return { ok: false };
+  const wk = finiteNum_(week, 1, 53);
+  if (wk == null) return { ok: false, err: 'bad_week' };
+  let rows = await getSurvey_();
+  rows = rows.filter(function (r) {
+    return !(r.device === s.surveyToken && Number(r.week) === wk);
+  });
+  await writeJSON('survey', rows);
+  return getMyWeekly(username, pin);
 }
 
 /* One call for everything the staff home page needs beyond the daily logs. */
@@ -771,7 +858,8 @@ async function getMyWeekly(username, pin) {
           week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
           oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
           langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
-          sabbath: r.sabbath, growth: r.growth, days: r.days || 0
+          sabbath: r.sabbath, growth: r.growth, days: r.days || 0,
+          source: r.source || 'daily'
         };
       })
       .sort(function (a, b) { return b.week - a.week; });
@@ -1137,6 +1225,8 @@ const HANDLERS = {
   getTripRequests: function (a) { return getTripRequests(a[0], a[1]); },
   respondToTrip: function (a) { return respondToTrip(a[0], a[1], a[2], a[3]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
+  saveMyWeek: function (a) { return saveMyWeek(a[0], a[1], a[2], a[3]); },
+  deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); },
   weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
 };
 

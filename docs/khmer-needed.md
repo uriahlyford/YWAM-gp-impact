@@ -128,36 +128,57 @@ separately. "tracked by hand" marks a key result with no KPI behind it. The two
 "No objectives set..." lines differ only in whose department it is, which Khmer may
 well handle in one sentence — if so, use the same text twice._
 
-## 0c-3. The Health tab (14 needed)
+## 0c-3b. The weekly check-in (15 needed)
 
-The weekly health section moved off the dashboard onto its own tab in My GP —
-your own weekly score and its detail, your recent weeks, then the base total your
-week feeds. Most of its labels were already translated for the dashboard; these
-are the new ones.
+The eleven weekly questions are back as a form, on the Health tab. The questions
+themselves were already translated for the dashboard; these are the labels around
+them, plus the mentor's view of a mentee's answers.
+
+| English | ខ្មែរ |
+|---|---|
+| My check-in |  |
+| Against last week |  |
+| My weeks |  |
+| From your weekly check-in |  |
+| Worked out from the days you logged |  |
+| Edit my answers |  |
+| Hide the form |  |
+| Clear this week |  |
+| Clear this week's check-in? |  |
+| Answer the 1-10 questions first. |  |
+| weekly check-in |  |
+| from daily logs |  |
+| answer the week directly |  |
+| Their weekly check-ins |  |
+| No check-ins yet. |  |
+| Base figures are totals only — no names. Your answers are shown by name to your mentor and to nobody else. |  |
+
+_"weekly check-in" and "from daily logs" are small tags under a week, saying which
+way that week was answered — lowercase on purpose. "Clear this week's check-in?" is
+a confirm dialog, so it needs to read as a yes/no question. The last line is the
+promise the page makes about who sees what; worth getting exactly right rather than
+literal — the base total is nameless, and the reader's mentor is the one person who
+sees their answers with their name on them._
+
+## 0c-3. Health tab labels still needed (6)
+
+What the Health tab needs beyond the weekly-check-in list above. The rest of its
+labels — the eleven questions, the base-average rows, Staff Health Score, Checked in
+this week — were already translated for the dashboard.
 
 | English | ខ្មែរ |
 |---|---|
 | Health score out of 10 |  |
-| from the days you logged |  |
 | this week |  |
-| My recent weeks |  |
-| days logged |  |
-| Nothing logged for this week yet — log a day and this fills in. |  |
-| Logged so far |  |
-| needs |  |
-| more |  |
 | Loneliness (avg) |  |
 | Growth (avg) |  |
 | Language hours |  |
 | Ministry hours |  |
-| Base figures are totals only — no names, and nobody sees an individual answer. |  |
 
-_"needs" and "more" are fragments in one line — "Logged so far: 2 · needs 3 (1 more)".
-If Khmer would rather say that as a whole sentence, write it in the "Logged so far"
-row and leave the other two blank; the code can be reworked to match. The short
-"(avg)" labels are the reader's own figures averaged across the days they logged —
-not across people — which is why "My health" uses them while the base section keeps
-the longer dashboard wording._
+_The short "(avg)" labels are the reader's own figures — averaged across the days
+they logged when a week came from daily logs, or simply their answer when they filled
+the week in. The base section keeps the longer dashboard wording, which is an average
+across people._
 
 ## 0d. One sentence for the Base tab (1)
 

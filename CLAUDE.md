@@ -1,8 +1,8 @@
 # GonPreah (GP) Impact App
 
 A mobile-first, bilingual (Khmer-first) web app for YWAM GonPreah (កូនព្រះ), Cambodia.
-It tracks ministry KPIs, OKRs, a staff health survey, and per-staff daily logging
-across the Poipet and Siem Reap campuses.
+It tracks ministry KPIs, OKRs, a weekly staff health check-in, and per-staff daily
+logging across the Poipet and Siem Reap campuses.
 
 ## Architecture (single deploy target)
 Everything lives in this repo and deploys as one Netlify site — push to `main`,
@@ -92,19 +92,21 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
 Handlers: getData, saveEntries, saveObjective, deleteObjective, saveSurvey, teamRoster,
 staffRegister, staffLogin, updateProfile, changePin, uploadPhoto, saveDaily, getMyLogs,
 getMyMentees, getMenteeLogs, getMyMentorRequests, respondToMentorRequest,
-getMyWeekly, saveGoals, saveMyHabits, getMyMinistry, saveMyMinistry, saveMyKpiDay,
-weeklyHealthFromLogs. No `translateBatch` equivalent (was `LanguageApp.translate`, not
+getMyWeekly, saveMyWeek, deleteMyWeek, saveGoals, saveMyHabits, getMyMinistry,
+saveMyMinistry, saveMyKpiDay, weeklyHealthFromLogs. No `translateBatch` equivalent (was `LanguageApp.translate`, not
 available outside Apps Script) — Khmer strings machine-translation fallback is gone;
 all Khmer must come from `BUILTIN_KM` or be added by hand.
 
-**Enter each number once — everything weekly is derived.** Two rules matter here:
-- **Weekly health** is computed from that week's daily logs by `syncWeekSurvey_`,
-  called automatically at the end of `saveDaily`. There is no weekly survey form
-  any more; it asked the same eleven questions as the daily check-in. Thresholds
-  (`WEEK_EXERCISE_DAYS` 3, `WEEK_QUIETTIME_DAYS` 4) match what the old form asked in
-  words; yes/no fields are "did this happen at all this week", 1-10 scales average
-  the days logged. Rows land in the same `survey` blob the anonymous device survey
-  uses, so the base health score needs no extra plumbing.
+**Enter each number once.** Two rules matter here:
+- **Weekly health has two ways in, and one row.** The eleven questions are a form on
+  the Health tab (`saveMyWeek`) — the primary path, because daily logging proved
+  unsustainable. `syncWeekSurvey_` still derives a week from daily logs at the end of
+  `saveDaily` for anyone who logs them (thresholds `WEEK_EXERCISE_RATE` /
+  `WEEK_QUIETTIME_RATE`; yes/no fields are "did this happen at all this week", 1-10
+  scales average the days logged). **Both write the same row**, keyed by the person's
+  `surveyToken` — one per person per week, so they cannot double-count — and **a week
+  answered by hand wins**: the sync leaves `source:'weekly'` alone. See "Health lives
+  on the staff page" for who is allowed to read it.
 - **Ministry KPIs** are typed per day into the `kpiDaily` blob; `saveMyKpiDay` then
   recomputes that week's figure into `entries` (the array the dashboard reads) using
   the metric's own sum/latest/avg rule. Correcting Tuesday only changes Tuesday.
@@ -177,27 +179,39 @@ lock ("you may only log your own campus") waits until everyone has an account;
 until then it would shut real people out.
 
 ## Health lives on the staff page
-The weekly health section moved off the dashboard onto My GP's **Health** tab, in the
-order that matters to the person reading it: **my own week** (score, the ten items behind
-it, and how many logged days fed it), **my recent weeks**, then **the base total** my week
-feeds — score for the week and YTD, check-in rate, and the per-question averages and
-shares. The base half is aggregate only; names never cross that line, exactly as before.
+The weekly health section sits on My GP's **Health** tab. Reading order: **my
+check-in** for the chosen week, **against last week** question by question, **my
+weeks** (every week I've answered, newest first), then **the base average** my week
+feeds — score for the week and YTD, check-in rate, and the per-question averages
+and shares.
 
-**The anonymous device survey did not come with it, deliberately.** A signed-in staff
-member's weekly health is already derived from their daily logs — `syncWeekSurvey_` writes
-it into the same `survey` blob keyed by their own token — so a second form on a signed-in
-page would put two rows in for the same person in the same week, inflating the response
-count and skewing the base average. Since the account gate landed, that form was only
-reachable by signed-in staff, which is exactly the group it double-counts. **Logging your
-days is the check-in now.** This closes the "retiring the anonymous device survey" item.
-`saveSurvey` still exists server-side and nothing calls it — left in place in case the
-device survey is ever wanted back, e.g. for staff who never get an account.
+**Weekly entry is the primary path.** Daily logging proved unsustainable, so the
+eleven questions are a form again — `saveMyWeek` in `api.js`, filled in on the
+Health tab. It writes to the **same survey row the daily roll-up would have
+written**, keyed by the person's `surveyToken`: one row per person per week, so the
+two paths cannot double-count anybody. Daily logging still works for anyone who
+does it, and `syncWeekSurvey_` still derives a week from days — but **a week
+answered by hand wins**: the sync leaves a row with `source:'weekly'` alone,
+because a deliberate answer beats an inference from however many days got logged.
+Each week's tag says which way it was answered.
 
-**Consequence to know:** the dashboard no longer shows the per-question health breakdown,
-and there is no longer an all-campuses view of it — a staff member's Health tab shows their
-own campus. The base health *score* is still on the dashboard hero and on Base. If
-leadership needs the combined-campus breakdown back, it wants adding to the dashboard as a
-read-only block.
+**Who sees what — the token is the whole mechanism.** Survey rows carry a token and
+never a name, so anything pooled base-wide is anonymous *by construction*, not by
+policy. Only the person's own staff record maps that token back to them, and
+`getMenteeLogs` is the one place that join happens — so their **ONE approved
+mentor** sees their answers with their name on them, and nobody else does.
+Leadership reads the base total; it never reads an individual's answers. A
+teammate's page (`staffProfile`) carries no health answers at all. 15 checks cover
+this against the real handler, including that a non-mentor and a *pending* mentor
+request are both refused, and that `getData` survey rows are nameless.
+
+**Consequence to know:** the dashboard has no per-question health breakdown and no
+all-campuses view of it — a staff member's Health tab shows their own campus. The
+base health *score* is still on the dashboard hero and on Base. The anonymous
+device survey is gone for good: it was keyed by a random device id rather than a
+person, so it could neither be attributed to a mentor nor prevented from
+double-counting someone who also logged days. `saveSurvey` still exists
+server-side with nothing calling it.
 
 ## What the dashboard leads with
 The dashboard answers the questions leadership actually asks, in this order — each
