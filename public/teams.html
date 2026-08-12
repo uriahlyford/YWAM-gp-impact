@@ -82,6 +82,21 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .statNum { font-family:'Koulen',sans-serif; font-size:26px; color:#1F44FF; line-height:1.1; }
 .statLabel { font-size:11.5px; color:#6b6557; margin-top:2px; line-height:1.3; }
 
+/* the base hero — same black card and amber figures as the dashboard, because
+   it is the dashboard: this page now leads with how the base is doing. */
+.hero { background:#17150F; color:#FAF6F0; border-radius:14px; padding:17px 17px 15px; margin-bottom:14px; }
+.heroLabel { font-size:11px; letter-spacing:2.6px; color:#FFB323; font-weight:700; }
+.heroNum { font-family:'Koulen',sans-serif; font-size:50px; line-height:1.05; color:#FFB323; }
+.heroTrend { margin-top:5px; font-size:13px; color:#c9c3b6; }
+.heroFig { font-family:'Koulen',sans-serif; font-weight:400; color:#FAF6F0; font-size:16px; }
+.heroSub { border-top:1px solid #3a352b; margin-top:13px; padding-top:10px; }
+.heroSubRow { display:flex; align-items:baseline; gap:8px; }
+.heroSubLabel { font-size:11px; letter-spacing:2.2px; color:#FFB323; font-weight:700; }
+.heroSubNum { font-family:'Koulen',sans-serif; font-size:29px; line-height:1; color:#FAF6F0; margin-left:auto; }
+.heroQ { display:flex; gap:13px; flex-wrap:wrap; margin-top:6px; font-size:13px; color:#c9c3b6; }
+.heroQ b { color:#FAF6F0; font-family:'Koulen',sans-serif; font-weight:400; }
+.mine { border-color:#1F44FF !important; box-shadow:0 0 0 1px #1F44FF inset; }
+
 .dir { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
 .dircard { background:#fff; border:1px solid #e4ddd0; border-radius:12px; padding:14px; text-align:center; cursor:pointer; }
 .dircard .avatar { margin:0 auto 8px; }
@@ -277,11 +292,16 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 </script>
 <script src="km.js"></script>
 <script src="taxonomy.js"></script>
+<script src="rollup.js"></script>
 <script>
 if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
   window.gpBootFailed('taxonomy.js did not load');
   // Throwing stops the rest of this script, so nothing paints over the message.
   throw new Error('taxonomy.js missing');
+}
+if(typeof gpRollup !== 'function'){
+  window.gpBootFailed('rollup.js did not load');
+  throw new Error('rollup.js missing');
 }
 /* CAMPUSES, getDepartments(), modeOf() and the metric lists come from
    taxonomy.js — the same file the dashboard uses, so a staff member's KPI
@@ -309,7 +329,7 @@ var MOODS = [
 
 var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
-  logs:[], roster:[], mentees:[], mentorRequests:[], view:'home',
+  logs:[], roster:[], mentees:[], mentorRequests:[], view:'base', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], goalDraft:null, ministry:null, kpiDraft:{}, weekDraft:{},
   habits:null, habitEdit:false, sharedHabits:[],
@@ -508,7 +528,10 @@ function afterLogin(){
   run('getMyTrips', [S.auth.user, S.auth.pin], function(d){ if(d.ok) S.trips=d; render(); });
   run('getTripRequests', [S.auth.user, S.auth.pin], function(d){ if(d.ok) S.tripRequests=d.requests||[]; render(); });
   run('getMyMinistry', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.ministry=d; } render(); });
-  S.view='home'; render();
+  /* The base's own figures — the dashboard endpoint, no leader code, so the two
+     money metrics leadership can see never reach this page. */
+  run('getData', [''], function(d){ if(d && d.entries) S.base=d; render(); });
+  S.view='base'; render();
 }
 function logout(){
   localStorage.removeItem('gp-staff');
@@ -531,17 +554,18 @@ function render(){
     return;
   }
   hb.innerHTML = '<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+'<button class="hbtn" id="backBtn">'+esc(t('Dashboard'))+'</button>';
-  /* Four tabs, not six: today's check-in lives ON Home (a daily tool's daily
-     thing shouldn't be a tab away), Profile folded into Me, and Mentor reached
-     from Team. */
+  /* Base leads: signing in should show how the base is doing, not a to-do list.
+     Your own week is one tap away, Profile is folded into Me, and Mentor is
+     reached from Team. */
   var reqN=S.mentorRequests?S.mentorRequests.length:0;
-  var tabs=[['home','Home','🏠'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','💚']];
+  var tabs=[['base','Base','🏠'],['week','My week','✅'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','💚']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+tab[2]+'</span>'+t(tab[1])+'</button>';
   }).join('');
   var m=document.getElementById('main');
-  if(S.view==='home') m.innerHTML=homeHtml();
+  if(S.view==='base') m.innerHTML=baseHtml();
+  else if(S.view==='week') m.innerHTML=homeHtml();
   else if(S.view==='me') m.innerHTML=meHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
@@ -549,11 +573,128 @@ function render(){
   bind();
 }
 
-/* ---------- home: the first thing you see after logging in ---------- */
 function greeting(){
   var h=new Date().getHours();
   return h<12 ? 'Good morning' : (h<18 ? 'Good afternoon' : 'Good evening');
 }
+
+/* ---------- base: the first thing you see after logging in ----------
+   The dashboard's figures, for the base this person actually works at. Nothing
+   is computed here — rollup.js does the arithmetic, so these are the same
+   numbers leadership reads, not a second opinion.
+
+   getData() is the dashboard's own endpoint. It needs no leader code: the two
+   money metrics leadership can see are stripped server-side for everyone else,
+   so what lands here is what an ordinary staff member is allowed to read. */
+var _baseRoll = null;
+function baseR(){
+  var d = S.base || {};
+  if(!_baseRoll || _baseRoll.e!==d.entries || _baseRoll.s!==d.survey || _baseRoll.r!==S.roster){
+    _baseRoll = { e:d.entries, s:d.survey, r:S.roster,
+      api: gpRollup({ entries:d.entries, survey:d.survey, roster:S.roster, week:thisWeek() }) };
+  }
+  return _baseRoll.api;
+}
+
+/* One tile. `metric` only decides formatting ($ / 1-10 / plain), and a trend is
+   passed in already rendered because only the caller knows what to compare. */
+function bstat(label, value, metric, trend){
+  return '<div class="stat"><div class="statNum">'+fmt(value, metric)+'</div>'+
+    '<div class="statLabel">'+esc(t(label))+(trend||'')+'</div></div>';
+}
+
+function baseHtml(){
+  var wk=thisWeek();
+  var first=String(S.me.name||'').trim().split(/\s+/)[0];
+  var ids=[S.me.campus];
+  var R=baseR();
+
+  var h='<div class="pmeta" style="margin:2px 0 10px">'+esc(t(greeting()))+', '+esc(first)+
+    (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>';
+
+  if(!S.base){
+    return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
+  }
+
+  /* --- the hero: who we are, then what happened --- */
+  var staff=R.totalStaff(ids);
+  h+='<div class="hero"><div class="heroLabel">'+esc(t(campusName(S.me.campus)).toUpperCase())+' · '+esc(t('WEEK'))+' '+wk+'</div>'+
+     '<div class="heroNum">'+fmt(staff)+'</div>'+
+     '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('STAFF'))+'</div>';
+  var cr=R.checkinRate(ids, wk);
+  if(cr.total && cr.total>0){
+    h+='<div class="heroTrend">'+esc(t('Checked in this week'))+' <b class="heroFig">'+cr.n+'</b> / '+cr.total+
+       ' · '+Math.round(cr.n/cr.total*100)+'%</div>';
+  }
+  var hs=R.healthScore(ids);
+  if(hs!==null){
+    h+='<div class="heroTrend">'+esc(t('Staff Health Score'))+' <b class="heroFig">'+hs.toFixed(1)+'</b>/10 '+
+       R.trendFor(function(w){return R.healthScore(ids,w);}, null)+'</div>';
+  }
+  h+='<div class="heroSub"><div class="heroSubRow">'+
+     '<span class="heroSubLabel">'+esc(t('SALVATIONS — YTD'))+'</span>'+
+     '<span class="heroSubNum">'+fmt(R.headlineFor(ids,'Salvations'))+'</span></div>'+
+     '<div class="heroQ">';
+  for(var q=0;q<4;q++) h+='<span>Q'+(q+1)+' <b>'+fmt(R.headlineFor(ids,'Salvations',q))+'</b></span>';
+  h+='</div></div></div>';
+
+  /* --- where this person sits in it: their department, against the others --- */
+  var bd=R.salvByDept(ids);
+  var myDept=S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
+  h+='<h3>🙌 '+esc(t('Salvations by department'))+'</h3><div class="card">';
+  Object.keys(bd).forEach(function(d){
+    var isMine=(d===myDept);
+    h+='<div class="row"><span class="rowName">'+(MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+
+       (isMine?' <span class="chip blue" style="padding:1px 8px;font-size:11px">'+esc(t('yours'))+'</span>':'')+
+       '</span><span class="'+(isMine?'pctSm':'rowVal')+'">'+fmt(bd[d])+'</span></div>';
+  });
+  h+='</div>';
+
+  /* --- the schools --- */
+  h+='<h3>🌱 '+esc(t('Leadership Development schools'))+'</h3><div class="grid">'+
+     bstat('Schools', R.ldSchools(ids))+
+     bstat('Students Enrolled', R.ldStudents(ids))+
+     bstat('Students Graduated', R.ldGraduates(ids), null,
+       R.trendFor(function(w){return R.ministryRollupWeek(ids, LD_DEPT, LD_SCHOOL_MINISTRIES, 'Students Graduated', w);}, 'Students Graduated'))+
+     '</div>';
+  h+='<h3>📚 '+esc(t('Community schools'))+'</h3><div class="grid">'+
+     bstat('Schools', R.communitySchools(ids))+
+     bstat('Students Enrolled', R.communityStudents(ids))+
+     bstat('Students in Discipleship', R.communityDiscipled(ids))+
+     '</div>';
+
+  /* --- outreach teams --- */
+  h+='<h3>🙌 '+esc(t('Outreach teams'))+'</h3><div class="grid">'+
+     bstat('Teams Hosted', R.outreachRollup(ids,'Teams Hosted'), null,
+       R.trendFor(function(w){return R.ministryRollupWeek(ids, CS_DEPT, ['Outreach Teams'], 'Teams Hosted', w);}, 'Teams Hosted'))+
+     bstat('Volunteers Mobilized', R.outreachRollup(ids,'Volunteers Mobilized'))+
+     bstat('People Served', R.headlineFor(ids,'People Served'), null,
+       R.trendFor(function(w){return R.metricWeekSum(ids,'People Served',w);}, 'People Served'))+
+     bstat('Total Volunteer Hours', R.volunteerHours(ids))+
+     '</div>';
+
+  /* --- churches --- */
+  h+='<h3>⛪ '+esc(t('Local church partnerships'))+'</h3><div class="grid">'+
+     bstat('Local Churches Partnered', R.partnerChurches(ids))+
+     bstat('Combined Congregation Attendance', R.ministryRollup(ids, LD_DEPT, ['Church Partnerships'], 'Combined Congregation Attendance'))+
+     bstat('People Connected to Local Church', R.headlineFor(ids,'People Connected to Local Church'))+
+     '</div>';
+
+  /* --- the gospel totals, every ministry pooled --- */
+  h+='<h3>🕊️ '+esc(t('Across every ministry'))+'</h3><div class="grid">';
+  ['Baptisms','People Heard the Gospel','Healings'].forEach(function(m){
+    h+=bstat(m, R.headlineFor(ids,m), m,
+      R.trendFor(function(w){return R.metricWeekSum(ids,m,w);}, m));
+  });
+  h+='</div>';
+
+  h+='<p class="hint" style="margin-top:14px">'+
+     esc(t('Every figure here is built from what each ministry logs each week — including yours.'))+
+     ' <button class="linkbtn inline" id="goFullDash">'+esc(t('See the full dashboard'))+' →</button></p>';
+  return h;
+}
+
+/* ---------- my week: the personal page ---------- */
 
 /* The app knows what day it is. Monday you're setting goals, midweek you're
    keeping habits, Friday you're closing the week out — so the card that matters
@@ -586,24 +727,17 @@ function phaseBanner(phase, wk){
 
 function homeHtml(){
   var wk=thisWeek();
-  var first=String(S.me.name||'').trim().split(/\s+/)[0];
   var wl=thisWeekLogs();
   var phase=weekPhase();
 
-  /* --- who you are --- */
-  var h='<div class="card"><div class="pcard">'+avatarHtml(S.me,'lg')+
-    '<div><div class="pmeta">'+esc(greeting())+'</div>'+
-    '<div class="pname">'+esc(first)+'</div>'+
-    '<div class="pmeta">'+esc(t(S.me.role||S.me.dept))+
-      (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>'+
-    '<div class="pmeta">'+esc(campusName(S.me.campus))+' · week '+wk+'</div></div></div>';
-  // Streak only — hours live in the week summary below, and the per-habit
-  // streaks live on Me. No need to say any of it three times.
+  /* No name-and-face card here: Base already greeted you by name and Me holds
+     your profile. This page opens on the week itself. */
   var st=graceStreak(function(){return true;});
-  h+='<div class="chips" style="margin-top:12px">'+
+  var h='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>'+
+    '<div class="chips" style="margin:0 0 12px">'+
     (st>0?'<span class="chip">🔥 '+st+'-day streak</span>'
         : '<span class="chip blue">'+wl.length+' of 7 days logged</span>')+
-    '</div></div>';
+    '</div>';
 
   h+=phaseBanner(phase, wk);
 
@@ -637,7 +771,7 @@ function weekSummaryHtml(wk){
     : (wl.length===0 ? 'log a day and this starts filling in'
                      : wl.length+' day'+(wl.length===1?'':'s')+' logged · '+short+' more for your score');
   var h='<div class="card slim"><button class="discloseBtn" id="weekToggle">'+
-    '<span><strong>💚 My week '+wk+'</strong>'+
+    '<span><strong>💚 '+esc(t('My health'))+' · '+esc(t('week'))+' '+wk+'</strong>'+
     '<div class="pmeta">'+esc(sub)+'</div></span>'+
     '<span class="'+(score===null?'chev':'pctBig')+'">'+
       (score===null ? (open?'▴':'▾') : score.toFixed(1))+'</span></button>';
@@ -1471,9 +1605,11 @@ function bindHome(){
   var gp=document.getElementById('goProfile');
   if(gp) gp.onclick=function(){ S.view='profile'; render(); };
   var jg=document.getElementById('jumpGoals');
-  if(jg) jg.onclick=function(){ S.view='home'; render(); };
+  if(jg) jg.onclick=function(){ S.view='week'; render(); };
   var jt=document.getElementById('jumpToday');
-  if(jt) jt.onclick=function(){ S.view='home'; S.todayOpen=true; render(); };
+  if(jt) jt.onclick=function(){ S.view='week'; S.todayOpen=true; render(); };
+  var fd=document.getElementById('goFullDash');
+  if(fd) fd.onclick=function(){ gpGo('index'); };
   var mt=document.getElementById('moreToday');
   if(mt) mt.onclick=function(){ S.todayOpen=!S.todayOpen; render(); };
   var wt=document.getElementById('weekToggle');
@@ -1857,7 +1993,8 @@ function refreshAll(){
     runP('getMyMentees',[u,k]).then(function(d){ if(d&&d.ok) S.mentees=d.mentees; }),
     runP('getMyMentorRequests',[u,k]).then(function(d){ if(d&&d.ok) S.mentorRequests=d.requests; }),
     runP('getMyTrips',[u,k]).then(function(d){ if(d&&d.ok) S.trips=d; }),
-    runP('getTripRequests',[u,k]).then(function(d){ if(d&&d.ok) S.tripRequests=d.requests||[]; })
+    runP('getTripRequests',[u,k]).then(function(d){ if(d&&d.ok) S.tripRequests=d.requests||[]; }),
+    runP('getData',['']).then(function(d){ if(d&&d.entries) S.base=d; })
   ]).then(function(){ render(); });
 }
 
