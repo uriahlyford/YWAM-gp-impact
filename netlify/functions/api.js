@@ -868,6 +868,49 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
   return getMyMinistry(username, pin);
 }
 
+/* ==================== a teammate's public profile ====================
+   What one staff member may see about another: who they are, what ministry
+   they're in, and their weekly goals — work commitments the team is meant to
+   know about and cheer on.
+
+   Everything the app treats as private stays out of here, and it's an allowlist
+   rather than a blocklist so a field added to the staff record later can't leak
+   by default: no loneliness, no porn, no staff debt, no clarity/growth scores,
+   no health score, and no habit data — habits are governed by the per-habit
+   mentor consent flag and sharing them team-wide would go behind that.
+
+   Requires the caller's own PIN: the roster is browsable, but goals are only
+   for people who are actually on the team, never anonymous visitors. */
+const PUBLIC_GOAL_WEEKS = 4;
+
+async function staffProfile(username, pin, staffId) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  const rows = await getStaff_();
+  const p = rows.find(function (r) { return r.id === staffId && r.active; });
+  if (!p) return { ok: false, err: 'not_found' };
+
+  const goals = goalsFor_(await getGoals_(), p.id).slice(0, PUBLIC_GOAL_WEEKS);
+  // Aggregate participation only — how consistently someone shows up is fair
+  // encouragement; what they logged on any given day is not.
+  const mine = (await getDaily_()).filter(function (r) { return r.staffId === p.id; });
+  const weeks = {};
+  mine.forEach(function (r) { weeks[String(r.week)] = 1; });
+  const dates = mine.map(function (r) { return r.date; }).sort();
+
+  return {
+    ok: true,
+    staff: publicStaff_(p),
+    goals: goals,
+    activity: {
+      weeksTracked: Object.keys(weeks).length,
+      daysLogged: mine.length,
+      lastLogged: dates.length ? dates[dates.length - 1] : ''
+    },
+    isMe: p.id === me.id
+  };
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getData: function (a) { return getData(a[0]); },
@@ -893,6 +936,7 @@ const HANDLERS = {
   saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   saveMyKpiPins: function (a) { return saveMyKpiPins(a[0], a[1], a[2]); },
+  staffProfile: function (a) { return staffProfile(a[0], a[1], a[2]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
 };

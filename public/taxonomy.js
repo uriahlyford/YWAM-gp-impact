@@ -151,3 +151,16 @@ function compositeOf(r){
   var s=0; parts.forEach(function(p){s+=p;});
   return s/parts.length;
 }
+
+/* Emoji per department and ministry. Shared so the staff directory badges
+   match the dashboard exactly. */
+var MIN_EMOJI = {
+  'Outreach Teams':'\ud83d\ude4c', 'Cafe':'\u2615', 'GP Education':'\ud83d\udcda',
+  'Intercession':'\ud83d\ude4f', 'Ponlork School':'\ud83c\udf31', 'LTN':'\ud83d\udcda', 'Sry Noi':'\ud83d\udcda',
+  'Sports':'\u26bd', 'GP Media':'\ud83c\udfac', 'YDC':'\ud83c\udf1f', 'Worship':'\ud83c\udfb5',
+  'GPDTS':'\ud83d\udd25', 'DTS':'\ud83d\udd25', 'DBS':'\ud83d\udcd6', 'SMS':'\ud83d\udcf1',
+  'BCS':'\ud83d\udcac', 'SOMD':'\ud83c\udf93', 'Evangelism':'\ud83d\udce2', 'Church Partnerships':'\u26ea',
+  'Finances':'\ud83d\udcb0', 'Hospitality':'\ud83c\udf3a', 'Technical':'\ud83d\udd27', 'Culinary':'\ud83c\udf72',
+  'Community Service':'\ud83e\udd1d', 'Youth Education':'\ud83c\udf1f', 'Leadership Development':'\ud83c\udf31',
+  'Skills Training':'\ud83d\udee0\ufe0f', 'Base Leadership':'\u2726', 'Campus Leadership':'\u2726'
+};
