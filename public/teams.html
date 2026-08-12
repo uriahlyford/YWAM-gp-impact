@@ -22,9 +22,6 @@ input:focus, select:focus, button:focus-visible { outline:3px solid #1F44FF; out
 
 header { background:#17150F; color:#FAF6F0; padding:16px; display:flex; justify-content:space-between; align-items:center; }
 .brand { display:flex; align-items:center; gap:10px; }
-.mark { width:38px; height:38px; border-radius:50%; background:#1F44FF; color:#FAF6F0; font-family:'Koulen',sans-serif;
-  font-size:20px; display:flex; align-items:center; justify-content:center; position:relative; }
-.mark::after { content:'✦'; position:absolute; top:-4px; right:-4px; color:#FFB323; font-size:14px; }
 .brandKh { font-family:'Koulen',sans-serif; font-size:22px; letter-spacing:1px; line-height:1; }
 .brandEn { font-size:9px; letter-spacing:3px; color:#FFB323; font-weight:700; }
 .hbtns { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
@@ -159,19 +156,30 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .trend.down { color:#b3261e; background:#fbe6e6; }
 .trend.flat { color:#6b6557; background:#efeae0; }
 
-/* pull-to-refresh — same gesture as the dashboard. This page has the text "GP"
-   mark rather than the embedded logo, so the coin spins that instead. */
+/* pull-to-refresh — same gesture, same spinning logo coin as the dashboard. */
 .ptr { position:fixed; top:0; left:0; right:0; z-index:60; display:flex; justify-content:center;
   pointer-events:none; opacity:0; transform:translateY(-60px);
   transition:transform .22s ease, opacity .22s ease; }
 .ptr.dragging { transition:none; }
-.ptrCoin { width:40px; height:40px; border-radius:50%; margin-top:10px; background:#1F44FF;
-  color:#FAF6F0; font-family:'Koulen',sans-serif; font-size:16px; letter-spacing:.5px;
+.ptrCoin { width:40px; height:40px; border-radius:50%; margin-top:10px; background:#17150F;
   display:flex; align-items:center; justify-content:center;
-  box-shadow:0 6px 18px rgba(31,68,255,.32), 0 0 0 3px rgba(31,68,255,.12); }
-.ptr.spinning .ptrCoin { animation:spin 1s linear infinite; }
+  box-shadow:0 6px 18px rgba(31,68,255,.3), 0 0 0 3px rgba(31,68,255,.12); }
+.ptrCoin img { width:27px; height:auto; }
+.ptr.spinning .ptrCoin img { animation:spin 1s linear infinite; transform:none !important; }
 @keyframes spin { to { transform:rotate(360deg) } }
-@media (prefers-reduced-motion: reduce){ .ptr.spinning .ptrCoin { animation:none } }
+@media (prefers-reduced-motion: reduce){ .ptr.spinning .ptrCoin img { animation:none } }
+
+/* "Impact Loading" — the same spinning-coin wait the dashboard uses, so the two
+   pages feel like one app while they are still two files. */
+.loadingBox { text-align:center; padding:52px 0 40px; }
+.loadCoin { width:92px; height:92px; border-radius:50%; margin:0 auto; background:#17150F;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 12px 30px rgba(31,68,255,.28), 0 0 0 4px rgba(31,68,255,.1); }
+.loadLogo { width:66px; height:auto; animation:spin 1.4s linear infinite; }
+.loadText { font-family:'Koulen',sans-serif; font-size:22px; letter-spacing:1px; color:#17150F; margin-top:18px; }
+.ldots::after { content:''; animation:ldots 1.4s steps(1,end) infinite; }
+@keyframes ldots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%,100%{content:'...'} }
+@media (prefers-reduced-motion: reduce){ .loadLogo{ animation:none } .ldots::after{ content:'...' } }
 /* collapsed sections — keep the front page short */
 .discloseBtn { display:flex; width:100%; align-items:center; justify-content:space-between; gap:12px;
   background:transparent; border:0; border-top:1px solid #f0eadf; padding:13px 0 4px; margin-top:6px;
@@ -183,23 +191,22 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .msg { position:fixed; left:50%; bottom:86px; transform:translateX(-50%); background:#17150F; color:#FAF6F0;
   padding:10px 18px; border-radius:999px; font-size:14px; z-index:20; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90%; }
 .msg.show { opacity:1; }
-.loading { padding:50px; text-align:center; color:#6b6557; }
 footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 </style>
 </head>
 <body>
 
-<div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin">GP</div></div>
+<div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin"><img id="ptrLogo" src="" alt=""></div></div>
 
 <header>
   <div class="brand">
-    <div class="mark">GP</div>
-    <div><div class="brandKh">កូនព្រះ · My GP</div><div class="brandEn">MY HOME</div></div>
+    <img id="brandLogo" alt="YWAM GP — Gon Preah" style="height:44px;width:auto;display:block">
+    <div><div class="brandKh">កូនព្រះ</div><div class="brandEn">MY GP</div></div>
   </div>
   <div class="hbtns" id="hbtns"></div>
 </header>
 
-<main id="main"><div class="loading">…</div></main>
+<main id="main"><div class="loadingBox"><div class="loadCoin"><img class="loadLogo" id="bootLogo" src="" alt=""></div><div class="loadText">Impact Loading<span class="ldots"></span></div></div></main>
 <nav class="bottom hidden" id="bottomNav"></nav>
 <div class="msg" id="msg"></div>
 
@@ -258,6 +265,15 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   });
   window.gpBootFailed = fallback;
 })();
+</script>
+<script src="logo.js"></script>
+<script>
+/* Paint the header mark and the boot coin as soon as logo.js is in — the first
+   thing you see is the real logo, not a bare header. */
+(function(){ if(typeof GP_LOGO_WIDE!=='string') return;
+  var b=document.getElementById('brandLogo'); if(b) b.src=GP_LOGO_WIDE;
+  var l=document.getElementById('bootLogo'); if(l) l.src=GP_LOGO;
+  var p=document.getElementById('ptrLogo'); if(p) p.src=GP_LOGO; })();
 </script>
 <script src="km.js"></script>
 <script src="taxonomy.js"></script>
@@ -449,6 +465,9 @@ function count(rows, f){ var n=0; rows.forEach(function(r){ if(f(r)) n++; }); re
 
 /* ---------- boot ---------- */
 function boot(){
+  /* The dashboard's front door links straight here: ?reg=1 opens the create
+     form rather than making someone find the "New here?" link first. */
+  try { if(String(location.search||'').indexOf('reg=1')>-1) S.regMode = true; } catch(e){}
   var saved = null;
   try { saved = JSON.parse(localStorage.getItem('gp-staff')||'null'); } catch(e){}
   if(saved && saved.user && saved.pin){
@@ -464,7 +483,9 @@ function boot(){
 function saveStaffCard(){
   try {
     localStorage.setItem('gp-staff-card', JSON.stringify({
-      name: S.me.name, photo: S.me.photo || '', ministry: S.me.ministry || ''
+      name: S.me.name, photo: S.me.photo || '', ministry: S.me.ministry || '',
+      // Campus so the dashboard can open on your own base instead of Poipet.
+      campus: S.me.campus || ''
     }));
   } catch(e){}
 }
