@@ -286,6 +286,26 @@ inferred from volunteer counts.
   their ONE chosen mentor (server-enforced in getMenteeLogs); leadership sees aggregates only.
 - The dashboard intentionally omits "New Churches Planted" and "Base Plants in Planning"
   (still loggable in their ministries, just not shown on the dashboard summary).
+- **A weekly goal's progress is a percentage, not a tick.** Ministry work is rarely
+  finished-or-not — you discipled two of the three students you meant to — and a
+  checkbox made people round an honest 60% to one of two lies. With three goals, a
+  week could also only ever read 0, 33, 67 or 100%. Each goal now stores `pct`
+  (0-100, step 5 in the UI) and the week is the **average** of what moved. `done` is
+  still returned, derived as `pct >= 100`.
+  **Rows written before this store `done` and no `pct`** — always read them through
+  `goalItemPct_` (server) / `goalItemPct` (client), which maps a ticked goal to 100
+  and an unticked one to 0. Reading `.pct` directly would silently zero every goal
+  the team has already completed; `test-goals.mjs` covers exactly that.
+  Progress and colour are shared: `pctColor` grades amber → blue → green as the
+  number climbs, `pctWord` says the same thing in words for anyone who cannot pick
+  those colours apart, and `ringVars`/`ringHtml` drive both the ring and the slider
+  track from one string. Dragging repaints locally and saves once on release —
+  never re-render mid-drag, or the thumb jumps out from under a finger.
+- **Every "we are loading" state is the spinning GP mark.** Boot screen, pull-to-refresh
+  coin, and the header refresh button all use `@keyframes spin` on the real logo. The
+  refresh button used to swap in a "…", which read as nothing happening and stayed
+  there forever when a request failed, since only a successful render put the ↻ back.
+  If you add a busy state, spin the mark and restore it in both branches.
 
 ## Known limits (real, not yet fixed)
 - **Weeks carry no year.** Every row in `entries`, `survey`, `goals` and `kpiDaily` is

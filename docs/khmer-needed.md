@@ -190,6 +190,30 @@ _This is the line under the base figures that tells a staff member their own
 weekly numbers are part of what they are looking at. Worth getting right rather
 than literal._
 
+## 0e. Goal progress, now a percentage (9 needed)
+
+Weekly goals moved from a tick to a 0-100% slider, because ministry work is rarely
+finished-or-not. These are the words under each slider — they say in words what the
+colour says, for anyone who cannot tell the amber from the green.
+
+| English | ខ្មែរ |
+|---|---|
+| End of week — how far did you get? |  |
+| Drag each one — few weeks are all or nothing. |  |
+| Progress |  |
+| Not started |  |
+| Just started |  |
+| Under way |  |
+| Halfway |  |
+| Almost there |  |
+| Done |  |
+
+_These six state words are read far more often than they are long, and each sits
+directly under a number, so short beats literal — "Halfway" is labelling 50%, not
+explaining it. "Progress" is the screen-reader label on the slider itself
+("Progress: disciple two students"), so it needs to work as a noun. "Done" is
+already in list 1 as a button label; if one Khmer word suits both, reuse it._
+
 ## 1. Words and labels (53 needed)
 
 Fill the right column:

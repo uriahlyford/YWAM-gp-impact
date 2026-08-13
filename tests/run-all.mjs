@@ -19,6 +19,7 @@ const SERVER = [
   'test-boot.mjs',       // getMyBoot: one call per page open
   'test-week-auth.mjs',  // weekly health: anonymity + mentor visibility
   'test-okr-auth.mjs',   // OKR writes stay inside your campus + department
+  'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
 ];

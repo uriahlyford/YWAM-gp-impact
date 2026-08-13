@@ -634,25 +634,43 @@ const MAX_GOALS = 3;
 
 async function getGoals_() { return readJSON('goals', []); }
 
+/* A goal's progress is a percentage, not a tick. Ministry work rarely lands on
+   "done" or "not done" — you discipled two of the three students you meant to, the
+   curriculum is most of the way written — and a checkbox forced people to round
+   an honest 60% to one of those two lies. Three goals used to mean the week could
+   only ever read 0, 33, 67 or 100%.
+   Rows written before this store `done` instead, so read through goalItemPct_:
+   an old ticked goal is 100 and an unticked one is 0, which is exactly what they
+   meant. `done` is still returned, derived, because a few read paths show a tick. */
+function goalItemPct_(i) {
+  if (!i) return 0;
+  const n = finiteNum_(i.pct, 0, 100);
+  if (n != null) return Math.round(n);
+  return i.done ? 100 : 0;
+}
+
 function goalsFor_(rows, staffId) {
   return rows.filter(function (r) { return r.staffId === staffId; })
     .slice()
     .sort(function (a, b) { return Number(b.week) - Number(a.week); })
     .map(function (r) {
       const items = (r.items || []).map(function (i) {
-        return { text: i.text || '', done: !!i.done, metricKey: i.metricKey || '' };
+        const pct = goalItemPct_(i);
+        return { text: i.text || '', pct: pct, done: pct >= 100, metricKey: i.metricKey || '' };
       });
       return { week: Number(r.week), items: items, pct: goalPct_(items), updated: r.updated };
     });
 }
 
-/* null (not 0%) when nothing was written, so "no goals set" and "set none
-   of them" stay distinguishable in the mentor view. */
+/* The week is the average of what you actually moved, not a count of finished
+   ones — three goals at 60% is a 60% week, which is the honest reading.
+   null (not 0%) when nothing was written, so "no goals set" and "set them and
+   moved none of them" stay distinguishable in the mentor view. */
 function goalPct_(items) {
   const written = (items || []).filter(function (i) { return i && i.text; });
   if (!written.length) return null;
-  const done = written.filter(function (i) { return i.done; }).length;
-  return Math.round(done / written.length * 100);
+  const total = written.reduce(function (a, i) { return a + goalItemPct_(i); }, 0);
+  return Math.round(total / written.length);
 }
 
 async function saveGoals(username, pin, week, items) {
@@ -662,7 +680,10 @@ async function saveGoals(username, pin, week, items) {
   if (wk == null) return { ok: false, err: 'bad_week' };
   const clean = (Array.isArray(items) ? items.slice(0, MAX_GOALS) : []).map(function (i) {
     return {
-      text: str_(i && i.text, 200) || '', done: !!(i && i.done),
+      text: str_(i && i.text, 200) || '',
+      /* pct is the stored truth; `done` goes with it so a client reading the blob
+         directly, or an older cached page, still sees something sensible. */
+      pct: goalItemPct_(i), done: goalItemPct_(i) >= 100,
       // Optional "dept|ministry|metric" — links a goal to the KPI it moves, so
       // personal follow-through and ministry output read as one thing.
       metricKey: str_(i && i.metricKey, 200) || ''

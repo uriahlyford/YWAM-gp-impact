@@ -136,10 +136,38 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .goalRow { display:flex; align-items:flex-start; gap:11px; padding:11px 0; border-bottom:1px solid #f0eadf; }
 .goalRow:last-of-type { border-bottom:none; }
 .goalText { font-size:14.5px; line-height:1.35; padding-top:3px; }
-.goalRow.done .goalText { color:#6b6557; text-decoration:line-through; }
-.tick { flex:0 0 auto; width:28px; height:28px; border-radius:8px; border:1.5px solid #c9c3b6;
-  background:#FAF6F0; font-size:15px; font-weight:700; color:#fff; cursor:pointer; line-height:1; }
-.tick.on { background:#0a7d3c; border-color:#0a7d3c; }
+/* ---- a goal's progress is a percentage ----
+   The ring is the read: one glance says how far along, and it fills clockwise as
+   the number climbs. conic-gradient keeps it to one element with no SVG and no
+   library. The slider under it is the write — drag it and it saves on release. */
+.gRing { flex:0 0 auto; width:42px; height:42px; border-radius:50%; position:relative;
+  background:conic-gradient(var(--gc) calc(var(--p) * 1%), #ece5d9 0); display:grid; place-items:center;
+  transition:background .3s ease; }
+.gRing::after { content:''; position:absolute; inset:4px; border-radius:50%; background:#fff; }
+.gRing span { position:relative; z-index:1; font-family:'Koulen',sans-serif; font-size:12.5px;
+  color:var(--gc); letter-spacing:-.2px; }
+.gRing.lg { width:58px; height:58px; }
+.gRing.lg span { font-size:16px; }
+.gRing.lg::after { inset:5px; }
+.goalBody { flex:1 1 auto; min-width:0; }
+.gSlide { -webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent;
+  margin:7px 0 0; display:block; cursor:pointer; }
+.gSlide::-webkit-slider-runnable-track { height:10px; border-radius:99px;
+  background:linear-gradient(90deg, var(--gc) var(--p1), #ece5d9 var(--p1)); }
+.gSlide::-moz-range-track { height:10px; border-radius:99px;
+  background:linear-gradient(90deg, var(--gc) var(--p1), #ece5d9 var(--p1)); }
+.gSlide::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:24px; height:24px;
+  border-radius:50%; background:#fff; border:3px solid var(--gc); margin-top:-7px;
+  box-shadow:0 2px 8px rgba(23,21,15,.22); transition:transform .12s ease; }
+.gSlide::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:#fff;
+  border:3px solid var(--gc); box-shadow:0 2px 8px rgba(23,21,15,.22); }
+.gSlide:active::-webkit-slider-thumb { transform:scale(1.18); }
+.gSlide:focus-visible { outline:2px solid #1F44FF; outline-offset:3px; border-radius:99px; }
+.gWord { font-size:11.5px; letter-spacing:.4px; text-transform:uppercase; font-weight:700;
+  color:var(--gc); margin-top:4px; }
+.barFill { background:linear-gradient(90deg,#1F44FF,#5B7BFF); }
+.barFill.done { background:linear-gradient(90deg,#FFB323,#FFD166); }
+@media (prefers-reduced-motion: reduce){ .gRing, .gSlide::-webkit-slider-thumb { transition:none } }
 .kpiIn { width:88px !important; text-align:right; }
 
 /* team directory grouped by department then ministry */
@@ -1183,11 +1211,10 @@ function phaseBanner(phase, wk){
     return '<div class="banner big">🎯 <strong>Start of the week.</strong> Pick the three things that matter for week '+wk+'.'+
       ' <button class="linkbtn inline" id="jumpGoals">Set them now</button></div>';
   if(phase==='review'){
-    var done=hasGoals ? rec.items.filter(function(i){return i.text&&i.done;}).length : 0;
-    var tot=hasGoals ? rec.items.filter(function(i){return i.text;}).length : 0;
-    if(hasGoals && done<tot)
-      return '<div class="banner big">✅ <strong>End of the week.</strong> You’ve marked '+done+' of '+tot+
-        ' goals done. <button class="linkbtn inline" id="jumpGoals">Close out week '+wk+'</button></div>';
+    var avgPct=hasGoals && rec.pct!==null ? rec.pct : 0;
+    if(hasGoals && avgPct<100)
+      return '<div class="banner big">✅ <strong>End of the week.</strong> Your three goals are '+avgPct+
+        '% of the way there. <button class="linkbtn inline" id="jumpGoals">Close out week '+wk+'</button></div>';
     if(!thisWeekLogs().length)
       return '<div class="banner big">💚 <strong>End of the week.</strong> No days logged yet — '+
         'your week’s health figures come straight from these.'+
@@ -1370,6 +1397,40 @@ function todaySummaryLine(log){
 
 
 /* --- three weekly goals --- */
+/* ---- goal progress: percentage, not a tick ----
+   goalItemPct reads either shape, because rows written before this stored `done`.
+   The colour walks amber → blue → green as the number climbs, so a row's state is
+   legible before you read the digits; the word underneath says the same thing for
+   anyone who cannot pick those colours apart. */
+function goalItemPct(g){
+  if(!g) return 0;
+  var n = Number(g.pct);
+  if(g.pct!==undefined && g.pct!==null && g.pct!=='' && isFinite(n)) return Math.max(0, Math.min(100, Math.round(n)));
+  return g.done ? 100 : 0;
+}
+function pctColor(p){
+  if(p>=100) return '#0a7d3c';
+  if(p>=75)  return '#1F44FF';
+  if(p>=25)  return '#C98700';
+  if(p>0)    return '#C4622D';
+  return '#9a9384';
+}
+function pctWord(p){
+  if(p>=100) return t('Done');
+  if(p>=75)  return t('Almost there');
+  if(p>=50)  return t('Halfway');
+  if(p>=25)  return t('Under way');
+  if(p>0)    return t('Just started');
+  return t('Not started');
+}
+/* Both the ring and the slider track read --p/--p1 and --gc, so one string sets
+   the fill and the colour for either. */
+function ringVars(p){ return '--p:'+p+';--p1:'+p+'%;--gc:'+pctColor(p)+';'; }
+function ringHtml(p, big){
+  return '<div class="gRing'+(big?' lg':'')+'" style="'+ringVars(p)+'" role="img" aria-label="'+p+'%">'+
+    '<span>'+p+'</span></div>';
+}
+
 function goalsCardHtml(wk){
   var rec=goalsForWeek(wk);
   var editing = S.goalDraft !== null;
@@ -1413,15 +1474,23 @@ function goalsCardHtml(wk){
        '<button class="linkbtn" id="cancelGoals">Cancel</button>';
   } else {
     var pct=rec?rec.pct:null;
-    h+='<div class="row" style="border:0;padding-top:0"><span class="rowName">End of week — did you get them done?</span>'+
-       '<span class="pctBig">'+(pct===null?'—':pct+'%')+'</span></div>';
-    h+='<div class="bar"><div class="barFill'+(pct>=100?' done':'')+'" style="width:'+(pct||0)+'%"></div></div>';
+    h+='<div class="row" style="border:0;padding-top:0"><span class="rowName">'+
+       esc(t('End of week — how far did you get?'))+
+       '<div class="pmeta">'+esc(t('Drag each one — few weeks are all or nothing.'))+'</div></span>'+
+       '<span class="pctBig" style="color:'+pctColor(pct||0)+'">'+(pct===null?'—':pct+'%')+'</span></div>';
+    h+='<div class="bar"><div class="barFill" style="width:'+(pct||0)+'%;background:'+pctColor(pct||0)+'"></div></div>';
     written.forEach(function(g,i){
       var mm=g.metricKey?g.metricKey.split('|')[2]:'';
-      h+='<div class="goalRow'+(g.done?' done':'')+'">'+
-        '<button class="tick'+(g.done?' on':'')+'" data-goaltick="'+i+'" aria-label="Toggle goal '+(i+1)+'">'+(g.done?'✓':'')+'</button>'+
-        '<span><span class="goalText">'+esc(g.text)+'</span>'+
-        (mm?'<div class="goalLink">📊 moves '+esc(mm)+'</div>':'')+'</span></div>';
+      var gp=goalItemPct(g);
+      h+='<div class="goalRow'+(gp>=100?' done':'')+'">'+
+        ringHtml(gp)+
+        '<div class="goalBody"><span class="goalText">'+esc(g.text)+'</span>'+
+        (mm?'<div class="goalLink">📊 '+esc(t('moves'))+' '+esc(t(mm))+'</div>':'')+
+        '<input type="range" class="gSlide" min="0" max="100" step="5" value="'+gp+'"'+
+          ' style="'+ringVars(gp)+'" data-goalpct="'+i+'"'+
+          ' aria-label="'+esc(t('Progress'))+': '+esc(g.text)+'">'+
+        '<div class="gWord" data-goalword="'+i+'">'+esc(pctWord(gp))+'</div>'+
+        '</div></div>';
     });
     h+='<button class="btn ghost" id="editGoals" style="margin-top:12px">Edit goals</button>';
   }
@@ -1439,9 +1508,8 @@ function pastGoalsHtml(wk){
     '<div class="pmeta">'+past.length+' week'+(past.length===1?'':'s')+' tracked</div></span>'+
     '<span class="pctBig">'+(avg===null?'—':avg+'%')+'</span></div>';
   past.slice(0,6).forEach(function(g){
-    var done=g.items.filter(function(i){return i.text&&i.done;}).length;
-    var tot=g.items.filter(function(i){return i.text;}).length;
-    h+='<div class="row"><span class="rowName">Week '+g.week+'<div class="pmeta">'+done+' of '+tot+' done</div></span>'+
+    var each=g.items.filter(function(i){return i.text;}).map(function(i){ return goalItemPct(i)+'%'; }).join(' · ');
+    h+='<div class="row"><span class="rowName">Week '+g.week+'<div class="pmeta">'+esc(each)+'</div></span>'+
       '<span class="pctSm">'+(g.pct===null?'—':g.pct+'%')+'</span></div>';
   });
   return h+'</div>';
@@ -2008,11 +2076,11 @@ function personHtml(){
         '<span class="rowName">'+esc(t('Week'))+' '+g.week+'</span>'+
         '<span class="pctSm">'+(g.pct===null?'—':g.pct+'%')+'</span></div>';
       g.items.filter(function(i){return i.text;}).forEach(function(i){
-        h+='<div class="goalRow'+(i.done?' done':'')+'">'+
-          '<button class="tick'+(i.done?' on':'')+'" disabled>'+(i.done?'✓':'')+'</button>'+
-          '<span><span class="goalText">'+esc(i.text)+'</span>'+
+        var ip=goalItemPct(i);
+        h+='<div class="goalRow'+(ip>=100?' done':'')+'">'+ringHtml(ip)+
+          '<div class="goalBody"><span class="goalText">'+esc(i.text)+'</span>'+
           (i.metricKey?'<div class="goalLink">📊 '+esc(t('moves'))+' '+esc(t(i.metricKey.split('|')[2]||''))+'</div>':'')+
-          '</span></div>';
+          '</div></div>';
       });
       h+='</div>';
     });
@@ -2134,8 +2202,9 @@ function mentorHtml(){
         h+='<div class="card"><div class="row" style="border:0;padding-top:0"><span class="rowName">Week '+g.week+'</span>'+
           '<span class="pctSm">'+(g.pct===null?'—':g.pct+'%')+'</span></div>';
         g.items.filter(function(i){return i.text;}).forEach(function(i){
-          h+='<div class="goalRow'+(i.done?' done':'')+'"><button class="tick'+(i.done?' on':'')+'" disabled>'+(i.done?'✓':'')+'</button>'+
-            '<span class="goalText">'+esc(i.text)+'</span></div>';
+          var mp=goalItemPct(i);
+          h+='<div class="goalRow'+(mp>=100?' done':'')+'">'+ringHtml(mp)+
+            '<div class="goalBody"><span class="goalText">'+esc(i.text)+'</span></div></div>';
         });
         h+='</div>';
       });
@@ -2518,7 +2587,7 @@ function bindHome(){
   if(eg) eg.onclick=function(){
     var rec=goalsForWeek(thisWeek());
     var items=(rec&&rec.items)?rec.items.slice():[];
-    while(items.length<3) items.push({text:'',done:false});
+    while(items.length<3) items.push({text:'',pct:0});
     S.goalDraft=items; render();
   };
   var cg=document.getElementById('cancelGoals');
@@ -2527,7 +2596,7 @@ function bindHome(){
     inp.oninput=function(){
       var i=Number(inp.getAttribute('data-goaltext'));
       if(!S.goalDraft) return;
-      S.goalDraft[i]=S.goalDraft[i]||{text:'',done:false};
+      S.goalDraft[i]=S.goalDraft[i]||{text:'',pct:0};
       S.goalDraft[i].text=inp.value;
     };
   });
@@ -2535,7 +2604,7 @@ function bindHome(){
     sel.onchange=function(){
       var i=Number(sel.getAttribute('data-goalmetric'));
       if(!S.goalDraft) return;
-      S.goalDraft[i]=S.goalDraft[i]||{text:'',done:false};
+      S.goalDraft[i]=S.goalDraft[i]||{text:'',pct:0};
       S.goalDraft[i].metricKey=sel.value;
     };
   });
@@ -2543,7 +2612,8 @@ function bindHome(){
   if(sg) sg.onclick=function(){
     if(S.busy) return;
     var items=(S.goalDraft||[]).map(function(g){
-      return {text:(g.text||'').trim(), done:!!g.done, metricKey:g.metricKey||''};
+      // Carry the percentage through: rewording a goal is not undoing the work.
+      return {text:(g.text||'').trim(), pct:goalItemPct(g), metricKey:g.metricKey||''};
     });
     if(!items.some(function(g){return g.text;})){ showMsg('Write at least one goal'); return; }
     S.busy=true; sg.disabled=true; sg.textContent='…';
@@ -2554,19 +2624,32 @@ function bindHome(){
       render();
     });
   };
-  document.querySelectorAll('[data-goaltick]').forEach(function(b){
-    b.onclick=function(){
-      if(S.busy) return;
+  /* Dragging repaints the ring, the track and the word straight away — waiting on
+     a round trip to see your own thumb move feels broken. The save fires once on
+     release, and only render() after it lands, so a re-render never yanks the
+     slider out from under a thumb that is still down. */
+  document.querySelectorAll('[data-goalpct]').forEach(function(sl){
+    var row=sl.closest('.goalRow');
+    var ring=row&&row.querySelector('.gRing');
+    var word=row&&row.querySelector('[data-goalword]');
+    function paint(){
+      var v=Number(sl.value)||0;
+      sl.setAttribute('style', ringVars(v));
+      if(ring){ ring.setAttribute('style', ringVars(v)); var sp=ring.querySelector('span'); if(sp) sp.textContent=v; }
+      if(word) word.textContent=pctWord(v);
+      if(row) row.classList.toggle('done', v>=100);
+    }
+    sl.oninput=paint;
+    sl.onchange=function(){
+      paint();
       var rec=goalsForWeek(thisWeek());
       if(!rec) return;
-      var i=Number(b.getAttribute('data-goaltick'));
+      var i=Number(sl.getAttribute('data-goalpct'));
       var written=rec.items.filter(function(x){ return x.text; });
       if(!written[i]) return;
-      written[i].done=!written[i].done;
-      S.busy=true;
+      written[i].pct=Number(sl.value)||0;
       run('saveGoals',[S.auth.user,S.auth.pin,thisWeek(),written],function(d){
-        S.busy=false;
-        if(d.ok) S.goals=d.goals||[];
+        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn\u2019t save \u2014 try again.'));
         render();
       });
     };

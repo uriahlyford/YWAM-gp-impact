@@ -130,7 +130,10 @@ input[type=number] { width:96px; font-size:17px; padding:9px 10px; border-radius
   box-shadow:0 6px 18px rgba(31,68,255,.3), 0 0 0 3px rgba(31,68,255,.12); }
 .ptrCoin img { width:27px; height:auto; }
 .ptr.spinning .ptrCoin img { animation:spin 1s linear infinite; transform:none !important; }
-@media (prefers-reduced-motion: reduce){ .ptr.spinning .ptrCoin img { animation:none } }
+/* The header refresh button spins the same mark rather than swapping in a "…". */
+.spinBtn { padding:0 !important; display:inline-grid; place-items:center; }
+.spinMark { width:19px; height:auto; animation:spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce){ .ptr.spinning .ptrCoin img, .spinMark { animation:none } }
 /* Touch devices pull to refresh; the button stays for mouse/desktop. */
 @media (pointer:coarse){ #refreshBtn { display:none; } }
 .hidden { display:none; }
@@ -1094,7 +1097,24 @@ function toggleLeader(){
 
 function bindEvents(){
   document.getElementById('langBtn').onclick = toggleLang;
-  document.getElementById('refreshBtn').onclick = function(){ this.textContent='…'; fetchData(); };
+  /* Refresh spins the GP mark, the same way the boot screen and pull-to-refresh
+     do. It used to swap in a "…" — a dead ellipsis that looked like nothing was
+     happening, and that stayed on the button forever if the request failed,
+     because only a successful render put the ↻ back. */
+  document.getElementById('refreshBtn').onclick = function(){
+    var btn = this;
+    if(btn.dataset.busy) return;
+    btn.dataset.busy = '1';
+    btn.classList.add('spinBtn');
+    btn.innerHTML = logoImg('spinMark') || '↻';
+    var done = function(){
+      delete btn.dataset.busy;
+      btn.classList.remove('spinBtn');
+      btn.textContent = '↻';
+    };
+    var p = fetchData();
+    if(p && p.then) p.then(done, done); else done();
+  };
   document.getElementById('lockBtn').onclick = toggleLeader;
   document.querySelectorAll('[data-campus]').forEach(function(b){
     b.onclick = function(){ state.campus=b.getAttribute('data-campus'); if(state.view==='all') state.view='dashboard'; render(); };
