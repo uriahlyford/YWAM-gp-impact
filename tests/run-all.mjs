@@ -1,0 +1,65 @@
+/* Runs the whole suite and prints one line per file.
+
+   Server tests import the real netlify/functions/api.js against a fake
+   @netlify/blobs, so they are fast and need nothing installed. Browser tests need
+   playwright and a Chromium; they are skipped with a message if it is missing,
+   rather than failing the run for someone who only touched the API.
+
+   Usage:  node tests/run-all.mjs           all of it
+           node tests/run-all.mjs server    just the fast ones
+*/
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+const SERVER = [
+  'test-firstrun.mjs',   // empty / junk / ragged store, malformed requests
+  'test-boot.mjs',       // getMyBoot: one call per page open
+  'test-week-auth.mjs',  // weekly health: anonymity + mentor visibility
+  'test-okr-auth.mjs',   // OKR writes stay inside your campus + department
+  'test-rollups.mjs',    // the roll-up maths
+  'test-jobfocus.mjs',   // jobfocus.js and help.html agree
+];
+
+const BROWSER = [
+  'test-storage.mjs',       // language survives a reload; storage blocked
+  'test-degraded.mjs',      // a missing optional script must not kill a page
+  'test-base.mjs',          // the Base tab and the health form
+  'test-mentor-health.mjs', // a mentor sees a mentee by name
+  'audit-load.mjs',         // one function invocation per page open
+  'audit-paint.mjs',        // first paint even with the font CDN hanging
+  'audit-allviews.mjs',     // every screen, no console errors
+  'check-nav.mjs',          // the bottom tabs do not wrap at 320px
+];
+
+const only = process.argv[2];
+const files = only === 'server' ? SERVER : only === 'browser' ? BROWSER : SERVER.concat(BROWSER);
+
+let haveBrowser = true;
+try { await import('playwright'); } catch (e) { haveBrowser = false; }
+
+const failed = [];
+const skipped = [];
+for (const f of files) {
+  if (BROWSER.indexOf(f) > -1 && !haveBrowser) { skipped.push(f); continue; }
+  const r = spawnSync(process.execPath, [path.join(HERE, f)], { encoding: 'utf8' });
+  const out = String(r.stdout || '') + String(r.stderr || '');
+  const lines = out.trim().split('\n').filter(function (l) { return l.trim(); });
+  const last = lines.length ? lines[lines.length - 1].trim() : '(no output)';
+  const bad = r.status !== 0 || /\bFAIL\b|\bERR\b|errors: [1-9]/.test(out);
+  if (bad) failed.push(f);
+  console.log((bad ? 'FAIL ' : 'ok   ') + f.padEnd(24) + last.slice(0, 90));
+  if (bad) {
+    for (const l of lines) if (/\bFAIL\b|\bERR\b/.test(l)) console.log('        ' + l.trim().slice(0, 140));
+  }
+}
+
+if (skipped.length) {
+  console.log('\nskipped (no playwright installed): ' + skipped.join(', '));
+  console.log('  npm i -D playwright   # Chromium is found automatically, or set GP_CHROMIUM');
+}
+console.log('\n' + (files.length - failed.length - skipped.length) + ' passed, ' +
+  failed.length + ' failed' + (skipped.length ? ', ' + skipped.length + ' skipped' : ''));
+process.exit(failed.length ? 1 : 0);

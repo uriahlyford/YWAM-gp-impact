@@ -45,6 +45,16 @@ function pctChange(prev,cur){
   if(prev===0) return null;
   return Math.round((cur-prev)/Math.abs(prev)*100);
 }
+/* Share of the base that checked in, as a whole number. Capped at 100 because a
+   week can hold more rows than there are current staff — somebody who has since
+   left still has their older weeks in the blob — and "150%" reads as a bug rather
+   than as the stale row it is. The raw counts are always shown next to it, so the
+   discrepancy stays visible to anyone looking for it. */
+function gpCheckinPct(n, total){
+  if(!total || total <= 0) return null;
+  return Math.min(100, Math.round((Number(n)||0) / total * 100));
+}
+
 function trendBadge(pct, higherBetter){
   if(pct===null||pct===undefined) return '';
   if(pct===0) return '<span class="trend flat">— 0%</span>';

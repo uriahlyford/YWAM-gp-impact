@@ -89,13 +89,36 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   placeholders** (cobalt circle + "GP" wordmark) — swap in real ones when available.
 
 ### netlify/functions/api.js
-Handlers: getData, saveEntries, saveObjective, deleteObjective, saveSurvey, teamRoster,
+Handlers: getMyBoot, getData, saveEntries, saveObjective, deleteObjective, teamRoster,
 staffRegister, staffLogin, updateProfile, changePin, uploadPhoto, saveDaily, getMyLogs,
 getMyMentees, getMenteeLogs, getMyMentorRequests, respondToMentorRequest,
 getMyWeekly, saveMyWeek, deleteMyWeek, saveGoals, saveMyHabits, getMyMinistry,
-saveMyMinistry, saveMyKpiDay, weeklyHealthFromLogs. No `translateBatch` equivalent (was `LanguageApp.translate`, not
+saveMyMinistry, saveMyKpiDay, staffProfile, getMyTrips, requestTrip, respondToTrip,
+getTripRequests. No `translateBatch` equivalent (was `LanguageApp.translate`, not
 available outside Apps Script) — Khmer strings machine-translation fallback is gone;
 all Khmer must come from `BUILTIN_KM` or be added by hand.
+
+**Netlify bills invocations, so a page open is one call.** `getMyBoot(username, pin)`
+returns everything the staff page needs and `getData` carries the roster for the
+dashboard. Both pages open on exactly one invocation — `audit-load.mjs` asserts that,
+and it is the number to watch when adding a feature: a new `run()` on boot is a new
+bill on every open, for every staff member, every day. Prefer widening `getMyBoot`.
+`getMyBoot` deliberately does *not* fail as a unit — each section is caught on its own,
+so a bad trips read cannot cost someone their base figures — and it returns
+`{ok:false, err:'auth'}` for a bad PIN specifically, because only that should log
+somebody out. A plain `!ok` used to, which meant a server hiccup signed people out.
+
+**A bad blob must not take the app down.** `readJSON(key, fallback)` checks the value's
+shape against the fallback (array for the row stores, object for `loginThrottle`) and
+returns the fallback when it does not match. Every read handler used to pass whatever
+was there straight to `.forEach`/`.findIndex`, so one malformed blob answered 500 for
+every user at once. `saveMyMinistry` currently has no caller — it is a safe,
+self-scoped write left in place, not a live path.
+
+**`saveMyWeek`/`deleteMyWeek` bound weeks to 1-52**, matching `saveEntries` and both
+week pickers. They allowed 53, which no screen can offer or read back, so such a row
+would sit in the base average invisible to the person who wrote it. Weeks carry no
+year anywhere in the store — see "Known limits" below.
 
 **Enter each number once.** Two rules matter here:
 - **Weekly health has two ways in, and one row.** The eleven questions are a form on
@@ -210,8 +233,8 @@ all-campuses view of it — a staff member's Health tab shows their own campus. 
 base health *score* is still on the dashboard hero and on Base. The anonymous
 device survey is gone for good: it was keyed by a random device id rather than a
 person, so it could neither be attributed to a mentor nor prevented from
-double-counting someone who also logged days. `saveSurvey` still exists
-server-side with nothing calling it.
+double-counting someone who also logged days. `saveSurvey` has been removed: it
+wrote to the health blob with no authentication at all and nothing called it.
 
 ## What the dashboard leads with
 The dashboard answers the questions leadership actually asks, in this order — each
@@ -263,6 +286,45 @@ inferred from volunteer counts.
   their ONE chosen mentor (server-enforced in getMenteeLogs); leadership sees aggregates only.
 - The dashboard intentionally omits "New Churches Planted" and "Base Plants in Planning"
   (still loggable in their ministries, just not shown on the dashboard summary).
+
+## Known limits (real, not yet fixed)
+- **Weeks carry no year.** Every row in `entries`, `survey`, `goals` and `kpiDaily` is
+  keyed by a week number 1-52 and nothing else, and both pages compute the current week
+  from the Monday of week 1 of *this* calendar year. So week 33 of 2027 will land on top
+  of week 33 of 2026, and the days at a year boundary that belong to the next year's week
+  1 get clamped onto week 52 instead. Fixing it properly means adding a year to every row
+  and migrating the store — a decision for Uriah, not a quiet refactor. Until then the
+  store is effectively single-year.
+- **`saveEntries` still accepts unauthenticated writes.** The front door gates the log
+  form in the UI only; the endpoint itself does not check who is posting. `saveObjective`,
+  `saveMyWeek` and the rest of the personal handlers *are* server-enforced.
+- **No locking on read-modify-write.** Every write reads a whole blob, edits it and writes
+  it back. Two people saving the same sheet in the same second means one loses. Rare at
+  this team size, real nonetheless.
+
+## Things that made the app fail to load (don't reintroduce)
+Each of these looked harmless and took the whole page down. `test-degraded.mjs`,
+`test-storage.mjs` and `test-firstrun.mjs` exist to keep them fixed.
+- **A render-blocking font.** A pending stylesheet blocks script execution, so an
+  `@import` of Google Fonts held JS for 8s on a slow connection. All three pages now load
+  fonts with `media="print" onload="this.media='all'"`. `audit-paint.mjs` asserts first
+  paint stays under ~200ms even with the CDN hanging for 12s.
+- **A third `<script src>`.** The error boundary treats a failed script as fatal, so
+  extracting `logo.js` broke production. Optional scripts carry `data-optional` and the
+  boundary skips them — and anything they define must be reached through a guard
+  (`logoImg()`), because a bare `GP_LOGO` in a string is a ReferenceError.
+- **Reading `localStorage` unguarded.** With storage blocked, `getItem` and `setItem`
+  *throw* rather than returning null. `state` was being built from a bare `getItem`, so
+  the page rendered nothing at all; `afterLogin()` wrote the session before anything else,
+  so logging in silently did nothing but show "Connection problem". Both pages now go
+  through `lsGet`/`lsSet`/`lsDel` — losing a saved preference is fine, losing the page is not.
+- **A dead cache key deciding the language.** Khmer used to be fetched into `gp-km-v2`;
+  nothing writes that key any more, but the read was still there with an English fallback,
+  so every data load quietly reset a Khmer reader to English while the toggle still read
+  ខ្មែរ. The dictionary ships with the page now — there is nothing to wait for.
+- **A malformed request body.** `HANDLERS[body.fn]` threw on a bare `null` body (500) and
+  resolved `fn:"constructor"` to `Object` and called it. Dispatch now needs an own
+  property that is actually a function, and anything else is a 400.
 
 ## Deliberately NOT built
 - **No Bible reading plan.** The team works through The Bible Recap together in a

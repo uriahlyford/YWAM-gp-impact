@@ -12,8 +12,23 @@
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='47' fill='%231F44FF'/%3E%3Ctext x='50' y='64' font-family='Arial' font-weight='bold' font-size='40' fill='%23FAF6F0' text-anchor='middle'%3EGP%3C/text%3E%3Cpath d='M76 12 L78.6 19.4 L86 22 L78.6 24.6 L76 32 L73.4 24.6 L66 22 L73.4 19.4 Z' fill='%23FFB323'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
+<!-- Fonts load OUT of the render path, on purpose.
+
+     As an @import inside <style> this was render-blocking, and a pending
+     stylesheet also blocks script execution — so on a slow or unreachable font
+     CDN the app's JavaScript did not run until the request resolved or timed
+     out. Measured at 8.1 seconds of dead app on a hanging font request, which
+     is exactly the connection this thing is built for.
+
+     media="print" makes the browser fetch it without blocking; onload promotes
+     it to all. Text renders immediately in the fallback face and swaps when the
+     webfont lands (the URL already carries display=swap). The <noscript> copy
+     keeps fonts working if scripts are off. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap"></noscript>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap');
 * { box-sizing:border-box; margin:0; }
 html { overscroll-behavior:none; }
 body { background:#FAF6F0; color:#17150F; font-family:'Kantumruy Pro',system-ui,sans-serif; padding-bottom:76px; overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
@@ -458,11 +473,19 @@ function checkinForWeek(week){
    missing translation degrades to English rather than breaking a page.
    Khmer is the first language of most people using this page every day, so a
    string added here without a dictionary entry is a gap, not a finished job. */
-var LANG = (function(){ try { return localStorage.getItem('gp-lang')||'en'; } catch(e){ return 'en'; } })();
+/* localStorage is not always there to be written. With storage blocked, setItem
+   throws rather than quietly doing nothing — and afterLogin() used to write the
+   session before touching anything else, so a login just silently did nothing at
+   all. Not saving the session is a bad session; not logging in is a bad app. */
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+function lsDel(k){ try { localStorage.removeItem(k); } catch(e){} }
+
+var LANG = (function(){ return lsGet('gp-lang') || 'en'; })();
 function t(s){ return LANG==='km' ? (BUILTIN_KM[s] || s) : s; }
 function toggleLang(){
   LANG = LANG==='km' ? 'en' : 'km';
-  try { localStorage.setItem('gp-lang', LANG); } catch(e){}
+  lsSet('gp-lang', LANG);
   render();
 }
 
@@ -470,7 +493,6 @@ function toggleLang(){
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 function initials(name){ return String(name||'?').trim().split(/\s+/).map(function(w){return w[0];}).slice(0,2).join('').toUpperCase(); }
-function deptOfMe(){ return S.me ? S.me.dept : ''; }
 function campusName(id){ for(var i=0;i<CAMPUSES.length;i++) if(CAMPUSES[i].id===id) return CAMPUSES[i].name; return id; }
 function nameOf(id){ for(var i=0;i<S.roster.length;i++) if(S.roster[i].id===id) return S.roster[i].name; return '—'; }
 
@@ -562,53 +584,83 @@ function boot(){
      form rather than making someone find the "New here?" link first. */
   try { if(String(location.search||'').indexOf('reg=1')>-1) S.regMode = true; } catch(e){}
   var saved = null;
-  try { saved = JSON.parse(localStorage.getItem('gp-staff')||'null'); } catch(e){}
+  try { saved = JSON.parse(lsGet('gp-staff')||'null'); } catch(e){}
   if(saved && saved.user && saved.pin){
+    /* A remembered session goes straight to getMyBoot: it verifies the PIN and
+       returns the staff record, so the separate staffLogin round-trip that used
+       to come first is not needed. Logging in by hand still uses staffLogin,
+       because there the answer to "is this PIN right" is the whole point. */
     S.auth = saved;
-    run('staffLogin', [saved.user, saved.pin], function(d){
-      if(d.ok){ S.me=d.staff; S.profile=d.profile; afterLogin(); }
-      else { localStorage.removeItem('gp-staff'); render(); }
+    run('getMyBoot', [saved.user, saved.pin], function(d){
+      if(d && d.ok){
+        S.me = d.staff; S.profile = d.profile;
+        applyBoot(d);
+        return;
+      }
+      /* Only forget the session when the server actually says the credentials are
+         wrong. Anything else — a 500, a bad gateway, a truncated response — is the
+         request failing, and making somebody retype their PIN because the server
+         hiccuped is the wrong answer. run() already reports a dropped connection;
+         this covers a server that answered but not with a page. */
+      if(d && d.err === 'auth'){
+        lsDel('gp-staff');
+        S.me = null; S.auth = { user:'', pin:'' };
+        showMsg(t('Your PIN didn’t work — please log in again.'));
+      } else {
+        showMsg(t('Couldn’t load your page — pull down to try again.'));
+      }
+      render();
     });
   } else { render(); }
 }
 /* Small public snapshot so the dashboard's top-right chip can show your face
    and name without needing your PIN. Nothing private goes in here. */
 function saveStaffCard(){
-  try {
-    localStorage.setItem('gp-staff-card', JSON.stringify({
-      name: S.me.name, photo: S.me.photo || '', ministry: S.me.ministry || '',
-      // Campus so the dashboard can open on your own base instead of Poipet.
-      campus: S.me.campus || ''
-    }));
-  } catch(e){}
+  lsSet('gp-staff-card', JSON.stringify({
+    name: S.me.name, photo: S.me.photo || '', ministry: S.me.ministry || '',
+    // Campus so the dashboard can open on your own base instead of Poipet.
+    campus: S.me.campus || ''
+  }));
 }
 
 function afterLogin(){
-  localStorage.setItem('gp-staff', JSON.stringify(S.auth));
+  lsSet('gp-staff', JSON.stringify(S.auth));
   saveStaffCard();
-  run('teamRoster', [], function(r){ S.roster = Array.isArray(r)?r:[]; render(); });
-  run('getMyLogs', [S.auth.user, S.auth.pin], function(d){
-    if(d.ok){
-      S.logs=d.logs;
-      if(d.habits) S.habits=d.habits;
-      if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile);
-    }
-    render();
+  S.view='base';
+  /* ONE request for everything this page needs. It used to be nine on top of the
+     login — each verifying the same PIN, each re-rendering when it landed, so the
+     page rebuilt itself nine times while it loaded. Sections that fail come back
+     null and simply stay empty; the rest of the page still works. */
+  run('getMyBoot', [S.auth.user, S.auth.pin], function(d){
+    if(!d || !d.ok){ showMsg(t('Couldn’t load your page — pull down to try again.')); render(); return; }
+    if(d.staff) S.me = d.staff;
+    if(d.profile) S.profile = Object.assign(S.profile||{}, d.profile);
+    applyBoot(d);
   });
-  run('getMyMentees', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentees=d.mentees; } render(); });
-  run('getMyMentorRequests', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.mentorRequests=d.requests; } render(); });
-  run('getMyWeekly', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.goals=d.goals||[]; S.checkins=d.checkins||[]; } render(); });
-  run('getMyTrips', [S.auth.user, S.auth.pin], function(d){ if(d.ok) S.trips=d; render(); });
-  run('getTripRequests', [S.auth.user, S.auth.pin], function(d){ if(d.ok) S.tripRequests=d.requests||[]; render(); });
-  run('getMyMinistry', [S.auth.user, S.auth.pin], function(d){ if(d.ok){ S.ministry=d; } render(); });
-  /* The base's own figures — the dashboard endpoint, no leader code, so the two
-     money metrics leadership can see never reach this page. */
-  run('getData', [''], function(d){ if(d && d.entries) S.base=d; render(); });
-  S.view='base'; render();
+  render();
 }
+
+/* Everything a boot payload carries, in one place, because two entry points use
+   it: a remembered session and a fresh login. */
+function applyBoot(d){
+  S.roster = d.roster || [];
+  S.logs = d.logs || [];
+  if(d.habits) S.habits = d.habits;
+  S.mentees = d.mentees || [];
+  S.mentorRequests = d.mentorRequests || [];
+  S.goals = d.goals || [];
+  S.checkins = d.checkins || [];
+  if(d.trips) S.trips = d.trips;
+  S.tripRequests = d.tripRequests || [];
+  if(d.ministry) S.ministry = d.ministry;
+  if(d.base && d.base.entries) S.base = d.base;
+  if(!S.view) S.view = 'base';
+  render();
+}
+
 function logout(){
-  localStorage.removeItem('gp-staff');
-  localStorage.removeItem('gp-staff-card');
+  lsDel('gp-staff');
+  lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalDraft=null; S.weekDraft={}; S.kpiDraft={};
   render();
@@ -722,7 +774,7 @@ function baseHtml(){
   var cr=R.checkinRate(ids, wk);
   if(cr.total && cr.total>0){
     h+='<div class="heroTrend">'+esc(t('Checked in this week'))+' <b class="heroFig">'+cr.n+'</b> / '+cr.total+
-       ' · '+Math.round(cr.n/cr.total*100)+'%</div>';
+       ' · '+gpCheckinPct(cr.n, cr.total)+'%</div>';
   }
   var hs=R.healthScore(ids);
   if(hs!==null){
@@ -1739,7 +1791,7 @@ function healthHtml(){
       '<div class="statLabel">'+esc(t('Staff Health Score'))+' · YTD</div></div>'+
     '<div class="stat"><div class="statNum">'+cr.n+(cr.total?' / '+cr.total:'')+'</div>'+
       '<div class="statLabel">'+esc(t('Checked in this week'))+' · W'+wk+
-      (cr.total&&cr.total>0?' · '+Math.round(cr.n/cr.total*100)+'%':'')+'</div></div>'+
+      (cr.total&&cr.total>0?' · '+gpCheckinPct(cr.n, cr.total)+'%':'')+'</div></div>'+
     '</div>';
 
   h += '<div class="card" style="margin-top:12px">';
@@ -2788,7 +2840,7 @@ function bind(){
     var np=document.getElementById('p_newpin').value.trim();
     if(!/^\d{4}$/.test(np)){ showMsg('PIN must be 4 digits'); return; }
     run('changePin',[S.auth.user,S.auth.pin,np],function(d){
-      if(d.ok){ S.auth.pin=np; localStorage.setItem('gp-staff',JSON.stringify(S.auth)); showMsg('PIN updated'); }
+      if(d.ok){ S.auth.pin=np; lsSet('gp-staff',JSON.stringify(S.auth)); showMsg('PIN updated'); }
       else showMsg('Could not update PIN');
     });
   };

@@ -36,9 +36,22 @@ function finiteNum_(v, min, max) {
 }
 
 function store() { return getStore('gp-data'); }
+/* Every blob in this store is either a JSON array of rows or, for loginThrottle,
+   a plain object. If one ever comes back as something else — a half-finished
+   write, a hand-edit in the Netlify UI, a future schema change — the old code
+   handed it straight to .forEach/.findIndex and the whole app answered 500,
+   which is the "Error when loading app" screen for every user at once. Check the
+   shape against the fallback the caller asked for instead: a bad blob then reads
+   as empty, which shows an empty page rather than taking the app down, and the
+   next successful write repairs it. */
 async function readJSON(key, fallback) {
   const v = await store().get(key, { type: 'json' });
-  return v == null ? fallback : v;
+  if (v == null) return fallback;
+  const wantArray = Array.isArray(fallback);
+  const isArray = Array.isArray(v);
+  if (wantArray !== isArray) return fallback;
+  if (!wantArray && typeof v !== 'object') return fallback;
+  return v;
 }
 async function writeJSON(key, value) {
   await store().setJSON(key, value);
@@ -81,8 +94,14 @@ async function recordFailedLogin_(username) {
   await writeJSON('loginThrottle', throttle);
 }
 async function clearLoginThrottle_(username) {
+  const key = normUser_(username);
   const throttle = await readJSON('loginThrottle', {});
-  delete throttle[normUser_(username)];
+  // Nothing to clear is the normal case, and a no-op write is not free: every
+  // authenticated call used to read AND write this blob, so a page open wrote it
+  // once per request — several of them racing on a read-modify-write with no
+  // locking. Only write when a lock actually needs lifting.
+  if (!(key in throttle)) return;
+  delete throttle[key];
   await writeJSON('loginThrottle', throttle);
 }
 
@@ -490,7 +509,12 @@ async function getData(code) {
     };
   });
 
-  return { leader: leader, entries: entries, okrs: okrs, survey: survey };
+  /* The roster rides along: the dashboard needs it for the staff headcount and was
+     fetching it as a second request, and teamRoster is already unauthenticated, so
+     this exposes nothing new — it just costs one invocation instead of two. */
+  const roster = (await getStaff_()).filter(function (s) { return s.active; }).map(publicStaff_);
+
+  return { leader: leader, entries: entries, okrs: okrs, survey: survey, roster: roster };
 }
 
 async function saveEntries(campus, updates, code) {
@@ -600,34 +624,6 @@ async function deleteObjective(id, code, username, pin) {
   rows = rows.filter(function (r) { return String(r.id) !== String(id); });
   await writeJSON('okrs', rows);
   return getData(code);
-}
-
-async function saveSurvey(payload, code) {
-  const rows = await getSurvey_();
-  const idx = rows.findIndex(function (r) {
-    return r.campus === payload.campus && Number(r.week) === Number(payload.week) && r.device === payload.device;
-  });
-  const rec = {
-    campus: payload.campus, week: Number(payload.week), device: payload.device,
-    lonely: Number(payload.lonely), clarity: Number(payload.clarity),
-    porn: payload.porn ? 1 : 0, oneOnOne: payload.oneOnOne ? 1 : 0, exercise: payload.exercise ? 1 : 0,
-    quietTime: payload.quietTime ? 1 : 0, debt: payload.debt ? 1 : 0,
-    langHours: Number(payload.langHours) || 0, minHours: Number(payload.minHours) || 0,
-    sharedFaith: payload.sharedFaith ? 1 : 0, sabbath: payload.sabbath ? 1 : 0, growth: Number(payload.growth) || 0,
-    updated: new Date().toISOString()
-  };
-  if (idx > -1) rows[idx] = rec; else rows.push(rec);
-  await writeJSON('survey', rows);
-  return getData(code);
-}
-
-/* ---- bridge for later: weekly health composite derived from daily logs ---- */
-async function weeklyHealthFromLogs(campusId, week) {
-  const staff = (await getStaff_()).filter(function (s) { return s.active && s.campus === campusId; });
-  const ids = {}; staff.forEach(function (s) { ids[s.id] = 1; });
-  const rows = (await getDaily_()).filter(function (r) { return Number(r.week) === Number(week) && ids[r.staffId]; });
-  const n = new Set(rows.map(function (r) { return r.staffId; })).size;
-  return { n: n, week: week, campus: campusId };
 }
 
 /* ==================== weekly goals ====================
@@ -799,7 +795,10 @@ const WEEK_HOURS = ['langHours', 'minHours'];
 async function saveMyWeek(username, pin, week, payload) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  const wk = finiteNum_(week, 1, 53);
+  /* 1-52, the same bound as saveEntries and the week pickers. This used to allow
+     53, which no client can offer and no screen can read back, so such a row
+     would sit in the base average invisible to the person who wrote it. */
+  const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   const p = payload || {};
 
@@ -833,7 +832,7 @@ async function saveMyWeek(username, pin, week, payload) {
 async function deleteMyWeek(username, pin, week) {
   const s = await verifyStaff_(username, pin);
   if (!s || !s.surveyToken) return { ok: false };
-  const wk = finiteNum_(week, 1, 53);
+  const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   let rows = await getSurvey_();
   rows = rows.filter(function (r) {
@@ -1193,13 +1192,69 @@ async function staffProfile(username, pin, staffId) {
   };
 }
 
+/* ---------- one call for a page open ----------
+   Opening the staff page used to fire ten separate function invocations —
+   staffLogin, teamRoster, getMyLogs, getMyMentees, getMyMentorRequests,
+   getMyWeekly, getMyTrips, getTripRequests, getMyMinistry and getData — eight of
+   which verified the same PIN against the same staff blob, and each of which
+   re-rendered the page when it landed.
+
+   This is the same data in one invocation, with the PIN checked once. The
+   individual handlers all stay, because everything after boot (saving a day,
+   answering a week, approving a request) still uses them and should keep
+   returning just the slice it changed.
+
+   It deliberately does NOT fail as a unit: each section is caught on its own, so
+   a problem reading trips cannot stop the page from having the base's figures. */
+async function getMyBoot(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  // `err:'auth'` on purpose: the page must be able to tell "your PIN is wrong"
+  // from "the request failed", because only the first should log somebody out.
+  if (!s) return { ok: false, err: 'auth' };
+
+  const part = async function (fn) {
+    try { return await fn(); } catch (e) { return null; }
+  };
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base] =
+    await Promise.all([
+      part(function () { return getStaff_(); }),
+      part(function () { return getMyLogs(username, pin); }),
+      part(function () { return getMyMentees(username, pin); }),
+      part(function () { return getMyMentorRequests(username, pin); }),
+      part(function () { return getMyWeekly(username, pin); }),
+      part(function () { return getMyTrips(username, pin); }),
+      part(function () { return getTripRequests(username, pin); }),
+      part(function () { return getMyMinistry(username, pin); }),
+      // No leader code: the two money metrics leadership can see never reach here.
+      part(function () { return getData(''); })
+    ]);
+
+  return {
+    ok: true,
+    staff: publicStaff_(s),
+    profile: { phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '' },
+    roster: (staffRows || []).filter(function (r) { return r.active; }).map(publicStaff_),
+    logs: (logs && logs.logs) || [],
+    habits: (logs && logs.habits) || null,
+    mentees: (mentees && mentees.mentees) || [],
+    mentorRequests: (requests && requests.requests) || [],
+    goals: (weekly && weekly.goals) || [],
+    checkins: (weekly && weekly.checkins) || [],
+    trips: trips || null,
+    tripRequests: (tripReqs && tripReqs.requests) || [],
+    ministry: ministry || null,
+    // the roster is already top-level above; no need to ship it twice in one response
+    base: base ? Object.assign({}, base, { roster: undefined }) : null
+  };
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
+  getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
   getData: function (a) { return getData(a[0]); },
   saveEntries: function (a) { return saveEntries(a[0], a[1], a[2]); },
   saveObjective: function (a) { return saveObjective(a[0], a[1], a[2], a[3]); },
   deleteObjective: function (a) { return deleteObjective(a[0], a[1], a[2], a[3]); },
-  saveSurvey: function (a) { return saveSurvey(a[0], a[1]); },
   teamRoster: function () { return teamRoster(); },
   staffRegister: function (a) { return staffRegister(a[0]); },
   staffLogin: function (a) { return staffLogin(a[0], a[1]); },
@@ -1226,8 +1281,7 @@ const HANDLERS = {
   respondToTrip: function (a) { return respondToTrip(a[0], a[1], a[2], a[3]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   saveMyWeek: function (a) { return saveMyWeek(a[0], a[1], a[2], a[3]); },
-  deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); },
-  weeklyHealthFromLogs: function (a) { return weeklyHealthFromLogs(a[0], a[1]); }
+  deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); }
 };
 
 export default async (req) => {
@@ -1238,12 +1292,19 @@ export default async (req) => {
   try { body = await req.json(); } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: 'Bad JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-  const fn = HANDLERS[body.fn];
+  /* `body` can be valid JSON and still not be an object — a bare `null` parses
+     fine, and reading .fn off it threw, which came back as a 500. A malformed
+     request is the caller's problem, so answer 400.
+     hasOwnProperty, not a plain lookup: HANDLERS is an object literal, so
+     fn:"constructor" used to resolve to Object and get called. */
+  const named = body && typeof body === 'object' &&
+    Object.prototype.hasOwnProperty.call(HANDLERS, body.fn) ? HANDLERS[body.fn] : null;
+  const fn = typeof named === 'function' ? named : null;
   if (!fn) {
-    return new Response(JSON.stringify({ ok: false, error: 'Unknown function: ' + body.fn }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: false, error: 'Unknown function: ' + (body && body.fn) }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   try {
-    const result = await fn(body.args || []);
+    const result = await fn(Array.isArray(body.args) ? body.args : []);
     return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
     return new Response(JSON.stringify({ ok: false, error: String((err && err.message) || err) }), { status: 500, headers: { 'Content-Type': 'application/json' } });

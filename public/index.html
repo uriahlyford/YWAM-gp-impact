@@ -13,8 +13,23 @@
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='47' fill='%231F44FF'/%3E%3Ctext x='50' y='64' font-family='Arial' font-weight='bold' font-size='40' fill='%23FAF6F0' text-anchor='middle'%3EGP%3C/text%3E%3Cpath d='M76 12 L78.6 19.4 L86 22 L78.6 24.6 L76 32 L73.4 24.6 L66 22 L73.4 19.4 Z' fill='%23FFB323'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
+<!-- Fonts load OUT of the render path, on purpose.
+
+     As an @import inside <style> this was render-blocking, and a pending
+     stylesheet also blocks script execution — so on a slow or unreachable font
+     CDN the app's JavaScript did not run until the request resolved or timed
+     out. Measured at 8.1 seconds of dead app on a hanging font request, which
+     is exactly the connection this thing is built for.
+
+     media="print" makes the browser fetch it without blocking; onload promotes
+     it to all. Text renders immediately in the fallback face and swaps when the
+     webfont lands (the URL already carries display=swap). The <noscript> copy
+     keeps fonts working if scripts are off. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap"></noscript>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap');
 * { box-sizing: border-box; margin: 0; }
 html { overscroll-behavior:none; height:100%; }
 body { background:#FAF6F0; color:#17150F; font-family:'Kantumruy Pro',system-ui,sans-serif; padding-bottom:44px; overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
@@ -425,14 +440,25 @@ function myCampus(){
   return null;
 }
 
+/* localStorage is not always there to be read. With storage blocked, or a Safari
+   private window near its quota, getItem and setItem throw instead of returning
+   null — and these are called while the page is still booting, so an unguarded
+   one is a blank screen. Losing a saved preference is fine; losing the page is not. */
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+function lsDel(k){ try { localStorage.removeItem(k); } catch(e){} }
+
 var state = {
   data:{ leader:false, entries:{}, okrs:[], survey:[] }, roster:null,
   campus: myCampus() || 'poipet', view:'dashboard',
   week:1, dept:'Community Service', ministry:'Outreach Teams', loaded:false,
   okrQuarter: Math.floor(new Date().getMonth()/3)+1, okrFormOpen:false, editingId:null,
-  lang: localStorage.getItem('gp-lang') || 'en', km: {},
+  /* Reading localStorage can throw outright, not just return null, when a browser
+     has storage blocked — and this runs while state is being built, so an
+     unguarded read there is a blank page rather than a degraded one. */
+  lang: lsGet('gp-lang') || 'en', km: {},
   dashDept:'Community Service',
-  leaderCode: localStorage.getItem('gp-leadercode') || ''
+  leaderCode: lsGet('gp-leadercode') || ''
 };
 
 /* ---------- weeks & dates ---------- */
@@ -471,7 +497,7 @@ function toggleLang(){
   // show in English via t()'s existing fallback — BUILTIN_KM already covers
   // the vast majority of what's on screen.
   state.lang = state.lang==='km' ? 'en' : 'km';
-  localStorage.setItem('gp-lang', state.lang);
+  lsSet('gp-lang', state.lang);
   render();
 }
 
@@ -657,9 +683,8 @@ function renderNav(){
    The sheet itself lives in rollup.js so the staff page's Base tab opens the
    same breakdown from the same numbers. These stay as thin wrappers so the call
    sites below read unchanged. */
-function drillDownRows(filterFn){ return R().drillRows(filterFn); }
-function openDrillDown(title, rows){ return gpOpenDrill(title, rows); }
-function closeDrillDown(){ return gpCloseDrill(); }
+/* Only drillAttrs is still used here — the sheet itself is opened and closed by
+   rollup.js, which both pages share. */
 function drillAttrs(metric, ids, dept, ministry, quarter){
   return gpDrillAttrs(metric, ids, dept, ministry, quarter);
 }
@@ -705,7 +730,7 @@ function dashboardHtml(title, ids, perCampus){
   var cr = checkinRate(ids, currentWeek());
   if(cr.total && cr.total>0){
     h += '<div class="heroTrend">'+esc(t('Checked in this week'))+' <b class="heroFig">'+cr.n+'</b> / '+cr.total+
-      ' · '+Math.round(cr.n/cr.total*100)+'%</div>';
+      ' · '+gpCheckinPct(cr.n, cr.total)+'%</div>';
   }
   var hs = healthScore(ids);
   if(hs!==null){
@@ -1052,14 +1077,14 @@ function apiCall(fn, args){
 
 function toggleLeader(){
   if(state.data.leader){
-    state.leaderCode=''; localStorage.removeItem('gp-leadercode');
+    state.leaderCode=''; lsDel('gp-leadercode');
     fetchData(); return;
   }
   var code = prompt(t('Enter leadership code'));
   if(!code) return;
   apiCall('getData', [code]).then(function(d){
     if(d.leader){
-      state.leaderCode = code; localStorage.setItem('gp-leadercode', code);
+      state.leaderCode = code; lsSet('gp-leadercode', code);
       state.data = d; render();
     } else {
       showError(t('Wrong code'));
@@ -1193,19 +1218,20 @@ function saveOkrForm(btn){
 function showError(msg){ var e=document.getElementById('errorBar'); e.textContent=msg; e.classList.remove('hidden'); }
 function hideError(){ document.getElementById('errorBar').classList.add('hidden'); }
 
-function loadRoster(){
-  apiCall('teamRoster', []).then(function(r){ state.roster=Array.isArray(r)?r:[]; render(); })
-    .catch(function(){});
-}
 function fetchData(){
-  loadRoster();
   // Returns the promise so pull-to-refresh knows when to stop spinning.
+  /* One request: getData brings the roster with it, so the dashboard no longer
+     makes a second round trip for the staff headcount. */
   return apiCall('getData', [state.leaderCode]).then(function(d){
+    if(d && Array.isArray(d.roster)) state.roster = d.roster;
     state.data=d; state.loaded=true;
-    if(state.lang==='km'){
-      var cached = localStorage.getItem('gp-km-v2');
-      if(cached) state.km = JSON.parse(cached); else state.lang='en';
-    }
+    /* Khmer used to be fetched into a `gp-km-v2` cache, and this is where the
+       cache was read — falling back to English when it was empty. Nothing writes
+       that key any more (km.js ships BUILTIN_KM with the page), so the fallback
+       fired every single time: a Khmer reader picked Khmer, reloaded, and the
+       first data load quietly put the page back into English while the toggle
+       still read ខ្មែរ. The dictionary is local now, so there is nothing to wait
+       for and nothing to fall back to. */
     render();
   }).catch(function(){ showError("Couldn't load data. Pull down to refresh."); });
 }
