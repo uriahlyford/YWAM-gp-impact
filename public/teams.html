@@ -30,12 +30,26 @@
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap"></noscript>
 <style>
 * { box-sizing:border-box; margin:0; }
-html { overscroll-behavior:none; }
-body { background:#FAF6F0; color:#17150F; font-family:'Kantumruy Pro',system-ui,sans-serif; padding-bottom:76px; overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
+/* ---- locked to the edges of the phone ----
+   The page asks for viewport-fit=cover and a black-translucent status bar, which
+   together hand it the whole screen INCLUDING the notch and the home-indicator
+   strip. Nothing then padded for them, so the header sat under the notch and the
+   tab bar under the indicator — and because iOS reports those insets late and
+   re-reports them on rotation, on keyboard open/close and when the URL bar
+   collapses, the content shifted each time. That is the wiggle. Pad by the insets
+   and the chrome stops moving.
+   overflow-x is on html as well as body on purpose: on iOS, body alone still lets
+   the document itself rubber-band sideways. */
+html { overscroll-behavior:none; overflow-x:hidden; }
+body { background:#FAF6F0; color:#17150F; font-family:'Kantumruy Pro',system-ui,sans-serif;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+  overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
 button, select, input { font-family:inherit; }
 input:focus, select:focus, button:focus-visible { outline:3px solid #1F44FF; outline-offset:1px; }
 
-header { background:#17150F; color:#FAF6F0; padding:16px; display:flex; justify-content:space-between; align-items:center; }
+header { background:#17150F; color:#FAF6F0; display:flex; justify-content:space-between; align-items:center;
+  padding:calc(16px + env(safe-area-inset-top)) 16px 16px; }
 .brand { display:flex; align-items:center; gap:10px; }
 .brandKh { font-family:'Koulen',sans-serif; font-size:22px; letter-spacing:1px; line-height:1; }
 .brandEn { font-size:9px; letter-spacing:3px; color:#FFB323; font-weight:700; }
@@ -118,7 +132,8 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .dircard .pname { font-size:16px; }
 
 nav.bottom { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #e4ddd0;
-  display:flex; z-index:10; }
+  display:flex; z-index:10; padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
 nav.bottom button { flex:1; padding:10px 2px 8px; background:none; border:none; cursor:pointer; color:#6b6557; font-size:10.5px; }
 nav.bottom button .ic { display:block; font-size:20px; margin-bottom:2px; }
 nav.bottom button.on { color:#1F44FF; font-weight:700; }
@@ -215,7 +230,7 @@ nav.bottom button.on { color:#1F44FF; font-weight:700; }
 .trend.flat { color:#6b6557; background:#efeae0; }
 
 /* pull-to-refresh — same gesture, same spinning logo coin as the dashboard. */
-.ptr { position:fixed; top:0; left:0; right:0; z-index:60; display:flex; justify-content:center;
+.ptr { position:fixed; top:env(safe-area-inset-top); left:0; right:0; z-index:60; display:flex; justify-content:center;
   pointer-events:none; opacity:0; transform:translateY(-60px);
   transition:transform .22s ease, opacity .22s ease; }
 .ptr.dragging { transition:none; }
@@ -325,7 +340,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   <div class="hbtns" id="hbtns"></div>
 </header>
 
-<main id="main"><div class="loadingBox"><div class="loadCoin"><img class="loadLogo" id="bootLogo" alt=""></div><div class="loadText">Impact Loading<span class="ldots"></span></div></div></main>
+<main id="main"></main>
 <nav class="bottom hidden" id="bottomNav"></nav>
 <div class="msg" id="msg"></div>
 
@@ -396,12 +411,26 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 </script>
 <script src="logo.js" data-optional></script>
 <script>
-/* Paint the header mark and the boot coin as soon as logo.js is in — the first
-   thing you see is the real logo, not a bare header. */
-(function(){ if(typeof GP_LOGO_WIDE!=='string') return;
-  var b=document.getElementById('brandLogo'); if(b) b.src=GP_LOGO_WIDE;
-  var l=document.getElementById('bootLogo'); if(l) l.src=GP_LOGO;
-  var p=document.getElementById('ptrLogo'); if(p) p.src=GP_LOGO; })();
+/* Paint the header mark and build the boot coin as soon as logo.js is in.
+
+   The coin is written here rather than sitting in the body markup, because as
+   markup it was an <img> with no src until this script ran: on a slow connection
+   you watched an empty black ring spin with a hole in the middle. The dashboard
+   never had that problem — it builds its loading box in render(), after the
+   scripts are in — so this now matches it. An empty <main> for the few ms before
+   logo.js lands looks like nothing; a hollow coin looks broken. */
+(function(){
+  var b=document.getElementById('brandLogo');
+  if(b && typeof GP_LOGO_WIDE==='string') b.src=GP_LOGO_WIDE;
+  if(typeof GP_LOGO!=='string') return;
+  var p=document.getElementById('ptrLogo'); if(p) p.src=GP_LOGO;
+  var m=document.getElementById('main');
+  if(m && !m.firstChild){
+    m.innerHTML='<div class="loadingBox"><div class="loadCoin">'+
+      '<img class="loadLogo" src="'+GP_LOGO+'" alt=""></div>'+
+      '<div class="loadText">Impact Loading<span class="ldots"></span></div></div>';
+  }
+})();
 </script>
 <script src="km.js" data-optional></script>
 <script src="jobfocus.js" data-optional></script>

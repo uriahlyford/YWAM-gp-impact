@@ -25,6 +25,8 @@ const SERVER = [
 ];
 
 const BROWSER = [
+  'test-frontdoor.mjs',     // gate -> guest -> signed in -> staff page, end to end
+  'test-chrome.mjs',        // no dashboard flash, boot coin never hollow, safe-area insets
   'test-storage.mjs',       // language survives a reload; storage blocked
   'test-degraded.mjs',      // a missing optional script must not kill a page
   'test-base.mjs',          // the Base tab and the health form

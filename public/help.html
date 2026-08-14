@@ -29,11 +29,15 @@
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&family=Archivo:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;700&display=swap"></noscript>
 <style>
 *{box-sizing:border-box;margin:0}
-html{overscroll-behavior:none}
-body{background:#FAF6F0;color:#17150F;font-family:'Hanken Grotesk','Kantumruy Pro',system-ui,sans-serif;padding-bottom:60px;line-height:1.5;overscroll-behavior:none;overflow-x:hidden;-webkit-text-size-adjust:100%}
+/* viewport-fit=cover + a translucent status bar hand this page the notch and the
+   home-indicator strip; pad by the insets or the header sits under the notch and
+   shifts every time iOS re-reports them. overflow-x on html too, because on iOS
+   body alone still lets the document rubber-band sideways. */
+html{overscroll-behavior:none;overflow-x:hidden}
+body{background:#FAF6F0;color:#17150F;font-family:'Hanken Grotesk','Kantumruy Pro',system-ui,sans-serif;padding-bottom:calc(60px + env(safe-area-inset-bottom));padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);line-height:1.5;overscroll-behavior:none;overflow-x:hidden;-webkit-text-size-adjust:100%}
 .kh{font-family:'Kantumruy Pro',sans-serif}
 .wrap{max-width:820px;margin:0 auto;padding:0 16px}
-header{background:#17150F;color:#FAF6F0;padding:20px 0 20px}
+header{background:#17150F;color:#FAF6F0;padding:calc(20px + env(safe-area-inset-top)) 0 20px}
 .hdrTop{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
 .backBtn{float:none !important}
 .langToggle{float:none !important}

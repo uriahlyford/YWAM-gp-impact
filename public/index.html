@@ -4,6 +4,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+/* Staff who've logged in get their own page as the app's front door — opening the
+   PWA drops them straight into their Teams home instead of the leadership
+   dashboard. Tapping "← Dashboard" over there sets gp-skip-teams for the rest of
+   the browser session so they don't get bounced back here.
+
+   This has to sit in <head>, above every byte of body markup, and it touches no
+   DOM for exactly that reason. It used to run from a script below the header,
+   after the blocking <script src> tags — so the browser had already laid out and
+   painted the dashboard chrome by the time the redirect fired, and staff saw the
+   dashboard flash for ~200ms on every single app open before landing on their own
+   page. Nothing above this line paints. */
+(function(){
+  try {
+    if(sessionStorage.getItem('gp-skip-teams')) return;
+    var saved = JSON.parse(localStorage.getItem('gp-staff')||'null');
+    if(saved && saved.user && saved.pin) window.location.replace('teams.html');
+  } catch(e){}
+})();
+</script>
 <title>GonPreah Impact</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,12 +51,24 @@
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&display=swap"></noscript>
 <style>
 * { box-sizing: border-box; margin: 0; }
-html { overscroll-behavior:none; height:100%; }
-body { background:#FAF6F0; color:#17150F; font-family:'Kantumruy Pro',system-ui,sans-serif; padding-bottom:44px; overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
+/* ---- locked to the edges of the phone ----
+   The page asks for viewport-fit=cover and a black-translucent status bar, which
+   together hand it the whole screen INCLUDING the notch and the home-indicator
+   strip. Nothing then padded for them, so the header sat under the notch — and
+   because iOS reports those insets late and re-reports them on rotation, on
+   keyboard open/close and when the URL bar collapses, the content shifted each
+   time. That is the wiggle. Pad by the insets and the chrome stops moving.
+   overflow-x is on html as well as body on purpose: on iOS, body alone still lets
+   the document itself rubber-band sideways. */
+html { overscroll-behavior:none; height:100%; overflow-x:hidden; }
+body { background:#FAF6F0; color:#17150F; font-family:'Kantumruy Pro',system-ui,sans-serif;
+  padding-bottom:calc(44px + env(safe-area-inset-bottom));
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+  overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
 button, select, input, textarea { font-family:inherit; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline:3px solid #1F44FF; outline-offset:1px; }
 
-header { background:#17150F; color:#FAF6F0; padding:18px 16px 14px; }
+header { background:#17150F; color:#FAF6F0; padding:calc(18px + env(safe-area-inset-top)) 16px 14px; }
 .topRow { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
 .brandRow { display:flex; align-items:center; gap:12px; }
 .brandKh { font-family:'Koulen',sans-serif; font-size:26px; line-height:1.05; letter-spacing:1px; }
@@ -53,7 +85,9 @@ header { background:#17150F; color:#FAF6F0; padding:18px 16px 14px; }
   font-size:11px; font-weight:700; letter-spacing:.3px; overflow:hidden; }
 .userChip .uName { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media (max-width:480px){
-  header { padding:14px 12px 12px; }
+  /* Keep the notch inset here too — this rule wins on every phone, which is the
+     only place the inset is ever non-zero. */
+  header { padding:calc(14px + env(safe-area-inset-top)) 12px 12px; }
   .brandKh { font-size:22px; }
   .brandRow img { height:44px !important; }
   .langBtn { padding:6px 10px; font-size:12px; }
@@ -121,7 +155,7 @@ input[type=number] { width:96px; font-size:17px; padding:9px 10px; border-radius
 @media (prefers-reduced-motion: reduce){ .loadLogo{ animation:none } .ldots::after{ content:'...' } }
 
 /* pull-to-refresh indicator */
-.ptr { position:fixed; top:0; left:0; right:0; z-index:60; display:flex; justify-content:center;
+.ptr { position:fixed; top:env(safe-area-inset-top); left:0; right:0; z-index:60; display:flex; justify-content:center;
   pointer-events:none; opacity:0; transform:translateY(-60px);
   transition:transform .22s ease, opacity .22s ease; }
 .ptr.dragging { transition:none; }
@@ -346,20 +380,6 @@ if(typeof gpRollup !== 'function'){
   window.gpBootFailed('rollup.js did not load');
   throw new Error('rollup.js missing');
 }
-
-/* Staff who've logged in get their own page as the app's front door — opening
-   the PWA drops them straight into their Teams home instead of the leadership
-   dashboard. Tapping "← Dashboard" over there sets gp-skip-teams for the rest
-   of the browser session so they don't get bounced back here. Runs before
-   anything renders, so there's no flash of the wrong page. */
-(function(){
-  try {
-    if(sessionStorage.getItem('gp-skip-teams')) return;
-    var saved = JSON.parse(localStorage.getItem('gp-staff')||'null');
-    if(saved && saved.user && saved.pin) window.location.replace('teams.html');
-  } catch(e){}
-})();
-
 
 
 function emj(name){ return MIN_EMOJI[name] ? '<span class="mEmoji">'+MIN_EMOJI[name]+'</span>' : ''; }

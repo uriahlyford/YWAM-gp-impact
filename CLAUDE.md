@@ -301,11 +301,35 @@ inferred from volunteer counts.
   those colours apart, and `ringVars`/`ringHtml` drive both the ring and the slider
   track from one string. Dragging repaints locally and saves once on release —
   never re-render mid-drag, or the thumb jumps out from under a finger.
+- **The app is locked to the edges of the phone.** All three pages ask for
+  `viewport-fit=cover` and a `black-translucent` status bar, which hands them the
+  notch and the home-indicator strip as well as the screen. Every page therefore
+  pads by `env(safe-area-inset-*)`: header top, body bottom/left/right, the staff
+  tab bar, and the pull-to-refresh coin. Without it the header sat under the notch
+  and the chrome shifted every time iOS re-reported the insets — on rotation, on
+  keyboard open/close, when the URL bar collapsed — which reads as the app
+  wiggling. **Watch for media queries**: `index.html` re-declares `header` padding
+  under `max-width:480px`, so the inset has to be in that rule too or the fix does
+  nothing on the one class of device that has insets. `overflow-x:hidden` is on
+  `html` as well as `body`, because on iOS `body` alone still lets the document
+  rubber-band sideways. `test-chrome.mjs` asserts all of it.
+- **The staff redirect lives in `<head>`.** A signed-in staff member opening
+  `index.html` is sent to `teams.html`, and that check must run above every byte of
+  body markup — it touches no DOM for exactly that reason. It used to sit in a
+  script below the header, after the blocking `<script src>` tags, so the browser
+  had already painted the dashboard chrome: staff saw the dashboard flash for
+  ~200ms on every app open.
 - **Every "we are loading" state is the spinning GP mark.** Boot screen, pull-to-refresh
   coin, and the header refresh button all use `@keyframes spin` on the real logo. The
   refresh button used to swap in a "…", which read as nothing happening and stayed
   there forever when a request failed, since only a successful render put the ↻ back.
   If you add a busy state, spin the mark and restore it in both branches.
+  The staff boot coin is **built by JS** once `logo.js` is in, not written as body
+  markup. As markup it was an `<img>` with no `src` until that script ran, so on a
+  slow connection you watched an empty ring spin with a hole in it. An empty
+  `<main>` for a few ms looks like nothing; a hollow coin looks broken. The
+  dashboard already did it this way (it builds its loading box in `render()`), and
+  the two now match — do not move either back into static markup.
 
 ## Known limits (real, not yet fixed)
 - **Weeks carry no year.** Every row in `entries`, `survey`, `goals` and `kpiDaily` is
