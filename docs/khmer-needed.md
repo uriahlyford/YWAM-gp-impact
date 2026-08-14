@@ -214,6 +214,33 @@ explaining it. "Progress" is the screen-reader label on the slider itself
 ("Progress: disciple two students"), so it needs to work as a noun. "Done" is
 already in list 1 as a button label; if one Khmer word suits both, reuse it._
 
+## 0f. Appearance, sharing and streaks (11 needed)
+
+New controls from the dark-mode round. "Auto / Light / Dark" is a three-way choice
+in Profile & settings; the rest are short one-line messages.
+
+| English | ខ្មែរ |
+|---|---|
+| Appearance |  |
+| Auto |  |
+| Light |  |
+| Dark |  |
+| Auto follows your phone. |  |
+| Share my week |  |
+| goals |  |
+| a week! |  |
+| a month! |  |
+| Card opened — press and hold to save it. |  |
+| Allow pop-ups to save the card. |  |
+| This browser cannot make the card. |  |
+
+_"Auto / Light / Dark" sit in a three-button row with roughly 10 characters each, so
+short wins. "a week!" and "a month!" are appended to a streak chip that already reads
+"🔥 7-day streak" — they are the celebration, not the count, so an exclamation that
+sounds natural in Khmer matters more than a literal translation. The last three are
+what shows after tapping Share my week on browsers that cannot hand the image
+straight to the share sheet._
+
 ## 1. Words and labels (53 needed)
 
 Fill the right column:

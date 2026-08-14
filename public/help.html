@@ -7,7 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="YWAM GP">
-<meta name="theme-color" content="#17150F">
+<!-- The header is dark in both themes, so the status bar matches it either way. -->
+<meta name="theme-color" content="#17150F" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0B09" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
@@ -27,6 +29,183 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&family=Archivo:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Koulen&family=Kantumruy+Pro:wght@400;500;700&family=Archivo:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;700&display=swap"></noscript>
+<script>
+/* Apply a saved theme BEFORE anything paints. Same class of problem as the splash:
+   read it late and the reader watches the app flash the wrong colours on every
+   open. No attribute means "follow the system", which is the default. */
+(function(){
+  try {
+    var t = localStorage.getItem('gp-theme');
+    if(t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  } catch(e){}
+})();
+</script>
+<style>
+/* ==================== THEME TOKENS ====================
+   THIS BLOCK IS DUPLICATED VERBATIM IN index.html, teams.html AND help.html.
+   tests/test-theme.mjs asserts the copies are byte-identical — edit one, edit all.
+
+   Three states, which is what a phone actually has:
+     no attribute  -> follow the system (prefers-color-scheme)
+     data-theme="light" / "dark" -> the reader chose, and their choice wins both ways
+   That is why the media query is guarded with :not([data-theme="light"]) — without
+   it, a reader who picks light on a dark phone gets ignored.
+
+   Two pairs must never be collapsed into one token, because they diverge between
+   themes and a blind find-and-replace inverts them:
+     --ink (body text) vs --headerBg (the black header, hero and coin, which stay
+       dark in BOTH themes — this is the brand, not the background)
+     --surface (cards) vs --onDark (text sitting on that black header)
+   The brand marks in logo.js are white and drawn for the black header, so anything
+   showing them needs --headerBg behind it in either theme or they vanish. */
+:root {
+  --bg:#FAF6F0;            /* page */
+  --surface:#fff;          /* cards */
+  --surface2:#F0EADF;      /* tracks, subtle fills */
+  --ink:#17150F;           /* body text */
+  --muted:#6B6557;         /* secondary text */
+  --faint:#6F6A5A;         /* tertiary text */
+  --line:#F0EADF;          /* hairlines */
+  --border:#E4DDD0;        /* card borders */
+  --border2:#C9C3B6;       /* input borders */
+  --accent:#1F44FF;        /* cobalt */
+  --accent2:#5B7BFF;       /* gradient partner */
+  --accentInk:#fff;        /* text on cobalt */
+  --accentSoft:#E8ECFF;    /* cobalt tint fill */
+  --accentSoftBorder:#B9C4FF;
+  --amber:#FFB323;
+  --amberInk:#17150F;      /* text on amber */
+  --amberDeep:#96650A;     /* amber as TEXT, so darker than --amber */
+  --good:#0A7D3C;
+  --goodSoft:#E3F6EA;
+  --bad:#B3261E;
+  --badSoft:#FBE6E6;
+  --warm:#A84E1C;       /* 'just started' on the goal rings */
+  --banner:#FFF1D6;
+  --bannerBorder:#FFD98A;
+  --bannerInk:#5C4A1E;
+  --headerBg:#17150F;      /* header, hero, black cards, loading coin */
+  --onDark:#FAF6F0;        /* text on --headerBg */
+  --onDarkFaint:#9A9384;   /* tertiary text on --headerBg, which is dark in BOTH themes */
+  --onDarkBorder:#4A463D;  /* outlined buttons in the header */
+  --shadow:rgba(31,68,255,.28);
+  --shadowSoft:rgba(31,68,255,.12);
+  --scrim:rgba(23,21,15,.45);
+  color-scheme:light;
+}
+/* Dark: warm greys rather than pure black, so the paper-and-ink feel survives.
+   Cobalt is lifted to #6C86FF — #1F44FF on a dark ground fails contrast — and the
+   text that sits on cobalt goes dark to match. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#121110;
+    --surface:#1C1A17;
+    --surface2:#26231D;
+    --ink:#F2EDE4;
+    --muted:#A8A192;
+    --faint:#8A8474;
+    --line:#2A261F;
+    --border:#332E26;
+    --border2:#463F34;
+    --accent:#6C86FF;
+    --accent2:#8EA0FF;
+    --accentInk:#0B0A08;
+    --accentSoft:#1B2145;
+    --accentSoftBorder:#2F3872;
+    --amber:#FFC352;
+    --amberInk:#17150F;
+    --amberDeep:#E9AE3A;
+    --good:#4CC98A;
+    --goodSoft:#12301F;
+    --bad:#FF7A6B;
+    --badSoft:#38191A;
+    --warm:#FF9E6B;
+    --banner:#2A2313;
+    --bannerBorder:#4C3D18;
+    --bannerInk:#F0DFB4;
+    --headerBg:#0C0B09;
+    --onDark:#F2EDE4;
+    --onDarkFaint:#9A9384;
+    --onDarkBorder:#3A352B;
+    --shadow:rgba(108,134,255,.30);
+    --shadowSoft:rgba(108,134,255,.14);
+    --scrim:rgba(0,0,0,.62);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#121110;
+  --surface:#1C1A17;
+  --surface2:#26231D;
+  --ink:#F2EDE4;
+  --muted:#A8A192;
+  --faint:#8A8474;
+  --line:#2A261F;
+  --border:#332E26;
+  --border2:#463F34;
+  --accent:#6C86FF;
+  --accent2:#8EA0FF;
+  --accentInk:#0B0A08;
+  --accentSoft:#1B2145;
+  --accentSoftBorder:#2F3872;
+  --amber:#FFC352;
+  --amberInk:#17150F;
+  --amberDeep:#E9AE3A;
+  --good:#4CC98A;
+  --goodSoft:#12301F;
+  --bad:#FF7A6B;
+  --badSoft:#38191A;
+  --warm:#FF9E6B;
+  --banner:#2A2313;
+  --bannerBorder:#4C3D18;
+  --bannerInk:#F0DFB4;
+  --headerBg:#0C0B09;
+  --onDark:#F2EDE4;
+  --onDarkFaint:#9A9384;
+  --onDarkBorder:#3A352B;
+  --shadow:rgba(108,134,255,.30);
+  --shadowSoft:rgba(108,134,255,.14);
+  --scrim:rgba(0,0,0,.62);
+  color-scheme:dark;
+}
+/* Motion: one spring, used everywhere something appears or grows. The overshoot
+   is what separates "an app" from "a web page"; honoured only when the reader has
+   not asked for less motion. */
+:root { --spring:cubic-bezier(.34,1.56,.64,1); --ease:cubic-bezier(.4,0,.2,1);
+        --r:18px; --rSm:12px; --rLg:22px; }
+@media (prefers-reduced-motion: reduce) { :root { --spring:linear; --ease:linear; } }
+
+/* ---- progress rings, shared ----
+   Driven by gpRingHtml()/gpRingVars() in rollup.js. One element, no SVG: the
+   conic-gradient is the sweep and the ::after punches the middle out, so the ring
+   inherits whatever background it is sitting on. */
+.gRing { flex:0 0 auto; width:42px; height:42px; border-radius:50%; position:relative;
+  background:conic-gradient(var(--gc) calc(var(--p) * 1%), var(--surface2) 0);
+  display:grid; place-items:center; transition:background .3s var(--ease); }
+.gRing::after { content:''; position:absolute; inset:4px; border-radius:50%; background:var(--surface); }
+.gRing span { position:relative; z-index:1; font-family:'Koulen',sans-serif; font-size:12.5px;
+  color:var(--gc); letter-spacing:-.2px; }
+.gRing.sm { width:34px; height:34px; }
+.gRing.sm span { font-size:10.5px; }
+.gRing.sm::after { inset:3px; }
+.gRing.lg { width:58px; height:58px; }
+.gRing.lg span { font-size:16px; }
+.gRing.lg::after { inset:5px; }
+/* On the black hero the punched-out middle has to match the hero, not a card. */
+.hero .gRing::after, .focusCard .gRing::after { background:var(--headerBg); }
+.hero .gRing, .focusCard .gRing { background:conic-gradient(var(--gc) calc(var(--p) * 1%), var(--onDarkBorder) 0); }
+/* ...and the digits go to plain light text there. The paper-mode versions of those
+   colours are chosen to be readable ON PAPER, so they are far too dark to sit on
+   the hero; the sweep still carries the colour, which is where it reads anyway. */
+.hero .gRing span, .focusCard .gRing span { color:var(--onDark); }
+
+/* ---- a number that has just landed ----
+   Pairs with gpAnimateCounts(): the value climbs and the element settles into
+   place, so a figure reads as arriving rather than simply being there. */
+@keyframes gpPop { 0%{transform:scale(.88);opacity:.55} 100%{transform:scale(1);opacity:1} }
+[data-count] { display:inline-block; animation:gpPop .42s var(--spring) both; }
+@media (prefers-reduced-motion: reduce) { [data-count] { animation:none } }
+</style>
 <style>
 *{box-sizing:border-box;margin:0}
 /* viewport-fit=cover + a translucent status bar hand this page the notch and the
@@ -34,71 +213,71 @@
    shifts every time iOS re-reports them. overflow-x on html too, because on iOS
    body alone still lets the document rubber-band sideways. */
 html{overscroll-behavior:none;overflow-x:hidden}
-body{background:#FAF6F0;color:#17150F;font-family:'Hanken Grotesk','Kantumruy Pro',system-ui,sans-serif;padding-bottom:calc(60px + env(safe-area-inset-bottom));padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);line-height:1.5;overscroll-behavior:none;overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:'Hanken Grotesk','Kantumruy Pro',system-ui,sans-serif;padding-bottom:calc(60px + env(safe-area-inset-bottom));padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);line-height:1.5;overscroll-behavior:none;overflow-x:hidden;-webkit-text-size-adjust:100%}
 .kh{font-family:'Kantumruy Pro',sans-serif}
 .wrap{max-width:820px;margin:0 auto;padding:0 16px}
-header{background:#17150F;color:#FAF6F0;padding:calc(20px + env(safe-area-inset-top)) 0 20px}
+header{background:var(--headerBg);color:var(--onDark);padding:calc(20px + env(safe-area-inset-top)) 0 20px}
 .hdrTop{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
 .backBtn{float:none !important}
 .langToggle{float:none !important}
 .brandKh{font-family:'Koulen',sans-serif;font-size:30px;letter-spacing:1px}
-.brandEn{font-size:11px;letter-spacing:3px;color:#FFB323;font-weight:800;text-transform:uppercase;margin-top:2px}
+.brandEn{font-size:11px;letter-spacing:3px;color:var(--amber);font-weight:800;text-transform:uppercase;margin-top:2px}
 h1{font-family:'Archivo',sans-serif;font-weight:900;font-size:26px;margin:14px 0 4px;line-height:1.1}
-.sub{color:#c9c3b6;font-size:14px}
-.backBtn{float:left;border:1px solid #4a463d;background:transparent;color:#FAF6F0;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
-.langToggle{float:right;display:flex;gap:0;border:1px solid #4a463d;border-radius:999px;overflow:hidden}
-.langToggle button{background:transparent;color:#FAF6F0;border:none;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
-.langToggle button.on{background:#FFB323;color:#17150F}
+.sub{color:var(--onDarkFaint);font-size:14px}
+.backBtn{float:left;border:1px solid var(--onDarkBorder);background:transparent;color:var(--onDark);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.langToggle{float:right;display:flex;gap:0;border:1px solid var(--onDarkBorder);border-radius:999px;overflow:hidden}
+.langToggle button{background:transparent;color:var(--onDark);border:none;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.langToggle button.on{background:var(--amber);color:var(--amberInk)}
 
-.rhythm{background:#1F44FF;color:#fff;border-radius:14px;padding:18px 18px 16px;margin:18px 0}
+.rhythm{background:var(--accent);color:var(--accentInk);border-radius:14px;padding:18px 18px 16px;margin:18px 0}
 .rhythm .step{display:flex;gap:12px;align-items:flex-start;padding:8px 0}
-.rhythm .day{font-family:'Archivo',sans-serif;font-weight:900;background:#FFB323;color:#17150F;border-radius:8px;padding:4px 10px;font-size:13px;white-space:nowrap;min-width:78px;text-align:center}
+.rhythm .day{font-family:'Archivo',sans-serif;font-weight:900;background:var(--amber);color:var(--amberInk);border-radius:8px;padding:4px 10px;font-size:13px;white-space:nowrap;min-width:78px;text-align:center}
 .rhythm p{font-size:14.5px}
 .rhythm .kh{display:block;font-size:14px;opacity:.92;margin-top:2px}
 
-.controls{position:sticky;top:0;background:#FAF6F0;padding:12px 0 8px;z-index:5;border-bottom:1px solid #e4ddd0}
+.controls{position:sticky;top:0;background:var(--bg);padding:12px 0 8px;z-index:5;border-bottom:1px solid var(--border)}
 .deptRow{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
-.deptBtn{flex:0 0 auto;border:1.5px solid #17150F;background:#fff;border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;color:#17150F;line-height:1.15}
+.deptBtn{flex:0 0 auto;border:1.5px solid var(--ink);background:var(--surface);border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--ink);line-height:1.15}
 .deptBtn .kh{display:block;font-weight:700;font-size:14px}
-.deptBtn .en{display:block;font-size:10px;color:#6b6557;letter-spacing:1px;text-transform:uppercase}
-.deptBtn.on{background:#1F44FF;border-color:#1F44FF;color:#fff}
-.deptBtn.on .en{color:#cdd6ff}
+.deptBtn .en{display:block;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.deptBtn.on{background:var(--accent);border-color:var(--accent);color:var(--accentInk)}
+.deptBtn.on .en{color:var(--accentInk)}
 
 .finder{margin:16px 0}
-.finder input{width:100%;font-size:15px;padding:12px 14px;border-radius:12px;border:1.5px solid #17150F;background:#fff;font-family:inherit}
+.finder input{width:100%;font-size:15px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--ink);background:var(--surface);font-family:inherit}
 .jump{margin:10px 0 6px}
 .jumpGroup{margin-bottom:10px}
-.jumpDept{font-family:'Koulen',sans-serif;font-size:14px;color:#6b6557;margin:8px 0 6px;letter-spacing:.5px}
+.jumpDept{font-family:'Koulen',sans-serif;font-size:14px;color:var(--muted);margin:8px 0 6px;letter-spacing:.5px}
 .jumpDept .en{display:none}
-.jumpItem{display:inline-block;background:#fff;border:1px solid #e4ddd0;border-radius:999px;padding:6px 12px;margin:0 6px 6px 0;font-size:13px;text-decoration:none;color:#17150F}
-.jumpItem .en{color:#6b6557;font-size:11px;margin-left:5px}
+.jumpItem{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 12px;margin:0 6px 6px 0;font-size:13px;text-decoration:none;color:var(--ink)}
+.jumpItem .en{color:var(--muted);font-size:11px;margin-left:5px}
 
-.ministry{background:#fff;border:1px solid #e4ddd0;border-radius:14px;padding:16px 16px 6px;margin:14px 0;scroll-margin-top:120px}
+.ministry{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 16px 6px;margin:14px 0;scroll-margin-top:120px}
 .mHead{font-family:'Koulen',sans-serif;font-size:22px;letter-spacing:.5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:8px}
 .mHead .kh{font-size:22px}
-.mHead .en{font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;color:#6b6557}
-.tag{font-family:'Hanken Grotesk';font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:#FFF1D6;border:1px solid #ffd98a;color:#7a5b12;border-radius:999px;padding:3px 9px}
-.focus{background:#FAF6F0;border-radius:10px;padding:12px 14px;margin:12px 0}
-.focusLabel{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#1F44FF}
+.mHead .en{font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;color:var(--muted)}
+.tag{font-family:'Hanken Grotesk';font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--banner);border:1px solid var(--bannerBorder);color:var(--amberDeep);border-radius:999px;padding:3px 9px}
+.focus{background:var(--bg);border-radius:10px;padding:12px 14px;margin:12px 0}
+.focusLabel{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
 .focus p{font-size:14.5px;margin-top:3px}
 .kpis{margin-top:6px}
-.kpi{padding:11px 0;border-top:1px solid #f0eadf}
+.kpi{padding:11px 0;border-top:1px solid var(--line)}
 .kpiName{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .kpiName .kh{font-weight:700;font-size:15.5px}
-.kpiName .en{font-size:13px;color:#6b6557}
-.unit{font-family:'Archivo';font-weight:800;font-size:10px;color:#c98700;background:#FFF1D6;border-radius:6px;padding:1px 6px}
-.kpiGloss{font-size:13.5px;color:#4a463d;margin-top:2px}
+.kpiName .en{font-size:13px;color:var(--muted)}
+.unit{font-family:'Archivo';font-weight:800;font-size:10px;color:var(--amberDeep);background:var(--banner);border-radius:6px;padding:1px 6px}
+.kpiGloss{font-size:13.5px;color:var(--muted);margin-top:2px}
 
 /* EN-first mode: promote English, quiet Khmer */
 body.enfirst .kh{opacity:.62;font-weight:400}
-body.enfirst .kpiName .en,body.enfirst .mHead .en{color:#17150F}
+body.enfirst .kpiName .en,body.enfirst .mHead .en{color:var(--ink)}
 body.enfirst .mHead .en{font-size:20px}
 body.enfirst .kpiName .en{font-size:15px;font-weight:700}
 body.enfirst .kpiName .kh{font-size:13px}
 body.enfirst .lang-kh{display:none}
 body:not(.enfirst) .lang-en{display:none}
 
-footer{color:#6b6557;font-size:12px;text-align:center;margin-top:28px}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:28px}
 .hidden{display:none}
 </style>
 </head>

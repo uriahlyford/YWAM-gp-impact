@@ -540,3 +540,160 @@ function gpBindDrill(R){
     };
   });
 }
+
+/* ==================== shared UI atoms ====================
+   Small pieces both pages need, kept here for the same reason the roll-up maths is
+   here: one definition, one behaviour, no drift. The CSS they rely on lives in the
+   theme block (also shared), so a ring looks the same wherever it appears. */
+
+/* ---- progress rings ----
+   A percentage as a filled ring. conic-gradient, so it is one element with no SVG
+   and no library. The colour walks warm -> amber -> cobalt -> green as the number
+   climbs, and gpPctWord says the same thing in words for anyone who cannot pick
+   those colours apart. Both return tokens rather than hex, which is what makes
+   them follow the theme. */
+function gpPctColor(p){
+  if(p>=100) return 'var(--good)';
+  if(p>=75)  return 'var(--accent)';
+  if(p>=25)  return 'var(--amberDeep)';
+  if(p>0)    return 'var(--warm)';
+  return 'var(--faint)';
+}
+function gpPctWord(p){
+  var T = (typeof t === 'function') ? t : function(s){ return s; };
+  if(p>=100) return T('Done');
+  if(p>=75)  return T('Almost there');
+  if(p>=50)  return T('Halfway');
+  if(p>=25)  return T('Under way');
+  if(p>0)    return T('Just started');
+  return T('Not started');
+}
+/* One string drives both the ring's sweep and a slider track's fill. */
+function gpRingVars(p){ return '--p:'+p+';--p1:'+p+'%;--gc:'+gpPctColor(p)+';'; }
+function gpRingHtml(p, size, label){
+  var cls = 'gRing' + (size ? ' ' + size : '');
+  return '<div class="'+cls+'" style="'+gpRingVars(p)+'" role="img" aria-label="'+
+    (label ? gpDrillEsc(label)+': ' : '')+p+'%"><span>'+p+'</span></div>';
+}
+
+/* ---- a tap you can feel ----
+   Android and desktop Chrome buzz; iOS Safari ignores vibrate() entirely, so this
+   is a bonus on the platforms that allow it and silently nothing on the ones that
+   do not. Never rely on it to convey anything. */
+function gpTap(ms){
+  try {
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if(navigator.vibrate) navigator.vibrate(ms || 8);
+  } catch(e){}
+}
+
+/* ---- numbers that count up ----
+   This is the dashboard's own animateCounts(), moved here so the staff page gets it
+   too — it was already written and working on one page only. Reads data-count for
+   the target and data-prefix / data-suffix / data-dec for how to print it, so the
+   markup carries the truth and an interrupted animation still ends up correct.
+   Skipped entirely when the reader has asked for less motion: a number sliding up
+   is decoration, and the final value is the information. */
+function gpAnimateCounts(root){
+  var scope = root || document;
+  var reduce = false;
+  try { reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+  scope.querySelectorAll('[data-count]').forEach(function(el){
+    var target = Number(el.getAttribute('data-count'));
+    if(isNaN(target)) return;
+    var prefix = el.getAttribute('data-prefix') || '';
+    var suffix = el.getAttribute('data-suffix') || '';
+    var dec = el.getAttribute('data-dec') === '1';
+    var show = function(v){
+      el.textContent = prefix + (dec ? v.toFixed(1) : Math.round(v).toLocaleString()) + suffix;
+    };
+    if(reduce){ show(target); return; }
+    var start = performance.now(), dur = 700;
+    function tick(now){
+      var p = Math.min(1, (now - start) / dur);
+      show(target * (1 - Math.pow(1 - p, 3)));
+      if(p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ---- a week worth sharing ----
+   Draws "WEEK n · x%" as a square card on a canvas and hands it to the OS share
+   sheet. Canvas rather than an <img> so there is nothing to host and nothing to
+   fetch, and the figures are whatever the caller passes in.
+
+   Sharing a FILE is not universally supported: iOS Safari 15+ and Android Chrome
+   take it, older browsers reject it, and some accept navigator.share for text but
+   not for files — which is why canShare({files}) is checked rather than assumed.
+   The fallback opens the PNG in a new tab so it can be long-pressed and saved,
+   because a download attribute is ignored on iOS. Returns what actually happened
+   so the caller can say so. */
+function gpShareCardDraw(o){
+  var S = 1080, c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  var g = c.getContext('2d');
+  if(!g) return null;
+
+  g.fillStyle = '#17150F'; g.fillRect(0, 0, S, S);   // the brand black, not the theme
+  // a cobalt glow behind the figure, so the card is not a flat rectangle
+  var glow = g.createRadialGradient(S/2, S*0.46, 40, S/2, S*0.46, S*0.52);
+  glow.addColorStop(0, 'rgba(31,68,255,0.42)');
+  glow.addColorStop(1, 'rgba(31,68,255,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, S, S);
+
+  var pct = Math.max(0, Math.min(100, Math.round(Number(o && o.pct) || 0)));
+  // the ring, drawn the same way the DOM one reads: track, then sweep
+  var cx = S/2, cy = S*0.46, r = 250, w = 34;
+  g.lineWidth = w; g.lineCap = 'round';
+  g.strokeStyle = 'rgba(250,246,240,0.16)';
+  g.beginPath(); g.arc(cx, cy, r, 0, Math.PI*2); g.stroke();
+  if(pct > 0){
+    g.strokeStyle = pct >= 100 ? '#3FBF74' : pct >= 75 ? '#6C86FF' : pct >= 25 ? '#FFB323' : '#FF9E6B';
+    g.beginPath();
+    g.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + Math.PI*2*(pct/100));
+    g.stroke();
+  }
+
+  g.textAlign = 'center'; g.fillStyle = '#FAF6F0';
+  g.font = '700 190px system-ui, sans-serif';
+  g.fillText(pct + '%', cx, cy + 66);
+  g.font = '600 46px system-ui, sans-serif';
+  g.fillStyle = '#FFB323';
+  g.fillText(String(o && o.label || '').toUpperCase(), cx, cy - r + 4);
+  if(o && o.sub){
+    g.font = '400 40px system-ui, sans-serif';
+    g.fillStyle = 'rgba(250,246,240,0.72)';
+    g.fillText(String(o.sub), cx, cy + r + 92);
+  }
+  g.font = '600 34px system-ui, sans-serif';
+  g.fillStyle = 'rgba(250,246,240,0.5)';
+  g.fillText('YWAM GonPreah · GP Impact', cx, S - 66);
+  return c;
+}
+
+function gpShareCard(o){
+  var c = gpShareCardDraw(o);
+  if(!c) return Promise.resolve('unsupported');
+  return new Promise(function(resolve){
+    if(!c.toBlob){ resolve('unsupported'); return; }
+    c.toBlob(function(blob){
+      if(!blob){ resolve('unsupported'); return; }
+      var name = (o && o.file || 'gp-week') + '.png';
+      var file = null;
+      try { file = new File([blob], name, { type: 'image/png' }); } catch(e){}
+      if(file && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share){
+        navigator.share({ files: [file], title: (o && o.label) || 'GP Impact' })
+          .then(function(){ resolve('shared'); })
+          .catch(function(){ resolve('cancelled'); });   // a dismissed sheet is not a failure
+        return;
+      }
+      // No file sharing: open it so it can be saved by hand. A download attribute
+      // does nothing on iOS, so do not pretend otherwise.
+      var url = URL.createObjectURL(blob);
+      var w = window.open(url, '_blank');
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+      resolve(w ? 'opened' : 'blocked');
+    }, 'image/png');
+  });
+}

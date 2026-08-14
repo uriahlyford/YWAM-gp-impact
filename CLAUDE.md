@@ -313,6 +313,44 @@ inferred from volunteer counts.
   nothing on the one class of device that has insets. `overflow-x:hidden` is on
   `html` as well as `body`, because on iOS `body` alone still lets the document
   rubber-band sideways. `test-chrome.mjs` asserts all of it.
+- **Colours come from tokens; there is no raw palette hex left.** The theme block
+  (`/* ==================== THEME TOKENS ====================`) is duplicated verbatim
+  in **all three** pages and `test-theme.mjs` asserts the copies are byte-identical —
+  **edit one, edit all**. It is read in `<head>` before the stylesheet, and the saved
+  choice is applied there too, or the app flashes the wrong colours on every open.
+  Three states: no `data-theme` attribute follows the system, `light`/`dark` is the
+  reader's choice and wins both ways. That is why the media query is guarded with
+  `:not([data-theme="light"])`. The control lives in **Profile & settings** on the
+  staff page (Appearance: Auto / Light / Dark, stored in `gp-theme`).
+  **Four pairs of tokens must never be collapsed**, because each value was doing two
+  jobs in the old palette and a blind find-and-replace inverts them:
+  `--ink` (body text) vs `--headerBg` (header, hero, coin — dark in BOTH themes);
+  `--surface` (cards) vs `--onDark` (text on that dark header);
+  `--faint` (tertiary text on paper) vs `--onDarkFaint` (tertiary text on the hero);
+  and anything sitting on `--accent`/`--amber` needs `--accentInk`/`--amberInk`, not
+  the page's text colour. Three of those four were found by the contrast audit, not
+  by eye — the hero rings, the campus chip and the KPI guide's amber buttons all had
+  light text on a light fill in one theme or the other.
+  **`test-theme.mjs` walks every text node on every screen in both themes** and fails
+  anything under WCAG AA, working out each element's real background by climbing until
+  it finds an opaque one. It also caught three contrast failures that predated dark
+  mode, so `--faint`, `--amberDeep` and `--warm` are darker than they used to be.
+  Run it after any colour change; do not chase contrast by looking at screenshots.
+- **Shared UI atoms live at the bottom of `rollup.js`.** `gpRingHtml`/`gpRingVars`/
+  `gpPctColor`/`gpPctWord` (the progress rings, `sm`/`lg` sizes, colour walking warm →
+  amber → cobalt → green with a word saying the same thing), `gpTap` (haptics —
+  Android buzzes, iOS Safari ignores `vibrate()`, so it can only ever be a bonus and
+  must never carry meaning), `gpAnimateCounts` (the count-up, which was already
+  written for the dashboard and only lived there), and `gpShareCard` (a week as a
+  canvas PNG through the OS share sheet). teams.html keeps thin wrappers
+  (`ringHtml` → `gpRingHtml`) so its call sites read unchanged.
+  The rings' CSS is in the shared theme block, not per page, so a ring looks the same
+  wherever it appears — including the override that makes its digits `--onDark` inside
+  the black hero.
+  `gpShareCard` checks `navigator.canShare({files})` rather than assuming: file
+  sharing is missing on older browsers, and a `download` attribute does nothing on
+  iOS, so the fallback opens the PNG to be long-pressed and the return value says
+  which happened (`shared` / `cancelled` / `opened` / `blocked` / `unsupported`).
 - **The launch splash is one block, duplicated verbatim in both pages.** Look for
   `<!-- ==================== SPLASH ====================` at the top of the body in
   `index.html` and `teams.html`; `test-splash.mjs` asserts the two copies are
