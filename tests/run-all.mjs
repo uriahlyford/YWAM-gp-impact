@@ -25,6 +25,7 @@ const SERVER = [
 ];
 
 const BROWSER = [
+  'test-splash.mjs',        // launch shows the splash, never the dashboard; one shared block
   'test-frontdoor.mjs',     // gate -> guest -> signed in -> staff page, end to end
   'test-chrome.mjs',        // no dashboard flash, boot coin never hollow, safe-area insets
   'test-storage.mjs',       // language survives a reload; storage blocked

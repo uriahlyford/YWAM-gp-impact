@@ -330,6 +330,83 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
 </head>
 <body>
 
+<!-- ==================== SPLASH ====================
+     THIS BLOCK IS DUPLICATED VERBATIM IN index.html AND teams.html.
+     tests/test-splash.mjs asserts the two copies are byte-identical — edit one,
+     edit both. It is inlined rather than pulled from a file because it has to
+     paint on the very first frame: an external stylesheet is another round trip,
+     and a round trip is the whole problem this solves.
+
+     Why it exists: the PWA's start_url is index.html, so every launch loads the
+     dashboard and then navigates to the staff page. That second navigation is a
+     real network fetch, so for as long as it takes you saw the dashboard. Script
+     timing cannot fix that — the splash is in the markup from the first byte and
+     covers the viewport, so there is nothing to see underneath at any point.
+
+     background is the manifest's background_color, so the iOS launch screen and
+     this are the same colour and the hand-off has no flash of white or paper.
+
+     The ring spins immediately, from CSS alone, because logo.js is 77KB and must
+     not block the head. The real GP mark fades into the middle the moment it
+     lands — normally within a few tens of ms, and instantly once cached. -->
+<style>
+#splash { position:fixed; inset:0; z-index:9999; background:#17150F;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+  opacity:1; transition:opacity .34s ease; }
+#splash.gone { opacity:0; pointer-events:none; }
+.spCoin { width:104px; height:104px; border-radius:50%; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 4px rgba(31,68,255,.16), 0 14px 40px rgba(31,68,255,.34); }
+/* The comet ring: visible from frame one, no image needed. Masked to a 3px band
+   so it reads as a ring rather than a filled disc. */
+.spCoin::before { content:''; position:absolute; inset:-9px; border-radius:50%;
+  background:conic-gradient(from 0deg, rgba(31,68,255,0) 0deg, rgba(31,68,255,.15) 200deg, #1F44FF 340deg, #5B7BFF 360deg);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  animation:spSpin 1s linear infinite; }
+/* The mark is white, drawn for the black header, so it reads on this background
+   with no coin behind it. Hidden until it has a src, so it is never a blank gap. */
+.spCoin img { width:74px; height:auto; opacity:0; transition:opacity .3s ease;
+  animation:spSpin 1.4s linear infinite; }
+.spCoin img[src] { opacity:1; }
+.spWord { font-family:'Koulen',system-ui,sans-serif; font-size:20px; letter-spacing:2.5px;
+  color:#FAF6F0; text-transform:uppercase; }
+.spWord::after { content:''; animation:spDots 1.4s steps(1,end) infinite; }
+@keyframes spSpin { to { transform:rotate(360deg) } }
+@keyframes spDots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%,100%{content:'...'} }
+@media (prefers-reduced-motion: reduce){
+  .spCoin::before, .spCoin img { animation:none }
+  .spWord::after { content:'...' }
+}
+</style>
+<div id="splash"><div class="spCoin"><img id="splashLogo" alt=""></div><div class="spWord">Impact Loading</div></div>
+<script>
+/* Two calls, so nothing else needs to know how the splash is built:
+   gpSplashLogo(src) drops the real mark in once logo.js has landed, and
+   gpSplashDone() takes the splash down when there is finally something behind it
+   worth looking at. Both are safe to call more than once, and safe to call before
+   the element exists.
+
+   The timeout is the important part: if any path forgets to call gpSplashDone —
+   an error boundary, a branch added later — the splash would sit there covering a
+   working app forever. Better to reveal a half-drawn page than to trap it. */
+(function(){
+  var TIMEOUT = 8000;
+  window.gpSplashLogo = function(src){
+    var i = document.getElementById('splashLogo');
+    if(i && typeof src === 'string' && src && !i.getAttribute('src')) i.src = src;
+  };
+  window.gpSplashDone = function(){
+    var s = document.getElementById('splash');
+    if(!s || s.className.indexOf('gone') > -1) return;
+    s.className = 'gone';
+    setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 420);
+  };
+  setTimeout(function(){ window.gpSplashDone(); }, TIMEOUT);
+})();
+</script>
+<!-- ================== END SPLASH ================== -->
+
 <div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin"><img id="ptrLogo" alt=""></div></div>
 
 <header>
@@ -356,6 +433,8 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
     if(shown) return; shown = true;
     // Latch it so a later render() can't paint over the message.
     window.gpDead = true;
+    // And lift the splash, or the message sits behind it and the app looks hung.
+    if(window.gpSplashDone) window.gpSplashDone();
     var html =
       '<div style="max-width:420px;margin:12vh auto;padding:0 22px;text-align:center;'+
       'font-family:system-ui,sans-serif;color:#17150F">'+
@@ -423,6 +502,7 @@ footer { text-align:center; font-size:12px; color:#6b6557; margin-top:26px; }
   var b=document.getElementById('brandLogo');
   if(b && typeof GP_LOGO_WIDE==='string') b.src=GP_LOGO_WIDE;
   if(typeof GP_LOGO!=='string') return;
+  window.gpSplashLogo(GP_LOGO);
   var p=document.getElementById('ptrLogo'); if(p) p.src=GP_LOGO;
   var m=document.getElementById('main');
   if(m && !m.firstChild){
@@ -726,6 +806,11 @@ function logout(){
 /* ---------- render root ---------- */
 function render(){
   if(window.gpDead) return;   // an error message is on screen; leave it there
+  /* Whatever this render decides to show — the profile, the login form, an empty
+     week — it is a real screen, so the splash has done its job. Lifting it here
+     rather than on a timer is what makes the launch read as splash-then-profile
+     instead of splash-then-pause-then-profile. */
+  if(window.gpSplashDone) window.gpSplashDone();
   var hb=document.getElementById('hbtns');
   var nav=document.getElementById('bottomNav');
   if(!S.me){

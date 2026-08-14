@@ -313,6 +313,36 @@ inferred from volunteer counts.
   nothing on the one class of device that has insets. `overflow-x:hidden` is on
   `html` as well as `body`, because on iOS `body` alone still lets the document
   rubber-band sideways. `test-chrome.mjs` asserts all of it.
+- **The launch splash is one block, duplicated verbatim in both pages.** Look for
+  `<!-- ==================== SPLASH ====================` at the top of the body in
+  `index.html` and `teams.html`; `test-splash.mjs` asserts the two copies are
+  byte-identical, so **edit one, edit both**. It is inlined rather than pulled from
+  a file because it must paint on the first frame, and an external stylesheet is
+  another round trip — which is the very thing it exists to hide.
+  Why it exists: the PWA's `start_url` is `index.html`, so **every launch loads the
+  dashboard and then navigates to the staff page**, and that second navigation is a
+  real network fetch. No amount of script timing fixes that; the splash is in the
+  markup from the first byte, `position:fixed`, opaque, `z-index:9999`, ahead of the
+  header, so there is nothing to see underneath at any point on any engine. Its
+  background is the manifest's `background_color`, so the iOS launch screen hands
+  over with no flash of white or paper.
+  The ring is a masked `conic-gradient` spinning from CSS alone, because `logo.js`
+  is **77KB and must never block the head**; the real mark fades in via
+  `gpSplashLogo(GP_LOGO)` the moment it lands. `gpSplashDone()` takes it down and is
+  called from `render()` on both pages and from both error boundaries — and it also
+  lifts itself after 8s, so a path that forgets to call it cannot trap a working app
+  behind a splash.
+  `window.gpLeaving` is set when the dashboard redirects: it makes `render()` return
+  early (so the dashboard is never drawn or unveiled) and skips `fetchData()`, which
+  would otherwise spend a Netlify invocation on a screen nobody sees, once per staff
+  member per app open.
+  **Testing note:** Chromium never paints the document it is navigating away from —
+  `evaluate()` there throws "execution context destroyed" — so frame-timing
+  assertions about the flash pass even with no splash present. WebKit on iOS *does*
+  paint it, which is why the flash was visible on a phone and never in the harness.
+  The assertions that actually hold the fix run with **scripts disabled** and check
+  the splash covers the viewport and the header underneath is unreachable. Do not
+  "simplify" those into timing checks.
 - **The staff redirect lives in `<head>`.** A signed-in staff member opening
   `index.html` is sent to `teams.html`, and that check must run above every byte of
   body markup — it touches no DOM for exactly that reason. It used to sit in a

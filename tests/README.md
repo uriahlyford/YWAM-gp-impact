@@ -27,6 +27,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
 | `test-rollups.mjs` | The dashboard maths — headcounts summed instead of levelled, OKR progress wrong |
 | `test-jobfocus.mjs` | `jobfocus.js` and `help.html` drift apart |
+| `test-splash.mjs` | The launch splash: covers the dashboard hand-off, holds the real mark, always lets go, and stays identical in both pages |
 | `test-frontdoor.mjs` | The front door: gate, guest with locked tabs, signed in, hand-off to the staff page |
 | `test-chrome.mjs` | The dashboard flashes before the staff page, the boot coin goes hollow, or the chrome stops being padded for the notch and home indicator |
 | `test-storage.mjs` | Khmer does not survive a reload, or blocked storage blanks the page / breaks login |
