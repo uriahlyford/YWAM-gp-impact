@@ -294,6 +294,94 @@ names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.tri
 ok('deleting a row takes it off the list', names.length === 0, names.join(' | '));
 await p.close();
 
+/* ---------- 9b. the generated report ----------
+   The document itself is checked in test-report.mjs against the real filed
+   report. What matters here is that the button hands it the records on screen,
+   that it opens over the app and comes back off, and that the three ways out
+   exist — a document nobody can get into Google Docs is not a report. */
+store = makeStore([
+  { id:'pr_g', kind:'goal', program:'SVI', campus:'poipet', year:YEAR, semester:1, target:50, unit:'volunteers' },
+  { id:'pr_t', kind:'team', program:'SVI', campus:'poipet', year:YEAR, semester:1, name:'YWAM Maui',
+    country:'USA', from:YEAR+'-01-27', to:YEAR+'-02-21', male:6, female:6,
+    servedMale:454, servedFemale:456, activities:'Teaching English in remote villages' },
+  { id:'pr_i', kind:'issue', program:'', campus:'poipet', year:YEAR, semester:1,
+    challenge:'Fewer volunteer teams than last year', solution:'Asked two partner bases' },
+]);
+p = await mk(store);
+await p.click('[data-view="programs"]');
+await p.waitForSelector('.progChips', { timeout: 8000 });
+await p.selectOption('#progSemSel', '1');
+await p.waitForTimeout(400);
+await p.click('#genReportBtn');
+await p.waitForSelector('.repSheet', { timeout: 5000 });
+await p.waitForTimeout(400);
+
+const rep = await p.$eval('#repDoc', e => e.textContent.replace(/\s+/g, ' '));
+ok('the report is built from the records on screen, not from a fixture',
+  /YWAM Maui \(USA\): 12 members/.test(rep), (rep.match(/YWAM[^|]{0,50}/) || [''])[0]);
+ok('and against the goal typed into the app',
+  /representing 24% of the annual target \(Target: 50 volunteers for 2026\)/.test(rep) ||
+  /representing 24% of the annual target/.test(rep),
+  (rep.match(/representing[^.]{0,70}/) || [''])[0]);
+ok('the challenges written in the app reach the report',
+  /Fewer volunteer teams than last year/.test(rep) && /Asked two partner bases/.test(rep));
+ok('all five sections are there',
+  ['1. Introduction', '2. Project Implementation Progress', '3. Implementation Activities',
+   '4. Progress of Semester Activities', '5. Conclusion'].every(s => rep.indexOf(s) > -1));
+ok('the outputs table rendered as a table, not as text',
+  (await p.$$eval('#repDoc table th', els => els.length)) === 5,
+  String(await p.$$eval('#repDoc table th', els => els.map(e => e.textContent))));
+
+/* Paper, in both themes — a reviewer is looking at what will be sent, not at the
+   app's dark mode. */
+const paper = await p.$eval('#repDoc', e => getComputedStyle(e).backgroundColor);
+ok('the document is white paper regardless of the app theme',
+  /rgb\(255,\s*255,\s*255\)/.test(paper), paper);
+
+ok('there are three ways to get it out of the app',
+  !!(await p.$('#repCopy')) && !!(await p.$('#repDownload')) && !!(await p.$('#repPrint')));
+ok('the sheet says it is a draft and says it is English on purpose',
+  /draft, in English/i.test(await p.$eval('.repNote', e => e.textContent)));
+
+/* Escape closes it — the same key that closes the drill-down. */
+await p.keyboard.press('Escape');
+await p.waitForTimeout(300);
+ok('Escape closes the report', !(await p.$('.repSheet')));
+ok('and gives the page its scrolling back',
+  (await p.evaluate(() => document.body.style.overflow)) === '');
+
+await p.click('#genReportBtn');
+await p.waitForSelector('.repSheet', { timeout: 5000 });
+await p.click('#repClose');
+await p.waitForTimeout(300);
+ok('and so does the close button', !(await p.$('.repSheet')));
+
+/* The sheet is modal on purpose: the document covers the screen, so nothing
+   behind it can be tapped by accident while somebody is reading a report they are
+   about to send to a ministry. */
+await p.click('#genReportBtn');
+await p.waitForSelector('.repSheet', { timeout: 5000 });
+const navBlocked = await p.evaluate(() => {
+  const tab = document.querySelector('[data-view="dashboard"]');
+  const r = tab.getBoundingClientRect();
+  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  return !tab.contains(hit);
+});
+ok('the sheet is modal — the tabs behind it cannot be tapped', navBlocked);
+
+/* And should it ever be shown some other way, a render on another view takes it
+   down rather than leaving it hanging over the dashboard. */
+await p.evaluate(() => { state.view = 'dashboard'; render(); });
+await p.waitForTimeout(300);
+ok('a render on another view closes the report', !(await p.$('.repSheet')));
+ok('and the page scrolls again afterwards',
+  (await p.evaluate(() => document.body.style.overflow)) === '');
+await p.click('[data-view="programs"]');
+await p.waitForTimeout(400);
+
+ok('no console errors from generating a report', p.__errs.length === 0, p.__errs.join(' | ') || 'clean');
+await p.close();
+
 /* ---------- 10. a guest gets the gate, not an empty report ---------- */
 store = makeStore();
 p = await mk(store, { guest:true });

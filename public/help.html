@@ -91,6 +91,14 @@
   --shadow:rgba(31,68,255,.28);
   --shadowSoft:rgba(31,68,255,.12);
   --scrim:rgba(23,21,15,.45);
+  /* PAPER. The generated Ministry report is a document about to be printed and
+     sent, so it looks the same in both themes on purpose — these three are
+     defined once here and deliberately NOT redefined below. A reviewer must be
+     looking at what the Ministry will receive, not at the app's dark mode. */
+  --paper:#ffffff;
+  --paperInk:#111111;
+  --paperLine:#999999;
+  --paperShade:#eeeeee;
   color-scheme:light;
 }
 /* Dark: warm greys rather than pure black, so the paper-and-ink feel survives.

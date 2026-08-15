@@ -121,6 +121,14 @@
   --shadow:rgba(31,68,255,.28);
   --shadowSoft:rgba(31,68,255,.12);
   --scrim:rgba(23,21,15,.45);
+  /* PAPER. The generated Ministry report is a document about to be printed and
+     sent, so it looks the same in both themes on purpose — these three are
+     defined once here and deliberately NOT redefined below. A reviewer must be
+     looking at what the Ministry will receive, not at the app's dark mode. */
+  --paper:#ffffff;
+  --paperInk:#111111;
+  --paperLine:#999999;
+  --paperShade:#eeeeee;
   color-scheme:light;
 }
 /* Dark: warm greys rather than pure black, so the paper-and-ink feel survives.
@@ -408,6 +416,32 @@ input[type=date] { font-size:15px; padding:9px 10px; border-radius:10px; border:
 .fCell input[type=number] { width:100%; }
 .emptyRec { font-size:13.5px; color:var(--muted); padding:16px 0; text-align:center; line-height:1.5; }
 
+/* ---------- the generated report ----------
+   A full-screen sheet rather than a card, because what is inside is a document
+   and reading it on a phone needs the whole phone. The document itself is
+   deliberately styled like paper in both themes — it is going to a ministry, and
+   a reviewer should be looking at what will be sent, not at the app's dark mode. */
+.repSheet { position:fixed; inset:0; z-index:60; background:var(--bg); display:flex; flex-direction:column;
+  padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+.repBar { display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--border);
+  background:var(--headerBg); color:var(--onDark); flex-wrap:wrap; }
+.repBar .repTitle { font-family:'Koulen',sans-serif; font-size:16px; letter-spacing:.5px; flex:1 1 auto; min-width:110px; }
+.repBar button { border:1px solid var(--onDarkBorder); background:transparent; color:var(--onDark);
+  border-radius:999px; padding:7px 13px; font-size:13.5px; cursor:pointer; white-space:nowrap; }
+.repBar button.primary { background:var(--amber); border-color:var(--amber); color:var(--amberInk); font-weight:700; }
+.repPaper { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; }
+.repDoc { background:var(--paper); color:var(--paperInk); max-width:680px; margin:0 auto; padding:26px 22px 40px;
+  border-radius:10px; font-family:Georgia,'Times New Roman',serif; font-size:14.5px; line-height:1.6; }
+.repDoc h1 { font-family:Georgia,'Times New Roman',serif; font-size:21px; margin:0 0 4px; letter-spacing:0; }
+.repDoc h2 { font-family:Georgia,'Times New Roman',serif; font-size:17px; margin:26px 0 8px; letter-spacing:0; }
+.repDoc h3 { font-family:Georgia,'Times New Roman',serif; font-size:15px; margin:20px 0 6px; }
+.repDoc p, .repDoc li { margin:0 0 9px; }
+.repDoc ul, .repDoc ol { margin:0 0 12px; padding-left:22px; }
+.repDoc table { width:100%; border-collapse:collapse; font-size:12.5px; margin:10px 0 4px; }
+.repDoc th, .repDoc td { border:1px solid var(--paperLine); padding:6px 7px; vertical-align:top; text-align:left; }
+.repDoc th { background:var(--paperShade); color:var(--paperInk); }
+.repNote { max-width:680px; margin:0 auto 12px; font-size:12.5px; color:var(--muted); line-height:1.55; }
+
 .seg { display:flex; gap:8px; }
 .seg button { flex:1; padding:10px; border-radius:10px; border:1.5px solid var(--border2); background:var(--bg); font-size:15px; cursor:pointer; }
 .seg button.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
@@ -615,6 +649,8 @@ input[data-carried] { color:var(--muted); background:var(--surface2); }
 <main id="main"><div class="loading">Loading…</div></main>
 <footer id="footerLine">✦ Every number is a person. The goal is people knowing Jesus.</footer>
 <div id="ddRoot"></div>
+<!-- The generated Ministry report opens in here, over everything else. -->
+<div id="repRoot"></div>
 
 <script>
 /*  Error boundary — must come first, before any other script.
@@ -695,6 +731,9 @@ input[data-carried] { color:var(--muted); background:var(--surface2); }
      don't need it: if it fails to arrive the Programs tab simply isn't offered,
      rather than the whole dashboard dying for want of a report screen. -->
 <script src="programs.js" data-optional></script>
+<!-- The report generator. Optional in turn: without it the Programs tab still
+     records everything, it just cannot write the document yet. -->
+<script src="report.js" data-optional></script>
 <script>
 /* If taxonomy.js or rollup.js didn't land, stop here with a real message rather
    than throwing halfway through rendering. */
@@ -912,6 +951,10 @@ function render(){
   ['lockBtn','refreshBtn','userChip'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.classList.remove('hidden');
   });
+  /* The report sheet belongs to the Programs tab. Leaving the tab takes it down;
+     a refresh while it is open leaves it alone, because the sheet covers the
+     screen and nothing behind it can have been touched. */
+  if(state.view!=='programs') closeReport();
   renderCampusRow(); renderNav();
   document.getElementById('langBtn').textContent = state.lang==='km' ? 'EN' : 'ខ្មែរ';
   document.getElementById('lockBtn').textContent = state.data.leader ? '🔓' : '🔒';
@@ -1585,7 +1628,15 @@ function programsHtml(){
   if(state.progLoading && !state.progRecords) return h + loadingHtml();
   if(!state.progRecords) return h + '<p class="note">'+esc(t("Couldn't load data. Pull down to refresh."))+'</p>';
 
-  return h + (state.prog==='ISSUES' ? issuesHtml() : programCardHtml());
+  h += (state.prog==='ISSUES' ? issuesHtml() : programCardHtml());
+  /* The whole point of typing any of this in. Last, because you write the report
+     once the records are right. */
+  if(typeof gpBuildReport === 'function'){
+    h += '<button class="ghostBtn" id="genReportBtn" style="width:100%;margin-top:6px">'+
+      '📄 '+esc(t('Generate the Ministry report'))+'</button>'+
+      '<p class="note">'+esc(t('Writes the semester report from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent.'))+'</p>';
+  }
+  return h;
 }
 
 function programCardHtml(){
@@ -1771,6 +1822,112 @@ function deleteProgramRow(id){
   }).catch(function(){ showError("Couldn't save. Check your connection and try again."); });
 }
 
+/* ---------- the generated report ----------
+   Opened over the app rather than rendered into it: the document has its own
+   typography and its own scroll, and a reviewer should see what will be sent.
+
+   Getting it into Google Docs. There is no Google account behind this app and
+   adding one would mean an OAuth consent screen for every leader, so the document
+   goes onto the clipboard as rich HTML instead — paste into a blank Doc and the
+   headings, bullets and tables arrive intact. Downloading the .doc and dropping
+   it into Drive works too, and so does printing to PDF. Three ways out, because
+   clipboard write is refused on some browsers and iOS Safari has its own rules. */
+function openReport(){
+  var body = gpBuildReport({ records: progRows(), year: state.progYear, semester: state.progSemester });
+  var title = 'GP Activity Report — ' + (state.progSemester ? 'Semester '+state.progSemester+' ' : '') + state.progYear;
+  var root = document.getElementById('repRoot');
+  if(!root) return;
+  root.innerHTML =
+    '<div class="repSheet" role="dialog" aria-modal="true" aria-label="'+esc(title)+'">'+
+      '<div class="repBar">'+
+        '<span class="repTitle">'+esc(t('Ministry report'))+'</span>'+
+        '<button class="primary" id="repCopy">'+esc(t('Copy for Google Docs'))+'</button>'+
+        '<button id="repDownload">'+esc(t('Download'))+'</button>'+
+        '<button id="repPrint">'+esc(t('Print'))+'</button>'+
+        '<button id="repClose" aria-label="'+esc(t('Close'))+'">✕</button>'+
+      '</div>'+
+      '<div class="repPaper">'+
+        '<p class="repNote">'+esc(t('A draft, in English — this document goes to the Ministry, so it is not machine-translated. The prose around the numbers is carried over from the last report; read it and edit it in the Doc before sending.'))+'</p>'+
+        '<div class="repDoc" id="repDoc">'+body+'</div>'+
+      '</div>'+
+    '</div>';
+  document.body.style.overflow = 'hidden';
+
+  document.getElementById('repClose').onclick = closeReport;
+  document.getElementById('repCopy').onclick = function(){ copyReport(this, body); };
+  document.getElementById('repDownload').onclick = function(){ downloadReport(body, title); };
+  document.getElementById('repPrint').onclick = function(){ printReport(body, title); };
+  /* Escape closes it, the same as the drill-down sheet. */
+  root._esc = function(e){ if(e.key==='Escape') closeReport(); };
+  document.addEventListener('keydown', root._esc);
+}
+function closeReport(){
+  var root = document.getElementById('repRoot');
+  if(!root) return;
+  if(root._esc) document.removeEventListener('keydown', root._esc);
+  root.innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+/* Rich HTML on the clipboard is what makes the paste land in Google Docs as a
+   document rather than as a wall of plain text. Not every browser allows it, so
+   the plain-text copy is written alongside as a fallback, and if the whole API is
+   refused the button says to use Download instead rather than failing silently. */
+function copyReport(btn, body){
+  var label = btn.textContent;
+  var done = function(msg){
+    btn.textContent = msg;
+    setTimeout(function(){ btn.textContent = label; }, 2200);
+  };
+  var docHtml = gpReportDocument(body, 'Activity Report');
+  var plain = document.getElementById('repDoc');
+  plain = plain ? plain.innerText : body.replace(/<[^>]+>/g, ' ');
+  try {
+    if(navigator.clipboard && window.ClipboardItem){
+      navigator.clipboard.write([ new ClipboardItem({
+        'text/html': new Blob([docHtml], {type:'text/html'}),
+        'text/plain': new Blob([plain], {type:'text/plain'})
+      })]).then(function(){ done(t('Copied — paste into a Doc')); },
+                function(){ done(t('Use Download instead')); });
+      return;
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(plain).then(function(){ done(t('Copied as plain text')); },
+                                               function(){ done(t('Use Download instead')); });
+      return;
+    }
+  } catch(e){}
+  done(t('Use Download instead'));
+}
+
+/* A .doc that is really HTML: Word opens it, and Google Drive converts it to a
+   Doc on upload. A real .docx would mean a zip writer in the page for no gain. */
+function downloadReport(body, title){
+  var blob = new Blob(['﻿' + gpReportDocument(body, title)], {type:'application/msword'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = title.replace(/[^\w\d\- ]+/g, '') .trim() + '.doc';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+}
+
+/* Printing the app's own window would print the app. A detached iframe carries
+   only the document and its paper styling. */
+function printReport(body, title){
+  var f = document.createElement('iframe');
+  f.setAttribute('aria-hidden','true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(f);
+  var d = f.contentWindow.document;
+  d.open(); d.write(gpReportDocument(body, title)); d.close();
+  var go = function(){
+    try { f.contentWindow.focus(); f.contentWindow.print(); } catch(e){}
+    setTimeout(function(){ if(f.parentNode) f.parentNode.removeChild(f); }, 1500);
+  };
+  if(d.readyState === 'complete') go(); else f.onload = go;
+}
+
 function bindPrograms(){
   var ys = document.getElementById('progYearSel');
   if(ys) ys.onchange = function(){
@@ -1802,6 +1959,8 @@ function bindPrograms(){
       deleteProgramRow(b.getAttribute('data-pdel'));
     };
   });
+  var rb = document.getElementById('genReportBtn');
+  if(rb) rb.onclick = function(){ gpTap(); openReport(); };
 }
 
 /* ---------- Health survey ---------- */

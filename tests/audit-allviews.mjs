@@ -112,6 +112,10 @@ await visit(p,'Programs: semester and year switch',async p=>{
   await p.selectOption('#progSemSel','1');await p.waitForTimeout(500);
   const ys=await p.$('#progYearSel'); if(ys){const v=String(new Date().getFullYear()-1);
     await p.selectOption('#progYearSel',v);await p.waitForTimeout(700);}});
+await visit(p,'Programs: generate the report',async p=>{await p.click('[data-prog="SVI"]');await p.waitForTimeout(500);
+  const g=await p.$('#genReportBtn'); if(g){await g.click();await p.waitForTimeout(900);
+    await p.click('#repPrint');await p.waitForTimeout(700);
+    await p.click('#repClose');await p.waitForTimeout(400);}});
 await visit(p,'drill-down open/close',async p=>{await p.click('[data-view="dashboard"]');await p.waitForTimeout(700);
   await p.click('#main .heroSubRow');await p.waitForTimeout(500);await p.click('#ddClose');});
 await visit(p,'Khmer toggle',async p=>{await p.click('#langBtn');await p.waitForTimeout(800);await p.click('#langBtn');});

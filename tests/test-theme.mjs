@@ -195,6 +195,11 @@ const SCREENS = [
   { file: 'index.html', wait: '.hero', name: 'Programs', steps: ['[data-view="programs"]'] },
   { file: 'index.html', wait: '.hero', name: 'Programs form',
     steps: ['[data-view="programs"]', '#openRecBtn'] },
+  /* The report sheet paints its own paper over the app, so it needs auditing in
+     both themes like any other screen — a white document with the app's dark-mode
+     text colour inherited into it would be unreadable. */
+  { file: 'index.html', wait: '.hero', name: 'Programs report',
+    steps: ['[data-view="programs"]', '#genReportBtn'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Base', steps: [] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'My week', steps: ['nav.bottom button:nth-child(2)'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Team', steps: ['nav.bottom button:nth-child(3)'] },

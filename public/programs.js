@@ -16,33 +16,81 @@
     Shared by the dashboard (data entry + the report) and the API (validation), so
     a field added here is a field the server will accept.  */
 
+/* Two descriptions per programme on purpose. `blurb` is for the person typing the
+   figures in — it says what to put in this box, in the words the base uses.
+   `desc` is the paragraph the Ministry reads, lifted from the report already
+   filed so the generated one reads like its predecessor rather than like an app.
+
+   Where the two disagree, both are right for their reader: the filed report
+   describes YAP as housing, food and scholarships for underprivileged students,
+   while Uriah describes it as the pathway into staff. The first is what the
+   Ministry has seen; the second is what the person entering the numbers means by
+   it. Change `desc` only when the agreement's own wording changes.
+
+   `no` is the project's number in the agreement — the report numbers them
+   1 SVI, 2 YLT, 3 YDC, 4 YAP, which is not the order the app shows them in.  */
 var GP_PROGRAMS = [
-  { id: 'SVI', name: 'Student Volunteer Internship',
-    unit: 'volunteers',
+  { id: 'SVI', no: 1, name: 'Student Volunteer Internship',
+    reportName: 'Student Volunteer Internship Project (SVI)',
+    unit: 'volunteers', countedAs: 'participants',
     kind: 'team',
     /* Which of the app's own ministries feed this programme, so the report can
        cross-check a hand-entered total against what was logged weekly. */
     ministries: ['Outreach Teams'],
-    blurb: 'Outreach teams from other YWAM bases, churches and organisations — international teams and short-term volunteers.' },
+    blurb: 'Outreach teams from other YWAM bases, churches and organisations — international teams and short-term volunteers.',
+    desc: 'This project facilitates university students and other youth from around the world to conduct short-term volunteer work in Cambodia in partnership with existing local and international organizations, providing additional human resources for various organizational activities. Program locations include Phnom Penh Capital and various provinces. The project also promotes cross-cultural learning and connections for Cambodian people, which is vital in a globalized world.',
+    conclusion: 'Through the Student Volunteer Internship (SVI) project, individuals will learn Khmer culture and language. These individuals help educate and develop the Cambodian nation, giving young people the experience they need to grow and become good citizens of Cambodia and the world.' },
 
-  { id: 'YDC', name: 'Youth Development Center',
-    unit: 'students',
+  { id: 'YDC', no: 3, name: 'Youth Development Center',
+    reportName: 'Youth Development Center Project (YDC)',
+    unit: 'students', countedAs: 'students',
     kind: 'class',
     ministries: ['YDC', 'GP Education', 'Ponlork School', 'LTN', 'Sry Noi', 'Sports'],
-    blurb: 'Educational and youth programmes: kids programmes, youth programmes, sports and preschool.' },
+    blurb: 'Educational and youth programmes: kids programmes, youth programmes, sports and preschool.',
+    desc: 'The Youth Development Center serves as a platform for young people to gather and self-develop through formal and positive non-formal activities. Its goal is to foster personal character and skill development for youth in Cambodia. English classes are taught 5 days a week by foreign teachers and Khmer interns. Intercultural interaction strengthens students’ cross-cultural skills and builds confidence in communicating with foreigners in a globalized world. We provide English, music, computer, arts, and other classes tailored to teacher capabilities and student needs.',
+    conclusion: 'Through the Youth Development Center (YDC) project, we will help provide general non-formal knowledge, as well as provide education in ethics and etiquette, and educate how to live to be good citizens in society.' },
 
-  { id: 'YLT', name: 'Youth Leadership Training',
-    unit: 'students',
+  { id: 'YLT', no: 2, name: 'Youth Leadership Training',
+    reportName: 'Youth Leadership Training Project (YLT)',
+    unit: 'students', countedAs: 'students',
     kind: 'cohort',
     ministries: ['DTS', 'GPDTS', 'DBS', 'SMS', 'BCS', 'SOMD'],
-    blurb: 'Leadership training schools — DTS, DBS and the other leadership schools.' },
+    blurb: 'Leadership training schools — DTS, DBS and the other leadership schools.',
+    desc: 'The Youth Leadership Training (YLT) program facilitates leadership training, character development, and ethics for Cambodian youth. It consists of 2 phases. The first phase is 12 weeks of training through lectures and classroom-based activities. Each week is spent learning about a specific topic, such as personal identity, building healthy relationships, forgiving others, and living a purposeful life that makes a positive impact on society. The second phase lasts for 2 months and serves as a practical application period. Students are divided into small groups and sent to various provinces across Cambodia as well as abroad to participate in programs hosted by different organizations, allowing them to apply what they learned in class.',
+    conclusion: 'Through the Youth Leadership Training (YLT), we provide a positive learning environment for Cambodian youth where they can learn leadership, life skills, and gain the foundation for working with our organization or other NGOs.' },
 
-  { id: 'YAP', name: 'Youth Assistance Project',
-    unit: 'participants',
+  { id: 'YAP', no: 4, name: 'Youth Assistance Project',
+    reportName: 'Youth Assistance Project (YAP)',
+    unit: 'participants', countedAs: 'students',
     kind: 'group',
     ministries: [],
-    blurb: 'The pathway for young people becoming staff: dorm residents, new staff in their first 2–4 years, and young leaders being supported through education and mentoring.' }
+    blurb: 'The pathway for young people becoming staff: dorm residents, new staff in their first 2–4 years, and young leaders being supported through education and mentoring.',
+    desc: 'The Youth Assistance Project (YAP) provides housing, food, and scholarships to underprivileged students so they can complete high school or university, alongside training in computers, English, arts, music, and sports.',
+    conclusion: 'As for the Youth Assistance Program (YAP), we hope that the students who stay with us will receive a good education and be well-disciplined. The YAP leaders and staff have maintained good relationships with families and villagers. That is why families trust them and send their children to join our program. The project leaders and staff are truly committed to working with the youth and walking with them even after they graduate from high school. Graduates will also have the opportunity to participate in our youth leadership training program.' }
 ];
+
+/* The parts of the report that are the same every time. Lifted from the report
+   already filed, so the generated one is the same document with this period's
+   numbers in it — not a new format the Ministry has to learn to read.
+
+   `province` heads the document. Poipet is in Banteay Meanchey, and the filed
+   report is headed for that province; a Siem Reap-only report would need its own,
+   which is why this is data and not a string in the middle of the generator. */
+var GP_REPORT_TEXT = {
+  province: 'II. Banteay Meanchey Province',
+  org: 'University of The Nations',
+  intro: 'The University of The Nations organisation has been registered as a legal non-governmental organization (NGO) in Cambodia since June 2002. The University of The Nations in Cambodia is affiliated with the worldwide University of The Nations, a global movement working across many nations to empower young people to serve their communities, educate youth, and develop leaders for national societal growth.',
+  mission: 'Serve the Community, Educate Youth, and Develop Leaders (Youth and Leadership).',
+  agreementsLine: 'We hold 4 project agreements with the Ministry of Education, Youth and Sport:',
+  conclusionOpen: 'Through the above four projects, our organization hopes that children and youth in the community will benefit from the non-formal education programs we have.',
+  budgetNote: 'We do not need to do this budget yet, but be prepared to provide budget information regarding your specific ministries in the future.'
+};
+
+/* Report order, which is the agreement's own numbering rather than the order the
+   app lists the programmes in. */
+function gpProgramsInReportOrder(){
+  return GP_PROGRAMS.slice().sort(function(a, b){ return (a.no || 99) - (b.no || 99); });
+}
 
 /* The fields each kind of record carries. `n` fields are counts, `s` are text,
    `d` are dates. The forms, the validation and the report all read this, so the

@@ -63,8 +63,13 @@ async function run(label, page_, blocked, seed) {
     `\n   app usable:   ${usable}` +
     `\n   logo missing: ${logoBroken}`);
   const progTab = await page.evaluate(() => !!document.querySelector('[data-view="programs"]'));
+  /* How many tabs rendered at all. Without it, "the Programs tab is absent" passes
+     just as well when the whole nav is absent — which is what happened the first
+     time these two ran, because the seed forgot gp-skip-teams and the page handed
+     itself off to the staff page before painting a nav. */
+  const navTabs = await page.evaluate(() => document.querySelectorAll('[data-view]').length);
   await page.close();
-  return { dead, usable, progTab };
+  return { dead, usable, progTab, navTabs };
 }
 
 console.log('=== dashboard ===');
@@ -75,8 +80,16 @@ const d = await run('taxonomy.js missing (must still be fatal)', 'index.html', [
 const d2 = await run('rollup.js missing (must still be fatal)', 'index.html', ['rollup.js']);
 /* programs.js is data-optional: without it the Programs tab is simply not offered,
    and the KPI screens are untouched. */
-const d3 = await run('programs.js missing', 'index.html', ['programs.js'],
-  () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sokha', pin: '1234' })));
+/* Signed in AND told to stay: a signed-in visitor to index.html is handed off to
+   the staff page, and a page that navigated away has no tabs to inspect. */
+const dashSeed = () => {
+  localStorage.setItem('gp-staff', JSON.stringify({ user: 'sokha', pin: '1234' }));
+  sessionStorage.setItem('gp-skip-teams', '1');
+};
+const d3 = await run('programs.js missing', 'index.html', ['programs.js'], dashSeed);
+/* report.js is optional in turn: without it the records still go in, there is just
+   no button to write the document. */
+const d4 = await run('report.js missing', 'index.html', ['report.js'], dashSeed);
 
 console.log('\n=== staff page ===');
 const seed = () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sokha', pin: '1234' }));
@@ -93,7 +106,10 @@ if (c.dead || !c.usable) fails.push('missing km.js still kills the dashboard');
 if (!d.dead) fails.push('missing taxonomy.js no longer reports an error');
 if (!d2.dead) fails.push('missing rollup.js silently degrades the dashboard maths');
 if (d3.dead || !d3.usable) fails.push('missing programs.js kills the dashboard instead of hiding one tab');
+if (!d3.navTabs) fails.push('the dashboard rendered no tabs at all — the check below would pass for the wrong reason');
 if (d3.progTab) fails.push('the Programs tab is offered with no programs.js behind it');
+if (d4.dead || !d4.usable) fails.push('missing report.js kills the dashboard instead of hiding one button');
+if (!d4.progTab) fails.push('missing report.js took the Programs tab with it — recording should still work');
 if (e.dead || !e.usable) fails.push('healthy staff page broken');
 if (f.dead || !f.usable) fails.push('missing logo.js still kills the staff page');
 if (!g.dead) fails.push('missing taxonomy.js no longer reports an error on staff page');

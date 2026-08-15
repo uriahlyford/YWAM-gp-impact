@@ -80,6 +80,12 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   lists; the function bundle cannot import the frontend's globals, which is why there are
   two copies at all. Loaded `data-optional`: if it fails to arrive the Programs tab is
   simply not offered.
+- `report.js` — writes the semester report to the Ministry from those records.
+  `gpBuildReport({records, year, semester})` returns HTML; `gpReportDocument(body)`
+  wraps it as a standalone file for the .doc download and for print. **Pure — no DOM,
+  no globals of its own, no network** — which is what lets `test-report.mjs` assert
+  every figure against the report actually filed, in node, with no browser. Also
+  `data-optional`: without it the records still go in, there is just no button.
 - `rollup.js` — **the roll-up engine: the maths behind every dashboard figure.**
   `gpRollup({entries, survey, roster, week})` returns the read-only questions
   (`headlineFor`, `ministryRollup`, `healthScore`, `totalStaff`, `trendFor`, `drillRows`,
@@ -514,6 +520,42 @@ and carry a `semester` (1 or 2) because the report is written twice a year.
   reader nothing.* Write the real ones — lower volunteer numbers, conflict, fewer
   teachers, students who stop coming.
 
+### The report
+
+`gpBuildReport()` writes section 1 to 5 of the document the base already files —
+introduction, the per-project achievement summary, challenges and solutions, the
+per-project detail, the outputs table and the conclusion — from the records on the
+Programs tab. It is **modelled on the report filed for the 1st semester of 2026**,
+and `test-report.mjs` feeds it that report's own data and asserts its own
+sentences: 24 volunteers against 50 is 48%, 187 students against 400 is **46.75%
+and not 47%**, because rounding it would report a figure we did not achieve.
+
+- **Progress is measured on the year, against the annual target.** The half being
+  reported is stated separately. Measuring the annual target against one semester
+  would make the second report read as a collapse.
+- **The projects are numbered as the agreement numbers them** — 1 SVI, 2 YLT,
+  3 YDC, 4 YAP — which is not the order the app lists them in. That is what `no`
+  on each programme is for.
+- **Two descriptions per programme.** `blurb` is for the person typing figures in;
+  `desc` is the paragraph the Ministry reads, lifted from the filed report. Where
+  they disagree — YAP especially — both are right for their reader.
+- **The report is English, always, whatever the app's language.** Putting
+  machine-translated Khmer nobody has read into a government submission is not a
+  risk worth taking. A Khmer version is a job for a person.
+- **How it reaches Google Docs.** There is no Google account behind this app, and
+  adding one means an OAuth consent screen for every leader. The document goes on
+  the clipboard as rich HTML instead — paste into a blank Doc and the headings,
+  bullets and tables arrive intact. Download (a .doc that is really HTML, which
+  Drive converts on upload) and Print are the fallbacks, because clipboard write
+  is refused on some browsers.
+- **Every field in it was typed by a person and it gets sent onward**, so
+  everything is escaped through `gpRepEsc`. There is a test for a team called
+  `<script>`.
+- **The paper tokens** (`--paper`, `--paperInk`, `--paperLine`, `--paperShade`) are
+  defined once in the theme block and deliberately never redefined per theme: a
+  reviewer must see what the Ministry will receive, not the app's dark mode. The
+  contrast audit walks the report screen in both themes anyway.
+
 ## Known limits (real, not yet fixed)
 - **No locking on read-modify-write.** Every write reads a whole blob, edits it and writes
   it back. Two people saving the same sheet in the same second means one loses. Rare at
@@ -562,12 +604,18 @@ Each of these looked harmless and took the whole page down. `test-degraded.mjs`,
   with position tracking existed briefly and was removed — don't rebuild it.
 
 ## On the horizon (not yet built)
-- **The quarterly report button.** Data capture is built; generating the document is not.
-  The intent is a button that produces a Google Doc shaped like the Ministry activity
-  report already filed — the four programmes, their activities, the challenges and
-  solutions — from `gpProgramSummary()` and the records for the period. Budget figures
-  are explicitly deferred: Uriah expects them to be hard and wants them "in time", not
-  now. Whatever generates it must read `programs.js`, not restate the field list.
+- **Budget in the report.** The outputs table carries the column and leaves it empty,
+  the way the filed report does — it says in its own margin that the budget is not
+  needed yet. When it is, it needs a per-programme figure per period, which is a new
+  record kind (`budget`) and a column that fills itself. Uriah expects this to be the
+  hard one and asked for it "in time", not now.
+- **Quarters.** Uriah asked for a *quarterly* report; the agreements, the challenges
+  and the filed report are all **semesters**, so that is what records carry and what
+  the generator writes. Quarterly would mean quarter-stamping every record — worth
+  doing only if the Ministry actually asks for four reports a year.
+- **A real Google Doc, created by the app.** Today it is a clipboard paste or a .doc
+  upload. Creating the Doc directly means Google OAuth per leader; worth it only if
+  the paste turns out to be the annoying part in practice.
 - **One page instead of two.** `index.html` and `teams.html` are converging: they now
   share `logo.js`, `km.js` and `taxonomy.js`, the same loading coin, the same header
   mark, and the front door hands off between them. The end state is a single page where

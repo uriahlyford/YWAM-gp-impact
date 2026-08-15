@@ -326,6 +326,29 @@ the paperwork.
 | Sign in again to save. | ចូលគណនីម្តងទៀតដើម្បីរក្សាទុក។ | Error bar |
 | This screen could not load. Pull down to refresh. | អេក្រង់នេះមិនអាចផ្ទុកបានទេ។ ទាញចុះក្រោមដើម្បីធ្វើឱ្យស្រស់។ | |
 
+### 0h-1b. Generating the report
+
+The report itself is **not translated and should not be** — the document filed with
+the Ministry is in English, and putting machine-translated Khmer that nobody has
+read into a government submission is not a risk worth taking. These are only the
+buttons around it.
+
+| English | ខ្មែរ |
+|---|---|
+| Generate the Ministry report | បង្កើតរបាយការណ៍ជូនក្រសួង |
+| Writes the semester report from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent. | សរសេររបាយការណ៍ឆមាសពីកំណត់ត្រាទាំងនេះ ក្នុងទម្រង់ដូចរបាយការណ៍ដែលបានដាក់ជូនរួចហើយ។ វាបើកជាសេចក្តីព្រាង — សូមអានវាមុនពេលផ្ញើ។ |
+| Ministry report | របាយការណ៍ជូនក្រសួង |
+| Copy for Google Docs | ចម្លងសម្រាប់ Google Docs |
+| Download | ទាញយក |
+| Print | បោះពុម្ព |
+| A draft, in English — this document goes to the Ministry, so it is not machine-translated. The prose around the numbers is carried over from the last report; read it and edit it in the Doc before sending. | សេចក្តីព្រាង ជាភាសាអង់គ្លេស — ឯកសារនេះផ្ញើទៅក្រសួង ដូច្នេះវាមិនត្រូវបានបកប្រែដោយម៉ាស៊ីនទេ។ អត្ថបទជុំវិញតួលេខត្រូវបានយកមកពីរបាយការណ៍លើកមុន សូមអាន និងកែសម្រួលវានៅក្នុង Doc មុនពេលផ្ញើ។ |
+| Copied — paste into a Doc | បានចម្លង — សូមបិទភ្ជាប់ក្នុង Doc |
+| Copied as plain text | បានចម្លងជាអត្ថបទធម្មតា |
+| Use Download instead | សូមប្រើ ទាញយក ជំនួសវិញ |
+
+_The last three are what the Copy button says back to you after you press it, so
+they replace a button label and have that much room — about 20 characters._
+
 ### 0h-2. The challenges section
 
 Uriah's instruction for this section is the point of it, so the wording matters:

@@ -24,6 +24,7 @@ const SERVER = [
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-programs.mjs',   // Ministry records: auth, campus stamp, year, and the two field lists
+  'test-report.mjs',     // the generated Ministry report, against the one actually filed
 ];
 
 const BROWSER = [
