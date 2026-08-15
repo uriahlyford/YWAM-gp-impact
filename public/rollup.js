@@ -697,3 +697,21 @@ function gpShareCard(o){
     }, 'image/png');
   });
 }
+
+/* ---- sentences with numbers in them ----
+   Khmer word order is not English word order, so a sentence built by gluing
+   fragments around a number — 'wl.length + " of 7 days logged"' — cannot be
+   translated at all: there is no string for a translator to be given. gpT() takes
+   a whole sentence as the key, with {placeholders}, so the translator gets one
+   line and can move the number wherever Khmer wants it.
+
+     gpT('{n} of 7 days logged', {n: 4})
+
+   Falls back to the English key exactly as t() does, so a missing translation
+   still reads correctly with its numbers in place. */
+function gpT(template, vars){
+  var s = (typeof t === 'function') ? t(template) : template;
+  return String(s).replace(/\{(\w+)\}/g, function (whole, name) {
+    return (vars && Object.prototype.hasOwnProperty.call(vars, name)) ? String(vars[name]) : whole;
+  });
+}

@@ -55,7 +55,13 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   the loading coin and pull-to-refresh). **Never regenerate these blobs** — they are the
   real assets. Both marks are white, drawn for the black header, so on the paper
   background they need a dark coin behind them or they vanish.
-- `km.js` — the 266-entry reviewed Khmer dictionary (`BUILTIN_KM`), shared by both pages.
+- `km.js` — the Khmer dictionary, shared by all three pages. **Two objects, and the
+  split is load-bearing:** `REVIEWED_KM` (266 entries, checked by native speakers) and
+  `PENDING_KM` (~219, translated by Claude at Uriah's explicit request and **not yet
+  reviewed**). `BUILTIN_KM` merges them with reviewed last, so a checked string always
+  beats a pending one. Never collapse them into one object — that would permanently
+  lose track of what a human has actually read. As each string is checked, move it up
+  into `REVIEWED_KM`; that is the whole workflow.
 - `jobfocus.js` — `JOB_FOCUS` / `jobFocus(dept, ministry)`: what each of the 28 ministries
   is for, in one paragraph — the "job description" the OKRs tab is built around. Extracted
   verbatim from `help.html`, which still carries the same paragraphs inline so it needs no
@@ -190,9 +196,20 @@ year anywhere in the store — see "Known limits" below.
 ## Conventions / must-preserve
 - **Khmer-first.** Khmer is never smaller/lighter than English. All KPI/ministry/department
   NAMES come from the reviewed `BUILTIN_KM` dictionary in `public/km.js`.
-- **Khmer prose needs human review** (native speakers Sreilea / Leakha) before going wide;
-  machine translation is fallback only. New Khmer strings go in `docs/khmer-needed.md`
-  for review — never machine-translated into `km.js`.
+- **Khmer prose needs human review** (native speakers Sreilea / Leakha). The rule used
+  to be "never machine-translate into km.js"; Uriah asked for the backlog to be
+  translated anyway, having been told what that trades away, so the rule is now
+  narrower and stricter about where things go: **never put an unreviewed string into
+  `REVIEWED_KM`.** New strings go into `PENDING_KM`, and move up only once a native
+  speaker has read them. `docs/khmer-needed.md` is the review checklist, with notes on
+  how each string is used — several are labels with very little room, and a few are
+  promises the app makes about privacy, which are worth checking first.
+- **A translation nobody can see is not a translation.** `t()` falls back to the English
+  key, so a `t('...')` whose string is missing from the dictionary renders English and
+  nothing complains. Worse, a *literal* that was never wrapped in `t()` at all can never
+  be translated. `test-khmer.mjs` walks the source for both cases and fails on either —
+  it is what found ~50 strings the hand-written backlog had missed, and it catches
+  `t(cond ? 'a' : 'b')`, which a naive scan does not.
 - **Never regenerate the base64 blobs in `logo.js`** — they are the real brand assets, not
   placeholder art. Edit in place; don't "tidy" or re-encode them.
 - Uploaded files from macOS TextEdit may arrive as RTF — convert to plain text first.
@@ -431,10 +448,13 @@ inferred from volunteer counts.
   days belonging to the *next* year's week 1 land on week 52 instead. The year field
   keeps those days in the right year now, so this is a mis-numbered week rather than
   lost history — much smaller than it was, still not right.
-- **Khmer is behind.** `docs/khmer-needed.md` lists roughly 100 strings with no
-  translation yet, including everything added recently. They render in English, which is
-  safe but wrong for a Khmer-first app. **Do not machine-translate them** — see the
-  Conventions section.
+- **~219 Khmer strings are translated but unreviewed** (`PENDING_KM` in `km.js`). They
+  are on screen now rather than sitting in English, which was Uriah's call, but nobody
+  who speaks Khmer has read them yet. `docs/khmer-needed.md` is the checklist.
+- **The job-focus paragraphs are still English.** `public/jobfocus.js` and the KPI
+  glossary in `help.html` carry 28 ministries' worth of prose — that is content rather
+  than interface, it is long, and it reads as teaching material, so it wants a person
+  writing it rather than a translation of the English.
 
 ## Things that made the app fail to load (don't reintroduce)
 Each of these looked harmless and took the whole page down. `test-degraded.mjs`,

@@ -1525,12 +1525,13 @@ function phaseBanner(phase, wk){
   if(phase==='review'){
     var avgPct=hasGoals && rec.pct!==null ? rec.pct : 0;
     if(hasGoals && avgPct<100)
-      return '<div class="banner big">✅ <strong>End of the week.</strong> Your three goals are '+avgPct+
-        '% of the way there. <button class="linkbtn inline" id="jumpGoals">Close out week '+wk+'</button></div>';
+      return '<div class="banner big">✅ <strong>'+esc(t('End of the week.'))+'</strong> '+
+        esc(gpT('Your three goals are {pct}% of the way there.',{pct:avgPct}))+
+        ' <button class="linkbtn inline" id="jumpGoals">'+esc(gpT('Close out week {wk}',{wk:wk}))+'</button></div>';
     if(!thisWeekLogs().length)
-      return '<div class="banner big">💚 <strong>End of the week.</strong> No days logged yet — '+
+      return '<div class="banner big">💚 <strong>'+esc(t('End of the week.'))+'</strong> No days logged yet — '+
         'your week’s health figures come straight from these.'+
-        ' <button class="linkbtn inline" id="jumpToday">Log today</button></div>';
+        ' <button class="linkbtn inline" id="jumpToday">'+esc(t('Log today'))+'</button></div>';
   }
   return '';
 }
@@ -1545,9 +1546,9 @@ function homeHtml(){
   var st=graceStreak(function(){return true;});
   var h='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>'+
     '<div class="chips" style="margin:0 0 12px">'+
-    (st>0?'<span class="chip'+(st>=7?' milestone':'')+'">🔥 '+st+'-day streak'+
+    (st>0?'<span class="chip'+(st>=7?' milestone':'')+'">🔥 '+esc(gpT('{n}-day streak',{n:st}))+
            (st>=30?' · '+esc(t('a month!')):(st>=7?' · '+esc(t('a week!')):''))+'</span>'
-        : '<span class="chip blue">'+wl.length+' of 7 days logged</span>')+
+        : '<span class="chip blue">'+esc(gpT('{n} of 7 days logged',{n:wl.length}))+'</span>')+
     '</div>';
 
   h+=phaseBanner(phase, wk);
@@ -1579,9 +1580,9 @@ function weekSummaryHtml(wk){
   // number built from one day would just be wrong, and it isn't sent to the
   // base either. Say how many more days instead.
   var short = MIN_WEEK_DAYS - wl.length;
-  var sub = score!==null ? wl.length+' of 7 days logged'
-    : (wl.length===0 ? 'log a day and this starts filling in'
-                     : wl.length+' day'+(wl.length===1?'':'s')+' logged · '+short+' more for your score');
+  var sub = score!==null ? gpT('{n} of 7 days logged',{n:wl.length})
+    : (wl.length===0 ? t('log a day and this starts filling in')
+                     : gpT('{n} days logged · {m} more for your score',{n:wl.length,m:short}));
   var h='<div class="card slim"><button class="discloseBtn" id="weekToggle">'+
     '<span><strong>💚 '+esc(t('My health'))+' · '+esc(t('week'))+' '+wk+'</strong>'+
     '<div class="pmeta">'+esc(sub)+'</div></span>'+
@@ -1590,8 +1591,8 @@ function weekSummaryHtml(wk){
   if(score!==null){
     h+='<div class="bar" style="margin-top:8px"><div class="barFill'+(score>=8?' done':'')+
        '" style="width:'+Math.round(score*10)+'%"></div></div>'+
-       '<div class="pmeta">Health score out of 10, from the '+wl.length+' day'+(wl.length===1?'':'s')+
-       ' you logged · feeds the base total for '+esc(campusName(S.me.campus))+
+       '<div class="pmeta">'+esc(gpT('Health score out of 10, from the {n} days you logged',{n:wl.length}))+
+       ' · '+esc(gpT('feeds the base total for {campus}',{campus:t(campusName(S.me.campus))}))+
        ' · <button class="linkbtn inline" id="toHealthTab">'+esc(t('answer the week directly'))+'</button></div>';
   }
   if(open && c){
@@ -1626,10 +1627,10 @@ function habitsCardHtml(){
   var list=myHabits();
   var doneN=list.filter(function(hb){ return log && didHabit(log,hb.id); }).length;
 
-  var h='<h3>✅ Today <small>· '+esc(today)+'</small></h3>'+
+  var h='<h3>✅ '+esc(t('Today'))+' <small>· '+esc(today)+'</small></h3>'+
     '<div class="card"><div class="row" style="border:0;padding-top:0">'+
-    '<span class="rowName">'+(doneN?doneN+' of '+list.length+' done':'Tap what you’ve done today')+
-    '<div class="pmeta">'+(log?'Saved — tap to change':'Nothing logged yet')+'</div></span>'+
+    '<span class="rowName">'+esc(doneN?gpT('{done} of {total} done',{done:doneN,total:list.length}):t('Tap what you’ve done today'))+
+    '<div class="pmeta">'+esc(log?t('Saved — tap to change'):t('Nothing logged yet'))+'</div></span>'+
     '<span class="pctBig">'+Math.round(doneN/list.length*100)+'%</span></div>';
   if(S.habitEdit){
     h+='<p class="sub" style="margin:2px 0 8px">Pick up to '+MAX_HABITS+'. The eye controls whether '+
@@ -1672,7 +1673,7 @@ function habitsCardHtml(){
     });
     d._loaded=true;
   }
-  h+='<button class="discloseBtn" id="moreToday"><span><strong>Hours, mood &amp; private</strong>'+
+  h+='<button class="discloseBtn" id="moreToday"><span><strong>'+esc(t('Hours, mood & private'))+'</strong>'+
      '<div class="pmeta">'+todaySummaryLine(log)+'</div></span>'+
      '<span class="chev">'+(S.todayOpen?'▴':'▾')+'</span></button>';
   if(S.todayOpen){
@@ -1692,14 +1693,14 @@ function habitsCardHtml(){
     h+='</div></div><div class="qBlock"><div class="qText">Did I look at porn today?</div><div class="seg">'+
        '<button data-yn="porn|1" class="'+(d.porn===true||d.porn===1?'on bad':'')+'">Yes</button>'+
        '<button data-yn="porn|0" class="'+(d.porn===false||d.porn===0?'on':'')+'">No</button></div></div></div>';
-    h+='<button class="btn" id="saveDayBtn">Save today</button>';
+    h+='<button class="btn" id="saveDayBtn">'+esc(t('Save today'))+'</button>';
   }
-  h+='<button class="linkbtn" id="editHabits" style="margin-top:8px">Choose my habits</button>';
+  h+='<button class="linkbtn" id="editHabits" style="margin-top:8px">'+esc(t('Choose my habits'))+'</button>';
   return h+'</div>';
 }
 
 function todaySummaryLine(log){
-  if(!log) return 'Not logged yet';
+  if(!log) return t('Not logged yet');
   var bits=[];
   if(log.langHours) bits.push(log.langHours+'h language');
   if(log.minHours) bits.push(log.minHours+'h ministry');
@@ -1735,7 +1736,7 @@ function goalsCardHtml(wk){
     : (rec && rec.items && rec.items.length ? rec.items : []);
   var written = items.filter(function(i){ return i && i.text; });
 
-  var h='<h3>🎯 My 3 goals · week '+wk+'</h3>';
+  var h='<h3>🎯 '+esc(gpT('My {n} goals · week {wk}',{n:3,wk:wk}))+'</h3>';
 
   if(!written.length && !editing){
     h+='<div class="card"><p class="sub" style="margin:4px 0 10px">No goals set for this week yet. Three is the whole point — pick the three that matter.</p>'+
@@ -1789,7 +1790,7 @@ function goalsCardHtml(wk){
         '<div class="gWord" data-goalword="'+i+'">'+esc(pctWord(gp))+'</div>'+
         '</div></div>';
     });
-    h+='<button class="btn ghost" id="editGoals" style="margin-top:12px">Edit goals</button>';
+    h+='<button class="btn ghost" id="editGoals" style="margin-top:12px">'+esc(t('Edit goals'))+'</button>';
     /* Only offered once there is a figure worth showing. */
     if(pct!==null) h+='<button class="linkbtn" id="shareWeek">'+esc(t('Share my week'))+'</button>';
   }
@@ -1855,24 +1856,24 @@ function kpiCardHtml(wk){
     return h+'<button class="btn" id="saveKpiPins" style="margin-top:12px">Done</button></div>';
   }
 
-  h+='<p class="sub" style="margin:4px 0 10px">Log today’s numbers — week '+wk+
-    ' adds up on its own.</p>';
+  h+='<p class="sub" style="margin:4px 0 10px">'+
+    esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))+'</p>';
   showing.forEach(function(metric){
     var mode=modeOf(metric);
     var days=daily[metric]||{};
     var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
       : (days[today]!==undefined ? days[today] : '');
     var weekVal=(entries[metric]||{})[String(wk)];
-    var label = mode==='latest' ? 'now' : (mode==='avg' ? 'week avg' : 'week total');
+    var label = mode==='latest' ? t('now') : (mode==='avg' ? t('week avg') : t('week total'));
     h+='<div class="row"><span class="rowName">'+esc(t(metric))+
       '<div class="pmeta">'+label+' '+(weekVal===undefined?'—':weekVal)+'</div></span>'+
       '<input type="number" inputmode="decimal" class="kpiIn" data-kpi="'+esc(metric)+
       '" data-kpimode="'+mode+'" value="'+esc(String(cur))+'"></div>';
   });
-  h+='<button class="btn" id="saveKpiBtn">Save today</button>';
-  if(hiddenN>0) h+='<button class="linkbtn" id="kpiShowAll">Show all '+metrics.length+' ('+hiddenN+' hidden)</button>';
+  h+='<button class="btn" id="saveKpiBtn">'+esc(t('Save today'))+'</button>';
+  if(hiddenN>0) h+='<button class="linkbtn" id="kpiShowAll">'+esc(gpT('Show all {total} ({hidden} hidden)',{total:metrics.length,hidden:hiddenN}))+'</button>';
   else if(pins.length && S.kpiAll) h+='<button class="linkbtn" id="kpiShowLess">Show just my '+pins.length+'</button>';
-  h+='<button class="linkbtn" id="pickKpis">'+(pins.length?'Change which I log daily':'Pick the ones I log daily')+'</button>';
+  h+='<button class="linkbtn" id="pickKpis">'+esc(t(pins.length?'Change which I log daily':'Pick the ones I log daily'))+'</button>';
   return h+'</div>';
 }
 
@@ -1911,22 +1912,22 @@ function registerHtml(){
    doesn't show. */
 function meHtml(){
   var wl=thisWeekLogs();
-  var h='<h2>My progress</h2>';
+  var h='<h2>'+esc(t('My progress'))+'</h2>';
   var runs=myHabits().map(function(hb){
     var meta=habitMeta(hb.id);
     return { label:meta.label, icon:meta.icon, now:graceStreak(habitPred(hb.id)), best:bestStreak(habitPred(hb.id)) };
   }).filter(function(r){ return r.now>0 || r.best>0; });
   if(runs.length){
-    h+='<h3>🔥 Streaks</h3><div class="card">';
+    h+='<h3>🔥 '+esc(t('Streaks'))+'</h3><div class="card">';
     runs.forEach(function(r){
       h+='<div class="row"><span class="rowName">'+r.icon+' '+esc(t(r.label))+
-        '<div class="pmeta">best '+r.best+' day'+(r.best===1?'':'s')+'</div></span>'+
+        '<div class="pmeta">'+esc(gpT('best {n} days',{n:r.best}))+'</div></span>'+
         '<span class="pctSm">'+r.now+'d</span></div>';
     });
     h+='</div>';
   }
 
-  h+='<h3>📅 This week</h3><div class="grid">';
+  h+='<h3>📅 '+esc(t('This week'))+'</h3><div class="grid">';
   var cells=[
     [sum(wl,function(r){return r.langHours;}).toFixed(1),'Language hrs'],
     [sum(wl,function(r){return r.minHours;}).toFixed(1),'Ministry hrs'],
@@ -1937,10 +1938,10 @@ function meHtml(){
     [count(wl,function(r){return r.sharedFaith;}),'Shared faith'],
     [count(wl,function(r){return r.sabbath;}),'Sabbaths']
   ];
-  cells.forEach(function(c){ h+='<div class="stat"><div class="statNum">'+c[0]+'</div><div class="statLabel">'+c[1]+'</div></div>'; });
+  cells.forEach(function(c){ h+='<div class="stat"><div class="statNum">'+c[0]+'</div><div class="statLabel">'+esc(t(c[1]))+'</div></div>'; });
   h+='</div>';
 
-  h+='<h3>🗓️ Recent days</h3><div class="card">';
+  h+='<h3>🗓️ '+esc(t('Recent days'))+'</h3><div class="card">';
   if(!S.logs.length) h+='<p class="sub" style="margin:6px 0">No entries yet — log your first day on the Today tab.</p>';
   S.logs.slice(0,7).forEach(function(l){
     var bits=[];
@@ -1960,7 +1961,7 @@ function meHtml(){
   h+=okrSectionHtml(S.me, true);
 
   // Profile and settings live under Me now rather than owning a tab of their own.
-  h+='<button class="btn ghost" id="goProfileFromMe">Profile &amp; settings</button>';
+  h+='<button class="btn ghost" id="goProfileFromMe">'+esc(t('Profile & settings'))+'</button>';
   return h;
 }
 
@@ -2399,7 +2400,7 @@ function mentorEntryHtml(){
   if(!S.mentees.length && !reqN) return '';
   var label = reqN
     ? reqN+' mentor request'+(reqN===1?'':'s')+' waiting'
-    : S.mentees.length+' mentee'+(S.mentees.length===1?'':'s');
+    : gpT('{n} mentees',{n:S.mentees.length});
   return '<button class="btn'+(reqN?'':' ghost')+'" id="goMentor">🤝 '+esc(label)+'</button>';
 }
 

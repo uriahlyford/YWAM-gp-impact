@@ -28,6 +28,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
 | `test-rollups.mjs` | The dashboard maths — headcounts summed instead of levelled, OKR progress wrong |
 | `test-jobfocus.mjs` | `jobfocus.js` and `help.html` drift apart |
+| `test-khmer.mjs` | A string the code shows has no translation, the reviewed and pending dictionaries get merged, or Khmer overflows a label |
 | `test-theme.mjs` | Dark mode, the three-state theme switch, and a WCAG AA contrast audit of every screen in both themes |
 | `test-splash.mjs` | The launch splash: covers the dashboard hand-off, holds the real mark, always lets go, and stays identical in both pages |
 | `test-frontdoor.mjs` | The front door: gate, guest with locked tabs, signed in, hand-off to the staff page |

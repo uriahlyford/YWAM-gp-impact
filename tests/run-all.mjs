@@ -26,6 +26,7 @@ const SERVER = [
 ];
 
 const BROWSER = [
+  'test-khmer.mjs',         // Khmer reaches the screen, and does not overflow when it does
   'test-theme.mjs',         // dark mode, and a WCAG contrast audit of every screen
   'test-splash.mjs',        // launch shows the splash, never the dashboard; one shared block
   'test-frontdoor.mjs',     // gate -> guest -> signed in -> staff page, end to end
