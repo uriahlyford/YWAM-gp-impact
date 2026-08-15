@@ -445,7 +445,20 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 /* ---- the drill-down sheet (rollup.js renders it; these are its clothes) ----
    Same sheet the dashboard uses, so "where did this number come from" looks the
    same wherever you tap a figure. */
-.drillable { cursor:pointer; }
+/* A figure that opens has to LOOK like it opens. This was cursor:pointer only,
+   which is nothing at all on a phone — so which numbers were tappable was pure
+   guesswork, and the ones that are deliberately closed (a count of ministries, a
+   figure derived by a formula) looked identical to a broken one. The dotted rule
+   under the number is the affordance; ▸ marks the tile-shaped ones. */
+.drillable { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.drillable .statNum, .drillable .rowVal, .drillable.rowVal {
+  text-decoration:underline dotted var(--accent); text-underline-offset:4px;
+  text-decoration-thickness:1.5px; }
+.stat.drillable { position:relative; }
+.stat.drillable::after { content:'▸'; position:absolute; top:8px; right:9px;
+  font-size:11px; line-height:1; color:var(--accent); opacity:.65; }
+.drillable:active { opacity:.62; }
+@media (prefers-reduced-motion: reduce){ .drillable:active { opacity:1 } }
 .ddOverlay { position:fixed; inset:0; background:rgba(23,21,15,.55); z-index:50; display:flex; align-items:flex-end; justify-content:center; }
 .ddModal { background:var(--bg); border-radius:var(--rLg) var(--rLg) 0 0; max-width:640px; width:100%; max-height:78vh; overflow-y:auto; padding:16px; animation:ddUp .26s var(--spring) both; }
 @keyframes ddUp { 0%{transform:translateY(24px);opacity:0} 100%{transform:translateY(0);opacity:1} }
@@ -1158,15 +1171,25 @@ function baseHtml(){
      function(q){ return gpDrillAttrs('Students Enrolled', ids, LD, null, q); });
 
   /* --- community schools --- */
+  /* Three of these open and three do not, and the line between them is whether a
+     breakdown would ADD UP to the number above it — see the same note on the
+     dashboard. Schools is a count of ministries reporting; Total Volunteer Hours
+     is Σ(hours × volunteers). */
   h+='<h3>📚 '+esc(t('Community schools'))+'</h3><div class="grid">'+
      bstat('Schools', R.communitySchools(ids))+
-     bstat('Students Enrolled', R.communityStudents(ids))+
-     bstat('Students in Discipleship', R.communityDiscipled(ids))+
+     bstat('Students Enrolled', R.communityStudents(ids), null, '',
+       gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
+         CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
+     bstat('Students in Discipleship', R.communityDiscipled(ids), null, '',
+       gpDrillGroupAttrs('Students in Discipleship', ids,
+         CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
      bstat('Students Supported Financially',
        R.ministryRollup(ids, CS, CS_SCHOOL_MINISTRIES, 'Students Supported Financially'), null, '',
        gpDrillAttrs('Students Supported Financially', ids, CS))+
      '</div>';
-  h+=bquarters('Students Enrolled', function(q){ return R.communityStudents(ids,q); });
+  h+=bquarters('Students Enrolled', function(q){ return R.communityStudents(ids,q); },
+    function(q){ return gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
+      CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools'), q); });
 
   /* --- outreach teams --- */
   h+='<h3>🙌 '+esc(t('Outreach teams'))+'</h3><div class="grid">'+
@@ -1191,7 +1214,9 @@ function baseHtml(){
 
   /* --- churches --- */
   h+='<h3>⛪ '+esc(t('Local church partnerships'))+'</h3><div class="grid">'+
-     bstat('Local Churches Partnered', R.partnerChurches(ids))+
+     bstat('Local Churches Partnered', R.partnerChurches(ids), null, '',
+       gpDrillGroupAttrs(['Partner Churches Supported','Churches Being Led'], ids,
+         ['Church Partnerships'], t('Local church partnerships')))+
      bstat('Partner Churches Supported',
        R.ministryRollup(ids, LD, ['Church Partnerships'], 'Partner Churches Supported'), null, '',
        gpDrillAttrs('Partner Churches Supported', ids, LD, 'Church Partnerships'))+
@@ -3315,65 +3340,9 @@ function refreshAll(){
   ]).then(function(){ render(); });
 }
 
-/* ---------- pull to refresh ----------
-   Mirrors the dashboard: engages only at the top of the page, takes over from
-   the native rubber-band, and never fires while a form is mid-edit. Haptics go
-   through navigator.vibrate — Android feels them, iOS Safari doesn't implement
-   the API. */
-(function(){
-  var ptr=document.getElementById('ptr');
-  if(!ptr || !('ontouchstart' in window)) return;
-  var THRESHOLD=68, MAX=108, RESIST=0.55;
-  var startY=null, pull=0, armed=false, busy=false;
-
-  function buzz(p){ if(navigator.vibrate){ try{ navigator.vibrate(p); }catch(e){} } }
-  function setPull(px){
-    pull=px;
-    ptr.style.transform='translateY('+(Math.min(px,MAX)-60)+'px)';
-    ptr.style.opacity=Math.min(1, px/THRESHOLD);
-  }
-  function reset(){
-    ptr.classList.remove('dragging');
-    ptr.style.transform=''; ptr.style.opacity='';
-    startY=null; pull=0; armed=false;
-  }
-
-  document.addEventListener('touchstart', function(e){
-    if(busy || e.touches.length!==1 || window.scrollY>0) return;
-    // Don't hijack the gesture while someone is typing or picking things.
-    var a=document.activeElement;
-    if(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
-    startY=e.touches[0].clientY;
-    ptr.classList.add('dragging');
-  }, { passive:true });
-
-  document.addEventListener('touchmove', function(e){
-    if(startY===null || busy) return;
-    var dy=e.touches[0].clientY-startY;
-    if(dy<=0 || window.scrollY>0){ if(pull) reset(); return; }
-    e.preventDefault();
-    setPull(dy*RESIST);
-    if(!armed && pull>=THRESHOLD){ armed=true; buzz(12); }
-    else if(armed && pull<THRESHOLD){ armed=false; }
-  }, { passive:false });
-
-  document.addEventListener('touchend', function(){
-    if(startY===null || busy) return;
-    if(pull<THRESHOLD){ reset(); return; }
-    busy=true; startY=null;
-    ptr.classList.remove('dragging');
-    ptr.classList.add('spinning');
-    ptr.style.transform='translateY(14px)';
-    ptr.style.opacity='1';
-    buzz([8,40,12]);
-    refreshAll().then(function(){
-      ptr.classList.remove('spinning');
-      busy=false; reset();
-    });
-  }, { passive:true });
-
-  document.addEventListener('touchcancel', function(){ if(!busy) reset(); }, { passive:true });
-})();
+/* Shared with the dashboard — see gpPullToRefresh in rollup.js. The staff page
+   also sits out the gesture while nobody is logged in. */
+gpPullToRefresh(function(){ return refreshAll(); }, { blocked: function(){ return !S.me; } });
 
 boot();
 </script>

@@ -26,6 +26,7 @@ const SERVER = [
 ];
 
 const BROWSER = [
+  'test-pull-drill.mjs',    // the pull gesture on both pages, and which figures open
   'test-khmer.mjs',         // Khmer reaches the screen, and does not overflow when it does
   'test-theme.mjs',         // dark mode, and a WCAG contrast audit of every screen
   'test-splash.mjs',        // launch shows the splash, never the dashboard; one shared block

@@ -374,6 +374,28 @@ inferred from volunteer counts.
   it finds an opaque one. It also caught three contrast failures that predated dark
   mode, so `--faint`, `--amberDeep` and `--warm` are darker than they used to be.
   Run it after any colour change; do not chase contrast by looking at screenshots.
+- **Pull-to-refresh is `gpPullToRefresh(onRefresh, opts)` in `rollup.js`, once.** Both
+  pages had their own copy and the copies drifted twice — first the staff coin had no
+  mark in it, then it did not *turn* as you pulled, which is what made the gesture feel
+  broken there. The rotation during the drag (`rotate(px * 3)deg`) is the part that
+  makes the coin feel attached to your finger; on release the inline transform is
+  **cleared** so the CSS spin animation can take over, which the dashboard's own copy
+  had never done. `onRefresh` must return a promise or the coin never stops.
+- **A figure opens a breakdown only if the breakdown would ADD UP to it.** That is the
+  whole rule. Students, discipleship and partner churches are sums of rows, so they
+  open and the sheet totals the tile exactly. "Schools" is a count of ministries
+  reporting, and Total Volunteer Hours is Σ(hours × volunteers) — a sheet under either
+  would show rows totalling something other than the headline, which is worse than not
+  opening. `test-pull-drill.mjs` opens a group sheet and asserts its rows sum to the
+  tile, so this cannot rot.
+  Figures summed across a **set** of ministries or **two** metrics use
+  `gpDrillGroupAttrs(metricOrMetrics, ids, ministries, label, quarter)` — community
+  students spans two departments *and* two metrics (Students Enrolled + Youth Enrolled),
+  which is why those tiles used to be closed for want of a filter rather than by choice.
+- **Tappable figures must look tappable.** `.drillable` was `cursor:pointer` and nothing
+  else, which is invisible on a phone — so which numbers opened was guesswork, and the
+  ones deliberately closed looked identical to broken ones. Tappable numbers now carry a
+  dotted accent underline and tiles a ▸ marker. A test asserts both, on both pages.
 - **Shared UI atoms live at the bottom of `rollup.js`.** `gpRingHtml`/`gpRingVars`/
   `gpPctColor`/`gpPctWord` (the progress rings, `sm`/`lg` sizes, colour walking warm →
   amber → cobalt → green with a word saying the same thing), `gpTap` (haptics —

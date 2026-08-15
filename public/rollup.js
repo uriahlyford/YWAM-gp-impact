@@ -471,6 +471,20 @@ function gpDrillAttrs(metric, ids, dept, ministry, quarter){
     (quarter!==undefined && quarter!==null ? ' data-drill-quarter="'+quarter+'"' : '');
 }
 
+/* Attributes for a figure that is summed across a named set of ministries.
+   `label` names the group in the sheet's title, since neither a department nor a
+   single ministry does. */
+function gpDrillGroupAttrs(metric, ids, ministries, label, quarter){
+  var mets = Array.isArray(metric) ? metric : [metric];
+  return ' data-drill-metric="'+gpDrillEsc(mets[0])+'"'+
+         (mets.length>1 ? ' data-drill-metrics="'+gpDrillEsc(mets.join('|'))+'"' : '')+
+         ' data-drill-ids="'+gpDrillEsc(ids.join(','))+'"'+
+         (ministries && ministries.length ? ' data-drill-ministries="'+gpDrillEsc(ministries.join('|'))+'"' : '')+
+         (label ? ' data-drill-label="'+gpDrillEsc(label)+'"' : '')+
+         ' data-drill-quarter="'+(quarter===undefined||quarter===null?'':quarter)+'"'+
+         ' role="button" tabindex="0" class="drillable"';
+}
+
 function gpDrillRoot(){
   var r = document.getElementById('ddRoot');
   if(!r){ r = document.createElement('div'); r.id = 'ddRoot'; document.body.appendChild(r); }
@@ -513,13 +527,25 @@ function gpBindDrill(R){
       var ids      = el.getAttribute('data-drill-ids').split(',');
       var dept     = el.getAttribute('data-drill-dept');
       var ministry = el.getAttribute('data-drill-ministry');
+      /* A group of ministries, for a figure summed across several of them — the
+         community-school student count spans two departments, so neither a dept
+         nor a single ministry describes it. Without this those tiles had to be
+         left un-tappable, which is why some numbers opened and some did not. */
+      var minsAttr = el.getAttribute('data-drill-ministries');
+      var mins     = minsAttr ? minsAttr.split('|') : null;
+      /* Some tiles add two metrics together — community students is Students
+         Enrolled plus Youth Enrolled — so the sheet has to gather both. */
+      var metsAttr = el.getAttribute('data-drill-metrics');
+      var mets     = metsAttr ? metsAttr.split('|') : null;
       var qAttr    = el.getAttribute('data-drill-quarter');
       var quarter  = (qAttr===null || qAttr==='') ? null : Number(qAttr);
 
       var rows = R.drillRows(function(campus, d, min, met){
-        if(ids.indexOf(campus)===-1 || met!==metric) return false;
+        if(ids.indexOf(campus)===-1) return false;
+        if(mets ? mets.indexOf(met)===-1 : met!==metric) return false;
         if(dept && d!==dept) return false;
         if(ministry && min!==ministry) return false;
+        if(mins && mins.indexOf(min)===-1) return false;
         // Matches how the totals are computed: base-wide figures skip Base
         // Leadership, which reports the same metric names about its own work.
         if(!dept && typeof BL_DEPT !== 'undefined' && d===BL_DEPT) return false;
@@ -533,8 +559,9 @@ function gpBindDrill(R){
           return total===null ? null : { campus:r.campus, dept:r.dept, ministry:r.ministry, metric:r.metric, weeks:w, total:total };
         }).filter(Boolean);
       }
+      var groupName = el.getAttribute('data-drill-label');
       var title = gpDrillT(metric) +
-        (dept ? ' · '+gpDrillT(ministry||dept) : '') +
+        (groupName ? ' · '+gpDrillT(groupName) : (dept ? ' · '+gpDrillT(ministry||dept) : '')) +
         (quarter!==null ? ' · Q'+(quarter+1) : '');
       gpOpenDrill(title, rows);
     };
@@ -714,4 +741,83 @@ function gpT(template, vars){
   return String(s).replace(/\{(\w+)\}/g, function (whole, name) {
     return (vars && Object.prototype.hasOwnProperty.call(vars, name)) ? String(vars[name]) : whole;
   });
+}
+
+/* ---- pull to refresh ----
+   Both pages had their own copy of this, and the copies drifted twice: first the
+   staff page's coin had no logo in it, and then — the part that was actually
+   reported — its coin did not TURN as you pulled. The dashboard rotated the mark
+   with the drag, so it felt attached to your finger; the staff page only slid it
+   down and started spinning after release, which reads as broken.
+
+   One implementation now, and the page supplies only what differs: what to
+   refresh. onRefresh must return a promise, or the coin never stops.  */
+function gpPullToRefresh(onRefresh, opts){
+  var ptr = document.getElementById('ptr');
+  if(!ptr || !('ontouchstart' in window)) return;
+  opts = opts || {};
+
+  var THRESHOLD = 68;    // pull needed to arm a refresh
+  var MAX = 108;         // furthest the coin travels
+  var RESIST = 0.55;     // <1 so the pull feels weighted
+  var startY = null, pull = 0, armed = false, busy = false;
+
+  function coin(){ return ptr.querySelector('img'); }
+  function setPull(px){
+    pull = px;
+    ptr.style.transform = 'translateY('+(Math.min(px, MAX) - 60)+'px)';
+    ptr.style.opacity = Math.min(1, px / THRESHOLD);
+    // The mark turns with the drag — this is what makes it feel held rather than dragged.
+    var c = coin();
+    if(c) c.style.transform = 'rotate('+Math.round(px * 3)+'deg)';
+  }
+  function reset(){
+    ptr.classList.remove('dragging');
+    ptr.style.transform = ''; ptr.style.opacity = '';
+    var c = coin();
+    if(c) c.style.transform = '';
+    startY = null; pull = 0; armed = false;
+  }
+
+  document.addEventListener('touchstart', function(e){
+    if(busy || e.touches.length !== 1 || window.scrollY > 0) return;
+    if(document.getElementById('ddOverlay')) return;     // the drill sheet is open
+    // Don't hijack the gesture while someone is typing or picking something.
+    var a = document.activeElement;
+    if(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+    if(opts.blocked && opts.blocked()) return;
+    startY = e.touches[0].clientY;
+    ptr.classList.add('dragging');
+  }, { passive:true });
+
+  document.addEventListener('touchmove', function(e){
+    if(startY === null || busy) return;
+    var dy = e.touches[0].clientY - startY;
+    if(dy <= 0 || window.scrollY > 0){ if(pull) reset(); return; }
+    e.preventDefault();          // take over from the native rubber-band
+    setPull(dy * RESIST);
+    if(!armed && pull >= THRESHOLD){ armed = true; gpTap(12); }
+    else if(armed && pull < THRESHOLD){ armed = false; }
+  }, { passive:false });
+
+  document.addEventListener('touchend', function(){
+    if(startY === null || busy) return;
+    if(pull < THRESHOLD){ reset(); return; }
+    busy = true; startY = null;
+    ptr.classList.remove('dragging');
+    ptr.classList.add('spinning');
+    ptr.style.transform = 'translateY(14px)';
+    ptr.style.opacity = '1';
+    // Hand the spin over to the CSS animation, which needs no inline rotation.
+    var c = coin();
+    if(c) c.style.transform = '';
+    gpTap([8, 40, 12]);
+    Promise.resolve(onRefresh()).then(done, done);
+    function done(){
+      ptr.classList.remove('spinning');
+      busy = false; reset();
+    }
+  }, { passive:true });
+
+  document.addEventListener('touchcancel', function(){ if(!busy) reset(); }, { passive:true });
 }
