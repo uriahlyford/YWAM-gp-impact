@@ -35,6 +35,59 @@ function finiteNum_(v, min, max) {
   return (isFinite(n) && n >= min && n <= max) ? n : null;
 }
 
+/* ==================== the year a week belongs to ====================
+   Every dated row used to carry a week number and nothing else, so week 33 of 2027
+   would land on top of week 33 of 2026: the new year's first write would overwrite
+   last year's figure for sum metrics and silently replace it for `latest` ones.
+   The store was a single year's worth of data by construction, and nobody had
+   noticed only because the app had not lived through a New Year yet.
+
+   Rows now carry `year`. Reads filter to one year — the current one unless asked
+   otherwise — which is what keeps rollup.js and both pages working on plain week
+   numbers exactly as before: the year is resolved at this boundary and never
+   leaves it.
+
+   LEGACY: rows written before this have no `year`, and it cannot be *recovered*,
+   only inferred — so yearOf_ takes the best evidence available, in order: an
+   explicit year, the row's own date (kpiDaily and dailyLogs carry one), the
+   timestamp of its last edit, and finally GP_LEGACY_YEAR. Set that env var to the
+   year the existing data was collected in. This is an assignment, not a recovery:
+   a row edited in January that describes the previous December will be attributed
+   to the wrong year, which is rare and was unknowable either way. */
+const YEAR_MIN = 2020, YEAR_MAX = 2100;
+
+function currentYear_() { return new Date().getUTCFullYear(); }
+
+function legacyYear_() {
+  const n = finiteNum_(process.env.GP_LEGACY_YEAR, YEAR_MIN, YEAR_MAX);
+  return n == null ? currentYear_() : n;
+}
+
+/* The year a request is asking about. Absent or junk means "this year", so every
+   existing caller keeps working without passing anything. */
+function askedYear_(v) {
+  const n = finiteNum_(v, YEAR_MIN, YEAR_MAX);
+  return n == null ? currentYear_() : Math.round(n);
+}
+
+function yearFromDate_(d) {
+  const n = finiteNum_(String(d || '').slice(0, 4), YEAR_MIN, YEAR_MAX);
+  return n == null ? null : Math.round(n);
+}
+
+function yearOf_(row) {
+  if (!row) return legacyYear_();
+  const explicit = finiteNum_(row.year, YEAR_MIN, YEAR_MAX);
+  if (explicit != null) return Math.round(explicit);
+  return yearFromDate_(row.date) || yearFromDate_(row.updated) || legacyYear_();
+}
+
+/* The filter every year-scoped read goes through, so "which year is this row in"
+   is answered in exactly one place. */
+function inYear_(year) {
+  return function (row) { return yearOf_(row) === year; };
+}
+
 function store() { return getStore('gp-data'); }
 /* Every blob in this store is either a JSON array of rows or, for loginThrottle,
    a plain object. If one ever comes back as something else — a half-finished
@@ -426,7 +479,7 @@ async function getMenteeLogs(username, pin, menteeId) {
   let checkins = [];
   if (m.surveyToken) {
     checkins = (await getSurvey_())
-      .filter(function (r) { return r.device === m.surveyToken; })
+      .filter(function (r) { return r.device === m.surveyToken && yearOf_(r) === currentYear_(); })
       .map(function (r) {
         return {
           week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
@@ -471,9 +524,10 @@ async function getEntries_() { return readJSON('entries', []); }
 async function getOkrs_() { return readJSON('okrs', []); }
 async function getSurvey_() { return readJSON('survey', []); }
 
-async function getData(code) {
+async function getData(code, year) {
   const leader = isLeader_(code);
-  const entryRows = await getEntries_();
+  const yr = askedYear_(year);
+  const entryRows = (await getEntries_()).filter(inYear_(yr));
   const entries = {};
   entryRows.forEach(function (r) {
     const dept = r.dept === 'Base Director' ? 'Base Leadership' : r.dept; // rename migration
@@ -498,7 +552,7 @@ async function getData(code) {
   });
 
   const nn = function (v) { const n = Number(v); return (v === '' || v == null || isNaN(n)) ? null : n; };
-  const surveyRows = await getSurvey_();
+  const surveyRows = (await getSurvey_()).filter(inYear_(yr));
   const survey = surveyRows.map(function (s) {
     return {
       campus: s.campus, week: Number(s.week), device: s.device,
@@ -514,15 +568,38 @@ async function getData(code) {
      this exposes nothing new — it just costs one invocation instead of two. */
   const roster = (await getStaff_()).filter(function (s) { return s.active; }).map(publicStaff_);
 
-  return { leader: leader, entries: entries, okrs: okrs, survey: survey, roster: roster };
+  /* `year` goes back so a page can tell which year it is looking at without
+     recomputing it — the two pages disagree slightly about week numbering, and
+     they must not also disagree about the year. */
+  return { leader: leader, year: yr, entries: entries, okrs: okrs, survey: survey, roster: roster };
 }
 
-async function saveEntries(campus, updates, code) {
+/* Writing ministry numbers now requires saying who you are.
+
+   It used to accept any POST at all: the front door gated the log form in the UI
+   and the endpoint itself checked nothing, so anyone who found the URL could
+   rewrite any campus's figures. Two ways in now, and one of them has to hold:
+     - the leadership code, which may write any campus, as before; or
+     - a username + PIN, which may write ONLY that person's own campus.
+   The campus lock is the one Uriah asked for — "they should only log numbers for
+   the campus they're logged in as" — and it costs nobody access, because the UI
+   has required an account to reach this form since the front door was added.
+   A staff member with no campus on their record is refused rather than guessed at. */
+async function saveEntries(campus, updates, code, username, pin) {
   const leader = isLeader_(code);
+  let writer = null;
+  if (!leader) {
+    writer = await verifyStaff_(username, pin);
+    if (!writer) return { ok: false, err: 'auth' };
+    if (!writer.campus) return { ok: false, err: 'no_campus' };
+  }
   const rows = await getEntries_();
   const now = new Date().toISOString();
+  const yr = currentYear_();
   campus = str_(campus, 40);
   if (!campus) return getData(code);
+  // Staff write their own campus whatever the request says it is.
+  if (writer && campus !== writer.campus) return { ok: false, err: 'wrong_campus' };
   (updates || []).forEach(function (u) {
     const dept = str_(u.dept, 80), ministry = str_(u.ministry, 80), metric = str_(u.metric, 80);
     const week = finiteNum_(u.week, 1, 52);
@@ -531,7 +608,8 @@ async function saveEntries(campus, updates, code) {
     // here so a non-leader can't blindly overwrite a value they can't see.
     if (!leader && SENSITIVE.indexOf(metric) > -1) return;
     const idx = rows.findIndex(function (r) {
-      return r.campus === campus && r.dept === dept && r.ministry === ministry && r.metric === metric && String(r.week) === String(week);
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
+        r.metric === metric && String(r.week) === String(week) && yearOf_(r) === yr;
     });
     if (u.value === null || u.value === '' || u.value === undefined) {
       if (idx > -1) rows.splice(idx, 1);
@@ -540,9 +618,10 @@ async function saveEntries(campus, updates, code) {
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
     if (idx > -1) {
-      rows[idx].value = value; rows[idx].updated = now;
+      rows[idx].value = value; rows[idx].updated = now; rows[idx].year = yr;
     } else {
-      rows.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: week, value: value, updated: now });
+      rows.push({ campus: campus, dept: dept, ministry: ministry, metric: metric,
+        week: week, year: yr, value: value, updated: now });
     }
   });
   await writeJSON('entries', rows);
@@ -649,8 +728,9 @@ function goalItemPct_(i) {
   return i.done ? 100 : 0;
 }
 
-function goalsFor_(rows, staffId) {
-  return rows.filter(function (r) { return r.staffId === staffId; })
+function goalsFor_(rows, staffId, year) {
+  const yr = askedYear_(year);
+  return rows.filter(function (r) { return r.staffId === staffId && yearOf_(r) === yr; })
     .slice()
     .sort(function (a, b) { return Number(b.week) - Number(a.week); })
     .map(function (r) {
@@ -690,8 +770,11 @@ async function saveGoals(username, pin, week, items) {
     };
   });
   const rows = await getGoals_();
-  const idx = rows.findIndex(function (r) { return r.staffId === s.id && Number(r.week) === wk; });
-  const rec = { staffId: s.id, week: wk, items: clean, updated: new Date().toISOString() };
+  const yr = currentYear_();
+  const idx = rows.findIndex(function (r) {
+    return r.staffId === s.id && Number(r.week) === wk && yearOf_(r) === yr;
+  });
+  const rec = { staffId: s.id, week: wk, year: yr, items: clean, updated: new Date().toISOString() };
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('goals', rows);
   return { ok: true, goals: goalsFor_(rows, s.id) };
@@ -748,7 +831,7 @@ function weekSurveyFrom_(logs, s, token, wk) {
     return days.reduce(function (a, r) { return a + (Number(r[k]) || 0); }, 0);
   };
   return {
-    campus: s.campus, week: wk, device: token,
+    campus: s.campus, week: wk, year: currentYear_(), device: token,
     lonely: meanOf('lonely'), clarity: meanOf('clarity'), growth: meanOf('growth'),
     porn: anyOf('porn'), oneOnOne: anyOf('oneOnOne'), sharedFaith: anyOf('sharedFaith'),
     sabbath: anyOf('sabbath'),
@@ -774,7 +857,8 @@ async function syncWeekSurvey_(s, wk, dailyRows) {
   const rec = weekSurveyFrom_(mine, staffRows[si], token, wk);
   const rows = await getSurvey_();
   const idx = rows.findIndex(function (r) {
-    return r.campus === s.campus && Number(r.week) === wk && r.device === token;
+    return r.campus === s.campus && Number(r.week) === wk && r.device === token &&
+      yearOf_(r) === rec.year;
   });
 
   // Too few days to speak for a week: publish nothing, and withdraw anything
@@ -829,7 +913,7 @@ async function saveMyWeek(username, pin, week, payload) {
   const token = surveyTokenFor_(staffRows[si]);
   await saveStaff_(staffRows);
 
-  const rec = { campus: s.campus, week: wk, device: token, source: 'weekly',
+  const rec = { campus: s.campus, week: wk, year: currentYear_(), device: token, source: 'weekly',
     days: 7, updated: new Date().toISOString() };
   WEEK_SCALES.forEach(function (k) { rec[k] = finiteNum_(p[k], 1, 10); });
   WEEK_FLAGS.forEach(function (k) { rec[k] = p[k] ? 1 : 0; });
@@ -843,7 +927,8 @@ async function saveMyWeek(username, pin, week, payload) {
 
   const rows = await getSurvey_();
   const idx = rows.findIndex(function (r) {
-    return r.campus === s.campus && Number(r.week) === wk && r.device === token;
+    return r.campus === s.campus && Number(r.week) === wk && r.device === token &&
+      yearOf_(r) === rec.year;
   });
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('survey', rows);
@@ -856,8 +941,9 @@ async function deleteMyWeek(username, pin, week) {
   const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   let rows = await getSurvey_();
+  const yr = currentYear_();
   rows = rows.filter(function (r) {
-    return !(r.device === s.surveyToken && Number(r.week) === wk);
+    return !(r.device === s.surveyToken && Number(r.week) === wk && yearOf_(r) === yr);
   });
   await writeJSON('survey', rows);
   return getMyWeekly(username, pin);
@@ -872,7 +958,7 @@ async function getMyWeekly(username, pin) {
   let checkins = [];
   if (s.surveyToken) {
     checkins = (await getSurvey_())
-      .filter(function (r) { return r.device === s.surveyToken; })
+      .filter(function (r) { return r.device === s.surveyToken && yearOf_(r) === currentYear_(); })
       .map(function (r) {
         return {
           week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
@@ -895,10 +981,12 @@ async function getMyMinistry(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   const out = {}, daily = {};
+  const yr = currentYear_();
   if (s.ministry) {
     (await getEntries_()).forEach(function (r) {
       if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
       if (SENSITIVE.indexOf(r.metric) > -1) return;
+      if (yearOf_(r) !== yr) return;
       if (!out[r.metric]) out[r.metric] = {};
       out[r.metric][String(r.week)] = Number(r.value);
     });
@@ -906,6 +994,7 @@ async function getMyMinistry(username, pin) {
     // for the rest of this week.
     (await getKpiDaily_()).forEach(function (r) {
       if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
+      if (yearOf_(r) !== yr) return;
       if (!daily[r.metric]) daily[r.metric] = {};
       daily[r.metric][r.date] = Number(r.value);
     });
@@ -924,12 +1013,13 @@ async function saveMyMinistry(username, pin, week, updates) {
   if (wk == null) return { ok: false, err: 'bad_week' };
   const rows = await getEntries_();
   const now = new Date().toISOString();
+  const yr = currentYear_();
   (Array.isArray(updates) ? updates : []).forEach(function (u) {
     const metric = str_(u && u.metric, 80);
     if (!metric || SENSITIVE.indexOf(metric) > -1) return;
     const idx = rows.findIndex(function (r) {
       return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
-        r.metric === metric && String(r.week) === String(wk);
+        r.metric === metric && String(r.week) === String(wk) && yearOf_(r) === yr;
     });
     if (u.value === null || u.value === '' || u.value === undefined) {
       if (idx > -1) rows.splice(idx, 1);
@@ -938,7 +1028,7 @@ async function saveMyMinistry(username, pin, week, updates) {
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
     if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; }
-    else rows.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, value: value, updated: now });
+    else rows.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, year: yr, value: value, updated: now });
   });
   await writeJSON('entries', rows);
   return getMyMinistry(username, pin);
@@ -997,7 +1087,8 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
     if (value == null) return;
     const rec = {
       campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric,
-      date: date, week: wk, value: value, staffId: s.id, updated: new Date().toISOString()
+      date: date, week: wk, year: yearFromDate_(date) || currentYear_(),
+      value: value, staffId: s.id, updated: new Date().toISOString()
     };
     if (idx > -1) daily[idx] = rec; else daily.push(rec);
   });
@@ -1006,19 +1097,22 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
   // Push the derived weekly totals into the shared entries the dashboard reads.
   const entries = await getEntries_();
   const now = new Date().toISOString();
+  /* The days themselves are dated, so the week they roll into belongs to the year
+     those days are in — not to whatever year it happens to be when this runs. */
+  const dayYear = yearFromDate_(date) || currentYear_();
   Object.keys(touched).forEach(function (metric) {
     const days = daily.filter(function (r) {
       return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
-        r.metric === metric && Number(r.week) === wk;
+        r.metric === metric && Number(r.week) === wk && yearOf_(r) === dayYear;
     });
     const total = rollUpKpi_(days, touched[metric]);
     const ei = entries.findIndex(function (r) {
       return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
-        r.metric === metric && String(r.week) === String(wk);
+        r.metric === metric && String(r.week) === String(wk) && yearOf_(r) === dayYear;
     });
     if (total === null) { if (ei > -1) entries.splice(ei, 1); return; }
     if (ei > -1) { entries[ei].value = total; entries[ei].updated = now; }
-    else entries.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, value: total, updated: now });
+    else entries.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, year: dayYear, value: total, updated: now });
   });
   await writeJSON('entries', entries);
   return getMyMinistry(username, pin);
@@ -1272,8 +1366,8 @@ async function getMyBoot(username, pin) {
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
-  getData: function (a) { return getData(a[0]); },
-  saveEntries: function (a) { return saveEntries(a[0], a[1], a[2]); },
+  getData: function (a) { return getData(a[0], a[1]); },
+  saveEntries: function (a) { return saveEntries(a[0], a[1], a[2], a[3], a[4]); },
   saveObjective: function (a) { return saveObjective(a[0], a[1], a[2], a[3]); },
   deleteObjective: function (a) { return deleteObjective(a[0], a[1], a[2], a[3]); },
   teamRoster: function () { return teamRoster(); },

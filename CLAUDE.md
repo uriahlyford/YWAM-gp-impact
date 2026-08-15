@@ -108,6 +108,27 @@ so a bad trips read cannot cost someone their base figures — and it returns
 `{ok:false, err:'auth'}` for a bad PIN specifically, because only that should log
 somebody out. A plain `!ok` used to, which meant a server hiccup signed people out.
 
+**Every dated row carries a `year`, and reads are scoped to one.** Rows used to hold a
+week number and nothing else, so week 33 of 2027 would have landed on top of week 33 of
+2026 — summed metrics doubling, `latest` metrics silently replaced, last year gone. The
+year is resolved at the API boundary and never leaves it: `getData(code, year)` filters
+to one year and returns which one it used, so **`rollup.js` and both pages still work on
+plain week numbers** exactly as before. Only `api.js` knows years exist.
+`yearOf_(row)` is the single place that question is answered, and it takes the best
+evidence available in order: an explicit `year`, the row's own `date` (kpiDaily and
+dailyLogs carry one), its `updated` stamp, then `GP_LEGACY_YEAR`.
+**Set `GP_LEGACY_YEAR` in the Netlify environment to the year the existing data was
+collected in.** Rows written before this change have no year, and it cannot be recovered
+— only inferred — so this is an *assignment*, not a recovery. Left unset it defaults to
+the current year, which silently drags all the old data forward every January.
+
+**Writing ministry numbers needs a name.** `saveEntries` took any POST at all: the front
+door gated the form in the UI and the endpoint checked nothing, so anyone with the URL
+could rewrite any campus's figures. It now needs either the leadership code (any campus,
+as before) or a username + PIN (**that person's own campus only** — the campus lock
+Uriah asked for). Nobody lost access: reaching that form has required an account since
+the front door was added. A staff record with no campus is refused rather than guessed at.
+
 **A bad blob must not take the app down.** `readJSON(key, fallback)` checks the value's
 shape against the fallback (array for the row stores, object for `loginThrottle`) and
 returns the fallback when it does not match. Every read handler used to pass whatever
@@ -357,9 +378,11 @@ inferred from volunteer counts.
   byte-identical, so **edit one, edit both**. It is inlined rather than pulled from
   a file because it must paint on the first frame, and an external stylesheet is
   another round trip — which is the very thing it exists to hide.
-  Why it exists: the PWA's `start_url` is `index.html`, so **every launch loads the
-  dashboard and then navigates to the staff page**, and that second navigation is a
-  real network fetch. No amount of script timing fixes that; the splash is in the
+  Why it exists: `start_url` used to be `index.html`, so **every launch loaded the
+  dashboard and then navigated to the staff page** — a second real network fetch. It now
+  points at `teams.html`, so an installed app opens straight on the staff page and that
+  hand-off does not happen at all. The splash still matters, because opening the
+  dashboard *link* (or a leader tapping "Dashboard") can still cross between the two. No amount of script timing fixes that; the splash is in the
   markup from the first byte, `position:fixed`, opaque, `z-index:9999`, ahead of the
   header, so there is nothing to see underneath at any point on any engine. Its
   background is the manifest's `background_color`, so the iOS launch screen hands
@@ -400,19 +423,18 @@ inferred from volunteer counts.
   the two now match — do not move either back into static markup.
 
 ## Known limits (real, not yet fixed)
-- **Weeks carry no year.** Every row in `entries`, `survey`, `goals` and `kpiDaily` is
-  keyed by a week number 1-52 and nothing else, and both pages compute the current week
-  from the Monday of week 1 of *this* calendar year. So week 33 of 2027 will land on top
-  of week 33 of 2026, and the days at a year boundary that belong to the next year's week
-  1 get clamped onto week 52 instead. Fixing it properly means adding a year to every row
-  and migrating the store — a decision for Uriah, not a quiet refactor. Until then the
-  store is effectively single-year.
-- **`saveEntries` still accepts unauthenticated writes.** The front door gates the log
-  form in the UI only; the endpoint itself does not check who is posting. `saveObjective`,
-  `saveMyWeek` and the rest of the personal handlers *are* server-enforced.
 - **No locking on read-modify-write.** Every write reads a whole blob, edits it and writes
   it back. Two people saving the same sheet in the same second means one loses. Rare at
   this team size, real nonetheless.
+- **The last days of a 53-week year still clamp onto week 52.** Both pages compute the
+  week from the Monday of week 1 of the current calendar year and clamp to 52, so the
+  days belonging to the *next* year's week 1 land on week 52 instead. The year field
+  keeps those days in the right year now, so this is a mis-numbered week rather than
+  lost history — much smaller than it was, still not right.
+- **Khmer is behind.** `docs/khmer-needed.md` lists roughly 100 strings with no
+  translation yet, including everything added recently. They render in English, which is
+  safe but wrong for a Khmer-first app. **Do not machine-translate them** — see the
+  Conventions section.
 
 ## Things that made the app fail to load (don't reintroduce)
 Each of these looked harmless and took the whole page down. `test-degraded.mjs`,

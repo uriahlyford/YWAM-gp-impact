@@ -885,10 +885,11 @@ function render(){
    tying logging to your own campus; the campus lock itself waits until everyone
    has an account.
 
-   Note this is a UI gate, not a server one. `saveEntries` still accepts an
-   unauthenticated POST, so this stops the accident, not a determined person.
-   Closing that properly means passing staff credentials to saveEntries and
-   checking them in api.js. */
+   The server enforces this too now: saveEntries takes either the leadership code
+   or a username + PIN, and a staff login may write only its own campus. So this
+   gate stops the accident and api.js stops the determined person — the campus lock
+   Uriah asked for, which costs nobody access because reaching this form has
+   required an account since the front door was added. */
 function staffSession(){
   try { return JSON.parse(localStorage.getItem('gp-staff')||'null'); } catch(e){ return null; }
 }
@@ -1480,7 +1481,20 @@ function saveCard(btn){
       week:state.week, value: inp.value==='' ? null : Number(inp.value) });
   });
   btn.disabled=true; btn.textContent=t('Saving…'); hideError();
-  apiCall('saveEntries', [state.campus, updates, state.leaderCode]).then(function(d){
+  /* The server needs to know who is writing: the leadership code, or a staff
+     login. Without one of them it refuses, and a staff login may only write its
+     own campus. */
+  var sess = staffSession() || {};
+  apiCall('saveEntries', [state.campus, updates, state.leaderCode, sess.user, sess.pin]).then(function(d){
+    if(d && d.ok === false){
+      btn.disabled=false; btn.textContent=t('Save Week')+' '+state.week;
+      showError(d.err === 'wrong_campus'
+        ? t('You can only log numbers for your own campus.')
+        : d.err === 'no_campus'
+          ? t('Your profile has no campus yet — add one on your profile page.')
+          : t('Sign in again to save numbers.'));
+      return;
+    }
     state.data = d; btn.innerHTML='<span class="savedSpark">✦</span> '+t('Saved');
     setTimeout(function(){ render(); }, 900);
   }).catch(function(){

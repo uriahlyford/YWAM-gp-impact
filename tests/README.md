@@ -24,6 +24,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-boot.mjs` | A page open costs more than one function invocation — Netlify bills these |
 | `test-week-auth.mjs` | Health answers stop being anonymous in base averages, or reach someone other than your one mentor |
 | `test-okr-auth.mjs` | Someone can write objectives outside their own campus and department |
+| `test-year.mjs` | A new year overwrites last year's figures, legacy rows lose their history, or anyone can POST numbers for any campus |
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
 | `test-rollups.mjs` | The dashboard maths — headcounts summed instead of levelled, OKR progress wrong |
 | `test-jobfocus.mjs` | `jobfocus.js` and `help.html` drift apart |

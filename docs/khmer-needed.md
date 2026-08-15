@@ -241,6 +241,21 @@ sounds natural in Khmer matters more than a literal translation. The last three 
 what shows after tapping Share my week on browsers that cannot hand the image
 straight to the share sheet._
 
+## 0g. When a save is refused (3 needed)
+
+Logging ministry numbers now needs an account and is locked to your own campus, so
+there are three new messages for when a save cannot go through.
+
+| English | ខ្មែរ |
+|---|---|
+| You can only log numbers for your own campus. |  |
+| Your profile has no campus yet — add one on your profile page. |  |
+| Sign in again to save numbers. |  |
+
+_These appear in the orange bar at the top of the dashboard. The first is the common
+one and should read as a rule rather than a telling-off — logging for the wrong campus
+was an easy accident before, which is why the lock exists._
+
 ## 1. Words and labels (53 needed)
 
 Fill the right column:

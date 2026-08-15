@@ -1,12 +1,15 @@
 {
   "name": "YWAM GP — GonPreah Impact",
   "short_name": "YWAM GP",
+  "description": "Ministry numbers, weekly goals and the staff health check-in for YWAM GonPreah — Poipet and Siem Reap.",
   "display": "standalone",
   "background_color": "#17150F",
   "theme_color": "#17150F",
-  "start_url": "./index.html",
+  "start_url": "./teams.html",
+  "scope": "./",
   "icons": [
     { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
