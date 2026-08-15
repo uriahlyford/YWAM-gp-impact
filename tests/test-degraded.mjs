@@ -62,8 +62,9 @@ async function run(label, page_, blocked, seed) {
     `\n   error screen: ${dead ? 'YES  <-- app dead' : 'no'}` +
     `\n   app usable:   ${usable}` +
     `\n   logo missing: ${logoBroken}`);
+  const progTab = await page.evaluate(() => !!document.querySelector('[data-view="programs"]'));
   await page.close();
-  return { dead, usable };
+  return { dead, usable, progTab };
 }
 
 console.log('=== dashboard ===');
@@ -72,6 +73,10 @@ const b = await run('logo.js missing', 'index.html', ['logo.js']);
 const c = await run('km.js missing', 'index.html', ['km.js']);
 const d = await run('taxonomy.js missing (must still be fatal)', 'index.html', ['taxonomy.js']);
 const d2 = await run('rollup.js missing (must still be fatal)', 'index.html', ['rollup.js']);
+/* programs.js is data-optional: without it the Programs tab is simply not offered,
+   and the KPI screens are untouched. */
+const d3 = await run('programs.js missing', 'index.html', ['programs.js'],
+  () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sokha', pin: '1234' })));
 
 console.log('\n=== staff page ===');
 const seed = () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sokha', pin: '1234' }));
@@ -87,6 +92,8 @@ if (b.dead || !b.usable) fails.push('missing logo.js still kills the dashboard')
 if (c.dead || !c.usable) fails.push('missing km.js still kills the dashboard');
 if (!d.dead) fails.push('missing taxonomy.js no longer reports an error');
 if (!d2.dead) fails.push('missing rollup.js silently degrades the dashboard maths');
+if (d3.dead || !d3.usable) fails.push('missing programs.js kills the dashboard instead of hiding one tab');
+if (d3.progTab) fails.push('the Programs tab is offered with no programs.js behind it');
 if (e.dead || !e.usable) fails.push('healthy staff page broken');
 if (f.dead || !f.usable) fails.push('missing logo.js still kills the staff page');
 if (!g.dead) fails.push('missing taxonomy.js no longer reports an error on staff page');

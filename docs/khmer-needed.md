@@ -19,6 +19,10 @@ what is on screen today.
   Several are labels in buttons with about 9-10 characters of space; a few are
   promises the app makes about privacy, and those are worth checking first —
   they are in sections 0c-3b and 0g.
+- **Section 0h is new and is the one that leaves the building.** Everything in it
+  ends up in the twice-yearly report to the Ministry of Education, Youth and Sport.
+  The four programme names are the ones in the signed agreements; if the
+  agreements already carry official Khmer names, those replace the guesses here.
 
 A machine translation that nobody has read is not the same thing as a checked one,
 which is the whole reason for the split. Nothing here is settled until you say so.
@@ -266,6 +270,124 @@ there are three new messages for when a save cannot go through.
 _These appear in the orange bar at the top of the dashboard. The first is the common
 one and should read as a rule rather than a telling-off — logging for the wrong campus
 was an easy accident before, which is why the lock exists._
+
+## 0h. Programs — the Ministry of Education report
+
+**The most important section on this list to get right after the front door**, and
+for a different reason: these words go into a document that leaves the building.
+The four programme names are what the Ministry of Education, Youth and Sport calls
+them in the signed agreements, so **if the agreements already have official Khmer
+names, those are the right ones and these guesses should be replaced** — Uriah has
+the paperwork.
+
+| English | ខ្មែរ | Where it is |
+|---|---|---|
+| Programs | កម្មវិធី | The fourth tab on the dashboard — about 9 characters of room |
+| Student Volunteer Internship | កម្មសិក្សាស្ម័គ្រចិត្តសិស្ស | Programme name (SVI), from the agreement |
+| Youth Development Center | មជ្ឈមណ្ឌលអភិវឌ្ឍន៍យុវជន | Programme name (YDC), from the agreement |
+| Youth Leadership Training | ការបណ្តុះបណ្តាលភាពជាអ្នកដឹកនាំយុវជន | Programme name (YLT), from the agreement |
+| Youth Assistance Project | គម្រោងជំនួយយុវជន | Programme name (YAP), from the agreement |
+| volunteers | អ្នកស្ម័គ្រចិត្ត | What SVI counts |
+| students | សិស្ស | What YDC and YLT count |
+| participants | អ្នកចូលរួម | What YAP counts |
+| Outreach teams from other YWAM bases, churches and organisations — international teams and short-term volunteers. | ក្រុមផ្សព្វផ្សាយពីមូលដ្ឋាន YWAM ផ្សេងទៀត ព្រះវិហារ និងអង្គការនានា — ក្រុមអន្តរជាតិ និងអ្នកស្ម័គ្រចិត្តរយៈពេលខ្លី។ | What SVI covers |
+| Educational and youth programmes: kids programmes, youth programmes, sports and preschool. | កម្មវិធីអប់រំ និងយុវជន៖ កម្មវិធីកុមារ កម្មវិធីយុវជន កីឡា និងមត្តេយ្យសិក្សា។ | What YDC covers |
+| Leadership training schools — DTS, DBS and the other leadership schools. | សាលាបណ្តុះបណ្តាលភាពជាអ្នកដឹកនាំ — DTS, DBS និងសាលាភាពជាអ្នកដឹកនាំផ្សេងទៀត។ | What YLT covers |
+| The pathway for young people becoming staff: dorm residents, new staff in their first 2–4 years, and young leaders being supported through education and mentoring. | ផ្លូវសម្រាប់យុវជនក្លាយជាបុគ្គលិក៖ អ្នកស្នាក់នៅអន្តេវាសិកដ្ឋាន បុគ្គលិកថ្មីក្នុងរយៈពេល ២–៤ ឆ្នាំដំបូង និងអ្នកដឹកនាំវ័យក្មេងដែលទទួលការគាំទ្រតាមរយៈការអប់រំ និងការណែនាំ។ | What YAP covers |
+| Our four project agreements with the Ministry of Education, Youth and Sport. These records cover the whole base — both campuses — and are what the twice-yearly report is written from. | កិច្ចព្រមព្រៀងគម្រោងទាំងបួនរបស់យើងជាមួយក្រសួងអប់រំ យុវជន និងកីឡា។ កំណត់ត្រាទាំងនេះគ្របដណ្តប់មូលដ្ឋានទាំងមូល — សាខាទាំងពីរ — ហើយជាមូលដ្ឋានសម្រាប់សរសេររបាយការណ៍ពីរដងក្នុងមួយឆ្នាំ។ | Under the heading |
+| Year | ឆ្នាំ | Picker label |
+| Semester | ឆមាស | Picker label |
+| Semester 1 | ឆមាសទី ១ | |
+| Semester 2 | ឆមាសទី ២ | |
+| Whole year | ពេញមួយឆ្នាំ | |
+| Year goal (per the agreement) | គោលដៅប្រចាំឆ្នាំ (តាមកិច្ចព្រមព្រៀង) | The number the agreement commits us to |
+| Save goal | រក្សាទុកគោលដៅ | Button — short |
+| No goal set for this year yet. | មិនទាន់មានគោលដៅសម្រាប់ឆ្នាំនេះទេ។ | |
+| {n} of {t} so far this year | {n} ក្នុងចំណោម {t} គិតមកដល់ពេលនេះក្នុងឆ្នាំនេះ | Progress against the goal — keep both {n} and {t} |
+| Nothing recorded yet for this semester. | មិនទាន់មានការកត់ត្រាសម្រាប់ឆមាសនេះទេ។ | |
+| Nothing recorded yet for this year. | មិនទាន់មានការកត់ត្រាសម្រាប់ឆ្នាំនេះទេ។ | Same, when "Whole year" is selected |
+| Pick a semester to add a record — a record belongs to one half of the year. | ជ្រើសរើសឆមាសមួយដើម្បីបន្ថែមកំណត់ត្រា — កំណត់ត្រាមួយជាកម្មសិទ្ធិរបស់ពាក់កណ្តាលឆ្នាំមួយ។ | Shown when "Whole year" is selected |
+| New record | កំណត់ត្រាថ្មី | |
+| Edit record | កែសម្រួលកំណត់ត្រា | |
+| Add record | បន្ថែមកំណត់ត្រា | Button |
+| + Add a team | + បន្ថែមក្រុម | Button, SVI |
+| + Add a location | + បន្ថែមទីតាំង | Button, YDC and YAP |
+| + Add a school | + បន្ថែមសាលា | Button, YLT |
+| + Add a challenge | + បន្ថែមបញ្ហាប្រឈម | Button |
+| optional | ស្រេចចិត្ត | Next to a field that may be left blank — very little room |
+| Untitled | គ្មានចំណងជើង | A record saved with no name |
+| From | មកពី | Before the list of countries teams came from |
+| {m} men, {f} women | បុរស {m} នាក់, ស្ត្រី {f} នាក់ | Under every record — keep {m} and {f} |
+| classes | ថ្នាក់ | In "6 classes · 48 men, 52 women" |
+| Khmer | ខ្មែរ | In a cohort's breakdown |
+| international | អន្តរជាតិ | In a cohort's breakdown |
+| Please fill in | សូមបំពេញ | Followed by ": " and the name of the empty field |
+| Sign in again to open Programs. | ចូលគណនីម្តងទៀតដើម្បីបើកកម្មវិធី។ | Error bar |
+| Sign in again to save. | ចូលគណនីម្តងទៀតដើម្បីរក្សាទុក។ | Error bar |
+| This screen could not load. Pull down to refresh. | អេក្រង់នេះមិនអាចផ្ទុកបានទេ។ ទាញចុះក្រោមដើម្បីធ្វើឱ្យស្រស់។ | |
+
+### 0h-2. The challenges section
+
+Uriah's instruction for this section is the point of it, so the wording matters:
+_"Don't write about lack of staff because every organization needs more staff.
+Write about current challenges you are facing."_ The second sentence below is
+that instruction, on screen, and it should read as guidance rather than a scolding.
+
+| English | ខ្មែរ |
+|---|---|
+| Challenges | បញ្ហាប្រឈមនានា |
+| Challenges and solutions | បញ្ហាប្រឈម និងដំណោះស្រាយ |
+| What we are actually up against this semester, and what we did about it — lower volunteer numbers, conflict, fewer teachers, students who stop coming. | អ្វីដែលយើងកំពុងជួបប្រទះពិតប្រាកដក្នុងឆមាសនេះ និងអ្វីដែលយើងបានធ្វើចំពោះវា — ចំនួនអ្នកស្ម័គ្រចិត្តតិច ជម្លោះ គ្រូបង្រៀនតិច សិស្សឈប់មករៀន។ |
+| Not "we need more staff" — every organisation needs more staff, and it tells the reader nothing. | មិនមែន «យើងត្រូវការបុគ្គលិកបន្ថែម» ទេ — គ្រប់អង្គការសុទ្ធតែត្រូវការបុគ្គលិកបន្ថែម ហើយវាមិនប្រាប់អ្វីដល់អ្នកអានឡើយ។ |
+| Nothing written yet for this semester. | មិនទាន់មានការសរសេរសម្រាប់ឆមាសនេះទេ។ |
+| Nothing written yet for this year. | មិនទាន់មានការសរសេរសម្រាប់ឆ្នាំនេះទេ។ |
+| Challenge | បញ្ហាប្រឈម |
+| What we did about it | អ្វីដែលយើងបានធ្វើចំពោះវា |
+
+### 0h-3. The record forms
+
+These are the field labels on the four data-entry forms, and the grey example text
+inside each box. **They are what a ministry leader reads while typing the figures
+the Ministry sees**, so an ambiguous label here becomes a wrong number in the
+report. Labels sit two to a line on a phone — about 14–16 characters before they
+wrap.
+
+| English | ខ្មែរ | Which form |
+|---|---|---|
+| Team name | ឈ្មោះក្រុម | SVI |
+| e.g. YWAM Maui | ឧ. YWAM Maui | SVI, example text |
+| Country of origin | ប្រទេសដើម | SVI |
+| e.g. USA | ឧ. សហរដ្ឋអាមេរិក | SVI, example text |
+| Arrived | មកដល់ | SVI, a date |
+| Left | ចាកចេញ | SVI, a date |
+| Men on the team | បុរសក្នុងក្រុម | SVI |
+| Women on the team | ស្ត្រីក្នុងក្រុម | SVI |
+| Boys/men served | ក្មេងប្រុស/បុរសដែលបានបម្រើ | SVI — people the team served, not the team itself |
+| Girls/women served | ក្មេងស្រី/ស្ត្រីដែលបានបម្រើ | SVI |
+| What they did | អ្វីដែលពួកគេបានធ្វើ | SVI |
+| Teaching, community outreach, refugee relief… | ការបង្រៀន ការផ្សព្វផ្សាយសហគមន៍ ជំនួយជនភៀសខ្លួន… | SVI, example text |
+| Location | ទីតាំង | YDC and YAP |
+| e.g. Poipet YDC | ឧ. YDC ប៉ោយប៉ែត | YDC, example text |
+| Classes running | ថ្នាក់ដែលកំពុងបើក | YDC |
+| Male students | សិស្សប្រុស | YDC |
+| Female students | សិស្សស្រី | YDC |
+| Notes | កំណត់ចំណាំ | all forms |
+| School / cohort | សាលា / ជំនាន់ | YLT |
+| e.g. GPDTS Sept 2026 | ឧ. GPDTS ខែកញ្ញា ២០២៦ | YLT, example text |
+| International students | សិស្សអន្តរជាតិ | YLT |
+| Khmer students | សិស្សខ្មែរ | YLT |
+| Male staff | បុគ្គលិកប្រុស | YLT |
+| Female staff | បុគ្គលិកស្រី | YLT |
+| International staff | បុគ្គលិកអន្តរជាតិ | YLT |
+| Khmer staff | បុគ្គលិកខ្មែរ | YLT |
+| Outreach locations | ទីតាំងផ្សព្វផ្សាយ | YLT |
+| One per line | មួយក្នុងមួយជួរ | YLT, example text |
+| e.g. Saang District dormitory | ឧ. អន្តេវាសិកដ្ឋានស្រុកសាង | YAP, example text |
+| Male participants | អ្នកចូលរួមប្រុស | YAP |
+| Female participants | អ្នកចូលរួមស្រី | YAP |
+| Support for sponsor families | ការគាំទ្រសម្រាប់គ្រួសារឧបត្ថម្ភ | YAP |
+| Target for the year | គោលដៅសម្រាប់ឆ្នាំ | The year goal form |
+| Counted in | រាប់ជា | The unit the goal is counted in |
 
 ## 1. Words and labels
 

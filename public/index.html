@@ -378,6 +378,36 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:30px;
 .formBlock { border-top:1px dashed var(--border); padding-top:12px; margin-top:12px; }
 .formBlock label, .qLabel { display:block; font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:10px 0 4px; }
 
+/* ---------- Programs: the twice-yearly Ministry of Education report ----------
+   Reuses .card/.row/.formBlock so this screen matches the rest of the app; what
+   is new here is the programme chip row, the facts strip and a date input, none
+   of which the KPI screens needed. */
+.progChips { display:flex; gap:8px; overflow-x:auto; padding:2px 0 6px; margin-bottom:14px; scrollbar-width:none; }
+.progChips::-webkit-scrollbar { display:none; }
+.pchip { flex:0 0 auto; border:1.5px solid var(--border2); background:var(--bg); color:var(--ink);
+  border-radius:999px; padding:8px 14px; font-size:14px; cursor:pointer; white-space:nowrap; }
+.pchip.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
+.progHead { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.progName { font-size:15.5px; font-weight:700; line-height:1.35; }
+.progBlurb { font-size:12.5px; color:var(--muted); line-height:1.5; margin-top:4px; }
+.progFacts { display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:14px; }
+.progFact b { display:block; font-family:'Koulen',sans-serif; font-size:23px; color:var(--accent); line-height:1.1; }
+.progFact span { font-size:10.5px; letter-spacing:.7px; color:var(--muted); text-transform:uppercase; }
+.recRow { padding:11px 0; border-bottom:1px solid var(--line); }
+.recRow:last-child { border-bottom:none; }
+.recName { font-size:14.5px; font-weight:600; line-height:1.3; }
+.recMeta { font-size:12px; color:var(--muted); margin-top:3px; line-height:1.5; }
+.recActs { display:flex; gap:6px; justify-content:flex-end; margin-top:4px; }
+.recActs .ghostBtn { padding:5px 12px; font-size:13px; }
+.tag { display:inline-block; font-size:10px; letter-spacing:.8px; text-transform:uppercase; vertical-align:1px;
+  border:1px solid var(--border2); color:var(--muted); border-radius:999px; padding:1px 7px; margin-left:6px; }
+input[type=date] { font-size:15px; padding:9px 10px; border-radius:10px; border:1.5px solid var(--border2);
+  background:var(--bg); color:var(--ink); width:100%; }
+.fGrid { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+.fGrid .fCell { min-width:0; }
+.fCell input[type=number] { width:100%; }
+.emptyRec { font-size:13.5px; color:var(--muted); padding:16px 0; text-align:center; line-height:1.5; }
+
 .seg { display:flex; gap:8px; }
 .seg button { flex:1; padding:10px; border-radius:10px; border:1.5px solid var(--border2); background:var(--bg); font-size:15px; cursor:pointer; }
 .seg button.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
@@ -661,6 +691,10 @@ input[data-carried] { color:var(--muted); background:var(--surface2); }
 </script>
 <script src="taxonomy.js"></script>
 <script src="rollup.js"></script>
+<!-- The four Ministry project agreements. data-optional because the KPI screens
+     don't need it: if it fails to arrive the Programs tab simply isn't offered,
+     rather than the whole dashboard dying for want of a report screen. -->
+<script src="programs.js" data-optional></script>
 <script>
 /* If taxonomy.js or rollup.js didn't land, stop here with a real message rather
    than throwing halfway through rendering. */
@@ -757,7 +791,12 @@ var state = {
      unguarded read there is a blank page rather than a degraded one. */
   lang: lsGet('gp-lang') || 'en', km: {},
   dashDept:'Community Service',
-  leaderCode: lsGet('gp-leadercode') || ''
+  leaderCode: lsGet('gp-leadercode') || '',
+  /* Programs (the Ministry report). Loaded on first visit to the tab rather than
+     at boot, so a page open still costs one function invocation. `progEditing` is
+     the id of the row being edited, '' for a new one, and null for no form. */
+  prog:'SVI', progYear:new Date().getFullYear(), progSemester: (new Date().getMonth() < 6 ? 1 : 2),
+  progRecords:null, progLoading:false, progEditing:null
 };
 
 /* ---------- weeks & dates ---------- */
@@ -885,6 +924,7 @@ function render(){
   else if(state.view==='dashboard') m.innerHTML = dashboardHtml(t(campusName()), [state.campus], false);
   else if(isWriteView(state.view) && !canEnterData()) m.innerHTML = gateHtml();
   else if(state.view==='log') m.innerHTML = logHtml();
+  else if(state.view==='programs') m.innerHTML = programsHtml();
   else m.innerHTML = okrHtml();
   bindEvents();
   animateCounts();
@@ -915,7 +955,10 @@ function isSignedIn(){ var s=staffSession(); return !!(s && s.user && s.pin); }
 function isGuest(){ try { return sessionStorage.getItem('gp-guest')==='1'; } catch(e){ return false; } }
 function canEnterData(){ return isSignedIn(); }
 /* Health moved to the staff page, which owns the personal half of it. */
-var WRITE_VIEWS = ['log'];
+/* Programs is a write view for the same reason Log Numbers is: every row is
+   stamped with who entered it and which campus they belong to, and the server
+   will not hand the list to an anonymous caller. */
+var WRITE_VIEWS = ['log','programs'];
 function isWriteView(v){ return WRITE_VIEWS.indexOf(v)>-1; }
 
 function welcomeHtml(){
@@ -962,6 +1005,10 @@ function gateHtml(){
 function campusName(){ for(var i=0;i<CAMPUSES.length;i++) if(CAMPUSES[i].id===state.campus) return CAMPUSES[i].name; }
 
 function renderCampusRow(){
+  /* The Programs screen covers the whole base — the Ministry agreements are with
+     the organisation, not with one campus — so the campus chips come off there
+     rather than sitting above a list they do not filter. */
+  if(state.view==='programs'){ document.getElementById('campusRow').innerHTML=''; return; }
   var h='';
   CAMPUSES.forEach(function(c){
     h += '<button class="cbtn'+(state.campus===c.id&&state.view!=='all'?' on':'')+'" data-campus="'+c.id+'">'+esc(t(c.short))+'</button>';
@@ -974,6 +1021,8 @@ function renderNav(){
   var n = document.getElementById('nav');
   if(state.view==='all'){ n.innerHTML=''; return; }
   var tabs=[['dashboard','Dashboard','\ud83d\udcca'],['log','Log Numbers','\u270f\ufe0f'],['okr','OKRs','\ud83c\udfaf']];
+  /* programs.js is optional (see the error boundary); no dictionary, no tab. */
+  if(hasPrograms()) tabs.push(['programs','Programs','\ud83d\udcdd']);
   /* Locked tabs stay visible with a padlock rather than disappearing — a guest
      should be able to see what an account would get them. */
   var locked = !canEnterData();
@@ -1383,6 +1432,378 @@ function okrHtml(){
   return h;
 }
 
+/* ---------- Programs: the Ministry of Education report ----------
+   Four project agreements — SVI, YDC, YLT, YAP — reported on twice a year. The
+   report asks for things the weekly KPIs do not hold: which country a visiting
+   team came from, the dates it was here, how many of a class were girls. Those
+   are facts about one thing that happened, not a figure that exists every week,
+   so they are typed here as records and nothing about the weekly log changes.
+
+   The shapes live in programs.js, which the API validates against, so a field
+   added there appears in this form and is accepted by the server. */
+function hasPrograms(){
+  return typeof GP_PROGRAMS !== 'undefined' && typeof gpProgramFields === 'function';
+}
+function progRows(){ return state.progRecords || []; }
+
+/* Rows for the programme and semester currently on screen. Semester 0 is the
+   "Whole year" option — the year goal is annual, so somebody checking progress
+   against it needs to see the year, not one half of it. */
+function progVisible(kind, program){
+  return progRows().filter(function(r){
+    if(r.kind!==kind) return false;
+    if(program && r.program!==program) return false;
+    if(state.progSemester && Number(r.semester)!==state.progSemester) return false;
+    return true;
+  });
+}
+
+function fmtDay(s){
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||''));
+  if(!m) return String(s||'');
+  var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return Number(m[3])+' '+MON[Number(m[2])-1];
+}
+function campusTag(id){
+  var short = gpCampusShort(id);
+  return short ? '<span class="tag">'+esc(t(short))+'</span>' : '';
+}
+
+/* One line describing a saved row, in the words the report uses. */
+function recLine(r){
+  var mf = esc(gpT('{m} men, {f} women', { m:Number(r.male)||0, f:Number(r.female)||0 }));
+  if(r.kind==='team'){
+    /* Built from the parts that are actually filled in — the dates and the country
+       are what the report wants, but a row saved without them should not read as
+       " ·  · 5 men, 7 women". */
+    var bits = [];
+    if(r.from || r.to) bits.push(esc(fmtDay(r.from)+' – '+fmtDay(r.to)));
+    if(r.country) bits.push(esc(r.country));
+    bits.push(mf);
+    return bits.join(' · ');
+  }
+  if(r.kind==='class') return (Number(r.classes)||0)+' '+esc(t('classes'))+' · '+mf;
+  if(r.kind==='cohort'){
+    return mf+' · '+(Number(r.khmer)||0)+' '+esc(t('Khmer'))+', '+(Number(r.intl)||0)+' '+esc(t('international'))+
+      ' · '+((Number(r.staffMale)||0)+(Number(r.staffFemale)||0))+' '+esc(t('staff'));
+  }
+  if(r.kind==='group') return mf;
+  return '';
+}
+function recTitle(r){
+  return r.name || r.location || t('Untitled');
+}
+
+/* The facts strip: the numbers the report asks for, worked out from the rows on
+   screen so a mistyped figure is visible while the person who typed it is still
+   looking at the form. gpProgramSummary is shared with the report generator. */
+function progFactsHtml(p, rows){
+  var s = gpProgramSummary(p.id, rows);
+  var f = [];
+  function add(n, label){ f.push('<div class="progFact"><b>'+n+'</b><span>'+esc(t(label))+'</span></div>'); }
+  if(p.id==='SVI'){
+    add(s.rows, 'Teams'); add(s.people, 'Volunteers');
+    add(s.male, 'Men'); add(s.female, 'Women');
+    add(s.countries.length, 'Countries');
+  } else if(p.id==='YDC'){
+    add(s.locations, 'Locations'); add(s.classes, 'Classes');
+    add(s.people, 'Students'); add(s.male, 'Male'); add(s.female, 'Female');
+  } else if(p.id==='YLT'){
+    add(s.rows, 'Schools'); add(s.people, 'Students');
+    add(s.male, 'Male'); add(s.female, 'Female');
+    add(s.khmer, 'Khmer'); add(s.intl, 'International'); add(s.staff, 'Staff');
+  } else {
+    add(s.locations, 'Locations'); add(s.people, 'Participants');
+    add(s.male, 'Male'); add(s.female, 'Female');
+  }
+  var h = '<div class="progFacts">'+f.join('')+'</div>';
+  if(p.id==='SVI' && s.countries.length){
+    h += '<div class="progBlurb">'+esc(t('From'))+': '+esc(s.countries.join(', '))+'</div>';
+  }
+  return h;
+}
+
+/* The form for one record, built from programs.js. Runs of number fields are laid
+   out two to a line — "Men on the team" and "Women on the team" belong beside
+   each other, and a column of full-width number boxes is a long scroll on a
+   phone. */
+function recFormHtml(kind, rec){
+  var fields = GP_RECORD_FIELDS[kind] || [];
+  rec = rec || {};
+  var h = '', i = 0;
+  function inputFor(f){
+    var v = rec[f.k]===undefined || rec[f.k]===null ? '' : String(rec[f.k]);
+    var id = 'pf_'+f.k, hint = f.hint ? ' placeholder="'+esc(t(f.hint))+'"' : '';
+    if(f.t==='x') return '<textarea id="'+id+'" rows="3" data-f="'+esc(f.k)+'"'+hint+'>'+esc(v)+'</textarea>';
+    if(f.t==='d') return '<input type="date" id="'+id+'" data-f="'+esc(f.k)+'" value="'+esc(v)+'">';
+    if(f.t==='n') return '<input type="number" inputmode="numeric" min="0" id="'+id+'" data-f="'+esc(f.k)+'" value="'+esc(v)+'" placeholder="0">';
+    return '<input type="text" id="'+id+'" data-f="'+esc(f.k)+'" value="'+esc(v)+'"'+hint+'>';
+  }
+  function labelFor(f){
+    return '<label for="pf_'+f.k+'">'+esc(t(f.label))+(f.optional?' <span style="text-transform:none;letter-spacing:0">('+esc(t('optional'))+')</span>':'')+'</label>';
+  }
+  while(i < fields.length){
+    var run = i;
+    while(run < fields.length && fields[run].t==='n') run++;
+    if(run - i >= 2){
+      h += '<div class="fGrid">';
+      for(var j=i;j<run;j++) h += '<div class="fCell">'+labelFor(fields[j])+inputFor(fields[j])+'</div>';
+      h += '</div>';
+      i = run;
+    } else {
+      h += labelFor(fields[i]) + inputFor(fields[i]);
+      i++;
+    }
+  }
+  return h;
+}
+
+function programsHtml(){
+  if(!hasPrograms()) return '<p class="note">'+esc(t('This screen could not load. Pull down to refresh.'))+'</p>';
+  var h = '<h2>'+esc(t('Programs'))+' <small>· '+state.progYear+'</small></h2>';
+  h += '<p class="note" style="margin:-8px 0 14px">'+
+    esc(t('Our four project agreements with the Ministry of Education, Youth and Sport. These records cover the whole base — both campuses — and are what the twice-yearly report is written from.'))+'</p>';
+
+  var thisYear = new Date().getFullYear();
+  h += '<div class="pickerRow">';
+  h += '<label class="pick"><span>'+esc(t('Year'))+'</span><select id="progYearSel">';
+  for(var y=thisYear+1; y>=thisYear-3; y--) h += '<option value="'+y+'"'+(state.progYear===y?' selected':'')+'>'+y+'</option>';
+  h += '</select></label>';
+  h += '<label class="pick"><span>'+esc(t('Semester'))+'</span><select id="progSemSel">'+
+    '<option value="1"'+(state.progSemester===1?' selected':'')+'>'+esc(t('Semester 1'))+'</option>'+
+    '<option value="2"'+(state.progSemester===2?' selected':'')+'>'+esc(t('Semester 2'))+'</option>'+
+    '<option value="0"'+(state.progSemester===0?' selected':'')+'>'+esc(t('Whole year'))+'</option>'+
+    '</select></label></div>';
+
+  h += '<div class="progChips">';
+  GP_PROGRAMS.forEach(function(p){
+    h += '<button class="pchip'+(state.prog===p.id?' on':'')+'" data-prog="'+p.id+'">'+esc(p.id)+'</button>';
+  });
+  h += '<button class="pchip'+(state.prog==='ISSUES'?' on':'')+'" data-prog="ISSUES">⚑ '+esc(t('Challenges'))+'</button>';
+  h += '</div>';
+
+  if(state.progLoading && !state.progRecords) return h + loadingHtml();
+  if(!state.progRecords) return h + '<p class="note">'+esc(t("Couldn't load data. Pull down to refresh."))+'</p>';
+
+  return h + (state.prog==='ISSUES' ? issuesHtml() : programCardHtml());
+}
+
+function programCardHtml(){
+  var p = gpProgram(state.prog);
+  if(!p) return '';
+  /* The goal is for the year, so it is measured against the year — not against
+     whichever semester happens to be showing. */
+  var yearRows = progRows().filter(function(r){ return r.program===p.id; });
+  var target = gpProgramGoal(p.id, yearRows);
+  var reached = gpProgramSummary(p.id, yearRows).people;
+  var pct = (target && target > 0) ? Math.round(reached/target*100) : 0;
+
+  var h = '<div class="okrCard"><div class="progHead"><div>'+
+    '<div class="progName">'+esc(t(p.name))+'</div>'+
+    '<div class="progBlurb">'+esc(t(p.blurb))+'</div></div>'+
+    (target===null ? '' : ring(pct, 58))+'</div>';
+
+  h += '<div class="formBlock"><label for="progTarget">'+esc(t('Year goal (per the agreement)'))+'</label>'+
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+
+    '<input type="number" inputmode="numeric" min="0" id="progTarget" value="'+(target===null?'':target)+'" placeholder="0">'+
+    '<span class="rowSub" style="margin:0">'+esc(t(p.unit))+' · '+state.progYear+'</span>'+
+    '<button class="ghostBtn" id="saveGoalBtn">'+esc(t('Save goal'))+'</button></div>'+
+    (target===null
+      ? '<div class="rowSub" style="margin-top:6px">'+esc(t('No goal set for this year yet.'))+'</div>'
+      : '<div class="rowSub" style="margin-top:6px">'+esc(gpT('{n} of {t} so far this year', {n:reached, t:target}))+' · '+esc(gpPctWord(pct))+'</div>')+
+    '</div>';
+
+  h += progFactsHtml(p, progVisible(p.kind, p.id)) + '</div>';
+
+  var rows = progVisible(p.kind, p.id);
+  h += '<div class="card">';
+  if(!rows.length){
+    h += '<div class="emptyRec">'+esc(t(state.progSemester
+      ? 'Nothing recorded yet for this semester.'
+      : 'Nothing recorded yet for this year.'))+'</div>';
+  } else {
+    rows.forEach(function(r){
+      h += '<div class="recRow"><div class="recName">'+esc(recTitle(r))+campusTag(r.campus)+'</div>'+
+        '<div class="recMeta">'+recLine(r)+'</div>'+
+        (r.activities ? '<div class="recMeta">'+esc(r.activities)+'</div>' : '')+
+        '<div class="recActs"><button class="ghostBtn" data-prec="'+esc(r.id)+'">'+esc(t('Edit'))+'</button>'+
+        '<button class="dangerBtn" data-pdel="'+esc(r.id)+'">'+esc(t('Delete'))+'</button></div></div>';
+    });
+  }
+  h += '</div>';
+
+  h += recordFormBlock(p.kind, p.id, {
+    add: p.kind==='team' ? '+ Add a team' : p.kind==='class' ? '+ Add a location' :
+         p.kind==='cohort' ? '+ Add a school' : '+ Add a location'
+  });
+  return h;
+}
+
+function issuesHtml(){
+  var rows = progVisible('issue', '');
+  var h = '<div class="okrCard"><div class="progName">'+esc(t('Challenges and solutions'))+'</div>'+
+    '<div class="progBlurb">'+esc(t('What we are actually up against this semester, and what we did about it — lower volunteer numbers, conflict, fewer teachers, students who stop coming.'))+'</div>'+
+    '<div class="progBlurb" style="margin-top:8px">'+esc(t('Not "we need more staff" — every organisation needs more staff, and it tells the reader nothing.'))+'</div></div>';
+
+  h += '<div class="card">';
+  if(!rows.length) h += '<div class="emptyRec">'+esc(t(state.progSemester
+    ? 'Nothing written yet for this semester.'
+    : 'Nothing written yet for this year.'))+'</div>';
+  else rows.forEach(function(r){
+    h += '<div class="recRow"><div class="recName">'+esc(r.challenge||'')+campusTag(r.campus)+'</div>'+
+      '<div class="recMeta">'+esc(r.solution||'')+'</div>'+
+      '<div class="recActs"><button class="ghostBtn" data-prec="'+esc(r.id)+'">'+esc(t('Edit'))+'</button>'+
+      '<button class="dangerBtn" data-pdel="'+esc(r.id)+'">'+esc(t('Delete'))+'</button></div></div>';
+  });
+  h += '</div>';
+  return h + recordFormBlock('issue', '', { add:'+ Add a challenge' });
+}
+
+/* The add/edit form, or the button that opens it. state.progEditing is the row's
+   id, '' for a new row, null for closed. */
+function recordFormBlock(kind, program, opts){
+  if(state.progEditing===null || state.progEditing===undefined){
+    if(state.progSemester===0){
+      return '<p class="note">'+esc(t('Pick a semester to add a record — a record belongs to one half of the year.'))+'</p>';
+    }
+    return '<button class="saveBtn" id="openRecBtn">'+esc(t(opts.add))+'</button>';
+  }
+  var editing = null;
+  progRows().forEach(function(r){ if(r.id===state.progEditing) editing = r; });
+  return '<div class="okrCard" id="recForm" data-kind="'+esc(kind)+'" data-program="'+esc(program)+'">'+
+    '<div class="progName">'+esc(t(editing?'Edit record':'New record'))+'</div>'+
+    '<div class="formBlock" style="border:none;margin-top:0">'+
+    recFormHtml(kind, editing)+
+    '<button class="saveBtn" id="saveRecBtn">'+esc(t(editing?'Save changes':'Add record'))+'</button>'+
+    '<button class="ghostBtn" id="cancelRecBtn" style="width:100%">'+esc(t('Cancel'))+'</button></div></div>';
+}
+
+function loadPrograms(){
+  var sess = staffSession() || {};
+  if(!sess.user) return;
+  state.progLoading = true;
+  return apiCall('getPrograms', [sess.user, sess.pin, state.progYear]).then(function(d){
+    state.progLoading = false;
+    if(d && d.ok){ state.progRecords = d.records || []; }
+    else showError(t('Sign in again to open Programs.'));
+    render();
+  }).catch(function(){
+    state.progLoading = false;
+    showError("Couldn't load data. Pull down to refresh.");
+    render();
+  });
+}
+
+function progErrText(err){
+  if(err==='no_campus') return t('Your profile has no campus yet — add one on your profile page.');
+  if(err==='auth') return t('Sign in again to save.');
+  return t("Couldn't save. Check your connection and try again.");
+}
+
+/* One path for every programme write — a record, a challenge and a year goal are
+   all the same call with a different `kind`. */
+function saveProgram(rec, btn, okLabel){
+  var sess = staffSession() || {};
+  if(btn){ btn.disabled = true; btn.textContent = t('Saving…'); }
+  hideError();
+  return apiCall('saveProgramRecord', [sess.user, sess.pin, rec]).then(function(d){
+    if(!d || !d.ok){
+      if(btn){ btn.disabled = false; btn.textContent = t(okLabel); }
+      showError(progErrText(d && d.err));
+      return;
+    }
+    state.progRecords = d.records || [];
+    state.progEditing = null;
+    render();
+  }).catch(function(){
+    if(btn){ btn.disabled = false; btn.textContent = t(okLabel); }
+    showError("Couldn't save. Check your connection and try again.");
+  });
+}
+
+function saveRecordForm(btn){
+  var form = document.getElementById('recForm');
+  if(!form) return;
+  var kind = form.getAttribute('data-kind');
+  var editing = null;
+  if(state.progEditing) progRows().forEach(function(r){ if(r.id===state.progEditing) editing = r; });
+  /* An edit keeps the row's own semester. Taking it from the picker instead would
+     quietly move a semester-2 team into semester 1 the moment somebody opened it
+     from the "Whole year" view — which is exactly the view you use to check the
+     year's total, so the corruption would arrive with the proofreading. */
+  var rec = { kind:kind, program:form.getAttribute('data-program'), year:state.progYear,
+    semester: editing ? (Number(editing.semester) || 1) : (state.progSemester || 1) };
+  if(state.progEditing) rec.id = state.progEditing;
+  var missing = null;
+  (GP_RECORD_FIELDS[kind]||[]).forEach(function(f){
+    var el = form.querySelector('[data-f="'+f.k+'"]');
+    var v = el ? String(el.value).trim() : '';
+    /* Zero is a real answer for a count, so "filled in" means the box is not
+       empty — not that the number is truthy. */
+    if(!v && !f.optional && !missing) missing = f.label;
+    rec[f.k] = f.t==='n' ? (v===''?0:Number(v)) : v;
+  });
+  if(missing){ showError(t('Please fill in')+': '+t(missing)); return; }
+  saveProgram(rec, btn, state.progEditing ? 'Save changes' : 'Add record');
+}
+
+function saveProgramGoal(btn){
+  var el = document.getElementById('progTarget');
+  if(!el) return;
+  var p = gpProgram(state.prog);
+  if(!p) return;
+  var existing = null;
+  progRows().forEach(function(r){ if(r.kind==='goal' && r.program===p.id) existing = r; });
+  var rec = { kind:'goal', program:p.id, year:state.progYear, semester:1,
+    target: Number(el.value)||0, unit: p.unit };
+  if(existing) rec.id = existing.id;
+  saveProgram(rec, btn, 'Save goal');
+}
+
+function deleteProgramRow(id){
+  var sess = staffSession() || {};
+  hideError();
+  apiCall('deleteProgramRecord', [sess.user, sess.pin, id]).then(function(d){
+    if(!d || !d.ok){ showError(progErrText(d && d.err)); return; }
+    state.progRecords = d.records || [];
+    state.progEditing = null;
+    render();
+  }).catch(function(){ showError("Couldn't save. Check your connection and try again."); });
+}
+
+function bindPrograms(){
+  var ys = document.getElementById('progYearSel');
+  if(ys) ys.onchange = function(){
+    state.progYear = Number(ys.value);
+    /* A different year is a different list — drop the old one so the screen shows
+       a spinner rather than last year's rows relabelled with this year's. */
+    state.progRecords = null; state.progEditing = null;
+    loadPrograms(); render();
+  };
+  var ss = document.getElementById('progSemSel');
+  if(ss) ss.onchange = function(){ state.progSemester = Number(ss.value); state.progEditing = null; render(); };
+  document.querySelectorAll('[data-prog]').forEach(function(b){
+    b.onclick = function(){ gpTap(); state.prog = b.getAttribute('data-prog'); state.progEditing = null; render(); };
+  });
+  var ob = document.getElementById('openRecBtn');
+  if(ob) ob.onclick = function(){ state.progEditing = ''; render(); };
+  var cb = document.getElementById('cancelRecBtn');
+  if(cb) cb.onclick = function(){ state.progEditing = null; render(); };
+  var sb = document.getElementById('saveRecBtn');
+  if(sb) sb.onclick = function(){ saveRecordForm(sb); };
+  var gb = document.getElementById('saveGoalBtn');
+  if(gb) gb.onclick = function(){ saveProgramGoal(gb); };
+  document.querySelectorAll('[data-prec]').forEach(function(b){
+    b.onclick = function(){ state.progEditing = b.getAttribute('data-prec'); render(); };
+  });
+  document.querySelectorAll('[data-pdel]').forEach(function(b){
+    b.onclick = function(){
+      if(!confirm(t('Delete')+'?')) return;
+      deleteProgramRow(b.getAttribute('data-pdel'));
+    };
+  });
+}
+
 /* ---------- Health survey ---------- */
 /* ---------- events & server ---------- */
 function apiCall(fn, args){
@@ -1430,7 +1851,7 @@ function bindEvents(){
       btn.classList.remove('spinBtn');
       btn.textContent = '↻';
     };
-    var p = fetchData();
+    var p = refreshAll();
     if(p && p.then) p.then(done, done); else done();
   };
   document.getElementById('lockBtn').onclick = toggleLeader;
@@ -1440,7 +1861,15 @@ function bindEvents(){
   var all = document.querySelector('[data-all]');
   if(all) all.onclick = function(){ state.view='all'; render(); };
   document.querySelectorAll('[data-view]').forEach(function(b){
-    b.onclick = function(){ gpTap(); state.view=b.getAttribute('data-view'); render(); };
+    b.onclick = function(){
+      gpTap(); state.view=b.getAttribute('data-view');
+      /* The programme records are fetched the first time the tab is opened, not
+         at boot: a page open costs one function invocation and most opens never
+         reach this screen. Started before the render, not after, so the first
+         paint is the spinner rather than a flash of "couldn't load". */
+      if(state.view==='programs' && hasPrograms() && !state.progRecords && !state.progLoading && canEnterData()) loadPrograms();
+      render();
+    };
   });
   var gc=document.getElementById('gCreate');
   if(gc) gc.onclick=function(){ window.location.href='teams.html?reg=1'; };
@@ -1498,6 +1927,20 @@ function bindEvents(){
     };
   });
 
+  if(hasPrograms()) bindPrograms();
+}
+
+/* What both refresh gestures do: the dashboard's own data always, and the
+   programme records as well when that is the screen you are looking at —
+   otherwise the pull appears to work while another leader's new team is still
+   missing from the list. */
+function refreshAll(){
+  var jobs = [fetchData()];
+  if(state.view==='programs' && hasPrograms() && canEnterData()){
+    var p = loadPrograms();
+    if(p && p.then) jobs.push(p);
+  }
+  return Promise.all(jobs);
 }
 
 function serverCall(fn, args){
@@ -1633,7 +2076,7 @@ function initialsOf(name){
 })();
 
 /* Shared with the staff page — see gpPullToRefresh in rollup.js. */
-gpPullToRefresh(function(){ return fetchData(); });
+gpPullToRefresh(function(){ return refreshAll(); });
 
 render();
 if(!window.gpLeaving) fetchData();

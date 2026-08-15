@@ -28,8 +28,10 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
 | `test-rollups.mjs` | The dashboard maths — headcounts summed instead of levelled, OKR progress wrong |
 | `test-jobfocus.mjs` | `jobfocus.js` and `help.html` drift apart |
+| `test-programs.mjs` | Ministry records reach the wrong campus or year, junk gets stored, or the two copies of the field list — `public/programs.js` and `api.js` — drift and a field is silently dropped on save |
+| `test-programs-ui.mjs` | The Programs forms stop being built from `programs.js`, a field the report needs is not sent, records get fetched at boot instead of on opening the tab, or a fourth tab breaks the 320px nav |
 | `test-pull-drill.mjs` | The pull coin stops turning as you drag, the two pages stop offering the same breakdowns, or a tappable number stops looking tappable |
-| `test-khmer.mjs` | A string the code shows has no translation, the reviewed and pending dictionaries get merged, or Khmer overflows a label |
+| `test-khmer.mjs` | A string the code shows has no translation — including the programme names and field labels that live as data in `programs.js` — the reviewed and pending dictionaries get merged, or Khmer overflows a label |
 | `test-theme.mjs` | Dark mode, the three-state theme switch, and a WCAG AA contrast audit of every screen in both themes |
 | `test-splash.mjs` | The launch splash: covers the dashboard hand-off, holds the real mark, always lets go, and stays identical in both pages |
 | `test-frontdoor.mjs` | The front door: gate, guest with locked tabs, signed in, hand-off to the staff page |

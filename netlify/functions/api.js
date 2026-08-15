@@ -1363,9 +1363,118 @@ async function getMyBoot(username, pin) {
   };
 }
 
+/* ==================== programme records (the Ministry report) ====================
+   Four project agreements with the Ministry of Education, Youth and Sport — SVI,
+   YDC, YLT, YAP — reported on twice a year. What that report needs is not what the
+   weekly KPIs hold: a visiting team's country and dates, a class's male/female
+   split, a cohort's Khmer/international breakdown. Those are facts about a thing
+   that happened once, so they are records rather than weekly figures, and none of
+   this touches what anyone logs each week.
+
+   One list, discriminated by `kind`, because five blobs would eventually disagree
+   about which year a row belongs to. Rows are year-scoped like everything else.
+
+   Any signed-in staff may read and write: ministry leaders enter their own
+   programme's teams and classes, which is the only way the data ever gets in.
+   A row is stamped with its writer's campus, and only its writer's campus. */
+const PROGRAM_IDS = ['SVI', 'YDC', 'YLT', 'YAP'];
+const RECORD_KINDS = ['team', 'class', 'cohort', 'group', 'issue', 'goal'];
+
+/* Mirrors public/programs.js. Kept as a plain allow-list rather than imported,
+   because the function bundle does not share the frontend's globals — the test
+   asserts the two agree, so a field added there is accepted here. */
+const RECORD_FIELDS = {
+  team:   ['name', 'country', 'from', 'to', 'male', 'female', 'servedMale', 'servedFemale', 'activities'],
+  class:  ['location', 'classes', 'male', 'female', 'activities'],
+  cohort: ['name', 'male', 'female', 'intl', 'khmer', 'staffMale', 'staffFemale',
+           'staffIntl', 'staffKhmer', 'outreach', 'activities'],
+  group:  ['location', 'male', 'female', 'sponsors', 'activities'],
+  issue:  ['challenge', 'solution'],
+  goal:   ['target', 'unit']
+};
+const NUMERIC_FIELDS = ['male', 'female', 'servedMale', 'servedFemale', 'classes',
+  'intl', 'khmer', 'staffMale', 'staffFemale', 'staffIntl', 'staffKhmer', 'target'];
+
+async function getPrograms_() { return readJSON('programs', []); }
+
+function publicRecord_(r) {
+  const out = {
+    id: r.id, kind: r.kind, program: r.program || '', campus: r.campus || '',
+    year: yearOf_(r), semester: finiteNum_(r.semester, 1, 2) || 1,
+    updated: r.updated || '', by: r.by || ''
+  };
+  (RECORD_FIELDS[r.kind] || []).forEach(function (k) {
+    if (r[k] !== undefined) out[k] = r[k];
+  });
+  return out;
+}
+
+async function getPrograms(username, pin, year) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, err: 'auth' };
+  const yr = askedYear_(year);
+  const rows = (await getPrograms_()).filter(inYear_(yr)).map(publicRecord_);
+  return { ok: true, year: yr, records: rows };
+}
+
+async function saveProgramRecord(username, pin, rec) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, err: 'auth' };
+  if (!s.campus) return { ok: false, err: 'no_campus' };
+  rec = rec || {};
+
+  const kind = str_(rec.kind, 12);
+  if (RECORD_KINDS.indexOf(kind) === -1) return { ok: false, err: 'bad_kind' };
+  /* `issue` is the base's own challenges for the semester, not a programme's. */
+  const program = str_(rec.program, 8) || '';
+  if (kind !== 'issue' && PROGRAM_IDS.indexOf(program) === -1) return { ok: false, err: 'bad_program' };
+
+  const clean = {
+    id: str_(rec.id, 40) || ('pr_' + crypto.randomUUID().slice(0, 12)),
+    kind: kind, program: kind === 'issue' ? '' : program,
+    campus: s.campus,                      // the writer's own, whatever was sent
+    year: askedYear_(rec.year),
+    semester: finiteNum_(rec.semester, 1, 2) || 1,
+    updated: new Date().toISOString(), by: s.id
+  };
+  RECORD_FIELDS[kind].forEach(function (k) {
+    if (NUMERIC_FIELDS.indexOf(k) > -1) {
+      const n = finiteNum_(rec[k], 0, 1e7);
+      clean[k] = n == null ? 0 : Math.round(n);
+    } else {
+      clean[k] = str_(rec[k], 4000) || '';
+    }
+  });
+
+  const rows = await getPrograms_();
+  const idx = rows.findIndex(function (r) { return r.id === clean.id; });
+  /* Editing somebody else's row is fine — a report is a shared document — but it
+     cannot be moved to another campus by editing it. */
+  if (idx > -1) { clean.campus = rows[idx].campus || s.campus; rows[idx] = clean; }
+  else rows.push(clean);
+  await writeJSON('programs', rows);
+  return getPrograms(username, pin, clean.year);
+}
+
+async function deleteProgramRecord(username, pin, id) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, err: 'auth' };
+  const rid = str_(id, 40);
+  if (!rid) return { ok: false, err: 'bad_id' };
+  let rows = await getPrograms_();
+  const before = rows.length;
+  rows = rows.filter(function (r) { return r.id !== rid; });
+  if (rows.length === before) return { ok: false, err: 'not_found' };
+  await writeJSON('programs', rows);
+  return getPrograms(username, pin);
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
+  getPrograms: function (a) { return getPrograms(a[0], a[1], a[2]); },
+  saveProgramRecord: function (a) { return saveProgramRecord(a[0], a[1], a[2]); },
+  deleteProgramRecord: function (a) { return deleteProgramRecord(a[0], a[1], a[2]); },
   getData: function (a) { return getData(a[0], a[1]); },
   saveEntries: function (a) { return saveEntries(a[0], a[1], a[2], a[3], a[4]); },
   saveObjective: function (a) { return saveObjective(a[0], a[1], a[2], a[3]); },

@@ -32,6 +32,15 @@ const TRIPS={ok:true,trips:[{id:'t1',from:'2026-03-01',to:'2026-03-05',days:5,ki
   totals:{[String(new Date().getFullYear())]:{work:5,personal:0,trips:1}},
   reasons:{work:['Outreach','Other work'],personal:['Visiting family','Other personal']},hasMentor:true};
 
+const PROGRAMS=(()=>{const y=new Date().getFullYear();return [
+  {id:'pr_a',kind:'team',program:'SVI',campus:'poipet',year:y,semester:1,name:'YWAM Maui',country:'USA',
+   from:y+'-02-03',to:y+'-02-17',male:5,female:7,servedMale:40,servedFemale:60,activities:'Teaching'},
+  {id:'pr_b',kind:'goal',program:'SVI',campus:'poipet',year:y,semester:1,target:250,unit:'volunteers'},
+  {id:'pr_c',kind:'class',program:'YDC',campus:'poipet',year:y,semester:1,location:'Poipet YDC',
+   classes:6,male:48,female:52,activities:''},
+  {id:'pr_e',kind:'issue',program:'',campus:'poipet',year:y,semester:1,
+   challenge:'Fewer volunteer teams',solution:'Asked two partner bases'}];})();
+
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const errs=[];
 async function mk(seed){
@@ -51,6 +60,8 @@ async function mk(seed){
       ministry:{ok:true,campus:'poipet',dept:'Community Service',ministry:'Outreach Teams',
         entries:{'Salvations':{[NOWWK]:4}},daily:{},pins:['Salvations','Teams Hosted']},
       base:DATA};
+    else if(q.fn==='getPrograms')o={ok:true,year:new Date().getFullYear(),records:PROGRAMS};
+    else if(q.fn==='saveProgramRecord'||q.fn==='deleteProgramRecord')o={ok:true,year:new Date().getFullYear(),records:PROGRAMS};
     else if(q.fn==='teamRoster')o=[ME,MATE];
     else if(q.fn==='staffLogin')o={ok:true,staff:ME,profile:{}};
     else if(q.fn==='staffProfile')o={ok:true,staff:MATE,goals:[],activity:{weeksTracked:3,daysLogged:12,lastLogged:'2026-08-11'},awayWork:{},isMe:false};
@@ -89,6 +100,18 @@ await visit(p,'log: switch dept',async p=>{await p.selectOption('#deptSel','Yout
 await visit(p,'log: switch ministry',async p=>{await p.selectOption('#minSel','GP Media');await p.waitForTimeout(700);});
 await visit(p,'log: Base Leadership',async p=>{await p.selectOption('#deptSel','Base Leadership');await p.waitForTimeout(700);});
 await visit(p,'log: switch week',async p=>{await p.selectOption('#weekSel','5');await p.waitForTimeout(700);});
+await visit(p,'Programs',async p=>{await p.click('[data-view="programs"]');await p.waitForTimeout(900);});
+await visit(p,'Programs: each agreement',async p=>{
+  for(const id of ['YDC','YLT','YAP','SVI']){await p.click(`[data-prog="${id}"]`);await p.waitForTimeout(500);}});
+await visit(p,'Programs: open and cancel the form',async p=>{await p.click('#openRecBtn');await p.waitForTimeout(600);
+  await p.click('#cancelRecBtn');await p.waitForTimeout(400);});
+await visit(p,'Programs: challenges',async p=>{await p.click('[data-prog="ISSUES"]');await p.waitForTimeout(700);
+  await p.click('#openRecBtn');await p.waitForTimeout(600);await p.click('#cancelRecBtn');});
+await visit(p,'Programs: semester and year switch',async p=>{
+  await p.selectOption('#progSemSel','0');await p.waitForTimeout(500);
+  await p.selectOption('#progSemSel','1');await p.waitForTimeout(500);
+  const ys=await p.$('#progYearSel'); if(ys){const v=String(new Date().getFullYear()-1);
+    await p.selectOption('#progYearSel',v);await p.waitForTimeout(700);}});
 await visit(p,'drill-down open/close',async p=>{await p.click('[data-view="dashboard"]');await p.waitForTimeout(700);
   await p.click('#main .heroSubRow');await p.waitForTimeout(500);await p.click('#ddClose');});
 await visit(p,'Khmer toggle',async p=>{await p.click('#langBtn');await p.waitForTimeout(800);await p.click('#langBtn');});

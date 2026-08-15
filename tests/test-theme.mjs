@@ -36,6 +36,19 @@ const OKRS = [{ id: 'o1', campus: 'poipet', quarter: 3, dept: 'Community Service
   krs: [{ text: 'Host 12 outreach teams', metricKey: 'Community Service|Outreach Teams|Teams Hosted', target: 12, manual: 0 },
         { text: 'Write the volunteer handbook', metricKey: '', target: 0, manual: 40 }] }];
 const DATA = { leader: false, entries: ENTRIES, okrs: OKRS, survey: SURVEY, roster: ROSTER };
+/* Enough programme records for the Programs screen to paint every element the
+   contrast audit needs to see: a chip, a ring, the facts strip and a record row. */
+const PROGRAMS = (function () {
+  const y = new Date().getFullYear();
+  return [
+    { id: 'pr_a', kind: 'team', program: 'SVI', campus: 'poipet', year: y, semester: 1,
+      name: 'YWAM Maui', country: 'USA', from: y + '-02-03', to: y + '-02-17',
+      male: 5, female: 7, servedMale: 40, servedFemale: 60, activities: 'Teaching English' },
+    { id: 'pr_b', kind: 'goal', program: 'SVI', campus: 'poipet', year: y, semester: 1, target: 250, unit: 'volunteers' },
+    { id: 'pr_e', kind: 'issue', program: '', campus: 'poipet', year: y, semester: 1,
+      challenge: 'Fewer volunteer teams', solution: 'Asked two partner bases' },
+  ];
+})();
 const GOALS = [{ week: 33, pct: 62, updated: '', items: [
   { text: 'Disciple two students through Romans', pct: 60, done: false, metricKey: '' },
   { text: 'Finish the volunteer handbook', pct: 25, done: false, metricKey: '' },
@@ -136,7 +149,10 @@ async function page(scheme, forced) {
   await p.route('**fonts.g**', function (r) { r.abort(); });
   await p.route('**/api', function (r) {
     const fn = (r.request().postDataJSON() || {}).fn;
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fn === 'getMyBoot' ? BOOT : DATA) });
+    const body = fn === 'getMyBoot' ? BOOT
+      : fn === 'getPrograms' ? { ok: true, year: new Date().getFullYear(), records: PROGRAMS }
+      : DATA;
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
   /* addInitScript(fn, arg) — a .bind()ed function cannot be serialised into the page. */
   await p.addInitScript(function (t) {
@@ -176,6 +192,9 @@ const SCREENS = [
   { file: 'index.html', wait: '.hero', name: 'dashboard', steps: [] },
   { file: 'index.html', wait: '.hero', name: 'log form', steps: ['[data-view="log"]'] },
   { file: 'index.html', wait: '.hero', name: 'OKRs', steps: ['[data-view="okr"]'] },
+  { file: 'index.html', wait: '.hero', name: 'Programs', steps: ['[data-view="programs"]'] },
+  { file: 'index.html', wait: '.hero', name: 'Programs form',
+    steps: ['[data-view="programs"]', '#openRecBtn'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Base', steps: [] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'My week', steps: ['nav.bottom button:nth-child(2)'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Team', steps: ['nav.bottom button:nth-child(3)'] },

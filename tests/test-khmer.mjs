@@ -48,6 +48,26 @@ const BOOT = {
   base: { leader: false, entries: ENTRIES, okrs: OKRS, survey: SURVEY },
 };
 
+/* Enough programme records that the Programs screen has something in every box:
+   a team with a country and dates, a class with a location, a year goal, and a
+   challenge. All four shapes render differently. */
+const PROGRAMS = (function () {
+  const y = new Date().getFullYear();
+  return [
+    { id: 'pr_a', kind: 'team', program: 'SVI', campus: 'poipet', year: y, semester: 1,
+      name: 'YWAM Maui', country: 'United States of America', from: y + '-02-03', to: y + '-02-17',
+      male: 5, female: 7, servedMale: 40, servedFemale: 60, activities: 'Teaching English, community outreach' },
+    { id: 'pr_b', kind: 'goal', program: 'SVI', campus: 'poipet', year: y, semester: 1, target: 250, unit: 'volunteers' },
+    { id: 'pr_c', kind: 'class', program: 'YDC', campus: 'poipet', year: y, semester: 1,
+      location: 'Poipet YDC', classes: 6, male: 48, female: 52, activities: '' },
+    { id: 'pr_d', kind: 'cohort', program: 'YLT', campus: 'poipet', year: y, semester: 1,
+      name: 'GPDTS', male: 8, female: 12, intl: 4, khmer: 16, staffMale: 3, staffFemale: 4,
+      staffIntl: 2, staffKhmer: 5, outreach: 'Battambang', activities: '' },
+    { id: 'pr_e', kind: 'issue', program: '', campus: 'poipet', year: y, semester: 1,
+      challenge: 'Fewer volunteer teams than last year', solution: 'Asked two partner bases to send teams in October' },
+  ];
+})();
+
 const TYPES = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png' };
 const srv = http.createServer(function (req, res) {
   const f = path.join(ROOT, req.url.split('?')[0]);
@@ -131,6 +151,23 @@ const KH = /[ក-៿]/;
   }
   ok('every t() string in the code has a translation', missing.length === 0,
     missing.length + ' missing: ' + missing.slice(0, 4).join(' | '));
+
+  /* programs.js holds English as DATA rather than in a t() call — the programme
+     names, the blurbs and every field label on the record forms are strings in an
+     object that the page later passes through t(). The scan above cannot see
+     them, so a field added to an agreement would ship untranslated and this test
+     would still say clean. Read the object and check it directly. */
+  const progSrc = fs.readFileSync(path.join(ROOT, 'programs.js'), 'utf8');
+  const pbox = {};
+  new Function('g', progSrc + '\ng.P=GP_PROGRAMS; g.F=GP_RECORD_FIELDS;')(pbox);
+  const words = [];
+  pbox.P.forEach(function (p) { words.push(p.name, p.unit, p.blurb); });
+  Object.keys(pbox.F).forEach(function (k) {
+    pbox.F[k].forEach(function (f) { words.push(f.label); if (f.hint) words.push(f.hint); });
+  });
+  const noKm = words.filter(function (w) { return w && !(w in have); });
+  ok('every programme name, blurb and field label has a translation', noKm.length === 0,
+    noKm.length + ' missing: ' + noKm.slice(0, 4).join(' | '));
 }
 
 /* ---------- 2. it reaches the screen ---------- */
@@ -140,7 +177,10 @@ async function open(file, wait, km) {
   await p.route('**fonts.g**', function (r) { r.abort(); });
   await p.route('**/api', function (r) {
     const fn = (r.request().postDataJSON() || {}).fn;
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fn === 'getMyBoot' ? BOOT : DATA) });
+    const body = fn === 'getMyBoot' ? BOOT
+      : fn === 'getPrograms' ? { ok: true, year: new Date().getFullYear(), records: PROGRAMS }
+      : DATA;
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
   await p.addInitScript(function (lang) {
     try {
@@ -159,6 +199,13 @@ async function open(file, wait, km) {
 const SCREENS = [
   { file: 'index.html', wait: '.hero', name: 'dashboard', steps: [] },
   { file: 'index.html', wait: '.hero', name: 'log form', steps: ['[data-view="log"]'] },
+  { file: 'index.html', wait: '.hero', name: 'Programs', steps: ['[data-view="programs"]'] },
+  /* The record form is the densest thing in the app in Khmer: eleven labels, some
+     of them long, half of them two to a line. */
+  { file: 'index.html', wait: '.hero', name: 'Programs form',
+    steps: ['[data-view="programs"]', '[data-prog="YLT"]', '#openRecBtn'] },
+  { file: 'index.html', wait: '.hero', name: 'Programs challenges',
+    steps: ['[data-view="programs"]', '[data-prog="ISSUES"]'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Base', steps: [] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'My week', steps: ['nav.bottom button:nth-child(2)'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Team', steps: ['nav.bottom button:nth-child(3)'] },

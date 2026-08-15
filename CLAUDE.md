@@ -22,8 +22,8 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
 
 ## Files
 ### public/
-- `index.html` — leadership dashboard (KPIs, OKRs), and the app's front door. Three tabs:
-  Dashboard, Log Numbers, OKRs — **Health moved to the staff page** (see below). Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state,
+- `index.html` — leadership dashboard (KPIs, OKRs), and the app's front door. Four tabs:
+  Dashboard, Log Numbers, OKRs, Programs — **Health moved to the staff page** (see below). Has weekly ▲/▼ trend badges, a spinning-logo "Impact Loading" state,
   click-through drill-down on dashboard totals, and the ✦ Teams / 📖 buttons (plain
   page nav now, not postMessage). Calls the backend via the `apiCall(fn, args)` helper.
 - `teams.html` — per-staff space ("My GP"), five tabs: **Base · My week · Team · Me · Health**.
@@ -57,7 +57,7 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   background they need a dark coin behind them or they vanish.
 - `km.js` — the Khmer dictionary, shared by all three pages. **Two objects, and the
   split is load-bearing:** `REVIEWED_KM` (266 entries, checked by native speakers) and
-  `PENDING_KM` (~219, translated by Claude at Uriah's explicit request and **not yet
+  `PENDING_KM` (~302, translated by Claude at Uriah's explicit request and **not yet
   reviewed**). `BUILTIN_KM` merges them with reviewed last, so a checked string always
   beats a pending one. Never collapse them into one object — that would permanently
   lose track of what a human has actually read. As each string is checked, move it up
@@ -71,6 +71,15 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   departments they oversee.
 - `taxonomy.js` — campuses, departments, ministries, metric lists, `modeOf()`, `compositeOf()`
   and the ministry emoji, shared by both pages.
+- `programs.js` — the four project agreements with the Ministry of Education, Youth and
+  Sport (SVI, YDC, YLT, YAP) and the shape of the records each one reports on:
+  `GP_PROGRAMS`, `GP_RECORD_FIELDS`, `gpProgramSummary()`, `gpProgramGoal()`. The forms,
+  the validation and (eventually) the report generator all read this, so **a field added
+  here appears in the form and is accepted by the server** — but only if it is added to
+  `RECORD_FIELDS`/`NUMERIC_FIELDS` in `api.js` too. `test-programs.mjs` compares the two
+  lists; the function bundle cannot import the frontend's globals, which is why there are
+  two copies at all. Loaded `data-optional`: if it fails to arrive the Programs tab is
+  simply not offered.
 - `rollup.js` — **the roll-up engine: the maths behind every dashboard figure.**
   `gpRollup({entries, survey, roster, week})` returns the read-only questions
   (`headlineFor`, `ministryRollup`, `healthScore`, `totalStaff`, `trendFor`, `drillRows`,
@@ -100,7 +109,7 @@ staffRegister, staffLogin, updateProfile, changePin, uploadPhoto, saveDaily, get
 getMyMentees, getMenteeLogs, getMyMentorRequests, respondToMentorRequest,
 getMyWeekly, saveMyWeek, deleteMyWeek, saveGoals, saveMyHabits, getMyMinistry,
 saveMyMinistry, saveMyKpiDay, staffProfile, getMyTrips, requestTrip, respondToTrip,
-getTripRequests. No `translateBatch` equivalent (was `LanguageApp.translate`, not
+getTripRequests, getPrograms, saveProgramRecord, deleteProgramRecord. No `translateBatch` equivalent (was `LanguageApp.translate`, not
 available outside Apps Script) — Khmer strings machine-translation fallback is gone;
 all Khmer must come from `BUILTIN_KM` or be added by hand.
 
@@ -461,6 +470,50 @@ inferred from volunteer counts.
   dashboard already did it this way (it builds its loading box in `render()`), and
   the two now match — do not move either back into static markup.
 
+## Programs — the Ministry of Education report
+
+Four project agreements with the Ministry of Education, Youth and Sport, reported on
+twice a year: **SVI** (Student Volunteer Internship — visiting outreach teams), **YDC**
+(Youth Development Center — kids, youth, sports, preschool), **YLT** (Youth Leadership
+Training — DTS, DBS and the other schools) and **YAP** (Youth Assistance Project — dorm
+residents, new staff in their first 2–4 years, young leaders being supported).
+
+**Why this is not a KPI.** The weekly KPIs answer "how is this ministry doing this week"
+— one number, every week, per metric. The Ministry report asks something else: which
+country a team came from, the dates it was here, how many of a class were girls. A team
+of 12 from YWAM Maui that visited in February is *one fact*, not a weekly figure, and
+forcing it through the KPI system would mean retyping it every week and still losing the
+country and the dates. So programme records sit **beside** the KPIs and nothing about
+what anyone logs each week changed.
+
+**One blob, discriminated by `kind`.** `programs` holds every row: `team` (SVI), `class`
+(YDC), `cohort` (YLT), `group` (YAP), `issue` (the base's challenges and solutions) and
+`goal` (the year's target for one programme). Five blobs would eventually disagree about
+which year a row belongs to. Rows are year-scoped through `inYear_` like everything else,
+and carry a `semester` (1 or 2) because the report is written twice a year.
+
+- **Any signed-in staff may read and write.** Ministry leaders enter their own
+  programme's teams and classes — that is the only way the data ever gets in. Editing
+  somebody else's row is fine (a report is a shared document), but a row **cannot be
+  moved to another campus by editing it**: the campus is stamped from the writer's own
+  staff record on create and preserved on update, the same rule `saveEntries` has.
+- **The year goal is stored, not hardcoded.** It is renegotiated — the 2026 agreement is
+  not the 2027 one, and last year's report must still show last year's target. Note the
+  numbers Uriah quoted (SVI 250, YDC 500, YLT 35, YAP 25) differ from the 2026 targets in
+  the Ministry PDF (50 / 400 / 35 / 25); they are typed in per year rather than shipped
+  in code, so whichever is right can just be entered.
+- **`gpProgramSummary(id, rows)` is the one definition** of "how many volunteers came
+  this year". The facts strip on the data-entry screen reads it so a mistyped figure is
+  visible while the person who typed it is still looking at the form, and the report
+  generator will read the same function. Do not write a second one.
+- **Records load when the tab is opened, not at boot.** A page open is one function
+  invocation (see `audit-load.mjs`); most opens never reach this screen. `state.progRecords`
+  is `null` until then.
+- **The challenges section carries Uriah's instruction on screen**, deliberately: *don't
+  write about lack of staff, because every organisation needs more staff and it tells the
+  reader nothing.* Write the real ones — lower volunteer numbers, conflict, fewer
+  teachers, students who stop coming.
+
 ## Known limits (real, not yet fixed)
 - **No locking on read-modify-write.** Every write reads a whole blob, edits it and writes
   it back. Two people saving the same sheet in the same second means one loses. Rare at
@@ -509,6 +562,12 @@ Each of these looked harmless and took the whole page down. `test-degraded.mjs`,
   with position tracking existed briefly and was removed — don't rebuild it.
 
 ## On the horizon (not yet built)
+- **The quarterly report button.** Data capture is built; generating the document is not.
+  The intent is a button that produces a Google Doc shaped like the Ministry activity
+  report already filed — the four programmes, their activities, the challenges and
+  solutions — from `gpProgramSummary()` and the records for the period. Budget figures
+  are explicitly deferred: Uriah expects them to be hard and wants them "in time", not
+  now. Whatever generates it must read `programs.js`, not restate the field list.
 - **One page instead of two.** `index.html` and `teams.html` are converging: they now
   share `logo.js`, `km.js` and `taxonomy.js`, the same loading coin, the same header
   mark, and the front door hands off between them. The end state is a single page where

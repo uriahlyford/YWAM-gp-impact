@@ -1,0 +1,326 @@
+/* The Programs tab — data capture for the twice-yearly Ministry report.
+
+   What this protects, in order of how badly it hurts:
+
+   - The form is built from programs.js. If it ever stops being, the SVI form and
+     the YDC form drift into two hand-written copies and a field added to the
+     agreement gets added to one of them.
+   - What the form sends is what the server was asked to store: the country and
+     the dates go in the body, not just the headcounts.
+   - Records are fetched when the tab is opened, not at boot — a page open is one
+     function invocation and Netlify bills those.
+   - A guest gets the gate. getPrograms refuses an anonymous caller anyway, but
+     the screen must say so rather than showing an empty report.
+   - Four tabs still fit a 320px phone.
+*/
+/* Paths and the browser binary come from tests/env.mjs so this runs from a clone
+   rather than from one machine's scratch directory. */
+import { PUBLIC, CHROMIUM } from './env.mjs';
+import { chromium } from 'playwright';
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+
+const ROOT = PUBLIC;
+const T = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json', '.png':'image/png' };
+const srv = http.createServer((q, r) => {
+  let p = q.url.split('?')[0]; if (p === '/') p = '/index.html';
+  const f = path.join(ROOT, p);
+  if (!fs.existsSync(f)) { r.writeHead(404); r.end(); return; }
+  r.writeHead(200, { 'Content-Type': T[path.extname(f)] || 'application/octet-stream' });
+  r.end(fs.readFileSync(f));
+});
+await new Promise(r => srv.listen(4419, r));
+
+const YEAR = new Date().getFullYear();
+const ME = { id:'st1', name:'Sokha Chan', username:'sokha', campus:'poipet', dept:'Community Service',
+  ministry:'Outreach Teams', role:'Coordinator', photo:'', mentorId:'' };
+const DATA = { leader:false, entries:{ poipet:{} }, okrs:[], survey:[] };
+
+let pass = 0, fail = 0;
+function ok(name, cond, extra) {
+  if (cond) { pass++; console.log('ok   ' + name + (extra ? '  → ' + extra : '')); }
+  else { fail++; console.log('FAIL ' + name + (extra ? '  → ' + extra : '')); }
+}
+
+const b = await chromium.launch(CHROMIUM ? { executablePath: CHROMIUM } : {});
+
+/* The fake store: one array of programme rows, and the handlers behave the way
+   api.js does — save returns the whole list back, stamped. */
+function makeStore(seed) {
+  return { rows: (seed || []).slice(), calls: [] };
+}
+
+async function mk(store, opts) {
+  opts = opts || {};
+  const p = await b.newPage({ viewport:{ width: opts.width || 400, height: 900 } });
+  const errs = [];
+  p.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
+  p.on('console', m => { const tx = m.text();
+    if (m.type() === 'error' && !/fonts\.googleapis|ERR_CONNECTION|ERR_NAME|favicon/.test(tx)) errs.push('console: ' + tx.slice(0, 160)); });
+  p.on('dialog', d => d.accept());
+  await p.route('**/.netlify/functions/api', r => {
+    const q = JSON.parse(r.request().postData() || '{}');
+    store.calls.push(q);
+    let o = DATA;
+    if (q.fn === 'getPrograms') {
+      const yr = Number(q.args[2]) || YEAR;
+      o = { ok:true, year:yr, records: store.rows.filter(x => Number(x.year) === yr) };
+    } else if (q.fn === 'saveProgramRecord') {
+      const rec = Object.assign({}, q.args[2]);
+      rec.id = rec.id || ('pr_' + store.rows.length + '_' + Date.now());
+      rec.campus = 'poipet'; rec.by = 'st1';
+      const i = store.rows.findIndex(x => x.id === rec.id);
+      if (i > -1) store.rows[i] = rec; else store.rows.push(rec);
+      o = { ok:true, year:Number(rec.year) || YEAR, records: store.rows.filter(x => Number(x.year) === (Number(rec.year) || YEAR)) };
+    } else if (q.fn === 'deleteProgramRecord') {
+      store.rows = store.rows.filter(x => x.id !== q.args[2]);
+      o = { ok:true, year:YEAR, records: store.rows.filter(x => Number(x.year) === YEAR) };
+    } else if (q.fn === 'getMyBoot') {
+      o = { ok:true, staff:ME, profile:{}, roster:[ME], logs:[], habits:null, mentees:[], mentorRequests:[],
+        goals:[], checkins:[], trips:null, tripRequests:[], ministry:null, base:DATA };
+    } else if (/^getMy/.test(q.fn)) o = { ok:true, logs:[], goals:[], checkins:[], mentees:[], requests:[] };
+    r.fulfill({ status:200, contentType:'application/json', body: JSON.stringify(o) });
+  });
+  await p.addInitScript(signedIn => {
+    sessionStorage.setItem('gp-skip-teams', '1');
+    if (signedIn) {
+      localStorage.setItem('gp-staff', JSON.stringify({ user:'sokha', pin:'1234' }));
+      localStorage.setItem('gp-staff-card', JSON.stringify({ name:'Sokha Chan', campus:'poipet' }));
+    } else {
+      sessionStorage.setItem('gp-guest', '1');
+    }
+  }, opts.guest ? false : true);
+  await p.goto('http://localhost:4419/index.html');
+  await p.waitForSelector('#nav button', { timeout: 15000 });
+  await p.waitForTimeout(500);
+  p.__errs = errs;
+  return p;
+}
+
+/* ---------- 1. the tab, and the load that only happens when you open it ---------- */
+let store = makeStore();
+let p = await mk(store);
+const tabs = await p.$$eval('#nav button', bs => bs.map(x => x.getAttribute('data-view')));
+ok('the Programs tab is in the nav', tabs.indexOf('programs') > -1, tabs.join(','));
+
+const beforeOpen = store.calls.filter(c => c.fn === 'getPrograms').length;
+ok('opening the page does not fetch programme records', beforeOpen === 0, 'calls=' + beforeOpen);
+
+await p.click('[data-view="programs"]');
+await p.waitForSelector('.progChips', { timeout: 8000 });
+await p.waitForTimeout(600);
+const afterOpen = store.calls.filter(c => c.fn === 'getPrograms');
+ok('opening the tab fetches once', afterOpen.length === 1, 'calls=' + afterOpen.length);
+ok('and asks for the year on screen', Number(afterOpen[0].args[2]) === YEAR, String(afterOpen[0].args[2]));
+ok('signed in as the person doing it', afterOpen[0].args[0] === 'sokha', String(afterOpen[0].args[0]));
+
+const chips = await p.$$eval('.pchip', bs => bs.map(x => x.getAttribute('data-prog')));
+ok('all four agreements plus the challenges section are offered',
+  chips.join(',') === 'SVI,YDC,YLT,YAP,ISSUES', chips.join(','));
+
+/* ---------- 2. the form is built from programs.js ---------- */
+await p.click('#openRecBtn');
+await p.waitForSelector('#recForm', { timeout: 5000 });
+const sviFields = await p.$$eval('#recForm [data-f]', els => els.map(e => e.getAttribute('data-f')));
+const wantSvi = await p.evaluate(() => GP_RECORD_FIELDS.team.map(f => f.k));
+ok('the SVI form has exactly the fields programs.js declares',
+  sviFields.join(',') === wantSvi.join(','), sviFields.join(','));
+const dateBoxes = await p.$$eval('#recForm input[type=date]', els => els.length);
+ok('the dates are real date pickers, not free text', dateBoxes === 2, 'date inputs=' + dateBoxes);
+
+/* ---------- 3. what the form sends is what the report needs ---------- */
+await p.fill('#pf_name', 'YWAM Maui');
+await p.fill('#pf_country', 'USA');
+await p.fill('#pf_from', YEAR + '-02-03');
+await p.fill('#pf_to', YEAR + '-02-17');
+await p.fill('#pf_male', '5');
+await p.fill('#pf_female', '7');
+await p.fill('#pf_activities', 'Teaching English');
+await p.click('#saveRecBtn');
+await p.waitForTimeout(700);
+
+const saved = store.calls.filter(c => c.fn === 'saveProgramRecord').pop();
+const body = saved && saved.args[2];
+ok('the country and the dates were sent, not just the headcount',
+  body && body.country === 'USA' && body.from === YEAR + '-02-03' && body.to === YEAR + '-02-17',
+  body ? JSON.stringify({ c:body.country, f:body.from, t:body.to }) : 'nothing sent');
+ok('counts are sent as numbers', body && body.male === 5 && body.female === 7,
+  body ? typeof body.male + ' ' + body.male + '/' + body.female : '');
+ok('the record knows its programme, year and semester',
+  body && body.program === 'SVI' && body.year === YEAR && (body.semester === 1 || body.semester === 2),
+  body ? body.program + ' ' + body.year + ' S' + body.semester : '');
+
+const listed = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
+ok('the team is now on the list', listed.some(x => /YWAM Maui/.test(x)), listed.join(' | '));
+const meta = await p.$eval('.recRow .recMeta', e => e.textContent);
+ok('and reads back the way the report says it', /USA/.test(meta) && /5 men/.test(meta) && /7 women/.test(meta), meta);
+
+/* The facts strip is the check on your own typing — a wrong figure should be
+   visible before the report is written, not after. */
+const facts = await p.$$eval('.progFact', els => els.map(e => e.querySelector('span').textContent.trim() + '=' + e.querySelector('b').textContent.trim()));
+ok('the facts strip counts the team', facts.indexOf('Teams=1') > -1, facts.join(' '));
+ok('and its twelve volunteers', facts.indexOf('Volunteers=12') > -1, facts.join(' '));
+ok('split by sex, which is what the Ministry asks for',
+  facts.indexOf('Men=5') > -1 && facts.indexOf('Women=7') > -1, facts.join(' '));
+ok('and counts the countries it came from', facts.indexOf('Countries=1') > -1, facts.join(' '));
+
+/* ---------- 4. the year goal, and the percentage against it ---------- */
+await p.fill('#progTarget', '250');
+await p.click('#saveGoalBtn');
+await p.waitForTimeout(700);
+const goalCall = store.calls.filter(c => c.fn === 'saveProgramRecord' && c.args[2].kind === 'goal').pop();
+ok('a year goal saves as its own record', goalCall && goalCall.args[2].target === 250 && goalCall.args[2].program === 'SVI',
+  goalCall ? JSON.stringify(goalCall.args[2]) : 'not sent');
+const ringPct = await p.$eval('.okrCard .ring', e => e.textContent.trim()).catch(() => '');
+ok('and the ring shows progress against it, not against nothing', /^5/.test(ringPct), 'ring=' + ringPct);  // 12/250 = 5%
+
+/* ---------- 5. a different agreement is a different form ---------- */
+await p.click('[data-prog="YDC"]');
+await p.waitForTimeout(400);
+await p.click('#openRecBtn');
+await p.waitForSelector('#recForm', { timeout: 5000 });
+const ydcFields = await p.$$eval('#recForm [data-f]', els => els.map(e => e.getAttribute('data-f')));
+const wantYdc = await p.evaluate(() => GP_RECORD_FIELDS.class.map(f => f.k));
+ok('YDC asks for locations and classes, not countries and dates',
+  ydcFields.join(',') === wantYdc.join(',') && ydcFields.indexOf('country') === -1, ydcFields.join(','));
+
+await p.click('[data-prog="YLT"]');
+await p.waitForTimeout(400);
+await p.click('#openRecBtn');
+await p.waitForSelector('#recForm', { timeout: 5000 });
+const yltFields = await p.$$eval('#recForm [data-f]', els => els.map(e => e.getAttribute('data-f')));
+ok('YLT asks for the Khmer/international and staff breakdown',
+  ['khmer','intl','staffMale','staffFemale','staffIntl','staffKhmer','outreach'].every(k => yltFields.indexOf(k) > -1),
+  yltFields.join(','));
+
+/* ---------- 6. challenges belong to the base, not to a programme ---------- */
+await p.click('[data-prog="ISSUES"]');
+await p.waitForTimeout(400);
+await p.click('#openRecBtn');
+await p.waitForSelector('#recForm', { timeout: 5000 });
+await p.fill('#pf_challenge', 'Fewer volunteer teams than last year');
+await p.fill('#pf_solution', 'Asked two partner bases to send in October');
+await p.click('#saveRecBtn');
+await p.waitForTimeout(700);
+const issue = store.calls.filter(c => c.fn === 'saveProgramRecord' && c.args[2].kind === 'issue').pop();
+ok('a challenge saves with no programme attached',
+  issue && issue.args[2].program === '' && /Fewer volunteer/.test(issue.args[2].challenge),
+  issue ? JSON.stringify(issue.args[2]) : 'not sent');
+const issueText = await p.$eval('#main', e => e.textContent);
+ok('the screen says what not to write about', /every organisation needs more staff/i.test(issueText),
+  /needs more staff/i.test(issueText) ? 'present' : 'MISSING');
+
+/* ---------- 7. a required field is not silently dropped ---------- */
+await p.click('#openRecBtn');
+await p.waitForSelector('#recForm', { timeout: 5000 });
+const sendsBefore = store.calls.filter(c => c.fn === 'saveProgramRecord').length;
+await p.click('#saveRecBtn');
+await p.waitForTimeout(500);
+const sendsAfter = store.calls.filter(c => c.fn === 'saveProgramRecord').length;
+ok('an empty form does not post', sendsAfter === sendsBefore, sendsBefore + ' -> ' + sendsAfter);
+const errShown = await p.$eval('#errorBar', e => !e.classList.contains('hidden') && e.textContent).catch(() => false);
+ok('and says which field is missing', !!errShown && /challenge/i.test(String(errShown)), String(errShown));
+
+ok('no console errors anywhere on the Programs tab', p.__errs.length === 0, p.__errs.join(' | ') || 'clean');
+await p.close();
+
+/* ---------- 8. the semester filter, and the year switch ---------- */
+store = makeStore([
+  { id:'pr_s1', kind:'class', program:'YDC', campus:'poipet', year:YEAR, semester:1,
+    location:'Poipet YDC', classes:4, male:30, female:35, activities:'' },
+  { id:'pr_s2', kind:'class', program:'YDC', campus:'poipet', year:YEAR, semester:2,
+    location:'Siem Reap YDC', classes:2, male:11, female:9, activities:'' },
+  { id:'pr_old', kind:'class', program:'YDC', campus:'poipet', year:YEAR - 1, semester:1,
+    location:'Last year', classes:9, male:1, female:1, activities:'' },
+]);
+p = await mk(store);
+await p.click('[data-view="programs"]');
+await p.waitForSelector('.progChips', { timeout: 8000 });
+await p.click('[data-prog="YDC"]');
+await p.waitForTimeout(400);
+await p.selectOption('#progSemSel', '1');
+await p.waitForTimeout(400);
+let names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
+ok('semester 1 shows only semester 1', names.length === 1 && /Poipet YDC/.test(names[0]), names.join(' | '));
+await p.selectOption('#progSemSel', '2');
+await p.waitForTimeout(400);
+names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
+ok('semester 2 shows only semester 2', names.length === 1 && /Siem Reap YDC/.test(names[0]), names.join(' | '));
+await p.selectOption('#progSemSel', '0');
+await p.waitForTimeout(400);
+names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
+ok('"whole year" shows both halves', names.length === 2, names.join(' | '));
+
+/* Nothing from last year leaks in, and asking for last year fetches it. */
+ok('last year is not on screen', !names.some(n => /Last year/.test(n)), names.join(' | '));
+await p.selectOption('#progYearSel', String(YEAR - 1));
+await p.waitForTimeout(700);
+const yearCalls = store.calls.filter(c => c.fn === 'getPrograms').map(c => Number(c.args[2]));
+ok('changing the year refetches for that year', yearCalls.indexOf(YEAR - 1) > -1, yearCalls.join(','));
+names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
+ok('and last year\'s rows are what shows', names.length === 1 && /Last year/.test(names[0]), names.join(' | '));
+
+/* ---------- 8b. editing from the whole-year view keeps the row's own semester ----------
+   The picker says "Whole year"; the row says semester 2. Taking the semester from
+   the picker on save moved the row into semester 1 — and "Whole year" is exactly
+   the view you use to check the year's total, so the corruption arrived with the
+   proofreading. */
+await p.selectOption('#progYearSel', String(YEAR));   // back from last year
+await p.waitForTimeout(700);
+await p.selectOption('#progSemSel', '0');
+await p.waitForTimeout(400);
+const editBtns = await p.$$('[data-prec]');
+let edited = null;
+for (const btn of editBtns) {
+  const id = await btn.getAttribute('data-prec');
+  if (id !== 'pr_s2') continue;                 // the semester-2 row
+  await btn.click();
+  await p.waitForSelector('#recForm', { timeout: 5000 });
+  await p.click('#saveRecBtn');
+  await p.waitForTimeout(700);
+  edited = store.calls.filter(c => c.fn === 'saveProgramRecord').pop();
+}
+ok('editing a row from the whole-year view keeps its own semester',
+  edited && edited.args[2].id === 'pr_s2' && edited.args[2].semester === 2,
+  edited ? 'semester=' + edited.args[2].semester : 'no edit sent');
+
+/* ---------- 9. delete ---------- */
+await p.selectOption('#progYearSel', String(YEAR));
+await p.waitForTimeout(700);
+await p.selectOption('#progSemSel', '1');
+await p.waitForTimeout(400);
+const delBtn = await p.$('[data-pdel]');
+if (delBtn) { await delBtn.click(); await p.waitForTimeout(700); }
+names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
+ok('deleting a row takes it off the list', names.length === 0, names.join(' | '));
+await p.close();
+
+/* ---------- 10. a guest gets the gate, not an empty report ---------- */
+store = makeStore();
+p = await mk(store, { guest:true });
+await p.click('[data-view="programs"]');
+await p.waitForTimeout(600);
+const gate = await p.$('.gate');
+ok('a guest sees the account gate', !!gate);
+ok('and no request was made on their behalf',
+  store.calls.filter(c => c.fn === 'getPrograms').length === 0,
+  String(store.calls.filter(c => c.fn === 'getPrograms').length));
+const lock = await p.$('[data-view="programs"] .navLock');
+ok('the tab shows a padlock rather than vanishing', !!lock);
+await p.close();
+
+/* ---------- 11. four tabs still fit the smallest phone ---------- */
+for (const w of [320, 360, 390]) {
+  const q = await mk(makeStore(), { width: w });
+  const info = await q.$$eval('#nav button', bs => bs.map(x => ({
+    h: Math.round(x.getBoundingClientRect().height), w: Math.round(x.getBoundingClientRect().width),
+  })));
+  const heights = [...new Set(info.map(i => i.h))];
+  const overflow = await q.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  ok('nav does not wrap or overflow at ' + w + 'px', heights.length === 1 && !overflow,
+    'heights ' + heights.join('/') + ' widths ' + info.map(i => i.w).join(',') + ' overflow ' + overflow);
+  await q.close();
+}
+
+await b.close(); srv.close();
+console.log('\n' + pass + ' passed, ' + fail + ' failed');
+process.exit(fail ? 1 : 0);

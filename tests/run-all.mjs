@@ -23,9 +23,11 @@ const SERVER = [
   'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
+  'test-programs.mjs',   // Ministry records: auth, campus stamp, year, and the two field lists
 ];
 
 const BROWSER = [
+  'test-programs-ui.mjs',   // the Programs tab: forms built from programs.js, what gets sent
   'test-pull-drill.mjs',    // the pull gesture on both pages, and which figures open
   'test-khmer.mjs',         // Khmer reaches the screen, and does not overflow when it does
   'test-theme.mjs',         // dark mode, and a WCAG contrast audit of every screen
