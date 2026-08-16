@@ -293,7 +293,7 @@ const HABIT_LIBRARY = [
   { id: 'sleptWell',   label: 'Slept well' },
   { id: 'language',    label: 'Language study' },
   { id: 'gratitude',   label: 'Wrote down something I’m grateful for' },
-  { id: 'oneOnOne',    label: 'One-on-one' },
+  { id: 'oneOnOne',    label: 'Got a one-on-one' },
   { id: 'sharedFaith', label: 'Shared my faith' },
   { id: 'sabbath',     label: 'Sabbath / rest' }
 ];
@@ -483,7 +483,12 @@ async function getMenteeLogs(username, pin, menteeId) {
       .map(function (r) {
         return {
           week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
-          oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
+          oneOnOne: r.oneOnOne, oneOnOneAsked: r.oneOnOneAsked || 0,
+          gaveOneOnOne: r.gaveOneOnOne || 0,
+          exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
+          /* The amount reaches your one approved mentor, who already sees these
+             answers by name. It reaches nothing that is pooled. */
+          debtAmount: Number(r.debtAmount) || 0,
           langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
           sabbath: r.sabbath, growth: r.growth, days: r.days || 0,
           source: r.source || 'daily'
@@ -507,6 +512,88 @@ async function getMyMentorRequests(username, pin) {
   const pending = rows.filter(function (x) { return x.active && x.mentorId === s.id && x.mentorStatus === 'pending'; }).map(publicStaff_);
   return { ok: true, requests: pending };
 }
+/* ==================== asking for a one-on-one ====================
+   The weekly check-in asks whether you had your one-on-one, and separates "I
+   asked and it has not happened" from "I have not asked". The second is the one
+   you can do something about, so the app puts the doing one tap away: this is
+   that tap. It reaches your ONE approved mentor and nobody else.
+
+   Deliberately not a message: there is no inbox in this app and adding one to
+   arrange a coffee would be the wrong shape. It is a standing flag on the
+   mentor's Team tab that stays until they clear it. */
+async function getOneOnOneAsks_() { return readJSON('oneOnOneAsks', []); }
+
+function publicAsk_(r, byId) {
+  const from = byId[r.from];
+  return {
+    id: r.id, week: Number(r.week) || 0, year: yearOf_(r), at: r.at || '',
+    fromId: r.from, fromName: (from && from.name) || '', fromPhoto: (from && from.photo) || ''
+  };
+}
+
+/* One open ask per person at a time. Asking twice is the same ask, not two —
+   otherwise a fortnight of unanswered asks reads as a pile-up rather than one
+   person still waiting, and the mentor has to clear each one. */
+async function askForOneOnOne(username, pin, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, err: 'auth' };
+  if (!(s.mentorId && s.mentorStatus === 'approved')) return { ok: false, err: 'no_mentor' };
+  const wk = finiteNum_(week, 1, 52);
+  if (wk == null) return { ok: false, err: 'bad_week' };
+
+  const rows = await getOneOnOneAsks_();
+  const open = rows.find(function (r) { return r.from === s.id && r.state === 'open'; });
+  if (open) { open.week = wk; open.at = new Date().toISOString(); }
+  else {
+    rows.push({ id: 'oo_' + crypto.randomUUID().slice(0, 12), from: s.id, to: s.mentorId,
+      week: wk, year: currentYear_(), at: new Date().toISOString(), state: 'open' });
+  }
+  await writeJSON('oneOnOneAsks', rows);
+  return { ok: true, asked: true };
+}
+
+/* The asks waiting for me, as somebody's mentor. */
+async function getOneOnOneAsks(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, asks: [] };
+  const staffRows = await getStaff_();
+  const byId = {};
+  staffRows.forEach(function (r) { byId[r.id] = r; });
+  const rows = (await getOneOnOneAsks_()).filter(function (r) {
+    /* Only from people who are still my approved mentee — an ask does not
+       outlive the mentoring relationship it belongs to. */
+    const from = byId[r.from];
+    return r.state === 'open' && r.to === s.id && from && from.active &&
+      from.mentorId === s.id && from.mentorStatus === 'approved';
+  });
+  return { ok: true, asks: rows.map(function (r) { return publicAsk_(r, byId); }) };
+}
+
+/* Either party may clear it: the mentor when they have met, and the person who
+   asked when they no longer need to. */
+async function clearOneOnOneAsk(username, pin, id) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, err: 'auth' };
+  const rid = str_(id, 40);
+  const rows = await getOneOnOneAsks_();
+  const idx = rows.findIndex(function (r) { return r.id === rid; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  if (rows[idx].to !== s.id && rows[idx].from !== s.id) return { ok: false, err: 'not_yours' };
+  rows[idx].state = 'done';
+  rows[idx].clearedBy = s.id;
+  rows[idx].clearedAt = new Date().toISOString();
+  await writeJSON('oneOnOneAsks', rows);
+  return getOneOnOneAsks(username, pin);
+}
+
+/* Whether my own ask is still outstanding, so the button can say so rather than
+   letting somebody tap it every week wondering if it worked. */
+async function myOneOnOneAsk_(staffId) {
+  const rows = await getOneOnOneAsks_();
+  const mine = rows.find(function (r) { return r.from === staffId && r.state === 'open'; });
+  return mine ? { week: Number(mine.week) || 0, at: mine.at || '' } : null;
+}
+
 async function respondToMentorRequest(username, pin, menteeId, approve) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
@@ -557,11 +644,36 @@ async function getData(code, year) {
     return {
       campus: s.campus, week: Number(s.week), device: s.device,
       lonely: Number(s.lonely), clarity: Number(s.clarity), porn: Number(s.porn), oneOnOne: Number(s.oneOnOne),
+      oneOnOneAsked: Number(s.oneOnOneAsked) || 0, gaveOneOnOne: Number(s.gaveOneOnOne) || 0,
       exercise: Number(s.exercise), quietTime: Number(s.quietTime), debt: Number(s.debt),
       langHours: Number(s.langHours) || 0, minHours: Number(s.minHours) || 0,
       sharedFaith: nn(s.sharedFaith), sabbath: nn(s.sabbath), growth: nn(s.growth)
+      /* debtAmount is DELIBERATELY not here. A survey row is anonymous by its
+         token, but an unusual amount is close to a name in a base this size, and
+         this payload goes to anyone who opens the dashboard — guests included.
+         The base total below is computed here and shipped as one number. */
     };
   });
+
+  /* What the base owes, per campus: one anonymous figure built from the latest
+     week each person answered, so somebody who has answered ten weeks is counted
+     once rather than ten times. */
+  const debtTotals = (function () {
+    const latest = {};
+    surveyRows.forEach(function (r) {
+      const key = r.campus + '|' + r.device;
+      if (!latest[key] || Number(r.week) > Number(latest[key].week)) latest[key] = r;
+    });
+    const out = {};
+    Object.keys(latest).forEach(function (k) {
+      const r = latest[k];
+      const amt = finiteNum_(r.debtAmount, 0, DEBT_MAX) || 0;
+      if (!out[r.campus]) out[r.campus] = { total: 0, people: 0 };
+      if (r.debt && amt > 0) { out[r.campus].total += amt; out[r.campus].people++; }
+      else if (r.debt) out[r.campus].people++;
+    });
+    return out;
+  })();
 
   /* The roster rides along: the dashboard needs it for the staff headcount and was
      fetching it as a second request, and teamRoster is already unauthenticated, so
@@ -571,7 +683,8 @@ async function getData(code, year) {
   /* `year` goes back so a page can tell which year it is looking at without
      recomputing it — the two pages disagree slightly about week numbering, and
      they must not also disagree about the year. */
-  return { leader: leader, year: yr, entries: entries, okrs: okrs, survey: survey, roster: roster };
+  return { leader: leader, year: yr, entries: entries, okrs: okrs, survey: survey,
+    roster: roster, debtTotals: debtTotals };
 }
 
 /* Writing ministry numbers now requires saying who you are.
@@ -838,6 +951,8 @@ function weekSurveyFrom_(logs, s, token, wk) {
     exercise: days.length && countOf('workout') / days.length >= WEEK_EXERCISE_RATE ? 1 : 0,
     quietTime: days.length && countOf('quietTime') / days.length >= WEEK_QUIETTIME_RATE ? 1 : 0,
     debt: s.debt ? 1 : 0,
+    debtAmount: s.debt ? (finiteNum_(s.debtAmount, 0, DEBT_MAX) || 0) : 0,
+    oneOnOneAsked: anyOf('oneOnOneAsked'), gaveOneOnOne: anyOf('gaveOneOnOne'),
     langHours: sumOf('langHours'), minHours: sumOf('minHours'),
     days: days.length,
     updated: new Date().toISOString()
@@ -894,8 +1009,17 @@ async function syncWeekSurvey_(s, wk, dailyRows) {
    person's own record maps their token back to them, which is how their ONE
    approved mentor — and nobody else — can be shown their answers. */
 const WEEK_SCALES = ['lonely', 'clarity', 'growth'];
-const WEEK_FLAGS = ['porn', 'oneOnOne', 'exercise', 'quietTime', 'debt', 'sharedFaith', 'sabbath'];
+/* `oneOnOne` still means "it happened", so every row written before this reads
+   the same as it always did. `oneOnOneAsked` is the second half of the three-state
+   answer: asked, but the meeting has not happened. `gaveOneOnOne` is the other
+   side entirely — a mentoring conversation I had WITH somebody I lead, which is
+   the meaning the single old question kept getting confused with. */
+const WEEK_FLAGS = ['porn', 'oneOnOne', 'oneOnOneAsked', 'gaveOneOnOne', 'exercise',
+  'quietTime', 'debt', 'sharedFaith', 'sabbath'];
 const WEEK_HOURS = ['langHours', 'minHours'];
+/* How much staff debt, when there is any. Capped at a million dollars: past that
+   it is a typo, and a typo here would swamp the base total. */
+const DEBT_MAX = 1000000;
 
 async function saveMyWeek(username, pin, week, payload) {
   const s = await verifyStaff_(username, pin);
@@ -921,8 +1045,13 @@ async function saveMyWeek(username, pin, week, payload) {
   // Every 1-10 question has to be answered, or the composite is built on gaps.
   if (WEEK_SCALES.some(function (k) { return rec[k] == null; })) return { ok: false, err: 'incomplete' };
 
+  /* The amount only means anything when there IS debt, so answering "no" clears
+     it rather than leaving last week's figure attached to a debt-free week. */
+  rec.debtAmount = rec.debt ? (finiteNum_(p.debtAmount, 0, DEBT_MAX) || 0) : 0;
+
   // Staff debt is part of the profile, not just this week's answer.
   staffRows[si].debt = !!p.debt;
+  staffRows[si].debtAmount = rec.debtAmount;
   await saveStaff_(staffRows);
 
   const rows = await getSurvey_();
@@ -962,7 +1091,12 @@ async function getMyWeekly(username, pin) {
       .map(function (r) {
         return {
           week: Number(r.week), lonely: r.lonely, clarity: r.clarity, porn: r.porn,
-          oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
+          oneOnOne: r.oneOnOne, oneOnOneAsked: r.oneOnOneAsked || 0,
+          gaveOneOnOne: r.gaveOneOnOne || 0,
+          exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
+          /* The amount reaches your one approved mentor, who already sees these
+             answers by name. It reaches nothing that is pooled. */
+          debtAmount: Number(r.debtAmount) || 0,
           langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
           sabbath: r.sabbath, growth: r.growth, days: r.days || 0,
           source: r.source || 'daily'
@@ -1330,12 +1464,14 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base] =
+  const [staffRows, logs, mentees, requests, oneOnOneAsks, myAsk, weekly, trips, tripReqs, ministry, base] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
       part(function () { return getMyMentees(username, pin); }),
       part(function () { return getMyMentorRequests(username, pin); }),
+      part(function () { return getOneOnOneAsks(username, pin); }),
+      part(function () { return myOneOnOneAsk_(s.id); }),
       part(function () { return getMyWeekly(username, pin); }),
       part(function () { return getMyTrips(username, pin); }),
       part(function () { return getTripRequests(username, pin); }),
@@ -1347,12 +1483,15 @@ async function getMyBoot(username, pin) {
   return {
     ok: true,
     staff: publicStaff_(s),
-    profile: { phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '' },
+    profile: { phone: s.phone, joined: s.joined, debt: s.debt,
+      debtAmount: Number(s.debtAmount) || 0, mentorStatus: s.mentorStatus || '' },
     roster: (staffRows || []).filter(function (r) { return r.active; }).map(publicStaff_),
     logs: (logs && logs.logs) || [],
     habits: (logs && logs.habits) || null,
     mentees: (mentees && mentees.mentees) || [],
     mentorRequests: (requests && requests.requests) || [],
+    oneOnOneAsks: (oneOnOneAsks && oneOnOneAsks.asks) || [],
+    myOneOnOneAsk: myAsk || null,
     goals: (weekly && weekly.goals) || [],
     checkins: (weekly && weekly.checkins) || [],
     trips: trips || null,
@@ -1494,6 +1633,9 @@ async function deleteProgramRecord(username, pin, id) {
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
+  askForOneOnOne: function (a) { return askForOneOnOne(a[0], a[1], a[2]); },
+  getOneOnOneAsks: function (a) { return getOneOnOneAsks(a[0], a[1]); },
+  clearOneOnOneAsk: function (a) { return clearOneOnOneAsk(a[0], a[1], a[2]); },
   getPrograms: function (a) { return getPrograms(a[0], a[1], a[2]); },
   saveProgramRecord: function (a) { return saveProgramRecord(a[0], a[1], a[2]); },
   deleteProgramRecord: function (a) { return deleteProgramRecord(a[0], a[1], a[2]); },

@@ -18,6 +18,7 @@ const SERVER = [
   'test-firstrun.mjs',   // empty / junk / ragged store, malformed requests
   'test-boot.mjs',       // getMyBoot: one call per page open
   'test-week-auth.mjs',  // weekly health: anonymity + mentor visibility
+  'test-oneonone.mjs',   // the three-answer one-on-one, asking for one, and staff-debt amounts
   'test-okr-auth.mjs',   // OKR writes stay inside your campus + department
   'test-year.mjs',       // weeks belong to a year; writing numbers needs a name
   'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read

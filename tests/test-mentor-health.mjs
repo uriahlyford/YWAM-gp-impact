@@ -17,9 +17,17 @@ const NOWWK=(()=>{const y=new Date().getFullYear(),j=new Date(y,0,1);
   return Math.max(1,Math.min(52,Math.floor((new Date()-m)/(7*86400000))+1)); })();
 const DARA={id:'st_dara',name:'Dara Pich',username:'dara',campus:'poipet',dept:'Base Leadership',ministry:'Campus Leadership',role:'Base director',photo:'',mentorId:''};
 const SOKHA={id:'st_sokha',name:'Sokha Chan',username:'sokha',campus:'poipet',dept:'Community Service',ministry:'Outreach Teams',role:'Outreach coordinator',photo:'',mentorId:'st_dara'};
+/* The older week carries the middle one-on-one answer — asked, not yet — and a
+   debt with an amount, both of which the mentor is the one person allowed to see. */
 const MENTEE_CHECKINS=[NOWWK,NOWWK-1].map((w,i)=>({week:w,days:7,source:'weekly',
-  lonely:i?6:3, clarity:i?5:8, growth:i?5:7, porn:0, oneOnOne:1, exercise:i?0:1,
-  quietTime:1, debt:i?1:0, langHours:i?1:3, minHours:i?4:7, sharedFaith:i?0:1, sabbath:1}));
+  lonely:i?6:3, clarity:i?5:8, growth:i?5:7, porn:0,
+  oneOnOne:i?0:1, oneOnOneAsked:i?1:0, gaveOneOnOne:i?0:1,
+  exercise:i?0:1,
+  quietTime:1, debt:i?1:0, debtAmount:i?450:0,
+  langHours:i?1:3, minHours:i?4:7, sharedFaith:i?0:1, sabbath:1}));
+/* Sokha has asked Dara for a one-on-one and is waiting on it. */
+const ASKS=[{id:'oo_1', week:NOWWK, year:new Date().getFullYear(), at:'',
+  fromId:'st_sokha', fromName:'Sokha Chan', fromPhoto:''}];
 const DATA={leader:false,entries:{poipet:{}},okrs:[],survey:[]};
 
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -29,7 +37,7 @@ p.on('console',m=>{if(m.type()==='error'&&!/fonts|ERR_CONN/.test(m.text()))errs.
 await p.route('**/.netlify/functions/api',r=>{const q=JSON.parse(r.request().postData()||'{}');
   let o=DATA;
   if(q.fn==='getMyBoot')o={ok:true,staff:DARA,profile:{},roster:[DARA,SOKHA],logs:[],habits:null,
-    mentees:[SOKHA],mentorRequests:[],goals:[],checkins:[],
+    mentees:[SOKHA],mentorRequests:[],oneOnOneAsks:ASKS,myOneOnOneAsk:null,goals:[],checkins:[],
     trips:{ok:true,trips:[],totals:{},reasons:{work:['x'],personal:['y']},hasMentor:false},
     tripRequests:[],ministry:null,base:DATA};
   else   if(q.fn==='teamRoster')o=[DARA,SOKHA];
@@ -37,6 +45,8 @@ await p.route('**/.netlify/functions/api',r=>{const q=JSON.parse(r.request().pos
   else if(q.fn==='getMyMentees')o={ok:true,mentees:[SOKHA]};
   else if(q.fn==='getMenteeLogs')o={ok:true,mentee:SOKHA,logs:[],sharedHabits:[],goals:[],
     checkins:MENTEE_CHECKINS,profile:{debt:false}};
+  else if(q.fn==='getOneOnOneAsks')o={ok:true,asks:ASKS};
+  else if(q.fn==='clearOneOnOneAsk')o={ok:true,asks:[]};
   else if(q.fn==='getMyTrips')o={ok:true,trips:[],totals:{},reasons:{work:['x'],personal:['y']},hasMentor:false};
   else if(q.fn==='getTripRequests')o={ok:true,requests:[]};
   else if(/^getMy/.test(q.fn))o={ok:true,logs:[],goals:[],checkins:[],mentees:[],requests:[]};
@@ -75,6 +85,40 @@ console.log('week history:   '+await p.evaluate(()=>{
   while(n){ if(n.classList&&n.classList.contains('card')) cards.push(n.querySelectorAll('.row').length); n=n.nextElementSibling; if(n&&n.tagName==='H3')break; }
   return cards.join('+');
 }));
+/* The three-answer one-on-one, as the mentor reads it — and the debt figure,
+   which reaches this one person and nothing that is pooled. */
+console.log('their one-on-one, in words: '+await p.evaluate(()=>{
+  const t=document.getElementById('main').innerText;
+  return /Their one-on-one/.test(t) && /Yes, we met|I asked, not yet|I have not asked/.test(t);
+}));
+console.log('gave-vs-got kept apart: '+await p.evaluate(()=>{
+  const t=document.getElementById('main').innerText;
+  return /Their one-on-one/.test(t) && /Gave a one-on-one/.test(t);
+}));
+console.log('debt amount reaches the mentor: '+await p.evaluate(()=>
+  /Have staff debt/.test(document.getElementById('main').innerText)));
 await p.screenshot({path:OUT+'mentor-health.png', fullPage:true});
+
+/* ---- a mentee asking for a one-on-one reaches this mentor ----
+   The flag stays on the Team tab until one of them clears it, so nobody has to
+   remember that somebody asked. */
+await p.click('nav.bottom [data-tab="team"]'); await p.waitForTimeout(1400);
+console.log('ask on the mentor tab: '+JSON.stringify(await p.evaluate(()=>{
+  const txt=document.getElementById('main').innerText;
+  return { heading:/Asking for a one-on-one/i.test(txt), named:/Sokha Chan/.test(txt),
+           clearBtn:!!document.querySelector('[data-ooclear]') };
+})));
+console.log('team tab counts it: '+await p.evaluate(()=>{
+  const b=[...document.querySelectorAll('nav.bottom button')].find(x=>/Team/i.test(x.textContent));
+  return b?b.textContent.trim():'';
+}));
+console.log('after "We met": '+await p.evaluate(async ()=>{
+  const b=document.querySelector('[data-ooclear]');
+  if(!b) return 'no button';
+  b.click();
+  await new Promise(r=>setTimeout(r,900));
+  return /Asking for a one-on-one/i.test(document.getElementById('main').innerText)?'still there':'cleared';
+}));
+
 console.log('errors: '+(errs.length?errs.join('\n'):'none'));
 await b.close(); srv.close();

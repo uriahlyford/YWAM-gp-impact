@@ -271,6 +271,41 @@ answered by hand wins**: the sync leaves a row with `source:'weekly'` alone,
 because a deliberate answer beats an inference from however many days got logged.
 Each week's tag says which way it was answered.
 
+**The one-on-one has three answers, and giving one is a different question.**
+"Did I have a one-on-one this week?" said nothing about which side of it you were
+on — a one-on-one is a mentoring conversation, so people answered yes for giving
+one and yes for getting one and both landed in the same box. And "no" hid two
+completely different weeks: *my mentor never made time* versus *I never asked*.
+Only the second is the person's to fix, so the question now says which.
+
+- `oneOnOne` still means **it happened**, so every row written before this reads
+  exactly as it always did. `oneOnOneAsked` carries the middle answer. A row with
+  neither reads as "haven't asked", which is the honest reading of an old row —
+  nothing in it ever claimed anyone asked.
+- `oneOnOneScore()` in `taxonomy.js`: **met 10, asked 5, haven't asked 0**. Asking
+  is worth half because they did their part.
+- `gaveOneOnOne` is the other side entirely, and is **deliberately not in the
+  health composite** — mentoring somebody else is ministry, not a measure of your
+  own health, and `One-on-Ones Held` already counts it as a KPI.
+- **Answering "I have not asked" offers the asking, one tap.** `askForOneOnOne`
+  puts a standing flag on that person's **one approved mentor's** Team tab, which
+  stays until either of them clears it. One open ask per person — asking again
+  moves the same ask to this week rather than piling up. It dies with the
+  mentoring relationship, and somebody with no approved mentor is told to pick one
+  rather than shown a button that cannot work. Not a message: there is no inbox in
+  this app and adding one to arrange a coffee would be the wrong shape.
+
+**Staff debt asks how much, and the amount is the private half.** `debtAmount`
+rides with the weekly `debt` flag, and answering "no debt" clears it rather than
+leaving last week's figure on a debt-free week. The amount reaches **the person
+and their one mentor** — who already sees these answers by name — and **never
+leaves in a survey row**: `getData` strips it and ships one pooled `debtTotals`
+per campus instead, built from the latest week each person answered so somebody
+who has answered ten weeks counts once. An unusual figure is close to a name in a
+base this size, and that payload goes to anyone who opens the dashboard, guests
+included. Capped at $1,000,000: past that it is a typo, and a typo would swamp the
+total.
+
 **Who sees what — the token is the whole mechanism.** Survey rows carry a token and
 never a name, so anything pooled base-wide is anonymous *by construction*, not by
 policy. Only the person's own staff record maps that token back to them, and

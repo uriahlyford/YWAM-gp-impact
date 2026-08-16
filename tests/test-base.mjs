@@ -357,7 +357,8 @@ await page.selectOption('#healthWeekSel', String(NOWWK - 5));
 await page.waitForTimeout(900);
 console.log('\nunanswered week -> form open: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
 console.log('  1-10 questions: ' + await page.$$eval('#weekForm .scale', e => e.length));
-console.log('  yes/no questions: ' + await page.$$eval('#weekForm .seg', e => e.length));
+console.log('  yes/no questions: ' + await page.$$eval('#weekForm .seg:not(.seg3)', e => e.length));
+console.log('  three-answer questions: ' + await page.$$eval('#weekForm .seg3', e => e.length));
 console.log('  hour boxes: ' + await page.$$eval('#weekForm [data-wnum]', e => e.length));
 
 // submitting with the scales unanswered is refused
@@ -372,10 +373,35 @@ await page.fill('[data-wnum="langHours"]', '3');
 await page.dispatchEvent('[data-wnum="langHours"]', 'change');
 await page.fill('[data-wnum="minHours"]', '7');
 await page.dispatchEvent('[data-wnum="minHours"]', 'change');
-for (const q of ['oneOnOne', 'exercise', 'quietTime', 'sharedFaith', 'sabbath']) {
+/* The one-on-one is three answers now: we met / I asked, not yet / I have not
+   asked. "No" was hiding two very different weeks. */
+await page.click('[data-w3="oneOnOne|met"]'); await page.waitForTimeout(200);
+for (const q of ['gaveOneOnOne', 'exercise', 'quietTime', 'sharedFaith', 'sabbath']) {
   await page.click(`[data-wyn="${q}|1"]`); await page.waitForTimeout(200);
 }
 for (const q of ['porn', 'debt']) { await page.click(`[data-wyn="${q}|0"]`); await page.waitForTimeout(200); }
+
+/* Answering "I have not asked" offers the asking, right there. */
+await page.click('[data-w3="oneOnOne|no"]'); await page.waitForTimeout(400);
+/* This fixture's person has no mentor, so there is nobody to ask — and the screen
+   has to say that rather than showing a button that cannot work. The button
+   itself is covered in test-mentor-health.mjs, which has a real pair. */
+console.log('  no mentor -> says so instead of a dead button: ' + await page.evaluate(() =>
+  !document.querySelector('#askOneOnOne') &&
+  /no mentor yet/i.test(document.querySelector('#weekForm').innerText)));
+await page.click('[data-w3="oneOnOne|asked"]'); await page.waitForTimeout(300);
+console.log('  "asked, not yet" does not offer it again: ' + await page.evaluate(() =>
+  !document.querySelector('#askOneOnOne')));
+
+/* "How much?" only exists once there is debt to put a number to. */
+console.log('  amount hidden with no debt: ' + await page.evaluate(() =>
+  !document.querySelector('[data-wnum="debtAmount"]')));
+await page.click('[data-wyn="debt|1"]'); await page.waitForTimeout(400);
+console.log('  amount appears with debt: ' + await page.evaluate(() =>
+  !!document.querySelector('[data-wnum="debtAmount"]')));
+await page.click('[data-wyn="debt|0"]'); await page.waitForTimeout(300);
+
+await page.click('[data-w3="oneOnOne|met"]'); await page.waitForTimeout(200);
 await page.click('#weekSubmit'); await page.waitForTimeout(2200);
 console.log('\nafter submit, score: ' + await page.$eval('#main .pctBig', e => e.textContent.trim()));
 console.log('  marked hand-entered: ' + await page.evaluate(() =>

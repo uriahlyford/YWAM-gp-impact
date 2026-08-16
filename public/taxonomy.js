@@ -157,12 +157,31 @@ function modeOf(metric){
   return 'sum';
 }
 
+/* The one-on-one you RECEIVE, scored out of 10. Three states, because "I didn't
+   have one" hides two very different weeks: my mentor never made time, or I never
+   asked. The second is the one the person can fix, and the app says so.
+
+     met            10   it happened
+     asked, not yet  5   they did their part; the meeting has not happened
+     haven't asked   0
+
+   Rows written before this only carry `oneOnOne`, so a false reads as "haven't
+   asked" — the honest reading, since nothing in an old row claims anyone asked.
+
+   Giving a one-on-one is NOT in here. Mentoring somebody else is ministry, not a
+   measure of your own health, and 'One-on-Ones Held' already counts it as a KPI. */
+function oneOnOneScore(r){
+  if(r.oneOnOne) return 10;
+  if(r.oneOnOneAsked) return 5;
+  return 0;
+}
+
 /* Weekly health composite for one survey row. Shared so the staff page can
    show a person their own weekly score using exactly the maths the base
    dashboard uses — loneliness inverted, porn/debt count as zero. */
 function compositeOf(r){
   var parts = [ 10-(Number(r.lonely)||0), Number(r.clarity)||0,
-    r.porn?0:10, r.oneOnOne?10:0, r.exercise?10:0, r.quietTime?10:0, r.debt?0:10 ];
+    r.porn?0:10, oneOnOneScore(r), r.exercise?10:0, r.quietTime?10:0, r.debt?0:10 ];
   if(r.growth!==null && r.growth!==undefined) parts.push(Number(r.growth)||0);
   if(r.sharedFaith!==null && r.sharedFaith!==undefined) parts.push(r.sharedFaith?10:0);
   if(r.sabbath!==null && r.sabbath!==undefined) parts.push(r.sabbath?10:0);

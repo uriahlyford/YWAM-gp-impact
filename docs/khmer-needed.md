@@ -271,6 +271,58 @@ _These appear in the orange bar at the top of the dashboard. The first is the co
 one and should read as a rule rather than a telling-off — logging for the wrong campus
 was an easy accident before, which is why the lock exists._
 
+## 0g-2. The one-on-one, and staff debt — check the wording here carefully
+
+**The one-on-one question changed shape, and the words are doing real work.**
+"Did I have a one-on-one this week?" never said which side of it you were on —
+giving one and getting one both got a yes. It is now two questions, and the one
+you *receive* has three answers instead of two, because "no" was hiding two very
+different weeks: my mentor never made time, or I never asked. Only the second is
+mine to fix, and the wording has to make that land without sounding like a telling-off.
+
+| English | ខ្មែរ | Note |
+|---|---|---|
+| Did I have my one-on-one this week? | តើខ្ញុំបានជួបមួយទល់មួយរបស់ខ្ញុំសប្តាហ៍នេះទេ? | **"my"** matters — it is the one you receive |
+| Yes, we met | បាទ/ចាស យើងបានជួបគ្នា | Button — three across a phone, so short |
+| I asked, not yet | ខ្ញុំបានស្នើសុំ ប៉ុន្តែមិនទាន់ | Button — "I did my part, it has not happened" |
+| I have not asked | ខ្ញុំមិនទាន់បានស្នើសុំ | Button — should read as a fact, not a failing |
+| Yours to arrange. If it has not happened, ask for it. | ជាតួនាទីរបស់អ្នកក្នុងការរៀបចំ។ បើវាមិនទាន់កើតឡើងទេ សូមស្នើសុំ។ | The line under the question. This is the whole point of the change — encouraging, not scolding |
+| Did I give a one-on-one to someone this week? | តើខ្ញុំបានធ្វើមួយទល់មួយជាមួយនរណាម្នាក់សប្តាហ៍នេះទេ? | The other side: I mentored somebody |
+| Got a one-on-one | បានទទួលមួយទល់មួយ | Daily habit tile — very little room |
+| Got their one-on-one | បានទទួលមួយទល់មួយរបស់គាត់ | Base list |
+| Got my one-on-one | បានទទួលមួយទល់មួយរបស់ខ្ញុំ | Base list, own view |
+| Gave a one-on-one | បានធ្វើមួយទល់មួយឱ្យអ្នកដទៃ | |
+| Their one-on-one | មួយទល់មួយរបស់គាត់ | Mentor's view of a mentee |
+| One-on-ones got | មួយទល់មួយដែលបានទទួល | Stat tile |
+
+### Asking for one
+
+| English | ខ្មែរ | Note |
+|---|---|---|
+| Ask {name} for a one-on-one | ស្នើសុំ {name} សម្រាប់មួយទល់មួយ | Button — {name} is their mentor's first name, keep the placeholder |
+| Asking… | កំពុងស្នើសុំ… | |
+| Asked. It is on their Team tab now. | បានស្នើសុំ។ វាស្ថិតនៅលើផ្ទាំងក្រុមរបស់គាត់ហើយ។ | |
+| Asked in week {wk}. Still waiting. | បានស្នើសុំក្នុងសប្តាហ៍ {wk}។ នៅតែរង់ចាំ។ | |
+| Asked in week {wk} | បានស្នើសុំក្នុងសប្តាហ៍ {wk} | On the mentor's tab |
+| You have no mentor yet — pick one on your profile, and this becomes one tap. | អ្នកមិនទាន់មានអ្នកណែនាំទេ — សូមជ្រើសរើសម្នាក់នៅលើប្រវត្តិរូបរបស់អ្នក រួចវានឹងក្លាយជាការចុចតែម្តង។ | |
+| Asking for a one-on-one | ការស្នើសុំមួយទល់មួយ | Heading on the mentor's Team tab |
+| They said in their check-in that their one-on-one has not happened, and asked. Clear it once you have met. | ពួកគេបាននិយាយក្នុងការរាយការណ៍របស់ខ្លួនថាមួយទល់មួយរបស់ពួកគេមិនទាន់កើតឡើងទេ ហើយបានស្នើសុំ។ សូមសម្អាតវានៅពេលអ្នកបានជួបគ្នារួច។ | |
+| We met | យើងបានជួបគ្នា | Button the mentor presses |
+| {n} waiting on you | {n} កំពុងរង់ចាំអ្នក | Keep {n} |
+
+### Staff debt — how much
+
+**These are money and they are private**, so they belong with the privacy promises
+in section 0g. The app now asks the amount, not just yes/no. Please check that the
+privacy sentence is unambiguous in Khmer — it is a promise the app is making.
+
+| English | ខ្មែរ |
+|---|---|
+| How much? (US$) | ប៉ុន្មាន? (ដុល្លារអាមេរិក) |
+| Pooled into one base total with no names on it. Your mentor sees your own figure; nobody else does. | ត្រូវបានបូកបញ្ចូលក្នុងសរុបមូលដ្ឋានតែមួយដោយគ្មានឈ្មោះ។ អ្នកណែនាំរបស់អ្នកឃើញតួលេខផ្ទាល់របស់អ្នក គ្មាននរណាផ្សេងឃើញទេ។ |
+| Staff debt carried | បំណុលបុគ្គលិកដែលកំពុងទ្រាំទ្រ |
+| {n} people, no names | {n} នាក់ គ្មានឈ្មោះ |
+
 ## 0h. Programs — the Ministry of Education report
 
 **The most important section on this list to get right after the front door**, and

@@ -23,6 +23,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-firstrun.mjs` | A brand-new base, a junk blob or a malformed request takes the whole app down with a 500 |
 | `test-boot.mjs` | A page open costs more than one function invocation — Netlify bills these |
 | `test-week-auth.mjs` | Health answers stop being anonymous in base averages, or reach someone other than your one mentor |
+| `test-oneonone.mjs` | The one-on-one stops distinguishing "we met" from "I asked" from "I haven't asked", giving one gets confused with getting one, an ask reaches somebody other than that person's one approved mentor, or a staff-debt amount leaks out of the anonymous base total |
 | `test-okr-auth.mjs` | Someone can write objectives outside their own campus and department |
 | `test-year.mjs` | A new year overwrites last year's figures, legacy rows lose their history, or anyone can POST numbers for any campus |
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
