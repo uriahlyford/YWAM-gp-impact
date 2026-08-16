@@ -415,6 +415,20 @@ input[type=date] { font-size:15px; padding:9px 10px; border-radius:10px; border:
 .fGrid .fCell { min-width:0; }
 .fCell input[type=number] { width:100%; }
 .emptyRec { font-size:13.5px; color:var(--muted); padding:16px 0; text-align:center; line-height:1.5; }
+/* One row per ministry: what it logged, and the estimate it owns. Three columns
+   on a phone, and the ministry name is the one allowed to wrap. */
+.srcHead { font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:4px; }
+.srcWhen { letter-spacing:.5px; color:var(--accent); }
+.minRow { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); }
+.minRow:last-of-type { border-bottom:none; }
+.minName { flex:1 1 auto; min-width:0; font-size:14px; line-height:1.25; }
+.minMetric { font-size:11px; color:var(--muted); margin-top:1px; }
+.minGot { flex:0 0 auto; min-width:44px; text-align:right; font-family:'Koulen',sans-serif; font-size:18px; color:var(--accent); }
+.minRow .estIn { flex:0 0 68px; width:68px !important; font-size:15px !important; padding:6px 8px !important; }
+.minRow .ghostBtn { flex:0 0 auto; padding:6px 10px; font-size:12.5px; }
+/* Said once, where it matters: the weekly figure and the typed breakdown differ. */
+.mismatch { margin-top:10px; padding:9px 11px; border-radius:10px; font-size:12.5px; line-height:1.5;
+  background:var(--banner); border:1px solid var(--bannerBorder); color:var(--bannerInk); }
 
 /* ---------- the generated report ----------
    A full-screen sheet rather than a card, because what is inside is a document
@@ -1647,19 +1661,79 @@ function programsHtml(){
   if(typeof gpBuildReport === 'function'){
     h += '<button class="ghostBtn" id="genReportBtn" style="width:100%;margin-top:6px">'+
       '📄 '+esc(t('Generate the Ministry report'))+'</button>'+
-      '<p class="note">'+esc(t('Writes the report for the period above from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent.'))+'</p>';
+      '<p class="note">'+esc(t('Writes the report for the period above from your weekly numbers, with the detail entered here filling in the parts a weekly figure cannot hold. It opens as a draft — read it before it is sent.'))+'</p>';
   }
   return h;
+}
+
+/* The app's own weekly numbers for the period on screen, and for the year up to
+   the end of it. THE DIRECTION OF TRUTH: these are what the report prints, and
+   nobody retypes them here.
+
+   The Programs tab covers the whole base, so every campus is included — the
+   agreements are with the organisation, not with one campus. */
+function progActuals(){
+  var qs = gpPeriod(state.progPeriod).quarters.map(function(q){ return q-1; });   // rollup counts quarters from 0
+  var toDate = gpPeriodToDate(state.progPeriod).map(function(q){ return q-1; });
+  var ids = CAMPUSES.map(function(c){ return c.id; });
+  return { period: gpProgramActuals(R(), ids, qs), toDate: gpProgramActuals(R(), ids, toDate) };
+}
+
+/* One row per ministry that feeds this programme: what it logged, and the annual
+   estimate it owns. This is the answer to "the app should have entries for each
+   ministry that fill the format of the report" — the leader who runs the ministry
+   types the estimate, and the actual comes from what they already log weekly. */
+function ministryRowsHtml(p, A){
+  var mins = gpProgramMinistries(p.id);
+  var yearRows = progRows();
+  var h = '';
+
+  if(!mins.length){
+    /* YAP. Say so plainly rather than letting it look like the other three. */
+    var est = gpMinistryEstimate(p.id, yearRows, '', '');
+    h += '<div class="formBlock"><div class="srcHead">'+esc(t('No weekly numbers behind this one'))+'</div>'+
+      '<div class="rowSub">'+esc(t('No ministry logs a weekly figure for this programme, so its numbers are the ones typed below.'))+'</div>'+
+      '<div class="minRow"><div class="minName">'+esc(t('Annual estimate'))+'</div>'+
+      '<input type="number" inputmode="numeric" min="0" class="estIn" data-est="|" value="'+(est?Number(est.target)||0:'')+'" placeholder="0">'+
+      '<button class="ghostBtn" data-estsave="|">'+esc(t('Save'))+'</button></div></div>';
+    return h;
+  }
+
+  h += '<div class="formBlock"><div class="srcHead">'+esc(t('From your weekly numbers'))+
+    ' <span class="srcWhen">'+esc(t(gpPeriod(state.progPeriod).label))+'</span></div>';
+  h += '<div class="rowSub" style="margin-bottom:8px">'+
+    esc(t('These come from what each ministry logs every week. The report reads them — nothing here is typed twice.'))+'</div>';
+
+  mins.forEach(function(m){
+    var key = m.dept+'|'+m.ministry;
+    var got = (A.period[p.id] && A.period[p.id].byMinistry[key+'|'+m.metric]) || null;
+    var est = gpMinistryEstimate(p.id, yearRows, m.dept, m.ministry);
+    h += '<div class="minRow">'+
+      '<div class="minName">'+gpMinEmoji(m.ministry)+esc(t(m.ministry))+
+        '<div class="minMetric">'+esc(t(m.metric))+'</div></div>'+
+      '<div class="minGot">'+(got===null ? '—' : fmt(got.value, m.metric))+'</div>'+
+      '<input type="number" inputmode="numeric" min="0" class="estIn" data-est="'+esc(key)+'" value="'+(est?Number(est.target)||0:'')+'" placeholder="'+esc(t('est.'))+'">'+
+      '<button class="ghostBtn" data-estsave="'+esc(key)+'">'+esc(t('Save'))+'</button></div>';
+  });
+  h += '<div class="rowSub" style="margin-top:8px">'+
+    esc(t('The middle column is this period. The box is that ministry\u2019s estimate for the whole year — the four add up to the target in the report.'))+'</div>';
+  return h + '</div>';
 }
 
 function programCardHtml(){
   var p = gpProgram(state.prog);
   if(!p) return '';
-  /* The goal is for the year, so it is measured against the year — not against
-     whichever period happens to be showing. */
+  var A = progActuals();
   var yearRows = progRows().filter(function(r){ return r.program===p.id; });
+  /* The target is the sum of the ministries' own annual estimates. */
   var target = gpProgramGoal(p.id, yearRows);
-  var reached = gpProgramSummary(p.id, yearRows).people;
+  /* Progress is what the ministries logged, falling back to the typed rows only
+     for a programme nobody logs (YAP) — the same rule the report follows, so the
+     ring and the document cannot disagree. */
+  var ytd = A.toDate[p.id];
+  var reached = (ytd && ytd.hasSources && ytd.people !== null)
+    ? ytd.people
+    : gpProgramSummary(p.id, yearRows).people;
   var pct = (target && target > 0) ? Math.round(reached/target*100) : 0;
 
   var h = '<div class="okrCard"><div class="progHead"><div>'+
@@ -1667,19 +1741,16 @@ function programCardHtml(){
     '<div class="progBlurb">'+esc(t(p.blurb))+'</div></div>'+
     (target===null ? '' : ring(pct, 58))+'</div>';
 
-  h += '<div class="formBlock"><label for="progTarget">'+esc(t('Year goal (per the agreement)'))+'</label>'+
-    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+
-    '<input type="number" inputmode="numeric" min="0" id="progTarget" value="'+(target===null?'':target)+'" placeholder="0">'+
-    '<span class="rowSub" style="margin:0">'+esc(t(p.unit))+' · '+state.progYear+'</span>'+
-    '<button class="ghostBtn" id="saveGoalBtn">'+esc(t('Save goal'))+'</button></div>'+
-    (target===null
-      ? '<div class="rowSub" style="margin-top:6px">'+esc(t('No goal set for this year yet.'))+'</div>'
-      : '<div class="rowSub" style="margin-top:6px">'+esc(gpT('{n} of {t} so far this year', {n:reached, t:target}))+' · '+esc(gpPctWord(pct))+'</div>')+
+  h += ministryRowsHtml(p, A);
+
+  h += '<div class="formBlock">'+ (target===null
+    ? '<div class="rowSub">'+esc(t('No annual estimate entered for this year yet.'))+'</div>'
+    : '<div class="rowSub"><b>'+esc(gpT('{n} of {t} so far this year', {n:reached, t:target}))+'</b> · '+esc(gpPctWord(pct))+'</div>')+
     '</div>';
 
-  h += progFactsHtml(p, progVisible(p.kind, p.id)) + '</div>';
-
   var rows = progVisible(p.kind, p.id);
+  h += progDetailFactsHtml(p, rows, A) + '</div>';
+
   h += '<div class="card">';
   if(!rows.length){
     h += '<div class="emptyRec">'+esc(gpT('Nothing recorded yet for {when}.', {when:periodWord()}))+'</div>';
@@ -1699,6 +1770,27 @@ function programCardHtml(){
          p.kind==='cohort' ? '+ Add a school' : '+ Add a location'
   });
   return h;
+}
+
+/* The facts strip, plus the one thing worth interrupting somebody for: the detail
+   they typed does not add up to what their ministry logged. The weekly figure is
+   the one the report will print, so a mismatch means the breakdown underneath it
+   is incomplete — usually a team or a class nobody has written up yet. */
+function progDetailFactsHtml(p, rows, A){
+  var h = '<div class="formBlock"><div class="srcHead">'+esc(t('Detail for the report'))+'</div>'+
+    '<div class="rowSub" style="margin-bottom:2px">'+
+    esc(t('The parts a weekly number cannot hold — countries, dates, and how many were women.'))+'</div>';
+  h += progFactsHtml(p, rows);
+  var got = A.period[p.id];
+  if(got && got.hasSources && got.people !== null){
+    var typed = gpProgramSummary(p.id, rows).people;
+    if(typed !== got.people){
+      h += '<div class="mismatch">'+esc(gpT(
+        'Your ministries logged {logged} for this period; the detail below adds up to {typed}. The report will print {logged} — fill in the rest so the breakdown matches.',
+        { logged:got.people, typed:typed }))+'</div>';
+    }
+  }
+  return h + '</div>';
 }
 
 function issuesHtml(){
@@ -1810,19 +1902,22 @@ function saveRecordForm(btn){
   saveProgram(rec, btn, state.progEditing ? 'Save changes' : 'Add record');
 }
 
-function saveProgramGoal(btn){
-  var el = document.getElementById('progTarget');
-  if(!el) return;
+/* One ministry's annual estimate. `key` is "dept|ministry", or "|" for the
+   programme's own when no ministry logs it. */
+function saveProgramEstimate(btn, key){
   var p = gpProgram(state.prog);
   if(!p) return;
-  var existing = null;
-  progRows().forEach(function(r){ if(r.kind==='goal' && r.program===p.id) existing = r; });
-  /* A goal is the year's, so its quarter is not meaningful — Q1 keeps the row a
-     valid shape without implying the target belongs to one quarter. */
-  var rec = { kind:'goal', program:p.id, year:state.progYear, quarter:1,
-    target: Number(el.value)||0, unit: p.unit };
+  var el = document.querySelector('.estIn[data-est="'+key+'"]');
+  if(!el) return;
+  var parts = String(key).split('|');
+  var dept = parts[0] || '', ministry = parts[1] || '';
+  var existing = gpMinistryEstimate(p.id, progRows(), dept, ministry);
+  /* An estimate is the year's, so its quarter is not meaningful — Q1 keeps the
+     row a valid shape without implying the target belongs to one quarter. */
+  var rec = { kind:'estimate', program:p.id, year:state.progYear, quarter:1,
+    dept:dept, ministry:ministry, target: Number(el.value)||0, unit: p.unit };
   if(existing) rec.id = existing.id;
-  saveProgram(rec, btn, 'Save goal');
+  saveProgram(rec, btn, 'Save');
 }
 
 function deleteProgramRow(id){
@@ -1847,7 +1942,11 @@ function deleteProgramRow(id){
    it into Drive works too, and so does printing to PDF. Three ways out, because
    clipboard write is refused on some browsers and iOS Safari has its own rules. */
 function openReport(){
-  var body = gpBuildReport({ records: progRows(), year: state.progYear, period: state.progPeriod });
+  /* The weekly numbers go in with the records. Without them the document would
+     be written from what somebody typed on this screen, which is the wrong way
+     round: the app's numbers are the record of what happened. */
+  var body = gpBuildReport({ records: progRows(), year: state.progYear,
+    period: state.progPeriod, actuals: progActuals() });
   var title = 'GP Activity Report — ' + gpPeriod(state.progPeriod).short + ' ' + state.progYear;
   var root = document.getElementById('repRoot');
   if(!root) return;
@@ -1962,8 +2061,9 @@ function bindPrograms(){
   if(cb) cb.onclick = function(){ state.progEditing = null; render(); };
   var sb = document.getElementById('saveRecBtn');
   if(sb) sb.onclick = function(){ saveRecordForm(sb); };
-  var gb = document.getElementById('saveGoalBtn');
-  if(gb) gb.onclick = function(){ saveProgramGoal(gb); };
+  document.querySelectorAll('[data-estsave]').forEach(function(b){
+    b.onclick = function(){ saveProgramEstimate(b, b.getAttribute('data-estsave')); };
+  });
   document.querySelectorAll('[data-prec]').forEach(function(b){
     b.onclick = function(){ state.progEditing = b.getAttribute('data-prec'); render(); };
   });

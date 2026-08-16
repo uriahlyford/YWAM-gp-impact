@@ -22,7 +22,8 @@ new Function('g',
   fs.readFileSync(path.join(PUBLIC, 'report.js'), 'utf8') +
   '\ng.build=gpBuildReport; g.doc=gpReportDocument; g.pct=gpRepPct; g.programs=GP_PROGRAMS;' +
   '\ng.periods=GP_PERIODS; g.period=gpPeriod; g.periodQuarter=gpPeriodQuarter;' +
-  '\ng.toDate=gpPeriodToDate;'
+  '\ng.toDate=gpPeriodToDate;' +
+  '\ng.goal=gpProgramGoal; g.mins=gpProgramMinistries; g.estimate=gpMinistryEstimate;'
 )(box);
 
 let pass = 0, fail = 0;
@@ -34,11 +35,17 @@ function ok(name, cond, extra) {
    <h3> to <h4> is not a regression, a number that changes is. */
 const textOf = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
+/* Annual estimates, entered by the ministries that have to reach them. A
+   programme's target is their sum — YDC's 400 is 250 from YDC plus 150 from GP
+   Education, and YLT's 35 is 20 from DTS plus 15 from DBS. YAP has no ministry
+   behind it, so it has one estimate of its own. */
 const GOALS = [
-  { kind: 'goal', program: 'SVI', year: 2026, target: 50, unit: 'volunteers' },
-  { kind: 'goal', program: 'YLT', year: 2026, target: 35, unit: 'students' },
-  { kind: 'goal', program: 'YDC', year: 2026, target: 400, unit: 'students' },
-  { kind: 'goal', program: 'YAP', year: 2026, target: 25, unit: 'participants' },
+  { kind: 'estimate', program: 'SVI', year: 2026, dept: 'Community Service', ministry: 'Outreach Teams', target: 50, unit: 'volunteers' },
+  { kind: 'estimate', program: 'YLT', year: 2026, dept: 'Leadership Development', ministry: 'DTS', target: 20, unit: 'students' },
+  { kind: 'estimate', program: 'YLT', year: 2026, dept: 'Leadership Development', ministry: 'DBS', target: 15, unit: 'students' },
+  { kind: 'estimate', program: 'YDC', year: 2026, dept: 'Youth Education', ministry: 'YDC', target: 250, unit: 'students' },
+  { kind: 'estimate', program: 'YDC', year: 2026, dept: 'Community Service', ministry: 'GP Education', target: 150, unit: 'students' },
+  { kind: 'estimate', program: 'YAP', year: 2026, dept: '', ministry: '', target: 25, unit: 'participants' },
 ];
 /* The 1st semester of 2026, as two quarters — which is how it would be entered
    now. The teams arrived in January/February (Q1) and May (Q2); the classes ran
@@ -270,10 +277,103 @@ ok('and so is every solution',
   ok('and still carries every record', /YWAM Maui/.test(ty) && /Poipet GP Community School/.test(ty));
 }
 
-/* ---------- 9. no goal set is different from a goal of zero ---------- */
+/* ---------- 8b. the target is the ministries' estimates, added up ----------
+   The number the Ministry sees as our annual target is owned by the people who
+   have to reach it, not decided once at the top and typed into a box. */
 {
-  const none = textOf(box.build({ records: S1.filter(r => r.kind !== 'goal'), year: 2026, period: 's1' }));
-  ok('with no target recorded the report says so rather than printing 0%',
+  ok('a programme target is the sum of its ministries\' estimates',
+    box.goal('YDC', GOALS) === 400 && box.goal('YLT', GOALS) === 35,
+    'YDC=' + box.goal('YDC', GOALS) + ' YLT=' + box.goal('YLT', GOALS));
+  ok('and the report prints that sum, not either half',
+    /Target: 400 students for 2026/.test(T) && /Target: 35 students for 2026/.test(T));
+  ok('a programme with no ministry behind it still has one estimate of its own',
+    box.goal('YAP', GOALS) === 25 && box.mins('YAP').length === 0);
+  ok('an estimate is found by the ministry that owns it',
+    box.estimate('YDC', GOALS, 'Youth Education', 'YDC').target === 250 &&
+    box.estimate('YDC', GOALS, 'Community Service', 'GP Education').target === 150 &&
+    box.estimate('YDC', GOALS, 'Youth Education', 'Sports') === null);
+  ok('revising one ministry\'s estimate moves the programme target',
+    box.goal('YDC', GOALS.map(r => (r.ministry === 'YDC' ? { ...r, target: 300 } : r))) === 450);
+  /* Every ministry that feeds a programme can be offered an estimate box. */
+  ok('the ministries that feed each programme are known',
+    box.mins('SVI').length === 1 && box.mins('YDC').length === 6 && box.mins('YLT').length === 6,
+    box.mins('YDC').map(m => m.ministry).join(','));
+}
+
+/* ---------- 8c. the app's numbers win ----------
+   THE DIRECTION OF TRUTH. The weekly KPI entries are the record of what happened;
+   this document is written from them. So a figure that exists in both places is
+   taken from the weekly numbers, and the typed rows supply only the breakdown
+   underneath it — the countries, the dates, the male/female split.
+
+   Getting this backwards is exactly what would make the report unreliable: the
+   Ministry would be reading a number somebody typed into a report screen, while
+   the app showed a different one to everybody else. */
+{
+  /* Outreach Teams logged 30 volunteers across 3 teams serving 2,000 people —
+     more than the two teams typed up in detail. The app is right; somebody has
+     not finished entering the detail. */
+  const actuals = {
+    period: { SVI: { hasSources: true, people: 30, teams: 3, served: 2000 } },
+    toDate: { SVI: { hasSources: true, people: 30, teams: 3, served: 2000 } },
+  };
+  const a = textOf(box.build({ records: S1, year: 2026, period: 's1', actuals }));
+
+  ok('the headline count is what the ministry logged, not what was typed',
+    /Received 30 participants in the 1st semester/.test(a) && !/Received 24 participants/.test(a),
+    (a.match(/Received \d+ participants[^.]{0,60}/) || [''])[0]);
+  ok('so is the percentage against the annual target',
+    /representing 60% of the annual target/.test(a),
+    (a.match(/representing[^.]{0,40}/) || [''])[0]);
+  ok('so is the team count', /we hosted 3 volunteer teams with a total of 30 members/.test(a),
+    (a.match(/we hosted[^:]{0,60}/) || [''])[0]);
+  ok('and so is the number of people served',
+    /served 2,000 children and youth/.test(a), (a.match(/served [\d,]+ children/) || [''])[0]);
+  ok('the achievement summary agrees with the headline rather than the typed rows',
+    /By the end of June, 30 participants, achieving 60%/.test(a),
+    (a.match(/By the end of June[^.]{0,60}/) || [''])[0]);
+  ok('the outputs table agrees too — one number, everywhere in the document',
+    /Hosted 3 international volunteer teams totaling 30 members/.test(a),
+    (a.match(/Hosted \d+ international[^.]{0,60}/) || [''])[0]);
+
+  /* The typed detail is still what supplies the breakdown, because the weekly
+     figure has no sex split, no country and no dates in it. */
+  ok('the typed detail still supplies what the weekly number cannot say',
+    /YWAM Maui \(USA\): 12 members \(6 male, 6 female\) \| Jan 27, 2026/.test(a) &&
+    /\(9 female and 15 male\)/.test(a));
+
+  /* A programme with no KPI behind it falls back to what was typed, and must
+     keep working — that is the stated exception, not a bug. */
+  ok('YAP, which no ministry logs, still reports its typed figure',
+    /Received 12 students in the 1st semester, representing 48%/.test(a));
+
+  /* hasSources false means "this programme has no weekly numbers", which is a
+     different thing from "its weekly numbers are zero". */
+  const noSrc = textOf(box.build({ records: S1, year: 2026, period: 's1',
+    actuals: { period: { SVI: { hasSources: false, people: null } },
+               toDate: { SVI: { hasSources: false, people: null } } } }));
+  ok('a programme with no source falls back rather than reporting nothing',
+    /Received 24 participants in the 1st semester/.test(noSrc));
+
+  /* Zero IS a figure. A ministry that logged nothing this quarter reports zero,
+     not the leftovers of whatever somebody typed. */
+  const zero = textOf(box.build({ records: S1, year: 2026, period: 's1',
+    actuals: { period: { SVI: { hasSources: true, people: 0, teams: 0, served: 0 } },
+               toDate: { SVI: { hasSources: true, people: 0, teams: 0, served: 0 } } } }));
+  ok('a logged zero is reported as zero, not replaced by the typed rows',
+    /Received 0 participants in the 1st semester/.test(zero) && !/Received 24 participants/.test(zero),
+    (zero.match(/Received \d+ participants[^.]{0,40}/) || [''])[0]);
+
+  /* And with no actuals at all — which is what every other test in this file
+     does — the generator still works from the records alone. */
+  ok('with no actuals passed the report still builds from the records',
+    /Received 24 participants in the 1st semester/.test(T));
+}
+
+/* ---------- 9. no estimate set is different from an estimate of zero ---------- */
+{
+  const none = textOf(box.build({ records: S1.filter(r => r.kind !== 'estimate'), year: 2026, period: 's1' }));
+  ok('with no estimate entered the report says so rather than printing 0%',
     /No annual target has been recorded for 2026/.test(none) && !/representing 0% of the annual target/.test(none));
 }
 ok('a target of zero yields no percentage rather than a division by zero',
@@ -295,7 +395,7 @@ ok('a target of zero yields no percentage rather than a division by zero',
    on. A team called "<script>" must arrive as those characters. */
 {
   const evil = box.build({ records: [
-    { kind: 'goal', program: 'SVI', year: 2026, target: 10 },
+    { kind: 'estimate', program: 'SVI', year: 2026, dept: 'Community Service', ministry: 'Outreach Teams', target: 10 },
     { kind: 'team', program: 'SVI', year: 2026, quarter: 1, name: '<script>alert(1)</script>',
       country: 'A & B', from: '', to: '', male: 1, female: 1, activities: '<b>bold</b>' }], year: 2026, period: 'q1' });
   ok('a name containing markup is escaped, not embedded',

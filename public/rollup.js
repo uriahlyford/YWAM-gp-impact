@@ -70,6 +70,16 @@ function addKnown(vals){
   return any ? total : null;
 }
 
+/* Is this week inside the asked-for quarter? `quarter` is a 0-based index, or an
+   ARRAY of them for a period spanning more than one — a semester is two quarters
+   and a year is four. Arrays matter for `latest` metrics especially: a headcount
+   over Q1+Q2 is the last value in that half, not Q1's plus Q2's. */
+function inQuarter_(wk, quarter){
+  if(quarter === undefined || quarter === null) return true;
+  if(Object.prototype.toString.call(quarter) === '[object Array]') return quarter.indexOf(qOf(wk)) > -1;
+  return qOf(wk) === quarter;
+}
+
 /* One metric's weeks collapsed to a single figure, per that metric's rule:
    sum for events, latest for headcounts, avg for 1-10 scores. */
 function aggregate(entries, mode, quarter){
@@ -78,7 +88,7 @@ function aggregate(entries, mode, quarter){
   for(var w in entries){
     var wk = Number(w), v = Number(entries[w]);
     if(isNaN(v)) continue;
-    if(quarter !== undefined && quarter !== null && qOf(wk) !== quarter) continue;
+    if(!inQuarter_(wk, quarter)) continue;
     pairs.push([wk, v]);
   }
   if(!pairs.length) return null;

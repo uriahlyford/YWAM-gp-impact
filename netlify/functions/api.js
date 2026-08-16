@@ -1365,11 +1365,18 @@ async function getMyBoot(username, pin) {
 
 /* ==================== programme records (the Ministry report) ====================
    Four project agreements with the Ministry of Education, Youth and Sport — SVI,
-   YDC, YLT, YAP — reported on twice a year. What that report needs is not what the
-   weekly KPIs hold: a visiting team's country and dates, a class's male/female
-   split, a cohort's Khmer/international breakdown. Those are facts about a thing
-   that happened once, so they are records rather than weekly figures, and none of
-   this touches what anyone logs each week.
+   YDC, YLT, YAP. What that report needs is not what the weekly KPIs hold: a
+   visiting team's country and dates, a class's male/female split, a cohort's
+   Khmer/international breakdown. Those are facts about a thing that happened once,
+   so they are records rather than weekly figures, and none of this touches what
+   anyone logs each week.
+
+   THE DIRECTION OF TRUTH RUNS ONE WAY. The weekly numbers are what happened; the
+   report is written from them. So what is stored here is only what the weekly
+   numbers cannot hold — the splits, the names, the dates — plus each ministry's
+   own annual estimate. The headline counts in the report are read from the KPI
+   entries at render time and are never copied into this blob, because a copy is a
+   second answer to a question that already has one.
 
    One list, discriminated by `kind`, because five blobs would eventually disagree
    about which year a row belongs to. Rows are year-scoped like everything else.
@@ -1378,7 +1385,7 @@ async function getMyBoot(username, pin) {
    programme's teams and classes, which is the only way the data ever gets in.
    A row is stamped with its writer's campus, and only its writer's campus. */
 const PROGRAM_IDS = ['SVI', 'YDC', 'YLT', 'YAP'];
-const RECORD_KINDS = ['team', 'class', 'cohort', 'group', 'issue', 'goal'];
+const RECORD_KINDS = ['team', 'class', 'cohort', 'group', 'issue', 'estimate'];
 
 /* Mirrors public/programs.js. Kept as a plain allow-list rather than imported,
    because the function bundle does not share the frontend's globals — the test
@@ -1390,7 +1397,7 @@ const RECORD_FIELDS = {
            'staffIntl', 'staffKhmer', 'outreach', 'activities'],
   group:  ['location', 'male', 'female', 'sponsors', 'activities'],
   issue:  ['challenge', 'solution'],
-  goal:   ['target', 'unit']
+  estimate: ['dept', 'ministry', 'target', 'unit']
 };
 const NUMERIC_FIELDS = ['male', 'female', 'servedMale', 'servedFemale', 'classes',
   'intl', 'khmer', 'staffMale', 'staffFemale', 'staffIntl', 'staffKhmer', 'target'];

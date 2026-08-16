@@ -57,7 +57,7 @@ const PROGRAMS = (function () {
     { id: 'pr_a', kind: 'team', program: 'SVI', campus: 'poipet', year: y, quarter: 1,
       name: 'YWAM Maui', country: 'United States of America', from: y + '-02-03', to: y + '-02-17',
       male: 5, female: 7, servedMale: 40, servedFemale: 60, activities: 'Teaching English, community outreach' },
-    { id: 'pr_b', kind: 'goal', program: 'SVI', campus: 'poipet', year: y, quarter: 1, target: 250, unit: 'volunteers' },
+    { id: 'pr_b', kind: 'estimate', program: 'SVI', dept: 'Community Service', ministry: 'Outreach Teams', campus: 'poipet', year: y, quarter: 1, target: 250, unit: 'volunteers' },
     { id: 'pr_c', kind: 'class', program: 'YDC', campus: 'poipet', year: y, quarter: 1,
       location: 'Poipet YDC', classes: 6, male: 48, female: 52, activities: '' },
     { id: 'pr_d', kind: 'cohort', program: 'YLT', campus: 'poipet', year: y, quarter: 1,

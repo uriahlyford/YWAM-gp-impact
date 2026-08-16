@@ -169,6 +169,28 @@ r = await call('getPrograms', ['sokha', '1234']);
     byName['First half'].semester === undefined, JSON.stringify(byName['First half']));
 }
 
+/* ---------- 4c. annual estimates belong to a ministry ----------
+   The number the Ministry report prints as our annual target is the sum of the
+   estimates the ministries entered, so an estimate has to carry whose it is. */
+seed();
+r = await call('saveProgramRecord', ['sokha', '1234', { kind: 'estimate', program: 'YDC', year: YEAR,
+  dept: 'Youth Education', ministry: 'YDC', target: 250, unit: 'students' }]);
+ok('an estimate saves with the ministry that owns it',
+  r.body.records[0].dept === 'Youth Education' && r.body.records[0].ministry === 'YDC' &&
+  r.body.records[0].target === 250, JSON.stringify(r.body.records[0]));
+r = await call('saveProgramRecord', ['sokha', '1234', { kind: 'estimate', program: 'YDC', year: YEAR,
+  dept: 'Community Service', ministry: 'GP Education', target: 150, unit: 'students' }]);
+ok('a second ministry gets its own row rather than overwriting the first',
+  r.body.records.length === 2, 'rows=' + r.body.records.length);
+r = await call('saveProgramRecord', ['sokha', '1234', { kind: 'estimate', program: 'YAP', year: YEAR,
+  target: 25, unit: 'participants' }]);
+ok('a programme with no ministry behind it may estimate for itself',
+  r.body.records[2].dept === '' && r.body.records[2].ministry === '' && r.body.records[2].target === 25,
+  JSON.stringify(r.body.records[2]));
+r = await call('saveProgramRecord', ['sokha', '1234', { kind: 'goal', program: 'SVI', year: YEAR, target: 50 }]);
+ok('the old programme-level goal kind is gone, not silently accepted',
+  r.body && r.body.err === 'bad_kind', JSON.stringify(r.body));
+
 /* ---------- 5. years do not bleed into each other ---------- */
 seed([
   { id: 'pr_old', kind: 'team', program: 'SVI', campus: 'poipet', year: YEAR - 1, quarter: 1,

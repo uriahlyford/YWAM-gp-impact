@@ -37,6 +37,14 @@ var GP_PROGRAMS = [
     /* Which of the app's own ministries feed this programme, so the report can
        cross-check a hand-entered total against what was logged weekly. */
     ministries: ['Outreach Teams'],
+    /* WHERE THE NUMBERS COME FROM. Each of these is a metric already logged
+       weekly by a ministry. The report reads them; nothing here is retyped on
+       the Programs tab. See gpProgramActuals(). */
+    sources: [
+      { of:'people', dept:'Community Service', ministries:['Outreach Teams'], metric:'Volunteers Mobilized' },
+      { of:'teams',  dept:'Community Service', ministries:['Outreach Teams'], metric:'Teams Hosted' },
+      { of:'served', dept:'Community Service', ministries:['Outreach Teams'], metric:'People Served' }
+    ],
     blurb: 'Outreach teams from other YWAM bases, churches and organisations — international teams and short-term volunteers.',
     desc: 'This project facilitates university students and other youth from around the world to conduct short-term volunteer work in Cambodia in partnership with existing local and international organizations, providing additional human resources for various organizational activities. Program locations include Phnom Penh Capital and various provinces. The project also promotes cross-cultural learning and connections for Cambodian people, which is vital in a globalized world.',
     conclusion: 'Through the Student Volunteer Internship (SVI) project, individuals will learn Khmer culture and language. These individuals help educate and develop the Cambodian nation, giving young people the experience they need to grow and become good citizens of Cambodia and the world.' },
@@ -46,6 +54,11 @@ var GP_PROGRAMS = [
     unit: 'students', countedAs: 'students',
     kind: 'class',
     ministries: ['YDC', 'GP Education', 'Ponlork School', 'LTN', 'Sry Noi', 'Sports'],
+    sources: [
+      { of:'people', dept:'Youth Education',   ministries:['YDC'], metric:'Youth Enrolled' },
+      { of:'people', dept:'Community Service', ministries:['GP Education','Ponlork School','LTN','Sry Noi'], metric:'Students Enrolled' },
+      { of:'people', dept:'Youth Education',   ministries:['Sports'], metric:'Youth Participating' }
+    ],
     blurb: 'Educational and youth programmes: kids programmes, youth programmes, sports and preschool.',
     desc: 'The Youth Development Center serves as a platform for young people to gather and self-develop through formal and positive non-formal activities. Its goal is to foster personal character and skill development for youth in Cambodia. English classes are taught 5 days a week by foreign teachers and Khmer interns. Intercultural interaction strengthens students’ cross-cultural skills and builds confidence in communicating with foreigners in a globalized world. We provide English, music, computer, arts, and other classes tailored to teacher capabilities and student needs.',
     conclusion: 'Through the Youth Development Center (YDC) project, we will help provide general non-formal knowledge, as well as provide education in ethics and etiquette, and educate how to live to be good citizens in society.' },
@@ -55,6 +68,11 @@ var GP_PROGRAMS = [
     unit: 'students', countedAs: 'students',
     kind: 'cohort',
     ministries: ['DTS', 'GPDTS', 'DBS', 'SMS', 'BCS', 'SOMD'],
+    sources: [
+      { of:'people',    dept:'Leadership Development', ministries:['DTS','GPDTS','DBS','SMS','BCS','SOMD'], metric:'Students Enrolled' },
+      { of:'graduates', dept:'Leadership Development', ministries:['DTS','GPDTS','DBS','SMS','BCS','SOMD'], metric:'Students Graduated' },
+      { of:'outreach',  dept:'Leadership Development', ministries:['DTS','GPDTS','DBS','SMS','BCS','SOMD'], metric:'Outreach Locations Reached' }
+    ],
     blurb: 'Leadership training schools — DTS, DBS and the other leadership schools.',
     desc: 'The Youth Leadership Training (YLT) program facilitates leadership training, character development, and ethics for Cambodian youth. It consists of 2 phases. The first phase is 12 weeks of training through lectures and classroom-based activities. Each week is spent learning about a specific topic, such as personal identity, building healthy relationships, forgiving others, and living a purposeful life that makes a positive impact on society. The second phase lasts for 2 months and serves as a practical application period. Students are divided into small groups and sent to various provinces across Cambodia as well as abroad to participate in programs hosted by different organizations, allowing them to apply what they learned in class.',
     conclusion: 'Through the Youth Leadership Training (YLT), we provide a positive learning environment for Cambodian youth where they can learn leadership, life skills, and gain the foundation for working with our organization or other NGOs.' },
@@ -63,7 +81,13 @@ var GP_PROGRAMS = [
     reportName: 'Youth Assistance Project (YAP)',
     unit: 'participants', countedAs: 'students',
     kind: 'group',
+    /* YAP is the one with no weekly KPI behind it: dorm residents and young
+       leaders being supported are not a metric anybody logs. Its figures are
+       therefore typed here, and the screen says so rather than letting it look
+       like the other three. If a YAP ministry is ever added to the taxonomy,
+       give it a source and the typing stops. */
     ministries: [],
+    sources: [],
     blurb: 'The pathway for young people becoming staff: dorm residents, new staff in their first 2–4 years, and young leaders being supported through education and mentoring.',
     desc: 'The Youth Assistance Project (YAP) provides housing, food, and scholarships to underprivileged students so they can complete high school or university, alongside training in computers, English, arts, music, and sports.',
     conclusion: 'As for the Youth Assistance Program (YAP), we hope that the students who stay with us will receive a good education and be well-disciplined. The YAP leaders and staff have maintained good relationships with families and villagers. That is why families trust them and send their children to join our program. The project leaders and staff are truly committed to working with the youth and walking with them even after they graduate from high school. Graduates will also have the opportunity to participate in our youth leadership training program.' }
@@ -197,11 +221,20 @@ var GP_RECORD_FIELDS = {
     { k: 'challenge',   t: 'x', label: 'Challenge' },
     { k: 'solution',    t: 'x', label: 'What we did about it' }
   ],
-  /* One per programme per year: the number the agreement commits us to. Stored
-     rather than hardcoded because it is renegotiated — the 2026 agreement is not
-     the 2027 one, and last year's report must still show last year's target. */
-  goal: [
-    { k: 'target',      t: 'n', label: 'Target for the year' },
+  /* The annual estimate, entered BY THE MINISTRY that will deliver it. A
+     programme's target for the year is the sum of its ministries' estimates, so
+     the number in the report is owned by the people who have to reach it rather
+     than decided once at the top.
+
+     `dept` and `ministry` say whose estimate it is; both are empty for a
+     programme with no ministry behind it (YAP), which then has exactly one.
+     Stored rather than hardcoded because the agreement is renegotiated — the
+     2026 target is not the 2027 one, and last year's report must still show
+     last year's. */
+  estimate: [
+    { k: 'dept',        t: 's', label: 'Department',          optional: true },
+    { k: 'ministry',    t: 's', label: 'Ministry',            optional: true },
+    { k: 'target',      t: 'n', label: 'Estimate for the year' },
     { k: 'unit',        t: 's', label: 'Counted in',          optional: true }
   ]
 };
@@ -254,13 +287,91 @@ function gpProgramSummary(id, rows){
   return out;
 }
 
-/* The year's target for one programme, or null when nobody has set one yet —
-   which is different from a target of zero and has to stay different, or an
-   unset programme reads as 0% instead of "no goal yet". */
+/* The year's target for one programme: the sum of the annual estimates its
+   ministries have entered. Null when nobody has entered any — which is a
+   different thing from a target of zero and has to stay different, or an
+   unestimated programme reads as 0% instead of "nobody has said yet".
+
+   Summing the ministries rather than storing one number at the top is the point:
+   the target in the Ministry report is then owned by the people who have to reach
+   it, and it moves when they revise it. */
 function gpProgramGoal(id, rows){
-  var found = null;
-  (rows||[]).forEach(function(r){
-    if(r.kind==='goal' && r.program===id) found = r;
+  var total = null;
+  gpProgramEstimates(id, rows).forEach(function(r){
+    total = (total === null ? 0 : total) + (Number(r.target) || 0);
   });
-  return found ? (Number(found.target)||0) : null;
+  return total;
+}
+function gpProgramEstimates(id, rows){
+  return (rows||[]).filter(function(r){ return r.kind==='estimate' && r.program===id; });
+}
+/* The estimate row for one ministry, if it has entered one. `dept`/`ministry`
+   empty means the programme's own, for a programme with no ministry behind it. */
+function gpMinistryEstimate(id, rows, dept, ministry){
+  var found = null;
+  gpProgramEstimates(id, rows).forEach(function(r){
+    if((r.dept||'') === (dept||'') && (r.ministry||'') === (ministry||'')) found = r;
+  });
+  return found;
+}
+
+/* ---- what the ministries actually logged ----
+   THE DIRECTION OF TRUTH. The weekly numbers are the app's own record of what
+   happened; the Ministry report is a document written from them. So the report
+   reads these, and the Programs tab never asks anybody to retype a figure that a
+   ministry already logged.
+
+   `R` is a gpRollup() instance, `ids` the campuses, `quarters` the 0-based
+   quarter indices the period covers (rollup's own convention). Returns, per
+   programme, the figures its sources hold — and `null` for a programme with no
+   source, which is a different thing from zero and must stay different. */
+function gpProgramActuals(R, ids, quarters){
+  var out = {};
+  GP_PROGRAMS.forEach(function(p){
+    var got = { people:null, teams:null, served:null, graduates:null, outreach:null,
+                byMinistry:{}, hasSources:!!(p.sources && p.sources.length) };
+    (p.sources || []).forEach(function(src){
+      var v = R.ministryRollup(ids, src.dept, src.ministries, src.metric, quarters);
+      if(v === null || v === undefined) return;
+      got[src.of] = (got[src.of] === null ? 0 : got[src.of]) + v;
+      /* Per ministry too, so the entry screen shows each leader their own
+         contribution rather than one number nobody recognises.
+
+         Keyed by METRIC as well as ministry. Keying on the ministry alone added
+         a ministry's volunteers to its teams to its people-served — 12 + 1 + 800
+         showing as 813, which is not a quantity of anything. */
+      if(src.of !== 'people') return;
+      src.ministries.forEach(function(min){
+        var one = R.ministryRollup(ids, src.dept, [min], src.metric, quarters);
+        if(one === null || one === undefined) return;
+        got.byMinistry[src.dept + '|' + min + '|' + src.metric] =
+          { dept:src.dept, ministry:min, metric:src.metric, value:one };
+      });
+    });
+    out[p.id] = got;
+  });
+  return out;
+}
+
+/* Every (dept, ministry) that contributes PEOPLE to a programme, in source order
+   — the rows the Programs tab shows, one per ministry, each with the metric it is
+   counted by and its own annual estimate.
+
+   Only the `people` sources: an estimate is "how many students will we have",
+   and a ministry cannot be asked to estimate its own teams-hosted and its
+   students-enrolled as one number. The other sources (teams, served, graduates)
+   belong to the programme, not to a row. */
+function gpProgramMinistries(id){
+  var p = gpProgram(id), out = [], seen = {};
+  if(!p) return out;
+  (p.sources || []).forEach(function(src){
+    if(src.of !== 'people') return;
+    src.ministries.forEach(function(min){
+      var key = src.dept + '|' + min;
+      if(seen[key]) return;
+      seen[key] = 1;
+      out.push({ dept:src.dept, ministry:min, metric:src.metric });
+    });
+  });
+  return out;
 }

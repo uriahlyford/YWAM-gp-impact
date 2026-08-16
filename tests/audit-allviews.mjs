@@ -35,7 +35,7 @@ const TRIPS={ok:true,trips:[{id:'t1',from:'2026-03-01',to:'2026-03-05',days:5,ki
 const PROGRAMS=(()=>{const y=new Date().getFullYear();return [
   {id:'pr_a',kind:'team',program:'SVI',campus:'poipet',year:y,quarter:1,name:'YWAM Maui',country:'USA',
    from:y+'-02-03',to:y+'-02-17',male:5,female:7,servedMale:40,servedFemale:60,activities:'Teaching'},
-  {id:'pr_b',kind:'goal',program:'SVI',campus:'poipet',year:y,quarter:1,target:250,unit:'volunteers'},
+  {id:'pr_b',kind:'estimate',program:'SVI',dept:'Community Service',ministry:'Outreach Teams',campus:'poipet',year:y,quarter:1,target:250,unit:'volunteers'},
   {id:'pr_c',kind:'class',program:'YDC',campus:'poipet',year:y,quarter:1,location:'Poipet YDC',
    classes:6,male:48,female:52,activities:''},
   {id:'pr_e',kind:'issue',program:'',campus:'poipet',year:y,quarter:1,

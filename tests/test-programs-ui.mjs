@@ -35,7 +35,17 @@ await new Promise(r => srv.listen(4419, r));
 const YEAR = new Date().getFullYear();
 const ME = { id:'st1', name:'Sokha Chan', username:'sokha', campus:'poipet', dept:'Community Service',
   ministry:'Outreach Teams', role:'Coordinator', photo:'', mentorId:'' };
-const DATA = { leader:false, entries:{ poipet:{} }, okrs:[], survey:[] };
+/* Weekly KPI entries — the app's own numbers, which are what the report must be
+   built from. Week 3 is Q1, week 20 is Q2 (rollup counts 13 weeks to a quarter).
+   Outreach Teams logged 12 volunteers across 1 team in Q1 and 18 across 2 teams
+   in Q2; YDC's enrolment is a level, so it is `latest` within the period. */
+const DATA = { leader:false, okrs:[], survey:[], entries:{ poipet:{
+  'Community Service|Outreach Teams|Volunteers Mobilized': { 3:12, 20:18 },
+  'Community Service|Outreach Teams|Teams Hosted':         { 3:1,  20:2 },
+  'Community Service|Outreach Teams|People Served':        { 3:800, 20:1020 },
+  'Youth Education|YDC|Youth Enrolled':                    { 3:95, 20:187 },
+  'Leadership Development|DTS|Students Enrolled':          { 20:24 },
+} } };
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra) {
@@ -165,15 +175,22 @@ ok('split by sex, which is what the Ministry asks for',
   facts.indexOf('Men=5') > -1 && facts.indexOf('Women=7') > -1, facts.join(' '));
 ok('and counts the countries it came from', facts.indexOf('Countries=1') > -1, facts.join(' '));
 
-/* ---------- 4. the year goal, and the percentage against it ---------- */
-await p.fill('#progTarget', '250');
-await p.click('#saveGoalBtn');
+/* ---------- 4. the annual estimate, and the percentage against it ----------
+   The estimate belongs to the ministry that has to reach it, so it is saved
+   against that ministry rather than against the programme as a whole. */
+const SVI_MIN = 'Community Service|Outreach Teams';
+await p.fill('.estIn[data-est="' + SVI_MIN + '"]', '250');
+await p.click('[data-estsave="' + SVI_MIN + '"]');
 await p.waitForTimeout(700);
-const goalCall = store.calls.filter(c => c.fn === 'saveProgramRecord' && c.args[2].kind === 'goal').pop();
-ok('a year goal saves as its own record', goalCall && goalCall.args[2].target === 250 && goalCall.args[2].program === 'SVI',
+const goalCall = store.calls.filter(c => c.fn === 'saveProgramRecord' && c.args[2].kind === 'estimate').pop();
+ok('an annual estimate saves as its own record, owned by a ministry',
+  goalCall && goalCall.args[2].target === 250 && goalCall.args[2].program === 'SVI' &&
+  goalCall.args[2].ministry === 'Outreach Teams',
   goalCall ? JSON.stringify(goalCall.args[2]) : 'not sent');
 const ringPct = await p.$eval('.okrCard .ring', e => e.textContent.trim()).catch(() => '');
-ok('and the ring shows progress against it, not against nothing', /^5/.test(ringPct), 'ring=' + ringPct);  // 12/250 = 5%
+/* 30 volunteers logged for the year to date (12 in Q1 + 18 in Q2) against an
+   estimate of 250 — the ring reads the weekly numbers, not the typed rows. */
+ok('the ring measures what was logged against the estimate', ringPct === '12%', 'ring=' + ringPct);
 
 /* ---------- 5. a different agreement is a different form ---------- */
 await p.click('[data-prog="YDC"]');
@@ -325,13 +342,84 @@ names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.tri
 ok('deleting a row takes it off the list', names.length === 0, names.join(' | '));
 await p.close();
 
+/* ---------- 9a. the app's numbers, not the report's ----------
+   THE DIRECTION OF TRUTH. What the ministries log weekly is the record of what
+   happened; the Programs tab holds only what a weekly figure cannot say. So the
+   screen shows each ministry its own logged figure, never asks anyone to retype
+   it, and warns when the typed breakdown does not add up to it. */
+store = makeStore([
+  { id:'pr_e1', kind:'estimate', program:'SVI', campus:'poipet', year:YEAR, quarter:1,
+    dept:'Community Service', ministry:'Outreach Teams', target:50, unit:'volunteers' },
+  /* Only ONE of the two Q1 teams has been written up: 12 logged, 5 typed. */
+  { id:'pr_t1', kind:'team', program:'SVI', campus:'poipet', year:YEAR, quarter:1, name:'YWAM Maui',
+    country:'USA', from:YEAR+'-01-27', to:YEAR+'-02-21', male:2, female:3,
+    servedMale:400, servedFemale:400, activities:'Teaching English' },
+]);
+p = await mk(store);
+await p.click('[data-view="programs"]');
+await p.waitForSelector('.progChips', { timeout: 8000 });
+await p.selectOption('#progPeriodSel', 'q1');
+await p.waitForTimeout(500);
+
+const minRow = await p.$eval('.minRow', e => ({
+  name: e.querySelector('.minName').textContent.replace(/\s+/g, ' ').trim(),
+  metric: e.querySelector('.minMetric').textContent.trim(),
+  got: e.querySelector('.minGot').textContent.trim(),
+}));
+ok('each ministry sees its own weekly figure on the Programs tab',
+  /Outreach Teams/.test(minRow.name) && minRow.metric === 'Volunteers Mobilized' && minRow.got === '12',
+  JSON.stringify(minRow));
+/* Keyed by metric as well as ministry. Keying on the ministry alone added this
+   ministry's volunteers to its teams to its people-served and showed 813. */
+ok('and that figure is one metric, not several added together', minRow.got === '12', minRow.got);
+ok('and the screen says where that number came from',
+  /From your weekly numbers/i.test(await p.$eval('#main', e => e.textContent)));
+ok('nothing on the screen asks for the count to be retyped',
+  !(await p.$('#progTarget')), 'a total-count box is still on the screen');
+
+/* The typed detail adds up to 5; the ministry logged 12. The report will print
+   12, so the person entering detail needs to know the breakdown is short. */
+const warn = await p.$('.mismatch');
+ok('a breakdown that does not add up to the logged figure is flagged', !!warn);
+if (warn) {
+  const wt = await warn.evaluate(e => e.textContent.replace(/\s+/g, ' '));
+  ok('and the warning names both numbers, and says which one wins',
+    /12/.test(wt) && /5/.test(wt) && /report will print 12/.test(wt), wt);
+}
+
+/* The ring measures the ministries' logged figure against their own estimate. */
+const ringPct1 = await p.$eval('.okrCard .ring', e => e.textContent.trim()).catch(() => '');
+ok('the progress ring counts what was logged, not what was typed',
+  ringPct1 === '24%', 'ring=' + ringPct1);   // 12 logged / 50 estimate
+
+/* Each ministry owns its own annual estimate. */
+await p.fill('.estIn[data-est="Community Service|Outreach Teams"]', '60');
+await p.click('[data-estsave="Community Service|Outreach Teams"]');
+await p.waitForTimeout(700);
+const estCall = store.calls.filter(c => c.fn === 'saveProgramRecord' && c.args[2].kind === 'estimate').pop();
+ok('an annual estimate saves against the ministry that owns it',
+  estCall && estCall.args[2].dept === 'Community Service' &&
+  estCall.args[2].ministry === 'Outreach Teams' && estCall.args[2].target === 60,
+  estCall ? JSON.stringify(estCall.args[2]) : 'not sent');
+
+/* YAP has no ministry logging anything, and the screen has to say so rather than
+   showing a dash and letting somebody assume it is broken. */
+await p.click('[data-prog="YAP"]');
+await p.waitForTimeout(400);
+const yapText = await p.$eval('#main', e => e.textContent);
+ok('a programme with no weekly numbers behind it says so',
+  /No weekly numbers behind this one/i.test(yapText) && /No ministry logs a weekly figure/i.test(yapText));
+ok('and still offers it one annual estimate', !!(await p.$('[data-estsave="|"]')));
+await p.close();
+
 /* ---------- 9b. the generated report ----------
    The document itself is checked in test-report.mjs against the real filed
    report. What matters here is that the button hands it the records on screen,
    that it opens over the app and comes back off, and that the three ways out
    exist — a document nobody can get into Google Docs is not a report. */
 store = makeStore([
-  { id:'pr_g', kind:'goal', program:'SVI', campus:'poipet', year:YEAR, quarter:1, target:50, unit:'volunteers' },
+  { id:'pr_g', kind:'estimate', program:'SVI', campus:'poipet', year:YEAR, quarter:1,
+    dept:'Community Service', ministry:'Outreach Teams', target:50, unit:'volunteers' },
   { id:'pr_t', kind:'team', program:'SVI', campus:'poipet', year:YEAR, quarter:1, name:'YWAM Maui',
     country:'USA', from:YEAR+'-01-27', to:YEAR+'-02-21', male:6, female:6,
     servedMale:454, servedFemale:456, activities:'Teaching English in remote villages' },
@@ -352,10 +440,14 @@ ok('the report names the quarter it was generated for',
   /Activity report — 1st Quarter/.test(rep), (rep.match(/Activity report[^1]{0,4}[^ ]* \w+/) || [''])[0]);
 ok('the report is built from the records on screen, not from a fixture',
   /YWAM Maui \(USA\): 12 members/.test(rep), (rep.match(/YWAM[^|]{0,50}/) || [''])[0]);
-ok('and against the goal typed into the app',
-  /representing 24% of the annual target \(Target: 50 volunteers for 2026\)/.test(rep) ||
-  /representing 24% of the annual target/.test(rep),
+ok('the headline count is the ministry\'s weekly figure, not the typed detail',
+  /Received 12 participants in the 1st quarter/.test(rep),
+  (rep.match(/Received \d+ participants[^.]{0,60}/) || [''])[0]);
+ok('and it is measured against the estimate that ministry entered',
+  /representing 24% of the annual target \(Target: 50 participants/.test(rep),
   (rep.match(/representing[^.]{0,70}/) || [''])[0]);
+ok('while the typed detail still supplies the country and the dates',
+  /YWAM Maui \(USA\)/.test(rep) && /Jan 27/.test(rep));
 ok('the challenges written in the app reach the report',
   /Fewer volunteer teams than last year/.test(rep) && /Asked two partner bases/.test(rep));
 ok('all five sections are there',

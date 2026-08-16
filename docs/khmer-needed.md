@@ -307,9 +307,19 @@ the paperwork.
 | this quarter | ត្រីមាសនេះ | Goes inside "Nothing recorded yet for {when}." |
 | this semester | ឆមាសនេះ | Same |
 | this year | ឆ្នាំនេះ | Same |
-| Year goal (per the agreement) | គោលដៅប្រចាំឆ្នាំ (តាមកិច្ចព្រមព្រៀង) | The number the agreement commits us to |
-| Save goal | រក្សាទុកគោលដៅ | Button — short |
-| No goal set for this year yet. | មិនទាន់មានគោលដៅសម្រាប់ឆ្នាំនេះទេ។ | |
+| From your weekly numbers | ពីចំនួនប្រចាំសប្តាហ៍របស់អ្នក | Heading over the ministry rows — these figures come from what each ministry logs every week, not from anything typed on this screen |
+| These come from what each ministry logs every week. The report reads them — nothing here is typed twice. | ទាំងនេះមកពីអ្វីដែលកិច្ចការបម្រើនីមួយៗកត់ត្រាជារៀងរាល់សប្តាហ៍។ របាយការណ៍អានវា — គ្មានអ្វីនៅទីនេះត្រូវវាយបញ្ចូលពីរដងទេ។ | |
+| The middle column is this period. The box is that ministry’s estimate for the whole year — the four add up to the target in the report. | ជួរឈរកណ្តាលគឺអំឡុងពេលនេះ។ ប្រអប់នេះគឺជាការប៉ាន់ស្មានរបស់កិច្ចការបម្រើនោះសម្រាប់ពេញមួយឆ្នាំ — ទាំងបួនបូកគ្នាជាគោលដៅក្នុងរបាយការណ៍។ | |
+| Annual estimate | ការប៉ាន់ស្មានប្រចាំឆ្នាំ | |
+| Estimate for the year | ការប៉ាន់ស្មានសម្រាប់ឆ្នាំ | Form label |
+| est. | ប៉ាន់ | Placeholder inside a very small box — about 5 characters |
+| Save | រក្សាទុក | Button beside each ministry's estimate — short |
+| No annual estimate entered for this year yet. | មិនទាន់មានការប៉ាន់ស្មានប្រចាំឆ្នាំសម្រាប់ឆ្នាំនេះទេ។ | |
+| No weekly numbers behind this one | គ្មានចំណួនប្រចាំសប្តាហ៍នៅពីក្រោយកម្មវិធីនេះទេ | Heading, YAP only |
+| No ministry logs a weekly figure for this programme, so its numbers are the ones typed below. | គ្មានកិច្ចការបម្រើណាកត់ត្រាចំនួនប្រចាំសប្តាហ៍សម្រាប់កម្មវិធីនេះទេ ដូច្នេះចំនួនរបស់វាគឺជាចំនួនដែលបានវាយបញ្ចូលខាងក្រោម។ | YAP only |
+| Detail for the report | ព័ត៌មានលម្អិតសម្រាប់របាយការណ៍ | Heading |
+| The parts a weekly number cannot hold — countries, dates, and how many were women. | ផ្នែកដែលចំនួនប្រចាំសប្តាហ៍មិនអាចផ្ទុកបាន — ប្រទេស កាលបរិច្ឆេទ និងចំនួនស្ត្រី។ | |
+| Your ministries logged {logged} for this period; the detail below adds up to {typed}. The report will print {logged} — fill in the rest so the breakdown matches. | កិច្ចការបម្រើរបស់អ្នកបានកត់ត្រា {logged} សម្រាប់អំឡុងពេលនេះ ប៉ុន្តែព័ត៌មានលម្អិតខាងក្រោមបូកបានត្រឹម {typed}។ របាយការណ៍នឹងបោះពុម្ព {logged} — សូមបំពេញផ្នែកដែលនៅសល់ ដើម្បីឱ្យការបែងចែកត្រូវគ្នា។ | The orange banner. **Both {logged} must stay** — the same number appears twice on purpose |
 | {n} of {t} so far this year | {n} ក្នុងចំណោម {t} គិតមកដល់ពេលនេះក្នុងឆ្នាំនេះ | Progress against the goal — keep both {n} and {t} |
 | Nothing recorded yet for {when}. | មិនទាន់មានការកត់ត្រាសម្រាប់{when}ទេ។ | {when} is one of the three above — keep the placeholder |
 | Pick a single quarter to add a record — a record belongs to the quarter it happened in. | ជ្រើសរើសត្រីមាសតែមួយដើម្បីបន្ថែមកំណត់ត្រា — កំណត់ត្រាមួយជាកម្មសិទ្ធិរបស់ត្រីមាសដែលវាបានកើតឡើង។ | Shown when a semester or the whole year is selected |
@@ -342,7 +352,7 @@ buttons around it.
 | English | ខ្មែរ |
 |---|---|
 | Generate the Ministry report | បង្កើតរបាយការណ៍ជូនក្រសួង |
-| Writes the report for the period above from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent. | សរសេររបាយការណ៍សម្រាប់អំឡុងពេលខាងលើពីកំណត់ត្រាទាំងនេះ ក្នុងទម្រង់ដូចរបាយការណ៍ដែលបានដាក់ជូនរួចហើយ។ វាបើកជាសេចក្តីព្រាង — សូមអានវាមុនពេលផ្ញើ។ |
+| Writes the report for the period above from your weekly numbers, with the detail entered here filling in the parts a weekly figure cannot hold. It opens as a draft — read it before it is sent. | សរសេររបាយការណ៍សម្រាប់អំឡុងពេលខាងលើពីចំនួនប្រចាំសប្តាហ៍របស់អ្នក ដោយព័ត៌មានលម្អិតដែលបញ្ចូលនៅទីនេះបំពេញផ្នែកដែលចំនួនប្រចាំសប្តាហ៍មិនអាចផ្ទុកបាន។ វាបើកជាសេចក្តីព្រាង — សូមអានវាមុនពេលផ្ញើ។ |
 | Ministry report | របាយការណ៍ជូនក្រសួង |
 | Copy for Google Docs | ចម្លងសម្រាប់ Google Docs |
 | Download | ទាញយក |
@@ -414,8 +424,8 @@ wrap.
 | Male participants | អ្នកចូលរួមប្រុស | YAP |
 | Female participants | អ្នកចូលរួមស្រី | YAP |
 | Support for sponsor families | ការគាំទ្រសម្រាប់គ្រួសារឧបត្ថម្ភ | YAP |
-| Target for the year | គោលដៅសម្រាប់ឆ្នាំ | The year goal form |
-| Counted in | រាប់ជា | The unit the goal is counted in |
+| Estimate for the year | ការប៉ាន់ស្មានសម្រាប់ឆ្នាំ | The annual-estimate form |
+| Counted in | រាប់ជា | The unit the estimate is counted in |
 
 ## 1. Words and labels
 

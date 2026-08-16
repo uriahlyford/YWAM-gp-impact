@@ -6,6 +6,18 @@
     the Ministry receives the format it has been receiving, with this period's
     numbers in it, rather than a new one it has to learn to read.
 
+    WHERE THE NUMBERS COME FROM. The headline counts — how many volunteers, how
+    many students — are the app's own weekly numbers, read from the KPI entries the
+    ministries log and handed in as `actuals`. They are NOT typed on the Programs
+    tab: the weekly numbers are the record of what happened, and this document is
+    written from them. What the Programs tab holds is only what a weekly figure
+    cannot say — which country a team came from, how many of a class were girls,
+    what each location is called.
+
+    So when `actuals` gives a figure it wins, and the typed detail supplies the
+    breakdown underneath it. A programme with no KPI behind it (YAP) falls back to
+    the typed rows, which is a stated exception rather than the rule.
+
     ANY PERIOD, FROM ONE SET OF RECORDS. Records are stamped with a quarter,
     because a quarter is the finest grain anybody reports on. A quarterly report is
     one quarter; the Ministry's own six-month filing is two of them added together;
@@ -97,8 +109,8 @@ function gpReportRows(records, kind, program, period, toDate){
   return (records || []).filter(function(r){
     if(r.kind !== kind) return false;
     if(program !== null && program !== undefined && r.program !== program) return false;
-    /* `goal` rows are the year's target and belong to no quarter. */
-    if(r.kind !== 'goal' && qs.indexOf(Number(r.quarter) || 1) === -1) return false;
+    /* `estimate` rows are the year's target and belong to no quarter. */
+    if(r.kind !== 'estimate' && qs.indexOf(Number(r.quarter) || 1) === -1) return false;
     return true;
   });
 }
@@ -108,11 +120,11 @@ function gpReportRows(records, kind, program, period, toDate){
     representing 48% of the annual target (Target: 50 participants for 2026)."
    The target is always the YEAR's, whichever half is being reported — that is
    what "annual target" means, and it is the number in the agreement. */
-function gpReportHeadline(p, records, year, period){
+function gpReportHeadline(p, records, year, period, A){
   var periodRows = gpReportRows(records, p.kind, p.id, period);
   var yearRows = gpReportRows(records, p.kind, p.id, period, true);
-  var got = gpProgramSummary(p.id, periodRows).people;
-  var yearGot = gpProgramSummary(p.id, yearRows).people;
+  var got = gpReportPeople(p, periodRows, A && A.period);
+  var yearGot = gpReportPeople(p, yearRows, A && A.toDate);
   var target = gpProgramGoal(p.id, records);
   /* Progress against an annual target is measured on the year, not on the half —
      otherwise every report after the first would restart at zero and read as a
@@ -128,14 +140,24 @@ function gpReportHeadline(p, records, year, period){
     gpRepNum(target) + ' ' + p.countedAs + ' for ' + year + ').';
 }
 
+/* The headcount for a programme over some span: the app's own weekly figure when
+   there is one, and the typed rows only when there is not. One place, so the
+   summary line, the project body and the outputs table cannot disagree about
+   which of the two they used. */
+function gpReportPeople(p, rows, actual){
+  if(actual && actual.hasSources && actual.people !== null && actual.people !== undefined) return actual.people;
+  return gpProgramSummary(p.id, rows).people;
+}
+
 /* ---- section 3.x: the body of one project ---- */
-function gpReportProject(p, records, year, period){
+function gpReportProject(p, records, year, period, A){
   var rows = gpReportRows(records, p.kind, p.id, period);
   var yearRows = gpReportRows(records, p.kind, p.id, period, true);
   var sum = gpProgramSummary(p.id, rows);
-  var yearSum = gpProgramSummary(p.id, yearRows);
+  var periodPeople = gpReportPeople(p, rows, A && A.period);
+  var yearPeople = gpReportPeople(p, yearRows, A && A.toDate);
   var target = gpProgramGoal(p.id, records);
-  var pct = gpRepPct(yearSum.people, target);
+  var pct = gpRepPct(yearPeople, target);
   var h = '<h3>3.' + p.no + ' Project ' + p.no + ': ' + gpRepEsc(p.reportName) + '</h3>';
   h += '<p>' + gpRepEsc(p.desc) + '</p>';
 
@@ -143,9 +165,11 @@ function gpReportProject(p, records, year, period){
     h += '<p>No activity was recorded for this project ' + gpRepIn(period) + '.</p>';
   } else if(p.kind === 'team'){
     /* "we hosted 2 volunteer teams with a total of 24 members (9 female and 15 male)" */
+    var teams = (A && A.period && A.period.teams !== null && A.period.teams !== undefined)
+      ? A.period.teams : sum.rows;
     h += '<p>' + (gpPeriod(period).kind === 'year' ? 'This year we' : 'In this ' + gpRepIn(period).replace(/^in the /, '') + ', we') +
-      ' hosted ' + gpRepNum(sum.rows) + ' volunteer team' + (sum.rows === 1 ? '' : 's') +
-      ' with a total of ' + gpRepNum(sum.people) + ' members (' +
+      ' hosted ' + gpRepNum(teams) + ' volunteer team' + (Number(teams) === 1 ? '' : 's') +
+      ' with a total of ' + gpRepNum(periodPeople) + ' members (' +
       gpRepNum(sum.female) + ' female and ' + gpRepNum(sum.male) + ' male):</p><ul>';
     rows.forEach(function(r){
       var when = gpRepRange(r.from, r.to);
@@ -160,7 +184,9 @@ function gpReportProject(p, records, year, period){
       .filter(Boolean);
     if(acts.length) h += '<p>These teams engaged in numerous activities, including ' +
       gpRepEsc(gpReportJoinActivities(acts)) + '.</p>';
-    if(sum.served) h += '<p>Together, these teams served ' + gpRepNum(sum.served) +
+    var served = (A && A.period && A.period.served !== null && A.period.served !== undefined)
+      ? A.period.served : sum.served;
+    if(served) h += '<p>Together, these teams served ' + gpRepNum(served) +
       ' children and youth (' + gpRepNum(rows.reduce(function(a, r){ return a + (Number(r.servedFemale) || 0); }, 0)) +
       ' female and ' + gpRepNum(rows.reduce(function(a, r){ return a + (Number(r.servedMale) || 0); }, 0)) +
       ' male).</p>';
@@ -204,7 +230,7 @@ function gpReportProject(p, records, year, period){
     ? 'No annual target has been recorded for ' + year + '.'
     : 'Plan to host ' + gpRepNum(target) + ' ' + p.countedAs + ' in ' + year + '.') + '</li>';
   h += '<li><strong>Actual Achievement:</strong> ' + gpReportAsOf(period) + ' ' +
-    gpRepNum(yearSum.people) + ' ' + p.countedAs +
+    gpRepNum(yearPeople) + ' ' + p.countedAs +
     (pct === null ? '' : ', achieving ' + pct + '% of the annual plan') + '.</li>';
   h += '</ul>';
   return h;
@@ -242,7 +268,7 @@ function gpReportJoinActivities(list){
    The Budget column is present and empty on purpose: the filed report carries it
    with a note saying it is not needed yet, and dropping the column would mean
    rebuilding the table the first time it is. */
-function gpReportTable(records, year, period){
+function gpReportTable(records, year, period, actuals){
   var h = '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%">' +
     '<thead><tr>' +
     ['No.','Output / Activity Name','Progress Description','% Achievement Target','Budget Spent (USD)']
@@ -252,12 +278,13 @@ function gpReportTable(records, year, period){
   gpProgramsInReportOrder().forEach(function(p){
     var rows = gpReportRows(records, p.kind, p.id, period);
     var yearRows = gpReportRows(records, p.kind, p.id, period, true);
+    var A = gpReportActualsFor(actuals, p.id);
     var target = gpProgramGoal(p.id, records);
-    var pct = gpRepPct(gpProgramSummary(p.id, yearRows).people, target);
+    var pct = gpRepPct(gpReportPeople(p, yearRows, A.toDate), target);
     var sum = gpProgramSummary(p.id, rows);
 
     h += '<tr><td>' + p.no + '</td><td><strong>Output ' + p.no + ': ' + gpRepEsc(p.reportName) + '</strong></td>' +
-      '<td>' + gpRepEsc(gpReportOutputLine(p, sum)) + '</td>' +
+      '<td>' + gpRepEsc(gpReportOutputLine(p, sum, gpReportPeople(p, rows, A.period), A.period)) + '</td>' +
       '<td>' + (pct === null ? '—' : pct + '%') + '</td><td>$</td></tr>';
 
     rows.forEach(function(r, i){
@@ -267,27 +294,39 @@ function gpReportTable(records, year, period){
     });
     /* SVI reports the people served as its own activity row, the way the filed
        report splits "International Volunteers" from "Program Participants". */
-    if(p.kind === 'team' && sum.served){
+    var served = (A.period && A.period.served !== null && A.period.served !== undefined)
+      ? A.period.served : sum.served;
+    if(p.kind === 'team' && served){
       h += '<tr><td>' + p.no + '.' + (rows.length + 1) + '</td>' +
         '<td>Activity ' + p.no + '.' + (rows.length + 1) + ': Program Participants</td>' +
-        '<td>Teams worked with and served ' + gpRepNum(sum.served) + ' children and youth.</td>' +
+        '<td>Teams worked with and served ' + gpRepNum(served) + ' children and youth.</td>' +
         '<td>—</td><td>—</td></tr>';
     }
   });
   return h + '</tbody></table>';
 }
 
-function gpReportOutputLine(p, sum){
-  if(p.kind === 'team') return 'Hosted ' + sum.rows + ' international volunteer team' +
-    (sum.rows === 1 ? '' : 's') + ' totaling ' + sum.people + ' members (' +
+function gpReportOutputLine(p, sum, people, actual){
+  var teams = (actual && actual.teams !== null && actual.teams !== undefined) ? actual.teams : sum.rows;
+  if(p.kind === 'team') return 'Hosted ' + teams + ' international volunteer team' +
+    (Number(teams) === 1 ? '' : 's') + ' totaling ' + people + ' members (' +
     sum.female + ' female, ' + sum.male + ' male).';
   if(p.kind === 'class') return sum.classes + ' classes across ' + sum.locations +
-    ' location' + (sum.locations === 1 ? '' : 's') + ', with ' + sum.people + ' students (' +
+    ' location' + (sum.locations === 1 ? '' : 's') + ', with ' + people + ' students (' +
     sum.male + ' boys, ' + sum.female + ' girls).';
-  if(p.kind === 'cohort') return sum.people + ' students (' + sum.khmer + ' Cambodian and ' +
+  if(p.kind === 'cohort') return people + ' students (' + sum.khmer + ' Cambodian and ' +
     sum.intl + ' international) across ' + sum.rows + ' course' + (sum.rows === 1 ? '' : 's') + '.';
-  return sum.people + ' students supported (' + sum.male + ' male, ' + sum.female + ' female) across ' +
+  return people + ' students supported (' + sum.male + ' male, ' + sum.female + ' female) across ' +
     sum.locations + ' location' + (sum.locations === 1 ? '' : 's') + '.';
+}
+
+/* The two figures a section needs from the app's own numbers: the period being
+   reported, and the year up to the end of it. Absent `actuals` — a caller that
+   has no roll-up to hand, which is every test of the prose — both come back
+   empty and the typed rows are used, so the generator still works standalone. */
+function gpReportActualsFor(actuals, id){
+  var A = actuals || {};
+  return { period: (A.period || {})[id] || null, toDate: (A.toDate || {})[id] || null };
 }
 function gpReportRowName(p, r){
   if(p.kind === 'team') return r.name || 'International volunteers';
@@ -311,6 +350,10 @@ function gpBuildReport(o){
   var records = o.records || [];
   var year = Number(o.year) || new Date().getFullYear();
   var period = gpPeriod(o.period).id;
+  /* { period: {SVI:{...}}, toDate: {SVI:{...}} } — what the ministries logged for
+     the period being reported, and for the year up to the end of it. Built by the
+     page from the roll-up; see gpProgramActuals() in programs.js. */
+  var actuals = o.actuals || null;
   var T = GP_REPORT_TEXT;
   var order = gpProgramsInReportOrder();
 
@@ -331,7 +374,7 @@ function gpBuildReport(o){
     ', the projects achieved the following results:</p><ul>';
   order.forEach(function(p){
     h += '<li><strong>' + gpRepEsc(p.name) + ' (' + gpRepEsc(p.id) + '):</strong> ' +
-      gpRepEsc(gpReportHeadline(p, records, year, period)) + '</li>';
+      gpRepEsc(gpReportHeadline(p, records, year, period, gpReportActualsFor(actuals, p.id))) + '</li>';
   });
   h += '</ul>';
 
@@ -355,13 +398,13 @@ function gpBuildReport(o){
   }
 
   h += '<h2>3. Implementation Activities of Projects / Programs</h2>';
-  order.forEach(function(p){ h += gpReportProject(p, records, year, period); });
+  order.forEach(function(p){ h += gpReportProject(p, records, year, period, gpReportActualsFor(actuals, p.id)); });
 
   h += '<h2>4. Progress of ' + (gpPeriod(period).kind === 'year' ? 'Annual' :
     gpPeriod(period).kind === 'quarter' ? 'Quarterly' : 'Semester') +
     ' Activities Implementation (Outputs Table)</h2>';
   h += '<p><em>* ' + gpRepEsc(T.budgetNote) + '</em></p>';
-  h += gpReportTable(records, year, period);
+  h += gpReportTable(records, year, period, actuals);
 
   h += '<h2>5. Conclusion</h2>';
   h += '<p>' + gpRepEsc(T.conclusionOpen) + '</p>';

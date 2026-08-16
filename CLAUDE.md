@@ -483,17 +483,47 @@ Four project agreements with the Ministry of Education, Youth and Sport: **SVI**
 Training — DTS, DBS and the other schools) and **YAP** (Youth Assistance Project — dorm
 residents, new staff in their first 2–4 years, young leaders being supported).
 
-**Why this is not a KPI.** The weekly KPIs answer "how is this ministry doing this week"
-— one number, every week, per metric. The Ministry report asks something else: which
-country a team came from, the dates it was here, how many of a class were girls. A team
-of 12 from YWAM Maui that visited in February is *one fact*, not a weekly figure, and
-forcing it through the KPI system would mean retyping it every week and still losing the
-country and the dates. So programme records sit **beside** the KPIs and nothing about
-what anyone logs each week changed.
+**THE DIRECTION OF TRUTH RUNS ONE WAY: app numbers → report.** The weekly KPI entries
+are the record of what happened. The Ministry report is a document written *from* them.
+So the report's headline counts — how many volunteers, how many students — are read out
+of the KPI entries at render time (`gpProgramActuals()`), and **nobody retypes them on
+the Programs tab**. The reverse would be the bug worth fearing: the Ministry reading a
+number somebody typed into a report screen while the app showed everyone else a
+different one.
+
+What the Programs tab holds is only what a weekly figure *cannot* say — which country a
+team came from, the dates it was here, how many of a class were girls, what each
+location is called — plus each ministry's own annual estimate. A team of 12 from YWAM
+Maui that visited in February is one fact, not a weekly figure; forcing it through the
+KPI system would mean retyping it every week and still losing the country and the dates.
+
+- `GP_PROGRAMS[].sources` names the (dept, ministries, metric) each programme is counted
+  by: SVI from `Outreach Teams / Volunteers Mobilized`, `Teams Hosted`, `People Served`;
+  YDC from `YDC / Youth Enrolled` + the community schools' `Students Enrolled` + `Sports
+  / Youth Participating`; YLT from the training schools' `Students Enrolled`.
+- **YAP is the stated exception** — no ministry logs a weekly figure for dorm residents,
+  so its numbers are typed, and the screen says so in those words rather than showing a
+  dash. Give it a source the day a YAP ministry exists and the typing stops.
+- `gpBuildReport({actuals})` takes the figures; absent them it falls back to the typed
+  rows, which is what keeps the generator pure and testable. `hasSources:false` means
+  "no weekly numbers exist", which is a different thing from "they are zero" — a logged
+  zero is reported as zero.
+- **The entry screen flags a mismatch.** If the typed breakdown does not add up to what
+  the ministries logged, a banner says both numbers and which one the report will print.
+  It means somebody has not finished writing up a team or a class, not that a figure is
+  wrong.
+
+**Each ministry owns its own annual estimate.** `estimate` records carry `dept` +
+`ministry`, and a programme's target is their **sum** (`gpProgramGoal()`). The number the
+Ministry sees as our annual target is therefore owned by the people who have to reach it
+and moves when they revise it — rather than being decided once at the top and typed into
+a box. A programme with no ministry behind it (YAP) gets one estimate of its own, keyed
+with empty dept/ministry. There is no programme-level `goal` kind any more; two
+mechanisms for one number is exactly the ambiguity this section exists to remove.
 
 **One blob, discriminated by `kind`.** `programs` holds every row: `team` (SVI), `class`
 (YDC), `cohort` (YLT), `group` (YAP), `issue` (the base's challenges and solutions) and
-`goal` (the year's target for one programme). Five blobs would eventually disagree about
+`estimate` (one ministry's annual estimate). Five blobs would eventually disagree about
 which year a row belongs to. Rows are year-scoped through `inYear_` like everything else.
 
 **Store quarters, report over any period.** Every row carries a `quarter` (1–4), because
@@ -523,10 +553,9 @@ class ran in, so storing semesters would have made quarters unreachable forever.
   numbers Uriah quoted (SVI 250, YDC 500, YLT 35, YAP 25) differ from the 2026 targets in
   the Ministry PDF (50 / 400 / 35 / 25); they are typed in per year rather than shipped
   in code, so whichever is right can just be entered.
-- **`gpProgramSummary(id, rows)` is the one definition** of "how many volunteers came
-  this year". The facts strip on the data-entry screen reads it so a mistyped figure is
-  visible while the person who typed it is still looking at the form, and the report
-  generator will read the same function. Do not write a second one.
+- **`gpProgramSummary(id, rows)` is the one definition** of what the *typed detail* adds
+  up to — used for the breakdown and for the mismatch check, never for the headline
+  count, which comes from the KPIs.
 - **Records load when the tab is opened, not at boot.** A page open is one function
   invocation (see `audit-load.mjs`); most opens never reach this screen. `state.progRecords`
   is `null` until then.
