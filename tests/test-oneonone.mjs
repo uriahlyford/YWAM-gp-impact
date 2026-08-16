@@ -241,6 +241,76 @@ seed();   // the block above unpicked the mentoring; a week check needs a mentor
 r = await call('askForOneOnOne', ['dara', '1234', 99]);
 ok('a week outside 1-52 is refused', r.body && r.body.err === 'bad_week', JSON.stringify(r.body));
 
+/* ---------- 6b. one-on-ones held, and the two-a-month rhythm ----------
+   The mentor logs the meeting at the end of it, which is the only moment anybody
+   actually knows it happened. Two a month per person is what the base is aiming
+   at, so the count is what the screens read. */
+seed();
+const THIS_MONTH = new Date().toISOString().slice(0, 10);
+r = await call('logOneOnOne', ['sokha', '1234', 'st_mentee', THIS_MONTH]);
+ok('a mentor can log a one-on-one', r.body && r.body.ok === true, JSON.stringify(r.body && r.body.err));
+ok('and it counts toward two a month', r.body.count.held === 1 && r.body.count.target === 2,
+  JSON.stringify(r.body.count));
+await call('logOneOnOne', ['sokha', '1234', 'st_mentee', THIS_MONTH]);
+r = await call('getMenteeLogs', ['sokha', '1234', 'st_mentee']);
+ok('the mentee page reads the same count', r.body.oneOnOnes.held === 2, JSON.stringify(r.body.oneOnOnes));
+ok('and can undo the last one', (r.body.oneOnOneLog || []).length === 2, JSON.stringify(r.body.oneOnOneLog));
+
+/* Last month's meetings are last month's — the rhythm is monthly or it is not a
+   rhythm. */
+seed();
+await call('logOneOnOne', ['sokha', '1234', 'st_mentee', '2020-01-15']);
+r = await call('getMenteeLogs', ['sokha', '1234', 'st_mentee']);
+ok('a meeting in another month does not count toward this one',
+  r.body.oneOnOnes.held === 0, JSON.stringify(r.body.oneOnOnes));
+ok('but it is still in the log', (r.body.oneOnOneLog || []).length === 1);
+
+/* The mentor's list carries each person's count, so who has been missed is
+   visible without opening every mentee. */
+seed();
+await call('logOneOnOne', ['sokha', '1234', 'st_mentee', THIS_MONTH]);
+r = await call('getMyMentees', ['sokha', '1234']);
+ok('the mentee list carries the count', r.body.mentees[0].oneOnOnes.held === 1,
+  JSON.stringify(r.body.mentees[0].oneOnOnes));
+
+/* Logging one clears the person's open ask — they asked and have now had it. */
+seed();
+await call('askForOneOnOne', ['dara', '1234', 30]);
+await call('logOneOnOne', ['sokha', '1234', 'st_mentee', THIS_MONTH]);
+r = await call('getOneOnOneAsks', ['sokha', '1234']);
+ok('logging the meeting clears the ask that led to it', r.body.asks.length === 0,
+  JSON.stringify(r.body.asks));
+
+/* Only their mentor, and only theirs. */
+r = await call('logOneOnOne', ['nita', '1234', 'st_mentee', THIS_MONTH]);
+ok('somebody who is not their mentor cannot log one for them',
+  r.body && r.body.err === 'not_your_mentee', JSON.stringify(r.body));
+r = await call('logOneOnOne', ['', '', 'st_mentee', THIS_MONTH]);
+ok('and an anonymous caller cannot either', r.body && r.body.err === 'auth');
+
+/* Undo, because a button pressed by accident at the end of a long day should not
+   need a developer. */
+seed();
+await call('logOneOnOne', ['sokha', '1234', 'st_mentee', THIS_MONTH]);
+{
+  const id = (await call('getMenteeLogs', ['sokha', '1234', 'st_mentee'])).body.oneOnOneLog[0].id;
+  r = await call('undoOneOnOne', ['nita', '1234', id]);
+  ok('only the mentor who logged it can undo it', r.body && r.body.err === 'not_yours', JSON.stringify(r.body));
+  r = await call('undoOneOnOne', ['sokha', '1234', id]);
+  ok('and undoing takes it back off the count', r.body.ok === true && r.body.count.held === 0,
+    JSON.stringify(r.body.count));
+}
+r = await call('undoOneOnOne', ['sokha', '1234', 'oh_nothing']);
+ok('undoing something that is not there says so', r.body && r.body.err === 'not_found');
+
+/* A junk blob must not take the mentee page down. */
+seed();
+mem.oneOnOnes = { not: 'an array' };
+r = await call('getMenteeLogs', ['sokha', '1234', 'st_mentee']);
+ok('a junk one-on-ones blob reads as zero rather than 500',
+  r.status === 200 && r.body.ok === true && r.body.oneOnOnes.held === 0,
+  r.status + ' ' + JSON.stringify(r.body.oneOnOnes));
+
 /* ---------- 7. the boot carries it, still in one invocation ---------- */
 seed();
 await call('askForOneOnOne', ['dara', '1234', 30]);

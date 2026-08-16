@@ -295,6 +295,42 @@ Only the second is the person's to fix, so the question now says which.
   rather than shown a button that cannot work. Not a message: there is no inbox in
   this app and adding one to arrange a coffee would be the wrong shape.
 
+**The 1-10 questions are sliders, and the unanswered state is the whole
+difficulty.** Ten buttons show plainly that none is pressed; a slider always sits
+somewhere, and a thumb resting at 5 with nothing behind it would collect a base
+full of accidental fives. So an untouched slider carries `data-untouched`, reads
+"—", greys its track, and is **not an answer** — submit still refuses until it has
+been moved. It reuses the `.gSlide` the weekly goals already use, so there is one
+slider in this app and not two, and its colour follows the question's direction
+(2/10 lonely is good and shows green; 2/10 clarity is not). Both ends are
+labelled, because "7 out of 10 lonely" means nothing on its own and three people
+guessing differently is what makes a base average worthless.
+
+**The mentor's page opens on the conversation, not on a dashboard about somebody.**
+`oneOnOneCardHtml()` puts three things above their numbers:
+- **This month against two.** `ONE_ON_ONE_TARGET = 2` per staff member per month.
+  The count rides with each mentee in `getMyMentees`, so the list shows who has
+  been missed without opening every person.
+- **Cues read off their own check-in** (`conversationCues()`) — loneliness at 6,
+  clarity at 5, no sabbath, carrying debt, *they asked for this meeting and were
+  waiting*. **Only what stands out**: a screen that flags everything flags
+  nothing, and a good week says so instead of inventing a concern. This is why
+  there is no separate pre-conversation form — their week already IS the
+  preparation, and asking them to rate themselves twice would be the same
+  duplicate-entry mistake the Programs tab had.
+- **Questions worth asking**, grouped: where you are, then God, then the work,
+  then what you need. Deliberately about the person rather than the ministry — the
+  weekly numbers already say how the work is going, and a one-on-one that becomes
+  a status update is the failure mode the list exists to prevent.
+
+**"One-on-one finished" is written by the mentor, at the end of it** — the only
+moment anybody actually knows it happened. `logOneOnOne` records it, clears any
+open ask from that person (they asked, and have now had it), and can be undone,
+because a button pressed by accident at the end of a long day should not need a
+developer to unpick. It stays separate from the weekly check-in on purpose: that
+is the person's own account of their week, this is the meeting. They will usually
+agree, and when they do not, the disagreement is worth seeing.
+
 **Staff debt asks how much, and the amount is the private half.** `debtAmount`
 rides with the weekly `debt` flag, and answering "no debt" clears it rather than
 leaving last week's figure on a debt-free week. The amount reaches **the person

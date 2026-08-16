@@ -461,7 +461,13 @@ async function getMyMentees(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   const rows = await getStaff_();
-  const mine = rows.filter(function (x) { return x.active && x.mentorId === s.id && x.mentorStatus === 'approved'; }).map(publicStaff_);
+  const held = await getOneOnOnes_();
+  const mine = rows.filter(function (x) { return x.active && x.mentorId === s.id && x.mentorStatus === 'approved'; })
+    .map(function (x) {
+      /* The count rides with each mentee so the list can show who is behind
+         without a request per person. */
+      return Object.assign(publicStaff_(x), { oneOnOnes: oneOnOneCount_(held, x.id) });
+    });
   return { ok: true, mentees: mine };
 }
 async function getMenteeLogs(username, pin, menteeId) {
@@ -496,13 +502,20 @@ async function getMenteeLogs(username, pin, menteeId) {
       })
       .sort(function (a, b) { return b.week - a.week; });
   }
+  const held = await getOneOnOnes_();
   return {
     ok: true, mentee: publicStaff_(m),
     logs: logsFor_(dailyRows, m.id, cfg),
     sharedHabits: cfg.filter(function (h) { return h.mentorVisible; }),
     goals: goalsFor_(await getGoals_(), m.id),
     checkins: checkins,
-    profile: { debt: m.debt }
+    /* This month against the two-a-month rhythm, and the recent ones so the
+       button can be undone and the last date is visible. */
+    oneOnOnes: oneOnOneCount_(held, m.id),
+    oneOnOneLog: held.filter(function (r) { return r.mentee === m.id; })
+      .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); })
+      .slice(0, 6).map(function (r) { return { id: r.id, date: r.date }; }),
+    profile: { debt: m.debt, debtAmount: Number(m.debtAmount) || 0 }
   };
 }
 async function getMyMentorRequests(username, pin) {
@@ -512,6 +525,77 @@ async function getMyMentorRequests(username, pin) {
   const pending = rows.filter(function (x) { return x.active && x.mentorId === s.id && x.mentorStatus === 'pending'; }).map(publicStaff_);
   return { ok: true, requests: pending };
 }
+/* ==================== one-on-ones held ====================
+   Two a month per staff member is the rhythm the base is aiming at, so the app
+   counts them. The record is written by the MENTOR, at the end of the
+   conversation, from a button on the mentee's page — which is the only moment
+   anybody actually knows it happened.
+
+   Separate from the weekly check-in on purpose. The check-in is the person's own
+   account of their week; this is the meeting itself. They will usually agree, and
+   when they do not, the disagreement is worth seeing rather than hiding. */
+const ONE_ON_ONE_TARGET = 2;   // per staff member, per month
+
+async function getOneOnOnes_() { return readJSON('oneOnOnes', []); }
+
+function monthKey_(d) {
+  const s = String(d || '');
+  return /^\d{4}-\d{2}/.test(s) ? s.slice(0, 7) : '';
+}
+/* How many this month, and the target. One place, because the mentee's page and
+   the mentor's list both show it and must not disagree. */
+function oneOnOneCount_(rows, menteeId, month) {
+  const m = month || new Date().toISOString().slice(0, 7);
+  const n = (rows || []).filter(function (r) {
+    return r.mentee === menteeId && monthKey_(r.date) === m;
+  }).length;
+  return { month: m, held: n, target: ONE_ON_ONE_TARGET };
+}
+
+/* Logging one clears any open ask from that person — they asked for a one-on-one
+   and have now had it, so leaving the flag up would be asking them to chase
+   something that already happened. */
+async function logOneOnOne(username, pin, menteeId, date) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, err: 'auth' };
+  const rows = await getStaff_();
+  const m = rows.find(function (x) { return x.id === menteeId; });
+  if (!m || m.mentorId !== s.id || m.mentorStatus !== 'approved') return { ok: false, err: 'not_your_mentee' };
+
+  const when = /^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? String(date)
+    : new Date().toISOString().slice(0, 10);
+  const held = await getOneOnOnes_();
+  held.push({ id: 'oh_' + crypto.randomUUID().slice(0, 12), mentor: s.id, mentee: menteeId,
+    date: when, year: yearFromDate_(when) || currentYear_(), at: new Date().toISOString() });
+  await writeJSON('oneOnOnes', held);
+
+  const asks = await getOneOnOneAsks_();
+  let changed = false;
+  asks.forEach(function (a) {
+    if (a.from === menteeId && a.state === 'open') {
+      a.state = 'done'; a.clearedBy = s.id; a.clearedAt = new Date().toISOString(); changed = true;
+    }
+  });
+  if (changed) await writeJSON('oneOnOneAsks', asks);
+
+  return { ok: true, count: oneOnOneCount_(held, menteeId), asks: (await getOneOnOneAsks(username, pin)).asks };
+}
+
+/* Undo. A button pressed by accident at the end of a long day should not need a
+   developer to unpick. */
+async function undoOneOnOne(username, pin, id) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false, err: 'auth' };
+  const rid = str_(id, 40);
+  let rows = await getOneOnOnes_();
+  const row = rows.find(function (r) { return r.id === rid; });
+  if (!row) return { ok: false, err: 'not_found' };
+  if (row.mentor !== s.id) return { ok: false, err: 'not_yours' };
+  rows = rows.filter(function (r) { return r.id !== rid; });
+  await writeJSON('oneOnOnes', rows);
+  return { ok: true, count: oneOnOneCount_(rows, row.mentee) };
+}
+
 /* ==================== asking for a one-on-one ====================
    The weekly check-in asks whether you had your one-on-one, and separates "I
    asked and it has not happened" from "I have not asked". The second is the one
@@ -1634,6 +1718,8 @@ async function deleteProgramRecord(username, pin, id) {
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
   askForOneOnOne: function (a) { return askForOneOnOne(a[0], a[1], a[2]); },
+  logOneOnOne: function (a) { return logOneOnOne(a[0], a[1], a[2], a[3]); },
+  undoOneOnOne: function (a) { return undoOneOnOne(a[0], a[1], a[2]); },
   getOneOnOneAsks: function (a) { return getOneOnOneAsks(a[0], a[1]); },
   clearOneOnOneAsk: function (a) { return clearOneOnOneAsk(a[0], a[1], a[2]); },
   getPrograms: function (a) { return getPrograms(a[0], a[1], a[2]); },

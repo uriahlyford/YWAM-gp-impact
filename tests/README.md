@@ -23,7 +23,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-firstrun.mjs` | A brand-new base, a junk blob or a malformed request takes the whole app down with a 500 |
 | `test-boot.mjs` | A page open costs more than one function invocation — Netlify bills these |
 | `test-week-auth.mjs` | Health answers stop being anonymous in base averages, or reach someone other than your one mentor |
-| `test-oneonone.mjs` | The one-on-one stops distinguishing "we met" from "I asked" from "I haven't asked", giving one gets confused with getting one, an ask reaches somebody other than that person's one approved mentor, or a staff-debt amount leaks out of the anonymous base total |
+| `test-oneonone.mjs` | The one-on-one stops distinguishing "we met" from "I asked" from "I haven't asked", giving one gets confused with getting one, an ask reaches somebody other than that person's one approved mentor, the two-a-month count stops being monthly or stops being undoable, or a staff-debt amount leaks out of the anonymous base total |
 | `test-okr-auth.mjs` | Someone can write objectives outside their own campus and department |
 | `test-year.mjs` | A new year overwrites last year's figures, legacy rows lose their history, or anyone can POST numbers for any campus |
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
@@ -40,8 +40,8 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-chrome.mjs` | The dashboard flashes before the staff page, the boot coin goes hollow, or the chrome stops being padded for the notch and home indicator |
 | `test-storage.mjs` | Khmer does not survive a reload, or blocked storage blanks the page / breaks login |
 | `test-degraded.mjs` | A missing optional script kills a page instead of degrading |
-| `test-base.mjs` | The Base tab or the weekly health form |
-| `test-mentor-health.mjs` | A mentor can no longer see their mentee by name |
+| `test-base.mjs` | The Base tab, or the weekly health form — including an untouched 1-10 slider counting as an answer, which would fill the base average with accidental fives |
+| `test-mentor-health.mjs` | A mentor can no longer see their mentee by name, the conversation cues stop following that person's actual answers, or the "one-on-one finished" button disappears |
 | `audit-load.mjs` | Invocations per page open, and duplicate PIN verification |
 | `audit-paint.mjs` | First paint regresses — usually a render-blocking stylesheet |
 | `audit-allviews.mjs` | A console error on any screen of either page |

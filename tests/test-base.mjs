@@ -365,10 +365,38 @@ console.log('  hour boxes: ' + await page.$$eval('#weekForm [data-wnum]', e => e
 await page.click('#weekSubmit'); await page.waitForTimeout(700);
 console.log('  incomplete refused: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
 
-// fill it in and submit
+/* The 1-10 questions are sliders now. The hard part is that a slider always sits
+   somewhere: an untouched one must not count as an answer, or a base full of
+   accidental fives is what comes back. */
+console.log('  1-10 are sliders: ' + await page.$$eval('#weekForm input.gSlide[data-wscale]', e => e.length));
+console.log('  untouched sliders read as unanswered: ' + await page.evaluate(() => {
+  const sl = [...document.querySelectorAll('#weekForm input.gSlide[data-wscale]')];
+  const vals = [...document.querySelectorAll('#weekForm .qVal')].map(x => x.textContent.trim());
+  return sl.every(x => x.hasAttribute('data-untouched')) && vals.every(v => v === '—');
+}));
+console.log('  each end of the scale is labelled: ' + await page.evaluate(() => {
+  const e = document.querySelector('#weekForm .qEnds');
+  return e ? e.innerText.replace(/\s+/g, ' ').trim() : '(none)';
+}));
+
+// fill it in and submit — dragging, the way a person would
 for (const [q, v] of [['lonely', 2], ['clarity', 9], ['growth', 8]]) {
-  await page.click(`[data-wscale="${q}|${v}"]`); await page.waitForTimeout(250);
+  await page.$eval(`input[data-wscale="${q}"]`, (el, val) => {
+    el.value = String(val);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, v);
+  await page.waitForTimeout(200);
 }
+console.log('  after dragging, the number shows: ' + await page.evaluate(() =>
+  [...document.querySelectorAll('#weekForm .qVal')].map(x => x.textContent.trim()).join(',')));
+console.log('  and they count as answered: ' + await page.evaluate(() =>
+  [...document.querySelectorAll('#weekForm input.gSlide[data-wscale]')].every(x => !x.hasAttribute('data-untouched'))));
+/* Lower-is-better questions colour the other way round: 2/10 lonely is good. */
+console.log('  colour follows the direction of the question: ' + await page.evaluate(() => {
+  const l = document.querySelector('input[data-wscale="lonely"]').getAttribute('style') || '';
+  const c = document.querySelector('input[data-wscale="clarity"]').getAttribute('style') || '';
+  return /--p1:90%/.test(l) && /--p1:90%/.test(c);   // lonely 2 inverted, clarity 9
+}));
 await page.fill('[data-wnum="langHours"]', '3');
 await page.dispatchEvent('[data-wnum="langHours"]', 'change');
 await page.fill('[data-wnum="minHours"]', '7');

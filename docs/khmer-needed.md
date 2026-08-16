@@ -310,6 +310,69 @@ mine to fix, and the wording has to make that land without sounding like a telli
 | We met | យើងបានជួបគ្នា | Button the mentor presses |
 | {n} waiting on you | {n} កំពុងរង់ចាំអ្នក | Keep {n} |
 
+### The 1-10 questions are sliders now
+
+| English | ខ្មែរ | Note |
+|---|---|---|
+| Drag to answer | អូសដើម្បីឆ្លើយ | Under an untouched slider |
+| Not at all | មិនសោះ | Left end of "How lonely" |
+| Very lonely | ឯកា​ណាស់ | Right end of "How lonely" |
+| No idea | មិនដឹងសោះ | Left end of "How clear" |
+| Completely clear | ច្បាស់លាស់ទាំងស្រុង | Right end of "How clear" |
+| Stuck | ជាប់គាំង | Left end of "personal growth" |
+| Growing fast | រីកចម្រើនលឿន | Right end of "personal growth" |
+
+_The end labels are the important ones: "7 out of 10 lonely" means nothing without
+them, and if three people read the ends differently the base average is worthless.
+They sit at either side of the slider with very little room — four or five words at
+most._
+
+### The mentor's one-on-one card
+
+**These are the words a mentor reads while sitting with somebody.** Tone matters
+more here than anywhere else in the app — the questions should sound like a
+friend asking, not a form.
+
+| English | ខ្មែរ |
+|---|---|
+| This one-on-one | មួយទល់មួយនេះ |
+| {n} of {t} this month | {n} ក្នុងចំណោម {t} ក្នុងខែនេះ |
+| {n}/{t} this month | {n}/{t} ក្នុងខែនេះ |
+| The base aims for two a month with each person. | មូលដ្ឋានតម្រង់ទៅរកពីរដងក្នុងមួយខែជាមួយមនុស្សម្នាក់ៗ។ |
+| From their own check-in | ពីការរាយការណ៍ផ្ទាល់របស់គាត់ |
+| Nothing is flagging this week. Ask {name} what is underneath the good numbers. | គ្មានអ្វីគួរឱ្យព្រួយបារម្ភសប្តាហ៍នេះទេ។ សូមសួរ {name} ថាតើមានអ្វីនៅពីក្រោមតួលេខល្អទាំងនេះ។ |
+| Questions worth asking | សំណួរដែលគួរសួរ |
+| Nobody asks all of them. Pick the two that fit today. | គ្មាននរណាសួរទាំងអស់ទេ។ សូមជ្រើសរើសពីរដែលសមនឹងថ្ងៃនេះ។ |
+| One-on-one finished with {name} | មួយទល់មួយជាមួយ {name} បានបញ្ចប់ |
+| Logged. Thank you for making the time. | បានកត់ត្រា។ អរគុណសម្រាប់ការចំណាយពេលវេលា។ |
+| Last one: {d} | លើកចុងក្រោយ៖ {d} |
+| Undo | មិនធ្វើវិញ |
+
+### The twelve questions
+
+**Please read these as a Khmer speaker would hear them in the room**, not as
+translations. If one lands wrong in Khmer, a different question that asks the same
+thing is better than a faithful translation that nobody would say out loud.
+
+| English | ខ្មែរ |
+|---|---|
+| Start here | ចាប់ផ្តើមនៅទីនេះ |
+| How are you actually doing — not how is the work going? | តើអ្នកពិតជាសុខសប្បាយយ៉ាងណាដែរ — មិនមែនការងារទៅយ៉ាងណាទេ? |
+| What has taken the most out of you since we last met? | តើអ្វីដែលធ្វើឱ្យអ្នកអស់កម្លាំងបំផុតតាំងពីយើងជួបគ្នាលើកមុន? |
+| What has given you life? | តើអ្វីដែលបានផ្តល់ជីវិតដល់អ្នក? |
+| Walking with God | ដើរជាមួយព្រះ |
+| What has God been saying to you lately? | តើព្រះកំពុងមានបន្ទូលអ្វីមកកាន់អ្នកថ្មីៗនេះ? |
+| Where have you seen him at work this month? | តើអ្នកបានឃើញព្រះអង្គធ្វើការនៅកន្លែងណាខ្លះក្នុងខែនេះ? |
+| What is hard to bring to him right now? | តើអ្វីដែលពិបាកនាំមកថ្វាយព្រះអង្គនៅពេលនេះ? |
+| The work | ការងារ |
+| What are you avoiding? | តើអ្នកកំពុងគេចវេះពីអ្វី? |
+| What would you change if you were not afraid of letting someone down? | តើអ្នកនឹងផ្លាស់ប្តូរអ្វី បើអ្នកមិនខ្លាចធ្វើឱ្យនរណាម្នាក់ខកចិត្ត? |
+| What decision are you waiting on somebody else for? | តើអ្នកកំពុងរង់ចាំការសម្រេចចិត្តអ្វីពីអ្នកដទៃ? |
+| Before we finish | មុនពេលយើងបញ្ចប់ |
+| Who is pouring into you, apart from me? | តើនរណាកំពុងចាក់បញ្ចូលក្នុងជីវិតអ្នក ក្រៅពីខ្ញុំ? |
+| What do you need from me that you have not asked for? | តើអ្នកត្រូវការអ្វីពីខ្ញុំដែលអ្នកមិនទាន់បានស្នើសុំ? |
+| What shall we pray about? | តើយើងគួរអធិស្ឋានអំពីអ្វី? |
+
 ### Staff debt — how much
 
 **These are money and they are private**, so they belong with the privacy promises

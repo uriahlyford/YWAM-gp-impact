@@ -24,7 +24,7 @@ const MENTEE_CHECKINS=[NOWWK,NOWWK-1].map((w,i)=>({week:w,days:7,source:'weekly'
   oneOnOne:i?0:1, oneOnOneAsked:i?1:0, gaveOneOnOne:i?0:1,
   exercise:i?0:1,
   quietTime:1, debt:i?1:0, debtAmount:i?450:0,
-  langHours:i?1:3, minHours:i?4:7, sharedFaith:i?0:1, sabbath:1}));
+  langHours:i?1:3, minHours:i?4:7, sharedFaith:i?0:1, sabbath:i?0:1}));
 /* Sokha has asked Dara for a one-on-one and is waiting on it. */
 const ASKS=[{id:'oo_1', week:NOWWK, year:new Date().getFullYear(), at:'',
   fromId:'st_sokha', fromName:'Sokha Chan', fromPhoto:''}];
@@ -44,7 +44,10 @@ await p.route('**/.netlify/functions/api',r=>{const q=JSON.parse(r.request().pos
   else if(q.fn==='staffLogin')o={ok:true,staff:DARA,profile:{}};
   else if(q.fn==='getMyMentees')o={ok:true,mentees:[SOKHA]};
   else if(q.fn==='getMenteeLogs')o={ok:true,mentee:SOKHA,logs:[],sharedHabits:[],goals:[],
-    checkins:MENTEE_CHECKINS,profile:{debt:false}};
+    checkins:MENTEE_CHECKINS,profile:{debt:false},
+    oneOnOnes:{month:'2026-08',held:1,target:2},
+    oneOnOneLog:[{id:'oh_1',date:'2026-08-04'}]};
+  else if(q.fn==='logOneOnOne')o={ok:true,count:{month:'2026-08',held:2,target:2},asks:[]};
   else if(q.fn==='getOneOnOneAsks')o={ok:true,asks:ASKS};
   else if(q.fn==='clearOneOnOneAsk')o={ok:true,asks:[]};
   else if(q.fn==='getMyTrips')o={ok:true,trips:[],totals:{},reasons:{work:['x'],personal:['y']},hasMentor:false};
@@ -87,6 +90,46 @@ console.log('week history:   '+await p.evaluate(()=>{
 }));
 /* The three-answer one-on-one, as the mentor reads it — and the debt figure,
    which reaches this one person and nothing that is pooled. */
+/* The conversation the page exists for: their own week turned into things worth
+   asking about, then questions, then the button that ends it. */
+console.log('one-on-one card: '+JSON.stringify(await p.evaluate(()=>{
+  const t=document.getElementById('main').innerText;
+  return {
+    rhythm: /1 of 2 this month/.test(t),
+    cues: /From their own check-in/.test(t),
+    questions: /Questions worth asking/.test(t),
+    aQuestion: /How are you actually doing/.test(t),
+    finishBtn: !!document.getElementById('ooDone'),
+    undo: !!document.querySelector('[data-ooundo]')
+  };
+})));
+/* The cues are read off their answers, not a fixed list. This mentee's latest
+   week is a good one — lonely 3, clarity 8, met their one-on-one, sabbath taken —
+   so nothing should flag, and the screen should say that rather than inventing a
+   concern. A screen that flags everything flags nothing. */
+console.log('a good week flags nothing: '+JSON.stringify(await p.evaluate(()=>{
+  const t=document.getElementById('main').innerText;
+  return { noLoneliness:!/Loneliness is at/.test(t), saysSo:/Nothing is flagging this week/.test(t) };
+})));
+
+/* Now a week worth talking about: switch to the older one, which is lonely 6,
+   clarity 5, no sabbath, carrying debt — and asked for a one-on-one that had not
+   happened. Every one of those should surface. */
+console.log('a hard week surfaces: '+JSON.stringify(await p.evaluate(async ()=>{
+  /* The card always reads the newest week, so leave only the hard one. */
+  S.menteeCheckins = S.menteeCheckins.filter(c => Number(c.lonely) === 6);
+  render();
+  await new Promise(r=>setTimeout(r,400));
+  const t=document.getElementById('main').innerText;
+  return {
+    lonely:/Loneliness is at 6\/10/.test(t),
+    clarity:/Only 5\/10 clear/.test(t),
+    sabbath:/No sabbath this week/.test(t),
+    debt:/Carrying staff debt of \$450/.test(t),
+    waiting:/They asked for this one-on-one/.test(t)
+  };
+})));
+
 console.log('their one-on-one, in words: '+await p.evaluate(()=>{
   const t=document.getElementById('main').innerText;
   return /Their one-on-one/.test(t) && /Yes, we met|I asked, not yet|I have not asked/.test(t);

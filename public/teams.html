@@ -370,6 +370,23 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .gSlide::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:var(--surface);
   border:3px solid var(--gc); box-shadow:0 2px 8px rgba(23,21,15,.22); }
 .gSlide:active::-webkit-slider-thumb { transform:scale(1.18); }
+/* An untouched 1-10 slider: grey track, no answer yet. */
+.gSlide[data-untouched]::-webkit-slider-thumb { border-color:var(--border2); }
+.gSlide[data-untouched]::-moz-range-thumb { border-color:var(--border2); }
+.qHead { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.qVal { font-family:'Koulen',sans-serif; font-size:26px; line-height:1; color:var(--accent); min-width:34px; text-align:right; }
+.qVal.unset { color:var(--faint); }
+.qEnds { display:flex; justify-content:space-between; gap:10px; font-size:11.5px; color:var(--muted); margin-top:2px; }
+/* The one-on-one card: cues from their own week, then questions worth asking. */
+.cue { font-size:13.5px; line-height:1.5; padding:7px 0; border-bottom:1px solid var(--line); }
+.cue:last-child { border-bottom:none; }
+.cue b { color:var(--accent); font-weight:700; }
+.qGroup { font-size:11px; letter-spacing:1.2px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:12px 0 2px; }
+.qList { margin:0; padding-left:18px; }
+.qList li { font-size:13.5px; line-height:1.5; margin:3px 0; }
+.ooTag { margin-top:6px; font-size:11px; letter-spacing:.4px; color:var(--muted);
+  border:1px solid var(--border2); border-radius:999px; padding:1px 8px; display:inline-block; }
+.ooTag.behind { color:var(--amberDeep); border-color:var(--amber); }
 .gSlide:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:99px; }
 .gWord { font-size:11.5px; letter-spacing:.4px; text-transform:uppercase; font-weight:700;
   color:var(--gc); margin-top:4px; }
@@ -2026,10 +2043,16 @@ function meHtml(){
      - only the person's own record maps that token back to them, which is how
        their ONE approved mentor — and nobody else — sees these answers by name.
    Leadership reads the base total. It does not read this. */
+/* The ends are labelled because "7 out of 10 lonely" means nothing on its own —
+   a slider with no anchors is a guess, and three people guessing differently is
+   what makes a base average worthless. */
 var WEEK_SCALE_QS = [
-  { id:'lonely',  text:'How lonely do I feel this week?', higherBetter:false },
-  { id:'clarity', text:'How clear am I on what to work on this week?', higherBetter:true },
-  { id:'growth',  text:'How would I rate my personal growth this week?', higherBetter:true }
+  { id:'lonely',  text:'How lonely do I feel this week?', higherBetter:false,
+    low:'Not at all', high:'Very lonely' },
+  { id:'clarity', text:'How clear am I on what to work on this week?', higherBetter:true,
+    low:'No idea', high:'Completely clear' },
+  { id:'growth',  text:'How would I rate my personal growth this week?', higherBetter:true,
+    low:'Stuck', high:'Growing fast' }
 ];
 /* The one-on-one you RECEIVE. Three answers, not two, because "no" was hiding
    two different weeks: my mentor never made time, or I never asked. Only one of
@@ -2123,6 +2146,36 @@ function baseDebtTotal(ids){
     out.people += Number(d.people) || 0;
   });
   return out;
+}
+
+/* A 1-10 answer as a slider rather than ten buttons. Same `.gSlide` the weekly
+   goals use, so there is one slider in this app and not two.
+
+   THE UNANSWERED STATE IS THE WHOLE DIFFICULTY. Ten buttons show plainly that
+   none is pressed; a slider always sits somewhere, and a thumb resting at 5 with
+   nothing behind it would collect a base full of accidental fives. So an
+   untouched slider reads "—", greys its track, and is not an answer — the submit
+   button still refuses until it has been moved. `data-untouched` is what says so.
+
+   The colour follows the answer's direction: 8/10 on clarity is good and shows
+   green, 8/10 on loneliness is not and shows warm. */
+function scaleSliderHtml(q, v){
+  var answered = (v !== undefined && v !== null && !isNaN(Number(v)));
+  var n = answered ? Number(v) : 5;
+  /* gpPctColor reads high as good, so a lower-is-better question is inverted
+     before it is coloured. */
+  var pct = q.higherBetter ? n*10 : (11-n)*10;
+  var vars = answered ? gpRingVars(pct) : '--p1:0%;--gc:var(--faint);';
+  return '<div class="qBlock"><div class="qHead">'+
+      '<div class="qText">'+esc(t(q.text))+'</div>'+
+      '<div class="qVal'+(answered?'':' unset')+'" id="qv_'+q.id+'">'+(answered?n:'—')+'</div>'+
+    '</div>'+
+    '<input type="range" class="gSlide" min="1" max="10" step="1" value="'+n+'" '+
+      'style="'+vars+'" data-wscale="'+q.id+'"'+(answered?'':' data-untouched="1"')+
+      ' aria-label="'+esc(t(q.text))+'">'+
+    '<div class="qEnds"><span>'+esc(t(q.low||'1'))+'</span><span>'+esc(t(q.high||'10'))+'</span></div>'+
+    (answered ? '' : '<div class="hint" style="margin-top:2px">'+esc(t('Drag to answer'))+'</div>')+
+  '</div>';
 }
 
 /* The one-on-one question, and the doing that goes with it.
@@ -2220,13 +2273,7 @@ function healthHtml(){
   if(open){
     var d = weekDraftFor(wk);
     h += '<div class="card" id="weekForm" style="padding:6px 14px 14px">';
-    WEEK_SCALE_QS.forEach(function(q){
-      h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div><div class="scale">';
-      for(var i=1;i<=10;i++){
-        h += '<button data-wscale="'+q.id+'|'+i+'" class="'+(Number(d[q.id])===i?'on':'')+'">'+i+'</button>';
-      }
-      h += '</div></div>';
-    });
+    WEEK_SCALE_QS.forEach(function(q){ h += scaleSliderHtml(q, d[q.id]); });
     WEEK_NUM_QS.forEach(function(q){
       h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div>'+
         '<div class="numIn"><input type="number" inputmode="decimal" min="0" placeholder="0" '+
@@ -2604,6 +2651,104 @@ function mentorEntryHtml(){
 }
 
 /* ---------- mentor ---------- */
+/* ---------- the one-on-one itself ----------
+   Questions worth asking, for the mentor to have open during the conversation.
+   Deliberately about the person rather than the work: the weekly numbers already
+   say how the ministry is going, and a mentoring conversation that turns into a
+   status update is the failure mode this list exists to avoid.
+
+   Grouped rather than listed flat because a good conversation has a shape —
+   where you are, then God, then the work, then what you need. Nobody is expected
+   to ask all twelve. */
+var MENTOR_QUESTIONS = [
+  { group:'Start here', qs:[
+    'How are you actually doing — not how is the work going?',
+    'What has taken the most out of you since we last met?',
+    'What has given you life?'
+  ]},
+  { group:'Walking with God', qs:[
+    'What has God been saying to you lately?',
+    'Where have you seen him at work this month?',
+    'What is hard to bring to him right now?'
+  ]},
+  { group:'The work', qs:[
+    'What are you avoiding?',
+    'What would you change if you were not afraid of letting someone down?',
+    'What decision are you waiting on somebody else for?'
+  ]},
+  { group:'Before we finish', qs:[
+    'Who is pouring into you, apart from me?',
+    'What do you need from me that you have not asked for?',
+    'What shall we pray about?'
+  ]}
+];
+
+/* What their own answers suggest is worth asking about this time. Read straight
+   off the check-in they already filled in, so nobody fills in a second form
+   before a conversation — their week IS the preparation.
+
+   Only what stands out. A screen that flags everything flags nothing. */
+function conversationCues(c, prev){
+  if(!c) return [];
+  var out = [];
+  var n = function(v){ return Number(v); };
+  if(n(c.lonely) >= 6) out.push({ tag:'Loneliness', line:'Loneliness is at '+n(c.lonely)+'/10. What is behind that?' });
+  if(n(c.clarity) <= 5) out.push({ tag:'Clarity', line:'Only '+n(c.clarity)+'/10 clear on what to work on. What would make it clearer?' });
+  if(n(c.growth) <= 5) out.push({ tag:'Growth', line:'Growth is at '+n(c.growth)+'/10. What has stalled?' });
+  if(prev && n(c.growth) < n(prev.growth) - 1) out.push({ tag:'Growth', line:'Growth has dropped since week '+prev.week+'. What changed?' });
+  if(!c.oneOnOne && c.oneOnOneAsked) out.push({ tag:'This meeting', line:'They asked for this one-on-one and were waiting. Worth saying you saw it.' });
+  if(!c.oneOnOne && !c.oneOnOneAsked) out.push({ tag:'This meeting', line:'They have not been asking for their one-on-ones. Is that time, or is it something else?' });
+  if(!c.quietTime) out.push({ tag:'Rest with God', line:'No regular quiet times this week.' });
+  if(!c.sabbath) out.push({ tag:'Rest', line:'No sabbath this week.' });
+  if(c.debt) out.push({ tag:'Money', line:'Carrying staff debt'+(Number(c.debtAmount)>0 ? ' of $'+Math.round(Number(c.debtAmount)).toLocaleString() : '')+'. Is there a plan, and does it need help?' });
+  if(c.porn) out.push({ tag:'Purity', line:'They answered yes on porn this week. Gently, and without flinching.' });
+  return out;
+}
+
+function oneOnOneCardHtml(){
+  var c = (S.menteeCheckins || []).slice().sort(function(a,b){ return b.week-a.week; })[0] || null;
+  var prev = (S.menteeCheckins || []).slice().sort(function(a,b){ return b.week-a.week; })[1] || null;
+  var cnt = S.menteeOneOnOnes || { held:0, target:2 };
+  var pct = cnt.target ? Math.min(100, Math.round(cnt.held/cnt.target*100)) : 0;
+  var first = (S.mentee && S.mentee.name ? S.mentee.name.split(' ')[0] : '');
+
+  var h = '<h3>☕ '+esc(t('This one-on-one'))+'</h3><div class="card">';
+  h += '<div class="row" style="border:0"><span class="rowName"><strong>'+
+    esc(gpT('{n} of {t} this month', { n:cnt.held, t:cnt.target }))+'</strong>'+
+    '<div class="pmeta">'+esc(t('The base aims for two a month with each person.'))+'</div></span>'+
+    '<span class="pctBig">'+pct+'%</span></div>'+
+    '<div class="bar"><div class="barFill'+(pct>=100?' done':'')+'" style="width:'+pct+'%"></div></div>';
+
+  var cues = conversationCues(c, prev);
+  if(cues.length){
+    h += '<div class="formBlock"><label>'+esc(t('From their own check-in'))+'</label>';
+    cues.forEach(function(q){
+      h += '<div class="cue"><b>'+esc(t(q.tag))+'</b> '+esc(t(q.line))+'</div>';
+    });
+    h += '</div>';
+  } else if(c){
+    h += '<div class="formBlock"><label>'+esc(t('From their own check-in'))+'</label>'+
+      '<div class="sub" style="margin:0">'+esc(gpT('Nothing is flagging this week. Ask {name} what is underneath the good numbers.', { name:first }))+'</div></div>';
+  }
+
+  h += '<div class="formBlock"><label>'+esc(t('Questions worth asking'))+'</label>';
+  MENTOR_QUESTIONS.forEach(function(g){
+    h += '<div class="qGroup">'+esc(t(g.group))+'</div><ul class="qList">';
+    g.qs.forEach(function(q){ h += '<li>'+esc(t(q))+'</li>'; });
+    h += '</ul>';
+  });
+  h += '<div class="sub" style="margin:2px 0 0">'+esc(t('Nobody asks all of them. Pick the two that fit today.'))+'</div></div>';
+
+  h += '<button class="btn" id="ooDone">✓ '+esc(gpT('One-on-one finished with {name}', { name:first }))+'</button>';
+  var log = S.menteeOneOnOneLog || [];
+  if(log.length){
+    h += '<div class="row" style="border:0;padding-bottom:0"><span class="rowName">'+
+      esc(gpT('Last one: {d}', { d: log[0].date }))+'</span>'+
+      '<button class="linkbtn inline" data-ooundo="'+esc(log[0].id)+'">'+esc(t('Undo'))+'</button></div>';
+  }
+  return h + '</div>';
+}
+
 function oneOnOneAsksHtml(){
   if(!S.oneOnOneAsks || !S.oneOnOneAsks.length) return '';
   var h='<h3>☕ '+esc(t('Asking for a one-on-one'))+' <small>· '+S.oneOnOneAsks.length+'</small></h3>'+
@@ -2624,6 +2769,10 @@ function mentorHtml(){
     h+='<div class="card"><div class="pcard">'+avatarHtml(m,'lg')+'<div><div class="pname">'+esc(m.name)+'</div><div class="pmeta">'+esc(m.dept)+(m.role?' · '+esc(m.role):'')+'</div></div></div></div>';
     h+='<div class="banner">🔒 Shared with you as '+esc(m.name.split(' ')[0])+'\u2019s mentor. Hold it with care and prayer — this is trust, not surveillance.</div>';
     if(S.menteeProfile && S.menteeProfile.debt) h+='<div class="banner">💰 Currently carrying staff debt.</div>';
+
+    /* The conversation first, their numbers under it: this page is opened to have
+       a one-on-one, not to read a dashboard about somebody. */
+    h+=oneOnOneCardHtml();
 
     /* Their weekly check-ins, by name. This is the one place a survey answer is
        attached to a person: the base average pools tokens and never sees a name,
@@ -2782,7 +2931,14 @@ function mentorHtml(){
   h+='<h2>My mentees <small>· '+S.mentees.length+'</small></h2>'+
     '<p class="sub">People who chose you as their mentor and you’ve accepted. You can see their private check-ins.</p><div class="dir">';
   S.mentees.forEach(function(p){
-    h+='<div class="dircard" data-mentee="'+esc(p.id)+'">'+avatarHtml(p)+'<div class="pname">'+esc(p.name)+'</div><div class="pmeta">'+esc(p.dept)+'</div></div>';
+    /* Two a month, at a glance — so who has been missed is visible from the list
+       rather than only after opening each person. */
+    var c = p.oneOnOnes || null;
+    var behind = c && c.held < c.target;
+    h+='<div class="dircard" data-mentee="'+esc(p.id)+'">'+avatarHtml(p)+'<div class="pname">'+esc(p.name)+'</div>'+
+      '<div class="pmeta">'+esc(p.dept)+'</div>'+
+      (c ? '<div class="ooTag'+(behind?' behind':'')+'">☕ '+esc(gpT('{n}/{t} this month',{n:c.held,t:c.target}))+'</div>' : '')+
+      '</div>';
   });
   h+='</div>';
   return h;
@@ -3311,12 +3467,28 @@ function bind(){
   };
 
   /* --- the weekly check-in form --- */
-  document.querySelectorAll('[data-wscale]').forEach(function(b){
-    b.onclick=function(){
-      var p=b.getAttribute('data-wscale').split('|');
-      weekDraftFor(S.healthWeek||thisWeek())[p[0]]=Number(p[1]);
-      render();
+  /* Dragging repaints the number and the track in place rather than re-rendering
+     the page — a render mid-drag takes the slider out from under your thumb. The
+     draft is updated as you go, so nothing is lost if you never let go. */
+  document.querySelectorAll('input.gSlide[data-wscale]').forEach(function(sl){
+    var id = sl.getAttribute('data-wscale');
+    var q = null;
+    WEEK_SCALE_QS.forEach(function(x){ if(x.id===id) q=x; });
+    var paint = function(){
+      var n = Number(sl.value);
+      sl.removeAttribute('data-untouched');
+      var out = document.getElementById('qv_'+id);
+      if(out){ out.textContent = n; out.classList.remove('unset'); }
+      var pct = (q && q.higherBetter===false) ? (11-n)*10 : n*10;
+      sl.setAttribute('style', gpRingVars(pct));
+      weekDraftFor(S.healthWeek||thisWeek())[id] = n;
+      var hint = sl.parentNode.querySelector('.hint');
+      if(hint) hint.remove();
     };
+    sl.oninput = paint;
+    /* A tap on the track counts as an answer too, even if the value did not
+       change — otherwise tapping exactly 5 leaves it looking unanswered. */
+    sl.onchange = paint;
   });
   document.querySelectorAll('[data-wyn]').forEach(function(b){
     b.onclick=function(){
@@ -3331,6 +3503,39 @@ function bind(){
       var p=b.getAttribute('data-w3').split('|');
       weekDraftFor(S.healthWeek||thisWeek())[p[0]]=p[1];
       render();
+    };
+  });
+  var ood=document.getElementById('ooDone');
+  if(ood) ood.onclick=function(){
+    var id=S.mentee&&S.mentee.id; if(!id) return;
+    ood.disabled=true; ood.textContent=t('Saving…');
+    run('logOneOnOne',[S.auth.user,S.auth.pin,id,''],function(d){
+      if(d&&d.ok){
+        S.menteeOneOnOnes=d.count||S.menteeOneOnOnes;
+        S.oneOnOneAsks=d.asks||[];
+        showMsg(t('Logged. Thank you for making the time.'));
+        /* Refetch so the log — and the undo button — carry the new one. */
+        run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(m){
+          if(m&&m.ok){ S.menteeOneOnOneLog=m.oneOnOneLog||[]; S.menteeOneOnOnes=m.oneOnOnes||S.menteeOneOnOnes; }
+          render();
+        });
+      } else { showMsg(t('That didn\u2019t save — try again.')); render(); }
+    });
+  };
+  document.querySelectorAll('[data-ooundo]').forEach(function(b){
+    b.onclick=function(){
+      b.disabled=true;
+      run('undoOneOnOne',[S.auth.user,S.auth.pin,b.getAttribute('data-ooundo')],function(d){
+        if(d&&d.ok){
+          S.menteeOneOnOnes=d.count||S.menteeOneOnOnes;
+          var id=S.mentee&&S.mentee.id;
+          if(id) run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(m){
+            if(m&&m.ok){ S.menteeOneOnOneLog=m.oneOnOneLog||[]; S.menteeOneOnOnes=m.oneOnOnes||S.menteeOneOnOnes; }
+            render();
+          });
+          else render();
+        } else render();
+      });
     };
   });
   var ask=document.getElementById('askOneOnOne');
@@ -3457,7 +3662,8 @@ function bind(){
     c.onclick=function(){
       var id=c.getAttribute('data-mentee');
       run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(d){
-        if(d.ok){ S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[]; S.sharedHabits=d.sharedHabits||[]; S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[]; render(); }
+        if(d.ok){ S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[]; S.sharedHabits=d.sharedHabits||[]; S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[];
+          S.menteeOneOnOnes=d.oneOnOnes||null; S.menteeOneOnOneLog=d.oneOnOneLog||[]; render(); }
         else showMsg('Not available');
       });
     };

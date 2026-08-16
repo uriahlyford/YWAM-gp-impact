@@ -167,8 +167,19 @@ const KH = /[ក-៿]/;
   Object.keys(pbox.F).forEach(function (k) {
     pbox.F[k].forEach(function (f) { words.push(f.label); if (f.hint) words.push(f.hint); });
   });
+  /* MENTOR_QUESTIONS and the 1-10 sliders' end labels live as data inside
+     teams.html and reach the screen through t(), so the t() scan above cannot see
+     them either. A question added to that list would ship untranslated. */
+  const teams = fs.readFileSync(path.join(ROOT, 'teams.html'), 'utf8');
+  const qbox = {};
+  new Function('g', teams.match(/var MENTOR_QUESTIONS = \[[\s\S]*?\n\];/)[0] +
+    teams.match(/var WEEK_SCALE_QS = \[[\s\S]*?\n\];/)[0] +
+    '\ng.Q=MENTOR_QUESTIONS; g.S=WEEK_SCALE_QS;')(qbox);
+  qbox.Q.forEach(function (g) { words.push(g.group); g.qs.forEach(function (q) { words.push(q); }); });
+  qbox.S.forEach(function (q) { if (q.low) words.push(q.low); if (q.high) words.push(q.high); });
+
   const noKm = words.filter(function (w) { return w && !(w in have); });
-  ok('every programme name, blurb, field label and period has a translation', noKm.length === 0,
+  ok('every string that lives as data has a translation too', noKm.length === 0,
     noKm.length + ' missing: ' + noKm.slice(0, 4).join(' | '));
 }
 
