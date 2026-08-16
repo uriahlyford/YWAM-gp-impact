@@ -92,6 +92,59 @@ function gpProgramsInReportOrder(){
   return GP_PROGRAMS.slice().sort(function(a, b){ return (a.no || 99) - (b.no || 99); });
 }
 
+/* ---- periods ----
+   Records are stamped with a QUARTER, which is the finest grain anybody reports
+   on. Everything coarser is a set of quarters, so a six-month report is generated
+   from the same rows rather than typed a second time — which matters, because the
+   Ministry's own filing is a semester and Uriah wants to work in quarters.
+
+   Store fine, report coarse. The reverse — storing semesters and splitting them
+   — cannot be done at all: nothing in a six-month row says which half of it a
+   class ran in. */
+var GP_PERIODS = [
+  { id:'q1',   label:'Quarter 1',  short:'Q1', kind:'quarter', n:1, quarters:[1],       endsIn:'March' },
+  { id:'q2',   label:'Quarter 2',  short:'Q2', kind:'quarter', n:2, quarters:[2],       endsIn:'June' },
+  { id:'q3',   label:'Quarter 3',  short:'Q3', kind:'quarter', n:3, quarters:[3],       endsIn:'September' },
+  { id:'q4',   label:'Quarter 4',  short:'Q4', kind:'quarter', n:4, quarters:[4],       endsIn:'December' },
+  { id:'s1',   label:'Semester 1', short:'S1', kind:'semester', n:1, quarters:[1,2],    endsIn:'June' },
+  { id:'s2',   label:'Semester 2', short:'S2', kind:'semester', n:2, quarters:[3,4],    endsIn:'December' },
+  { id:'year', label:'Whole year', short:'Year', kind:'year',   n:0, quarters:[1,2,3,4], endsIn:'the year' }
+];
+
+function gpPeriod(id){
+  for(var i = 0; i < GP_PERIODS.length; i++) if(GP_PERIODS[i].id === id) return GP_PERIODS[i];
+  return GP_PERIODS[GP_PERIODS.length - 1];   // the whole year: shows everything rather than nothing
+}
+/* The single quarter a record would be filed under, or null when the period spans
+   more than one — which is what stops a record being saved against "Semester 1"
+   with no way of knowing which half of it the class actually ran in. */
+function gpPeriodQuarter(id){
+  var p = gpPeriod(id);
+  return p.quarters.length === 1 ? p.quarters[0] : null;
+}
+/* The quarters from the start of the year up to and including this period — what
+   "year to date" means when the period is Q1 and Q2 has already happened.
+
+   Without this, regenerating last quarter's report would silently restate it with
+   figures from quarters that had not happened when it was written: the Q1 report
+   filed in April says 12 volunteers, and the same button in October says 24. A
+   report has to keep saying what it said. */
+function gpPeriodToDate(id){
+  var qs = gpPeriod(id).quarters;
+  var last = qs[qs.length - 1];
+  var out = [];
+  for(var q = 1; q <= last; q++) out.push(q);
+  return out;
+}
+function gpQuarterOf(date){
+  var d = date || new Date();
+  return Math.floor(d.getMonth() / 3) + 1;
+}
+/* The period a record belongs to when you are looking at one. */
+function gpPeriodForQuarter(q){
+  return 'q' + (Number(q) >= 1 && Number(q) <= 4 ? Number(q) : 1);
+}
+
 /* The fields each kind of record carries. `n` fields are counts, `s` are text,
    `d` are dates. The forms, the validation and the report all read this, so the
    three cannot drift — add a field once and it appears in all of them. */

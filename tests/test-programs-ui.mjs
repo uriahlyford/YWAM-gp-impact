@@ -1,4 +1,4 @@
-/* The Programs tab — data capture for the twice-yearly Ministry report.
+/* The Programs tab — data capture for the Ministry report.
 
    What this protects, in order of how badly it hurts:
 
@@ -11,6 +11,8 @@
      function invocation and Netlify bills those.
    - A guest gets the gate. getPrograms refuses an anonymous caller anyway, but
      the screen must say so rather than showing an empty report.
+   - Records carry a quarter, and a period is the set of quarters it covers, so
+     the Ministry's six-month filing needs nothing typed a second time.
    - Four tabs still fit a 320px phone.
 */
 /* Paths and the browser binary come from tests/env.mjs so this runs from a clone
@@ -145,9 +147,9 @@ ok('the country and the dates were sent, not just the headcount',
   body ? JSON.stringify({ c:body.country, f:body.from, t:body.to }) : 'nothing sent');
 ok('counts are sent as numbers', body && body.male === 5 && body.female === 7,
   body ? typeof body.male + ' ' + body.male + '/' + body.female : '');
-ok('the record knows its programme, year and semester',
-  body && body.program === 'SVI' && body.year === YEAR && (body.semester === 1 || body.semester === 2),
-  body ? body.program + ' ' + body.year + ' S' + body.semester : '');
+ok('the record knows its programme, year and quarter',
+  body && body.program === 'SVI' && body.year === YEAR && body.quarter >= 1 && body.quarter <= 4,
+  body ? body.program + ' ' + body.year + ' Q' + body.quarter : '');
 
 const listed = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
 ok('the team is now on the list', listed.some(x => /YWAM Maui/.test(x)), listed.join(' | '));
@@ -223,13 +225,16 @@ ok('and says which field is missing', !!errShown && /challenge/i.test(String(err
 ok('no console errors anywhere on the Programs tab', p.__errs.length === 0, p.__errs.join(' | ') || 'clean');
 await p.close();
 
-/* ---------- 8. the semester filter, and the year switch ---------- */
+/* ---------- 8. the period filter, and the year switch ----------
+   Records carry a quarter; a period is the set of quarters it covers. The row in
+   Q1 and the row in Q3 must show under their own quarters, under the semester
+   that contains each, and together under the year — from one set of records. */
 store = makeStore([
-  { id:'pr_s1', kind:'class', program:'YDC', campus:'poipet', year:YEAR, semester:1,
+  { id:'pr_s1', kind:'class', program:'YDC', campus:'poipet', year:YEAR, quarter:1,
     location:'Poipet YDC', classes:4, male:30, female:35, activities:'' },
-  { id:'pr_s2', kind:'class', program:'YDC', campus:'poipet', year:YEAR, semester:2,
+  { id:'pr_s2', kind:'class', program:'YDC', campus:'poipet', year:YEAR, quarter:3,
     location:'Siem Reap YDC', classes:2, male:11, female:9, activities:'' },
-  { id:'pr_old', kind:'class', program:'YDC', campus:'poipet', year:YEAR - 1, semester:1,
+  { id:'pr_old', kind:'class', program:'YDC', campus:'poipet', year:YEAR - 1, quarter:1,
     location:'Last year', classes:9, male:1, female:1, activities:'' },
 ]);
 p = await mk(store);
@@ -237,18 +242,44 @@ await p.click('[data-view="programs"]');
 await p.waitForSelector('.progChips', { timeout: 8000 });
 await p.click('[data-prog="YDC"]');
 await p.waitForTimeout(400);
-await p.selectOption('#progSemSel', '1');
+const showing = async () => p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
+await p.selectOption('#progPeriodSel', 'q1');
 await p.waitForTimeout(400);
-let names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
-ok('semester 1 shows only semester 1', names.length === 1 && /Poipet YDC/.test(names[0]), names.join(' | '));
-await p.selectOption('#progSemSel', '2');
+let names = await showing();
+ok('Q1 shows only the Q1 record', names.length === 1 && /Poipet YDC/.test(names[0]), names.join(' | '));
+await p.selectOption('#progPeriodSel', 'q2');
 await p.waitForTimeout(400);
-names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
-ok('semester 2 shows only semester 2', names.length === 1 && /Siem Reap YDC/.test(names[0]), names.join(' | '));
-await p.selectOption('#progSemSel', '0');
+ok('Q2 shows nothing, because nothing happened in it', (await showing()).length === 0);
+await p.selectOption('#progPeriodSel', 'q3');
 await p.waitForTimeout(400);
-names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
-ok('"whole year" shows both halves', names.length === 2, names.join(' | '));
+names = await showing();
+ok('Q3 shows only the Q3 record', names.length === 1 && /Siem Reap YDC/.test(names[0]), names.join(' | '));
+
+/* The point of storing quarters: a six-month report needs nothing retyped. */
+await p.selectOption('#progPeriodSel', 's1');
+await p.waitForTimeout(400);
+names = await showing();
+ok('Semester 1 gathers Q1 and Q2', names.length === 1 && /Poipet YDC/.test(names[0]), names.join(' | '));
+await p.selectOption('#progPeriodSel', 's2');
+await p.waitForTimeout(400);
+names = await showing();
+ok('Semester 2 gathers Q3 and Q4', names.length === 1 && /Siem Reap YDC/.test(names[0]), names.join(' | '));
+await p.selectOption('#progPeriodSel', 'year');
+await p.waitForTimeout(400);
+names = await showing();
+ok('"whole year" shows every quarter', names.length === 2, names.join(' | '));
+
+/* A record belongs to one quarter, so anything wider cannot take a new one —
+   otherwise saving would have to guess when it happened. */
+await p.selectOption('#progPeriodSel', 's1');
+await p.waitForTimeout(400);
+ok('a semester will not take a new record',
+  !(await p.$('#openRecBtn')) && /Pick a single quarter/.test(await p.$eval('#main', e => e.textContent)));
+await p.selectOption('#progPeriodSel', 'q2');
+await p.waitForTimeout(400);
+ok('and a single quarter will', !!(await p.$('#openRecBtn')));
+await p.selectOption('#progPeriodSel', 'year');
+await p.waitForTimeout(400);
 
 /* Nothing from last year leaks in, and asking for last year fetches it. */
 ok('last year is not on screen', !names.some(n => /Last year/.test(n)), names.join(' | '));
@@ -259,34 +290,34 @@ ok('changing the year refetches for that year', yearCalls.indexOf(YEAR - 1) > -1
 names = await p.$$eval('.recRow .recName', els => els.map(e => e.textContent.trim()));
 ok('and last year\'s rows are what shows', names.length === 1 && /Last year/.test(names[0]), names.join(' | '));
 
-/* ---------- 8b. editing from the whole-year view keeps the row's own semester ----------
-   The picker says "Whole year"; the row says semester 2. Taking the semester from
-   the picker on save moved the row into semester 1 — and "Whole year" is exactly
-   the view you use to check the year's total, so the corruption arrived with the
+/* ---------- 8b. editing from a wider view keeps the row's own quarter ----------
+   The picker says "Whole year"; the row says Q3. Taking the quarter from the
+   picker on save moved the row into Q1 — and "Whole year" is exactly the view you
+   use to check the year's total, so the corruption arrived with the
    proofreading. */
 await p.selectOption('#progYearSel', String(YEAR));   // back from last year
 await p.waitForTimeout(700);
-await p.selectOption('#progSemSel', '0');
+await p.selectOption('#progPeriodSel', 'year');
 await p.waitForTimeout(400);
 const editBtns = await p.$$('[data-prec]');
 let edited = null;
 for (const btn of editBtns) {
   const id = await btn.getAttribute('data-prec');
-  if (id !== 'pr_s2') continue;                 // the semester-2 row
+  if (id !== 'pr_s2') continue;                 // the Q3 row
   await btn.click();
   await p.waitForSelector('#recForm', { timeout: 5000 });
   await p.click('#saveRecBtn');
   await p.waitForTimeout(700);
   edited = store.calls.filter(c => c.fn === 'saveProgramRecord').pop();
 }
-ok('editing a row from the whole-year view keeps its own semester',
-  edited && edited.args[2].id === 'pr_s2' && edited.args[2].semester === 2,
-  edited ? 'semester=' + edited.args[2].semester : 'no edit sent');
+ok('editing a row from the whole-year view keeps its own quarter',
+  edited && edited.args[2].id === 'pr_s2' && edited.args[2].quarter === 3,
+  edited ? 'quarter=' + edited.args[2].quarter : 'no edit sent');
 
 /* ---------- 9. delete ---------- */
 await p.selectOption('#progYearSel', String(YEAR));
 await p.waitForTimeout(700);
-await p.selectOption('#progSemSel', '1');
+await p.selectOption('#progPeriodSel', 'q1');
 await p.waitForTimeout(400);
 const delBtn = await p.$('[data-pdel]');
 if (delBtn) { await delBtn.click(); await p.waitForTimeout(700); }
@@ -300,23 +331,25 @@ await p.close();
    that it opens over the app and comes back off, and that the three ways out
    exist — a document nobody can get into Google Docs is not a report. */
 store = makeStore([
-  { id:'pr_g', kind:'goal', program:'SVI', campus:'poipet', year:YEAR, semester:1, target:50, unit:'volunteers' },
-  { id:'pr_t', kind:'team', program:'SVI', campus:'poipet', year:YEAR, semester:1, name:'YWAM Maui',
+  { id:'pr_g', kind:'goal', program:'SVI', campus:'poipet', year:YEAR, quarter:1, target:50, unit:'volunteers' },
+  { id:'pr_t', kind:'team', program:'SVI', campus:'poipet', year:YEAR, quarter:1, name:'YWAM Maui',
     country:'USA', from:YEAR+'-01-27', to:YEAR+'-02-21', male:6, female:6,
     servedMale:454, servedFemale:456, activities:'Teaching English in remote villages' },
-  { id:'pr_i', kind:'issue', program:'', campus:'poipet', year:YEAR, semester:1,
+  { id:'pr_i', kind:'issue', program:'', campus:'poipet', year:YEAR, quarter:1,
     challenge:'Fewer volunteer teams than last year', solution:'Asked two partner bases' },
 ]);
 p = await mk(store);
 await p.click('[data-view="programs"]');
 await p.waitForSelector('.progChips', { timeout: 8000 });
-await p.selectOption('#progSemSel', '1');
+await p.selectOption('#progPeriodSel', 'q1');
 await p.waitForTimeout(400);
 await p.click('#genReportBtn');
 await p.waitForSelector('.repSheet', { timeout: 5000 });
 await p.waitForTimeout(400);
 
 const rep = await p.$eval('#repDoc', e => e.textContent.replace(/\s+/g, ' '));
+ok('the report names the quarter it was generated for',
+  /Activity report — 1st Quarter/.test(rep), (rep.match(/Activity report[^1]{0,4}[^ ]* \w+/) || [''])[0]);
 ok('the report is built from the records on screen, not from a fixture',
   /YWAM Maui \(USA\): 12 members/.test(rep), (rep.match(/YWAM[^|]{0,50}/) || [''])[0]);
 ok('and against the goal typed into the app',
@@ -327,7 +360,7 @@ ok('the challenges written in the app reach the report',
   /Fewer volunteer teams than last year/.test(rep) && /Asked two partner bases/.test(rep));
 ok('all five sections are there',
   ['1. Introduction', '2. Project Implementation Progress', '3. Implementation Activities',
-   '4. Progress of Semester Activities', '5. Conclusion'].every(s => rep.indexOf(s) > -1));
+   '4. Progress of Quarterly Activities', '5. Conclusion'].every(s => rep.indexOf(s) > -1));
 ok('the outputs table rendered as a table, not as text',
   (await p.$$eval('#repDoc table th', els => els.length)) === 5,
   String(await p.$$eval('#repDoc table th', els => els.map(e => e.textContent))));

@@ -54,16 +54,16 @@ const BOOT = {
 const PROGRAMS = (function () {
   const y = new Date().getFullYear();
   return [
-    { id: 'pr_a', kind: 'team', program: 'SVI', campus: 'poipet', year: y, semester: 1,
+    { id: 'pr_a', kind: 'team', program: 'SVI', campus: 'poipet', year: y, quarter: 1,
       name: 'YWAM Maui', country: 'United States of America', from: y + '-02-03', to: y + '-02-17',
       male: 5, female: 7, servedMale: 40, servedFemale: 60, activities: 'Teaching English, community outreach' },
-    { id: 'pr_b', kind: 'goal', program: 'SVI', campus: 'poipet', year: y, semester: 1, target: 250, unit: 'volunteers' },
-    { id: 'pr_c', kind: 'class', program: 'YDC', campus: 'poipet', year: y, semester: 1,
+    { id: 'pr_b', kind: 'goal', program: 'SVI', campus: 'poipet', year: y, quarter: 1, target: 250, unit: 'volunteers' },
+    { id: 'pr_c', kind: 'class', program: 'YDC', campus: 'poipet', year: y, quarter: 1,
       location: 'Poipet YDC', classes: 6, male: 48, female: 52, activities: '' },
-    { id: 'pr_d', kind: 'cohort', program: 'YLT', campus: 'poipet', year: y, semester: 1,
+    { id: 'pr_d', kind: 'cohort', program: 'YLT', campus: 'poipet', year: y, quarter: 1,
       name: 'GPDTS', male: 8, female: 12, intl: 4, khmer: 16, staffMale: 3, staffFemale: 4,
       staffIntl: 2, staffKhmer: 5, outreach: 'Battambang', activities: '' },
-    { id: 'pr_e', kind: 'issue', program: '', campus: 'poipet', year: y, semester: 1,
+    { id: 'pr_e', kind: 'issue', program: '', campus: 'poipet', year: y, quarter: 1,
       challenge: 'Fewer volunteer teams than last year', solution: 'Asked two partner bases to send teams in October' },
   ];
 })();
@@ -159,14 +159,16 @@ const KH = /[ក-៿]/;
      would still say clean. Read the object and check it directly. */
   const progSrc = fs.readFileSync(path.join(ROOT, 'programs.js'), 'utf8');
   const pbox = {};
-  new Function('g', progSrc + '\ng.P=GP_PROGRAMS; g.F=GP_RECORD_FIELDS;')(pbox);
+  new Function('g', progSrc + '\ng.P=GP_PROGRAMS; g.F=GP_RECORD_FIELDS; g.PER=GP_PERIODS;')(pbox);
   const words = [];
   pbox.P.forEach(function (p) { words.push(p.name, p.unit, p.blurb); });
+  /* The period picker's labels are data too — Quarter 1, Semester 1, Whole year. */
+  pbox.PER.forEach(function (P) { words.push(P.label); });
   Object.keys(pbox.F).forEach(function (k) {
     pbox.F[k].forEach(function (f) { words.push(f.label); if (f.hint) words.push(f.hint); });
   });
   const noKm = words.filter(function (w) { return w && !(w in have); });
-  ok('every programme name, blurb and field label has a translation', noKm.length === 0,
+  ok('every programme name, blurb, field label and period has a translation', noKm.length === 0,
     noKm.length + ' missing: ' + noKm.slice(0, 4).join(' | '));
 }
 

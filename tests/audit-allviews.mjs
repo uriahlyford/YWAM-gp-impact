@@ -33,12 +33,12 @@ const TRIPS={ok:true,trips:[{id:'t1',from:'2026-03-01',to:'2026-03-05',days:5,ki
   reasons:{work:['Outreach','Other work'],personal:['Visiting family','Other personal']},hasMentor:true};
 
 const PROGRAMS=(()=>{const y=new Date().getFullYear();return [
-  {id:'pr_a',kind:'team',program:'SVI',campus:'poipet',year:y,semester:1,name:'YWAM Maui',country:'USA',
+  {id:'pr_a',kind:'team',program:'SVI',campus:'poipet',year:y,quarter:1,name:'YWAM Maui',country:'USA',
    from:y+'-02-03',to:y+'-02-17',male:5,female:7,servedMale:40,servedFemale:60,activities:'Teaching'},
-  {id:'pr_b',kind:'goal',program:'SVI',campus:'poipet',year:y,semester:1,target:250,unit:'volunteers'},
-  {id:'pr_c',kind:'class',program:'YDC',campus:'poipet',year:y,semester:1,location:'Poipet YDC',
+  {id:'pr_b',kind:'goal',program:'SVI',campus:'poipet',year:y,quarter:1,target:250,unit:'volunteers'},
+  {id:'pr_c',kind:'class',program:'YDC',campus:'poipet',year:y,quarter:1,location:'Poipet YDC',
    classes:6,male:48,female:52,activities:''},
-  {id:'pr_e',kind:'issue',program:'',campus:'poipet',year:y,semester:1,
+  {id:'pr_e',kind:'issue',program:'',campus:'poipet',year:y,quarter:1,
    challenge:'Fewer volunteer teams',solution:'Asked two partner bases'}];})();
 
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -107,9 +107,10 @@ await visit(p,'Programs: open and cancel the form',async p=>{await p.click('#ope
   await p.click('#cancelRecBtn');await p.waitForTimeout(400);});
 await visit(p,'Programs: challenges',async p=>{await p.click('[data-prog="ISSUES"]');await p.waitForTimeout(700);
   await p.click('#openRecBtn');await p.waitForTimeout(600);await p.click('#cancelRecBtn');});
-await visit(p,'Programs: semester and year switch',async p=>{
-  await p.selectOption('#progSemSel','0');await p.waitForTimeout(500);
-  await p.selectOption('#progSemSel','1');await p.waitForTimeout(500);
+await visit(p,'Programs: every period, and the year switch',async p=>{
+  for(const id of ['q1','q2','q3','q4','s1','s2','year']){
+    await p.selectOption('#progPeriodSel',id);await p.waitForTimeout(350);}
+  await p.selectOption('#progPeriodSel','q1');await p.waitForTimeout(400);
   const ys=await p.$('#progYearSel'); if(ys){const v=String(new Date().getFullYear()-1);
     await p.selectOption('#progYearSel',v);await p.waitForTimeout(700);}});
 await visit(p,'Programs: generate the report',async p=>{await p.click('[data-prog="SVI"]');await p.waitForTimeout(500);

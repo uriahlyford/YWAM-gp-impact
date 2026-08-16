@@ -478,8 +478,7 @@ inferred from volunteer counts.
 
 ## Programs — the Ministry of Education report
 
-Four project agreements with the Ministry of Education, Youth and Sport, reported on
-twice a year: **SVI** (Student Volunteer Internship — visiting outreach teams), **YDC**
+Four project agreements with the Ministry of Education, Youth and Sport: **SVI** (Student Volunteer Internship — visiting outreach teams), **YDC**
 (Youth Development Center — kids, youth, sports, preschool), **YLT** (Youth Leadership
 Training — DTS, DBS and the other schools) and **YAP** (Youth Assistance Project — dorm
 residents, new staff in their first 2–4 years, young leaders being supported).
@@ -495,8 +494,24 @@ what anyone logs each week changed.
 **One blob, discriminated by `kind`.** `programs` holds every row: `team` (SVI), `class`
 (YDC), `cohort` (YLT), `group` (YAP), `issue` (the base's challenges and solutions) and
 `goal` (the year's target for one programme). Five blobs would eventually disagree about
-which year a row belongs to. Rows are year-scoped through `inYear_` like everything else,
-and carry a `semester` (1 or 2) because the report is written twice a year.
+which year a row belongs to. Rows are year-scoped through `inYear_` like everything else.
+
+**Store quarters, report over any period.** Every row carries a `quarter` (1–4), because
+a quarter is the finest grain anybody reports on. `GP_PERIODS` in `programs.js` defines
+the seven things you can look at — Q1–Q4, Semester 1 (= Q1+Q2), Semester 2 (= Q3+Q4) and
+the whole year — each just a set of quarters. So Uriah's quarterly report and the
+Ministry's own six-month filing come out of **one** set of records with nothing typed
+twice. The reverse is impossible: nothing in a six-month row says which half of it a
+class ran in, so storing semesters would have made quarters unreachable forever.
+- A record can only be **added** while a single quarter is selected (`gpPeriodQuarter()`
+  returns null for anything wider). Saving from a semester view would mean guessing when
+  it happened, and a guess here is a wrong figure in a government report.
+- An **edit keeps the row's own quarter**, never the picker's — otherwise opening a Q3
+  team from the whole-year view (the view you use to check totals) silently moves it to
+  Q1, and the corruption arrives with the proofreading. There is a test.
+- `quarterOf_()` in api.js reads a legacy `semester` if a row has no quarter, mapping 1→Q1
+  and 2→Q3 — the earliest quarter each could have been, so nothing is ever reported as
+  happening earlier than it did. That is only for rows written while this was being built.
 
 - **Any signed-in staff may read and write.** Ministry leaders enter their own
   programme's teams and classes — that is the only way the data ever gets in. Editing
@@ -522,7 +537,7 @@ and carry a `semester` (1 or 2) because the report is written twice a year.
 
 ### The report
 
-`gpBuildReport()` writes section 1 to 5 of the document the base already files —
+`gpBuildReport({records, year, period})` writes section 1 to 5 of the document the base already files —
 introduction, the per-project achievement summary, challenges and solutions, the
 per-project detail, the outputs table and the conclusion — from the records on the
 Programs tab. It is **modelled on the report filed for the 1st semester of 2026**,
@@ -530,9 +545,20 @@ and `test-report.mjs` feeds it that report's own data and asserts its own
 sentences: 24 volunteers against 50 is 48%, 187 students against 400 is **46.75%
 and not 47%**, because rounding it would report a figure we did not achieve.
 
-- **Progress is measured on the year, against the annual target.** The half being
-  reported is stated separately. Measuring the annual target against one semester
-  would make the second report read as a collapse.
+- **Any period, from one set of records.** `gpBuildReport({period})` takes a `GP_PERIODS`
+  id — `q1`…`q4`, `s1`, `s2`, `year`. A quarterly report is one quarter; the Ministry's
+  six-month filing is two of them added together. Nothing is entered twice.
+- **Progress is measured on the year to date, against the annual target.** The period
+  being reported is stated separately. Measuring the annual target against one quarter
+  would make every report after the first read as a collapse.
+- **"Year to date" stops at the end of the period being reported** (`gpPeriodToDate()`),
+  not at whatever is in the data now. Regenerating the Q1 report in October must still
+  print what it printed in April — a report that quietly restates itself cannot be
+  reconciled against the copy that was filed. A row entered *late against Q1* does
+  change the Q1 report, which is a correction and is the behaviour you want.
+- **The document names its own period** — "1st Quarter 2026" / "1st Semester 2026" /
+  "2026" — section 4's heading follows it (Quarterly / Semester / Annual), and each
+  achievement line is dated to that period's end ("By the end of March,").
 - **The projects are numbered as the agreement numbers them** — 1 SVI, 2 YLT,
   3 YDC, 4 YAP — which is not the order the app lists them in. That is what `no`
   on each programme is for.

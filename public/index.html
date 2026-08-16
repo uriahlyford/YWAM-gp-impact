@@ -834,7 +834,10 @@ var state = {
   /* Programs (the Ministry report). Loaded on first visit to the tab rather than
      at boot, so a page open still costs one function invocation. `progEditing` is
      the id of the row being edited, '' for a new one, and null for no form. */
-  prog:'SVI', progYear:new Date().getFullYear(), progSemester: (new Date().getMonth() < 6 ? 1 : 2),
+  /* The current quarter. Worked out inline rather than with gpQuarterOf() because
+     state is built before we know whether the optional programs.js arrived, and a
+     throw here is a blank page. */
+  prog:'SVI', progYear:new Date().getFullYear(), progPeriod:'q'+(Math.floor(new Date().getMonth()/3)+1),
   progRecords:null, progLoading:false, progEditing:null
 };
 
@@ -1485,20 +1488,27 @@ function okrHtml(){
    The shapes live in programs.js, which the API validates against, so a field
    added there appears in this form and is accepted by the server. */
 function hasPrograms(){
-  return typeof GP_PROGRAMS !== 'undefined' && typeof gpProgramFields === 'function';
+  return typeof GP_PROGRAMS !== 'undefined' && typeof gpProgramFields === 'function' &&
+         typeof gpPeriod === 'function';
 }
 function progRows(){ return state.progRecords || []; }
 
-/* Rows for the programme and semester currently on screen. Semester 0 is the
-   "Whole year" option — the year goal is annual, so somebody checking progress
-   against it needs to see the year, not one half of it. */
+/* Rows for the programme and period currently on screen. Records carry a quarter;
+   a period is the set of quarters it covers, so "Semester 1" shows Q1 and Q2
+   together without anything being entered twice. */
 function progVisible(kind, program){
+  var qs = gpPeriod(state.progPeriod).quarters;
   return progRows().filter(function(r){
     if(r.kind!==kind) return false;
     if(program && r.program!==program) return false;
-    if(state.progSemester && Number(r.semester)!==state.progSemester) return false;
+    if(qs.indexOf(Number(r.quarter)||1)===-1) return false;
     return true;
   });
+}
+/* What the period is called in a sentence: "this quarter", "this year". */
+function periodWord(){
+  var k = gpPeriod(state.progPeriod).kind;
+  return k==='year' ? t('this year') : k==='semester' ? t('this semester') : t('this quarter');
 }
 
 function fmtDay(s){
@@ -1612,10 +1622,13 @@ function programsHtml(){
   h += '<label class="pick"><span>'+esc(t('Year'))+'</span><select id="progYearSel">';
   for(var y=thisYear+1; y>=thisYear-3; y--) h += '<option value="'+y+'"'+(state.progYear===y?' selected':'')+'>'+y+'</option>';
   h += '</select></label>';
-  h += '<label class="pick"><span>'+esc(t('Semester'))+'</span><select id="progSemSel">'+
-    '<option value="1"'+(state.progSemester===1?' selected':'')+'>'+esc(t('Semester 1'))+'</option>'+
-    '<option value="2"'+(state.progSemester===2?' selected':'')+'>'+esc(t('Semester 2'))+'</option>'+
-    '<option value="0"'+(state.progSemester===0?' selected':'')+'>'+esc(t('Whole year'))+'</option>'+
+  /* Quarters first, because that is what gets entered and reported on. The two
+     semesters and the year are below them: same records, added up, so the
+     Ministry's six-month filing needs nothing typed a second time. */
+  h += '<label class="pick"><span>'+esc(t('Period'))+'</span><select id="progPeriodSel">'+
+    GP_PERIODS.map(function(P){
+      return '<option value="'+esc(P.id)+'"'+(state.progPeriod===P.id?' selected':'')+'>'+esc(t(P.label))+'</option>';
+    }).join('')+
     '</select></label></div>';
 
   h += '<div class="progChips">';
@@ -1634,7 +1647,7 @@ function programsHtml(){
   if(typeof gpBuildReport === 'function'){
     h += '<button class="ghostBtn" id="genReportBtn" style="width:100%;margin-top:6px">'+
       '📄 '+esc(t('Generate the Ministry report'))+'</button>'+
-      '<p class="note">'+esc(t('Writes the semester report from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent.'))+'</p>';
+      '<p class="note">'+esc(t('Writes the report for the period above from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent.'))+'</p>';
   }
   return h;
 }
@@ -1643,7 +1656,7 @@ function programCardHtml(){
   var p = gpProgram(state.prog);
   if(!p) return '';
   /* The goal is for the year, so it is measured against the year — not against
-     whichever semester happens to be showing. */
+     whichever period happens to be showing. */
   var yearRows = progRows().filter(function(r){ return r.program===p.id; });
   var target = gpProgramGoal(p.id, yearRows);
   var reached = gpProgramSummary(p.id, yearRows).people;
@@ -1669,9 +1682,7 @@ function programCardHtml(){
   var rows = progVisible(p.kind, p.id);
   h += '<div class="card">';
   if(!rows.length){
-    h += '<div class="emptyRec">'+esc(t(state.progSemester
-      ? 'Nothing recorded yet for this semester.'
-      : 'Nothing recorded yet for this year.'))+'</div>';
+    h += '<div class="emptyRec">'+esc(gpT('Nothing recorded yet for {when}.', {when:periodWord()}))+'</div>';
   } else {
     rows.forEach(function(r){
       h += '<div class="recRow"><div class="recName">'+esc(recTitle(r))+campusTag(r.campus)+'</div>'+
@@ -1693,13 +1704,11 @@ function programCardHtml(){
 function issuesHtml(){
   var rows = progVisible('issue', '');
   var h = '<div class="okrCard"><div class="progName">'+esc(t('Challenges and solutions'))+'</div>'+
-    '<div class="progBlurb">'+esc(t('What we are actually up against this semester, and what we did about it — lower volunteer numbers, conflict, fewer teachers, students who stop coming.'))+'</div>'+
+    '<div class="progBlurb">'+esc(t('What we are actually up against this quarter, and what we did about it — lower volunteer numbers, conflict, fewer teachers, students who stop coming.'))+'</div>'+
     '<div class="progBlurb" style="margin-top:8px">'+esc(t('Not "we need more staff" — every organisation needs more staff, and it tells the reader nothing.'))+'</div></div>';
 
   h += '<div class="card">';
-  if(!rows.length) h += '<div class="emptyRec">'+esc(t(state.progSemester
-    ? 'Nothing written yet for this semester.'
-    : 'Nothing written yet for this year.'))+'</div>';
+  if(!rows.length) h += '<div class="emptyRec">'+esc(gpT('Nothing written yet for {when}.', {when:periodWord()}))+'</div>';
   else rows.forEach(function(r){
     h += '<div class="recRow"><div class="recName">'+esc(r.challenge||'')+campusTag(r.campus)+'</div>'+
       '<div class="recMeta">'+esc(r.solution||'')+'</div>'+
@@ -1714,8 +1723,11 @@ function issuesHtml(){
    id, '' for a new row, null for closed. */
 function recordFormBlock(kind, program, opts){
   if(state.progEditing===null || state.progEditing===undefined){
-    if(state.progSemester===0){
-      return '<p class="note">'+esc(t('Pick a semester to add a record — a record belongs to one half of the year.'))+'</p>';
+    /* A record belongs to one quarter. Adding one while looking at a semester or
+       a year would mean guessing which quarter it happened in, and a guess in this
+       data is a wrong figure in a government report. */
+    if(gpPeriodQuarter(state.progPeriod)===null){
+      return '<p class="note">'+esc(t('Pick a single quarter to add a record — a record belongs to the quarter it happened in.'))+'</p>';
     }
     return '<button class="saveBtn" id="openRecBtn">'+esc(t(opts.add))+'</button>';
   }
@@ -1778,12 +1790,12 @@ function saveRecordForm(btn){
   var kind = form.getAttribute('data-kind');
   var editing = null;
   if(state.progEditing) progRows().forEach(function(r){ if(r.id===state.progEditing) editing = r; });
-  /* An edit keeps the row's own semester. Taking it from the picker instead would
-     quietly move a semester-2 team into semester 1 the moment somebody opened it
-     from the "Whole year" view — which is exactly the view you use to check the
-     year's total, so the corruption would arrive with the proofreading. */
+  /* An edit keeps the row's own quarter. Taking it from the picker instead would
+     quietly move a Q3 team into Q1 the moment somebody opened it from a semester
+     or whole-year view — which is exactly the view you use to check a total, so
+     the corruption would arrive with the proofreading. */
   var rec = { kind:kind, program:form.getAttribute('data-program'), year:state.progYear,
-    semester: editing ? (Number(editing.semester) || 1) : (state.progSemester || 1) };
+    quarter: editing ? (Number(editing.quarter) || 1) : (gpPeriodQuarter(state.progPeriod) || 1) };
   if(state.progEditing) rec.id = state.progEditing;
   var missing = null;
   (GP_RECORD_FIELDS[kind]||[]).forEach(function(f){
@@ -1805,7 +1817,9 @@ function saveProgramGoal(btn){
   if(!p) return;
   var existing = null;
   progRows().forEach(function(r){ if(r.kind==='goal' && r.program===p.id) existing = r; });
-  var rec = { kind:'goal', program:p.id, year:state.progYear, semester:1,
+  /* A goal is the year's, so its quarter is not meaningful — Q1 keeps the row a
+     valid shape without implying the target belongs to one quarter. */
+  var rec = { kind:'goal', program:p.id, year:state.progYear, quarter:1,
     target: Number(el.value)||0, unit: p.unit };
   if(existing) rec.id = existing.id;
   saveProgram(rec, btn, 'Save goal');
@@ -1833,8 +1847,8 @@ function deleteProgramRow(id){
    it into Drive works too, and so does printing to PDF. Three ways out, because
    clipboard write is refused on some browsers and iOS Safari has its own rules. */
 function openReport(){
-  var body = gpBuildReport({ records: progRows(), year: state.progYear, semester: state.progSemester });
-  var title = 'GP Activity Report — ' + (state.progSemester ? 'Semester '+state.progSemester+' ' : '') + state.progYear;
+  var body = gpBuildReport({ records: progRows(), year: state.progYear, period: state.progPeriod });
+  var title = 'GP Activity Report — ' + gpPeriod(state.progPeriod).short + ' ' + state.progYear;
   var root = document.getElementById('repRoot');
   if(!root) return;
   root.innerHTML =
@@ -1937,8 +1951,8 @@ function bindPrograms(){
     state.progRecords = null; state.progEditing = null;
     loadPrograms(); render();
   };
-  var ss = document.getElementById('progSemSel');
-  if(ss) ss.onchange = function(){ state.progSemester = Number(ss.value); state.progEditing = null; render(); };
+  var ps = document.getElementById('progPeriodSel');
+  if(ps) ps.onchange = function(){ state.progPeriod = ps.value; state.progEditing = null; render(); };
   document.querySelectorAll('[data-prog]').forEach(function(b){
     b.onclick = function(){ gpTap(); state.prog = b.getAttribute('data-prog'); state.progEditing = null; render(); };
   });

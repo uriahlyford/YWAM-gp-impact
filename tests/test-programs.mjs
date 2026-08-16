@@ -70,7 +70,7 @@ function seed(records) {
   mem.programs = records || [];
 }
 const TEAM = {
-  kind: 'team', program: 'SVI', year: YEAR, semester: 1,
+  kind: 'team', program: 'SVI', year: YEAR, quarter: 1,
   name: 'YWAM Maui', country: 'USA', from: YEAR + '-02-03', to: YEAR + '-02-17',
   male: 5, female: 7, servedMale: 40, servedFemale: 60, activities: 'Teaching English, community outreach',
 };
@@ -132,15 +132,48 @@ ok('a null record is refused, not a 500', r.status === 200 && r.body && r.body.o
    id — and must not be forced to invent one. */
 seed();
 r = await call('saveProgramRecord', ['sokha', '1234',
-  { kind: 'issue', year: YEAR, semester: 2, challenge: 'Fewer volunteer teams', solution: 'Asked two partner bases' }]);
+  { kind: 'issue', year: YEAR, quarter: 3, challenge: 'Fewer volunteer teams', solution: 'Asked two partner bases' }]);
 ok('a challenge saves without a programme', r.body && r.body.ok === true, JSON.stringify(r.body && r.body.err));
 ok('and is stored with no programme', r.body.records[0].program === '', JSON.stringify(r.body.records[0]));
 
+/* ---------- 4b. the quarter a record belongs to ----------
+   Records are stamped with a quarter because it is the finest grain anybody
+   reports on: a six-month report adds two of them together, while splitting a
+   six-month row back into halves is impossible — nothing in it says when the
+   class ran. */
+seed();
+r = await call('saveProgramRecord', ['sokha', '1234', { ...TEAM, quarter: 3 }]);
+ok('a quarter round-trips', r.body.records[0].quarter === 3, 'q=' + r.body.records[0].quarter);
+r = await call('saveProgramRecord', ['sokha', '1234', { ...TEAM, id: undefined, quarter: 9 }]);
+ok('a quarter outside 1-4 falls back rather than storing nonsense',
+  r.body.records[1].quarter === 1, 'q=' + r.body.records[1].quarter);
+r = await call('saveProgramRecord', ['sokha', '1234', { ...TEAM, id: undefined, quarter: undefined }]);
+ok('a record with no quarter is still a valid row', r.body.records[2].quarter === 1,
+  'q=' + r.body.records[2].quarter);
+
+/* Rows written while this was being built carry a semester and no quarter. Each
+   maps to the earliest quarter it could have been, so nothing is ever reported
+   as having happened earlier than it did. */
+seed([
+  { id: 'pr_s1', kind: 'team', program: 'SVI', campus: 'poipet', year: YEAR, semester: 1, name: 'First half', male: 1, female: 1 },
+  { id: 'pr_s2', kind: 'team', program: 'SVI', campus: 'poipet', year: YEAR, semester: 2, name: 'Second half', male: 1, female: 1 },
+]);
+r = await call('getPrograms', ['sokha', '1234']);
+{
+  const byName = Object.fromEntries(r.body.records.map(function (x) { return [x.name, x]; }));
+  ok('a legacy semester-1 row reads as Q1', byName['First half'].quarter === 1,
+    'q=' + byName['First half'].quarter);
+  ok('a legacy semester-2 row reads as Q3, the earliest it could have been',
+    byName['Second half'].quarter === 3, 'q=' + byName['Second half'].quarter);
+  ok('and the stale semester field is not handed back to the app',
+    byName['First half'].semester === undefined, JSON.stringify(byName['First half']));
+}
+
 /* ---------- 5. years do not bleed into each other ---------- */
 seed([
-  { id: 'pr_old', kind: 'team', program: 'SVI', campus: 'poipet', year: YEAR - 1, semester: 1,
+  { id: 'pr_old', kind: 'team', program: 'SVI', campus: 'poipet', year: YEAR - 1, quarter: 1,
     name: 'Last year team', male: 3, female: 3 },
-  { id: 'pr_new', kind: 'team', program: 'SVI', campus: 'poipet', year: YEAR, semester: 1,
+  { id: 'pr_new', kind: 'team', program: 'SVI', campus: 'poipet', year: YEAR, quarter: 1,
     name: 'This year team', male: 4, female: 4 },
 ]);
 r = await call('getPrograms', ['sokha', '1234']);

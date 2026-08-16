@@ -1,10 +1,18 @@
-/*  The semester report to the Ministry of Education, Youth and Sport.
+/*  The report to the Ministry of Education, Youth and Sport.
 
     This builds the document that used to be typed by hand — the same document,
     section for section, from the records entered on the Programs tab. It is
     modelled directly on the report already filed for the 1st semester of 2026, so
     the Ministry receives the format it has been receiving, with this period's
     numbers in it, rather than a new one it has to learn to read.
+
+    ANY PERIOD, FROM ONE SET OF RECORDS. Records are stamped with a quarter,
+    because a quarter is the finest grain anybody reports on. A quarterly report is
+    one quarter; the Ministry's own six-month filing is two of them added together;
+    a year is four. Nothing is entered twice, and the six-month document still
+    reads the way it always has. Doing it the other way round — storing semesters
+    — would make quarters impossible: nothing in a six-month row says when the
+    class actually ran.
 
     WHY A PURE FUNCTION. `gpBuildReport()` takes records and returns an HTML
     string. It touches no DOM, no globals of its own and no network, which is what
@@ -58,20 +66,39 @@ function gpRepRange(a, b){
 function gpRepOrdinal(n){
   return n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
 }
-/* "1st Semester 2026", or "2026" when the whole year is being reported. */
-function gpRepPeriod(year, semester){
-  return semester ? gpRepOrdinal(semester) + ' Semester ' + year : String(year);
+/* "1st Quarter 2026", "1st Semester 2026", or "2026" for the whole year. */
+function gpRepPeriod(year, period){
+  var P = gpPeriod(period);
+  if(P.kind === 'year') return String(year);
+  return gpRepOrdinal(P.n) + (P.kind === 'quarter' ? ' Quarter ' : ' Semester ') + year;
 }
-function gpRepIn(semester){
-  return semester ? 'in the ' + gpRepOrdinal(semester) + ' semester' : 'during the year';
+/* "in the 1st quarter" — the phrase that goes inside a sentence. */
+function gpRepIn(period){
+  var P = gpPeriod(period);
+  if(P.kind === 'year') return 'during the year';
+  return 'in the ' + gpRepOrdinal(P.n) + ' ' + P.kind;
+}
+/* "the 3-month period of the 1st Quarter 2026" */
+function gpRepSpan(year, period){
+  var P = gpPeriod(period);
+  if(P.kind === 'year') return String(year);
+  return 'the ' + (P.kind === 'quarter' ? '3' : '6') + '-month period of the ' + gpRepPeriod(year, period);
 }
 
-/* Rows for one period. Semester 0 means the whole year. */
-function gpReportRows(records, kind, program, semester){
+/* Rows for one period — that is, rows in any of the quarters the period covers.
+   A semester is two quarters and a year is four, which is how one set of records
+   answers a quarterly report and the Ministry's six-month one alike.
+
+   Pass `toDate` for the year so far *as at the end of this period*, which is what
+   an annual-target percentage is measured on. Not the same as the whole year:
+   regenerating the Q1 report in October must still say what it said in April. */
+function gpReportRows(records, kind, program, period, toDate){
+  var qs = toDate ? gpPeriodToDate(period) : gpPeriod(period).quarters;
   return (records || []).filter(function(r){
     if(r.kind !== kind) return false;
     if(program !== null && program !== undefined && r.program !== program) return false;
-    if(semester && Number(r.semester) !== semester) return false;
+    /* `goal` rows are the year's target and belong to no quarter. */
+    if(r.kind !== 'goal' && qs.indexOf(Number(r.quarter) || 1) === -1) return false;
     return true;
   });
 }
@@ -81,20 +108,20 @@ function gpReportRows(records, kind, program, semester){
     representing 48% of the annual target (Target: 50 participants for 2026)."
    The target is always the YEAR's, whichever half is being reported — that is
    what "annual target" means, and it is the number in the agreement. */
-function gpReportHeadline(p, records, year, semester){
-  var periodRows = gpReportRows(records, p.kind, p.id, semester);
-  var yearRows = gpReportRows(records, p.kind, p.id, 0);
+function gpReportHeadline(p, records, year, period){
+  var periodRows = gpReportRows(records, p.kind, p.id, period);
+  var yearRows = gpReportRows(records, p.kind, p.id, period, true);
   var got = gpProgramSummary(p.id, periodRows).people;
   var yearGot = gpProgramSummary(p.id, yearRows).people;
   var target = gpProgramGoal(p.id, records);
   /* Progress against an annual target is measured on the year, not on the half —
-     otherwise the second semester's report would restart at zero and read as a
+     otherwise every report after the first would restart at zero and read as a
      collapse. */
   var pct = gpRepPct(yearGot, target);
-  var s = 'Received ' + gpRepNum(got) + ' ' + p.countedAs + ' ' + gpRepIn(semester);
-  /* In the first semester the half and the year are the same number, and saying
-     it twice reads like a mistake. It stops being the same the moment there is a
-     second semester, which is exactly when the reader needs both. */
+  var s = 'Received ' + gpRepNum(got) + ' ' + p.countedAs + ' ' + gpRepIn(period);
+  /* In the first period of a year the part and the whole are the same number, and
+     saying it twice reads like a mistake. It stops being the same the moment there
+     is a second one, which is exactly when the reader needs both. */
   if(yearGot !== got) s += ', totaling ' + gpRepNum(yearGot) + ' ' + p.countedAs + ' for the year';
   if(pct === null) return s + '. No annual target has been recorded for ' + year + '.';
   return s + ', representing ' + pct + '% of the annual target (Target: ' +
@@ -102,9 +129,9 @@ function gpReportHeadline(p, records, year, semester){
 }
 
 /* ---- section 3.x: the body of one project ---- */
-function gpReportProject(p, records, year, semester){
-  var rows = gpReportRows(records, p.kind, p.id, semester);
-  var yearRows = gpReportRows(records, p.kind, p.id, 0);
+function gpReportProject(p, records, year, period){
+  var rows = gpReportRows(records, p.kind, p.id, period);
+  var yearRows = gpReportRows(records, p.kind, p.id, period, true);
   var sum = gpProgramSummary(p.id, rows);
   var yearSum = gpProgramSummary(p.id, yearRows);
   var target = gpProgramGoal(p.id, records);
@@ -113,10 +140,10 @@ function gpReportProject(p, records, year, semester){
   h += '<p>' + gpRepEsc(p.desc) + '</p>';
 
   if(!rows.length){
-    h += '<p>No activity was recorded for this project ' + gpRepIn(semester) + '.</p>';
+    h += '<p>No activity was recorded for this project ' + gpRepIn(period) + '.</p>';
   } else if(p.kind === 'team'){
     /* "we hosted 2 volunteer teams with a total of 24 members (9 female and 15 male)" */
-    h += '<p>' + (semester ? 'In this ' + gpRepOrdinal(semester) + ' semester, we' : 'This year we') +
+    h += '<p>' + (gpPeriod(period).kind === 'year' ? 'This year we' : 'In this ' + gpRepIn(period).replace(/^in the /, '') + ', we') +
       ' hosted ' + gpRepNum(sum.rows) + ' volunteer team' + (sum.rows === 1 ? '' : 's') +
       ' with a total of ' + gpRepNum(sum.people) + ' members (' +
       gpRepNum(sum.female) + ' female and ' + gpRepNum(sum.male) + ' male):</p><ul>';
@@ -176,7 +203,7 @@ function gpReportProject(p, records, year, semester){
   h += '<li><strong>Planned Target:</strong> ' + (target === null
     ? 'No annual target has been recorded for ' + year + '.'
     : 'Plan to host ' + gpRepNum(target) + ' ' + p.countedAs + ' in ' + year + '.') + '</li>';
-  h += '<li><strong>Actual Achievement:</strong> ' + gpReportAsOf(semester) + ' ' +
+  h += '<li><strong>Actual Achievement:</strong> ' + gpReportAsOf(period) + ' ' +
     gpRepNum(yearSum.people) + ' ' + p.countedAs +
     (pct === null ? '' : ', achieving ' + pct + '% of the annual plan') + '.</li>';
   h += '</ul>';
@@ -188,10 +215,8 @@ function gpReportLetter(i){ return 'abcdefghijklmnopqrstuvwxyz'.charAt(i % 26); 
 /* "By the end of June," — the filed report dates its achievement figures, which
    matters because the figure is a year-to-date one and the reader needs to know
    how much of the year it covers. */
-function gpReportAsOf(semester){
-  if(semester === 1) return 'By the end of June,';
-  if(semester === 2) return 'By the end of December,';
-  return 'By the end of the year,';
+function gpReportAsOf(period){
+  return 'By the end of ' + gpPeriod(period).endsIn + ',';
 }
 
 /* Several teams each describe what they did. Joined into one sentence rather than
@@ -217,7 +242,7 @@ function gpReportJoinActivities(list){
    The Budget column is present and empty on purpose: the filed report carries it
    with a note saying it is not needed yet, and dropping the column would mean
    rebuilding the table the first time it is. */
-function gpReportTable(records, year, semester){
+function gpReportTable(records, year, period){
   var h = '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%">' +
     '<thead><tr>' +
     ['No.','Output / Activity Name','Progress Description','% Achievement Target','Budget Spent (USD)']
@@ -225,14 +250,14 @@ function gpReportTable(records, year, semester){
     '</tr></thead><tbody>';
 
   gpProgramsInReportOrder().forEach(function(p){
-    var rows = gpReportRows(records, p.kind, p.id, semester);
-    var yearRows = gpReportRows(records, p.kind, p.id, 0);
+    var rows = gpReportRows(records, p.kind, p.id, period);
+    var yearRows = gpReportRows(records, p.kind, p.id, period, true);
     var target = gpProgramGoal(p.id, records);
     var pct = gpRepPct(gpProgramSummary(p.id, yearRows).people, target);
     var sum = gpProgramSummary(p.id, rows);
 
     h += '<tr><td>' + p.no + '</td><td><strong>Output ' + p.no + ': ' + gpRepEsc(p.reportName) + '</strong></td>' +
-      '<td>' + gpRepEsc(gpReportOutputLine(p, sum, semester)) + '</td>' +
+      '<td>' + gpRepEsc(gpReportOutputLine(p, sum)) + '</td>' +
       '<td>' + (pct === null ? '—' : pct + '%') + '</td><td>$</td></tr>';
 
     rows.forEach(function(r, i){
@@ -252,7 +277,7 @@ function gpReportTable(records, year, semester){
   return h + '</tbody></table>';
 }
 
-function gpReportOutputLine(p, sum, semester){
+function gpReportOutputLine(p, sum){
   if(p.kind === 'team') return 'Hosted ' + sum.rows + ' international volunteer team' +
     (sum.rows === 1 ? '' : 's') + ' totaling ' + sum.people + ' members (' +
     sum.female + ' female, ' + sum.male + ' male).';
@@ -285,12 +310,12 @@ function gpBuildReport(o){
   o = o || {};
   var records = o.records || [];
   var year = Number(o.year) || new Date().getFullYear();
-  var semester = Number(o.semester) || 0;
+  var period = gpPeriod(o.period).id;
   var T = GP_REPORT_TEXT;
   var order = gpProgramsInReportOrder();
 
   var h = '<h1>' + gpRepEsc(T.province) + '</h1>';
-  h += '<p><em>Activity report — ' + gpRepEsc(gpRepPeriod(year, semester)) + '</em></p>';
+  h += '<p><em>Activity report — ' + gpRepEsc(gpRepPeriod(year, period)) + '</em></p>';
 
   h += '<h2>1. Introduction</h2>';
   h += '<p>' + gpRepEsc(T.intro) + '</p>';
@@ -302,18 +327,18 @@ function gpBuildReport(o){
   h += '<h2>2. Project Implementation Progress</h2>';
   h += '<h3>2.1 Summary of Project Achievements</h3>';
   h += '<p><strong>a) Overall Achievements:</strong></p>';
-  h += '<p>During ' + gpRepEsc(semester ? 'the 6-month period of ' + gpRepPeriod(year, semester) : String(year)) +
+  h += '<p>During ' + gpRepEsc(gpRepSpan(year, period)) +
     ', the projects achieved the following results:</p><ul>';
   order.forEach(function(p){
     h += '<li><strong>' + gpRepEsc(p.name) + ' (' + gpRepEsc(p.id) + '):</strong> ' +
-      gpRepEsc(gpReportHeadline(p, records, year, semester)) + '</li>';
+      gpRepEsc(gpReportHeadline(p, records, year, period)) + '</li>';
   });
   h += '</ul>';
 
   /* Challenges and solutions are paired by position: the first solution answers
      the first challenge, the way the filed report numbers them. A challenge with
      no solution written yet still appears — leaving it out would hide it. */
-  var issues = gpReportRows(records, 'issue', null, semester);
+  var issues = gpReportRows(records, 'issue', null, period);
   h += '<p><strong>b) Challenges:</strong></p>';
   if(!issues.length) h += '<p>No challenges were recorded for this period.</p>';
   else {
@@ -330,11 +355,13 @@ function gpBuildReport(o){
   }
 
   h += '<h2>3. Implementation Activities of Projects / Programs</h2>';
-  order.forEach(function(p){ h += gpReportProject(p, records, year, semester); });
+  order.forEach(function(p){ h += gpReportProject(p, records, year, period); });
 
-  h += '<h2>4. Progress of Semester Activities Implementation (Outputs Table)</h2>';
+  h += '<h2>4. Progress of ' + (gpPeriod(period).kind === 'year' ? 'Annual' :
+    gpPeriod(period).kind === 'quarter' ? 'Quarterly' : 'Semester') +
+    ' Activities Implementation (Outputs Table)</h2>';
   h += '<p><em>* ' + gpRepEsc(T.budgetNote) + '</em></p>';
-  h += gpReportTable(records, year, semester);
+  h += gpReportTable(records, year, period);
 
   h += '<h2>5. Conclusion</h2>';
   h += '<p>' + gpRepEsc(T.conclusionOpen) + '</p>';

@@ -41,11 +41,11 @@ const DATA = { leader: false, entries: ENTRIES, okrs: OKRS, survey: SURVEY, rost
 const PROGRAMS = (function () {
   const y = new Date().getFullYear();
   return [
-    { id: 'pr_a', kind: 'team', program: 'SVI', campus: 'poipet', year: y, semester: 1,
+    { id: 'pr_a', kind: 'team', program: 'SVI', campus: 'poipet', year: y, quarter: 1,
       name: 'YWAM Maui', country: 'USA', from: y + '-02-03', to: y + '-02-17',
       male: 5, female: 7, servedMale: 40, servedFemale: 60, activities: 'Teaching English' },
-    { id: 'pr_b', kind: 'goal', program: 'SVI', campus: 'poipet', year: y, semester: 1, target: 250, unit: 'volunteers' },
-    { id: 'pr_e', kind: 'issue', program: '', campus: 'poipet', year: y, semester: 1,
+    { id: 'pr_b', kind: 'goal', program: 'SVI', campus: 'poipet', year: y, quarter: 1, target: 250, unit: 'volunteers' },
+    { id: 'pr_e', kind: 'issue', program: '', campus: 'poipet', year: y, quarter: 1,
       challenge: 'Fewer volunteer teams', solution: 'Asked two partner bases' },
   ];
 })();

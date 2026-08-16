@@ -20,7 +20,7 @@ what is on screen today.
   promises the app makes about privacy, and those are worth checking first —
   they are in sections 0c-3b and 0g.
 - **Section 0h is new and is the one that leaves the building.** Everything in it
-  ends up in the twice-yearly report to the Ministry of Education, Youth and Sport.
+  ends up in the report to the Ministry of Education, Youth and Sport.
   The four programme names are the ones in the signed agreements; if the
   agreements already carry official Khmer names, those replace the guesses here.
 
@@ -296,17 +296,23 @@ the paperwork.
 | The pathway for young people becoming staff: dorm residents, new staff in their first 2–4 years, and young leaders being supported through education and mentoring. | ផ្លូវសម្រាប់យុវជនក្លាយជាបុគ្គលិក៖ អ្នកស្នាក់នៅអន្តេវាសិកដ្ឋាន បុគ្គលិកថ្មីក្នុងរយៈពេល ២–៤ ឆ្នាំដំបូង និងអ្នកដឹកនាំវ័យក្មេងដែលទទួលការគាំទ្រតាមរយៈការអប់រំ និងការណែនាំ។ | What YAP covers |
 | Our four project agreements with the Ministry of Education, Youth and Sport. These records cover the whole base — both campuses — and are what the twice-yearly report is written from. | កិច្ចព្រមព្រៀងគម្រោងទាំងបួនរបស់យើងជាមួយក្រសួងអប់រំ យុវជន និងកីឡា។ កំណត់ត្រាទាំងនេះគ្របដណ្តប់មូលដ្ឋានទាំងមូល — សាខាទាំងពីរ — ហើយជាមូលដ្ឋានសម្រាប់សរសេររបាយការណ៍ពីរដងក្នុងមួយឆ្នាំ។ | Under the heading |
 | Year | ឆ្នាំ | Picker label |
-| Semester | ឆមាស | Picker label |
-| Semester 1 | ឆមាសទី ១ | |
-| Semester 2 | ឆមាសទី ២ | |
+| Period | អំឡុងពេល | Picker label — records are entered by quarter, and the semester and year options add those quarters up |
+| Quarter 1 | ត្រីមាសទី ១ | |
+| Quarter 2 | ត្រីមាសទី ២ | |
+| Quarter 3 | ត្រីមាសទី ៣ | |
+| Quarter 4 | ត្រីមាសទី ៤ | |
+| Semester 1 | ឆមាសទី ១ | Quarters 1 and 2 together |
+| Semester 2 | ឆមាសទី ២ | Quarters 3 and 4 together |
 | Whole year | ពេញមួយឆ្នាំ | |
+| this quarter | ត្រីមាសនេះ | Goes inside "Nothing recorded yet for {when}." |
+| this semester | ឆមាសនេះ | Same |
+| this year | ឆ្នាំនេះ | Same |
 | Year goal (per the agreement) | គោលដៅប្រចាំឆ្នាំ (តាមកិច្ចព្រមព្រៀង) | The number the agreement commits us to |
 | Save goal | រក្សាទុកគោលដៅ | Button — short |
 | No goal set for this year yet. | មិនទាន់មានគោលដៅសម្រាប់ឆ្នាំនេះទេ។ | |
 | {n} of {t} so far this year | {n} ក្នុងចំណោម {t} គិតមកដល់ពេលនេះក្នុងឆ្នាំនេះ | Progress against the goal — keep both {n} and {t} |
-| Nothing recorded yet for this semester. | មិនទាន់មានការកត់ត្រាសម្រាប់ឆមាសនេះទេ។ | |
-| Nothing recorded yet for this year. | មិនទាន់មានការកត់ត្រាសម្រាប់ឆ្នាំនេះទេ។ | Same, when "Whole year" is selected |
-| Pick a semester to add a record — a record belongs to one half of the year. | ជ្រើសរើសឆមាសមួយដើម្បីបន្ថែមកំណត់ត្រា — កំណត់ត្រាមួយជាកម្មសិទ្ធិរបស់ពាក់កណ្តាលឆ្នាំមួយ។ | Shown when "Whole year" is selected |
+| Nothing recorded yet for {when}. | មិនទាន់មានការកត់ត្រាសម្រាប់{when}ទេ។ | {when} is one of the three above — keep the placeholder |
+| Pick a single quarter to add a record — a record belongs to the quarter it happened in. | ជ្រើសរើសត្រីមាសតែមួយដើម្បីបន្ថែមកំណត់ត្រា — កំណត់ត្រាមួយជាកម្មសិទ្ធិរបស់ត្រីមាសដែលវាបានកើតឡើង។ | Shown when a semester or the whole year is selected |
 | New record | កំណត់ត្រាថ្មី | |
 | Edit record | កែសម្រួលកំណត់ត្រា | |
 | Add record | បន្ថែមកំណត់ត្រា | Button |
@@ -336,7 +342,7 @@ buttons around it.
 | English | ខ្មែរ |
 |---|---|
 | Generate the Ministry report | បង្កើតរបាយការណ៍ជូនក្រសួង |
-| Writes the semester report from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent. | សរសេររបាយការណ៍ឆមាសពីកំណត់ត្រាទាំងនេះ ក្នុងទម្រង់ដូចរបាយការណ៍ដែលបានដាក់ជូនរួចហើយ។ វាបើកជាសេចក្តីព្រាង — សូមអានវាមុនពេលផ្ញើ។ |
+| Writes the report for the period above from these records, in the same format as the one already filed. It opens as a draft — read it before it is sent. | សរសេររបាយការណ៍សម្រាប់អំឡុងពេលខាងលើពីកំណត់ត្រាទាំងនេះ ក្នុងទម្រង់ដូចរបាយការណ៍ដែលបានដាក់ជូនរួចហើយ។ វាបើកជាសេចក្តីព្រាង — សូមអានវាមុនពេលផ្ញើ។ |
 | Ministry report | របាយការណ៍ជូនក្រសួង |
 | Copy for Google Docs | ចម្លងសម្រាប់ Google Docs |
 | Download | ទាញយក |
@@ -360,10 +366,9 @@ that instruction, on screen, and it should read as guidance rather than a scoldi
 |---|---|
 | Challenges | បញ្ហាប្រឈមនានា |
 | Challenges and solutions | បញ្ហាប្រឈម និងដំណោះស្រាយ |
-| What we are actually up against this semester, and what we did about it — lower volunteer numbers, conflict, fewer teachers, students who stop coming. | អ្វីដែលយើងកំពុងជួបប្រទះពិតប្រាកដក្នុងឆមាសនេះ និងអ្វីដែលយើងបានធ្វើចំពោះវា — ចំនួនអ្នកស្ម័គ្រចិត្តតិច ជម្លោះ គ្រូបង្រៀនតិច សិស្សឈប់មករៀន។ |
+| What we are actually up against this quarter, and what we did about it — lower volunteer numbers, conflict, fewer teachers, students who stop coming. | អ្វីដែលយើងកំពុងជួបប្រទះពិតប្រាកដក្នុងត្រីមាសនេះ និងអ្វីដែលយើងបានធ្វើចំពោះវា — ចំនួនអ្នកស្ម័គ្រចិត្តតិច ជម្លោះ គ្រូបង្រៀនតិច សិស្សឈប់មករៀន។ |
 | Not "we need more staff" — every organisation needs more staff, and it tells the reader nothing. | មិនមែន «យើងត្រូវការបុគ្គលិកបន្ថែម» ទេ — គ្រប់អង្គការសុទ្ធតែត្រូវការបុគ្គលិកបន្ថែម ហើយវាមិនប្រាប់អ្វីដល់អ្នកអានឡើយ។ |
-| Nothing written yet for this semester. | មិនទាន់មានការសរសេរសម្រាប់ឆមាសនេះទេ។ |
-| Nothing written yet for this year. | មិនទាន់មានការសរសេរសម្រាប់ឆ្នាំនេះទេ។ |
+| Nothing written yet for {when}. | មិនទាន់មានការសរសេរសម្រាប់{when}ទេ។ |
 | Challenge | បញ្ហាប្រឈម |
 | What we did about it | អ្វីដែលយើងបានធ្វើចំពោះវា |
 
