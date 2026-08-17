@@ -1,0 +1,89 @@
+# Run the test suite on every pull request, and on anything that lands on main.
+#
+# Why this exists: a push to main deploys straight to the base's live app — there
+# is no staging step between a merge and every staff member's phone. The suite is
+# the only thing standing there, so it has to run without anyone remembering to
+# run it.
+#
+# Two jobs on purpose, mirroring the suite's own split (see tests/README.md):
+#   server  — imports the real netlify/functions/api.js against a fake
+#             @netlify/blobs. Needs nothing installed, finishes in seconds.
+#   browser — drives the real pages in Chromium. Needs Playwright, so it is
+#             slower and has more ways to fail for reasons that are not the code.
+# Keeping them apart means a broken handler is reported in under a minute, and a
+# flaky browser download can never hide a server failure.
+#
+# Require BOTH in branch protection (Settings → Branches → main):
+#   "server tests" and "browser tests"
+
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: server tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # No install step: the server tests build their own fake @netlify/blobs in a
+      # temp directory, which is what makes them this cheap.
+      - run: node tests/run-all.mjs server
+
+  browser:
+    name: browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # --no-save so package.json stays a description of the app's own
+      # dependencies rather than of its test tooling.
+      - run: npm install --no-save playwright
+      # Chromium only. The suite never launches Firefox or WebKit, and pulling all
+      # three would triple this step for nothing.
+      - run: npx playwright install --with-deps chromium
+      # Two things at once, both load-bearing:
+      #
+      # run-all SKIPS the browser half when Playwright is missing and still exits
+      # 0 — a green tick over an app nobody tested. This fails the job instead.
+      #
+      # And it pins the browser: tests/env.mjs prefers a system Chromium if it
+      # finds one, so on a runner image that ships its own we could end up testing
+      # against a browser we did not install. GP_CHROMIUM points it at the exact
+      # binary from the step above.
+      - name: Pin the browser we just installed
+        run: |
+          node -e "import('playwright').then(m=>{
+            const p = m.chromium.executablePath();
+            console.log('chromium: ' + p);
+            require('fs').appendFileSync(process.env.GITHUB_ENV, 'GP_CHROMIUM=' + p + '\n');
+          }, e => { console.error('playwright missing: ' + e.message); process.exit(1); })"
+      - run: node tests/run-all.mjs browser
+      # Screenshots the browser tests write while running. Only useful when
+      # something failed, so they are not uploaded otherwise.
+      - name: Upload screenshots from a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots
+          path: /tmp/gp-impact-tests/out/
+          if-no-files-found: ignore
+          retention-days: 7

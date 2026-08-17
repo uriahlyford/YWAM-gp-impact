@@ -208,6 +208,11 @@ Three rules hold it together:
   same weekly cell. `test-ministry-kpis.mjs` asserts the split from both sides.
 
 ## Deploy rules — do not break
+- **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
+  checks — `server tests` (seconds, no install) and `browser tests` (Playwright +
+  Chromium) — on every PR and every push to `main`. Both are the ones to require in
+  branch protection. A green CI is not permission to skip running the suite locally:
+  a merge here is a production deploy.
 - **Netlify:** push to `main` → auto-deploy (GitHub integration on the `transcendent-crostata-c9b7f4`
   site). `netlify.toml` sets `publish = "public"` and `functions = "netlify/functions"`.
   Nothing else to run by hand.

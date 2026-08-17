@@ -3,7 +3,21 @@
 ```sh
 node tests/run-all.mjs          # everything
 node tests/run-all.mjs server   # just the fast ones, no browser needed
+node tests/run-all.mjs browser  # just the Chromium ones
 ```
+
+**CI runs this on every pull request and on every push to `main`**
+(`.github/workflows/tests.yml`) as two required checks, `server tests` and
+`browser tests`. That matters here because a merge to `main` deploys straight to
+the base's live app — there is no staging step between it and every staff member's
+phone. Run the suite locally anyway; CI is the backstop, not the plan.
+
+One trap the workflow guards against: `run-all.mjs` deliberately *skips* the
+browser half when Playwright is missing and still exits 0, so in CI that would be
+a green tick over an untested app. The browser job asserts Playwright imported
+before it trusts the result, and pins `GP_CHROMIUM` to the binary it installed so
+a runner image shipping its own Chromium cannot quietly change what we test
+against.
 
 Two kinds of test, and the split matters:
 
