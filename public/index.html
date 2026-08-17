@@ -307,6 +307,15 @@ h3 { font-family:'Koulen',sans-serif; font-size:16px; margin:22px 0 8px; letter-
 .heroLabel { font-size:11px; letter-spacing:3px; color:var(--amber); font-weight:700; }
 .heroNum { font-family:'Koulen',sans-serif; font-size:56px; line-height:1.05; color:var(--amber); }
 .heroQ { display:flex; gap:14px; flex-wrap:wrap; margin-top:6px; font-size:13px; color:var(--onDarkFaint); }
+/* who the staff are: kind of staff, and where from (gpStaffMixHtml) */
+.staffMix { gap:10px; margin-top:8px; }
+.staffMix span { border:1px solid var(--onDarkBorder); border-radius:999px; padding:3px 10px; font-size:12.5px; }
+.staffMix b { color:var(--onDark); font-family:'Koulen',sans-serif; font-weight:400; margin-left:2px; }
+.staffMixRow { margin-top:6px; }
+.staffMixRow.dim { color:var(--onDarkFaint); font-size:12px; }
+.mixBtn { background:none; border:0; padding:0; font:inherit; color:var(--onDark); text-align:left; white-space:normal;
+  text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px;
+  text-decoration-color:var(--amber); cursor:pointer; }
 
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
 .stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:12px 12px 10px; }
@@ -721,6 +730,7 @@ function verseOfWeek(){
 /* Staff counts and check-in rates come from the shared engine (rollup.js) —
    accounts first, the logged 'Total Staff' figure as the fallback. */
 function totalStaff(ids){ return R().totalStaff(ids); }
+function staffBreakdown(ids){ return R().staffBreakdown(ids); }
 function checkinRate(ids, week){ return R().checkinRate(ids, week); }
 
 
@@ -1031,6 +1041,9 @@ function dashboardHtml(title, ids, perCampus){
   var staff = totalStaff(ids);
   h += '<div class="hero"><div class="heroLabel">'+esc(t('STAFF'))+'</div>';
   h += '<div class="heroNum"'+(staff===null?'':' data-count="'+staff+'"')+'>'+(staff===null?'—':'0')+'</div>';
+  /* The headline is everyone at these campuses; this is those same people split
+     by what kind of staff they are and where they are from. */
+  h += gpStaffMixHtml(staffBreakdown(ids));
   var cr = checkinRate(ids, currentWeek());
   if(cr.total && cr.total>0){
     var crp = gpCheckinPct(cr.n, cr.total);
@@ -1447,6 +1460,7 @@ function bindEvents(){
   var gl=document.getElementById('gLogin');
   if(gl) gl.onclick=function(){ window.location.href='teams.html'; };
   gpBindDrill(R());
+  gpBindStaffMix(staffBreakdown(state.view==='all' ? CAMPUSES.map(function(c){return c.id;}) : [state.campus]));
   var ds=document.getElementById('deptSel');
   if(ds) ds.onchange=function(){ state.dept=ds.value; state.ministry=Object.keys(getDepartments(state.campus)[state.dept])[0]; render(); };
   var ms=document.getElementById('minSel');

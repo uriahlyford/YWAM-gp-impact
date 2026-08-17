@@ -66,6 +66,55 @@ the first screen a staff member sees after logging in — so they went from
 "leadership reads them" to "everyone reads them, every day". That moves them up
 the priority list, alongside list 0.
 
+## 0c-0. Who the staff are — kind of staff, and where from
+
+The staff number on Base and on the dashboard now breaks down two ways: what kind
+of staff someone is, and where they are from. Both are asked when a profile is
+created and changed from Profile & settings.
+
+| English | ខ្មែរ |
+|---|---|
+| What kind of staff are you? | តើអ្នកជាបុគ្គលិកប្រភេទណា? |
+| Campus staff | បុគ្គលិកសាខា |
+| Ministry staff | បុគ្គលិកកិច្ចការបម្រើ |
+| The base counts campus staff, YAP and ministry staff separately. | មូលដ្ឋានរាប់បុគ្គលិកសាខា YAP និងបុគ្គលិកកិច្ចការបម្រើដោយឡែកពីគ្នា។ |
+| Home country | ប្រទេសកំណើត |
+| Country | ប្រទេស |
+| — choose — | — ជ្រើសរើស — |
+| Other… | ផ្សេងទៀត… |
+| Counted as how many Khmer, how many international, and how many countries. | រាប់ជាចំនួនខ្មែរ ចំនួនបរទេស និងចំនួនប្រទេស។ |
+| Where we are from | យើងមកពីណាខ្លះ |
+| Khmer | ខ្មែរ |
+| international | បរទេស |
+| Nobody has said where they are from yet. | មិនទាន់មាននរណាម្នាក់បានប្រាប់ថាមកពីណានៅឡើយទេ។ |
+| Say what kind of staff you are and where you are from — it is what these numbers count. | សូមប្រាប់ថាអ្នកជាបុគ្គលិកប្រភេទណា និងមកពីប្រទេសណា — នេះជាអ្វីដែលចំនួនទាំងនេះរាប់។ |
+| Add it to my profile | បញ្ចូលទៅក្នុងប្រវត្តិរូបរបស់ខ្ញុំ |
+
+_Three things worth your eye here. **"YAP" is deliberately not in the dictionary** —
+it is the programme's own name, so it stays as it is; tell Uriah if it should be
+written in Khmer instead. **"Campus" and "Ministry" already have Khmer** (សាខា,
+កិច្ចការបម្រើព្រះ) and are reused as the short chip labels next to the staff number —
+worth checking they still read right as a count of people rather than of places.
+**Country names are not translated at all**: the picker is a list of forty
+Latin-script names, and a list half in Khmer would read worse than one that is
+plainly not translated. If the team wants them in Khmer that is its own job._
+
+## 0c-0b. The same, with numbers in them
+
+| English template | ខ្មែរ |
+|---|---|
+| {n} Khmer | ខ្មែរ {n} នាក់ |
+| {n} international | បរទេស {n} នាក់ |
+| {n} countries | {n} ប្រទេស |
+| {n} not said yet | {n} មិនទាន់បានប្រាប់ |
+| {n} more staff have no profile yet | បុគ្គលិក {n} នាក់ទៀតមិនទាន់មានប្រវត្តិរូប |
+| {n} still to say where they are from | {n} នាក់មិនទាន់បានប្រាប់ថាមកពីណា |
+
+_The first three sit on one line under the big staff number — "5 Khmer · 4
+international · 3 countries" — and that line is a button that opens the full list
+of countries. The last two are the honest small print: the first when the base has
+logged more staff than there are profiles, the second inside the country list._
+
 ## 0c. The Base tab
 
 The staff page opens on the base's own figures. These are its labels.

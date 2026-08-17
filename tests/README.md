@@ -28,6 +28,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
 | `test-rollups.mjs` | The dashboard maths — headcounts summed instead of levelled, OKR progress wrong |
 | `test-jobfocus.mjs` | `jobfocus.js` and `help.html` drift apart |
+| `test-stafftype.mjs` | The staff breakdown: kind of staff and home country stored, carried on the roster, counted the same on both pages — and country spellings folding to one name |
 | `test-pull-drill.mjs` | The pull coin stops turning as you drag, the two pages stop offering the same breakdowns, or a tappable number stops looking tappable |
 | `test-khmer.mjs` | A string the code shows has no translation, the reviewed and pending dictionaries get merged, or Khmer overflows a label |
 | `test-theme.mjs` | Dark mode, the three-state theme switch, and a WCAG AA contrast audit of every screen in both themes |

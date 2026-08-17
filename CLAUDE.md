@@ -69,7 +69,8 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   asserts every ministry in the taxonomy has a focus written for it. Edit one, edit both.
   Lookups take the department because Base Leadership's "ministries" are named after the
   departments they oversee.
-- `taxonomy.js` — campuses, departments, ministries, metric lists, `modeOf()`, `compositeOf()`
+- `taxonomy.js` — campuses, departments, ministries, metric lists, `STAFF_TYPES`, `COUNTRIES`,
+  `modeOf()`, `compositeOf()`
   and the ministry emoji, shared by both pages.
 - `rollup.js` — **the roll-up engine: the maths behind every dashboard figure.**
   `gpRollup({entries, survey, roster, week})` returns the read-only questions
@@ -146,6 +147,24 @@ self-scoped write left in place, not a live path.
 week pickers. They allowed 53, which no screen can offer or read back, so such a row
 would sit in the base average invisible to the person who wrote it. Weeks carry no
 year anywhere in the store — see "Known limits" below.
+
+**The staff number is counted from people, not logged.** `staffType` (campus / yap /
+ministry) and `country` live on the staff record, are asked for at sign-up and changed
+from Profile & settings, and ride along on `publicStaff_` because the base counts by
+them. `rollup.js` `staffBreakdown()` turns the roster into the split both pages render
+through `gpStaffMixHtml()` — one function, so the base can never be described two ways.
+Three rules hold it together:
+- **The headline stays everyone at the campus.** The split only describes people with
+  profiles, so when the logged 'Total Staff' is larger the gap is printed ("4 more staff
+  have no profile yet") rather than quietly shrinking the base.
+- **"Not said yet" is its own answer.** Nobody is guessed into a staff type or folded
+  into Khmer/international because they left it blank.
+- **One country is one string.** `cleanCountry_()` folds khmer/Cambodian/KH into
+  Cambodia and title-cases the rest, because "how many countries" is only answerable if
+  spellings cannot multiply. Unknown countries are kept, not rejected — a nationality
+  missing from `COUNTRIES` is a gap in the list, not bad data. The three staff-type ids
+  are duplicated in `api.js` (it must validate and cannot import a browser script):
+  change one, change both.
 
 **Enter each number once.** Two rules matter here:
 - **Weekly health has two ways in, and one row.** The eleven questions are a form on

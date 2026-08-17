@@ -311,6 +311,15 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .heroSubNum { font-family:'Koulen',sans-serif; font-size:29px; line-height:1; color:var(--onDark); margin-left:auto; }
 .heroQ { display:flex; gap:13px; flex-wrap:wrap; margin-top:6px; font-size:13px; color:var(--onDarkFaint); }
 .heroQ b { color:var(--onDark); font-family:'Koulen',sans-serif; font-weight:400; }
+/* who the staff are: kind of staff, and where from (gpStaffMixHtml) */
+.staffMix { gap:10px; margin-top:8px; }
+.staffMix span { border:1px solid var(--onDarkBorder); border-radius:999px; padding:3px 10px; font-size:12.5px; }
+.staffMix b { color:var(--onDark); font-family:'Koulen',sans-serif; font-weight:400; margin-left:2px; }
+.staffMixRow { margin-top:6px; }
+.staffMixRow.dim { color:var(--onDarkFaint); font-size:12px; }
+.mixBtn { background:none; border:0; padding:0; font:inherit; color:var(--onDark); text-align:left; white-space:normal;
+  text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px;
+  text-decoration-color:var(--amber); cursor:pointer; }
 .mine { border-color:var(--accent) !important; box-shadow:0 0 0 1px var(--accent) inset; }
 
 .dir { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
@@ -1112,6 +1121,14 @@ function baseHtml(){
     '<div class="pmeta">'+esc(t(campusName(S.me.campus)))+' · '+esc(t('week'))+' '+wk+'</div>'+
     '</div></div></div>';
 
+  /* Asked once of the people who have not answered: these two are the only facts
+     the base counts people by, so an unanswered one is a hole in the very figures
+     underneath it. */
+  if(!S.me.staffType || !S.me.country){
+    h+='<div class="banner">'+esc(t('Say what kind of staff you are and where you are from — it is what these numbers count.'))+
+       ' <button class="linkbtn inline" id="goProfileMix">'+esc(t('Add it to my profile'))+'</button></div>';
+  }
+
   if(!S.base){
     return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
   }
@@ -1121,6 +1138,10 @@ function baseHtml(){
   h+='<div class="hero"><div class="heroLabel">'+esc(t(campusName(S.me.campus)).toUpperCase())+' · '+esc(t('WEEK'))+' '+wk+'</div>'+
      '<div class="heroNum"'+(staff===null?'':' data-count="'+staff+'"')+'>'+(staff===null?'—':'0')+'</div>'+
      '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('STAFF'))+'</div>';
+  /* The headline counts everyone here. This is the same people split by what kind
+     of staff they are and where they are from — one function, shared with the
+     dashboard, so the base is never described two ways. */
+  h+=gpStaffMixHtml(R.staffBreakdown(ids));
   var cr=R.checkinRate(ids, wk);
   if(cr.total && cr.total>0){
     var crp = gpCheckinPct(cr.n, cr.total);
@@ -1911,6 +1932,58 @@ function loginHtml(){
     '<button class="btn" id="loginBtn">Log in</button>'+
     '<button class="linkbtn" id="toReg">New here? Create my profile</button></div>';
 }
+/*  Two facts the base counts people by: what kind of staff you are, and where you
+    are from. Asked when a profile is created and changed from Profile & settings
+    afterwards — one pair of fields, written once and used by both forms so the
+    two cannot drift.
+
+    Country is a picker rather than a text box on purpose: "how many countries are
+    we" only has an answer if one country is one string. "Other" is there so a
+    nationality missing from the list is still recordable — the API folds the
+    common spellings together either way. */
+function staffTypeFieldHtml(id, current){
+  return '<label class="f">'+esc(t('What kind of staff are you?'))+'</label>'+
+    '<select id="'+id+'"><option value="">'+esc(t('— choose —'))+'</option>'+
+    STAFF_TYPES.map(function(ty){
+      return '<option value="'+ty.id+'"'+(current===ty.id?' selected':'')+'>'+esc(t(ty.label))+'</option>';
+    }).join('')+'</select>'+
+    '<div class="hint">'+esc(t('The base counts campus staff, YAP and ministry staff separately.'))+'</div>';
+}
+function countryFieldHtml(id, current){
+  var known = COUNTRIES.indexOf(current)>-1;
+  var other = !!current && !known;
+  return '<label class="f">'+esc(t('Home country'))+'</label>'+
+    '<select id="'+id+'"><option value="">'+esc(t('— choose —'))+'</option>'+
+    COUNTRIES.map(function(c){
+      /* Country names stay in Latin script — a list half in Khmer would read worse
+         than one that is not translated at all. */
+      return '<option value="'+esc(c)+'"'+(current===c?' selected':'')+'>'+esc(c)+'</option>';
+    }).join('')+
+    '<option value="__other"'+(other?' selected':'')+'>'+esc(t('Other…'))+'</option></select>'+
+    '<input type="text" id="'+id+'_other" placeholder="'+esc(t('Country'))+'" value="'+esc(other?current:'')+'"'+
+    (other?'':' style="display:none"')+'>'+
+    '<div class="hint">'+esc(t('Counted as how many Khmer, how many international, and how many countries.'))+'</div>';
+}
+/* "Other" is a select value, never a country — read the text box instead. */
+function countryValue(id){
+  var sel=document.getElementById(id);
+  if(!sel) return '';
+  if(sel.value!=='__other') return sel.value;
+  var box=document.getElementById(id+'_other');
+  return box ? String(box.value||'').trim() : '';
+}
+function bindCountryOther(){
+  ['r_country','p_country'].forEach(function(id){
+    var sel=document.getElementById(id), box=document.getElementById(id+'_other');
+    if(!sel||!box) return;
+    sel.onchange=function(){
+      var other = sel.value==='__other';
+      box.style.display = other ? '' : 'none';
+      if(other) box.focus();
+    };
+  });
+}
+
 function registerHtml(){
   var opts = S.roster.map(function(p){ return '<option value="'+esc(p.id)+'">'+esc(p.name)+' · '+esc(p.dept)+'</option>'; }).join('');
   return '<h2>Create my profile</h2><p class="sub">Pick a username and a 4-digit PIN you\u2019ll remember. You can add a photo right after.</p>'+
@@ -1922,6 +1995,8 @@ function registerHtml(){
     '<label class="f">Department</label><select id="r_dept">'+deptsFor('poipet').map(function(d){return '<option value="'+esc(d)+'">'+esc(t(d))+'</option>';}).join('')+'</select>'+
     '<label class="f">Ministry</label><select id="r_ministry"></select><div class="hint">This is what puts your team’s KPIs on your home page.</div>'+
     '<label class="f">Role / team</label><input type="text" id="r_role" placeholder="e.g. Cafe barista, DTS staff">'+
+    staffTypeFieldHtml('r_type','')+
+    countryFieldHtml('r_country','')+
     '<label class="f">My mentor <span class="lock">🔒 sees my private check-ins</span></label><select id="r_mentor"><option value="">— choose later —</option>'+opts+'</select>'+
     '<label class="f">Phone (optional)</label><input type="tel" id="r_phone" placeholder="">'+
     '<label class="f">Year I joined (optional)</label><input type="number" id="r_joined" placeholder="2024">'+
@@ -2621,6 +2696,8 @@ function profileHtml(){
     '<label class="f">Department</label><select id="p_dept">'+deptsFor(S.me.campus).map(function(d){return '<option value="'+esc(d)+'"'+(S.me.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
     '<label class="f">Ministry</label><select id="p_ministry"></select><div class="hint">Sets which KPIs show on your home page.</div>'+
     '<label class="f">Role / team</label><input type="text" id="p_role" value="'+esc(S.me.role)+'">'+
+    staffTypeFieldHtml('p_type', S.me.staffType||'')+
+    countryFieldHtml('p_country', S.me.country||'')+
     '<label class="f">My mentor <span class="lock">🔒 sees my private check-ins</span></label><select id="p_mentor"><option value="">— none —</option>'+opts+'</select>'+
     (p.mentorStatus==='pending' ? '<div class="hint">⏳ Waiting for them to accept</div>' : p.mentorStatus==='approved' ? '<div class="hint">✓ Accepted — they can see your private check-ins</div>' : '')+
     '<label class="f">Phone</label><input type="tel" id="p_phone" value="'+esc(p.phone||'')+'">'+
@@ -3100,6 +3177,7 @@ function bind(){
   /* Every figure on Base opens its own breakdown, from the same sheet the
      dashboard uses. Only bound when the base's numbers are actually on screen. */
   if(S.base) gpBindDrill(baseR());
+  if(S.base && S.me) gpBindStaffMix(baseR().staffBreakdown([S.me.campus]));
   gpAnimateCounts();
   celebrateStreak();
   var bds=document.getElementById('baseDeptSel');
@@ -3173,11 +3251,14 @@ function bind(){
 
   bindHome();
   bindMinistrySelects();
+  bindCountryOther();
 
   bindAway();
 
   var gpm=document.getElementById('goProfileFromMe');
   if(gpm) gpm.onclick=function(){ S.view='profile'; render(); };
+  var gmx=document.getElementById('goProfileMix');
+  if(gmx) gmx.onclick=function(){ S.view='profile'; render(); };
   var gmn=document.getElementById('goMentor');
   if(gmn) gmn.onclick=function(){ S.view='mentor'; S.mentee=null; render(); };
 
@@ -3207,6 +3288,8 @@ function bind(){
       dept:document.getElementById('r_dept').value,
       ministry:(document.getElementById('r_ministry')||{}).value||'',
       role:document.getElementById('r_role').value.trim(),
+      staffType:document.getElementById('r_type').value,
+      country:countryValue('r_country'),
       mentorId:document.getElementById('r_mentor').value,
       phone:document.getElementById('r_phone').value.trim(),
       joined:document.getElementById('r_joined').value.trim()
@@ -3277,6 +3360,8 @@ function bind(){
       dept:document.getElementById('p_dept').value,
       ministry:(document.getElementById('p_ministry')||{}).value||'',
       role:document.getElementById('p_role').value.trim(),
+      staffType:document.getElementById('p_type').value,
+      country:countryValue('p_country'),
       mentorId:document.getElementById('p_mentor').value,
       phone:document.getElementById('p_phone').value.trim(),
       joined:document.getElementById('p_joined').value.trim(),

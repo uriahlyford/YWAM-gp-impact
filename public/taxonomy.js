@@ -182,3 +182,43 @@ var MIN_EMOJI = {
   'Community Service':'\ud83e\udd1d', 'Youth Education':'\ud83c\udf1f', 'Leadership Development':'\ud83c\udf31',
   'Skills Training':'\ud83d\udee0\ufe0f', 'Base Leadership':'\u2726', 'Campus Leadership':'\u2726'
 };
+
+/*  What kind of staff a person is, and where they are from.
+
+    Both are set when someone creates their profile and changed from Profile &
+    settings afterwards. They are the only two facts the base counts people by,
+    so they are stored as ids, not as typed text — "Ministry"/"ministry"/"Min."
+    would be three different kinds of staff, and "Khmer"/"Cambodia"/"KH" three
+    different countries, which is exactly how a headcount stops being a headcount.
+
+    The API keeps its own copy of the three ids (it must validate what it stores
+    and cannot import this file) — change one, change both. Country is validated
+    differently: the API normalises whatever arrives rather than rejecting it, so
+    a nationality missing from this list still lands as a usable country.  */
+var STAFF_TYPES = [
+  { id:'campus',   label:'Campus staff',   short:'Campus',   hint:'You serve the base itself — leadership, hospitality, finances, upkeep.' },
+  { id:'yap',      label:'YAP',            short:'YAP',      hint:'You are in the Youth Apprenticeship Programme.' },
+  { id:'ministry', label:'Ministry staff', short:'Ministry', hint:'You work in one of the ministries — cafe, schools, outreach, media, sports.' }
+];
+function staffTypeLabel(id){
+  for(var i=0;i<STAFF_TYPES.length;i++) if(STAFF_TYPES[i].id===id) return STAFF_TYPES[i].label;
+  return '';
+}
+function staffTypeShort(id){
+  for(var i=0;i<STAFF_TYPES.length;i++) if(STAFF_TYPES[i].id===id) return STAFF_TYPES[i].short;
+  return '';
+}
+
+/* The home country, for "how many Khmer, how many international, how many
+   countries". Cambodia leads because most of the base is Khmer; the rest are
+   alphabetical. Not a complete list of the world — it is the countries a YWAM
+   base in Cambodia actually sends and receives people from, plus room for
+   anything else through "Other". Adding a name here is safe; renaming one
+   orphans the people already stored under the old spelling. */
+var HOME_COUNTRY = 'Cambodia';
+var COUNTRIES = ['Cambodia',
+  'Australia','Austria','Brazil','Canada','China','Denmark','Fiji','Finland','France','Germany',
+  'Hong Kong','India','Indonesia','Ireland','Japan','Kenya','Laos','Malaysia','Mexico','Myanmar',
+  'Nepal','Netherlands','New Zealand','Nigeria','Norway','Papua New Guinea','Philippines','Singapore',
+  'South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Uganda',
+  'United Kingdom','United States','Vietnam'];

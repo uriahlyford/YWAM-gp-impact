@@ -58,8 +58,8 @@ const MY_CHECKINS = [NOWWK, NOWWK-1, NOWWK-2].map((w,i) => ({
   langHours: 2+i, minHours: 6-i, sharedFaith: 1, sabbath: 1
 }));
 CHECKIN_STORE = MY_CHECKINS.map(c => ({ ...c, source: 'daily' }));
-const MATE = { id: 'st2', name: 'Mealea Sok', username: 'mealea', campus: P, dept: 'Youth Education', ministry: 'YDC', role: 'YDC teacher', photo: '', mentorId: '' };
-const ME = { id: 'st1', name: 'Sokha Chan', username: 'sokha', campus: P, dept: 'Community Service', ministry: 'Outreach Teams', role: 'Outreach coordinator', photo: '', mentorId: '' };
+const MATE = { id: 'st2', name: 'Mealea Sok', username: 'mealea', campus: P, dept: 'Youth Education', ministry: 'YDC', role: 'YDC teacher', photo: '', mentorId: '', staffType: 'ministry', country: 'Cambodia' };
+const ME = { id: 'st1', name: 'Sokha Chan', username: 'sokha', campus: P, dept: 'Community Service', ministry: 'Outreach Teams', role: 'Outreach coordinator', photo: '', mentorId: '', staffType: 'campus', country: 'United States' };
 const Q = Math.min(4, Math.floor((new Date().getMonth()) / 3) + 1);
 const OKRS = [{
   id: 'o1', campus: P, quarter: Q,
@@ -75,7 +75,9 @@ const OKRS = [{
 }];
 let OKR_STORE = OKRS.map(o => ({ ...o, krs: o.krs.map(k => ({ ...k })) }));
 const DATA = {
-  leader: false, entries: e, get okrs() { return OKR_STORE; },
+  /* getData carries the roster in production — the dashboard's staff figures are
+     counted from it, so leaving it out here would test a page that cannot count. */
+  leader: false, entries: e, roster: [ME, MATE], get okrs() { return OKR_STORE; },
   survey: [NOWWK, NOWWK-1].flatMap(w => [0,1,2].map(i => ({
     campus: P, week: w, device: 'dev'+i, lonely: 2+i, clarity: 7+i%3, growth: 6+i,
     porn: 0, oneOnOne: i?1:0, exercise: i%2, quietTime: 1, debt: i===0?1:0,
@@ -188,6 +190,34 @@ console.log('\nBase tiles:      ' + await page.$$eval('#main .stat', e => e.leng
 console.log('Dashboard tiles: ' + await dash.$$eval('#main .stat', e => e.length));
 console.log('Base drillable:  ' + await page.$$eval('#main [data-drill-metric]', e => e.length));
 console.log('Base quarter rows: ' + await page.$$eval('#main .qRow', e => e.length));
+
+// 4b. the staff number breaks down by kind of staff and by where people are from
+const mix = await page.evaluate(() => {
+  const q = document.querySelector('.hero .staffMix');
+  const line = document.querySelector('.hero [data-staffmix]');
+  return { chips: q ? q.innerText.replace(/\n+/g, ' · ') : '(none)',
+           line: line ? line.innerText.trim() : '(none)' };
+});
+console.log('\nstaff by kind:   ' + mix.chips);
+console.log('staff by origin: ' + mix.line);
+const dashMix = await dash.evaluate(() => {
+  const line = document.querySelector('.hero [data-staffmix]');
+  return line ? line.innerText.trim() : '(none)';
+});
+console.log('same on dashboard: ' + dashMix);
+/* One base, one description of it — the two pages share gpStaffMixHtml, and this
+   is what catches them being handed different rosters. */
+if (mix.line !== dashMix) { console.log('  ^ the two pages describe the base differently'); process.exitCode = 1; }
+if (mix.chips === '(none)' || mix.line === '(none)') { console.log('  ^ the staff split did not render'); process.exitCode = 1; }
+
+// tapping that line lists the countries
+await page.click('.hero [data-staffmix]');
+await page.waitForSelector('.ddModal', { timeout: 6000 });
+const countries = await page.$$eval('.ddRow', els => els.map(x => x.textContent.trim().replace(/\s+/g, ' ')));
+console.log('countries:       ' + countries.join(' | '));
+if (countries.length !== 2) { console.log('  ^ expected one row per country'); process.exitCode = 1; }
+await page.click('#ddClose');
+await page.waitForTimeout(300);
 
 // 5. tapping a figure opens the breakdown
 await page.click('#main .stat[data-drill-metric="Salvations"]');

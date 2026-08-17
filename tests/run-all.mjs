@@ -23,6 +23,7 @@ const SERVER = [
   'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
+  'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted
 ];
 
 const BROWSER = [

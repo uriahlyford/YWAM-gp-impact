@@ -352,6 +352,60 @@ function gpRollup(D){
     return { n:responses, total:(t!==null && t>0)?Math.round(t):null };
   }
 
+  /* Who the staff of a campus are: what kind of staff, and where they are from.
+
+     Counted from the roster, never from a logged number, because these questions
+     are about named people — you cannot ask a weekly KPI cell how many countries
+     it is. That has a consequence worth stating on screen rather than hiding:
+     if the base has logged a 'Total Staff' larger than the number of accounts,
+     the headline is that larger figure while this breakdown only describes the
+     people who have profiles. `counted` and `missing` say so.
+
+     'Khmer' is the home country (Cambodia) and 'international' is everyone else —
+     that is the split the base actually talks in. Anyone who has not said yet is
+     in neither: `noCountry` and `noType` are shown, not quietly folded into the
+     larger group, because "we don't know" and "nobody" are different answers. */
+  function staffBreakdown(ids){
+    if(!ROSTER) return null;
+    var people = ROSTER.filter(function(r){ return ids.indexOf(r.campus)>-1; });
+    var out = {
+      counted: people.length, missing: 0,
+      types: { campus:0, yap:0, ministry:0 }, noType: 0,
+      khmer: 0, international: 0, noCountry: 0,
+      countries: 0, countryList: []
+    };
+    var seen = {};
+    people.forEach(function(p){
+      var ty = String(p.staffType||'');
+      if(out.types[ty] === undefined) out.noType++; else out.types[ty]++;
+      var c = String(p.country||'').trim();
+      if(!c){ out.noCountry++; return; }
+      if(c === HOME_COUNTRY) out.khmer++; else out.international++;
+      if(!seen[c]){ seen[c] = 0; out.countryList.push(c); }
+      seen[c]++;
+    });
+    out.countryList.sort(function(a,b){
+      // Biggest group first, and the home country ahead of an equal-sized one.
+      if(seen[b] !== seen[a]) return seen[b] - seen[a];
+      if(a === HOME_COUNTRY) return -1;
+      if(b === HOME_COUNTRY) return 1;
+      return a < b ? -1 : 1;
+    });
+    out.countries = out.countryList.length;
+    out.perCountry = seen;
+    /* Deliberately the LOGGED headcount, not totalStaff(): totalStaff prefers the
+       roster once anyone has an account, so comparing against it could only ever
+       be zero. The question here is the other one — has the base logged more staff
+       than have signed up? */
+    var logged = null;
+    ids.forEach(function(cid){
+      var v = blAgg(cid,'Total Staff');
+      if(v !== null) logged = (logged || 0) + v;
+    });
+    if(logged !== null && logged > people.length) out.missing = Math.round(logged) - people.length;
+    return out;
+  }
+
   /* ---------- survey ---------- */
   function surveyRows(ids, week){
     return SURVEY.filter(function(r){
@@ -433,6 +487,7 @@ function gpRollup(D){
     communityDiscipled:communityDiscipled,
     outreachRollup:outreachRollup, partnerChurches:partnerChurches,
     rosterCount:rosterCount, totalStaff:totalStaff, checkinRate:checkinRate,
+    staffBreakdown:staffBreakdown,
     surveyRows:surveyRows, pct:pct, avg:avg, healthScore:healthScore,
     drillRows:drillRows, krProgress:krProgress, objProgress:objProgress
   };
@@ -515,6 +570,88 @@ function gpOpenDrill(title, rows){
   gpDrillRoot().innerHTML = h;
   document.getElementById('ddClose').onclick = gpCloseDrill;
   document.getElementById('ddOverlay').onclick = function(e){ if(e.target.id==='ddOverlay') gpCloseDrill(); };
+}
+
+/* A plain list in the same sheet the drill-down uses. The drill sheet's rows are
+   metric-shaped (campus · department · ministry, then the weeks behind it), which
+   is the wrong shape for "which countries are we". Rather than bend that into
+   something it isn't, this is the same overlay with label / value rows. */
+function gpOpenList(title, rows, note){
+  var h = '<div class="ddOverlay" id="ddOverlay"><div class="ddModal" role="dialog" aria-modal="true">'+
+    '<div class="ddHead"><h3>'+gpDrillEsc(title)+'</h3>'+
+    '<button class="ddClose" id="ddClose" aria-label="'+gpDrillEsc(gpDrillT('Close'))+'">✕</button></div>';
+  if(note) h += '<p class="ddSub">'+gpDrillEsc(note)+'</p>';
+  if(!rows.length){
+    h += '<p class="ddSub">'+gpDrillEsc(gpDrillT('Nothing logged for this yet.'))+'</p>';
+  } else {
+    rows.forEach(function(r){
+      h += '<div class="ddRow"><div class="ddRowHead"><span>'+gpDrillEsc(r.label)+'</span>'+
+        '<span class="ddRowVal">'+gpDrillEsc(String(r.value))+'</span></div>'+
+        (r.sub ? '<div class="ddWeeks">'+gpDrillEsc(r.sub)+'</div>' : '')+'</div>';
+    });
+  }
+  h += '</div></div>';
+  gpDrillRoot().innerHTML = h;
+  document.getElementById('ddClose').onclick = gpCloseDrill;
+  document.getElementById('ddOverlay').onclick = function(e){ if(e.target.id==='ddOverlay') gpCloseDrill(); };
+}
+
+/* ---- who the staff are ----
+   The headline staff number is everyone at the campus. This is the same people
+   split two ways: what kind of staff they are, and where they are from. Both
+   pages render it from one function so the base cannot be described differently
+   on the dashboard and on someone's phone.
+
+   Everything here is a count of people with profiles. When the base has logged a
+   bigger 'Total Staff' than the number of accounts, that gap is printed rather
+   than smoothed over — otherwise the split silently describes a smaller base than
+   the number above it. */
+function gpStaffMixHtml(bd){
+  if(!bd || !bd.counted) return '';
+  var chips = [];
+  ['campus','yap','ministry'].forEach(function(id){
+    if(!bd.types[id]) return;
+    var label = (typeof staffTypeShort === 'function') ? staffTypeShort(id) : id;
+    chips.push('<span>'+gpDrillEsc(gpDrillT(label))+' <b>'+bd.types[id]+'</b></span>');
+  });
+  if(bd.noType) chips.push('<span>'+gpDrillEsc(gpT('{n} not said yet',{n:bd.noType}))+'</span>');
+
+  var h = chips.length ? '<div class="heroQ staffMix">'+chips.join('')+'</div>' : '';
+
+  var bits = [];
+  if(bd.khmer) bits.push(gpT('{n} Khmer',{n:bd.khmer}));
+  if(bd.international) bits.push(gpT('{n} international',{n:bd.international}));
+  if(bd.countries) bits.push(gpT('{n} countries',{n:bd.countries}));
+  if(bits.length){
+    h += '<div class="heroTrend staffMixRow"><button class="mixBtn" data-staffmix="1">'+
+      gpDrillEsc(bits.join(' · '))+' ›</button></div>';
+  } else if(bd.noCountry){
+    h += '<div class="heroTrend staffMixRow">'+gpDrillEsc(gpDrillT('Nobody has said where they are from yet.'))+'</div>';
+  }
+  if(bd.missing){
+    h += '<div class="heroTrend staffMixRow dim">'+
+      gpDrillEsc(gpT('{n} more staff have no profile yet',{n:bd.missing}))+'</div>';
+  }
+  return h;
+}
+
+/* Open the country list behind that line. Call after each render with the same
+   breakdown that was rendered. */
+function gpBindStaffMix(bd){
+  document.querySelectorAll('[data-staffmix]').forEach(function(el){
+    el.onclick = function(){
+      if(!bd) return;
+      var rows = bd.countryList.map(function(c){
+        /* Country names are not translated: the picker they come from is a list of
+           Latin-script names, and half a list in Khmer would read worse than none.
+           If the team wants them in Khmer that is its own piece of work. */
+        return { label: c, value: bd.perCountry[c],
+          sub: (c === HOME_COUNTRY) ? gpDrillT('Khmer') : gpDrillT('international') };
+      });
+      var note = bd.noCountry ? gpT('{n} still to say where they are from',{n:bd.noCountry}) : '';
+      gpOpenList(gpDrillT('Where we are from'), rows, note);
+    };
+  });
 }
 
 /* Wire every element carrying gpDrillAttrs(). Call it after each render, with

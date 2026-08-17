@@ -179,13 +179,65 @@ async function verifyStaff_(username, pin) {
   return s;
 }
 
+/* What kind of staff someone is. The three ids are duplicated from taxonomy.js
+   (STAFF_TYPES) because the server must validate what it stores and cannot
+   import a plain browser script — change one, change both. Anything else becomes
+   '' rather than being rejected: an unknown value means "not said yet", which
+   the base figures count and show as exactly that. */
+const STAFF_TYPE_IDS = ['campus', 'yap', 'ministry'];
+function cleanStaffType_(v) {
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  return STAFF_TYPE_IDS.indexOf(s) > -1 ? s : '';
+}
+
+/* Home country, normalised on the way in.
+
+   "How many countries are we?" is only answerable if one country is one string,
+   so this folds the ways people write the same place — khmer / cambodian / KH
+   all become Cambodia — and title-cases the rest so "new zealand" and
+   "New Zealand" cannot count as two. Unrecognised countries are kept, not
+   rejected: a nationality missing from the picker is a gap in the list, not bad
+   data, and refusing it would leave the person with no country at all. */
+const COUNTRY_ALIASES = {
+  'khmer': 'Cambodia', 'cambodian': 'Cambodia', 'kh': 'Cambodia', 'kampuchea': 'Cambodia',
+  'usa': 'United States', 'us': 'United States', 'u.s.': 'United States', 'u.s.a.': 'United States',
+  'america': 'United States', 'american': 'United States', 'united states of america': 'United States',
+  'uk': 'United Kingdom', 'u.k.': 'United Kingdom', 'england': 'United Kingdom',
+  'scotland': 'United Kingdom', 'wales': 'United Kingdom', 'britain': 'United Kingdom',
+  'great britain': 'United Kingdom', 'british': 'United Kingdom',
+  'korea': 'South Korea', 'republic of korea': 'South Korea', 'korean': 'South Korea',
+  'nz': 'New Zealand', 'aussie': 'Australia', 'australian': 'Australia',
+  'filipino': 'Philippines', 'the philippines': 'Philippines',
+  'holland': 'Netherlands', 'dutch': 'Netherlands',
+  'png': 'Papua New Guinea', 'hk': 'Hong Kong', 'viet nam': 'Vietnam', 'vietnamese': 'Vietnam',
+  'burma': 'Myanmar', 'thai': 'Thailand', 'japanese': 'Japan', 'chinese': 'China',
+  'german': 'Germany', 'french': 'France', 'canadian': 'Canada', 'brazilian': 'Brazil'
+};
+function cleanCountry_(v) {
+  const raw = String(v == null ? '' : v).trim().replace(/\s+/g, ' ');
+  if (!raw || raw.length > 40) return '';
+  const alias = COUNTRY_ALIASES[raw.toLowerCase()];
+  if (alias) return alias;
+  return raw.replace(/\S+/g, function (w) {
+    // Joining words stay lowercase ("Trinidad and Tobago"); everything else is capitalised.
+    if (/^(and|of|the|de|da)$/i.test(w)) return w.toLowerCase();
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
+}
+
 /* Deliberately narrow: this is what every staff member can see about every
    other one. surveyToken must never appear here — it's what keeps weekly
-   check-ins anonymous in the base survey. */
+   check-ins anonymous in the base survey.
+
+   staffType and country are here because the base counts people by them — how
+   many campus / YAP / ministry staff, how many Khmer, how many international,
+   how many countries. They are directory facts of the same kind as department
+   and role; nothing about anyone's health, money or days away travels with them. */
 function publicStaff_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
-    ministry: s.ministry || '', role: s.role, photo: s.photo || '', mentorId: s.mentorId || ''
+    ministry: s.ministry || '', role: s.role, photo: s.photo || '', mentorId: s.mentorId || '',
+    staffType: cleanStaffType_(s.staffType), country: s.country || ''
   };
 }
 
@@ -207,6 +259,8 @@ async function staffRegister(payload) {
     id: id, username: u, name: payload.name || u, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
     campus: payload.campus || '', dept: payload.dept || '', ministry: payload.ministry || '',
     role: payload.role || '', photo: '',
+    // Asked for at sign-up, changed from Profile & settings later.
+    staffType: cleanStaffType_(payload.staffType), country: cleanCountry_(payload.country),
     mentorId: payload.mentorId || '', mentorStatus: payload.mentorId ? 'pending' : '',
     phone: payload.phone || '', joined: payload.joined || '', debt: false, active: true,
     created: now, updated: now
@@ -236,6 +290,8 @@ async function updateProfile(username, pin, payload) {
   if (payload.dept !== undefined) rec.dept = payload.dept;
   if (payload.ministry !== undefined) rec.ministry = payload.ministry;
   if (payload.role !== undefined) rec.role = payload.role;
+  if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
+  if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
   if (payload.mentorId !== undefined) {
     const newMentorId = payload.mentorId || '';
     // Picking a new/different mentor always resets to pending — the mentor
