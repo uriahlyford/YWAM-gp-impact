@@ -814,11 +814,20 @@ function myHabits(){
 /* Mirrors MIN_WEEK_DAYS in the API: below this many logged days the week isn't
    scored or reported. Kept in step by hand — if you change one, change both. */
 var MIN_WEEK_DAYS = 3;
+/* Week 1 starts on the Monday on or before 1 January. Most years hold 52 of those
+   weeks; some hold 53, and the last days of one used to clamp onto week 52 —
+   landing on a week that had already happened. Bounded by the year's real length
+   now, the same way index.html and api.js do it. */
+function mondayOfW1For(y){
+  var jan1=new Date(y,0,1);
+  return new Date(y,0,1-((jan1.getDay()+6)%7));
+}
+function weeksInYearOf(y){
+  return Math.round((mondayOfW1For(y+1) - mondayOfW1For(y)) / (7*86400000));
+}
 function isoWeekOf(d){
   var y=d.getFullYear();
-  var jan1=new Date(y,0,1);
-  var monW1=new Date(y,0,1-((jan1.getDay()+6)%7));
-  return Math.max(1, Math.min(52, Math.floor((d-monW1)/(7*86400000))+1));
+  return Math.max(1, Math.min(weeksInYearOf(y), Math.floor((d-mondayOfW1For(y))/(7*86400000))+1));
 }
 function thisWeek(){ return isoWeekOf(new Date()); }
 function goalsForWeek(week){

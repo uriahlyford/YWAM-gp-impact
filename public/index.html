@@ -855,11 +855,21 @@ var state = {
   progRecords:null, progLoading:false, progEditing:null
 };
 
-/* ---------- weeks & dates ---------- */
+/* ---------- weeks & dates ----------
+   Week 1 starts on the Monday on or before 1 January. Most years hold 52 of those
+   weeks; some hold 53, and the last days of one used to clamp onto week 52 —
+   landing on a week that had already happened, replacing a headcount or adding to
+   a running total twice. The bound is the year's real length now. */
 function mondayOfW1(){
   var y = new Date().getFullYear();
   var jan1 = new Date(y, 0, 1);
   return new Date(y, 0, 1 - ((jan1.getDay() + 6) % 7));
+}
+function weeksThisYear(){
+  var y = new Date().getFullYear();
+  var a = new Date(y, 0, 1); a = new Date(y, 0, 1 - ((a.getDay() + 6) % 7));
+  var b = new Date(y+1, 0, 1); b = new Date(y+1, 0, 1 - ((b.getDay() + 6) % 7));
+  return Math.round((b - a) / (7*86400000));
 }
 function weekRange(w){
   var start = new Date(mondayOfW1().getTime() + (w-1)*7*86400000);
@@ -877,7 +887,7 @@ function weekLabel(w){
 }
 function currentWeek(){
   var diff = Math.floor((new Date() - mondayOfW1()) / (7*86400000)) + 1;
-  return Math.max(1, Math.min(52, diff));
+  return Math.max(1, Math.min(weeksThisYear(), diff));
 }
 state.week = currentWeek();
 /* qOf(), fmt(), aggregate() and lastBefore() are shared globals from rollup.js. */
@@ -1350,7 +1360,7 @@ function okrSummaryHtml(){
 
 function weekOptions(sel){
   var h='';
-  for(var w=1;w<=52;w++) h += '<option value="'+w+'"'+(sel===w?' selected':'')+'>'+esc(weekLabel(w))+'</option>';
+  for(var w=1, n=weeksThisYear(); w<=n; w++) h += '<option value="'+w+'"'+(sel===w?' selected':'')+'>'+esc(weekLabel(w))+'</option>';
   return h;
 }
 

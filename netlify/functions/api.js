@@ -58,9 +58,28 @@ const YEAR_MIN = 2020, YEAR_MAX = 2100;
 
 function currentYear_() { return new Date().getUTCFullYear(); }
 
+/* The year a row belongs to when it carries no year and no date at all — that is,
+   a row written before year-stamping shipped.
+
+   THIS IS A FIXED YEAR, NOT "THIS YEAR". It used to fall back to the current year,
+   which meant every unstamped row silently became a row of whatever year you
+   happened to be reading in: on 1 January the whole of last year's history would
+   have reappeared as this year's figures, and the only thing standing between us
+   and that was remembering to set GP_LEGACY_YEAR in the Netlify dashboard. A
+   deploy that needs a human to remember an environment variable, once, or else
+   quietly reports wrong numbers a year later, is a trap rather than a
+   configuration.
+
+   A fixed constant is simply the truth: year-stamping shipped in 2026, so a row
+   with no year on it was written in 2026 or earlier. It cannot have been written
+   later. The env var still overrides — a base that carried data forward from an
+   older spreadsheet may want an earlier year — but nothing breaks if nobody ever
+   sets it. */
+const LEGACY_YEAR = 2026;   // the year year-stamping shipped; see above before changing
+
 function legacyYear_() {
   const n = finiteNum_(process.env.GP_LEGACY_YEAR, YEAR_MIN, YEAR_MAX);
-  return n == null ? currentYear_() : n;
+  return n == null ? LEGACY_YEAR : n;
 }
 
 /* The year a request is asking about. Absent or junk means "this year", so every
@@ -366,13 +385,35 @@ async function saveMyHabits(username, pin, habits, bibleDay) {
   return { ok: true, habits: habitsOf_(rows[idx]), bibleDay: rows[idx].bibleDay || 0 };
 }
 
+/* ---- weeks ----
+   Week 1 starts on the Monday on or before 1 January. Most years hold 52 of those
+   weeks; some hold 53.
+
+   THE LAST DAYS OF A 53-WEEK YEAR USED TO CLAMP ONTO WEEK 52. Everything here
+   bounded the week at 52, so the days belonging to week 53 were filed as week 52
+   and landed on top of a week that had already happened — a headcount replaced, a
+   running total added to twice. Rare (a 53-week year comes round every five or six
+   years) and silent, which is the bad combination. The bound is now the number of
+   weeks the year actually has. */
+function mondayOfWeek1_(y) {
+  const jan1 = new Date(y, 0, 1);
+  return new Date(y, 0, 1 - ((jan1.getDay() + 6) % 7));
+}
+function weeksInYear_(y) {
+  return Math.round((mondayOfWeek1_(y + 1) - mondayOfWeek1_(y)) / (7 * 86400000));
+}
+/* The bound every week argument is checked against. Takes the year the row is
+   being written into, because 2026 has 53 weeks and 2027 has 52. */
+function maxWeek_(year) {
+  const y = finiteNum_(year, YEAR_MIN, YEAR_MAX);
+  return weeksInYear_(y == null ? currentYear_() : Math.round(y));
+}
+
 /* ---- daily log ---- */
 function isoWeek_(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   const y = d.getFullYear();
-  const jan1 = new Date(y, 0, 1);
-  const monW1 = new Date(y, 0, 1 - ((jan1.getDay() + 6) % 7));
-  return Math.max(1, Math.min(52, Math.floor((d - monW1) / (7 * 86400000)) + 1));
+  return Math.max(1, Math.min(weeksInYear_(y), Math.floor((d - mondayOfWeek1_(y)) / (7 * 86400000)) + 1));
 }
 
 async function getDaily_() { return readJSON('dailyLogs', []); }
@@ -622,7 +663,7 @@ async function askForOneOnOne(username, pin, week) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false, err: 'auth' };
   if (!(s.mentorId && s.mentorStatus === 'approved')) return { ok: false, err: 'no_mentor' };
-  const wk = finiteNum_(week, 1, 52);
+  const wk = finiteNum_(week, 1, maxWeek_(currentYear_()));
   if (wk == null) return { ok: false, err: 'bad_week' };
 
   const rows = await getOneOnOneAsks_();
@@ -799,7 +840,7 @@ async function saveEntries(campus, updates, code, username, pin) {
   if (writer && campus !== writer.campus) return { ok: false, err: 'wrong_campus' };
   (updates || []).forEach(function (u) {
     const dept = str_(u.dept, 80), ministry = str_(u.ministry, 80), metric = str_(u.metric, 80);
-    const week = finiteNum_(u.week, 1, 52);
+    const week = finiteNum_(u.week, 1, maxWeek_(yr));
     if (!dept || !ministry || !metric || week == null) return;
     // Reads are already filtered by leader status in getData(); mirror that
     // here so a non-leader can't blindly overwrite a value they can't see.
@@ -953,7 +994,7 @@ function goalPct_(items) {
 async function saveGoals(username, pin, week, items) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  const wk = finiteNum_(week, 1, 52);
+  const wk = finiteNum_(week, 1, maxWeek_(currentYear_()));
   if (wk == null) return { ok: false, err: 'bad_week' };
   const clean = (Array.isArray(items) ? items.slice(0, MAX_GOALS) : []).map(function (i) {
     return {
@@ -1108,10 +1149,11 @@ const DEBT_MAX = 1000000;
 async function saveMyWeek(username, pin, week, payload) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  /* 1-52, the same bound as saveEntries and the week pickers. This used to allow
-     53, which no client can offer and no screen can read back, so such a row
-     would sit in the base average invisible to the person who wrote it. */
-  const wk = finiteNum_(week, 1, 52);
+  /* Bounded by the number of weeks the year actually has — 53 in a long year, 52
+     otherwise. It allowed 53 unconditionally once, which put rows in short years
+     that no screen could read back; then it allowed only 52, which lost the last
+     days of a long one. */
+  const wk = finiteNum_(week, 1, maxWeek_(currentYear_()));
   if (wk == null) return { ok: false, err: 'bad_week' };
   const p = payload || {};
 
@@ -1151,7 +1193,7 @@ async function saveMyWeek(username, pin, week, payload) {
 async function deleteMyWeek(username, pin, week) {
   const s = await verifyStaff_(username, pin);
   if (!s || !s.surveyToken) return { ok: false };
-  const wk = finiteNum_(week, 1, 52);
+  const wk = finiteNum_(week, 1, maxWeek_(currentYear_()));
   if (wk == null) return { ok: false, err: 'bad_week' };
   let rows = await getSurvey_();
   const yr = currentYear_();
@@ -1227,7 +1269,7 @@ async function saveMyMinistry(username, pin, week, updates) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   if (!s.ministry) return { ok: false, err: 'no_ministry' };
-  const wk = finiteNum_(week, 1, 52);
+  const wk = finiteNum_(week, 1, maxWeek_(currentYear_()));
   if (wk == null) return { ok: false, err: 'bad_week' };
   const rows = await getEntries_();
   const now = new Date().toISOString();

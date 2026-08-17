@@ -137,11 +137,13 @@ to one year and returns which one it used, so **`rollup.js` and both pages still
 plain week numbers** exactly as before. Only `api.js` knows years exist.
 `yearOf_(row)` is the single place that question is answered, and it takes the best
 evidence available in order: an explicit `year`, the row's own `date` (kpiDaily and
-dailyLogs carry one), its `updated` stamp, then `GP_LEGACY_YEAR`.
-**Set `GP_LEGACY_YEAR` in the Netlify environment to the year the existing data was
-collected in.** Rows written before this change have no year, and it cannot be recovered
-— only inferred — so this is an *assignment*, not a recovery. Left unset it defaults to
-the current year, which silently drags all the old data forward every January.
+dailyLogs carry one), its `updated` stamp, then `LEGACY_YEAR`.
+`LEGACY_YEAR` is a **constant in the code**, not an environment variable and not "this
+year" — see *Two traps that were removed* below. Rows written before year-stamping have
+no year, and it cannot be recovered, only inferred; pinning it to the year the change
+shipped is the one inference that is certainly not too late. `GP_LEGACY_YEAR` still
+overrides it for a base that carried data in from an older spreadsheet, and **nothing
+breaks if nobody sets it.**
 
 **Writing ministry numbers needs a name.** `saveEntries` took any POST at all: the front
 door gated the form in the UI and the endpoint checked nothing, so anyone with the URL
@@ -181,6 +183,27 @@ year anywhere in the store — see "Known limits" below.
   **Consequence to know:** for a ministry+week that has daily rows, those days are
   the source of truth. A leader editing the same weekly cell on the dashboard will
   be overwritten the next time someone logs a day for it.
+
+## Two traps that were removed, so they do not come back
+- **The legacy year is a constant, not "this year".** `LEGACY_YEAR = 2026` in `api.js`
+  is the year year-stamping shipped, so a row carrying no year and no date was written
+  then or earlier — it cannot have been written later. It used to fall back to
+  `currentYear_()`, which meant every unstamped row silently became a row of whatever
+  year you were reading in: on 1 January the whole of last year's history would have
+  reappeared as this year's figures, and the only thing preventing it was somebody
+  remembering to set `GP_LEGACY_YEAR` in the Netlify dashboard. **A deploy step that
+  has to be remembered once, or else reports wrong numbers twelve months later, is a
+  trap rather than a configuration.** The env var still overrides — a base that carried
+  data in from an older spreadsheet may want an earlier year — but nothing breaks if
+  nobody ever sets it.
+- **A 53-week year has 53 weeks.** Week 1 starts on the Monday on or before 1 January,
+  so most years hold 52 of those weeks and some hold 53 — 2023 and 2028 do. Every week
+  bound in the app was a hardcoded 52, so the last days of a long year were filed as
+  week 52 and landed on top of a week that had already happened: a headcount replaced,
+  a running total added to twice. Silent, and every five or six years. `weeksInYear_()`
+  / `maxWeek_(year)` in `api.js` and `weeksThisYear()` / `weeksInYearOf()` on the two
+  pages are the bound now. A test asserts no `finiteNum_(week, 1, 52)` and no
+  `Math.min(52,` survives anywhere.
 
 ## Deploy rules — do not break
 - **Netlify:** push to `main` → auto-deploy (GitHub integration on the `transcendent-crostata-c9b7f4`
@@ -686,14 +709,14 @@ and not 47%**, because rounding it would report a figure we did not achieve.
 - **No locking on read-modify-write.** Every write reads a whole blob, edits it and writes
   it back. Two people saving the same sheet in the same second means one loses. Rare at
   this team size, real nonetheless.
-- **The last days of a 53-week year still clamp onto week 52.** Both pages compute the
-  week from the Monday of week 1 of the current calendar year and clamp to 52, so the
-  days belonging to the *next* year's week 1 land on week 52 instead. The year field
-  keeps those days in the right year now, so this is a mis-numbered week rather than
-  lost history — much smaller than it was, still not right.
-- **~219 Khmer strings are translated but unreviewed** (`PENDING_KM` in `km.js`). They
+- **~387 Khmer strings are translated but unreviewed** (`PENDING_KM` in `km.js`). They
   are on screen now rather than sitting in English, which was Uriah's call, but nobody
-  who speaks Khmer has read them yet. `docs/khmer-needed.md` is the checklist.
+  who speaks Khmer has read them yet. `docs/khmer-needed.md` is the checklist. **This
+  one cannot be closed by writing code** — it needs Sreilea and Leakha. The two
+  sections worth their time first are 0h (the programme names, which go into a
+  government document, and which the signed agreements may already have official Khmer
+  for) and the twelve mentoring questions, which want to be heard the way a Khmer
+  speaker would hear them in the room rather than translated faithfully.
 - **The job-focus paragraphs are still English.** `public/jobfocus.js` and the KPI
   glossary in `help.html` carry 28 ministries' worth of prose — that is content rather
   than interface, it is long, and it reads as teaching material, so it wants a person

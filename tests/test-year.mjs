@@ -186,6 +186,83 @@ for (const bad of ['abc', -5, 99999, null, {}]) {
     r.status === 200 && r.body && r.body.year === NOW, String(r.body && r.body.year));
 }
 
+/* ---------- 7. the legacy year does not need an environment variable ----------
+   It used to fall back to the CURRENT year, so an unstamped row silently became a
+   row of whatever year you were reading in — on 1 January, last year's whole
+   history would have reappeared as this year's figures. The only thing preventing
+   that was somebody remembering to set GP_LEGACY_YEAR in the Netlify dashboard,
+   once, or else finding out twelve months later.
+
+   Two assertions, because the behavioural one alone cannot see the bug today:
+   the pinned year and the current year happen to be the same in 2026, and the
+   difference only shows up on a New Year's Day nobody is running tests on. So the
+   second one reads the source and checks the fallback is a constant. */
+{
+  delete process.env.GP_LEGACY_YEAR;
+  const src = fs.readFileSync(REPO + '/netlify/functions/api.js', 'utf8');
+
+  const pinned = /const LEGACY_YEAR = (\d{4})/.exec(src);
+  ok('the legacy year is pinned to a constant in the source', !!pinned, pinned && pinned[1]);
+
+  const fn = /function legacyYear_\(\)[\s\S]*?\n}/.exec(src);
+  ok('and its fallback is that constant, not "whatever year it is now"',
+    !!fn && /LEGACY_YEAR/.test(fn[0]) && !/currentYear_\(\)/.test(fn[0]),
+    fn ? fn[0].replace(/\s+/g, ' ') : 'not found');
+
+  /* And it still behaves: an unstamped row reads as the pinned year with nothing
+     configured at all. */
+  seed({ entries: [
+    { campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams', metric: 'Salvations', week: 33, value: 40 },
+  ] });
+  const got = await call('getData', ['', Number(pinned[1])]);
+  ok('and an unstamped row lands in that year with no env var set',
+    val(got.body, 'poipet', KEY, 33) === 40, JSON.stringify(got.body && got.body.year));
+
+  /* The override is still there for a base that carried data in from an older
+     spreadsheet — it is just no longer load-bearing. */
+  process.env.GP_LEGACY_YEAR = '2024';
+  const older = await call('getData', ['', 2024]);
+  ok('GP_LEGACY_YEAR still overrides when somebody sets it',
+    val(older.body, 'poipet', KEY, 33) === 40);
+  delete process.env.GP_LEGACY_YEAR;
+}
+
+/* ---------- 8. a 53-week year has 53 weeks ----------
+   Week 1 starts on the Monday on or before 1 January, so most years hold 52 of
+   those weeks and some hold 53 — 2023 and 2028 do. Every week bound in the app
+   was 52, so the last days of a long year were filed as week 52 and landed on top
+   of a week that had already happened: a headcount replaced, a running total
+   added to twice. Silent, and every five or six years.
+
+   Read the helpers out of the source rather than reimplementing the arithmetic
+   here — a test that computes the answer its own way proves only that two bits of
+   maths agree, not that the app's bound is right. */
+{
+  const src = fs.readFileSync(REPO + '/netlify/functions/api.js', 'utf8');
+  const box = {};
+  new Function('g',
+    src.match(/function mondayOfWeek1_[\s\S]*?\n}/)[0] +
+    src.match(/function weeksInYear_[\s\S]*?\n}/)[0] +
+    '\ng.weeks=weeksInYear_;')(box);
+
+  ok('2023 and 2028 are 53-week years', box.weeks(2023) === 53 && box.weeks(2028) === 53,
+    '2023=' + box.weeks(2023) + ' 2028=' + box.weeks(2028));
+  ok('and an ordinary year still has 52', box.weeks(2026) === 52 && box.weeks(2027) === 52,
+    '2026=' + box.weeks(2026) + ' 2027=' + box.weeks(2027));
+
+  /* The bound the app checks against must follow the year, not a constant. */
+  const bounds = [...src.matchAll(/finiteNum_\((?:week|u\.week), 1, ([^)]+)\)/g)].map(m => m[1].trim());
+  ok('no week argument is still bounded by a hardcoded 52',
+    bounds.length > 0 && bounds.every(b => /maxWeek_/.test(b)), bounds.join(' | '));
+
+  /* And the two pages agree with the server about how long a year is. */
+  for (const f of ['index.html', 'teams.html']) {
+    const page = fs.readFileSync(REPO + '/public/' + f, 'utf8');
+    ok(f + ' does not clamp the week at 52 either',
+      !/Math\.min\(52,/.test(page), (page.match(/Math\.min\(52,[^)]*\)/) || ['none'])[0]);
+  }
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);
