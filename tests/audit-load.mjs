@@ -1,7 +1,7 @@
 /* What one app open actually costs, and whether anything errors along the way. */
 /* Paths and the browser binary come from tests/env.mjs so this runs from a clone
    rather than from one machine's scratch directory. */
-import { PUBLIC } from './env.mjs';
+import { PUBLIC, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT=PUBLIC;
@@ -21,7 +21,7 @@ const DATA={leader:false,entries:{poipet:{'Base Leadership|Campus Leadership|Tot
   'Community Service|Outreach Teams|Salvations':{[NOWWK]:4}}},okrs:[],
   survey:[{campus:'poipet',week:NOWWK,device:'d1',lonely:3,clarity:8,growth:7,porn:0,oneOnOne:1,exercise:1,quietTime:1,debt:0,langHours:2,minHours:5,sharedFaith:1,sabbath:1}]};
 
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const b=await chromium.launch({executablePath: CHROMIUM});
 
 async function audit(page_, label, seed){
   const p=await b.newPage({viewport:{width:400,height:900}});

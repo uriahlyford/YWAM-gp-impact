@@ -2,7 +2,7 @@
    patchy connections, so a hanging font request is the realistic bad case. */
 /* Paths and the browser binary come from tests/env.mjs so this runs from a clone
    rather than from one machine's scratch directory. */
-import { PUBLIC } from './env.mjs';
+import { PUBLIC, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT=PUBLIC;
@@ -12,7 +12,7 @@ const srv=http.createServer((q,r)=>{let p=q.url.split('?')[0]; if(p==='/')p='/in
   r.writeHead(200,{'Content-Type':T[path.extname(f)]||'application/octet-stream'}); r.end(fs.readFileSync(f));});
 await new Promise(r=>srv.listen(4411,r));
 const DATA={leader:false,entries:{poipet:{'Base Leadership|Campus Leadership|Total Staff':{1:12}}},okrs:[],survey:[]};
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const b=await chromium.launch({executablePath: CHROMIUM});
 
 async function run(label, fontMode){
   const p=await b.newPage({viewport:{width:400,height:900}});

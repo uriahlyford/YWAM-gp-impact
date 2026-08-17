@@ -1,6 +1,6 @@
 /* Paths and the browser binary come from tests/env.mjs so this runs from a clone
    rather than from one machine's scratch directory. */
-import { PUBLIC, tmpDir } from './env.mjs';
+import { PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT=PUBLIC;
@@ -11,7 +11,7 @@ const srv=http.createServer((q,r)=>{let p=q.url.split('?')[0]; if(p==='/')p='/in
 await new Promise(r=>srv.listen(4402,r));
 const ME={id:'st1',name:'Sokha Chan',username:'sokha',campus:'poipet',dept:'Community Service',ministry:'Outreach Teams',role:'Outreach coordinator',photo:'',mentorId:''};
 const DATA={leader:false,entries:{poipet:{}},okrs:[],survey:[]};
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const b=await chromium.launch({executablePath: CHROMIUM});
 for(const w of [320,360,390,430]){
   const p=await b.newPage({viewport:{width:w,height:800}});
   await p.route('**/.netlify/functions/api',r=>{const q=JSON.parse(r.request().postData()||'{}');

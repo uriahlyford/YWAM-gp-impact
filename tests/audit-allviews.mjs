@@ -1,7 +1,7 @@
 /* Visit every screen on both pages and collect anything that errors. */
 /* Paths and the browser binary come from tests/env.mjs so this runs from a clone
    rather than from one machine's scratch directory. */
-import { PUBLIC } from './env.mjs';
+import { PUBLIC, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT=PUBLIC;
@@ -32,7 +32,7 @@ const TRIPS={ok:true,trips:[{id:'t1',from:'2026-03-01',to:'2026-03-05',days:5,ki
   totals:{[String(new Date().getFullYear())]:{work:5,personal:0,trips:1}},
   reasons:{work:['Outreach','Other work'],personal:['Visiting family','Other personal']},hasMentor:true};
 
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const b=await chromium.launch({executablePath: CHROMIUM});
 const errs=[];
 async function mk(seed){
   const p=await b.newPage({viewport:{width:400,height:900}});

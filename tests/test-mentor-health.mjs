@@ -1,7 +1,7 @@
 /* A mentor sees their mentee's weekly check-ins by name; the base average does not. */
 /* Paths and the browser binary come from tests/env.mjs so this runs from a clone
    rather than from one machine's scratch directory. */
-import { PUBLIC, tmpDir } from './env.mjs';
+import { PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT=PUBLIC;
@@ -22,7 +22,7 @@ const MENTEE_CHECKINS=[NOWWK,NOWWK-1].map((w,i)=>({week:w,days:7,source:'weekly'
   quietTime:1, debt:i?1:0, langHours:i?1:3, minHours:i?4:7, sharedFaith:i?0:1, sabbath:1}));
 const DATA={leader:false,entries:{poipet:{}},okrs:[],survey:[]};
 
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const b=await chromium.launch({executablePath: CHROMIUM});
 const p=await b.newPage({viewport:{width:400,height:900},deviceScaleFactor:2});
 const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
 p.on('console',m=>{if(m.type()==='error'&&!/fonts|ERR_CONN/.test(m.text()))errs.push('console: '+m.text());});

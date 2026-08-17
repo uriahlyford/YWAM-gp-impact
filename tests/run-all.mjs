@@ -9,6 +9,7 @@
            node tests/run-all.mjs server    just the fast ones
 */
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,6 +44,27 @@ const BROWSER = [
   'audit-allviews.mjs',     // every screen, no console errors
   'check-nav.mjs',          // the bottom tabs do not wrap at 320px
 ];
+
+/* Pre-flight: no test may hardcode one machine's browser.
+   Five files did exactly that — executablePath:'/opt/pw-browsers/chromium' — and
+   passed for months here while crashing instantly anywhere else, including CI and
+   anyone else's clone. The browser comes from env.mjs (CHROMIUM), which honours
+   GP_CHROMIUM first. This is cheap and runs in both halves, because the only
+   reason that bug survived is that nothing looked. */
+{
+  const bad = [];
+  for (const f of fs.readdirSync(HERE)) {
+    if (!f.endsWith('.mjs') || f === 'env.mjs' || f === 'run-all.mjs') continue;
+    const src = fs.readFileSync(path.join(HERE, f), 'utf8');
+    const m = src.match(/executablePath\s*:\s*['"][^'"]+['"]/);
+    if (m) bad.push(f + '  ' + m[0]);
+  }
+  if (bad.length) {
+    console.log('FAIL a test hardcodes a browser path instead of using CHROMIUM from env.mjs:');
+    for (const b of bad) console.log('        ' + b);
+    process.exit(1);
+  }
+}
 
 const only = process.argv[2];
 const files = only === 'server' ? SERVER : only === 'browser' ? BROWSER : SERVER.concat(BROWSER);
