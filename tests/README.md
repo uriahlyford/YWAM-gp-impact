@@ -38,6 +38,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-storage.mjs` | Khmer does not survive a reload, or blocked storage blanks the page / breaks login |
 | `test-degraded.mjs` | A missing optional script kills a page instead of degrading |
 | `test-base.mjs` | The Base tab or the weekly health form |
+| `test-ministry-kpis.mjs` | My week's ministry cards: every KPI present, counts saved per day and levels per week, headcounts carried forward, and a level never written as a daily row |
 | `test-mentor-health.mjs` | A mentor can no longer see their mentee by name |
 | `audit-load.mjs` | Invocations per page open, and duplicate PIN verification |
 | `audit-paint.mjs` | First paint regresses — usually a render-blocking stylesheet |

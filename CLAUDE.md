@@ -185,6 +185,22 @@ Three rules hold it together:
   **Consequence to know:** for a ministry+week that has daily rows, those days are
   the source of truth. A leader editing the same weekly cell on the dashboard will
   be overwritten the next time someone logs a day for it.
+- **My week carries the ministry's whole log form, split by `modeOf()`** — the same
+  rule the dashboard reads each metric with, so the two pages ask for a number the
+  same way:
+  - `sum` (counts) → the **daily** card. The box is today's addition and prints what
+    the week becomes; `base` subtracts today's already-saved value so today is never
+    counted twice. Saved with `saveMyKpiDay`.
+  - `latest` / `avg` (levels and scores) → the **weekly** card, saved with
+    `saveMyMinistry`. `latest` metrics are **carried forward** pre-filled from
+    `lastBefore()` and marked `data-carried`, with the ▲/▼ change against that week
+    shown as you type. Carried values ARE written on save — otherwise "unchanged"
+    would read as "no data" for the week and the carry-forward would never become
+    real. `avg` does not carry: a 1-10 score is a judgement about this week, not a
+    level, and the dashboard does not carry it either.
+  **Never write a level as a daily row.** A headcount is not something you add up,
+  and the daily roll-up owns any metric it touches, so the two would fight over the
+  same weekly cell. `test-ministry-kpis.mjs` asserts the split from both sides.
 
 ## Deploy rules — do not break
 - **Netlify:** push to `main` → auto-deploy (GitHub integration on the `transcendent-crostata-c9b7f4`

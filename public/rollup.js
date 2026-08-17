@@ -740,6 +740,26 @@ function gpRingHtml(p, size, label){
     (label ? gpDrillEsc(label)+': ' : '')+p+'%"><span>'+p+'</span></div>';
 }
 
+/* ---- running totals as you type ----
+   A "+5" typed on top of 100 should visibly read as 105 before it is saved. Rows
+   opt in with data-run (what the total is without this box) and a .newTot span to
+   print into; data-metric gives fmt() the format. Shared because both the
+   dashboard's weekly log form and the staff page's daily one need exactly this,
+   and the last two things duplicated between those pages drifted. */
+function gpBindRunningTotals(root){
+  var scope = root || document;
+  scope.querySelectorAll('input[data-mode="sum"][data-run]').forEach(function(inp){
+    inp.oninput = function(){
+      var out = inp.closest('.row') ? inp.closest('.row').querySelector('.newTot') : null;
+      if(!out) return;
+      var add = Number(inp.value);
+      if(inp.value==='' || isNaN(add) || add===0){ out.textContent=''; return; }
+      var base = Number(inp.getAttribute('data-run'))||0;
+      out.textContent = ' → '+fmt(base+add, inp.getAttribute('data-metric'));
+    };
+  });
+}
+
 /* ---- a tap you can feel ----
    Android and desktop Chrome buzz; iOS Safari ignores vibrate() entirely, so this
    is a bonus on the platforms that allow it and silently nothing on the ones that

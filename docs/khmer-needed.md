@@ -99,6 +99,21 @@ worth checking they still read right as a count of people rather than of places.
 Latin-script names, and a list half in Khmer would read worse than one that is
 plainly not translated. If the team wants them in Khmer that is its own job._
 
+## 0c-0c. The ministry numbers on My week
+
+My week now carries every KPI the dashboard's log form asks of your ministry, in
+two cards: what happened today (things you count) and what is true of the whole
+week (headcounts and 1-10 scores, filled in from last week already).
+
+| English | ខ្មែរ |
+|---|---|
+| Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed. | ចំនួនមនុស្ស និងពិន្ទុសម្រាប់សប្តាហ៍នេះ។ អ្វីដែលកម្រផ្លាស់ប្តូរត្រូវបានបំពេញស្រាប់ពីលើកមុន — សូមកែតែអ្វីដែលបានផ្លាស់ប្តូរប៉ុណ្ណោះ។ |
+
+_Everything else in those two cards reuses Khmer you have already checked: "week
+total", "now", "avg", "carried from week", "Save today" and "Save Week" all come
+from the dashboard's own log form, which is the point — it is the same form, on
+the person's own page._
+
 ## 0c-0b. The same, with numbers in them
 
 | English template | ខ្មែរ |

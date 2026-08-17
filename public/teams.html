@@ -754,7 +754,7 @@ var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'base', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
-  goals:[], checkins:[], menteeCheckins:[], goalDraft:null, ministry:null, kpiDraft:{}, weekDraft:{},
+  goals:[], checkins:[], menteeCheckins:[], goalDraft:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, weekDraft:{},
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
@@ -999,7 +999,7 @@ function logout(){
   lsDel('gp-staff');
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
-  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalDraft=null; S.weekDraft={}; S.kpiDraft={};
+  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   render();
 }
 
@@ -1862,6 +1862,25 @@ function pastGoalsHtml(wk){
 }
 
 /* --- your ministry's KPIs, editable without leaving this page --- */
+/*  Everything the dashboard's log form asks of this ministry, on the person's
+    own page — and split the way the numbers actually behave, because one box
+    cannot serve both kinds:
+
+      · counts (sum mode) — something that happened today. Typed per day; the
+        server rolls the days into the week, so the weekly figure is never typed
+        twice. The box is today's addition, and it says what the week becomes.
+      · levels and scores (latest / avg) — a headcount or a 1-10 judgement about
+        the whole week. Typed once for the week, and carried forward already
+        filled in from the last week that has one, exactly as the dashboard does
+        it, so nobody retypes 280 students every Monday.
+
+    A level must never be written as a daily row: a headcount is not something you
+    add up, and the daily roll-up owns any metric it touches (see CLAUDE.md), so
+    the two would fight over the same weekly cell.
+
+    Formats come from fmt() and modeOf() — the same two functions the dashboard
+    uses — so a dollar figure, a 1-10 score and a percentage read the same in both
+    places. */
 function kpiCardHtml(wk){
   if(!S.me.ministry){
     return '<h3>📊 My ministry KPIs</h3><div class="card"><p class="sub" style="margin:4px 0 10px">'+
@@ -1873,27 +1892,29 @@ function kpiCardHtml(wk){
     return '<h3>📊 My ministry KPIs</h3><div class="card"><p class="sub" style="margin:4px 0">'+
       'No KPIs are defined for '+esc(S.me.ministry)+' yet.</p></div>';
   }
-  /* Enter today; the week's figure is derived from the days on the server, so
-     there's no separate weekly number to keep in step. */
   var entries=(S.ministry&&S.ministry.entries)||{};
   var daily=(S.ministry&&S.ministry.daily)||{};
   var pins=(S.ministry&&S.ministry.pins)||[];
   var today=todayStr();
 
-  /* Only show what this person logs day to day. GP Media carries 29 metrics,
-     and a 29-row daily form gets filled in never. No pins chosen yet means
-     show everything, so nothing is hidden from someone who hasn't picked. */
-  var showing = (pins.length && !S.kpiAll)
-    ? metrics.filter(function(m){ return pins.indexOf(m)>-1; })
-    : metrics;
-  var hiddenN = metrics.length - showing.length;
+  var counts=metrics.filter(function(m){ return modeOf(m)==='sum'; });
+  var levels=metrics.filter(function(m){ return modeOf(m)!=='sum'; });
 
-  var h='<h3>📊 '+esc(t(S.me.ministry))+' <small>· today</small></h3><div class="card">';
+  /* Pins are about the daily list only — how many boxes you face every day. A
+     level carries itself forward, so hiding one saves nobody any typing. */
+  var pinnedCounts=pins.filter(function(m){ return counts.indexOf(m)>-1; });
+  var showing = (pinnedCounts.length && !S.kpiAll)
+    ? counts.filter(function(m){ return pinnedCounts.indexOf(m)>-1; })
+    : counts;
+  var hiddenN = counts.length - showing.length;
+
+  var h='';
 
   if(S.kpiPick){
+    h+='<h3>📊 '+esc(t(S.me.ministry))+'</h3><div class="card">';
     h+='<p class="sub" style="margin:2px 0 8px">Star the ones you log most days — '+
        'the rest stay one tap away under “show all”.</p>';
-    metrics.forEach(function(metric){
+    counts.forEach(function(metric){
       var on=pins.indexOf(metric)>-1;
       h+='<div class="habitPick">'+
         '<button class="hpBox'+(on?' on':'')+'" data-kpipin="'+esc(metric)+'">'+(on?'★':'')+'</button>'+
@@ -1902,25 +1923,80 @@ function kpiCardHtml(wk){
     return h+'<button class="btn" id="saveKpiPins" style="margin-top:12px">Done</button></div>';
   }
 
-  h+='<p class="sub" style="margin:4px 0 10px">'+
-    esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))+'</p>';
-  showing.forEach(function(metric){
-    var mode=modeOf(metric);
-    var days=daily[metric]||{};
-    var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
-      : (days[today]!==undefined ? days[today] : '');
-    var weekVal=(entries[metric]||{})[String(wk)];
-    var label = mode==='latest' ? t('now') : (mode==='avg' ? t('week avg') : t('week total'));
-    h+='<div class="row"><span class="rowName">'+esc(t(metric))+
-      '<div class="pmeta">'+label+' '+(weekVal===undefined?'—':weekVal)+'</div></span>'+
-      '<input type="number" inputmode="decimal" class="kpiIn" data-kpi="'+esc(metric)+
-      '" data-kpimode="'+mode+'" value="'+esc(String(cur))+'"></div>';
-  });
-  h+='<button class="btn" id="saveKpiBtn">'+esc(t('Save today'))+'</button>';
-  if(hiddenN>0) h+='<button class="linkbtn" id="kpiShowAll">'+esc(gpT('Show all {total} ({hidden} hidden)',{total:metrics.length,hidden:hiddenN}))+'</button>';
-  else if(pins.length && S.kpiAll) h+='<button class="linkbtn" id="kpiShowLess">Show just my '+pins.length+'</button>';
-  h+='<button class="linkbtn" id="pickKpis">'+esc(t(pins.length?'Change which I log daily':'Pick the ones I log daily'))+'</button>';
-  return h+'</div>';
+  /* ---- what happened today ---- */
+  if(counts.length){
+    h+='<h3>📊 '+esc(t(S.me.ministry))+' <small>· '+esc(t('today'))+'</small></h3><div class="card" id="kpiDayCard">';
+    h+='<p class="sub" style="margin:4px 0 10px">'+
+      esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))+'</p>';
+    showing.forEach(function(metric){
+      var days=daily[metric]||{};
+      var savedToday = days[today];
+      var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
+        : (savedToday!==undefined ? savedToday : '');
+      var weekVal=(entries[metric]||{})[String(wk)];
+      /* What the week is without today, so the running total below the box adds
+         up to the week's real figure rather than counting today twice. */
+      var base = (weekVal===undefined?0:Number(weekVal)) - (savedToday===undefined?0:Number(savedToday));
+      h+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+        '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
+        '<span class="newTot"></span></div></div>'+
+        '<input type="number" inputmode="decimal" class="kpiIn" placeholder="+0" data-kpi="'+esc(metric)+
+        '" data-metric="'+esc(metric)+'" data-mode="sum" data-run="'+base+
+        '" data-kpimode="sum" value="'+esc(String(cur))+'"></div>';
+    });
+    h+='<button class="btn" id="saveKpiBtn">'+esc(t('Save today'))+'</button>';
+    if(hiddenN>0) h+='<button class="linkbtn" id="kpiShowAll">'+esc(gpT('Show all {total} ({hidden} hidden)',{total:counts.length,hidden:hiddenN}))+'</button>';
+    else if(pinnedCounts.length && S.kpiAll) h+='<button class="linkbtn" id="kpiShowLess">Show just my '+pinnedCounts.length+'</button>';
+    h+='<button class="linkbtn" id="pickKpis">'+esc(t(pinnedCounts.length?'Change which I log daily':'Pick the ones I log daily'))+'</button>';
+    h+='</div>';
+  }
+
+  /* ---- what is true of the whole week ---- */
+  if(levels.length){
+    h+='<h3>📈 '+esc(t(S.me.ministry))+' <small>· '+esc(t('week'))+' '+wk+'</small></h3><div class="card" id="kpiWeekCard">';
+    h+='<p class="sub" style="margin:4px 0 10px">'+
+      esc(t('Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed.'))+'</p>';
+    levels.forEach(function(metric){
+      var mode=modeOf(metric);
+      var wks=entries[metric]||{};
+      var agg=aggregate(wks, mode);
+      var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
+      var carried=false;
+      var sub='', extra='';
+      if(mode==='latest'){
+        var prev=lastBefore(wks, wk);
+        carried = (cur==='' && prev!==null);
+        if(carried){ cur=prev.value; extra=' data-carried="1"'; }
+        sub = esc(t('now'))+' '+fmt(agg, metric);
+        if(prev!==null){
+          sub += ' · ' + (carried
+            ? esc(t('carried from week'))+' '+prev.week
+            : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
+          var typed = S.kpiWeekDraft[metric]!==undefined ? Number(S.kpiWeekDraft[metric]) : Number(cur);
+          var d = typed - prev.value;
+          if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+        }
+      } else {
+        sub = esc(t('avg'))+' '+fmt(agg, metric);
+      }
+      if(S.kpiWeekDraft[metric]!==undefined) cur=S.kpiWeekDraft[metric];
+      h+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+        '<div class="rowSub">'+sub+'</div></div>'+
+        '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
+        ' data-kpiweek="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
+    });
+    h+='<button class="btn" id="saveKpiWeekBtn">'+esc(t('Save Week'))+' '+wk+'</button></div>';
+  }
+  return h;
+}
+
+/* A 1-10 score and a percentage have edges; a phone keypad should know about
+   them. Same rules the metric names already carry, read the same way fmt() reads
+   them, so nothing new has to be kept in step. */
+function kpiInputAttrs_(metric){
+  if(metric.indexOf('(1-10)')>-1) return ' min="1" max="10" step="1"';
+  if(metric.indexOf('(%)')>-1) return ' min="0" max="100"';
+  return '';
 }
 
 /* ---------- login / register ---------- */
@@ -3109,6 +3185,13 @@ function bindHome(){
   document.querySelectorAll('[data-kpi]').forEach(function(inp){
     inp.oninput=function(){ S.kpiDraft[inp.getAttribute('data-kpi')]=inp.value; };
   });
+  /* Held in state for the same reason as the daily boxes: a render triggered by
+     anything else would otherwise throw away a number someone had just typed. */
+  document.querySelectorAll('[data-kpiweek]').forEach(function(inp){
+    inp.oninput=function(){ S.kpiWeekDraft[inp.getAttribute('data-kpiweek')]=inp.value; };
+  });
+  // "+5" on top of 286 reads as 291 before it is saved (shared with the dashboard).
+  gpBindRunningTotals(document.getElementById('kpiDayCard'));
   // --- which KPIs show on the daily card ---
   var ksa=document.getElementById('kpiShowAll');
   if(ksa) ksa.onclick=function(){ S.kpiAll=true; render(); };
@@ -3158,6 +3241,26 @@ function bindHome(){
     run('saveMyKpiDay',[S.auth.user,S.auth.pin,todayStr(),updates],function(d){
       S.busy=false;
       if(d.ok){ S.ministry=d; S.kpiDraft={}; showMsg('Saved — week total updated'); }
+      else showMsg('Could not save');
+      render();
+    });
+  };
+
+  /* Levels and scores are the week's own figure, so they are written straight to
+     the week — including the ones sitting there carried forward, which is how a
+     headcount that did not change still ends up recorded for this week. */
+  var skw=document.getElementById('saveKpiWeekBtn');
+  if(skw) skw.onclick=function(){
+    if(S.busy) return;
+    var wk=thisWeek(), updates=[];
+    document.querySelectorAll('[data-kpiweek]').forEach(function(inp){
+      updates.push({ metric:inp.getAttribute('data-kpiweek'),
+        value: inp.value==='' ? null : Number(inp.value) });
+    });
+    S.busy=true; skw.disabled=true; skw.textContent=t('Saving…');
+    run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.ministry=d; S.kpiWeekDraft={}; showMsg('Saved — week '+wk+' updated'); }
       else showMsg('Could not save');
       render();
     });

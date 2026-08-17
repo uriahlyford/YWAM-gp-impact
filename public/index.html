@@ -1469,19 +1469,9 @@ function bindEvents(){
   if(ws) ws.onchange=function(){ state.week=Number(ws.value); render(); };
   var sb=document.getElementById('saveBtn');
   if(sb) sb.onclick=function(){ saveCard(sb); };
-  // Running-total metrics: show what the total becomes as you type the week's
-  // addition, so "+5" on top of 100 visibly reads as 105.
-  document.querySelectorAll('#logCard input[data-mode="sum"]').forEach(function(inp){
-    inp.oninput=function(){
-      var row = inp.parentNode;
-      var out = row.querySelector('.newTot');
-      if(!out) return;
-      var add = Number(inp.value);
-      if(inp.value==='' || isNaN(add) || add===0){ out.textContent=''; return; }
-      var base = Number(inp.getAttribute('data-run'))||0;
-      out.textContent = ' → '+fmt(base+add, inp.getAttribute('data-metric'));
-    };
-  });
+  // Running totals live in rollup.js now — the staff page's daily card needs the
+  // same behaviour, and a second hand-written copy is how these drift.
+  gpBindRunningTotals(document.getElementById('logCard'));
 
   var dds=document.getElementById('dashDeptSel');
   if(dds) dds.onchange=function(){ state.dashDept=dds.value; render(); };

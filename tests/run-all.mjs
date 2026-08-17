@@ -36,6 +36,7 @@ const BROWSER = [
   'test-storage.mjs',       // language survives a reload; storage blocked
   'test-degraded.mjs',      // a missing optional script must not kill a page
   'test-base.mjs',          // the Base tab and the health form
+  'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
   'test-mentor-health.mjs', // a mentor sees a mentee by name
   'audit-load.mjs',         // one function invocation per page open
   'audit-paint.mjs',        // first paint even with the font CDN hanging
