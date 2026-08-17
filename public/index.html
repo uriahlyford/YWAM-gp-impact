@@ -1300,11 +1300,13 @@ function logHtml(){
         if(d) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d),metric)+'</span>';
       }
     } else if(mode==='avg'){
-      sub = esc(t('avg'))+' '+fmt(agg,metric);
+      sub = esc(t('avg'))+' '+fmt(agg,metric)+gpVsLastWeek(wks, state.week, metric, wks[state.week]);
     } else {
       // Running totals: this box is the week's ADDITION, not the new total.
       // Spelling that out stops people entering "105" when they mean "+5".
-      sub = esc(t('total so far'))+' '+fmt(agg,metric)+'<span class="newTot"></span>';
+      // Last week sits beside it so a rise or fall is visible while typing.
+      sub = esc(t('total so far'))+' '+fmt(agg,metric)+
+        gpVsLastWeek(wks, state.week, metric, wks[state.week])+'<span class="newTot"></span>';
       extra = ' data-run="'+(agg===null?0:agg)+'"';
     }
     h += '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div><div class="rowSub">'+sub+'</div></div>'+

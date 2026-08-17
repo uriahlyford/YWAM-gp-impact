@@ -49,7 +49,10 @@ const MINISTRY = {
     'Cups Sold': { [WK]: 286, [LASTWK]: 270 },
     'Days Open': { [WK]: 5 },
     'Total in Bank Account ($)': { [LASTWK]: 1450 },
-    'Weekly Profit ($)': { [LASTWK]: 120 },
+    // up on last week; expenses are DOWN, which has to read as good news
+    'Weekly Profit ($)': { [WK]: 140, [LASTWK]: 120 },
+    'Weekly Expenses ($)': { [WK]: 280, [LASTWK]: 300 },
+    'Gospel Conversations': { [WK]: 10 },          // first week ever: nothing to compare
   },
   daily: { 'Cups Sold': { [todayStr()]: 55 } },
   pins: ['Cups Sold', 'Days Open', 'Customers Served', 'Gospel Conversations'],
@@ -162,6 +165,35 @@ function ok(name, cond, extra) {
   /* 286 already includes today's saved 55, so replacing today with 60 makes 291 —
      not 346. Counting today twice is the bug this assertion exists for. */
   ok('typing today updates the week without double-counting today', after === '→ 291', JSON.stringify(after));
+}
+
+/* ---------- 3b. last week, next to this week ---------- */
+{
+  const rows = await page.evaluate(() => {
+    const out = {};
+    document.querySelectorAll('#kpiDayCard .row, #kpiWeekCard .row').forEach(function (r) {
+      const name = r.querySelector('.rowName');
+      const sub = r.querySelector('.rowSub');
+      if (name && sub) out[name.textContent.trim()] = { text: sub.textContent.trim(), html: sub.innerHTML };
+    });
+    return out;
+  });
+  const profit = rows['Weekly Profit ($)'] || { text: '(missing)', html: '' };
+  ok('a count shows last week beside this week', / last week \$120/.test(profit.text), profit.text);
+  ok('and which way it went, in percent', /▲ 17%/.test(profit.text), profit.text);
+  ok('a rise in profit reads as good news', /class="trend up"/.test(profit.html));
+
+  /* The one that would be wrong if the badge just followed the arrow: spending
+     less is better, so a fall has to be green. */
+  const exp = rows['Weekly Expenses ($)'] || { text: '(missing)', html: '' };
+  ok('expenses falling is shown as good news', /class="trend up"/.test(exp.html) && /▼ 7%/.test(exp.text), exp.text);
+
+  /* A first week has no baseline. Inventing zero would print "▲ 100%" and mean
+     nothing. */
+  const first = rows['Gospel Conversations'] || { text: '(missing)', html: '' };
+  ok('a first week says nothing about a rise', !/last week/.test(first.text) && !/trend/.test(first.html), first.text);
+
+  ok('cups sold compares too', / last week 270/.test((rows['Cups Sold'] || {}).text || ''), (rows['Cups Sold'] || {}).text);
 }
 
 /* ---------- 4. each card writes through its own door ---------- */

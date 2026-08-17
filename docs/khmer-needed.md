@@ -108,11 +108,17 @@ week (headcounts and 1-10 scores, filled in from last week already).
 | English | ខ្មែរ |
 |---|---|
 | Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed. | ចំនួនមនុស្ស និងពិន្ទុសម្រាប់សប្តាហ៍នេះ។ អ្វីដែលកម្រផ្លាស់ប្តូរត្រូវបានបំពេញស្រាប់ពីលើកមុន — សូមកែតែអ្វីដែលបានផ្លាស់ប្តូរប៉ុណ្ណោះ។ |
+| last week | សប្តាហ៍មុន |
 
 _Everything else in those two cards reuses Khmer you have already checked: "week
 total", "now", "avg", "carried from week", "Save today" and "Save Week" all come
 from the dashboard's own log form, which is the point — it is the same form, on
 the person's own page._
+
+_"last week" appears in every row that has an earlier week to compare with —
+"week total $140 · last week $120 ▲ 17%" — on My week and on the dashboard's log
+form. When the previous figure is older than last week the row names the week
+instead ("week 31"), so this phrase is only used when it is literally true._
 
 ## 0c-0b. The same, with numbers in them
 

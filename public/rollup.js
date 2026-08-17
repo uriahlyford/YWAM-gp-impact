@@ -596,6 +596,34 @@ function gpOpenList(title, rows, note){
   document.getElementById('ddOverlay').onclick = function(e){ if(e.target.id==='ddOverlay') gpCloseDrill(); };
 }
 
+/* ---- this week against the last one ----
+   A log-form row that shows only the current week cannot tell you whether the
+   cafe made more money than last week, which is the question anyone entering the
+   number is actually asking. This is the comparison the dashboard's tiles already
+   make, written for a row: the previous week's figure in the metric's own format,
+   then a ▲/▼ against it.
+
+   Direction comes from LOWER_BETTER, so expenses falling reads as good news and
+   rising reads as bad — the same way round as everywhere else.
+
+   Returns '' when there is no earlier week to compare with. A first week should
+   read clean rather than invent a baseline of zero and call it a 100% rise. */
+function gpVsLastWeek(weeks, week, metric, current){
+  var prev = lastBefore(weeks, week);
+  if(prev === null) return '';
+  var when = (Number(prev.week) === Number(week) - 1)
+    ? gpDrillT('last week')
+    : gpDrillT('week') + ' ' + prev.week;
+  var out = ' · ' + gpDrillEsc(when) + ' ' + fmt(prev.value, metric);
+  var cur = (current === undefined || current === null || current === '') ? null : Number(current);
+  if(cur !== null && !isNaN(cur)){
+    /* Percentage, like the dashboard's badges — the raw previous figure is right
+       there next to it for anyone who would rather do the subtraction. */
+    out += trendBadge(pctChange(prev.value, cur), !LOWER_BETTER[metric]);
+  }
+  return out;
+}
+
 /* ---- who the staff are ----
    The headline staff number is everyone at the campus. This is the same people
    split two ways: what kind of staff they are, and where they are from. Both

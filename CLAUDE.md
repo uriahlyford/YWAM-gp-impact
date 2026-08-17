@@ -198,6 +198,11 @@ Three rules hold it together:
     would read as "no data" for the week and the carry-forward would never become
     real. `avg` does not carry: a 1-10 score is a judgement about this week, not a
     level, and the dashboard does not carry it either.
+  Every row that has an earlier week shows it — `gpVsLastWeek()` prints the previous
+  figure in the metric's own format plus a ▲/▼ against it, direction from
+  `LOWER_BETTER` so falling expenses read as good news. A first week shows nothing
+  rather than inventing a zero baseline and calling it a 100% rise. The dashboard's
+  log form uses the same helper, so both places compare the same way.
   **Never write a level as a daily row.** A headcount is not something you add up,
   and the daily roll-up owns any metric it touches, so the two would fight over the
   same weekly cell. `test-ministry-kpis.mjs` asserts the split from both sides.

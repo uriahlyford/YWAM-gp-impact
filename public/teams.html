@@ -1937,8 +1937,11 @@ function kpiCardHtml(wk){
       /* What the week is without today, so the running total below the box adds
          up to the week's real figure rather than counting today twice. */
       var base = (weekVal===undefined?0:Number(weekVal)) - (savedToday===undefined?0:Number(savedToday));
+      /* Last week next to this one, because "is the cafe up or down" is the
+         question anyone typing the number is really asking. */
       h+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
         '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
+        gpVsLastWeek(entries[metric], wk, metric, weekVal)+
         '<span class="newTot"></span></div></div>'+
         '<input type="number" inputmode="decimal" class="kpiIn" placeholder="+0" data-kpi="'+esc(metric)+
         '" data-metric="'+esc(metric)+'" data-mode="sum" data-run="'+base+
@@ -1977,7 +1980,10 @@ function kpiCardHtml(wk){
           if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
         }
       } else {
-        sub = esc(t('avg'))+' '+fmt(agg, metric);
+        // A year-to-date average hides which way this week went, so say that too.
+        var thisWk = wks[String(wk)];
+        sub = esc(t('avg'))+' '+fmt(agg, metric)+
+          gpVsLastWeek(wks, wk, metric, S.kpiWeekDraft[metric]!==undefined ? S.kpiWeekDraft[metric] : thisWk);
       }
       if(S.kpiWeekDraft[metric]!==undefined) cur=S.kpiWeekDraft[metric];
       h+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
