@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>My GP</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -424,6 +424,13 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .trend.flat { color:var(--muted); background:var(--surface2); }
 
 /* pull-to-refresh — same gesture, same spinning logo coin as the dashboard. */
+.installBar { display:flex; align-items:center; gap:10px; background:var(--surface2); color:var(--ink);
+  border-bottom:1px solid var(--border); padding:10px 16px; font-size:12.5px; }
+.installTxt { flex:1; line-height:1.4; }
+.installBtn { background:var(--accent); color:var(--accentInk); border:none; border-radius:999px;
+  padding:6px 14px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.installX { background:transparent; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:4px 6px; line-height:1; }
+
 .ptr { position:fixed; top:env(safe-area-inset-top); left:0; right:0; z-index:60; display:flex; justify-content:center;
   pointer-events:none; opacity:0; transform:translateY(-60px);
   transition:transform .22s ease, opacity .22s ease; }
@@ -3576,6 +3583,7 @@ function refreshAll(){
 /* Shared with the dashboard — see gpPullToRefresh in rollup.js. The staff page
    also sits out the gesture while nobody is logged in. */
 gpPullToRefresh(function(){ return refreshAll(); }, { blocked: function(){ return !S.me; } });
+gpInstallPrompt();
 
 boot();
 </script>

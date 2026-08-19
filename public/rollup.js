@@ -1006,3 +1006,57 @@ function gpPullToRefresh(onRefresh, opts){
 
   document.addEventListener('touchcancel', function(){ if(!busy) reset(); }, { passive:true });
 }
+
+/* ---- add-to-home-screen nudge ----
+   A page opened in a regular browser tab (or an in-app browser from a shared
+   link) has no way to reach the full-screen, toolbar-free experience the
+   manifest already promises except through "Add to Home Screen" — and almost
+   nobody finds that on their own. One dismissible bar, shown once.
+
+   Skipped entirely once already running standalone, and skipped on Android
+   unless the browser actually fires beforeinstallprompt — most in-app
+   browsers never do, and instructions for an install path that isn't there
+   would be worse than no prompt at all. */
+function gpInstallPrompt(){
+  try {
+    if(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return;
+    if(window.navigator.standalone === true) return;
+    if(localStorage.getItem('gp-install-dismissed')) return;
+  } catch(e){ return; }
+
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/.test(ua) && !window.MSStream;
+
+  function dismiss(bar){
+    if(bar && bar.parentNode) bar.parentNode.removeChild(bar);
+    try { localStorage.setItem('gp-install-dismissed','1'); } catch(e){}
+  }
+  function show(msg, onInstall){
+    if(document.getElementById('gpInstallBar')) return;
+    var header = document.querySelector('header');
+    if(!header) return;
+    var bar = document.createElement('div');
+    bar.id = 'gpInstallBar';
+    bar.className = 'installBar';
+    bar.innerHTML = '<span class="installTxt">'+gpDrillEsc(msg)+'</span>'+
+      (onInstall ? '<button class="installBtn" id="gpInstallBtn">'+gpDrillEsc(gpDrillT('Install'))+'</button>' : '')+
+      '<button class="installX" id="gpInstallX" aria-label="'+gpDrillEsc(gpDrillT('Dismiss'))+'">✕</button>';
+    header.insertAdjacentElement('afterend', bar);
+    document.getElementById('gpInstallX').onclick = function(){ dismiss(bar); };
+    if(onInstall) document.getElementById('gpInstallBtn').onclick = function(){ onInstall(bar); };
+  }
+
+  if(isIOS){
+    show(gpDrillT('Add this to your Home Screen: tap Share, then "Add to Home Screen".'));
+    return;
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    var deferred = e;
+    show(gpDrillT('Install this app for the full-screen experience.'), function(bar){
+      deferred.prompt();
+      deferred.userChoice.then(function(){ dismiss(bar); });
+    });
+  });
+}
