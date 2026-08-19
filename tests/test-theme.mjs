@@ -177,10 +177,10 @@ const SCREENS = [
   { file: 'index.html', wait: '.hero', name: 'log form', steps: ['[data-view="log"]'] },
   { file: 'index.html', wait: '.hero', name: 'OKRs', steps: ['[data-view="okr"]'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Base', steps: [] },
-  { file: 'teams.html', wait: 'nav.bottom button', name: 'My week', steps: ['nav.bottom button:nth-child(2)'] },
+  // My week and Me merged into one "My Database" tab (still view id 'week').
+  { file: 'teams.html', wait: 'nav.bottom button', name: 'My Database', steps: ['nav.bottom button:nth-child(2)'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Team', steps: ['nav.bottom button:nth-child(3)'] },
-  { file: 'teams.html', wait: 'nav.bottom button', name: 'Me', steps: ['nav.bottom button:nth-child(4)'] },
-  { file: 'teams.html', wait: 'nav.bottom button', name: 'Health', steps: ['nav.bottom button:nth-child(5)'] },
+  { file: 'teams.html', wait: 'nav.bottom button', name: 'Health', steps: ['nav.bottom button:nth-child(4)'] },
   { file: 'help.html', wait: 'body', name: 'KPI guide', steps: [] },
 ];
 for (const scheme of ['light', 'dark']) {
@@ -208,12 +208,12 @@ for (const scheme of ['light', 'dark']) {
     const { ctx, p } = await page('light', '');
     await p.goto(BASE + '/teams.html', { waitUntil: 'commit' });
     await p.waitForSelector('nav.bottom button', { timeout: 15000 });
-    await p.click('nav.bottom button:nth-child(4)');          // Me
+    await p.click('nav.bottom button:nth-child(2)');          // My Database
     await p.waitForTimeout(400);
     await p.click('#goProfileFromMe').catch(function () { });
     await p.waitForSelector('[data-theme-set]', { timeout: 8000 }).catch(function () { });
     const have = await p.$$eval('[data-theme-set]', function (b) { return b.length; }).catch(function () { return 0; });
-    if (!have) { ok('Appearance control is reachable from Me', false, 'no buttons found'); await ctx.close(); break; }
+    if (!have) { ok('Appearance control is reachable from My Database', false, 'no buttons found'); await ctx.close(); break; }
     await p.click('[data-theme-set="' + pick + '"]');
     await p.waitForTimeout(400);
     const st = await p.evaluate(`(function(){

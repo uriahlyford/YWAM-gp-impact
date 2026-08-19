@@ -418,3 +418,23 @@ dropped, because the number would vanish from the screen.
 | {n}-day streak | ជាប់គ្នា {n} ថ្ងៃ |
 | best {n} days | ល្អបំផុត {n} ថ្ងៃ |
 | Week {wk} · {n} staff | សប្តាហ៍ {wk} · បុគ្គលិក {n} នាក់ |
+
+## 3. My Database — the merged My week + Me tab
+
+My week and Me are now one tab, "My Database," with a quick-jump chip bar at
+the top so you can still get straight to one section instead of scrolling past
+everything above it. These seven strings are the new tab label and six of the
+chips — the "OKRs" chip reuses the term already reviewed in section 0c-2
+above rather than adding a new entry. Each chip is a button with limited
+width, so keep translations short — these are the shortest labels in the app
+after the tab bar itself.
+
+| English | ខ្មែរ |
+|---|---|
+| My Database | ទិន្នន័យរបស់ខ្ញុំ |
+| Weekly Goals | គោលដៅប្រចាំសប្តាហ៍ |
+| Habit Tracker | ការតាមដានទម្លាប់ |
+| My Health | សុខភាពរបស់ខ្ញុំ |
+| Leave | ការចាកឆ្ងាយ |
+| Mentorship | ការណែនាំ |
+| Account | គណនី |

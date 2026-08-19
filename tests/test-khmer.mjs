@@ -160,10 +160,10 @@ const SCREENS = [
   { file: 'index.html', wait: '.hero', name: 'dashboard', steps: [] },
   { file: 'index.html', wait: '.hero', name: 'log form', steps: ['[data-view="log"]'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Base', steps: [] },
-  { file: 'teams.html', wait: 'nav.bottom button', name: 'My week', steps: ['nav.bottom button:nth-child(2)'] },
+  // My week and Me merged into one "My Database" tab (still view id 'week').
+  { file: 'teams.html', wait: 'nav.bottom button', name: 'My Database', steps: ['nav.bottom button:nth-child(2)'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Team', steps: ['nav.bottom button:nth-child(3)'] },
-  { file: 'teams.html', wait: 'nav.bottom button', name: 'Me', steps: ['nav.bottom button:nth-child(4)'] },
-  { file: 'teams.html', wait: 'nav.bottom button', name: 'Health', steps: ['nav.bottom button:nth-child(5)'] },
+  { file: 'teams.html', wait: 'nav.bottom button', name: 'Health', steps: ['nav.bottom button:nth-child(4)'] },
 ];
 
 for (const sc of SCREENS) {

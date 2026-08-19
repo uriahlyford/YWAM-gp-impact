@@ -271,16 +271,16 @@ if (ydcRow) {
   await page.click('#ddClose');
 }
 
-// 10a. OKRs: off Base, on Me (mine only), and on a teammate's page
+// 10a. OKRs: off Base, on My Database (mine only), and on a teammate's page
 console.log('\n=== OKRs ===');
 console.log('OKR heading on Base:  ' + await page.evaluate(() =>
   Array.from(document.querySelectorAll('#main h3')).some(h => /OKR/.test(h.textContent))));
 const tabs = await page.$$eval('nav.bottom button', b => b.map(x => x.textContent.trim()));
 console.log('tabs (no OKR tab):    ' + tabs.join(' | '));
 
-await page.click('nav.bottom [data-tab="me"]');
+await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(1100);
-console.log('\n-- Me --');
+console.log('\n-- My Database --');
 console.log('OKR heading:   ' + await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
 console.log('focus card:    ' + await page.$eval('.focusCard', e => e.innerText.replace(/\n+/g, ' | ').slice(0, 120)));
 console.log('my objectives: ' + await page.$$eval('.okrCard', e => e.length));
@@ -312,8 +312,8 @@ if (card) {
 }
 
 // 10c. the editor: create, edit, hand-tracked %, delete
-console.log('\n=== OKR EDITOR (on Me) ===');
-await page.click('nav.bottom [data-tab="me"]');
+console.log('\n=== OKR EDITOR (on My Database) ===');
+await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(1000);
 console.log('starting objectives: ' + await page.$$eval('.okrCard', e => e.length));
 console.log('edit + delete shown: ' + await page.evaluate(() =>

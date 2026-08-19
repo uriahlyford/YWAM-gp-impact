@@ -97,7 +97,7 @@ await p.close();
 console.log('\nSTAFF PAGE (all tabs)');
 p=await mk(()=>localStorage.setItem('gp-staff',JSON.stringify({user:'sokha',pin:'1234'})));
 await p.goto('http://localhost:4414/teams.html'); await p.waitForSelector('nav.bottom button',{timeout:15000}); await p.waitForTimeout(900);
-for(const [tab,label] of [['base','Base'],['week','My week'],['team','Team'],['me','Me'],['health','Health']]){
+for(const [tab,label] of [['base','Base'],['week','My Database'],['team','Team'],['health','Health']]){
   await visit(p,'tab: '+label,async p=>{await p.click(`nav.bottom [data-tab="${tab}"]`);await p.waitForTimeout(900);});
 }
 await visit(p,'Base: dept explorer',async p=>{await p.click('nav.bottom [data-tab="base"]');await p.waitForTimeout(700);
@@ -111,12 +111,12 @@ await visit(p,'Team: open a person',async p=>{await p.click('nav.bottom [data-ta
 await visit(p,'Team: mentor view',async p=>{await p.click('nav.bottom [data-tab="team"]');await p.waitForTimeout(800);
   const c=await p.$('#main [data-mentee], #main button'); if(c){await c.click();await p.waitForTimeout(900);
     const m=await p.$('#main [data-mentee]'); if(m){await m.click();await p.waitForTimeout(900);}}});
-await visit(p,'Me: away card',async p=>{await p.click('nav.bottom [data-tab="me"]');await p.waitForTimeout(800);});
-await visit(p,'Me: profile & settings',async p=>{const b2=await p.$('#goProfileFromMe'); if(b2){await b2.click();await p.waitForTimeout(900);}});
+await visit(p,'My Database: away card',async p=>{await p.click('nav.bottom [data-tab="week"]');await p.waitForTimeout(800);});
+await visit(p,'My Database: profile & settings',async p=>{const b2=await p.$('#goProfileFromMe'); if(b2){await b2.click();await p.waitForTimeout(900);}});
 await visit(p,'Health: week switch',async p=>{await p.click('nav.bottom [data-tab="health"]');await p.waitForTimeout(800);
   await p.selectOption('#healthWeekSel',String(NOWWK-1));await p.waitForTimeout(800);});
 await visit(p,'Khmer across all tabs',async p=>{await p.click('#langBtn');await p.waitForTimeout(700);
-  for(const tb of ['base','week','team','me','health']){await p.click(`nav.bottom [data-tab="${tb}"]`);await p.waitForTimeout(650);}
+  for(const tb of ['base','week','team','health']){await p.click(`nav.bottom [data-tab="${tb}"]`);await p.waitForTimeout(650);}
   await p.click('#langBtn');});
 await p.close();
 
