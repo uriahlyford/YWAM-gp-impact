@@ -1195,14 +1195,19 @@ function baseHealthAccHtml(){
   var R = baseR(); // Year (YTD) is a chip on the year already loaded — no year picker here, unlike the Health tab's
   var ids = [S.me.campus];
   var wk = thisWeek();
-  var rows, score;
+  /* Its own block, same as the mockup, so every row can carry a real ▲/▼ —
+     against last week, or the previous quarter. Q1 and Year have nothing
+     before them to compare to, same as the mockup's own period chips. */
+  var rows, score, prevRows;
   if(period==='year'){
-    rows = R.surveyRows(ids); score = R.healthScore(ids);
+    rows = R.surveyRows(ids); score = R.healthScore(ids); prevRows = null;
   } else if(period==='week'){
     rows = R.surveyRows(ids, wk); score = R.healthScore(ids, wk);
+    prevRows = R.surveyRows(ids, wk-1);
   } else {
     var q = Number(period.slice(1))-1;
     rows = R.surveyRows(ids, undefined, q); score = R.healthScore(ids, undefined, q);
+    prevRows = q>0 ? R.surveyRows(ids, undefined, q-1) : null;
   }
   var cr = (period==='week') ? R.checkinRate(ids, wk) : null;
   var summary = score===null ? t('No check-ins yet.') :
@@ -1219,9 +1224,11 @@ function baseHealthAccHtml(){
      ['minHours','Community ministry (avg hrs)', true]
     ].forEach(function(q2){
       var v = rows.length ? R.avg(rows, q2[0]) : null;
+      var pv = (prevRows && prevRows.length) ? R.avg(prevRows, q2[0]) : null;
+      var tr = (v!==null && pv!==null) ? trendBadge(pctChange(pv,v), q2[2]) : '';
       var suffix = (q2[0]==='langHours'||q2[0]==='minHours') ? '' : '/10';
       b+='<div class="row"><span class="rowName">'+esc(t(q2[1]))+'</span>'+
-        '<span class="rowVal">'+(v===null?'—':v.toFixed(1)+suffix)+'</span></div>';
+        '<span class="rowVal">'+(v===null?'—':v.toFixed(1)+suffix)+tr+'</span></div>';
     });
     [['sharedFaith','Shared their faith', true],['sabbath','Took a sabbath', true],
      ['porn','Looked at porn', false],['oneOnOne','Had a one-on-one', true],
@@ -1229,8 +1236,10 @@ function baseHealthAccHtml(){
      ['debt','Have staff debt', false]
     ].forEach(function(q2){
       var p = rows.length ? R.pct(rows, q2[0]) : null;
+      var pp = (prevRows && prevRows.length) ? R.pct(prevRows, q2[0]) : null;
+      var tr = (p!==null && pp!==null) ? trendBadge(pctChange(pp,p), q2[2]) : '';
       b+='<div class="row"><span class="rowName">'+esc(t(q2[1]))+'</span>'+
-        '<span class="rowVal">'+(p===null?'—':p+'%')+'</span></div>';
+        '<span class="rowVal">'+(p===null?'—':p+'%')+tr+'</span></div>';
     });
     return b+'<p class="hint">🔒 '+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
   });
@@ -1303,7 +1312,7 @@ function baseHtml(){
   var myDept=S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
   h+='<div class="accCard">';
 
-  h+=accRowHtml('salv', '🙌 '+esc(t('Salvations by department')),
+  h+=accRowHtml('salv', '🙌 '+esc(t('Salvations by Department')),
     gpT('{n} YTD across {d} departments', {n:fmt(R.headlineFor(ids,'Salvations')), d:Object.keys(bd).length}),
     function(){
       var b='<div class="card">';
@@ -1317,7 +1326,7 @@ function baseHtml(){
       return b+'</div>';
     });
 
-  h+=accRowHtml('ld', '🌱 '+esc(t('Leadership Development schools')),
+  h+=accRowHtml('ld', '🌱 '+esc(t('Leadership Development Schools')),
     gpT('{s} schools running · {n} enrolled', {s:fmt(R.ldSchools(ids)), n:fmt(R.ldStudents(ids))}),
     function(){
       return '<div class="grid">'+
@@ -1337,28 +1346,28 @@ function baseHtml(){
      breakdown would ADD UP to the number above it — see the same note on the
      dashboard. Schools is a count of ministries reporting; Total Volunteer Hours
      is Σ(hours × volunteers). */
-  h+=accRowHtml('cs', '📚 '+esc(t('Community schools')),
-    gpT('{s} schools · {n} enrolled', {s:fmt(R.communitySchools(ids)), n:fmt(R.communityStudents(ids))}),
+  h+=accRowHtml('cs', '📚 '+esc(t('Community Schools')),
+    CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES).map(function(m){ return esc(t(m)); }).join(' · '),
     function(){
       return '<div class="grid">'+
         bstat('Schools', R.communitySchools(ids))+
         bstat('Students Enrolled', R.communityStudents(ids), null, '',
           gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
-            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
+            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community Schools')))+
         bstat('Students in Discipleship', R.communityDiscipled(ids), null, '',
           gpDrillGroupAttrs('Students in Discipleship', ids,
-            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
+            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community Schools')))+
         bstat('Students Supported Financially',
           R.ministryRollup(ids, CS, CS_SCHOOL_MINISTRIES, 'Students Supported Financially'), null, '',
           gpDrillAttrs('Students Supported Financially', ids, CS))+
         '</div>'+
         bquarters('Students Enrolled', function(q){ return R.communityStudents(ids,q); },
           function(q){ return gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
-            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools'), q); });
+            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community Schools'), q); });
     });
 
-  h+=accRowHtml('out', '🙌 '+esc(t('Outreach teams')),
-    gpT('{n} teams hosted YTD', {n:fmt(R.outreachRollup(ids,'Teams Hosted'))}),
+  h+=accRowHtml('out', '🙌 '+esc(t('Outreach Teams')),
+    gpT('{n} teams hosted · {m} people served', {n:fmt(R.outreachRollup(ids,'Teams Hosted')), m:fmt(R.headlineFor(ids,'People Served'))}),
     function(){
       return '<div class="grid">'+
         bstat('Teams Hosted', R.outreachRollup(ids,'Teams Hosted'), null,
@@ -1381,13 +1390,13 @@ function baseHtml(){
           function(q){ return gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams', q); });
     });
 
-  h+=accRowHtml('church', '⛪ '+esc(t('Local church partnerships')),
+  h+=accRowHtml('church', '⛪ '+esc(t('Local Church Partnerships')),
     gpT('{n} churches partnered', {n:fmt(R.partnerChurches(ids))}),
     function(){
       return '<div class="grid">'+
         bstat('Local Churches Partnered', R.partnerChurches(ids), null, '',
           gpDrillGroupAttrs(['Partner Churches Supported','Churches Being Led'], ids,
-            ['Church Partnerships'], t('Local church partnerships')))+
+            ['Church Partnerships'], t('Local Church Partnerships')))+
         bstat('Partner Churches Supported',
           R.ministryRollup(ids, LD, ['Church Partnerships'], 'Partner Churches Supported'), null, '',
           gpDrillAttrs('Partner Churches Supported', ids, LD, 'Church Partnerships'))+
@@ -1404,11 +1413,12 @@ function baseHtml(){
         '</div>';
     });
 
-  h+=accRowHtml('gospel', '🕊️ '+esc(t('Across every ministry')),
-    gpT('{n} baptisms YTD', {n:fmt(R.headlineFor(ids,'Baptisms'))}),
+  var GOSPEL_METRICS=['Baptisms','People Heard the Gospel','Healings'];
+  h+=accRowHtml('gospel', '🕊️ '+esc(t('Gospel Totals')),
+    GOSPEL_METRICS.map(function(m){ return esc(t(m)); }).join(' · '),
     function(){
       var b='<div class="grid">';
-      ['Baptisms','People Heard the Gospel','Healings'].forEach(function(m){
+      GOSPEL_METRICS.forEach(function(m){
         b+=bstat(m, R.headlineFor(ids,m), m,
           R.trendFor(function(w){return R.metricWeekSum(ids,m,w);}, m),
           gpDrillAttrs(m, ids));
@@ -1454,7 +1464,7 @@ function baseHtml(){
   var deps=getDepartments(S.me.campus);
   if(!S.baseDept || !deps[S.baseDept]) S.baseDept = (deps[myDept] ? myDept : Object.keys(deps)[0]);
   var entries=(S.base.entries||{})[S.me.campus]||{};
-  h+=accRowHtml('explorer', '🗂️ '+esc(t('Department dashboards')), t('Browse any department’s own numbers'),
+  h+=accRowHtml('explorer', '🗂️ '+esc(t('Department Explorer')), t('Browse any department’s own numbers'),
     function(){
       var b='<div class="pickerRow"><label class="pick"><span>'+esc(t('Department'))+'</span>'+
         '<select id="baseDeptSel">'+Object.keys(deps).map(function(d){

@@ -181,15 +181,24 @@ await dash.waitForSelector('.hero', { timeout: 15000 });
 await dash.waitForTimeout(1000);
 const dashSections = await dash.$$eval('#main h3', els => els.map(e => e.textContent.trim()));
 console.log('\n=== DASHBOARD sections (' + dashSections.length + ') ===\n  ' + dashSections.join('\n  '));
-const strip = s => s.replace(/^[^\w]*/, '').replace(/Q\d /, '');
+/* Case-insensitive: the Base accordion (ported from the redesign mockup) title-
+   cases several of these ("Community schools" -> "Community Schools") where the
+   dashboard, untouched, still has its original casing. That's cosmetic, not
+   drift, so it must not trip this check — genuine wording differences still do. */
+const strip = s => s.replace(/^[^\w]*/, '').replace(/Q\d /, '').toLowerCase();
 /* OKRs are deliberately NOT on Base — they live on Me (your own) and on a
    teammate's page (theirs), because an objective belongs to a person's job, not
-   to the base summary. "Base health" is on Base too, just renamed to "Base
-   Leadership" there — the accordion added a second, unrelated "Base Health"
-   row (everyone's own wellbeing check-in, not the department leaders' KPIs),
-   so the old name was freed up to avoid two rows reading the same on screen.
-   Everything else must match, so real drift still fails. */
-const EXPECTED_OFF_BASE = ['OKRs', 'Base health'];
+   to the base summary.
+
+   The other three are real renames, not drift: "Base health" is on Base too,
+   just as "Base Leadership" — the accordion added a second, unrelated "Base
+   Health" row (everyone's own wellbeing check-in, not the department leaders'
+   KPIs), so the old name was freed up to avoid two rows reading the same on
+   screen. "Across every ministry" and "Department dashboards" are the same
+   sections as "Gospel Totals" and "Department Explorer", renamed to match the
+   mockup's own wording for those two. Everything else must match, so real
+   drift still fails. */
+const EXPECTED_OFF_BASE = ['OKRs', 'Base health', 'Across every ministry', 'Department dashboards'];
 const missing = dashSections.map(strip)
   .filter(d => !sections.map(strip).includes(d))
   .filter(d => !EXPECTED_OFF_BASE.includes(d));

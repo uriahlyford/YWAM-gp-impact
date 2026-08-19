@@ -497,9 +497,8 @@ wants it — the same reason `gpT()` exists elsewhere in this app.
 | Score {n}/10 | ពិន្ទុ {n}/10 |
 | {n} YTD across {d} departments | {n} រហូតដល់បច្ចុប្បន្ន នៅទូទាំង {d} នាយកដ្ឋាន |
 | {s} schools running · {n} enrolled | សាលា {s} កំពុងដំណើរការ · សិស្ស {n} នាក់ចុះឈ្មោះ |
-| {n} teams hosted YTD | ក្រុម {n} ដែលបានទទួលរៀបចំ រហូតដល់បច្ចុប្បន្ន |
+| {n} teams hosted · {m} people served | ក្រុម {n} ដែលបានទទួលរៀបចំ · មនុស្ស {m} នាក់ដែលបានបម្រើ |
 | {n} churches partnered | ក្រុមជំនុំ {n} ដែលបានចាប់ដៃគូ |
-| {n} baptisms YTD | ពិធីជ្រមុជទឹក {n} រហូតដល់បច្ចុប្បន្ន |
 | {p} platforms · {f} followers | វេទិកា {p} · អ្នកតាមដាន {f} នាក់ |
 | Department leaders' own figures | ចំនួនផ្ទាល់ខ្លួនរបស់ប្រធាននាយកដ្ឋាន |
 | Browse any department's own numbers | រកមើលចំនួនផ្ទាល់ខ្លួនរបស់នាយកដ្ឋានណាមួយ |
@@ -509,3 +508,25 @@ Debt, One-on-Ones Held, etc. — previously titled "Base health" on this
 screen, renamed here to not collide with the new Base Health row) reuses the
 department name already translated elsewhere in the app, so it isn't
 repeated in this table.
+
+A few section titles are also re-cased or renamed to match the mockup exactly
+— the Khmer doesn't change (Khmer has no letter case), so these reuse an
+existing translation under the new, differently-cased or reworded English key:
+
+| English (new key on Base) | Reuses the Khmer already at… |
+|---|---|
+| Salvations by Department | "Salvations by department" |
+| Leadership Development Schools | "Leadership Development schools" |
+| Community Schools | "Community schools" |
+| Local Church Partnerships | "Local church partnerships" |
+
+Two are real renames, not just re-casing, and got their own new translation:
+
+| English | ខ្មែរ |
+|---|---|
+| Gospel Totals | សរុបដំណឹងល្អ |
+| Department Explorer | ការរុករកតាមផ្នែក |
+
+(Both replace a heading that still exists, unchanged, on the leadership
+dashboard — "Across every ministry" and "Department dashboards" respectively
+— which this redesign pass didn't touch.)
