@@ -294,7 +294,20 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .pcard { display:flex; align-items:center; gap:14px; }
 .avatar { width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid var(--border); background:var(--surface2); flex-shrink:0; }
 .avatar.lg { width:96px; height:96px; }
+.avatar.sm { width:40px; height:40px; }
 .avatar.ph { display:flex; align-items:center; justify-content:center; font-family:'Koulen',sans-serif; font-size:26px; color:var(--faint); }
+.avatar.sm.ph { font-size:14px; }
+
+/* ---- inline entry cards: Mentorship, Leave, Account, from the mockup ---- */
+.leaveEntry { display:flex; align-items:center; gap:13px; width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:0; color:inherit; }
+.leaveEntryIcon { flex:0 0 auto; width:38px; height:38px; border-radius:10px; background:var(--accentSoft); color:var(--accent); display:flex; align-items:center; justify-content:center; }
+.mentorLabel { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--faint); font-weight:700; margin-bottom:6px; }
+.mentorBlock { display:flex; align-items:center; gap:12px; padding:4px 0 14px; }
+.mentorName { font-size:14px; font-weight:700; }
+.mentorMeta { font-size:12px; color:var(--muted); margin-top:1px; }
+.mentorDivider { border-top:1px solid var(--border); margin:2px 0 14px; }
+.openBtn { flex:0 0 auto; border:1.5px solid var(--border2); background:var(--bg); border-radius:9px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink); }
+.emptyLine { font-size:13px; color:var(--muted); font-style:italic; padding:6px 0 14px; }
 .pname { font-family:'Koulen',sans-serif; font-size:22px; letter-spacing:.5px; }
 .pmeta { font-size:13px; color:var(--muted); margin-top:2px; }
 
@@ -887,6 +900,7 @@ function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMon
 function initials(name){ return String(name||'?').trim().split(/\s+/).map(function(w){return w[0];}).slice(0,2).join('').toUpperCase(); }
 function campusName(id){ for(var i=0;i<CAMPUSES.length;i++) if(CAMPUSES[i].id===id) return CAMPUSES[i].name; return id; }
 function nameOf(id){ for(var i=0;i<S.roster.length;i++) if(S.roster[i].id===id) return S.roster[i].name; return '—'; }
+function personOf(id){ for(var i=0;i<S.roster.length;i++) if(S.roster[i].id===id) return S.roster[i]; return null; }
 
 function avatarHtml(person, cls){
   cls = cls||'';
@@ -1829,6 +1843,38 @@ function phaseBanner(phase, wk){
   return '';
 }
 
+/* Who you mentor, and who mentors you — from the redesign mockup. The data
+   already exists (S.mentees from getMyMentees, S.me.mentorId from the
+   profile); this just gives it a home on My Database instead of only living
+   on Team. Tapping a mentee opens their page the same way Team's directory
+   does — it just also has to switch tabs to get there. */
+function mentorshipCardHtml(){
+  var h='<div class="card" id="sec-mentor">';
+  h+='<div class="mentorLabel">'+esc(t("You're Mentoring"))+'</div>';
+  if(S.mentees && S.mentees.length){
+    S.mentees.forEach(function(p){
+      h+='<div class="mentorBlock">'+avatarHtml(p,'sm')+
+        '<div style="flex:1"><div class="mentorName">'+esc(p.name)+'</div>'+
+        '<div class="mentorMeta">'+esc(t(p.ministry||p.dept||''))+'</div></div>'+
+        '<button class="openBtn" data-openmentee="'+esc(p.id)+'" aria-label="'+esc(t('Open their database'))+'">'+
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>';
+    });
+  } else {
+    h+='<div class="emptyLine">'+esc(t("You're not mentoring anyone yet."))+'</div>';
+  }
+  h+='<div class="mentorDivider"></div>';
+  h+='<div class="mentorLabel">'+esc(t('Your Mentor'))+'</div>';
+  if(S.me.mentorId){
+    var m=personOf(S.me.mentorId);
+    h+='<div class="mentorBlock" style="padding-bottom:2px">'+avatarHtml(m,'sm')+
+      '<div style="flex:1"><div class="mentorName">'+esc(m?m.name:nameOf(S.me.mentorId))+'</div>'+
+      '<div class="mentorMeta">'+esc(t(m?(m.ministry||m.dept||''):''))+'</div></div></div>';
+  } else {
+    h+='<div class="emptyLine">'+esc(t('No mentor set yet.'))+'</div>';
+  }
+  return h+'</div>';
+}
+
 function homeHtml(){
   var wk=thisWeek();
   var wl=thisWeekLogs();
@@ -1850,33 +1896,38 @@ function homeHtml(){
 
   h+=phaseBanner(phase, wk);
 
-  /* Today's habits come first on ordinary days; on planning and review days
-     the weekly cards lead instead. */
-  var daily = habitsCardHtml();
-  var weekly = goalsCardHtml(wk);
-  h += (phase==='work') ? (daily + weekly) : (weekly + daily);
+  /* Fixed order, matching the redesign mockup: Weekly Goals, Habit Tracker,
+     OKR, (Annual Goals — not built yet), Mentorship, Health, Leave, Account.
+     This used to lead with whichever of Goals/Habits the day's phase favored;
+     that's gone in favor of the mockup's fixed order. */
+  h += goalsCardHtml(wk);
+  h += habitsCardHtml();
   h += kpiCardHtml(wk);
   h += okrSectionHtml(S.me, true);
+  h += mentorshipCardHtml();
   h += weekSummaryHtml(wk);
   h += myProgressHtml();
   h += awayCardHtml();
 
   // Profile and settings live under My Database now rather than owning a tab of their own.
-  h+='<button class="btn ghost" id="goProfileFromMe">'+esc(t('Profile & settings'))+'</button>';
+  h+='<button class="card leaveEntry" id="goProfileFromMe">'+
+    '<span class="leaveEntryIcon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-7 8-7s7 2.5 8 7"/></svg></span>'+
+    '<span style="flex:1"><div style="font-size:13.5px;font-weight:700">'+esc(t('Profile & settings'))+'</div></span>'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
   return h;
 }
 
 /* One tap to any section on this tab, instead of scrolling past everything
-   above it. Mentorship and Account are their own screens already (Team →
-   mentor, and the profile view), so those two chips navigate straight there
-   rather than scrolling. */
+   above it. Same order as the sections themselves. Account has no section of
+   its own to scroll to — it's a card at the very bottom that opens the
+   profile screen — so that chip still navigates rather than scrolling. */
 function quickJumpHtml(){
-  var jumps=[['sec-goals','Weekly Goals'],['sec-okr','OKRs'],['sec-habits','Habit Tracker'],['sec-health','My Health'],['sec-leave','Leave']];
+  var jumps=[['sec-goals','Weekly Goals'],['sec-habits','Habit Tracker'],['sec-okr','OKRs'],
+    ['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
   var h='<div class="quickBar">';
   jumps.forEach(function(j){
     h+='<button class="quickChip" data-jump="'+j[0]+'">'+esc(t(j[1]))+'</button>';
   });
-  h+='<button class="quickChip" id="jumpMentor">'+esc(t('Mentorship'))+'</button>';
   h+='<button class="quickChip" id="jumpAccount">'+esc(t('Account'))+'</button>';
   return h+'</div>';
 }
@@ -3306,18 +3357,28 @@ function bindHome(){
   if(wt) wt.onclick=function(){ S.weekOpen=!S.weekOpen; render(); };
 
   /* Quick-jump bar: scroll to a section already on this tab, or navigate
-     straight to the screen for the two that live elsewhere (Mentorship,
-     Account). */
+     straight to the screen for the one that lives elsewhere (Account). */
   document.querySelectorAll('[data-jump]').forEach(function(b){
     b.onclick=function(){
       var el=document.getElementById(b.getAttribute('data-jump'));
       if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
     };
   });
-  var jm=document.getElementById('jumpMentor');
-  if(jm) jm.onclick=function(){ S.view='mentor'; S.mentee=null; render(); };
   var ja=document.getElementById('jumpAccount');
   if(ja) ja.onclick=function(){ S.view='profile'; render(); };
+
+  /* Mentorship card's "open" arrow — same fetch the mentor screen's own
+     mentee list uses, but from My Database this also has to switch to that
+     screen to land on the detail view. */
+  document.querySelectorAll('[data-openmentee]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-openmentee');
+      run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(d){
+        if(d.ok){ S.view='mentor'; S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[]; S.sharedHabits=d.sharedHabits||[]; S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[]; render(); }
+        else showMsg('Not available');
+      });
+    };
+  });
 
   // hours / mood / private — same daily record as the habit tiles.
   // Keep typed hours in the draft as they're typed: tapping a mood scale

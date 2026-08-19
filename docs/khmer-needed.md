@@ -530,3 +530,20 @@ Two are real renames, not just re-casing, and got their own new translation:
 (Both replace a heading that still exists, unchanged, on the leadership
 dashboard — "Across every ministry" and "Department dashboards" respectively
 — which this redesign pass didn't touch.)
+
+## 7. My Database — reordered, plus a new Mentorship card
+
+My Database's sections now follow a fixed order (Weekly Goals, Habit
+Tracker, OKRs, Mentorship, My Health, Leave, Account) instead of the old
+day-dependent one. The one genuinely new piece is a Mentorship card: who you
+mentor, and who mentors you — previously that only lived on the Team tab's
+own Mentor screen; now there's a summary here too, with an arrow to open a
+mentee's full page.
+
+| English | ខ្មែរ |
+|---|---|
+| You're Mentoring | អ្នកកំពុងណែនាំ |
+| Your Mentor | អ្នកណែនាំរបស់អ្នក |
+| Open their database | បើកទិន្នន័យរបស់គាត់ |
+| You're not mentoring anyone yet. | អ្នកមិនទាន់កំពុងណែនាំនរណាម្នាក់នៅឡើយទេ។ |
+| No mentor set yet. | មិនទាន់បានកំណត់អ្នកណែនាំនៅឡើយទេ។ |
