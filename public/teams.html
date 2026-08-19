@@ -286,6 +286,12 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .chip { background:var(--banner); border:1px solid var(--bannerBorder); color:var(--ink); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:700; }
 .chip.blue { background:var(--accentSoft); border-color:var(--accentSoftBorder); }
 
+/* Quick-jump bar at the top of My Database — one tap to any section folded in
+   from the old My week / Me tabs, instead of scrolling past all of them. */
+.quickBar { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+.quickChip { background:var(--surface); border:1.5px solid var(--border2); color:var(--ink); border-radius:999px;
+  padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; }
+
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
 .stat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px; }
 .statNum { font-family:'Koulen',sans-serif; font-size:26px; color:var(--accent); line-height:1.1; }
@@ -1043,7 +1049,7 @@ function render(){
      Your own week is one tap away, Profile is folded into Me, and Mentor is
      reached from Team. */
   var reqN=S.mentorRequests?S.mentorRequests.length:0;
-  var tabs=[['base','Base','🏠'],['week','My week','✅'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['me','Me','🙋'],['health','Health','💚']];
+  var tabs=[['base','Base','🏠'],['week','My Database','🗂️'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['health','Health','💚']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+tab[2]+'</span>'+t(tab[1])+'</button>';
@@ -1051,7 +1057,6 @@ function render(){
   var m=document.getElementById('main');
   if(S.view==='base') m.innerHTML=baseHtml();
   else if(S.view==='week') m.innerHTML=homeHtml();
-  else if(S.view==='me') m.innerHTML=meHtml();
   else if(S.view==='health') m.innerHTML=healthHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
@@ -1428,7 +1433,7 @@ function okrSectionHtml(who, mine){
   var wk = thisWeek();
   var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
   var dept = who.dept==='Base Director' ? 'Base Leadership' : who.dept;
-  var h = '<h3>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>';
+  var h = '<h3'+(mine?' id="sec-okr"':'')+'>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>';
 
   var focus = (typeof jobFocus==='function') ? jobFocus(dept, who.ministry) : null;
   if(focus){
@@ -1588,8 +1593,10 @@ function homeHtml(){
   var wl=thisWeekLogs();
   var phase=weekPhase();
 
-  /* No name-and-face card here: Base already greeted you by name and Me holds
-     your profile. This page opens on the week itself. */
+  /* No name-and-face card here: Base already greeted you by name. This page
+     opens on the week itself. My week and Me used to be separate tabs; they're
+     folded into one "My Database" tab now, so the quick-jump bar below is what
+     replaces the old tab bar for getting straight to one section. */
   var st=graceStreak(function(){return true;});
   var h='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>'+
     '<div class="chips" style="margin:0 0 12px">'+
@@ -1597,6 +1604,8 @@ function homeHtml(){
            (st>=30?' · '+esc(t('a month!')):(st>=7?' · '+esc(t('a week!')):''))+'</span>'
         : '<span class="chip blue">'+esc(gpT('{n} of 7 days logged',{n:wl.length}))+'</span>')+
     '</div>';
+
+  h += quickJumpHtml();
 
   h+=phaseBanner(phase, wk);
 
@@ -1606,7 +1615,77 @@ function homeHtml(){
   var weekly = goalsCardHtml(wk);
   h += (phase==='work') ? (daily + weekly) : (weekly + daily);
   h += kpiCardHtml(wk);
+  h += okrSectionHtml(S.me, true);
   h += weekSummaryHtml(wk);
+  h += myProgressHtml();
+  h += awayCardHtml();
+
+  // Profile and settings live under My Database now rather than owning a tab of their own.
+  h+='<button class="btn ghost" id="goProfileFromMe">'+esc(t('Profile & settings'))+'</button>';
+  return h;
+}
+
+/* One tap to any section on this tab, instead of scrolling past everything
+   above it. Mentorship and Account are their own screens already (Team →
+   mentor, and the profile view), so those two chips navigate straight there
+   rather than scrolling. */
+function quickJumpHtml(){
+  var jumps=[['sec-goals','Weekly Goals'],['sec-okr','OKRs'],['sec-habits','Habit Tracker'],['sec-health','My Health'],['sec-leave','Leave']];
+  var h='<div class="quickBar">';
+  jumps.forEach(function(j){
+    h+='<button class="quickChip" data-jump="'+j[0]+'">'+esc(t(j[1]))+'</button>';
+  });
+  h+='<button class="quickChip" id="jumpMentor">'+esc(t('Mentorship'))+'</button>';
+  h+='<button class="quickChip" id="jumpAccount">'+esc(t('Account'))+'</button>';
+  return h+'</div>';
+}
+
+/* Streaks, this week's totals, and recent days — carried over from the old
+   Me tab verbatim. Folded in here as its own block rather than interleaved
+   with the goal/habit/KPI cards above, since it's a look-back, not a task. */
+function myProgressHtml(){
+  var wl=thisWeekLogs();
+  var h='';
+  var runs=myHabits().map(function(hb){
+    var meta=habitMeta(hb.id);
+    return { label:meta.label, icon:meta.icon, now:graceStreak(habitPred(hb.id)), best:bestStreak(habitPred(hb.id)) };
+  }).filter(function(r){ return r.now>0 || r.best>0; });
+  if(runs.length){
+    h+='<h3>🔥 '+esc(t('Streaks'))+'</h3><div class="card">';
+    runs.forEach(function(r){
+      h+='<div class="row"><span class="rowName">'+r.icon+' '+esc(t(r.label))+
+        '<div class="pmeta">'+esc(gpT('best {n} days',{n:r.best}))+'</div></span>'+
+        '<span class="pctSm">'+r.now+'d</span></div>';
+    });
+    h+='</div>';
+  }
+
+  h+='<h3>📅 '+esc(t('This week'))+'</h3><div class="grid">';
+  var cells=[
+    [sum(wl,function(r){return r.langHours;}).toFixed(1),'Language hrs'],
+    [sum(wl,function(r){return r.minHours;}).toFixed(1),'Ministry hrs'],
+    [count(wl,function(r){return r.workout;}),'Workout days'],
+    [count(wl,function(r){return r.quietTime;}),'Quiet-time days'],
+    [count(wl,function(r){return r.bible;}),'Bible days'],
+    [count(wl,function(r){return r.oneOnOne;}),'One-on-ones'],
+    [count(wl,function(r){return r.sharedFaith;}),'Shared faith'],
+    [count(wl,function(r){return r.sabbath;}),'Sabbaths']
+  ];
+  cells.forEach(function(c){ h+='<div class="stat"><div class="statNum">'+c[0]+'</div><div class="statLabel">'+esc(t(c[1]))+'</div></div>'; });
+  h+='</div>';
+
+  h+='<h3>🗓️ '+esc(t('Recent days'))+'</h3><div class="card">';
+  if(!S.logs.length) h+='<p class="sub" style="margin:6px 0">No entries yet — log your first day on the Today tab.</p>';
+  S.logs.slice(0,7).forEach(function(l){
+    var bits=[];
+    if(l.langHours) bits.push(l.langHours+'h lang');
+    if(l.minHours) bits.push(l.minHours+'h min');
+    if(l.workout) bits.push('workout');
+    if(l.quietTime) bits.push('quiet time');
+    if(l.bible) bits.push('Bible');
+    h+='<div class="row"><span class="rowName">'+esc(l.date)+'<div class="pmeta">'+(bits.join(' · ')||'—')+'</div></span></div>';
+  });
+  h+='</div>';
   return h;
 }
 
@@ -1630,7 +1709,7 @@ function weekSummaryHtml(wk){
   var sub = score!==null ? gpT('{n} of 7 days logged',{n:wl.length})
     : (wl.length===0 ? t('log a day and this starts filling in')
                      : gpT('{n} days logged · {m} more for your score',{n:wl.length,m:short}));
-  var h='<div class="card slim"><button class="discloseBtn" id="weekToggle">'+
+  var h='<div class="card slim" id="sec-health"><button class="discloseBtn" id="weekToggle">'+
     '<span><strong>💚 '+esc(t('My health'))+' · '+esc(t('week'))+' '+wk+'</strong>'+
     '<div class="pmeta">'+esc(sub)+'</div></span>'+
     '<span class="'+(score===null?'chev':'pctBig')+'">'+
@@ -1674,7 +1753,7 @@ function habitsCardHtml(){
   var list=myHabits();
   var doneN=list.filter(function(hb){ return log && didHabit(log,hb.id); }).length;
 
-  var h='<h3>✅ '+esc(t('Today'))+' <small>· '+esc(today)+'</small></h3>'+
+  var h='<h3 id="sec-habits">✅ '+esc(t('Today'))+' <small>· '+esc(today)+'</small></h3>'+
     '<div class="card"><div class="row" style="border:0;padding-top:0">'+
     '<span class="rowName">'+esc(doneN?gpT('{done} of {total} done',{done:doneN,total:list.length}):t('Tap what you’ve done today'))+
     '<div class="pmeta">'+esc(log?t('Saved — tap to change'):t('Nothing logged yet'))+'</div></span>'+
@@ -1783,7 +1862,7 @@ function goalsCardHtml(wk){
     : (rec && rec.items && rec.items.length ? rec.items : []);
   var written = items.filter(function(i){ return i && i.text; });
 
-  var h='<h3>🎯 '+esc(gpT('My {n} goals · week {wk}',{n:3,wk:wk}))+'</h3>';
+  var h='<h3 id="sec-goals">🎯 '+esc(gpT('My {n} goals · week {wk}',{n:3,wk:wk}))+'</h3>';
 
   if(!written.length && !editing){
     h+='<div class="card"><p class="sub" style="margin:4px 0 10px">No goals set for this week yet. Three is the whole point — pick the three that matter.</p>'+
@@ -2093,61 +2172,6 @@ function registerHtml(){
    settings. Home already greets you and carries today's actions, so the
    identity card isn't repeated here — only the per-habit streaks Home
    doesn't show. */
-function meHtml(){
-  var wl=thisWeekLogs();
-  var h='<h2>'+esc(t('My progress'))+'</h2>';
-  var runs=myHabits().map(function(hb){
-    var meta=habitMeta(hb.id);
-    return { label:meta.label, icon:meta.icon, now:graceStreak(habitPred(hb.id)), best:bestStreak(habitPred(hb.id)) };
-  }).filter(function(r){ return r.now>0 || r.best>0; });
-  if(runs.length){
-    h+='<h3>🔥 '+esc(t('Streaks'))+'</h3><div class="card">';
-    runs.forEach(function(r){
-      h+='<div class="row"><span class="rowName">'+r.icon+' '+esc(t(r.label))+
-        '<div class="pmeta">'+esc(gpT('best {n} days',{n:r.best}))+'</div></span>'+
-        '<span class="pctSm">'+r.now+'d</span></div>';
-    });
-    h+='</div>';
-  }
-
-  h+='<h3>📅 '+esc(t('This week'))+'</h3><div class="grid">';
-  var cells=[
-    [sum(wl,function(r){return r.langHours;}).toFixed(1),'Language hrs'],
-    [sum(wl,function(r){return r.minHours;}).toFixed(1),'Ministry hrs'],
-    [count(wl,function(r){return r.workout;}),'Workout days'],
-    [count(wl,function(r){return r.quietTime;}),'Quiet-time days'],
-    [count(wl,function(r){return r.bible;}),'Bible days'],
-    [count(wl,function(r){return r.oneOnOne;}),'One-on-ones'],
-    [count(wl,function(r){return r.sharedFaith;}),'Shared faith'],
-    [count(wl,function(r){return r.sabbath;}),'Sabbaths']
-  ];
-  cells.forEach(function(c){ h+='<div class="stat"><div class="statNum">'+c[0]+'</div><div class="statLabel">'+esc(t(c[1]))+'</div></div>'; });
-  h+='</div>';
-
-  h+='<h3>🗓️ '+esc(t('Recent days'))+'</h3><div class="card">';
-  if(!S.logs.length) h+='<p class="sub" style="margin:6px 0">No entries yet — log your first day on the Today tab.</p>';
-  S.logs.slice(0,7).forEach(function(l){
-    var bits=[];
-    if(l.langHours) bits.push(l.langHours+'h lang');
-    if(l.minHours) bits.push(l.minHours+'h min');
-    if(l.workout) bits.push('workout');
-    if(l.quietTime) bits.push('quiet time');
-    if(l.bible) bits.push('Bible');
-    h+='<div class="row"><span class="rowName">'+esc(l.date)+'<div class="pmeta">'+(bits.join(' · ')||'—')+'</div></span></div>';
-  });
-  h+='</div>';
-  h+=awayCardHtml();
-
-  /* What my job is aiming at this quarter. Me is the page about my own work, so
-     my objectives belong here rather than on a tab of their own — and only mine,
-     not the rest of the base's. */
-  h+=okrSectionHtml(S.me, true);
-
-  // Profile and settings live under Me now rather than owning a tab of their own.
-  h+='<button class="btn ghost" id="goProfileFromMe">'+esc(t('Profile & settings'))+'</button>';
-  return h;
-}
-
 /* ---------- Health: my weekly check-in, my history, the base average ----------
    The eleven weekly questions, filled in by hand. Daily logging turned out not to
    be sustainable, so this is the primary way a week gets answered; the daily
@@ -2429,7 +2453,7 @@ function weekClear(){
    actually needs for planning. */
 function awayCardHtml(){
   var d=S.trips;
-  var h='<h3>✈️ '+esc(t('Away from campus'))+'</h3>';
+  var h='<h3 id="sec-leave">✈️ '+esc(t('Away from campus'))+'</h3>';
   if(!d){ return h+'<div class="card"><p class="sub" style="margin:6px 0">'+esc(t('Loading…'))+'</p></div>'; }
 
   var year=String(new Date().getFullYear());
@@ -3005,6 +3029,20 @@ function bindHome(){
   if(mt) mt.onclick=function(){ S.todayOpen=!S.todayOpen; render(); };
   var wt=document.getElementById('weekToggle');
   if(wt) wt.onclick=function(){ S.weekOpen=!S.weekOpen; render(); };
+
+  /* Quick-jump bar: scroll to a section already on this tab, or navigate
+     straight to the screen for the two that live elsewhere (Mentorship,
+     Account). */
+  document.querySelectorAll('[data-jump]').forEach(function(b){
+    b.onclick=function(){
+      var el=document.getElementById(b.getAttribute('data-jump'));
+      if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    };
+  });
+  var jm=document.getElementById('jumpMentor');
+  if(jm) jm.onclick=function(){ S.view='mentor'; S.mentee=null; render(); };
+  var ja=document.getElementById('jumpAccount');
+  if(ja) ja.onclick=function(){ S.view='profile'; render(); };
 
   // hours / mood / private — same daily record as the habit tiles.
   // Keep typed hours in the draft as they're typed: tapping a mood scale
