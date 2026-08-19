@@ -406,10 +406,16 @@ function gpRollup(D){
     return out;
   }
 
-  /* ---------- survey ---------- */
-  function surveyRows(ids, week){
+  /* ---------- survey ----------
+     `quarter` (0-3) narrows to that quarter of whichever year SURVEY already
+     holds — the caller picks the year by asking getData for it, same as every
+     other year-scoped read. Passing both week and quarter would be redundant;
+     quarter wins if given. */
+  function surveyRows(ids, week, quarter){
     return SURVEY.filter(function(r){
-      return ids.indexOf(r.campus)>-1 && (week===undefined || Number(r.week)===Number(week));
+      if(ids.indexOf(r.campus)===-1) return false;
+      if(quarter!==undefined && quarter!==null) return qOf(Number(r.week))===quarter;
+      return week===undefined || Number(r.week)===Number(week);
     });
   }
   function pct(rows, id){
@@ -424,8 +430,8 @@ function gpRollup(D){
     var s=0; v.forEach(function(r){ s+=Number(r[id])||0; });
     return s/v.length;
   }
-  function healthScore(ids, week){
-    var rows = surveyRows(ids, week);
+  function healthScore(ids, week, quarter){
+    var rows = surveyRows(ids, week, quarter);
     if(!rows.length) return null;
     var s=0; rows.forEach(function(r){ s+=compositeOf(r); });
     return s/rows.length;

@@ -773,7 +773,8 @@ var S = {
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
   baseDept:null, okrForm:false, okrEditId:null,
-  healthWeek:null, weekForm:null, weekDraftFor:null
+  healthWeek:null, weekForm:null, weekDraftFor:null,
+  healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{}
 };
 
 var HABIT_LIBRARY = [
@@ -1056,10 +1057,21 @@ function render(){
      Your own week is one tap away, Profile is folded into Me, and Mentor is
      reached from Team. */
   var reqN=S.mentorRequests?S.mentorRequests.length:0;
-  var tabs=[['base','Base','🏠'],['week','My Database','🗂️'],['team','Team'+(reqN?' ('+reqN+')':''),'👥'],['health','Health','💚']];
+  /* Outline icons from the redesign mockup, in place of the emoji this bar
+     used before — same four glyphs (house / stacked database / two people /
+     heart), traced as stroke paths so they inherit the tab's own color
+     instead of carrying an emoji font's fixed hue. */
+  var NAV_SVG_OPEN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
+  var NAV_ICONS = {
+    base: NAV_SVG_OPEN+'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>',
+    week: NAV_SVG_OPEN+'<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+    team: NAV_SVG_OPEN+'<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3.5 20c.6-3.4 3-5.4 5.5-5.4s4.9 2 5.5 5.4"/><path d="M14.8 15c1.9.2 3.6 1.9 4.1 5"/></svg>',
+    health: NAV_SVG_OPEN+'<path d="M12 20.5s-7.5-4.6-9.8-9.6C.6 7.3 2.4 4 5.7 4c2 0 3.5 1.1 4.3 2.5C10.8 5.1 12.3 4 14.3 4c3.3 0 5.1 3.3 3.5 6.9C15.5 15.9 12 20.5 12 20.5Z"/></svg>'
+  };
+  var tabs=[['base','Base'],['week','My Database'],['team','Team'+(reqN?' ('+reqN+')':'')],['health','Health']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
-    return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+tab[2]+'</span>'+t(tab[1])+'</button>';
+    return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+NAV_ICONS[tab[0]]+'</span>'+t(tab[1])+'</button>';
   }).join('');
   var m=document.getElementById('main');
   if(S.view==='base') m.innerHTML=baseHtml();
@@ -1092,6 +1104,24 @@ function baseR(){
       api: gpRollup({ entries:d.entries, survey:d.survey, roster:S.roster, week:thisWeek() }) };
   }
   return _baseRoll.api;
+}
+
+/* A year other than the one getMyBoot already loaded (S.base). Health's year
+   view needs to browse those without a second boot round-trip for every field
+   on the page, so it fetches just that year's getData and caches it — the
+   same anonymous, no-leader-code call S.base itself came from. */
+function baseRFor(year){
+  if(S.base && Number(S.base.year)===Number(year)) return baseR();
+  var d = S.baseByYear[year];
+  if(!d) return null;
+  return gpRollup({ entries:d.entries, survey:d.survey, roster:S.roster, week:thisWeek() });
+}
+function ensureBaseYear(year, cb){
+  if((S.base && Number(S.base.year)===Number(year)) || S.baseByYear[year]){ cb(); return; }
+  run('getData', ['', year], function(dd){
+    if(dd && dd.entries) S.baseByYear[year] = dd;
+    cb();
+  });
 }
 
 /* One tile. `metric` only decides formatting ($ / 1-10 / plain); a trend is
@@ -2359,21 +2389,55 @@ function healthHtml(){
   if(!S.base){
     return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
   }
-  var R = baseR(), ids = [S.me.campus];
-  var rows = R.surveyRows(ids, wk);
-  var hsWeek = R.healthScore(ids, wk), hsYtd = R.healthScore(ids);
-  var cr = R.checkinRate(ids, wk);
+  var ids = [S.me.campus];
+  var curYear = new Date().getFullYear();
+  var scope = S.healthScope || 'week';
+  var hYear = Number(S.healthYear || curYear);
+  var hQ = Number(S.healthQuarter || (qOf(cur)+1)); // 1-4, human-facing like the OKR quarter picker
 
   h += '<h3>🏠 '+esc(t('Base health'))+' · '+esc(t(campusName(S.me.campus)))+'</h3>';
+  h += '<div class="pickerRow">'+
+    '<label class="pick"><span>'+esc(t('View'))+'</span><select id="healthScopeSel">'+
+      [['week','Week'],['quarter','Quarter'],['year','Year']].map(function(sc){
+        return '<option value="'+sc[0]+'"'+(scope===sc[0]?' selected':'')+'>'+esc(t(sc[1]))+'</option>';
+      }).join('')+'</select></label>'+
+    (scope==='quarter' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Quarter'))+'</span><select id="healthQSel">'+
+      [1,2,3,4].map(function(i){ return '<option value="'+i+'"'+(hQ===i?' selected':'')+'>Q'+i+'</option>'; }).join('')+
+      '</select></label>' : '')+
+    (scope==='year' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Year'))+'</span><select id="healthYSel">'+
+      [curYear,curYear-1,curYear-2].map(function(y){ return '<option value="'+y+'"'+(hYear===y?' selected':'')+'>'+y+'</option>'; }).join('')+
+      '</select></label>' : '')+
+    '</div>';
+
+  var R = (scope==='year') ? baseRFor(hYear) : baseR();
+  if(!R){
+    h += '<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>'+
+      '<p class="hint">🔒 '+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
+    return h;
+  }
+
+  var rows, score, scopeLabel;
+  if(scope==='quarter'){
+    rows = R.surveyRows(ids, undefined, hQ-1); score = R.healthScore(ids, undefined, hQ-1); scopeLabel = 'Q'+hQ;
+  } else if(scope==='year'){
+    rows = R.surveyRows(ids); score = R.healthScore(ids); scopeLabel = String(hYear);
+  } else {
+    rows = R.surveyRows(ids, wk); score = R.healthScore(ids, wk); scopeLabel = 'W'+wk;
+  }
+  var hsYtd = baseR().healthScore(ids);
+  var cr = (scope==='week') ? R.checkinRate(ids, wk) : null;
+
   h += '<div class="grid">'+
-    '<div class="stat gold"><div class="statNum">'+(hsWeek===null?'—':hsWeek.toFixed(1)+'/10')+'</div>'+
-      '<div class="statLabel">'+esc(t('Staff Health Score'))+' · W'+wk+
-      R.trendB(function(w){ return R.healthScore(ids,w); }, true, wk)+'</div></div>'+
+    '<div class="stat gold"><div class="statNum">'+(score===null?'—':score.toFixed(1)+'/10')+'</div>'+
+      '<div class="statLabel">'+esc(t('Staff Health Score'))+' · '+scopeLabel+
+      (scope==='week' ? R.trendB(function(w){ return R.healthScore(ids,w); }, true, wk) : '')+'</div></div>'+
     '<div class="stat"><div class="statNum">'+(hsYtd===null?'—':hsYtd.toFixed(1)+'/10')+'</div>'+
       '<div class="statLabel">'+esc(t('Staff Health Score'))+' · YTD</div></div>'+
-    '<div class="stat"><div class="statNum">'+cr.n+(cr.total?' / '+cr.total:'')+'</div>'+
+    (cr ? '<div class="stat"><div class="statNum">'+cr.n+(cr.total?' / '+cr.total:'')+'</div>'+
       '<div class="statLabel">'+esc(t('Checked in this week'))+' · W'+wk+
-      (cr.total&&cr.total>0?' · '+gpCheckinPct(cr.n, cr.total)+'%':'')+'</div></div>'+
+      (cr.total&&cr.total>0?' · '+gpCheckinPct(cr.n, cr.total)+'%':'')+'</div></div>'
+      : '<div class="stat"><div class="statNum">'+rows.length+'</div>'+
+      '<div class="statLabel">'+esc(t('Check-ins logged'))+' · '+scopeLabel+'</div></div>')+
     '</div>';
 
   h += '<div class="card" style="margin-top:12px">';
@@ -2384,9 +2448,9 @@ function healthHtml(){
    ['minHours','Community ministry (avg hrs)', true]
   ].forEach(function(q){
     var v = rows.length ? R.avg(rows, q[0]) : null;
-    var tr = R.trendB(function(w){
+    var tr = (scope==='week') ? R.trendB(function(w){
       var r = R.surveyRows(ids, w); return r.length ? R.avg(r, q[0]) : null;
-    }, q[2], wk);
+    }, q[2], wk) : '';
     var suffix = (q[0]==='langHours'||q[0]==='minHours') ? '' : '/10';
     h += '<div class="row"><span class="rowName">'+esc(t(q[1]))+'</span>'+
       '<span class="rowVal">'+(v===null?'—':v.toFixed(1)+suffix)+tr+'</span></div>';
@@ -2400,9 +2464,9 @@ function healthHtml(){
    ['debt','Have staff debt', false]
   ].forEach(function(q){
     var p = R.pct(rows, q[0]);
-    var tr = R.trendB(function(w){
+    var tr = (scope==='week') ? R.trendB(function(w){
       var r = R.surveyRows(ids, w); return r.length ? R.pct(r, q[0]) : null;
-    }, q[2], wk);
+    }, q[2], wk) : '';
     h += '<div class="row"><span class="rowName">'+esc(t(q[1]))+'</span>'+
       '<span class="rowVal">'+(p===null?'—':p+'%')+tr+'</span></div>';
   });
@@ -3342,6 +3406,15 @@ function bind(){
     S.healthWeek=Number(hws.value);
     S.weekDraft=null; S.weekDraftFor=null; S.weekForm=null;   // a different week, a different set of answers
     render();
+  };
+  var hSc=document.getElementById('healthScopeSel');
+  if(hSc) hSc.onchange=function(){ S.healthScope=hSc.value; render(); };
+  var hQs=document.getElementById('healthQSel');
+  if(hQs) hQs.onchange=function(){ S.healthQuarter=Number(hQs.value); render(); };
+  var hYs=document.getElementById('healthYSel');
+  if(hYs) hYs.onchange=function(){
+    var y=Number(hYs.value);
+    ensureBaseYear(y, function(){ S.healthYear=y; render(); });
   };
 
   /* --- the weekly check-in form --- */

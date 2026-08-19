@@ -453,3 +453,20 @@ short, it's a pill button next to the message text.
 | Dismiss | បិទ |
 | Add this to your Home Screen: tap Share, then "Add to Home Screen". | បន្ថែមកម្មវិធីនេះទៅអេក្រង់ដើម៖ ចុច ចែករំលែក រួចជ្រើសរើស "បន្ថែមទៅអេក្រង់ដើម"។ |
 | Install this app for the full-screen experience. | ដំឡើងកម្មវិធីនេះ ដើម្បីទទួលបទពិសោធន៍ពេញអេក្រង់។ |
+
+## 5. Base health — quarter and year breakdown
+
+The Base health card on the Health tab used to show only "this week" and a
+running year-to-date figure. It now has a "View" picker — Week / Quarter /
+Year — so someone can see the same stats grouped by quarter or by whole year
+instead of just one week at a time. "View" labels the picker itself (a short
+dropdown label, like "Quarter" already on the OKR screen). "Check-ins logged"
+replaces the week-only "Checked in this week" stat once the view is a quarter
+or a year, since "how many people checked in" only means something for one
+specific week.
+
+| English | ខ្មែរ |
+|---|---|
+| View | ទិដ្ឋភាព |
+| Year | ឆ្នាំ |
+| Check-ins logged | ការរាយការណ៍ដែលបានកត់ត្រា |
