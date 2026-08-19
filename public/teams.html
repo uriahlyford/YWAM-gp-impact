@@ -229,11 +229,27 @@ input:focus, select:focus, button:focus-visible { outline:3px solid var(--accent
 
 header { background:var(--headerBg); color:var(--onDark); display:flex; justify-content:space-between; align-items:center;
   padding:calc(16px + env(safe-area-inset-top)) 16px 16px; }
-.brand { display:flex; align-items:center; gap:10px; }
+.brandRow { display:flex; align-items:center; gap:10px; min-width:0; }
+.logoImg { height:30px; width:auto; flex-shrink:0; display:block; }
+.brand { display:flex; flex-direction:column; padding-left:10px; border-left:1px solid var(--onDarkBorder); }
 .brandKh { font-family:'Koulen',sans-serif; font-size:22px; letter-spacing:1px; line-height:1; }
 .brandEn { font-size:9px; letter-spacing:3px; color:var(--amber); font-weight:700; }
 .hbtns { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .hbtn { border:1px solid var(--onDarkBorder); background:transparent; color:var(--onDark); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; }
+.hbtn.icon { padding:6px; display:flex; align-items:center; justify-content:center; }
+
+/* ---- hamburger menu drawer ---- */
+.scrim { position:fixed; inset:0; background:var(--scrim); z-index:40; }
+.drawer { position:fixed; top:0; right:0; bottom:0; width:280px; max-width:82vw; background:var(--surface); z-index:41;
+  box-shadow:-8px 0 24px rgba(23,21,15,.18); display:flex; flex-direction:column;
+  padding:calc(20px + env(safe-area-inset-top)) 16px 16px; padding-right:calc(16px + env(safe-area-inset-right)); overflow-y:auto; }
+.drawerHead { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+.drawerTitle { font-family:'Koulen',sans-serif; font-size:18px; color:var(--ink); }
+.drawerItem { display:flex; align-items:center; gap:12px; padding:13px 8px; border-radius:12px; background:none; border:0;
+  cursor:pointer; text-align:left; font-family:inherit; color:var(--ink); width:100%; }
+.drawerItem:active { background:var(--surface2); }
+.drawerIcon { flex:0 0 auto; color:var(--accent); display:flex; }
+.drawerLabel { font-size:14.5px; font-weight:600; flex:1; }
 
 main { padding:18px 16px; max-width:640px; margin:0 auto; }
 h2 { font-family:'Koulen',sans-serif; font-size:24px; letter-spacing:.5px; margin:0 0 4px; }
@@ -549,6 +565,11 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .pick span { display:block; font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted);
   text-transform:uppercase; margin-bottom:4px; }
 
+/* chip-row picker — the Base Health period toggle, from the mockup */
+.deptChips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.deptChip { border:1.5px solid var(--border2); background:var(--bg); border-radius:999px; padding:7px 13px; font-size:12.5px; cursor:pointer; color:var(--muted); font-family:inherit; }
+.deptChip.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
+
 /* the profile card that leads the Base tab */
 .baseMe { display:flex; align-items:center; gap:14px; }
 .baseMe .pname { font-size:20px; line-height:1.15; }
@@ -639,9 +660,9 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 <div class="ptr" id="ptr" aria-hidden="true"><div class="ptrCoin"><img id="ptrLogo" alt=""></div></div>
 
 <header>
-  <div class="brand">
-    <img id="brandLogo" alt="YWAM GP — Gon Preah" style="height:44px;width:auto;display:block">
-    <div><div class="brandKh">កូនព្រះ</div><div class="brandEn">MY GP</div></div>
+  <div class="brandRow">
+    <img id="brandLogo" alt="YWAM GP — Gon Preah" class="logoImg">
+    <div class="brand"><div class="brandKh">កូនព្រះ</div><div class="brandEn">MY GP</div></div>
   </div>
   <div class="hbtns" id="hbtns"></div>
 </header>
@@ -649,6 +670,7 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 <main id="main"></main>
 <nav class="bottom hidden" id="bottomNav"></nav>
 <div class="msg" id="msg"></div>
+<div id="menuRoot"></div>
 
 <script>
 /*  Error boundary — must come first, before any other script.
@@ -790,8 +812,9 @@ var S = {
   baseDept:null, okrForm:false, okrEditId:null,
   healthWeek:null, weekForm:null, weekDraftFor:null,
   healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{},
-  baseAcc:{salv:true, ld:true, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
-  baseHealthPeriod:'week'
+  baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
+  baseHealthPeriod:'week',
+  menuOpen:false
 };
 
 var HABIT_LIBRARY = [
@@ -1069,7 +1092,8 @@ function render(){
     bind();
     return;
   }
-  hb.innerHTML = '<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+'<button class="hbtn" id="backBtn">'+esc(t('Dashboard'))+'</button>';
+  hb.innerHTML = '<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+'<button class="hbtn" id="backBtn">'+esc(t('Dashboard'))+'</button>'+
+    '<button class="hbtn icon" id="menuBtn" aria-label="'+esc(t('Menu'))+'">'+HAMBURGER_SVG+'</button>';
   /* Base leads: signing in should show how the base is doing, not a to-do list.
      Your own week is one tap away, Profile is folded into Me, and Mentor is
      reached from Team. */
@@ -1164,6 +1188,51 @@ function bquarters(label, valFn, drillFn){
     h += '<span'+(d?' class="drillable"'+d:'')+'>Q'+(q+1)+' <b>'+fmt(valFn(q))+'</b></span>';
   }
   return h+'</div>';
+}
+
+/* ---- hamburger menu drawer ----
+   From the redesign mockup: a right-side drawer for the destinations that
+   aren't one of the four bottom tabs. "Admin" is deliberately not here —
+   the mockup's item points at an account-approval system this app doesn't
+   have yet, and a menu item that goes nowhere is worse than no menu item. */
+var HAMBURGER_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+var DRAWER_CLOSE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>';
+function renderMenu(){
+  var root = document.getElementById('menuRoot');
+  if(!root) return;
+  if(!S.menuOpen || !S.me){ root.innerHTML=''; return; }
+  var items = [
+    { id:'dashboard', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="20" x2="5" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="14"/></svg>',
+      label:t('GP Dashboard') },
+    { id:'leave', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><line x1="3.5" y1="10" x2="20.5" y2="10"/><path d="M8 8V3.5M16 8V3.5"/><path d="M8.5 14.5l2 2 4-4"/></svg>',
+      label:t('Leave Request') },
+    { id:'checkin', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>',
+      label:t('Weekly Check-in') }
+  ];
+  root.innerHTML = '<div class="scrim" id="menuScrim"></div>'+
+    '<div class="drawer">'+
+      '<div class="drawerHead"><span class="drawerTitle">✦ '+esc(t('Menu'))+'</span>'+
+        '<button class="hbtn icon" id="menuCloseBtn" style="border-color:var(--border2);color:var(--ink)" aria-label="'+esc(t('Dismiss'))+'">'+DRAWER_CLOSE_SVG+'</button></div>'+
+      items.map(function(it){
+        return '<button class="drawerItem" data-menu-item="'+it.id+'"><span class="drawerIcon">'+it.icon+'</span>'+
+          '<span class="drawerLabel">'+esc(it.label)+'</span></button>';
+      }).join('')+
+    '</div>';
+  var close=function(){ S.menuOpen=false; renderMenu(); };
+  document.getElementById('menuScrim').onclick=close;
+  document.getElementById('menuCloseBtn').onclick=close;
+  root.querySelectorAll('[data-menu-item]').forEach(function(btn){
+    btn.onclick=function(){
+      var id=btn.getAttribute('data-menu-item');
+      S.menuOpen=false;
+      if(id==='dashboard') gpGo('index');
+      else if(id==='leave'){ S.view='week'; render(); setTimeout(function(){
+        var el=document.getElementById('sec-leave'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+      }, 60); }
+      else if(id==='checkin'){ S.view='health'; render(); }
+      else renderMenu();
+    };
+  });
 }
 
 /* One collapsible row of the Base accordion. `bodyHtml` is only asked for —
@@ -3523,6 +3592,9 @@ function bind(){
   if(lb) lb.onclick=toggleLang;
   var back=document.getElementById('backBtn');
   if(back) back.onclick=function(){ gpGo('index'); };
+  var menuBtn=document.getElementById('menuBtn');
+  if(menuBtn) menuBtn.onclick=function(){ S.menuOpen=true; renderMenu(); };
+  renderMenu();
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; S.goalDraft=null; S.tripForm=false; render(); };
