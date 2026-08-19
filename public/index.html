@@ -3,7 +3,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <script>
 /* Staff who've logged in get their own page as the app's front door — opening the
    PWA drops them straight into their Teams home instead of the leadership
@@ -354,6 +354,13 @@ input[type=number] { width:96px; font-size:17px; padding:9px 10px; border-radius
 @media (prefers-reduced-motion: reduce){ .loadLogo{ animation:none } .ldots::after{ content:'...' } }
 
 /* pull-to-refresh indicator */
+.installBar { display:flex; align-items:center; gap:10px; background:var(--surface2); color:var(--ink);
+  border-bottom:1px solid var(--border); padding:10px 16px; font-size:12.5px; }
+.installTxt { flex:1; line-height:1.4; }
+.installBtn { background:var(--accent); color:var(--accentInk); border:none; border-radius:999px;
+  padding:6px 14px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.installX { background:transparent; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:4px 6px; line-height:1; }
+
 .ptr { position:fixed; top:env(safe-area-inset-top); left:0; right:0; z-index:60; display:flex; justify-content:center;
   pointer-events:none; opacity:0; transform:translateY(-60px);
   transition:transform .22s ease, opacity .22s ease; }
@@ -1641,6 +1648,7 @@ function initialsOf(name){
 
 /* Shared with the staff page — see gpPullToRefresh in rollup.js. */
 gpPullToRefresh(function(){ return fetchData(); });
+gpInstallPrompt();
 
 render();
 if(!window.gpLeaving) fetchData();

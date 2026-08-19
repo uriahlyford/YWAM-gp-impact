@@ -438,3 +438,18 @@ after the tab bar itself.
 | Leave | ការចាកឆ្ងាយ |
 | Mentorship | ការណែនាំ |
 | Account | គណនី |
+
+## 4. Add-to-Home-Screen nudge
+
+A small dismissible bar that appears under the header the first time someone
+opens the app in a regular browser tab (not yet running as an installed,
+full-screen app). It shows one of these two messages depending on the device,
+plus a button and a dismiss "✕". "Install" is the button label — keep it
+short, it's a pill button next to the message text.
+
+| English | ខ្មែរ |
+|---|---|
+| Install | ដំឡើង |
+| Dismiss | បិទ |
+| Add this to your Home Screen: tap Share, then "Add to Home Screen". | បន្ថែមកម្មវិធីនេះទៅអេក្រង់ដើម៖ ចុច ចែករំលែក រួចជ្រើសរើស "បន្ថែមទៅអេក្រង់ដើម"។ |
+| Install this app for the full-screen experience. | ដំឡើងកម្មវិធីនេះ ដើម្បីទទួលបទពិសោធន៍ពេញអេក្រង់។ |
