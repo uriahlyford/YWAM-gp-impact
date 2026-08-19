@@ -583,6 +583,38 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .deptChip { border:1.5px solid var(--border2); background:var(--bg); border-radius:999px; padding:7px 13px; font-size:12.5px; cursor:pointer; color:var(--muted); font-family:inherit; }
 .deptChip.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
 
+/* Weekly Goals — week nav card, Last week / This week cards, from the mockup */
+.card.muted { background:var(--surface2); border-color:var(--surface2); }
+.weekNavLabel { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:8px; }
+.weekNavRow { display:flex; align-items:center; gap:8px; }
+.weekArrow { flex:0 0 auto; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border2); background:var(--bg);
+  color:var(--ink); font-size:16px; cursor:pointer; font-family:inherit; }
+.weekArrow:disabled { opacity:.4; cursor:default; }
+.weekPill { flex:1; text-align:center; border:1.5px solid var(--border2); border-radius:999px; padding:9px 10px; font-size:14px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
+.currentTag { display:none; font-size:10px; letter-spacing:.5px; text-transform:uppercase; font-weight:700; color:var(--good);
+  background:var(--goodSoft); border-radius:999px; padding:3px 8px; }
+.currentTag.on { display:inline-block; }
+.weekCaption { font-size:12.5px; color:var(--muted); margin:8px 0 0; }
+.goalCardHead { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.goalCardTitle { font-size:14px; font-weight:700; }
+.goalCardDate { font-size:12px; color:var(--muted); }
+.lastGoalRow { font-size:13px; color:var(--muted); padding:6px 0; border-top:1px solid var(--line); }
+.lastGoalRow:first-child { border-top:0; }
+.wgRow { padding:11px 0; border-top:1px solid var(--line); }
+.wgRow:first-child { border-top:0; }
+.wgTop { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px; }
+.wgText { font-size:13.5px; font-weight:600; }
+.wgPct { font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.wgActions { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:9px; }
+.completePill { border:1.5px solid var(--good); background:var(--goodSoft); color:var(--good); border-radius:999px;
+  padding:6px 13px; font-size:10.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; font-family:inherit; }
+.removeX { border:0; background:none; color:var(--faint); cursor:pointer; padding:4px; display:flex; }
+.addGoalRow { display:flex; gap:9px; margin-top:14px; align-items:center; }
+input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); border-radius:999px; padding:11px 15px; font:inherit; font-size:14px; background:var(--bg); color:var(--ink); width:auto; }
+.addGoalBtn { flex:0 0 auto; width:38px; height:38px; border-radius:50%; border:0; background:var(--headerBg); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; }
+
 /* the profile card that leads the Base tab */
 .baseMe { display:flex; align-items:center; gap:14px; }
 .baseMe .pname { font-size:20px; line-height:1.15; }
@@ -818,7 +850,7 @@ var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'base', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
-  goals:[], checkins:[], menteeCheckins:[], goalDraft:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, weekDraft:{},
+  goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, weekDraft:{},
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
@@ -863,6 +895,7 @@ function isoWeekOf(d){
   return Math.max(1, Math.min(52, Math.floor((d-monW1)/(7*86400000))+1));
 }
 function thisWeek(){ return isoWeekOf(new Date()); }
+function goalsViewWeek(){ return S.goalsWeek==null ? thisWeek() : S.goalsWeek; }
 function goalsForWeek(week){
   for(var i=0;i<S.goals.length;i++) if(Number(S.goals[i].week)===Number(week)) return S.goals[i];
   return null;
@@ -1068,7 +1101,7 @@ function logout(){
   lsDel('gp-staff');
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
-  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
+  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   render();
 }
 
@@ -1900,7 +1933,7 @@ function homeHtml(){
      OKR, (Annual Goals — not built yet), Mentorship, Health, Leave, Account.
      This used to lead with whichever of Goals/Habits the day's phase favored;
      that's gone in favor of the mockup's fixed order. */
-  h += goalsCardHtml(wk);
+  h += goalsCardHtml(goalsViewWeek());
   h += habitsCardHtml();
   h += kpiCardHtml(wk);
   h += okrSectionHtml(S.me, true);
@@ -2148,89 +2181,82 @@ function ringVars(p){ return gpRingVars(p); }
 function ringHtml(p, big){ return gpRingHtml(p, big ? 'lg' : ''); }
 
 function goalsCardHtml(wk){
+  var isCur = Number(wk)===Number(thisWeek());
+  var lastWk = Number(wk)-1;
+  var lastRec = lastWk>=1 ? goalsForWeek(lastWk) : null;
+  var lastWritten = lastRec ? lastRec.items.filter(function(i){ return i && i.text; }) : [];
+
   var rec=goalsForWeek(wk);
-  var editing = S.goalDraft !== null;
-  var items = editing ? S.goalDraft
-    : (rec && rec.items && rec.items.length ? rec.items : []);
+  var items = (rec && rec.items && rec.items.length) ? rec.items : [];
   var written = items.filter(function(i){ return i && i.text; });
 
-  var h='<h3 id="sec-goals">🎯 '+esc(gpT('My {n} goals · week {wk}',{n:3,wk:wk}))+'</h3>';
+  var h='<h3 id="sec-goals">🎯 '+esc(t('Weekly Goals'))+'</h3>';
 
-  if(!written.length && !editing){
-    h+='<div class="card"><p class="sub" style="margin:4px 0 10px">No goals set for this week yet. Three is the whole point — pick the three that matter.</p>'+
-      '<button class="btn" id="editGoals">Set this week’s goals</button></div>';
-    h+=pastGoalsHtml(wk);
-    return h;
-  }
+  h+='<div class="card">'+
+    '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
+    '<div class="weekNavRow">'+
+      '<button class="weekArrow" id="goalsPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
+      '<div class="weekPill">'+esc(gpT('Week {wk}',{wk:wk}))+
+        '<span class="currentTag'+(isCur?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
+      '<button class="weekArrow" id="goalsNextWeek" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
+    '</div>'+
+    '<p class="weekCaption">'+esc(t('Review last week, plan this week.'))+'</p>'+
+    (isCur?'':'<button class="linkbtn" style="padding:6px 0 0" id="goalsJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
+  '</div>';
 
-  h+='<div class="card">';
-  if(editing){
+  h+='<div class="card muted">'+
+    '<div class="goalCardHead"><span class="goalCardTitle">'+esc(t('Last week'))+'</span>'+
+    '<span class="goalCardDate">'+esc(gpT('Week {wk}',{wk:lastWk}))+'</span></div>'+
+    (lastWritten.length
+      ? lastWritten.map(function(i){ return '<div class="lastGoalRow">'+esc(i.text)+'</div>'; }).join('')
+      : '<p class="emptyLine" style="padding:2px 0 0">'+esc(t('You didn’t set goals last week.'))+'</p>')+
+  '</div>';
+
+  h+='<div class="card">'+
+    '<div class="goalCardHead"><span class="goalCardTitle">'+esc(t('This week'))+'</span>'+
+    '<span class="goalCardDate">'+esc(gpT('Week {wk}',{wk:wk}))+'</span></div>';
+
+  if(written.length){
     /* Said plainly at the point of writing, not buried in settings. Goals are
        free text and the whole team can open them from the directory — that
        should be a known norm, never a surprise. */
     h+='<p class="hint" style="margin:2px 0 10px">👀 '+
        esc(t('Your team can see these on your profile. Anything personal belongs in the private check-in instead.'))+'</p>';
-    var mOpts=S.me.ministry ? metricsFor(S.me.campus,S.me.dept,S.me.ministry) : [];
-    for(var i=0;i<3;i++){
-      var gtext=(items[i]&&items[i].text)||'';
-      var mk=(items[i]&&items[i].metricKey)||'';
-      h+='<label class="f">Goal '+(i+1)+'</label>'+
-        '<input type="text" maxlength="200" data-goaltext="'+i+'" value="'+esc(gtext)+'" placeholder="'+(i===0?'e.g. Disciple two students':'')+'">';
-      // Linking a goal to one of your ministry's KPIs is what ties personal
-      // follow-through to the numbers the base actually reports.
-      if(mOpts.length){
-        h+='<select data-goalmetric="'+i+'" class="goalSel"><option value="">— not tied to a KPI —</option>'+
-          mOpts.map(function(mm){
-            var key=S.me.dept+'|'+S.me.ministry+'|'+mm;
-            return '<option value="'+esc(key)+'"'+(mk===key?' selected':'')+'>'+esc(t('moves'))+': '+esc(t(mm))+'</option>';
-          }).join('')+'</select>';
-      }
-    }
-    h+='<button class="btn" id="saveGoals">Save goals</button>'+
-       '<button class="linkbtn" id="cancelGoals">Cancel</button>';
-  } else {
-    var pct=rec?rec.pct:null;
-    h+='<div class="row" style="border:0;padding-top:0"><span class="rowName">'+
-       esc(t('End of week — how far did you get?'))+
-       '<div class="pmeta">'+esc(t('Drag each one — few weeks are all or nothing.'))+'</div></span>'+
-       '<span class="pctBig" style="color:'+pctColor(pct||0)+'">'+(pct===null?'—':pct+'%')+'</span></div>';
-    h+='<div class="bar"><div class="barFill" style="width:'+(pct||0)+'%;background:'+pctColor(pct||0)+'"></div></div>';
     written.forEach(function(g,i){
       var mm=g.metricKey?g.metricKey.split('|')[2]:'';
       var gp=goalItemPct(g);
-      h+='<div class="goalRow'+(gp>=100?' done':'')+'">'+
-        ringHtml(gp)+
-        '<div class="goalBody"><span class="goalText">'+esc(g.text)+'</span>'+
+      h+='<div class="wgRow'+(gp>=100?' done':'')+'">'+
+        '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
+          '<span class="wgPct" style="color:'+pctColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>'+
         (mm?'<div class="goalLink">📊 '+esc(t('moves'))+' '+esc(t(mm))+'</div>':'')+
-        '<input type="range" class="gSlide" min="0" max="100" step="5" value="'+gp+'"'+
-          ' style="'+ringVars(gp)+'" data-goalpct="'+i+'"'+
+        '<input type="range" min="0" max="100" step="5" value="'+gp+'" data-goalpct="'+i+'"'+
+          ' style="background:linear-gradient(to right, '+pctColor(gp)+' '+gp+'%, var(--surface2) '+gp+'%)"'+
           ' aria-label="'+esc(t('Progress'))+': '+esc(g.text)+'">'+
-        '<div class="gWord" data-goalword="'+i+'">'+esc(pctWord(gp))+'</div>'+
+        '<div class="wgActions">'+
+          (gp<100?'<button class="completePill" data-goalcomplete="'+i+'">'+esc(t('Mark Complete'))+'</button>':'')+
+          '<button class="removeX" data-goalremove="'+i+'" aria-label="'+esc(t('Remove goal'))+'">'+
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>'+
         '</div></div>';
     });
-    h+='<button class="btn ghost" id="editGoals" style="margin-top:12px">'+esc(t('Edit goals'))+'</button>';
-    /* Only offered once there is a figure worth showing. */
-    if(pct!==null) h+='<button class="linkbtn" id="shareWeek">'+esc(t('Share my week'))+'</button>';
+  } else {
+    h+='<p class="sub" style="margin:4px 0 10px">'+
+       esc(t('No goals set for this week yet. Three is the whole point — pick the three that matter.'))+'</p>';
   }
-  h+='</div>';
-  h+=pastGoalsHtml(wk);
-  return h;
-}
 
-function pastGoalsHtml(wk){
-  var past=S.goals.filter(function(g){ return Number(g.week)!==Number(wk) && g.items.some(function(i){return i.text;}); });
-  if(!past.length) return '';
-  var hit=past.filter(function(g){ return g.pct!==null; });
-  var avg=hit.length ? Math.round(hit.reduce(function(a,g){return a+g.pct;},0)/hit.length) : null;
-  var h='<div class="card"><div class="row" style="border:0;padding-top:0"><span class="rowName">Previous weeks'+
-    '<div class="pmeta">'+past.length+' week'+(past.length===1?'':'s')+' tracked</div></span>'+
-    '<span class="pctBig">'+(avg===null?'—':avg+'%')+'</span></div>';
-  past.slice(0,6).forEach(function(g){
-    var each=g.items.filter(function(i){return i.text;}).map(function(i){ return goalItemPct(i)+'%'; }).join(' · ');
-    h+='<div class="row"><span class="rowName">Week '+g.week+'<div class="pmeta">'+esc(each)+'</div></span>'+
-      '<span class="pctSm">'+(g.pct===null?'—':g.pct+'%')+'</span></div>';
-  });
-  return h+'</div>';
+  if(written.length && rec && rec.pct!==null){
+    h+='<button class="linkbtn" id="shareWeek">'+esc(t('Share my week'))+'</button>';
+  }
+
+  if(written.length<3){
+    h+='<div class="addGoalRow">'+
+      '<input type="text" class="addGoalInput" id="newGoalText" maxlength="200" placeholder="'+esc(t('Add a goal for this week…'))+'">'+
+      '<button class="addGoalBtn" id="addGoalBtn" aria-label="'+esc(t('Add goal'))+'">'+
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>'+
+    '</div>';
+  }
+
+  h+='</div>';
+  return h;
 }
 
 /* --- your ministry's KPIs, editable without leaving this page --- */
@@ -3467,45 +3493,27 @@ function bindHome(){
   });
 
   // --- goals ---
-  var eg=document.getElementById('editGoals');
-  if(eg) eg.onclick=function(){
-    var rec=goalsForWeek(thisWeek());
-    var items=(rec&&rec.items)?rec.items.slice():[];
-    while(items.length<3) items.push({text:'',pct:0});
-    S.goalDraft=items; render();
-  };
-  var cg=document.getElementById('cancelGoals');
-  if(cg) cg.onclick=function(){ S.goalDraft=null; render(); };
-  document.querySelectorAll('[data-goaltext]').forEach(function(inp){
-    inp.oninput=function(){
-      var i=Number(inp.getAttribute('data-goaltext'));
-      if(!S.goalDraft) return;
-      S.goalDraft[i]=S.goalDraft[i]||{text:'',pct:0};
-      S.goalDraft[i].text=inp.value;
-    };
-  });
-  document.querySelectorAll('[data-goalmetric]').forEach(function(sel){
-    sel.onchange=function(){
-      var i=Number(sel.getAttribute('data-goalmetric'));
-      if(!S.goalDraft) return;
-      S.goalDraft[i]=S.goalDraft[i]||{text:'',pct:0};
-      S.goalDraft[i].metricKey=sel.value;
-    };
-  });
+  var gpw=document.getElementById('goalsPrevWeek');
+  if(gpw) gpw.onclick=function(){ if(goalsViewWeek()<=1) return; gpTap(); S.goalsWeek=goalsViewWeek()-1; render(); };
+  var gnw=document.getElementById('goalsNextWeek');
+  if(gnw) gnw.onclick=function(){ if(goalsViewWeek()>=52) return; gpTap(); S.goalsWeek=goalsViewWeek()+1; render(); };
+  var gjc=document.getElementById('goalsJumpCurrent');
+  if(gjc) gjc.onclick=function(){ gpTap(); S.goalsWeek=null; render(); };
   document.querySelectorAll('[data-theme-set]').forEach(function(b){
     b.onclick=function(){ gpTap(); applyTheme(b.getAttribute('data-theme-set')); render(); };
   });
   var sw=document.getElementById('shareWeek');
   if(sw) sw.onclick=function(){
-    var rec=goalsForWeek(thisWeek());
+    var wk=goalsViewWeek();
+    var rec=goalsForWeek(wk);
     if(!rec || rec.pct===null) return;
     gpTap();
     sw.disabled=true;
     gpShareCard({
       pct: rec.pct,
-      label: t('WEEK')+' '+thisWeek(),
+      label: t('WEEK')+' '+wk,
       sub: rec.items.filter(function(i){return i.text;}).length+' '+t('goals'),
-      file: 'gp-week-'+thisWeek()
+      file: 'gp-week-'+wk
     }).then(function(how){
       sw.disabled=false;
       /* Say what happened rather than claiming success: a dismissed share sheet
@@ -3515,48 +3523,87 @@ function bindHome(){
       else if(how==='opened') showMsg(t('Card opened — press and hold to save it.'));
     });
   };
-  var sg=document.getElementById('saveGoals');
-  if(sg) sg.onclick=function(){
+  var agb=document.getElementById('addGoalBtn');
+  if(agb) agb.onclick=function(){
     if(S.busy) return;
-    var items=(S.goalDraft||[]).map(function(g){
-      // Carry the percentage through: rewording a goal is not undoing the work.
-      return {text:(g.text||'').trim(), pct:goalItemPct(g), metricKey:g.metricKey||''};
-    });
-    if(!items.some(function(g){return g.text;})){ showMsg('Write at least one goal'); return; }
-    S.busy=true; sg.disabled=true; sg.textContent='…';
-    run('saveGoals',[S.auth.user,S.auth.pin,thisWeek(),items],function(d){
+    var inp=document.getElementById('newGoalText');
+    var text=(inp&&inp.value||'').trim();
+    if(!text) return;
+    var wk=goalsViewWeek();
+    var rec=goalsForWeek(wk);
+    var written=(rec&&rec.items)?rec.items.filter(function(i){return i.text;}).slice():[];
+    if(written.length>=3) return;
+    written.push({text:text, pct:0, metricKey:''});
+    S.busy=true; agb.disabled=true;
+    run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
       S.busy=false;
-      if(d.ok){ S.goals=d.goals||[]; S.goalDraft=null; showMsg('Goals saved'); }
-      else showMsg('Could not save goals');
+      if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
       render();
     });
   };
-  /* Dragging repaints the ring, the track and the word straight away — waiting on
-     a round trip to see your own thumb move feels broken. The save fires once on
-     release, and only render() after it lands, so a re-render never yanks the
-     slider out from under a thumb that is still down. */
+  document.querySelectorAll('[data-goalcomplete]').forEach(function(b){
+    b.onclick=function(){
+      if(S.busy) return;
+      gpTap();
+      var wk=goalsViewWeek();
+      var rec=goalsForWeek(wk);
+      if(!rec) return;
+      var i=Number(b.getAttribute('data-goalcomplete'));
+      var written=rec.items.filter(function(x){ return x.text; });
+      if(!written[i]) return;
+      written[i].pct=100;
+      S.busy=true;
+      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
+        S.busy=false;
+        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
+        render();
+      });
+    };
+  });
+  document.querySelectorAll('[data-goalremove]').forEach(function(b){
+    b.onclick=function(){
+      if(S.busy) return;
+      gpTap();
+      var wk=goalsViewWeek();
+      var rec=goalsForWeek(wk);
+      if(!rec) return;
+      var i=Number(b.getAttribute('data-goalremove'));
+      var written=rec.items.filter(function(x){ return x.text; });
+      if(!written[i]) return;
+      written.splice(i,1);
+      S.busy=true;
+      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
+        S.busy=false;
+        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
+        render();
+      });
+    };
+  });
+  /* Dragging repaints the track and the label straight away — waiting on a
+     round trip to see your own thumb move feels broken. The save fires once
+     on release, and only render() after it lands, so a re-render never yanks
+     the slider out from under a thumb that is still down. */
   document.querySelectorAll('[data-goalpct]').forEach(function(sl){
-    var row=sl.closest('.goalRow');
-    var ring=row&&row.querySelector('.gRing');
-    var word=row&&row.querySelector('[data-goalword]');
+    var row=sl.closest('.wgRow');
+    var pctLabel=row&&row.querySelector('.wgPct');
     function paint(){
       var v=Number(sl.value)||0;
-      sl.setAttribute('style', ringVars(v));
-      if(ring){ ring.setAttribute('style', ringVars(v)); var sp=ring.querySelector('span'); if(sp) sp.textContent=v; }
-      if(word) word.textContent=pctWord(v);
+      sl.setAttribute('style', 'background:linear-gradient(to right, '+pctColor(v)+' '+v+'%, var(--surface2) '+v+'%)');
+      if(pctLabel){ pctLabel.style.color=pctColor(v); pctLabel.textContent=v+'% · '+pctWord(v); }
       if(row) row.classList.toggle('done', v>=100);
     }
     sl.oninput=function(){ paint(); gpTap(4); };
     sl.onchange=function(){
       paint();
-      var rec=goalsForWeek(thisWeek());
+      var wk=goalsViewWeek();
+      var rec=goalsForWeek(wk);
       if(!rec) return;
       var i=Number(sl.getAttribute('data-goalpct'));
       var written=rec.items.filter(function(x){ return x.text; });
       if(!written[i]) return;
       written[i].pct=Number(sl.value)||0;
-      run('saveGoals',[S.auth.user,S.auth.pin,thisWeek(),written],function(d){
-        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn\u2019t save \u2014 try again.'));
+      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
+        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
         render();
       });
     };
@@ -3658,7 +3705,7 @@ function bind(){
   renderMenu();
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
-    b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; S.goalDraft=null; S.tripForm=false; render(); };
+    b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; S.tripForm=false; render(); };
   });
 
   /* Every figure on Base opens its own breakdown, from the same sheet the

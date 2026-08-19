@@ -547,3 +547,33 @@ mentee's full page.
 | Open their database | បើកទិន្នន័យរបស់គាត់ |
 | You're not mentoring anyone yet. | អ្នកមិនទាន់កំពុងណែនាំនរណាម្នាក់នៅឡើយទេ។ |
 | No mentor set yet. | មិនទាន់បានកំណត់អ្នកណែនាំនៅឡើយទេ។ |
+
+## 8. Weekly Goals — mockup layout (week nav, Last/This week cards, add/remove)
+
+Weekly Goals was rebuilt to match the mockup: a week-navigation card (prev
+arrow / week pill with a "Current Week" tag / next arrow), a read-only
+"Last week" card, and a "This week" card where each goal has a slider, a
+"Mark Complete" button, and a remove button, plus an input to add a new goal
+(up to three, matching the existing three-goal limit).
+
+| English | ខ្មែរ |
+|---|---|
+| Previous week | សប្តាហ៍មុន |
+| Next week | សប្តាហ៍ក្រោយ |
+| Current Week | សប្តាហ៍បច្ចុប្បន្ន |
+| Week {wk} | សប្តាហ៍ {wk} |
+| Review last week, plan this week. | ពិនិត្យសប្តាហ៍មុន ហើយរៀបចំផែនការសប្តាហ៍នេះ។ |
+| Jump back to this week | ត្រឡប់ទៅសប្តាហ៍នេះវិញ |
+| Last week | សប្តាហ៍មុន |
+| You didn't set goals last week. | អ្នកមិនបានកំណត់គោលដៅសម្រាប់សប្តាហ៍មុនទេ។ |
+| Mark Complete | សម្គាល់ថារួចរាល់ |
+| Remove goal | ដកគោលដៅចេញ |
+| No goals set for this week yet. Three is the whole point — pick the three that matter. | មិនទាន់មានគោលដៅសម្រាប់សប្តាហ៍នេះនៅឡើយទេ។ បីគឺជាចំណុចសំខាន់ — សូមជ្រើសរើសបីដែលសំខាន់បំផុត។ |
+| Add a goal for this week… | បន្ថែមគោលដៅសម្រាប់សប្តាហ៍នេះ… |
+| Add goal | បន្ថែមគោលដៅ |
+
+The old "Edit goals" flow (three always-shown text fields, a metric picker,
+Save/Cancel) is gone — goals are added and removed one at a time now,
+matching the mockup, so `"Edit goals"` and `"Set this week's goals"` are no
+longer used anywhere in the code but stay in the dictionary as harmless
+leftovers.
