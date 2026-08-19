@@ -54,7 +54,12 @@ const errors = [];
 async function newPage() {
   const page = await browser.newPage({ viewport: { width: 430, height: 1000 }, deviceScaleFactor: 2 });
   page.on('pageerror', err => errors.push('PAGEERROR ' + err));
-  page.on('console', m => { if (m.type() === 'error' && !/ERR_CONNECTION_RESET|fonts\.googleapis/.test(m.text())) errors.push('console: ' + m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/ERR_CONNECTION_RESET|ERR_FAILED|fonts\.googleapis/.test(m.text())) errors.push('console: ' + m.text()); });
+  // Every other browser test in this suite blocks the real Google Fonts request
+  // rather than let it hit the network — this one didn't, so whatever error
+  // code that request happens to fail with in a given environment (a reset here,
+  // a cert error there) could slip past the console filter above.
+  await page.route('**fonts.g**', route => route.abort());
   await page.route('**/.netlify/functions/api', route => {
     const body = JSON.parse(route.request().postData() || '{}');
     let out = DATA;
