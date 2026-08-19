@@ -151,6 +151,12 @@ await page.goto('http://localhost:4401/teams.html', { waitUntil: 'load' });
 await page.waitForSelector('.hero', { timeout: 15000 });
 await page.waitForTimeout(1200);
 
+// Base's sections collapse into an accordion now (the redesign mockup);
+// force every row open so the rest of this file — which predates the
+// accordion and expects everything on screen at once — still sees it all.
+await page.evaluate(() => { Object.keys(S.baseAcc).forEach(k => { S.baseAcc[k] = true; }); render(); });
+await page.waitForTimeout(500);
+
 console.log('=== BASE TAB ===');
 // 1. profile card is first, above the hero
 const order = await page.evaluate(() => {
@@ -163,8 +169,9 @@ console.log('order:            ' + order);
 console.log('profile shows:    ' + await page.$eval('.baseMe', el => el.innerText.replace(/\n+/g, ' | ')));
 console.log('avatar present:   ' + await page.evaluate(() => !!document.querySelector('.baseMe .avatar')));
 
-// 2. every dashboard section present
-const sections = await page.$$eval('#main h3', els => els.map(e => e.textContent.trim()));
+// 2. every dashboard section present — Base's headings are accordion titles
+// now, not <h3>s (all forced open above, so every one of them is present)
+const sections = await page.$$eval('#main .accTitle', els => els.map(e => e.textContent.trim()));
 console.log('sections (' + sections.length + '):\n  ' + sections.join('\n  '));
 
 // 3. compare against the dashboard's own section list
@@ -177,8 +184,12 @@ console.log('\n=== DASHBOARD sections (' + dashSections.length + ') ===\n  ' + d
 const strip = s => s.replace(/^[^\w]*/, '').replace(/Q\d /, '');
 /* OKRs are deliberately NOT on Base — they live on Me (your own) and on a
    teammate's page (theirs), because an objective belongs to a person's job, not
-   to the base summary. Everything else must match, so real drift still fails. */
-const EXPECTED_OFF_BASE = ['OKRs'];
+   to the base summary. "Base health" is on Base too, just renamed to "Base
+   Leadership" there — the accordion added a second, unrelated "Base Health"
+   row (everyone's own wellbeing check-in, not the department leaders' KPIs),
+   so the old name was freed up to avoid two rows reading the same on screen.
+   Everything else must match, so real drift still fails. */
+const EXPECTED_OFF_BASE = ['OKRs', 'Base health'];
 const missing = dashSections.map(strip)
   .filter(d => !sections.map(strip).includes(d))
   .filter(d => !EXPECTED_OFF_BASE.includes(d));

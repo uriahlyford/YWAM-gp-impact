@@ -160,6 +160,12 @@ for (const [file, wait, label] of [
   ['teams.html', 'nav.bottom button', 'Base'],
 ]) {
   const { ctx, p } = await open(file, wait, false);
+  if (file === 'teams.html') {
+    // Base's sections collapse into an accordion now; open every row so its
+    // figures are on screen to compare against the dashboard's, same as before.
+    await p.evaluate(() => { Object.keys(S.baseAcc).forEach(k => { S.baseAcc[k] = true; }); render(); });
+    await p.waitForTimeout(500);
+  }
   const r = await p.evaluate(`(function(){
     var out={ drillable:[], closed:[] };
     document.querySelectorAll('[data-drill-metric]').forEach(function(el){

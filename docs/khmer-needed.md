@@ -470,3 +470,42 @@ specific week.
 | View | ទិដ្ឋភាព |
 | Year | ឆ្នាំ |
 | Check-ins logged | ការរាយការណ៍ដែលបានកត់ត្រា |
+
+## 6. Base tab — collapsible sections, and Base Health added there too
+
+Every section on Base below the profile/hero now collapses, matching the
+redesign mockup: a closed row shows one summary line instead of its full
+figures, and "Tap to collapse" is what an open row's summary line says instead.
+Base also gets its own copy of Base Health (the same wellbeing stats already
+on the Health tab), with a row of period chips — This Week, Q1–Q4, Year (YTD)
+— instead of a dropdown, so it fits the accordion's tap-to-browse feel. It's a
+second, independent view of the same data; nothing was removed from the
+Health tab.
+
+The summary lines are whole sentences with the count baked in ({n}, {d}, {s},
+{p}, {f}) rather than English fragments glued together, so a translator gets
+one line to work with and can put the number wherever Khmer sentence order
+wants it — the same reason `gpT()` exists elsewhere in this app.
+
+| English | ខ្មែរ |
+|---|---|
+| Tap to collapse | ចុចដើម្បីបិទ |
+| Base Health | សុខភាពរបស់មូលដ្ឋាន |
+| This Week | សប្តាហ៍នេះ |
+| Year (YTD) | ឆ្នាំ (រហូតដល់បច្ចុប្បន្ន) |
+| Score {n}/10 · {pct}% checked in | ពិន្ទុ {n}/10 · {pct}% បានរាយការណ៍ |
+| Score {n}/10 | ពិន្ទុ {n}/10 |
+| {n} YTD across {d} departments | {n} រហូតដល់បច្ចុប្បន្ន នៅទូទាំង {d} នាយកដ្ឋាន |
+| {s} schools running · {n} enrolled | សាលា {s} កំពុងដំណើរការ · សិស្ស {n} នាក់ចុះឈ្មោះ |
+| {n} teams hosted YTD | ក្រុម {n} ដែលបានទទួលរៀបចំ រហូតដល់បច្ចុប្បន្ន |
+| {n} churches partnered | ក្រុមជំនុំ {n} ដែលបានចាប់ដៃគូ |
+| {n} baptisms YTD | ពិធីជ្រមុជទឹក {n} រហូតដល់បច្ចុប្បន្ន |
+| {p} platforms · {f} followers | វេទិកា {p} · អ្នកតាមដាន {f} នាក់ |
+| Department leaders' own figures | ចំនួនផ្ទាល់ខ្លួនរបស់ប្រធាននាយកដ្ឋាន |
+| Browse any department's own numbers | រកមើលចំនួនផ្ទាល់ខ្លួនរបស់នាយកដ្ឋានណាមួយ |
+
+"Base Leadership" (the accordion row for the department-leader KPIs — Staff
+Debt, One-on-Ones Held, etc. — previously titled "Base health" on this
+screen, renamed here to not collide with the new Base Health row) reuses the
+department name already translated elsewhere in the app, so it isn't
+repeated in this table.

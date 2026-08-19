@@ -297,6 +297,21 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .statNum { font-family:'Koulen',sans-serif; font-size:26px; color:var(--accent); line-height:1.1; }
 .statLabel { font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.3; }
 
+/* ---- Base tab accordion ----
+   From the redesign mockup: every section below the hero collapses, so landing
+   on Base shows what changed (a summary line) rather than every figure the base
+   tracks. accBody is only in the DOM while open — same as the mockup's sc-if —
+   so a closed section costs nothing to render or to read past. */
+.accCard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:14px; }
+.accRow { border-bottom:1px solid var(--border); }
+.accRow:last-child { border-bottom:0; }
+.accHead { width:100%; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:16px; background:none; border:0; cursor:pointer; text-align:left; font-family:inherit; color:var(--ink); }
+.accTitle { font-weight:700; font-size:15px; }
+.accSummary { font-size:12.5px; color:var(--muted); margin-top:2px; }
+.accChevron { flex:0 0 auto; color:var(--faint); transition:transform .22s var(--ease); }
+.accBody { padding:0 16px 14px; }
+.accBody .grid { margin-top:0; }
+
 /* the base hero — same black card and amber figures as the dashboard, because
    it is the dashboard: this page now leads with how the base is doing. */
 .hero { background:var(--headerBg); color:var(--onDark); border-radius:14px; padding:17px 17px 15px; margin-bottom:14px; }
@@ -774,7 +789,9 @@ var S = {
   trips:null, tripRequests:[], tripForm:false, tripDraft:null,
   baseDept:null, okrForm:false, okrEditId:null,
   healthWeek:null, weekForm:null, weekDraftFor:null,
-  healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{}
+  healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{},
+  baseAcc:{salv:true, ld:true, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
+  baseHealthPeriod:'week'
 };
 
 var HABIT_LIBRARY = [
@@ -1149,6 +1166,76 @@ function bquarters(label, valFn, drillFn){
   return h+'</div>';
 }
 
+/* One collapsible row of the Base accordion. `bodyHtml` is only asked for —
+   and only lands in the DOM — while the row is open, matching the mockup's
+   sc-if; a closed row costs nothing but its own head line. */
+var ACC_CHEVRON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+function accRowHtml(id, title, summaryClosed, bodyFn){
+  var open = !!S.baseAcc[id];
+  return '<div class="accRow">'+
+    '<button class="accHead" data-acc="'+id+'">'+
+      '<span><div class="accTitle">'+title+'</div><div class="accSummary">'+
+        (open?esc(t('Tap to collapse')):summaryClosed)+'</div></span>'+
+      '<span class="accChevron" style="transform:rotate('+(open?'180deg':'0deg')+')">'+ACC_CHEVRON+'</span>'+
+    '</button>'+
+    (open ? '<div class="accBody">'+bodyFn()+'</div>' : '')+
+  '</div>';
+}
+
+/* The same Base Health figures the Health tab shows (loneliness, clarity,
+   habits…), reachable from Base too, on its own period — This Week, a
+   quarter, or the whole year — independent of whatever the Health tab's own
+   picker is set to. */
+var BASE_HEALTH_PERIODS = ['week','q1','q2','q3','q4','year'];
+function baseHealthPeriodLabel(id){
+  return id==='week' ? t('This Week') : id==='year' ? t('Year (YTD)') : 'Q'+id.slice(1);
+}
+function baseHealthAccHtml(){
+  var period = S.baseHealthPeriod || 'week';
+  var R = baseR(); // Year (YTD) is a chip on the year already loaded — no year picker here, unlike the Health tab's
+  var ids = [S.me.campus];
+  var wk = thisWeek();
+  var rows, score;
+  if(period==='year'){
+    rows = R.surveyRows(ids); score = R.healthScore(ids);
+  } else if(period==='week'){
+    rows = R.surveyRows(ids, wk); score = R.healthScore(ids, wk);
+  } else {
+    var q = Number(period.slice(1))-1;
+    rows = R.surveyRows(ids, undefined, q); score = R.healthScore(ids, undefined, q);
+  }
+  var cr = (period==='week') ? R.checkinRate(ids, wk) : null;
+  var summary = score===null ? t('No check-ins yet.') :
+    (cr && cr.total) ? gpT('Score {n}/10 · {pct}% checked in', {n:score.toFixed(1), pct:gpCheckinPct(cr.n,cr.total)})
+      : gpT('Score {n}/10', {n:score.toFixed(1)});
+  return accRowHtml('health', '🏠 '+esc(t('Base Health')), summary, function(){
+    var b = '<div class="deptChips">'+BASE_HEALTH_PERIODS.map(function(id){
+      return '<button class="deptChip'+(period===id?' on':'')+'" data-baseHealthPeriod="'+id+'">'+esc(baseHealthPeriodLabel(id))+'</button>';
+    }).join('')+'</div>';
+    [['lonely','Loneliness (avg, lower is better)', false],
+     ['clarity','Clarity (avg)', true],
+     ['growth','Personal growth (avg)', true],
+     ['langHours','Language study (avg hrs)', true],
+     ['minHours','Community ministry (avg hrs)', true]
+    ].forEach(function(q2){
+      var v = rows.length ? R.avg(rows, q2[0]) : null;
+      var suffix = (q2[0]==='langHours'||q2[0]==='minHours') ? '' : '/10';
+      b+='<div class="row"><span class="rowName">'+esc(t(q2[1]))+'</span>'+
+        '<span class="rowVal">'+(v===null?'—':v.toFixed(1)+suffix)+'</span></div>';
+    });
+    [['sharedFaith','Shared their faith', true],['sabbath','Took a sabbath', true],
+     ['porn','Looked at porn', false],['oneOnOne','Had a one-on-one', true],
+     ['exercise','Exercised 3+ days', true],['quietTime','Regular quiet time', true],
+     ['debt','Have staff debt', false]
+    ].forEach(function(q2){
+      var p = rows.length ? R.pct(rows, q2[0]) : null;
+      b+='<div class="row"><span class="rowName">'+esc(t(q2[1]))+'</span>'+
+        '<span class="rowVal">'+(p===null?'—':p+'%')+'</span></div>';
+    });
+    return b+'<p class="hint">🔒 '+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
+  });
+}
+
 function baseHtml(){
   var wk=thisWeek();
   var ids=[S.me.campus];
@@ -1208,125 +1295,158 @@ function baseHtml(){
   }
   h+='</div></div></div>';
 
-  /* --- where this person sits in it: their department, against the others --- */
+  /* --- everything else, one collapsible accordion (the redesign mockup's
+     Base tab): landing here shows what changed, not every figure the base
+     tracks. Summaries are computed either way — they're what a closed row
+     shows — only each row's full body is built lazily, on open. */
   var bd=R.salvByDept(ids);
   var myDept=S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
-  h+='<h3>🙌 '+esc(t('Salvations by department'))+'</h3><div class="card">';
-  Object.keys(bd).forEach(function(d){
-    var isMine=(d===myDept);
-    h+='<div class="row drillable"'+gpDrillAttrs('Salvations', ids, d)+'>'+
-       '<span class="rowName">'+(MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+
-       (isMine?' <span class="chip blue" style="padding:1px 8px;font-size:11px">'+esc(t('yours'))+'</span>':'')+
-       '</span><span class="'+(isMine?'pctSm':'rowVal')+'">'+fmt(bd[d])+'</span></div>';
-  });
-  h+='</div>';
+  h+='<div class="accCard">';
 
-  /* --- leadership development schools --- */
-  h+='<h3>🌱 '+esc(t('Leadership Development schools'))+'</h3><div class="grid">'+
-     bstat('Schools', R.ldSchools(ids))+
-     bstat('Students Enrolled', R.ldStudents(ids), null, '', gpDrillAttrs('Students Enrolled', ids, LD))+
-     bstat('Students Graduated', R.ldGraduates(ids), null,
-       R.trendFor(function(w){return R.ministryRollupWeek(ids, LD, LD_SCHOOL_MINISTRIES, 'Students Graduated', w);}, 'Students Graduated'),
-       gpDrillAttrs('Students Graduated', ids, LD))+
-     bstat('Potential Staff', R.ministryRollup(ids, LD, LD_SCHOOL_MINISTRIES, 'Potential Staff'), null, '',
-       gpDrillAttrs('Potential Staff', ids, LD))+
-     '</div>';
-  h+=bquarters('Students Enrolled', function(q){ return R.ldStudents(ids,q); },
-     function(q){ return gpDrillAttrs('Students Enrolled', ids, LD, null, q); });
+  h+=accRowHtml('salv', '🙌 '+esc(t('Salvations by department')),
+    gpT('{n} YTD across {d} departments', {n:fmt(R.headlineFor(ids,'Salvations')), d:Object.keys(bd).length}),
+    function(){
+      var b='<div class="card">';
+      Object.keys(bd).forEach(function(d){
+        var isMine=(d===myDept);
+        b+='<div class="row drillable"'+gpDrillAttrs('Salvations', ids, d)+'>'+
+           '<span class="rowName">'+(MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+
+           (isMine?' <span class="chip blue" style="padding:1px 8px;font-size:11px">'+esc(t('yours'))+'</span>':'')+
+           '</span><span class="'+(isMine?'pctSm':'rowVal')+'">'+fmt(bd[d])+'</span></div>';
+      });
+      return b+'</div>';
+    });
 
-  /* --- community schools --- */
+  h+=accRowHtml('ld', '🌱 '+esc(t('Leadership Development schools')),
+    gpT('{s} schools running · {n} enrolled', {s:fmt(R.ldSchools(ids)), n:fmt(R.ldStudents(ids))}),
+    function(){
+      return '<div class="grid">'+
+        bstat('Schools', R.ldSchools(ids))+
+        bstat('Students Enrolled', R.ldStudents(ids), null, '', gpDrillAttrs('Students Enrolled', ids, LD))+
+        bstat('Students Graduated', R.ldGraduates(ids), null,
+          R.trendFor(function(w){return R.ministryRollupWeek(ids, LD, LD_SCHOOL_MINISTRIES, 'Students Graduated', w);}, 'Students Graduated'),
+          gpDrillAttrs('Students Graduated', ids, LD))+
+        bstat('Potential Staff', R.ministryRollup(ids, LD, LD_SCHOOL_MINISTRIES, 'Potential Staff'), null, '',
+          gpDrillAttrs('Potential Staff', ids, LD))+
+        '</div>'+
+        bquarters('Students Enrolled', function(q){ return R.ldStudents(ids,q); },
+          function(q){ return gpDrillAttrs('Students Enrolled', ids, LD, null, q); });
+    });
+
   /* Three of these open and three do not, and the line between them is whether a
      breakdown would ADD UP to the number above it — see the same note on the
      dashboard. Schools is a count of ministries reporting; Total Volunteer Hours
      is Σ(hours × volunteers). */
-  h+='<h3>📚 '+esc(t('Community schools'))+'</h3><div class="grid">'+
-     bstat('Schools', R.communitySchools(ids))+
-     bstat('Students Enrolled', R.communityStudents(ids), null, '',
-       gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
-         CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
-     bstat('Students in Discipleship', R.communityDiscipled(ids), null, '',
-       gpDrillGroupAttrs('Students in Discipleship', ids,
-         CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
-     bstat('Students Supported Financially',
-       R.ministryRollup(ids, CS, CS_SCHOOL_MINISTRIES, 'Students Supported Financially'), null, '',
-       gpDrillAttrs('Students Supported Financially', ids, CS))+
-     '</div>';
-  h+=bquarters('Students Enrolled', function(q){ return R.communityStudents(ids,q); },
-    function(q){ return gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
-      CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools'), q); });
+  h+=accRowHtml('cs', '📚 '+esc(t('Community schools')),
+    gpT('{s} schools · {n} enrolled', {s:fmt(R.communitySchools(ids)), n:fmt(R.communityStudents(ids))}),
+    function(){
+      return '<div class="grid">'+
+        bstat('Schools', R.communitySchools(ids))+
+        bstat('Students Enrolled', R.communityStudents(ids), null, '',
+          gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
+            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
+        bstat('Students in Discipleship', R.communityDiscipled(ids), null, '',
+          gpDrillGroupAttrs('Students in Discipleship', ids,
+            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools')))+
+        bstat('Students Supported Financially',
+          R.ministryRollup(ids, CS, CS_SCHOOL_MINISTRIES, 'Students Supported Financially'), null, '',
+          gpDrillAttrs('Students Supported Financially', ids, CS))+
+        '</div>'+
+        bquarters('Students Enrolled', function(q){ return R.communityStudents(ids,q); },
+          function(q){ return gpDrillGroupAttrs(['Students Enrolled','Youth Enrolled'], ids,
+            CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community schools'), q); });
+    });
 
-  /* --- outreach teams --- */
-  h+='<h3>🙌 '+esc(t('Outreach teams'))+'</h3><div class="grid">'+
-     bstat('Teams Hosted', R.outreachRollup(ids,'Teams Hosted'), null,
-       R.trendFor(function(w){return R.ministryRollupWeek(ids, CS, ['Outreach Teams'], 'Teams Hosted', w);}, 'Teams Hosted'),
-       gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams'))+
-     bstat('Volunteers Mobilized', R.outreachRollup(ids,'Volunteers Mobilized'), null, '',
-       gpDrillAttrs('Volunteers Mobilized', ids, CS, 'Outreach Teams'))+
-     bstat('Total Volunteer Hours', R.volunteerHours(ids))+
-     bstat('People Served', R.headlineFor(ids,'People Served'), null,
-       R.trendFor(function(w){return R.metricWeekSum(ids,'People Served',w);}, 'People Served'),
-       gpDrillAttrs('People Served', ids))+
-     bstat('Salvations', R.outreachRollup(ids,'Salvations'), null, '',
-       gpDrillAttrs('Salvations', ids, CS, 'Outreach Teams'))+
-     bstat('Baptisms', R.outreachRollup(ids,'Baptisms'), null, '',
-       gpDrillAttrs('Baptisms', ids, CS, 'Outreach Teams'))+
-     bstat('People Connected to Local Church', R.outreachRollup(ids,'People Connected to Local Church'), null, '',
-       gpDrillAttrs('People Connected to Local Church', ids, CS, 'Outreach Teams'))+
-     '</div>';
-  h+=bquarters('Teams Hosted', function(q){ return R.outreachRollup(ids,'Teams Hosted',q); },
-     function(q){ return gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams', q); });
+  h+=accRowHtml('out', '🙌 '+esc(t('Outreach teams')),
+    gpT('{n} teams hosted YTD', {n:fmt(R.outreachRollup(ids,'Teams Hosted'))}),
+    function(){
+      return '<div class="grid">'+
+        bstat('Teams Hosted', R.outreachRollup(ids,'Teams Hosted'), null,
+          R.trendFor(function(w){return R.ministryRollupWeek(ids, CS, ['Outreach Teams'], 'Teams Hosted', w);}, 'Teams Hosted'),
+          gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams'))+
+        bstat('Volunteers Mobilized', R.outreachRollup(ids,'Volunteers Mobilized'), null, '',
+          gpDrillAttrs('Volunteers Mobilized', ids, CS, 'Outreach Teams'))+
+        bstat('Total Volunteer Hours', R.volunteerHours(ids))+
+        bstat('People Served', R.headlineFor(ids,'People Served'), null,
+          R.trendFor(function(w){return R.metricWeekSum(ids,'People Served',w);}, 'People Served'),
+          gpDrillAttrs('People Served', ids))+
+        bstat('Salvations', R.outreachRollup(ids,'Salvations'), null, '',
+          gpDrillAttrs('Salvations', ids, CS, 'Outreach Teams'))+
+        bstat('Baptisms', R.outreachRollup(ids,'Baptisms'), null, '',
+          gpDrillAttrs('Baptisms', ids, CS, 'Outreach Teams'))+
+        bstat('People Connected to Local Church', R.outreachRollup(ids,'People Connected to Local Church'), null, '',
+          gpDrillAttrs('People Connected to Local Church', ids, CS, 'Outreach Teams'))+
+        '</div>'+
+        bquarters('Teams Hosted', function(q){ return R.outreachRollup(ids,'Teams Hosted',q); },
+          function(q){ return gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams', q); });
+    });
 
-  /* --- churches --- */
-  h+='<h3>⛪ '+esc(t('Local church partnerships'))+'</h3><div class="grid">'+
-     bstat('Local Churches Partnered', R.partnerChurches(ids), null, '',
-       gpDrillGroupAttrs(['Partner Churches Supported','Churches Being Led'], ids,
-         ['Church Partnerships'], t('Local church partnerships')))+
-     bstat('Partner Churches Supported',
-       R.ministryRollup(ids, LD, ['Church Partnerships'], 'Partner Churches Supported'), null, '',
-       gpDrillAttrs('Partner Churches Supported', ids, LD, 'Church Partnerships'))+
-     bstat('Churches Being Led',
-       R.ministryRollup(ids, LD, ['Church Partnerships'], 'Churches Being Led'), null, '',
-       gpDrillAttrs('Churches Being Led', ids, LD, 'Church Partnerships'))+
-     bstat('Combined Congregation Attendance',
-       R.ministryRollup(ids, LD, ['Church Partnerships'], 'Combined Congregation Attendance'), null, '',
-       gpDrillAttrs('Combined Congregation Attendance', ids, LD, 'Church Partnerships'))+
-     bstat('People Connected to Local Church', R.headlineFor(ids,'People Connected to Local Church'), null,
-       R.trendFor(function(w){return R.metricWeekSum(ids,'People Connected to Local Church',w);}, 'People Connected to Local Church'),
-       gpDrillAttrs('People Connected to Local Church', ids))+
-     bstat('Spoke at Churches', R.blAggAll(ids,'Spoke at Churches'))+
-     '</div>';
+  h+=accRowHtml('church', '⛪ '+esc(t('Local church partnerships')),
+    gpT('{n} churches partnered', {n:fmt(R.partnerChurches(ids))}),
+    function(){
+      return '<div class="grid">'+
+        bstat('Local Churches Partnered', R.partnerChurches(ids), null, '',
+          gpDrillGroupAttrs(['Partner Churches Supported','Churches Being Led'], ids,
+            ['Church Partnerships'], t('Local church partnerships')))+
+        bstat('Partner Churches Supported',
+          R.ministryRollup(ids, LD, ['Church Partnerships'], 'Partner Churches Supported'), null, '',
+          gpDrillAttrs('Partner Churches Supported', ids, LD, 'Church Partnerships'))+
+        bstat('Churches Being Led',
+          R.ministryRollup(ids, LD, ['Church Partnerships'], 'Churches Being Led'), null, '',
+          gpDrillAttrs('Churches Being Led', ids, LD, 'Church Partnerships'))+
+        bstat('Combined Congregation Attendance',
+          R.ministryRollup(ids, LD, ['Church Partnerships'], 'Combined Congregation Attendance'), null, '',
+          gpDrillAttrs('Combined Congregation Attendance', ids, LD, 'Church Partnerships'))+
+        bstat('People Connected to Local Church', R.headlineFor(ids,'People Connected to Local Church'), null,
+          R.trendFor(function(w){return R.metricWeekSum(ids,'People Connected to Local Church',w);}, 'People Connected to Local Church'),
+          gpDrillAttrs('People Connected to Local Church', ids))+
+        bstat('Spoke at Churches', R.blAggAll(ids,'Spoke at Churches'))+
+        '</div>';
+    });
 
-  /* --- the gospel totals, every ministry pooled --- */
-  h+='<h3>🕊️ '+esc(t('Across every ministry'))+'</h3><div class="grid">';
-  ['Baptisms','People Heard the Gospel','Healings'].forEach(function(m){
-    h+=bstat(m, R.headlineFor(ids,m), m,
-      R.trendFor(function(w){return R.metricWeekSum(ids,m,w);}, m),
-      gpDrillAttrs(m, ids));
-  });
-  h+='</div>';
+  h+=accRowHtml('gospel', '🕊️ '+esc(t('Across every ministry')),
+    gpT('{n} baptisms YTD', {n:fmt(R.headlineFor(ids,'Baptisms'))}),
+    function(){
+      var b='<div class="grid">';
+      ['Baptisms','People Heard the Gospel','Healings'].forEach(function(m){
+        b+=bstat(m, R.headlineFor(ids,m), m,
+          R.trendFor(function(w){return R.metricWeekSum(ids,m,w);}, m),
+          gpDrillAttrs(m, ids));
+      });
+      return b+'</div>';
+    });
 
-  /* --- media --- */
   var ms=R.mediaSummary(ids);
-  h+='<h3>📱 '+esc(t('Media reach'))+'</h3><div class="grid">'+
-     bstat('Platforms', ms?ms.platforms:null)+
-     bstat('Total Pages', ms?ms.pages:null)+
-     bstat('Total Followers', ms?ms.followers:null)+
-     bstat('Views YTD', ms?ms.views:null)+
-     '</div>';
+  h+=accRowHtml('media', '📱 '+esc(t('Media reach')),
+    ms ? gpT('{p} platforms · {f} followers', {p:fmt(ms.platforms), f:fmt(ms.followers)}) : t('Nothing logged yet'),
+    function(){
+      return '<div class="grid">'+
+        bstat('Platforms', ms?ms.platforms:null)+
+        bstat('Total Pages', ms?ms.pages:null)+
+        bstat('Total Followers', ms?ms.followers:null)+
+        bstat('Views YTD', ms?ms.views:null)+
+        '</div>';
+    });
 
-  /* --- base health: the department leaders' own figures ---
+  /* --- base leadership: the department leaders' own figures ---
      These come from Base Leadership, where each department reports on how it is
-     being led rather than what it produced. The two money metrics are stripped
-     server-side for anyone without the leadership code, so they simply read as
-     "no figure" here. */
-  h+='<h3>🏠 '+esc(t('Base health'))+'</h3><div class="grid">';
-  ['Staff Debt ($)','One-on-Ones Held','Partner Connections','Spoke at YWAM Bases',
-   'Hours Sharing the Gospel','Base Vision (1-10)','Communications (1-10)',
-   'Partner Relationships (1-10)'].forEach(function(m){
-    h+='<div class="stat"><div class="statNum">'+fmt(R.blAgg(S.me.campus,m),m)+'</div>'+
-       '<div class="statLabel">'+esc(t(m).replace(' ($)','').replace(' (1-10)',''))+'</div></div>';
-  });
-  h+='</div>';
+     being led rather than what it produced — distinct from the Base Health row
+     below, which is everyone's own weekly wellbeing check-in. The two money
+     metrics are stripped server-side for anyone without the leadership code, so
+     they simply read as "no figure" here. */
+  h+=accRowHtml('baseKpi', '🏠 '+esc(t('Base Leadership')), t('Department leaders’ own figures'),
+    function(){
+      var b='<div class="grid">';
+      ['Staff Debt ($)','One-on-Ones Held','Partner Connections','Spoke at YWAM Bases',
+       'Hours Sharing the Gospel','Base Vision (1-10)','Communications (1-10)',
+       'Partner Relationships (1-10)'].forEach(function(m){
+        b+='<div class="stat"><div class="statNum">'+fmt(R.blAgg(S.me.campus,m),m)+'</div>'+
+           '<div class="statLabel">'+esc(t(m).replace(' ($)','').replace(' (1-10)',''))+'</div></div>';
+      });
+      return b+'</div>';
+    });
+
+  h+=baseHealthAccHtml();
 
   /* --- every metric, by department ---
      The tiles above are the roll-ups; this is the raw ledger behind them, one
@@ -1334,30 +1454,35 @@ function baseHtml(){
   var deps=getDepartments(S.me.campus);
   if(!S.baseDept || !deps[S.baseDept]) S.baseDept = (deps[myDept] ? myDept : Object.keys(deps)[0]);
   var entries=(S.base.entries||{})[S.me.campus]||{};
-  h+='<h3>🗂️ '+esc(t('Department dashboards'))+'</h3>';
-  h+='<div class="pickerRow"><label class="pick"><span>'+esc(t('Department'))+'</span>'+
-     '<select id="baseDeptSel">'+Object.keys(deps).map(function(d){
-       return '<option value="'+esc(d)+'"'+(S.baseDept===d?' selected':'')+'>'+
-         (MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+'</option>';
-     }).join('')+'</select></label></div>';
-  Object.keys(deps[S.baseDept]).forEach(function(min){
-    h+='<div class="card"><div class="row" style="border-bottom:2px solid var(--ink)">'+
-       '<span class="rowName" style="font-weight:700">'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span><span></span></div>';
-    deps[S.baseDept][min].forEach(function(metric){
-      var mode=modeOf(metric);
-      var mkey=S.baseDept+'|'+min+'|'+metric;
-      var v=aggregate(entries[mkey], mode);
-      var lbl=mode==='latest'?'now':(mode==='avg'?'avg':'YTD');
-      var tr=R.trendFor(function(w){
-        var en=entries[mkey];
-        return (en && en[w]!==undefined && en[w]!==null && !isNaN(Number(en[w]))) ? Number(en[w]) : null;
-      }, metric);
-      h+='<div class="row drillable"'+gpDrillAttrs(metric, ids, S.baseDept, min)+'>'+
-         '<span class="rowName">'+esc(t(metric))+' <span style="color:var(--faint);font-size:11px">'+lbl+'</span></span>'+
-         '<span class="rowVal">'+fmt(v,metric)+tr+'</span></div>';
+  h+=accRowHtml('explorer', '🗂️ '+esc(t('Department dashboards')), t('Browse any department’s own numbers'),
+    function(){
+      var b='<div class="pickerRow"><label class="pick"><span>'+esc(t('Department'))+'</span>'+
+        '<select id="baseDeptSel">'+Object.keys(deps).map(function(d){
+          return '<option value="'+esc(d)+'"'+(S.baseDept===d?' selected':'')+'>'+
+            (MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+'</option>';
+        }).join('')+'</select></label></div>';
+      Object.keys(deps[S.baseDept]).forEach(function(min){
+        b+='<div class="card"><div class="row" style="border-bottom:2px solid var(--ink)">'+
+           '<span class="rowName" style="font-weight:700">'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span><span></span></div>';
+        deps[S.baseDept][min].forEach(function(metric){
+          var mode=modeOf(metric);
+          var mkey=S.baseDept+'|'+min+'|'+metric;
+          var v=aggregate(entries[mkey], mode);
+          var lbl=mode==='latest'?'now':(mode==='avg'?'avg':'YTD');
+          var tr=R.trendFor(function(w){
+            var en=entries[mkey];
+            return (en && en[w]!==undefined && en[w]!==null && !isNaN(Number(en[w]))) ? Number(en[w]) : null;
+          }, metric);
+          b+='<div class="row drillable"'+gpDrillAttrs(metric, ids, S.baseDept, min)+'>'+
+             '<span class="rowName">'+esc(t(metric))+' <span style="color:var(--faint);font-size:11px">'+lbl+'</span></span>'+
+             '<span class="rowVal">'+fmt(v,metric)+tr+'</span></div>';
+        });
+        b+='</div>';
+      });
+      return b;
     });
-    h+='</div>';
-  });
+
+  h+='</div>';
 
   h+='<p class="hint" style="margin-top:14px">'+
      esc(t('Every figure here is built from what each ministry logs each week — including yours.'))+
@@ -3401,6 +3526,12 @@ function bind(){
   celebrateStreak();
   var bds=document.getElementById('baseDeptSel');
   if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
+  document.querySelectorAll('[data-acc]').forEach(function(btn){
+    btn.onclick=function(){ var id=btn.getAttribute('data-acc'); S.baseAcc[id]=!S.baseAcc[id]; render(); };
+  });
+  document.querySelectorAll('[data-baseHealthPeriod]').forEach(function(btn){
+    btn.onclick=function(){ S.baseHealthPeriod=btn.getAttribute('data-baseHealthPeriod'); render(); };
+  });
   var hws=document.getElementById('healthWeekSel');
   if(hws) hws.onchange=function(){
     S.healthWeek=Number(hws.value);
