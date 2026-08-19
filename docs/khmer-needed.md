@@ -577,3 +577,50 @@ Save/Cancel) is gone — goals are added and removed one at a time now,
 matching the mockup, so `"Edit goals"` and `"Set this week's goals"` are no
 longer used anywhere in the code but stay in the dictionary as harmless
 leftovers.
+
+## 9. Leave Request — full screen, matching the mockup
+
+Leave Request is now its own screen (reached from a tappable entry card on
+My Database, like Profile & Settings already was) instead of the old inline
+"Away from campus" card. It adds a Personal Time Off allowance tracker
+(30 work days/year, with Working Outside Siem Reap and Special Condition
+tracked separately and uncapped), a request form with a leave-type picker,
+reason/coverage text fields, and an acknowledgement checkbox, plus an
+"Awaiting Your Approval" section for mentors and a "My Requests" history.
+
+This replaces the old two-kind (work/personal) trip model server-side; a
+trip logged before this shipped still reads correctly (its `kind` maps onto
+the new `type`), it just displays as "Working Outside Siem Reap" for a
+former "work" trip.
+
+| English | ខ្មែរ |
+|---|---|
+| Baked into My GP — nothing to fill out on another site. | បង្កប់នៅក្នុង My GP រួចហើយ — មិនចាំបាច់បំពេញនៅគេហទំព័រផ្សេងទៀតទេ។ |
+| Personal Time Off | ថ្ងៃឈប់សម្រាកផ្ទាល់ខ្លួន |
+| UofN Cambodia allocates a maximum of 6 weeks (30 work days) off per year for vacation, furlough, support raising and home visits. | UofN កម្ពុជា បម្រុងទុកអតិបរមា ៦ សប្តាហ៍ (៣០ ថ្ងៃធ្វើការ) ក្នុងមួយឆ្នាំ សម្រាប់ការឈប់សម្រាក ការត្រឡប់ទៅផ្ទះ ការរៃអង្គាសមូលនិធិ និងការទស្សនាគ្រួសារ។ |
+| / {cap} days used | / {cap} ថ្ងៃបានប្រើ |
+| Working Outside Siem Reap | ធ្វើការនៅក្រៅសៀមរាប |
+| Special Condition | លក្ខខណ្ឌពិសេស |
+| Not capped, tracked separately | មិនកំណត់ដែនកំណត់ទេ តាមដានដោយឡែក |
+| Counts against your 30-day allowance | រាប់ចូលក្នុងកម្រិតកំណត់ ៣០ ថ្ងៃរបស់អ្នក |
+| Awaiting Your Approval | កំពុងរង់ចាំការអនុម័តរបស់អ្នក |
+| Pending | កំពុងរង់ចាំ |
+| Deny | បដិសេធ |
+| {n} work days | {n} ថ្ងៃធ្វើការ |
+| New Request | សំណើថ្មី |
+| Leave Dates | កាលបរិច្ឆេទឈប់សម្រាក |
+| work days requested (Mon–Fri) | ថ្ងៃធ្វើការដែលបានស្នើ (ច័ន្ទ–សុក្រ) |
+| Leave Type | ប្រភេទការឈប់សម្រាក |
+| This request would put you over your 30-day Personal Time Off allowance for the year. | សំណើនេះនឹងធ្វើឱ្យអ្នកលើសកម្រិតកំណត់ ៣០ ថ្ងៃនៃការឈប់សម្រាកផ្ទាល់ខ្លួនប្រចាំឆ្នាំ។ |
+| Why are you requesting this leave? | ហេតុអ្វីបានជាអ្នកស្នើសុំការឈប់សម្រាកនេះ? |
+| Ministry Coverage | អ្នកគ្របដណ្តប់កិច្ចការបម្រើ |
+| Who will cover your ministries while you're away? | នរណានឹងគ្របដណ្តប់កិច្ចការបម្រើរបស់អ្នក ខណៈពេលអ្នកចាកឆ្ងាយ? |
+| In-country leave needs at least 1 week notice · out-of-country leave needs at least 1 month notice. | ការឈប់សម្រាកក្នុងប្រទេសត្រូវការជូនដំណឹងយ៉ាងតិច ១ សប្តាហ៍ · ការឈប់សម្រាកក្រៅប្រទេសត្រូវការជូនដំណឹងយ៉ាងតិច ១ ខែ។ |
+| I understand the 6-week (30-day) allowance for personal time off. | ខ្ញុំយល់ដឹងអំពីកម្រិតកំណត់ ៦ សប្តាហ៍ (៣០ ថ្ងៃ) សម្រាប់ការឈប់សម្រាកផ្ទាល់ខ្លួន។ |
+| Send to {name} for Approval | ផ្ញើទៅ {name} ដើម្បីអនុម័ត |
+| Save this request | រក្សាទុកសំណើនេះ |
+| My Requests | សំណើរបស់ខ្ញុំ |
+| Denied / Approved / Noted | បានបដិសេធ / បានអនុម័ត / បានកត់ត្រា |
+| No requests yet. | មិនទាន់មានសំណើនៅឡើយទេ។ |
+| Pick both dates / Pick a leave type | សូមជ្រើសរើសកាលបរិច្ឆេទទាំងពីរ / សូមជ្រើសរើសប្រភេទការឈប់សម្រាក |
+| Please confirm you understand the allowance. | សូមបញ្ជាក់ថាអ្នកយល់ដឹងអំពីកម្រិតកំណត់នេះ។ |

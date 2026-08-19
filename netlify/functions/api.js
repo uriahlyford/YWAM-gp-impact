@@ -1174,23 +1174,27 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
   return getMyMinistry(username, pin);
 }
 
-/* ==================== away from campus ====================
-   Staff record the days they're off base and what for, and it doubles as the
-   check-in with their mentor: if they have an approved mentor the trip lands as
-   'pending' for that mentor to acknowledge; if they don't, it's simply 'noted'
-   so nobody is blocked from recording their own days by not having a mentor.
+/* ==================== leave request ====================
+   Staff request days off base and what for, and it doubles as the check-in
+   with their mentor: if they have an approved mentor the request lands as
+   'pending' for that mentor to acknowledge; if they don't, it's simply
+   'noted' so nobody is blocked from recording their own days by not having a
+   mentor.
 
-   Two kinds only — work and personal — because that's what the annual total
-   needs to separate. The reason is finer detail for context, not a third
-   category, so adding reasons later never breaks the totals.
+   Three types, matching UofN Cambodia's own leave categories: Personal Time
+   Off is capped at 30 work days a year (checked client-side as a heads-up,
+   not enforced here — a mentor can still approve an over-cap request), while
+   Working Outside Siem Reap and Special Condition are tracked but uncapped.
 
-   Days are whole and inclusive: leaving Friday and back Sunday is 3 days. No
-   half-days; the annual figure is for planning, not payroll. */
-const AWAY_KINDS = ['work', 'personal'];
-const AWAY_REASONS = {
-  work:     ['Outreach', 'Conference or training', 'Ministry travel', 'Base business', 'Other work'],
-  personal: ['Fundraising / home ministry', 'Visiting family', 'Medical', 'Holiday / rest', 'Other personal']
-};
+   Legacy rows written before this shipped only have `kind` ('work'/
+   'personal') — leaveTypeOf_ maps those onto the new types so old data still
+   reads sensibly instead of vanishing.
+
+   Work days are Monday–Friday only, matching how the allowance is actually
+   spent; `days` (whole calendar days, inclusive) is kept alongside for any
+   older row that only has that. */
+const LEAVE_TYPES = ['outside', 'special', 'personal'];
+const PTO_ANNUAL_CAP = 30;
 const MAX_TRIP_DAYS = 365;
 
 async function getTrips_() { return readJSON('trips', []); }
@@ -1200,18 +1204,31 @@ function tripDays_(from, to) {
   const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
   return Math.round((b - a) / 86400000) + 1;
 }
+function workDays_(from, to) {
+  const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
+  let n = 0;
+  for (let d = new Date(a); d <= b; d.setUTCDate(d.getUTCDate() + 1)) {
+    const dow = d.getUTCDay();
+    if (dow !== 0 && dow !== 6) n++;
+  }
+  return n;
+}
+function leaveTypeOf_(r) {
+  if (LEAVE_TYPES.indexOf(r.type) > -1) return r.type;
+  return r.kind === 'personal' ? 'personal' : 'outside';
+}
 
-/* Totals per calendar year, split by kind. Declined trips never count; a trip
-   is attributed to the year it starts in so a New Year crossing lands in one
-   place rather than being split. */
+/* Totals per calendar year, in work days, split by type. Declined requests
+   never count; a request is attributed to the year it starts in so a New
+   Year crossing lands in one place rather than being split. */
 function awayTotals_(trips) {
   const out = {};
   trips.forEach(function (r) {
     if (r.status === 'declined') return;
     const year = String(r.from).slice(0, 4);
-    if (!out[year]) out[year] = { work: 0, personal: 0, trips: 0 };
-    if (AWAY_KINDS.indexOf(r.kind) === -1) return;
-    out[year][r.kind] += Number(r.days) || 0;
+    if (!out[year]) out[year] = { outside: 0, special: 0, personal: 0, trips: 0 };
+    const wd = r.workDays != null ? r.workDays : workDays_(r.from, r.to);
+    out[year][leaveTypeOf_(r)] += wd;
     out[year].trips += 1;
   });
   return out;
@@ -1219,8 +1236,9 @@ function awayTotals_(trips) {
 
 function tripOut_(r) {
   return {
-    id: r.id, from: r.from, to: r.to, days: r.days, kind: r.kind,
-    reason: r.reason || '', where: r.where || '', note: r.note || '',
+    id: r.id, from: r.from, to: r.to, days: r.days,
+    type: leaveTypeOf_(r), workDays: r.workDays != null ? r.workDays : workDays_(r.from, r.to),
+    reason: r.reason || '', coverage: r.coverage || '',
     status: r.status, decidedAt: r.decidedAt || ''
   };
 }
@@ -1231,8 +1249,7 @@ async function getMyTrips(username, pin) {
   const mine = (await getTrips_()).filter(function (r) { return r.staffId === s.id; })
     .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
   return {
-    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine),
-    reasons: AWAY_REASONS,
+    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine), ptoCap: PTO_ANNUAL_CAP,
     hasMentor: !!(s.mentorId && s.mentorStatus === 'approved')
   };
 }
@@ -1245,26 +1262,22 @@ async function saveTrip(username, pin, trip) {
   if (t.to < t.from) return { ok: false, err: 'end_before_start' };
   const days = tripDays_(t.from, t.to);
   if (days < 1 || days > MAX_TRIP_DAYS) return { ok: false, err: 'bad_span' };
-  const kind = AWAY_KINDS.indexOf(t.kind) > -1 ? t.kind : 'work';
-  const reason = (AWAY_REASONS[kind].indexOf(t.reason) > -1) ? t.reason : AWAY_REASONS[kind][0];
+  const type = LEAVE_TYPES.indexOf(t.type) > -1 ? t.type : 'personal';
 
   const rows = await getTrips_();
   const now = new Date().toISOString();
   const mentored = !!(s.mentorId && s.mentorStatus === 'approved');
-  // Editing an existing trip re-opens it for the mentor rather than keeping a
-  // stale approval for dates that have since changed.
-  const existingIdx = t.id ? rows.findIndex(function (r) { return r.id === t.id && r.staffId === s.id; }) : -1;
   const rec = {
-    id: existingIdx > -1 ? rows[existingIdx].id : ('tr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    id: 'tr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     staffId: s.id, campus: s.campus,
-    from: t.from, to: t.to, days: days, kind: kind, reason: reason,
-    where: str_(t.where, 120) || '', note: str_(t.note, 300) || '',
+    from: t.from, to: t.to, days: days, type: type, workDays: workDays_(t.from, t.to),
+    reason: str_(t.reason, 500) || '', coverage: str_(t.coverage, 500) || '',
     mentorId: mentored ? s.mentorId : '',
     status: mentored ? 'pending' : 'noted',
     decidedBy: '', decidedAt: '',
-    created: existingIdx > -1 ? rows[existingIdx].created : now, updated: now
+    created: now, updated: now
   };
-  if (existingIdx > -1) rows[existingIdx] = rec; else rows.push(rec);
+  rows.push(rec);
   await writeJSON('trips', rows);
   return getMyTrips(username, pin);
 }

@@ -78,6 +78,7 @@
   --amberInk:#17150F;      /* text on amber */
   --amberDeep:#96650A;     /* amber as TEXT, so darker than --amber */
   --good:#0A7D3C;
+  --goodInk:#fff;          /* text on a solid --good fill */
   --goodSoft:#E3F6EA;
   --bad:#B3261E;
   --badSoft:#FBE6E6;
@@ -117,6 +118,7 @@
     --amberInk:#17150F;
     --amberDeep:#E9AE3A;
     --good:#4CC98A;
+    --goodInk:#0B0A08;
     --goodSoft:#12301F;
     --bad:#FF7A6B;
     --badSoft:#38191A;
@@ -153,6 +155,7 @@
   --amberInk:#17150F;
   --amberDeep:#E9AE3A;
   --good:#4CC98A;
+  --goodInk:#0B0A08;
   --goodSoft:#12301F;
   --bad:#FF7A6B;
   --badSoft:#38191A;
@@ -430,13 +433,6 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .minLabel { font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted);
   font-weight:700; margin:14px 0 7px; }
 
-/* days away from campus */
-.awaySplit { display:flex; gap:10px; margin:10px 0 4px; }
-.awayHalf { flex:1; border:1px solid var(--accentSoftBorder); background:var(--accentSoft); border-radius:12px; padding:11px 8px; text-align:center; }
-.awayHalf.personal { border-color:var(--bannerBorder); background:var(--banner); }
-.awayHalf .awayN { font-family:'Koulen',sans-serif; font-size:25px; line-height:1.1; color:var(--ink); }
-.awayHalf .awayL { font-size:11px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); font-weight:700; }
-.tripDel { border:0; background:none; color:var(--bad); font-size:14px; cursor:pointer; padding:2px 0 2px 8px; }
 .goalLink { font-size:12px; color:var(--accent); margin-top:5px; }
 
 /* today's habits */
@@ -599,9 +595,9 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .goalCardHead { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
 .goalCardTitle { font-size:14px; font-weight:700; }
 .goalCardDate { font-size:12px; color:var(--muted); }
-.lastGoalRow { font-size:13px; color:var(--muted); padding:6px 0; border-top:1px solid var(--line); }
+.lastGoalRow { font-size:13px; color:var(--muted); padding:6px 0; border-top:1px solid var(--border); }
 .lastGoalRow:first-child { border-top:0; }
-.wgRow { padding:11px 0; border-top:1px solid var(--line); }
+.wgRow { padding:11px 0; border-top:1px solid var(--border); }
 .wgRow:first-child { border-top:0; }
 .wgTop { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px; }
 .wgText { font-size:13.5px; font-weight:600; }
@@ -614,6 +610,48 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); border-radius:999px; padding:11px 15px; font:inherit; font-size:14px; background:var(--bg); color:var(--ink); width:auto; }
 .addGoalBtn { flex:0 0 auto; width:38px; height:38px; border-radius:50%; border:0; background:var(--headerBg); cursor:pointer;
   display:flex; align-items:center; justify-content:center; }
+
+/* Leave Request screen, from the mockup */
+.allowCard { background:var(--headerBg); color:var(--onDark); border-radius:var(--r); padding:16px 18px; margin-bottom:14px; }
+.allowTitle { font-size:12px; color:var(--amber); font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.allowNote { font-size:12px; color:var(--onDarkFaint); margin-top:4px; line-height:1.5; }
+.allowNum { display:flex; align-items:baseline; gap:6px; margin-top:10px; }
+.allowNum b { font-family:'Koulen',sans-serif; font-size:26px; }
+.allowBar { height:8px; background:var(--onDarkBorder); border-radius:99px; overflow:hidden; margin-top:8px; }
+.allowBarFill { height:100%; background:var(--amber); border-radius:99px; }
+.allowMini { display:flex; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px solid var(--onDarkBorder); font-size:12.5px; color:var(--onDarkFaint); }
+.field { margin-bottom:14px; }
+.fieldLabel { display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:6px; }
+.dateRow { display:flex; gap:10px; }
+input[type=date], textarea { width:100%; font:inherit; font-size:14.5px; padding:11px; border-radius:10px; border:1.5px solid var(--border2); background:var(--bg); color:var(--ink); }
+textarea { resize:vertical; min-height:64px; }
+.typeChips { display:flex; flex-direction:column; gap:8px; }
+.typeChip { display:flex; align-items:center; gap:10px; border:1.5px solid var(--border2); border-radius:12px; padding:11px 13px; cursor:pointer; text-align:left; background:var(--bg); font-family:inherit; width:100%; }
+.typeChip.on { border-color:var(--accent); background:var(--accentSoft); }
+.typeDot { flex:0 0 auto; width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border2); }
+.typeChip.on .typeDot { border-color:var(--accent); background:var(--accent); }
+.typeLabel { font-size:13.5px; font-weight:600; }
+.typeSub { font-size:11.5px; color:var(--muted); }
+.workDaysLine { text-align:center; padding:12px; background:var(--surface2); border-radius:12px; font-size:13px; color:var(--muted); margin:2px 0 14px; }
+.workDaysLine b { font-family:'Koulen',sans-serif; font-size:18px; color:var(--ink); }
+.ackRow { display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:var(--muted); line-height:1.5; padding:2px 0 4px; }
+.ackBox { flex:0 0 auto; width:20px; height:20px; border-radius:6px; border:1.5px solid var(--border2); background:var(--bg); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; color:transparent; margin-top:1px; }
+.ackBox.on { background:var(--good); border-color:var(--good); color:var(--goodInk); }
+.noticeNote { font-size:11.5px; color:var(--muted); background:var(--surface2); border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.5; }
+.histRow { padding:11px 0; border-top:1px solid var(--border); }
+.histRow:first-child { border-top:0; }
+.histTop { display:flex; justify-content:space-between; align-items:baseline; }
+.histType { font-size:13px; font-weight:700; }
+.histDates { font-size:12px; color:var(--muted); margin-top:2px; }
+.pill { font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; }
+.pill.pending { background:var(--banner); color:var(--bannerInk); }
+.pill.approved { background:var(--goodSoft); color:var(--good); }
+.pill.denied { background:var(--badSoft); color:var(--bad); }
+.approveRow { display:flex; gap:8px; margin-top:10px; }
+.approveBtn { flex:1; border:0; border-radius:10px; padding:10px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+.approveBtn.yes { background:var(--good); color:var(--goodInk); }
+.approveBtn.no { background:var(--surface2); color:var(--ink); }
 
 /* the profile card that leads the Base tab */
 .baseMe { display:flex; align-items:center; gap:14px; }
@@ -853,7 +891,7 @@ var S = {
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, weekDraft:{},
   habits:null, habitEdit:false, sharedHabits:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
-  trips:null, tripRequests:[], tripForm:false, tripDraft:null,
+  trips:null, tripRequests:[], leaveDraft:null,
   baseDept:null, okrForm:false, okrEditId:null,
   healthWeek:null, weekForm:null, weekDraftFor:null,
   healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{},
@@ -1101,7 +1139,7 @@ function logout(){
   lsDel('gp-staff');
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
-  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
+  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   render();
 }
 
@@ -1167,6 +1205,7 @@ function render(){
   else if(S.view==='health') m.innerHTML=healthHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
+  else if(S.view==='leave') m.innerHTML=leaveHtml();
   else m.innerHTML=profileHtml();
   bind();
 }
@@ -1940,7 +1979,7 @@ function homeHtml(){
   h += mentorshipCardHtml();
   h += weekSummaryHtml(wk);
   h += myProgressHtml();
-  h += awayCardHtml();
+  h += leaveEntryHtml();
 
   // Profile and settings live under My Database now rather than owning a tab of their own.
   h+='<button class="card leaveEntry" id="goProfileFromMe">'+
@@ -2799,66 +2838,137 @@ function weekClear(){
   });
 }
 
-/* --- away from campus ---
-   Doubles as the mentor check-in: submitting a trip is how you tell your mentor
-   you're going. The annual split (work vs personal) is the number the base
-   actually needs for planning. */
-function awayCardHtml(){
+/* --- leave request ---
+   A full screen (matching the mockup) rather than an inline card: the PTO
+   allowance, the approval queue, and the request form all need room, and
+   burying them in an accordion inside My Database would hide the one figure
+   (days used against the 30-day cap) staff most need at a glance.
+
+   Doubles as the mentor check-in: submitting a request is how you tell your
+   mentor you're going. Working Outside Siem Reap and Special Condition are
+   tracked but uncapped; Personal Time Off is what the 30-day allowance is
+   for. */
+function leaveTypeLabel_(type){
+  return type==='special' ? 'Special Condition' : type==='outside' ? 'Working Outside Siem Reap' : 'Personal Time Off';
+}
+function leaveWorkDays_(from,to){
+  var a=new Date(from+'T00:00:00Z'), b=new Date(to+'T00:00:00Z');
+  var n=0;
+  for(var d=new Date(a); d<=b; d.setUTCDate(d.getUTCDate()+1)){
+    var dow=d.getUTCDay();
+    if(dow!==0 && dow!==6) n++;
+  }
+  return n;
+}
+
+function leaveEntryHtml(){
+  return '<h3 id="sec-leave">'+esc(t('Leave Request'))+'</h3>'+
+    '<button class="card leaveEntry" id="goLeaveFromMe">'+
+    '<span class="leaveEntryIcon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><line x1="3.5" y1="10" x2="20.5" y2="10"/><path d="M8 8V3.5M16 8V3.5"/><path d="M8.5 14.5l2 2 4-4"/></svg></span>'+
+    '<span style="flex:1"><div style="font-size:13.5px;font-weight:700">'+esc(t('Leave Request'))+'</div></span>'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
+}
+
+function leaveHtml(){
+  var h='<button class="linkbtn" id="leaveBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  h+='<h2>'+esc(t('Leave Request'))+'</h2>';
+  h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
+
   var d=S.trips;
-  var h='<h3 id="sec-leave">✈️ '+esc(t('Away from campus'))+'</h3>';
-  if(!d){ return h+'<div class="card"><p class="sub" style="margin:6px 0">'+esc(t('Loading…'))+'</p></div>'; }
+  if(!d) return h+'<div class="card"><p class="sub" style="margin:6px 0">'+esc(t('Loading…'))+'</p></div>';
 
   var year=String(new Date().getFullYear());
-  var yt=(d.totals&&d.totals[year])||{work:0,personal:0,trips:0};
-  h+='<div class="card">';
-  h+='<div class="row" style="border:0;padding-top:0"><span class="rowName">'+esc(t('This year'))+
-     '<div class="pmeta">'+yt.trips+' '+esc(t('trips'))+' · '+year+'</div></span>'+
-     '<span class="pctBig">'+(yt.work+yt.personal)+'</span></div>';
-  h+='<div class="awaySplit">'+
-     '<div class="awayHalf"><div class="awayN">'+yt.work+'</div><div class="awayL">'+esc(t('work days'))+'</div></div>'+
-     '<div class="awayHalf personal"><div class="awayN">'+yt.personal+'</div><div class="awayL">'+esc(t('personal days'))+'</div></div>'+
-     '</div>';
+  var yt=(d.totals&&d.totals[year])||{outside:0,special:0,personal:0,trips:0};
+  var cap=d.ptoCap||30;
+  if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
+  var draft=S.leaveDraft;
+  var draftWorkDays = (draft.from && draft.to && draft.to>=draft.from) ? leaveWorkDays_(draft.from,draft.to) : 0;
+  var projectedPersonal = yt.personal + (draft.type==='personal'?draftWorkDays:0);
+  var barPct = Math.min(100, Math.round(yt.personal/cap*100));
 
-  if(S.tripForm){
-    var f=S.tripDraft;
-    var reasons=(d.reasons&&d.reasons[f.kind])||[];
-    h+='<div class="formBlock">'+
-      '<label class="f">'+esc(t('First day away'))+'</label><input type="date" id="tr_from" value="'+esc(f.from||'')+'">'+
-      '<label class="f">'+esc(t('Last day away'))+'</label><input type="date" id="tr_to" value="'+esc(f.to||'')+'">'+
-      '<div class="hint">'+esc(t('Whole days, including the first and last.'))+'</div>'+
-      '<label class="f">'+esc(t('Is this work or personal?'))+'</label><div class="seg">'+
-        '<button data-trkind="work" class="'+(f.kind==='work'?'on':'')+'">'+esc(t('Work'))+'</button>'+
-        '<button data-trkind="personal" class="'+(f.kind==='personal'?'on':'')+'">'+esc(t('Personal'))+'</button>'+
-      '</div>'+
-      '<label class="f">'+esc(t('Reason'))+'</label><select id="tr_reason">'+
-        reasons.map(function(r){ return '<option'+(f.reason===r?' selected':'')+'>'+esc(t(r))+'</option>'; }).join('')+'</select>'+
-      '<label class="f">'+esc(t('Where'))+'</label><input type="text" id="tr_where" maxlength="120" value="'+esc(f.where||'')+'" placeholder="'+esc(t('e.g. Phnom Penh'))+'">'+
-      '<label class="f">'+esc(t('Anything your mentor should know'))+'</label><input type="text" id="tr_note" maxlength="300" value="'+esc(f.note||'')+'">'+
-      '<button class="btn" id="saveTrip">'+esc(t(d.hasMentor?'Send to my mentor':'Save these days'))+'</button>'+
-      '<button class="linkbtn" id="cancelTrip">'+esc(t('Cancel'))+'</button>'+
-      '</div>';
-  } else {
-    h+='<button class="btn" id="newTrip" style="margin-top:12px">'+
-       esc(t(d.hasMentor?'Tell my mentor I’m going away':'Log days away'))+'</button>';
-    if(!d.hasMentor) h+='<div class="hint">'+esc(t('Pick a mentor on your profile and these go to them for a quick yes.'))+'</div>';
-  }
+  h+='<div class="allowCard">'+
+    '<div class="allowTitle">'+esc(t('Personal Time Off'))+'</div>'+
+    '<div class="allowNote">'+esc(t('UofN Cambodia allocates a maximum of 6 weeks (30 work days) off per year for vacation, furlough, support raising and home visits.'))+'</div>'+
+    '<div class="allowNum"><b>'+yt.personal+'</b> '+esc(gpT('/ {cap} days used',{cap:cap}))+'</div>'+
+    '<div class="allowBar"><div class="allowBarFill" style="width:'+barPct+'%"></div></div>'+
+    '<div class="allowMini">'+
+      '<span>'+esc(t('Working Outside Siem Reap'))+' <b>'+yt.outside+'d</b></span>'+
+      '<span>'+esc(t('Special Condition'))+' <b>'+yt.special+'d</b></span>'+
+    '</div></div>';
 
-  if(d.trips.length){
-    h+='<div style="margin-top:14px">';
-    d.trips.slice(0,8).forEach(function(r){
-      var badge = r.status==='approved' ? '<span class="trend up">✓</span>'
-                : r.status==='pending'  ? '<span class="trend flat">'+esc(t('waiting'))+'</span>'
-                : r.status==='declined' ? '<span class="trend down">'+esc(t('declined'))+'</span>' : '';
-      h+='<div class="row"><span class="rowName">'+esc(r.from)+(r.to!==r.from?' → '+esc(r.to):'')+' '+badge+
-        '<div class="pmeta">'+esc(t(r.kind==='work'?'Work':'Personal'))+' · '+esc(t(r.reason))+
-        (r.where?' · '+esc(r.where):'')+'</div></span>'+
-        '<span class="pctSm">'+r.days+'d <button class="tripDel" data-trdel="'+esc(r.id)+'" aria-label="'+esc(t('Remove'))+'">✕</button></span></div>';
+  var approvals=(S.tripRequests||[]);
+  if(approvals.length){
+    h+='<h3>'+esc(t('Awaiting Your Approval'))+'</h3><div class="card">';
+    approvals.forEach(function(r){
+      h+='<div class="histRow" style="border-top:0;padding-top:0">'+
+        '<div class="histTop"><span class="histType">'+esc(r.name)+' · '+esc(t(leaveTypeLabel_(r.type)))+'</span>'+
+        '<span class="pill pending">'+esc(t('Pending'))+'</span></div>'+
+        '<div class="histDates">'+esc(r.from)+(r.to!==r.from?' → '+esc(r.to):'')+' · '+esc(gpT('{n} work days',{n:r.workDays}))+'</div>'+
+        '<div class="approveRow">'+
+          '<button class="approveBtn yes" data-trok="'+esc(r.id)+'">'+esc(t('Approve'))+'</button>'+
+          '<button class="approveBtn no" data-trno="'+esc(r.id)+'">'+esc(t('Deny'))+'</button>'+
+        '</div></div>';
     });
     h+='</div>';
   }
+
+  h+='<h3>'+esc(t('New Request'))+'</h3><div class="card">';
+  h+='<div class="field"><label class="fieldLabel">'+esc(t('Leave Dates'))+'</label>'+
+     '<div class="dateRow"><input type="date" id="lv_from" value="'+esc(draft.from||'')+'">'+
+     '<input type="date" id="lv_to" value="'+esc(draft.to||'')+'"></div></div>';
+  h+='<div class="workDaysLine"><b>'+draftWorkDays+'</b> '+esc(t('work days requested (Mon–Fri)'))+'</div>';
+
+  h+='<div class="field"><label class="fieldLabel">'+esc(t('Leave Type'))+'</label><div class="typeChips">';
+  [['outside','Working Outside Siem Reap','Not capped, tracked separately'],
+   ['special','Special Condition','Not capped, tracked separately'],
+   ['personal','Personal Time Off',"Counts against your 30-day allowance"]
+  ].forEach(function(row){
+    h+='<button type="button" class="typeChip'+(draft.type===row[0]?' on':'')+'" data-leavetype="'+row[0]+'">'+
+       '<span class="typeDot"></span><span><div class="typeLabel">'+esc(t(row[1]))+'</div>'+
+       '<div class="typeSub">'+esc(t(row[2]))+'</div></span></button>';
+  });
+  h+='</div></div>';
+
+  if(draft.type==='personal' && projectedPersonal>cap){
+    h+='<div class="noticeNote" style="background:var(--badSoft);color:var(--bad)">'+
+       esc(t('This request would put you over your 30-day Personal Time Off allowance for the year.'))+'</div>';
+  }
+
+  h+='<div class="field"><label class="fieldLabel">'+esc(t('Reason'))+'</label>'+
+     '<textarea id="lv_reason" maxlength="500" placeholder="'+esc(t('Why are you requesting this leave?'))+'">'+esc(draft.reason||'')+'</textarea></div>';
+  h+='<div class="field"><label class="fieldLabel">'+esc(t('Ministry Coverage'))+'</label>'+
+     '<textarea id="lv_coverage" maxlength="500" placeholder="'+esc(t('Who will cover your ministries while you’re away?'))+'">'+esc(draft.coverage||'')+'</textarea></div>';
+
+  h+='<div class="noticeNote">'+esc(t('In-country leave needs at least 1 week notice · out-of-country leave needs at least 1 month notice.'))+'</div>';
+
+  h+='<div class="ackRow"><button type="button" class="ackBox'+(draft.ack?' on':'')+'" id="lv_ack">'+
+     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>'+
+     '<span>'+esc(t('I understand the 6-week (30-day) allowance for personal time off.'))+'</span></div>';
+
+  var mentor = (S.me.mentorId && S.me.mentorStatus==='approved') ? personOf(S.me.mentorId) : null;
+  var submitLabel = mentor ? gpT('Send to {name} for Approval',{name:mentor.name}) : t('Save this request');
+  var canSubmit = draft.from && draft.to && draft.to>=draft.from && draft.type && draft.ack;
+  h+='<button class="btn" id="saveLeave"'+(canSubmit?'':' disabled')+'>'+esc(submitLabel)+'</button>';
+  if(!mentor) h+='<div class="hint">'+esc(t('Pick a mentor on your profile and these go to them for a quick yes.'))+'</div>';
+  h+='</div>';
+
+  h+='<h3>'+esc(t('My Requests'))+'</h3><div class="card">';
+  if(d.trips.length){
+    d.trips.slice(0,10).forEach(function(r){
+      var pillCls = r.status==='declined'?'denied':(r.status==='approved'||r.status==='noted')?'approved':'pending';
+      var pillLabel = r.status==='declined'?t('Denied'):r.status==='approved'?t('Approved'):r.status==='noted'?t('Noted'):t('Pending');
+      h+='<div class="histRow"><div class="histTop"><span class="histType">'+esc(t(leaveTypeLabel_(r.type)))+'</span>'+
+        '<span class="pill '+pillCls+'">'+esc(pillLabel)+'</span></div>'+
+        '<div class="histDates">'+esc(r.from)+(r.to!==r.from?' → '+esc(r.to):'')+' · '+esc(gpT('{n} work days',{n:r.workDays}))+'</div></div>';
+    });
+  } else {
+    h+='<p class="sub" style="margin:4px 0">'+esc(t('No requests yet.'))+'</p>';
+  }
+  h+='</div>';
+
   h+='<p class="hint" style="margin-top:10px">🔒 '+
-     esc(t('Your team can see how many WORK days you’re away. Personal days and reasons stay between you and your mentor.'))+'</p>';
-  return h+'</div>';
+     esc(t('Your team can see how many WORK days you’re away. Reason and coverage stay between you and your mentor.'))+'</p>';
+  return h;
 }
 
 /* ---------- team directory ---------- */
@@ -3093,10 +3203,9 @@ function mentorHtml(){
       h+='<div class="card"><div class="row" style="border:0;padding-top:0">'+
         '<span class="rowName"><strong>'+esc(r.name)+'</strong>'+
         '<div class="pmeta">'+esc(r.from)+(r.to!==r.from?' → '+esc(r.to):'')+' · '+
-          esc(t(r.kind==='work'?'Work':'Personal'))+' · '+esc(t(r.reason))+'</div>'+
-        (r.where?'<div class="pmeta">'+esc(r.where)+'</div>':'')+
-        (r.note?'<div class="pmeta">“'+esc(r.note)+'”</div>':'')+
-        '</span><span class="pctSm">'+r.days+'d</span></div>'+
+          esc(t(leaveTypeLabel_(r.type)))+(r.reason?' · '+esc(r.reason):'')+'</div>'+
+        (r.coverage?'<div class="pmeta">“'+esc(r.coverage)+'”</div>':'')+
+        '</span><span class="pctSm">'+esc(gpT('{n} work days',{n:r.workDays}))+'</span></div>'+
         '<div style="display:flex;gap:8px;margin-top:10px">'+
         '<button class="btn" style="margin:0;padding:9px 4px;font-size:13px" data-trok="'+esc(r.id)+'">'+esc(t('Approve'))+'</button>'+
         '<button class="btn ghost" style="margin:0;padding:9px 4px;font-size:13px" data-trno="'+esc(r.id)+'">'+esc(t('Not yet'))+'</button>'+
@@ -3283,76 +3392,47 @@ function todayHabitMap(){
   return map;
 }
 
-/* Hold the trip form's fields in the draft as they change, so the re-render
-   caused by switching work/personal doesn't discard half-typed input. */
-function captureTrip(){
-  if(!S.tripDraft) return;
-  var g=function(id){ var e=document.getElementById(id); return e? e.value : undefined; };
-  ['from','to','where','note'].forEach(function(k){
-    var v=g('tr_'+k); if(v!==undefined) S.tripDraft[k]=v;
-  });
-  var r=g('tr_reason'); if(r!==undefined) S.tripDraft.reason=r;
-}
-
 function bindAway(){
-  var nt=document.getElementById('newTrip');
-  if(nt) nt.onclick=function(){
-    var today=todayStr();
-    S.tripDraft={ from:today, to:today, kind:'work',
-      reason:(S.trips&&S.trips.reasons)?S.trips.reasons.work[0]:'', where:'', note:'' };
-    S.tripForm=true; render();
-  };
-  var ct=document.getElementById('cancelTrip');
-  if(ct) ct.onclick=function(){ S.tripForm=false; S.tripDraft=null; render(); };
+  var lb=document.getElementById('leaveBack');
+  if(lb) lb.onclick=function(){ S.view='week'; render(); };
+  var gl=document.getElementById('goLeaveFromMe');
+  if(gl) gl.onclick=function(){ S.view='leave'; render(); };
 
-  document.querySelectorAll('[data-trkind]').forEach(function(b){
-    b.onclick=function(){
-      if(!S.tripDraft) return;
-      captureTrip();
-      var k=b.getAttribute('data-trkind');
-      S.tripDraft.kind=k;
-      // the two kinds have different reason lists, so reset to the first one
-      S.tripDraft.reason=(S.trips&&S.trips.reasons)?S.trips.reasons[k][0]:'';
-      render();
-    };
-  });
-  ['tr_from','tr_to','tr_where','tr_note','tr_reason'].forEach(function(id){
+  if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
+  ['lv_from','lv_to'].forEach(function(id){
     var el=document.getElementById(id);
-    if(el){ el.oninput=captureTrip; el.onchange=captureTrip; }
+    if(el) el.onchange=function(){ S.leaveDraft[id==='lv_from'?'from':'to']=el.value; render(); };
   });
+  var lr=document.getElementById('lv_reason');
+  if(lr) lr.oninput=function(){ S.leaveDraft.reason=lr.value; };
+  var lc=document.getElementById('lv_coverage');
+  if(lc) lc.oninput=function(){ S.leaveDraft.coverage=lc.value; };
+  document.querySelectorAll('[data-leavetype]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.leaveDraft.type=b.getAttribute('data-leavetype'); render(); };
+  });
+  var la=document.getElementById('lv_ack');
+  if(la) la.onclick=function(){ S.leaveDraft.ack=!S.leaveDraft.ack; render(); };
 
-  var st=document.getElementById('saveTrip');
-  if(st) st.onclick=function(){
+  var sl=document.getElementById('saveLeave');
+  if(sl) sl.onclick=function(){
     if(S.busy) return;
-    captureTrip();
-    var f=S.tripDraft||{};
-    if(!f.from || !f.to){ showMsg('Pick both dates'); return; }
-    if(f.to<f.from){ showMsg('The last day can’t be before the first'); return; }
-    S.busy=true; st.disabled=true; st.textContent='…';
-    run('saveTrip',[S.auth.user,S.auth.pin,f],function(d){
+    var f=S.leaveDraft||{};
+    if(!f.from || !f.to){ showMsg(t('Pick both dates')); return; }
+    if(f.to<f.from){ showMsg(t('The last day can’t be before the first')); return; }
+    if(!f.type){ showMsg(t('Pick a leave type')); return; }
+    if(!f.ack){ showMsg(t('Please confirm you understand the allowance.')); return; }
+    S.busy=true; sl.disabled=true; sl.textContent='…';
+    run('saveTrip',[S.auth.user,S.auth.pin,{from:f.from,to:f.to,type:f.type,reason:f.reason,coverage:f.coverage}],function(d){
       S.busy=false;
       if(d && d.ok){
-        S.trips=d; S.tripForm=false; S.tripDraft=null;
-        showMsg(d.hasMentor ? 'Sent to your mentor' : 'Saved');
-      } else showMsg('Could not save');
+        S.trips=d; S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
+        showMsg(d.hasMentor ? t('Sent to your mentor') : t('Saved'));
+      } else showMsg(t('Could not save'));
       render();
     });
   };
 
-  document.querySelectorAll('[data-trdel]').forEach(function(b){
-    b.onclick=function(){
-      if(S.busy) return;
-      if(!confirm('Remove these days?')) return;
-      S.busy=true;
-      run('deleteTrip',[S.auth.user,S.auth.pin,b.getAttribute('data-trdel')],function(d){
-        S.busy=false;
-        if(d && d.ok) S.trips=d;
-        render();
-      });
-    };
-  });
-
-  // mentor decisions on someone's days away
+  // mentor decisions on someone's leave request
   [['trok',true],['trno',false]].forEach(function(pair){
     document.querySelectorAll('[data-'+pair[0]+']').forEach(function(b){
       b.onclick=function(){
@@ -3705,7 +3785,7 @@ function bind(){
   renderMenu();
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
-    b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; S.tripForm=false; render(); };
+    b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; render(); };
   });
 
   /* Every figure on Base opens its own breakdown, from the same sheet the
