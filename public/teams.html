@@ -291,6 +291,21 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .scale { display:flex; gap:4px; flex-wrap:wrap; }
 .scale button { width:36px; height:36px; border-radius:9px; border:1.5px solid var(--border2); background:var(--bg); font-size:13px; cursor:pointer; }
 .scale button.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
+
+/* Weekly Health's 1-10 questions, from the mockup — a slider with low/high
+   captions and a live readout, instead of a row of ten buttons. Scoped to
+   .sliderWrap rather than a bare input[type=range] rule so it can't touch
+   the goal ring's own .gSlide styling elsewhere on the page. */
+.qCaps { display:flex; justify-content:space-between; font-size:10.5px; color:var(--faint); margin-top:2px; }
+.qReadout { font-family:'Koulen',sans-serif; font-size:15px; color:var(--accent); }
+.sliderWrap { padding:10px 2px 2px; }
+.sliderWrap input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:99px;
+  outline:none; margin:0; background:var(--surface2); cursor:pointer; }
+.sliderWrap input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
+  background:var(--accent); border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
+.sliderWrap input[type=range]::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:var(--accent);
+  border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
+.sliderWrap input[type=range]::-moz-range-track { height:6px; border-radius:99px; background:var(--surface2); }
 .numIn { display:flex; align-items:center; gap:10px; }
 .numIn input { width:110px; text-align:right; border:1.5px solid var(--border2); background:var(--bg); }
 
@@ -942,7 +957,7 @@ var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'base', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
-  goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, weekDraft:{},
+  goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[],
@@ -993,6 +1008,7 @@ function isoWeekOf(d){
 }
 function thisWeek(){ return isoWeekOf(new Date()); }
 function goalsViewWeek(){ return S.goalsWeek==null ? thisWeek() : S.goalsWeek; }
+function kpiViewWeek(){ return S.kpiWeek==null ? thisWeek() : S.kpiWeek; }
 
 /* Same Monday-anchored math as isoWeekOf, run backwards: a week NUMBER back
    to the calendar date its Monday actually falls on, so the Weekly Goals
@@ -1020,6 +1036,17 @@ function weekRangeLabel_(week){
 /* A compact "Aug 17 – 23" for secondary labels (the ministry KPI card),
    where the full "Week of …, 2026" sentence would be too long. */
 function weekRangeShort_(week){ return weekRange_(week).short; }
+function isoDateOf_(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+/* The Monday and Sunday of a given week, as YYYY-MM-DD — used to pick which
+   date a backfilled ministry number should land on when you're not looking
+   at the current week. */
+function weekBounds_(week){
+  var mon=mondayOfWeek_(week), sun=new Date(mon); sun.setDate(sun.getDate()+6);
+  return { from:isoDateOf_(mon), to:isoDateOf_(sun) };
+}
+function kpiEntryDate_(week){
+  return Number(week)===Number(thisWeek()) ? todayStr() : weekBounds_(week).to;
+}
 function goalsForWeek(week){
   for(var i=0;i<S.goals.length;i++) if(Number(S.goals[i].week)===Number(week)) return S.goals[i];
   return null;
@@ -1227,7 +1254,7 @@ function logout(){
   lsDel('gp-staff');
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
-  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
+  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[];
   render();
@@ -1297,6 +1324,7 @@ function render(){
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else if(S.view==='leave') m.innerHTML=leaveHtml();
+  else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
   else m.innerHTML=profileHtml();
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
@@ -1410,9 +1438,7 @@ function renderMenu(){
       var id=btn.getAttribute('data-menu-item');
       S.menuOpen=false;
       if(id==='dashboard') gpGo('index');
-      else if(id==='leave'){ S.view='week'; render(); setTimeout(function(){
-        var el=document.getElementById('sec-leave'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-      }, 60); }
+      else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='checkin'){ S.view='health'; render(); }
       else renderMenu();
     };
@@ -2186,8 +2212,34 @@ function miniDashboardHtml(){
    Purely computed from state already on the page (trips, tripRequests,
    oneOnOnes), the same way streaks and badges are derived rather than
    stored — there's no separate "seen/unseen" tracking, just what's recent. */
+function notifActionBtnsHtml_(okAttr, okId, noAttr, noId, okLabel, noLabel){
+  return '<span class="chips" style="margin:0">'+
+    '<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-'+okAttr+'="'+esc(okId)+'">'+esc(okLabel)+'</button>'+
+    '<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px;color:var(--faint)" data-'+noAttr+'="'+esc(noId)+'">'+esc(noLabel)+'</button>'+
+  '</span>';
+}
+/* A little inbox, not a wall of cards: things waiting on you (a mentee's
+   leave request, an incoming 1-on-1) get inline Approve/Deny or Accept/
+   Decline right here — same handlers the full Leave Request page and the
+   Mentorship card already use — so acting on one doesn't require leaving
+   the dashboard. Everything else here is just FYI, no action needed. */
 function notificationsHtml(){
   var items=[];
+  (S.tripRequests||[]).forEach(function(r){
+    var range=r.from+(r.to!==r.from?' → '+r.to:'');
+    items.push({ when:r.from, text: gpT('{name} requested leave {range}', {name:r.name, range:range}),
+      actions: notifActionBtnsHtml_('trok', r.id, 'trno', r.id, t('Approve'), t('Deny')) });
+  });
+  (S.oneOnOnes||[]).forEach(function(o){
+    if(!o.mine && o.status==='pending'){
+      items.push({ when:o.created, text: gpT('{name} requested a 1-on-1', {name:o.otherName}),
+        actions: notifActionBtnsHtml_('121accept', o.id, '121decline', o.id, t('Accept'), t('Decline')) });
+    } else if(o.mine && o.status==='accepted'){
+      items.push({ when:o.decidedAt||o.created, text: gpT('{name} accepted your 1-on-1 request', {name:o.otherName}) });
+    } else if(o.mine && o.status==='declined'){
+      items.push({ when:o.decidedAt||o.created, text: gpT('{name} declined your 1-on-1 request', {name:o.otherName}) });
+    }
+  });
   (S.trips && S.trips.trips || []).forEach(function(r){
     var range=r.from+(r.to!==r.from?' → '+r.to:'');
     if(r.status==='approved'){
@@ -2196,23 +2248,12 @@ function notificationsHtml(){
       items.push({ when: r.decidedAt||r.from, text: gpT('Your {range} leave request was declined', {range:range}) });
     }
   });
-  (S.tripRequests||[]).forEach(function(r){
-    items.push({ when:r.from, text: gpT('{name} requested leave {range}',
-      {name:r.name, range:r.from+(r.to!==r.from?' → '+r.to:'')}) });
-  });
-  (S.oneOnOnes||[]).forEach(function(o){
-    if(!o.mine && o.status==='pending'){
-      items.push({ when:o.created, text: gpT('{name} requested a 1-on-1', {name:o.otherName}) });
-    } else if(o.mine && o.status==='accepted'){
-      items.push({ when:o.decidedAt||o.created, text: gpT('{name} accepted your 1-on-1 request', {name:o.otherName}) });
-    } else if(o.mine && o.status==='declined'){
-      items.push({ when:o.decidedAt||o.created, text: gpT('{name} declined your 1-on-1 request', {name:o.otherName}) });
-    }
-  });
   if(!items.length) return '';
   items.sort(function(a,b){ return (b.when||'')<(a.when||'')?-1:1; });
   var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🔔 '+esc(t('Updates'))+'</div>';
-  items.slice(0,5).forEach(function(it){ h+='<div class="row"><span class="rowName">'+esc(it.text)+'</span></div>'; });
+  items.slice(0,5).forEach(function(it){
+    h+='<div class="row"><span class="rowName">'+esc(it.text)+'</span>'+(it.actions||'')+'</div>';
+  });
   return h+'</div>';
 }
 
@@ -2243,9 +2284,9 @@ function homeHtml(){
      OKR, Annual Goals, Mentorship, Health, Leave, Account. This used to lead
      with whichever of Goals/Habits the day's phase favored; that's gone in
      favor of the mockup's fixed order. */
-  h += goalsCardHtml(goalsViewWeek());
   h += habitsCardHtml();
-  h += kpiCardHtml(wk);
+  h += goalsCardHtml(goalsViewWeek());
+  h += myMinistryEntryHtml();
   h += okrSectionHtml(S.me, true);
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
@@ -2266,7 +2307,7 @@ function homeHtml(){
    its own to scroll to — it's a card at the very bottom that opens the
    profile screen — so that chip still navigates rather than scrolling. */
 function quickJumpHtml(){
-  var jumps=[['sec-goals','Weekly Goals'],['sec-habits','Habit Tracker'],['sec-kpi','Ministry Tracker'],['sec-okr','OKRs'],
+  var jumps=[['sec-habits','Habit Tracker'],['sec-goals','Weekly Goals'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
     ['sec-annual','Annual Goals'],['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
   var h='<div class="quickBar">';
   jumps.forEach(function(j){
@@ -2610,19 +2651,24 @@ function goalsCardHtml(wk){
     places. */
 function kpiCardHtml(wk){
   if(!S.me.ministry){
-    return '<h3>📊 My ministry KPIs</h3><div class="card"><p class="sub" style="margin:4px 0 10px">'+
+    return '<div class="card"><p class="sub" style="margin:4px 0 10px">'+
       'Set your ministry on the Profile tab and your team’s KPIs will show up here, ready to log.</p>'+
       '<button class="btn ghost" id="goProfile">Choose my ministry</button></div>';
   }
   var metrics=metricsFor(S.me.campus, S.me.dept, S.me.ministry);
   if(!metrics.length){
-    return '<h3>📊 My ministry KPIs</h3><div class="card"><p class="sub" style="margin:4px 0">'+
+    return '<div class="card"><p class="sub" style="margin:4px 0">'+
       'No KPIs are defined for '+esc(S.me.ministry)+' yet.</p></div>';
   }
   var entries=(S.ministry&&S.ministry.entries)||{};
   var daily=(S.ministry&&S.ministry.daily)||{};
   var pins=(S.ministry&&S.ministry.pins)||[];
   var today=todayStr();
+  var isCurWk=Number(wk)===Number(thisWeek());
+  /* Backfilling a past week doesn't have a "today" — daily sum-type numbers
+     for that week land on its last day, same as the week's own total is one
+     figure rather than a day-by-day breakdown in the section below. */
+  var entryDate = kpiEntryDate_(wk);
 
   var counts=metrics.filter(function(m){ return modeOf(m)==='sum'; });
   var levels=metrics.filter(function(m){ return modeOf(m)!=='sum'; });
@@ -2638,7 +2684,7 @@ function kpiCardHtml(wk){
   var h='';
 
   if(S.kpiPick){
-    h+='<h3>📊 '+esc(t(S.me.ministry))+'</h3><div class="card">';
+    h+='<div class="card">';
     h+='<p class="sub" style="margin:2px 0 8px">Star the ones you log most days — '+
        'the rest stay one tap away under “show all”.</p>';
     counts.forEach(function(metric){
@@ -2654,17 +2700,32 @@ function kpiCardHtml(wk){
      Collapsed by default: these boxes are useful when you have numbers to
      log, but sitting open on every visit to My Database pushes everything
      else below the fold. */
-  h += '<h3 id="sec-kpi">📊 '+esc(t(S.me.ministry))+'</h3><div class="accCard">';
+  h += '<div class="card">'+
+    '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
+    '<div class="weekNavRow">'+
+      '<button class="weekArrow" id="kpiPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
+      '<div class="weekPill">'+esc(weekRangeLabel_(wk))+
+        '<span class="currentTag'+(isCurWk?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
+      '<button class="weekArrow" id="kpiNextWeek" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
+    '</div>'+
+    (isCurWk?'':'<button class="linkbtn" style="padding:6px 0 0" id="kpiJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
+  '</div>';
+  h += '<div class="accCard">';
 
   if(counts.length){
-    var daySummary = gpT('{n} to log today', {n: showing.length});
-    h += accRowHtml('dbAcc', 'kpiDay', esc(t('Today')), daySummary, function(){
+    var dayTitle = isCurWk ? t('Today') : entryDate;
+    var daySummary = isCurWk ? gpT('{n} to log today', {n: showing.length})
+      : gpT('{n} to log for {range}', {n: showing.length, range: weekRangeShort_(wk)});
+    h += accRowHtml('dbAcc', 'kpiDay', esc(dayTitle), daySummary, function(){
       var b = '<div id="kpiDayCard">';
       b += '<p class="sub" style="margin:4px 0 10px">'+
-        esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))+'</p>';
+        (isCurWk
+          ? esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))
+          : esc(gpT('Backfilling week {wk} — this lands on {date}.',{wk:wk, date:entryDate})))+
+        '</p>';
       showing.forEach(function(metric){
         var days=daily[metric]||{};
-        var savedToday = days[today];
+        var savedToday = days[entryDate];
         var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
           : (savedToday!==undefined ? savedToday : '');
         var weekVal=(entries[metric]||{})[String(wk)];
@@ -2733,6 +2794,40 @@ function kpiCardHtml(wk){
   }
 
   h += '</div>';
+  return h;
+}
+
+/* Entry point on My Database — a tappable card like Leave Request's, so the
+   Ministry Tracker is its own full page instead of an inline accordion.
+   Generic label for everyone ("My Ministry"), personalized subtitle once
+   opened — same shape as Leave Request's card always saying "Leave
+   Request" while the page behind it is about your own days off. */
+function myMinistryEntryHtml(){
+  return '<h3 id="sec-kpi">'+esc(t('My Ministry'))+'</h3>'+
+    '<button class="card leaveEntry" id="goMinistryFromMe">'+
+    '<span class="leaveEntryIcon">📊</span>'+
+    '<span style="flex:1"><div style="font-size:13.5px;font-weight:700">'+esc(t('My Ministry'))+'</div>'+
+    (S.me.ministry?'<div class="pmeta">'+esc(t(S.me.ministry))+'</div>':'')+'</span>'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
+}
+
+/* The whole ministry-KPI experience — the same accCard body kpiCardHtml
+   already builds, just given a real page instead of a section buried in My
+   Database. Any staff member whose profile carries this ministry can log
+   for it, same as before; nothing here is leader-only. What's typed here
+   writes straight to the same entries/kpiDaily stores the leadership GP
+   Dashboard reads (ministryDataFor_/getData in api.js) — there is no
+   separate sync step. */
+function myMinistryHtml(){
+  var h='<button class="linkbtn" id="ministryBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  h+='<h2>'+esc(t('My Ministry'))+'</h2>';
+  if(S.me.ministry){
+    var minName=t(S.me.ministry);
+    h+='<p class="sub">'+esc(gpT('{ministry} — these numbers feed the GP Dashboard for both campuses.',{ministry:minName}))+'</p>';
+  } else {
+    h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
+  }
+  h+=kpiCardHtml(kpiViewWeek());
   return h;
 }
 
@@ -2848,9 +2943,9 @@ function registerHtml(){
        their ONE approved mentor — and nobody else — sees these answers by name.
    Leadership reads the base total. It does not read this. */
 var WEEK_SCALE_QS = [
-  { id:'lonely',  text:'How lonely do I feel this week?', higherBetter:false },
-  { id:'clarity', text:'How clear am I on what to work on this week?', higherBetter:true },
-  { id:'growth',  text:'How would I rate my personal growth this week?', higherBetter:true }
+  { id:'lonely',  text:'How lonely do I feel this week?', higherBetter:false, lowLabel:'1 · Very connected', highLabel:'10 · Very lonely' },
+  { id:'clarity', text:'How clear am I on what to work on this week?', higherBetter:true, lowLabel:'1 · Unclear', highLabel:'10 · Very clear' },
+  { id:'growth',  text:'How would I rate my personal growth this week?', higherBetter:true, lowLabel:'1 · Stagnant', highLabel:'10 · Thriving' }
 ];
 var WEEK_YESNO_QS = [
   { id:'porn',        text:'Did I look at porn this week?', higherBetter:false },
@@ -2948,16 +3043,18 @@ function healthHtml(){
     var d = weekDraftFor(wk);
     h += '<div class="card" id="weekForm" style="padding:6px 14px 14px">';
     WEEK_SCALE_QS.forEach(function(q){
-      h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div><div class="scale">';
-      for(var i=1;i<=10;i++){
-        h += '<button data-wscale="'+q.id+'|'+i+'" class="'+(Number(d[q.id])===i?'on':'')+'">'+i+'</button>';
-      }
-      h += '</div></div>';
+      var v = d[q.id]!==undefined ? Number(d[q.id]) : 5;
+      var pct = Math.round(((v-1)/9)*100);
+      h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div>'+
+        '<div class="sliderWrap"><input type="range" min="1" max="10" step="1" value="'+v+'" data-wslide="'+q.id+'" '+
+        'style="background:linear-gradient(to right, var(--accent) '+pct+'%, var(--surface2) '+pct+'%)"></div>'+
+        '<div class="qCaps"><span>'+esc(t(q.lowLabel))+'</span><span class="qReadout">'+v+'/10</span><span>'+esc(t(q.highLabel))+'</span></div>'+
+        '</div>';
     });
     WEEK_NUM_QS.forEach(function(q){
       h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div>'+
-        '<div class="numIn"><input type="number" inputmode="decimal" min="0" placeholder="0" '+
-        'data-wnum="'+q.id+'" value="'+(d[q.id]!==undefined?d[q.id]:'')+'"></div></div>';
+        '<div class="numIn"><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" '+
+        'data-wnum="'+q.id+'" value="'+(d[q.id]!==undefined?d[q.id]:'')+'"> '+esc(t('hours'))+'</div></div>';
     });
     WEEK_YESNO_QS.forEach(function(q){
       h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div><div class="seg">'+
@@ -3793,6 +3890,10 @@ function bindAway(){
   if(lb) lb.onclick=function(){ S.view='week'; render(); };
   var gl=document.getElementById('goLeaveFromMe');
   if(gl) gl.onclick=function(){ S.view='leave'; render(); };
+  var mb=document.getElementById('ministryBack');
+  if(mb) mb.onclick=function(){ S.view='week'; render(); };
+  var gm=document.getElementById('goMinistryFromMe');
+  if(gm) gm.onclick=function(){ S.view='ministry'; render(); };
 
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
   ['lv_from','lv_to'].forEach(function(id){
@@ -4144,6 +4245,14 @@ function bindHome(){
       render();
     };
   });
+  // --- ministry KPI week nav --- switching weeks drops any unsaved draft, so
+  // a number typed for one week can't be mistakenly submitted under another.
+  var kpw=document.getElementById('kpiPrevWeek');
+  if(kpw) kpw.onclick=function(){ if(kpiViewWeek()<=1) return; gpTap(); S.kpiWeek=kpiViewWeek()-1; S.kpiDraft={}; S.kpiWeekDraft={}; render(); };
+  var knw=document.getElementById('kpiNextWeek');
+  if(knw) knw.onclick=function(){ if(kpiViewWeek()>=52) return; gpTap(); S.kpiWeek=kpiViewWeek()+1; S.kpiDraft={}; S.kpiWeekDraft={}; render(); };
+  var kjc=document.getElementById('kpiJumpCurrent');
+  if(kjc) kjc.onclick=function(){ gpTap(); S.kpiWeek=null; S.kpiDraft={}; S.kpiWeekDraft={}; render(); };
   var skp=document.getElementById('saveKpiPins');
   if(skp) skp.onclick=function(){
     if(S.busy) return;
@@ -4169,7 +4278,8 @@ function bindHome(){
     });
     S.busy=true; skb.disabled=true; skb.textContent='…';
     // Saves the DAY; the server rolls the week up from the days it holds.
-    run('saveMyKpiDay',[S.auth.user,S.auth.pin,todayStr(),updates],function(d){
+    // Not the current week → the entry lands on that week's own last day.
+    run('saveMyKpiDay',[S.auth.user,S.auth.pin,kpiEntryDate_(kpiViewWeek()),updates],function(d){
       S.busy=false;
       if(d.ok){ S.ministry=d; S.kpiDraft={}; showMsg('Saved — week total updated'); }
       else showMsg('Could not save');
@@ -4183,7 +4293,7 @@ function bindHome(){
   var skw=document.getElementById('saveKpiWeekBtn');
   if(skw) skw.onclick=function(){
     if(S.busy) return;
-    var wk=thisWeek(), updates=[];
+    var wk=kpiViewWeek(), updates=[];
     document.querySelectorAll('[data-kpiweek]').forEach(function(inp){
       updates.push({ metric:inp.getAttribute('data-kpiweek'),
         value: inp.value==='' ? null : Number(inp.value) });
@@ -4245,11 +4355,15 @@ function bind(){
   };
 
   /* --- the weekly check-in form --- */
-  document.querySelectorAll('[data-wscale]').forEach(function(b){
-    b.onclick=function(){
-      var p=b.getAttribute('data-wscale').split('|');
-      weekDraftFor(S.healthWeek||thisWeek())[p[0]]=Number(p[1]);
-      render();
+  document.querySelectorAll('[data-wslide]').forEach(function(sl){
+    var block=sl.closest('.qBlock');
+    var readout=block&&block.querySelector('.qReadout');
+    sl.oninput=function(){
+      var v=Number(sl.value)||1;
+      var pct=Math.round(((v-1)/9)*100);
+      sl.style.background='linear-gradient(to right, var(--accent) '+pct+'%, var(--surface2) '+pct+'%)';
+      if(readout) readout.textContent=v+'/10';
+      weekDraftFor(S.healthWeek||thisWeek())[sl.getAttribute('data-wslide')]=v;
     };
   });
   document.querySelectorAll('[data-wyn]').forEach(function(b){

@@ -767,3 +767,55 @@ wasn't visible anywhere in the UI.
 |---|---|
 | Daily check-in | ការរាយការណ៍ប្រចាំថ្ងៃ |
 | Log {n}+ days this week and it fills in your weekly Health check-in — submit that form any time to override it by hand. | កត់ត្រា {n}+ ថ្ងៃក្នុងសប្តាហ៍នេះ វានឹងបំពេញការរាយការណ៍សុខភាពប្រចាំសប្តាហ៍របស់អ្នកដោយស្វ័យប្រវត្តិ — អ្នកអាចដាក់ស្នើទម្រង់នោះដោយផ្ទាល់ ដើម្បីជំនួសវានៅពេលណាក៏បាន។ |
+
+## 18. Weekly Health's 1-10 questions are now sliders
+
+Matching the mockup: the loneliness/clarity/growth questions on the Health
+tab's weekly check-in form are sliders with low/high captions and a live
+readout, instead of a row of ten number buttons. Hour fields now show a
+"hours" unit. A slider shows a default midpoint before you touch it, but
+that default doesn't count as answered — submitting still asks you to
+actually drag each one first, same as before.
+
+| English | ខ្មែរ |
+|---|---|
+| hours | ម៉ោង |
+| 1 · Very connected / 10 · Very lonely | 1 · ភ្ជាប់ចិត្តជាមួយគេ / 10 · ឯកោខ្លាំង |
+| 1 · Unclear / 10 · Very clear | 1 · មិនច្បាស់ / 10 · ច្បាស់ណាស់ |
+| 1 · Stagnant / 10 · Thriving | 1 · ឈប់នឹង / 10 · រីកចម្រើនល្អ |
+
+## 19. Ministry Tracker: week navigation, so a missed week can be backfilled
+
+The Ministry Tracker now has the same week picker as Weekly Goals (prev/
+next arrows, "Jump back to this week"). "This week" (headcounts and
+scores) already keyed off the week number, so navigating back now lets you
+fill in a week you missed. "Today" (daily running totals like Salvations)
+doesn't have a "today" in a past week, so backfilling a past week lands
+the number on that week's last day instead, and the card's heading and
+copy say so explicitly.
+
+| English | ខ្មែរ |
+|---|---|
+| {n} to log for {range} | {n} ត្រូវកត់ត្រាសម្រាប់ {range} |
+| Backfilling week {wk} — this lands on {date}. | កំពុងបំពេញត្រឡប់ក្រោយសម្រាប់សប្តាហ៍ {wk} — វានឹងចូលទៅក្នុងកាលបរិច្ឆេទ {date}។ |
+
+## 20. My Database reordering, Updates inbox actions, and "My Ministry" as its own page
+
+Habit Tracker now sits above Weekly Goals (was below it). The hamburger
+menu's "Leave Request" item now opens the Leave Request page directly
+instead of scrolling My Database to its entry card. The dashboard's
+Updates card is now a small inbox: a mentee's leave request and an
+incoming 1-on-1 request get inline Approve/Deny or Accept/Decline right
+there, using the same handlers the full Leave Request page and Mentorship
+card already call — nothing new on the backend. The Ministry Tracker is
+no longer an inline accordion in My Database; it's its own full page
+("My Ministry"), reached the same way Leave Request is — a tappable card
+in My Database — showing the actual ministry name and confirming these
+numbers already feed the GP Dashboard for both campuses (they always
+did; this just makes it visible). Logging permission is unchanged: anyone
+whose profile carries that ministry can log for it, same as before.
+
+| English | ខ្មែរ |
+|---|---|
+| My Ministry | កិច្ចការបម្រើរបស់ខ្ញុំ |
+| {ministry} — these numbers feed the GP Dashboard for both campuses. | {ministry} — ចំនួនទាំងនេះបញ្ចូលទៅក្នុងផ្ទាំងគ្រប់គ្រង GP សម្រាប់ទាំងពីរសាខា។ |

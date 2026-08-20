@@ -413,17 +413,21 @@ console.log('week options: ' + (await page.$$eval('#healthWeekSel option', e => 
 await page.selectOption('#healthWeekSel', String(NOWWK - 5));
 await page.waitForTimeout(900);
 console.log('\nunanswered week -> form open: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
-console.log('  1-10 questions: ' + await page.$$eval('#weekForm .scale', e => e.length));
+console.log('  1-10 questions: ' + await page.$$eval('#weekForm [data-wslide]', e => e.length));
 console.log('  yes/no questions: ' + await page.$$eval('#weekForm .seg', e => e.length));
 console.log('  hour boxes: ' + await page.$$eval('#weekForm [data-wnum]', e => e.length));
 
-// submitting with the scales unanswered is refused
+// submitting with the scales unanswered is refused — sliders show a default
+// position but don't count as answered until dragged
 await page.click('#weekSubmit'); await page.waitForTimeout(700);
 console.log('  incomplete refused: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
 
 // fill it in and submit
 for (const [q, v] of [['lonely', 2], ['clarity', 9], ['growth', 8]]) {
-  await page.click(`[data-wscale="${q}|${v}"]`); await page.waitForTimeout(250);
+  await page.$eval(`[data-wslide="${q}"]`, (el, val) => {
+    el.value = val; el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, v);
+  await page.waitForTimeout(250);
 }
 await page.fill('[data-wnum="langHours"]', '3');
 await page.dispatchEvent('[data-wnum="langHours"]', 'change');
@@ -457,8 +461,8 @@ await page.screenshot({ path: OUT + 'health-weekly.png', fullPage: true });
 // editing an answered week reopens with the answers in place
 await page.click('#weekEdit'); await page.waitForTimeout(800);
 console.log('\nedit reopens prefilled: ' + await page.evaluate(() => {
-  const on = document.querySelector('[data-wscale="clarity|9"]');
-  return !!on && on.classList.contains('on');
+  const sl = document.querySelector('[data-wslide="clarity"]');
+  return !!sl && Number(sl.value) === 9;
 }));
 
 // a week WITH a previous week shows progress/regress per question
