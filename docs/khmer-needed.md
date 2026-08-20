@@ -624,3 +624,22 @@ former "work" trip.
 | No requests yet. | មិនទាន់មានសំណើនៅឡើយទេ។ |
 | Pick both dates / Pick a leave type | សូមជ្រើសរើសកាលបរិច្ឆេទទាំងពីរ / សូមជ្រើសរើសប្រភេទការឈប់សម្រាក |
 | Please confirm you understand the allowance. | សូមបញ្ជាក់ថាអ្នកយល់ដឹងអំពីកម្រិតកំណត់នេះ។ |
+
+## 10. Weekly Goals layout fixes + ministry KPIs collapsed
+
+Two fixes to the Weekly Goals rebuild from section 8: the progress slider
+was rendering at the browser's tiny default size (no `input[type=range]`
+styling existed yet) instead of the mockup's full-width track, and the week
+pill/card headers showed a bare week number instead of an actual date
+range. Both now match the mockup: full-width sliders with a colored fill,
+and "Week of Aug 17 – 23, 2026"-style labels computed from the week number.
+
+The "log your ministry's numbers" cards (daily counts + weekly levels) are
+now collapsed into an accordion too, matching the Base tab's pattern,
+instead of always sitting open and pushing everything else down the page.
+
+| English | ខ្មែរ |
+|---|---|
+| Week of {range}, {year} | សប្តាហ៍នៃ {range}, {year} |
+| {n} to log today | {n} ត្រូវកត់ត្រាថ្ងៃនេះ |
+| {n} for week {wk} | {n} សម្រាប់សប្តាហ៍ {wk} |

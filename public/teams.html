@@ -603,6 +603,12 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .wgText { font-size:13.5px; font-weight:600; }
 .wgPct { font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .wgActions { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:9px; }
+input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:99px; outline:none; margin:0; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
+  background:var(--accent); border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
+input[type=range]::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:var(--accent);
+  border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
+input[type=range]::-moz-range-track { height:6px; border-radius:99px; background:var(--surface2); }
 .completePill { border:1.5px solid var(--good); background:var(--goodSoft); color:var(--good); border-radius:999px;
   padding:6px 13px; font-size:10.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; font-family:inherit; }
 .removeX { border:0; background:none; color:var(--faint); cursor:pointer; padding:4px; display:flex; }
@@ -897,6 +903,7 @@ var S = {
   healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{},
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
   baseHealthPeriod:'week',
+  dbAcc:{kpiDay:false, kpiWeek:false},
   menuOpen:false
 };
 
@@ -934,6 +941,26 @@ function isoWeekOf(d){
 }
 function thisWeek(){ return isoWeekOf(new Date()); }
 function goalsViewWeek(){ return S.goalsWeek==null ? thisWeek() : S.goalsWeek; }
+
+/* Same Monday-anchored math as isoWeekOf, run backwards: a week NUMBER back
+   to the calendar date its Monday actually falls on, so the Weekly Goals
+   header can say "Aug 17 – Aug 23" instead of a bare week number. */
+var MONTH_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function mondayOfWeek_(week){
+  var y=new Date().getFullYear();
+  var jan1=new Date(y,0,1);
+  var monW1=new Date(y,0,1-((jan1.getDay()+6)%7));
+  var d=new Date(monW1);
+  d.setDate(d.getDate()+(Number(week)-1)*7);
+  return d;
+}
+function weekRangeLabel_(week){
+  var mon=mondayOfWeek_(week);
+  var sun=new Date(mon); sun.setDate(sun.getDate()+6);
+  var a=MONTH_ABBR[mon.getMonth()]+' '+mon.getDate();
+  var b=sun.getMonth()===mon.getMonth() ? String(sun.getDate()) : MONTH_ABBR[sun.getMonth()]+' '+sun.getDate();
+  return gpT('Week of {range}, {year}',{range:a+' – '+b, year:sun.getFullYear()});
+}
 function goalsForWeek(week){
   for(var i=0;i<S.goals.length;i++) if(Number(S.goals[i].week)===Number(week)) return S.goals[i];
   return null;
@@ -1325,10 +1352,10 @@ function renderMenu(){
    and only lands in the DOM — while the row is open, matching the mockup's
    sc-if; a closed row costs nothing but its own head line. */
 var ACC_CHEVRON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-function accRowHtml(id, title, summaryClosed, bodyFn){
-  var open = !!S.baseAcc[id];
+function accRowHtml(bucketName, id, title, summaryClosed, bodyFn){
+  var open = !!S[bucketName][id];
   return '<div class="accRow">'+
-    '<button class="accHead" data-acc="'+id+'">'+
+    '<button class="accHead" data-acc="'+id+'" data-accbucket="'+bucketName+'">'+
       '<span><div class="accTitle">'+title+'</div><div class="accSummary">'+
         (open?esc(t('Tap to collapse')):summaryClosed)+'</div></span>'+
       '<span class="accChevron" style="transform:rotate('+(open?'180deg':'0deg')+')">'+ACC_CHEVRON+'</span>'+
@@ -1368,7 +1395,7 @@ function baseHealthAccHtml(){
   var summary = score===null ? t('No check-ins yet.') :
     (cr && cr.total) ? gpT('Score {n}/10 · {pct}% checked in', {n:score.toFixed(1), pct:gpCheckinPct(cr.n,cr.total)})
       : gpT('Score {n}/10', {n:score.toFixed(1)});
-  return accRowHtml('health', '🏠 '+esc(t('Base Health')), summary, function(){
+  return accRowHtml('baseAcc', 'health', '🏠 '+esc(t('Base Health')), summary, function(){
     var b = '<div class="deptChips">'+BASE_HEALTH_PERIODS.map(function(id){
       return '<button class="deptChip'+(period===id?' on':'')+'" data-baseHealthPeriod="'+id+'">'+esc(baseHealthPeriodLabel(id))+'</button>';
     }).join('')+'</div>';
@@ -1467,7 +1494,7 @@ function baseHtml(){
   var myDept=S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
   h+='<div class="accCard">';
 
-  h+=accRowHtml('salv', '🙌 '+esc(t('Salvations by Department')),
+  h+=accRowHtml('baseAcc', 'salv', '🙌 '+esc(t('Salvations by Department')),
     gpT('{n} YTD across {d} departments', {n:fmt(R.headlineFor(ids,'Salvations')), d:Object.keys(bd).length}),
     function(){
       var b='<div class="card">';
@@ -1481,7 +1508,7 @@ function baseHtml(){
       return b+'</div>';
     });
 
-  h+=accRowHtml('ld', '🌱 '+esc(t('Leadership Development Schools')),
+  h+=accRowHtml('baseAcc', 'ld', '🌱 '+esc(t('Leadership Development Schools')),
     gpT('{s} schools running · {n} enrolled', {s:fmt(R.ldSchools(ids)), n:fmt(R.ldStudents(ids))}),
     function(){
       return '<div class="grid">'+
@@ -1501,7 +1528,7 @@ function baseHtml(){
      breakdown would ADD UP to the number above it — see the same note on the
      dashboard. Schools is a count of ministries reporting; Total Volunteer Hours
      is Σ(hours × volunteers). */
-  h+=accRowHtml('cs', '📚 '+esc(t('Community Schools')),
+  h+=accRowHtml('baseAcc', 'cs', '📚 '+esc(t('Community Schools')),
     CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES).map(function(m){ return esc(t(m)); }).join(' · '),
     function(){
       return '<div class="grid">'+
@@ -1521,7 +1548,7 @@ function baseHtml(){
             CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES), t('Community Schools'), q); });
     });
 
-  h+=accRowHtml('out', '🙌 '+esc(t('Outreach Teams')),
+  h+=accRowHtml('baseAcc', 'out', '🙌 '+esc(t('Outreach Teams')),
     gpT('{n} teams hosted · {m} people served', {n:fmt(R.outreachRollup(ids,'Teams Hosted')), m:fmt(R.headlineFor(ids,'People Served'))}),
     function(){
       return '<div class="grid">'+
@@ -1545,7 +1572,7 @@ function baseHtml(){
           function(q){ return gpDrillAttrs('Teams Hosted', ids, CS, 'Outreach Teams', q); });
     });
 
-  h+=accRowHtml('church', '⛪ '+esc(t('Local Church Partnerships')),
+  h+=accRowHtml('baseAcc', 'church', '⛪ '+esc(t('Local Church Partnerships')),
     gpT('{n} churches partnered', {n:fmt(R.partnerChurches(ids))}),
     function(){
       return '<div class="grid">'+
@@ -1569,7 +1596,7 @@ function baseHtml(){
     });
 
   var GOSPEL_METRICS=['Baptisms','People Heard the Gospel','Healings'];
-  h+=accRowHtml('gospel', '🕊️ '+esc(t('Gospel Totals')),
+  h+=accRowHtml('baseAcc', 'gospel', '🕊️ '+esc(t('Gospel Totals')),
     GOSPEL_METRICS.map(function(m){ return esc(t(m)); }).join(' · '),
     function(){
       var b='<div class="grid">';
@@ -1582,7 +1609,7 @@ function baseHtml(){
     });
 
   var ms=R.mediaSummary(ids);
-  h+=accRowHtml('media', '📱 '+esc(t('Media reach')),
+  h+=accRowHtml('baseAcc', 'media', '📱 '+esc(t('Media reach')),
     ms ? gpT('{p} platforms · {f} followers', {p:fmt(ms.platforms), f:fmt(ms.followers)}) : t('Nothing logged yet'),
     function(){
       return '<div class="grid">'+
@@ -1599,7 +1626,7 @@ function baseHtml(){
      below, which is everyone's own weekly wellbeing check-in. The two money
      metrics are stripped server-side for anyone without the leadership code, so
      they simply read as "no figure" here. */
-  h+=accRowHtml('baseKpi', '🏠 '+esc(t('Base Leadership')), t('Department leaders’ own figures'),
+  h+=accRowHtml('baseAcc', 'baseKpi', '🏠 '+esc(t('Base Leadership')), t('Department leaders’ own figures'),
     function(){
       var b='<div class="grid">';
       ['Staff Debt ($)','One-on-Ones Held','Partner Connections','Spoke at YWAM Bases',
@@ -1619,7 +1646,7 @@ function baseHtml(){
   var deps=getDepartments(S.me.campus);
   if(!S.baseDept || !deps[S.baseDept]) S.baseDept = (deps[myDept] ? myDept : Object.keys(deps)[0]);
   var entries=(S.base.entries||{})[S.me.campus]||{};
-  h+=accRowHtml('explorer', '🗂️ '+esc(t('Department Explorer')), t('Browse any department’s own numbers'),
+  h+=accRowHtml('baseAcc', 'explorer', '🗂️ '+esc(t('Department Explorer')), t('Browse any department’s own numbers'),
     function(){
       var b='<div class="pickerRow"><label class="pick"><span>'+esc(t('Department'))+'</span>'+
         '<select id="baseDeptSel">'+Object.keys(deps).map(function(d){
@@ -2235,7 +2262,7 @@ function goalsCardHtml(wk){
     '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
     '<div class="weekNavRow">'+
       '<button class="weekArrow" id="goalsPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
-      '<div class="weekPill">'+esc(gpT('Week {wk}',{wk:wk}))+
+      '<div class="weekPill">'+esc(weekRangeLabel_(wk))+
         '<span class="currentTag'+(isCur?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
       '<button class="weekArrow" id="goalsNextWeek" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
     '</div>'+
@@ -2245,7 +2272,7 @@ function goalsCardHtml(wk){
 
   h+='<div class="card muted">'+
     '<div class="goalCardHead"><span class="goalCardTitle">'+esc(t('Last week'))+'</span>'+
-    '<span class="goalCardDate">'+esc(gpT('Week {wk}',{wk:lastWk}))+'</span></div>'+
+    '<span class="goalCardDate">'+esc(weekRangeLabel_(lastWk))+'</span></div>'+
     (lastWritten.length
       ? lastWritten.map(function(i){ return '<div class="lastGoalRow">'+esc(i.text)+'</div>'; }).join('')
       : '<p class="emptyLine" style="padding:2px 0 0">'+esc(t('You didn’t set goals last week.'))+'</p>')+
@@ -2253,7 +2280,7 @@ function goalsCardHtml(wk){
 
   h+='<div class="card">'+
     '<div class="goalCardHead"><span class="goalCardTitle">'+esc(t('This week'))+'</span>'+
-    '<span class="goalCardDate">'+esc(gpT('Week {wk}',{wk:wk}))+'</span></div>';
+    '<span class="goalCardDate">'+esc(weekRangeLabel_(wk))+'</span></div>';
 
   if(written.length){
     /* Said plainly at the point of writing, not buried in settings. Goals are
@@ -2360,76 +2387,89 @@ function kpiCardHtml(wk){
     return h+'<button class="btn" id="saveKpiPins" style="margin-top:12px">Done</button></div>';
   }
 
-  /* ---- what happened today ---- */
+  /* ---- what happened today / what is true of the whole week ----
+     Collapsed by default: these boxes are useful when you have numbers to
+     log, but sitting open on every visit to My Database pushes everything
+     else below the fold. */
+  h += '<h3>📊 '+esc(t(S.me.ministry))+'</h3><div class="accCard">';
+
   if(counts.length){
-    h+='<h3>📊 '+esc(t(S.me.ministry))+' <small>· '+esc(t('today'))+'</small></h3><div class="card" id="kpiDayCard">';
-    h+='<p class="sub" style="margin:4px 0 10px">'+
-      esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))+'</p>';
-    showing.forEach(function(metric){
-      var days=daily[metric]||{};
-      var savedToday = days[today];
-      var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
-        : (savedToday!==undefined ? savedToday : '');
-      var weekVal=(entries[metric]||{})[String(wk)];
-      /* What the week is without today, so the running total below the box adds
-         up to the week's real figure rather than counting today twice. */
-      var base = (weekVal===undefined?0:Number(weekVal)) - (savedToday===undefined?0:Number(savedToday));
-      /* Last week next to this one, because "is the cafe up or down" is the
-         question anyone typing the number is really asking. */
-      h+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
-        '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
-        gpVsLastWeek(entries[metric], wk, metric, weekVal)+
-        '<span class="newTot"></span></div></div>'+
-        '<input type="number" inputmode="decimal" class="kpiIn" placeholder="+0" data-kpi="'+esc(metric)+
-        '" data-metric="'+esc(metric)+'" data-mode="sum" data-run="'+base+
-        '" data-kpimode="sum" value="'+esc(String(cur))+'"></div>';
+    var daySummary = gpT('{n} to log today', {n: showing.length});
+    h += accRowHtml('dbAcc', 'kpiDay', esc(t('Today')), daySummary, function(){
+      var b = '<div id="kpiDayCard">';
+      b += '<p class="sub" style="margin:4px 0 10px">'+
+        esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))+'</p>';
+      showing.forEach(function(metric){
+        var days=daily[metric]||{};
+        var savedToday = days[today];
+        var cur = S.kpiDraft[metric]!==undefined ? S.kpiDraft[metric]
+          : (savedToday!==undefined ? savedToday : '');
+        var weekVal=(entries[metric]||{})[String(wk)];
+        /* What the week is without today, so the running total below the box adds
+           up to the week's real figure rather than counting today twice. */
+        var base = (weekVal===undefined?0:Number(weekVal)) - (savedToday===undefined?0:Number(savedToday));
+        /* Last week next to this one, because "is the cafe up or down" is the
+           question anyone typing the number is really asking. */
+        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+          '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
+          gpVsLastWeek(entries[metric], wk, metric, weekVal)+
+          '<span class="newTot"></span></div></div>'+
+          '<input type="number" inputmode="decimal" class="kpiIn" placeholder="+0" data-kpi="'+esc(metric)+
+          '" data-metric="'+esc(metric)+'" data-mode="sum" data-run="'+base+
+          '" data-kpimode="sum" value="'+esc(String(cur))+'"></div>';
+      });
+      b+='<button class="btn" id="saveKpiBtn">'+esc(t('Save today'))+'</button>';
+      if(hiddenN>0) b+='<button class="linkbtn" id="kpiShowAll">'+esc(gpT('Show all {total} ({hidden} hidden)',{total:counts.length,hidden:hiddenN}))+'</button>';
+      else if(pinnedCounts.length && S.kpiAll) b+='<button class="linkbtn" id="kpiShowLess">Show just my '+pinnedCounts.length+'</button>';
+      b+='<button class="linkbtn" id="pickKpis">'+esc(t(pinnedCounts.length?'Change which I log daily':'Pick the ones I log daily'))+'</button>';
+      return b+'</div>';
     });
-    h+='<button class="btn" id="saveKpiBtn">'+esc(t('Save today'))+'</button>';
-    if(hiddenN>0) h+='<button class="linkbtn" id="kpiShowAll">'+esc(gpT('Show all {total} ({hidden} hidden)',{total:counts.length,hidden:hiddenN}))+'</button>';
-    else if(pinnedCounts.length && S.kpiAll) h+='<button class="linkbtn" id="kpiShowLess">Show just my '+pinnedCounts.length+'</button>';
-    h+='<button class="linkbtn" id="pickKpis">'+esc(t(pinnedCounts.length?'Change which I log daily':'Pick the ones I log daily'))+'</button>';
-    h+='</div>';
   }
 
-  /* ---- what is true of the whole week ---- */
   if(levels.length){
-    h+='<h3>📈 '+esc(t(S.me.ministry))+' <small>· '+esc(t('week'))+' '+wk+'</small></h3><div class="card" id="kpiWeekCard">';
-    h+='<p class="sub" style="margin:4px 0 10px">'+
-      esc(t('Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed.'))+'</p>';
-    levels.forEach(function(metric){
-      var mode=modeOf(metric);
-      var wks=entries[metric]||{};
-      var agg=aggregate(wks, mode);
-      var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
-      var carried=false;
-      var sub='', extra='';
-      if(mode==='latest'){
-        var prev=lastBefore(wks, wk);
-        carried = (cur==='' && prev!==null);
-        if(carried){ cur=prev.value; extra=' data-carried="1"'; }
-        sub = esc(t('now'))+' '+fmt(agg, metric);
-        if(prev!==null){
-          sub += ' · ' + (carried
-            ? esc(t('carried from week'))+' '+prev.week
-            : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
-          var typed = S.kpiWeekDraft[metric]!==undefined ? Number(S.kpiWeekDraft[metric]) : Number(cur);
-          var d = typed - prev.value;
-          if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+    var weekSummary = gpT('{n} for week {wk}', {n: levels.length, wk: wk});
+    h += accRowHtml('dbAcc', 'kpiWeek', esc(t('This week')), weekSummary, function(){
+      var b = '<div id="kpiWeekCard">';
+      b += '<p class="sub" style="margin:4px 0 10px">'+
+        esc(t('Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed.'))+'</p>';
+      levels.forEach(function(metric){
+        var mode=modeOf(metric);
+        var wks=entries[metric]||{};
+        var agg=aggregate(wks, mode);
+        var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
+        var carried=false;
+        var sub='', extra='';
+        if(mode==='latest'){
+          var prev=lastBefore(wks, wk);
+          carried = (cur==='' && prev!==null);
+          if(carried){ cur=prev.value; extra=' data-carried="1"'; }
+          sub = esc(t('now'))+' '+fmt(agg, metric);
+          if(prev!==null){
+            sub += ' · ' + (carried
+              ? esc(t('carried from week'))+' '+prev.week
+              : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
+            var typed = S.kpiWeekDraft[metric]!==undefined ? Number(S.kpiWeekDraft[metric]) : Number(cur);
+            var d = typed - prev.value;
+            if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+          }
+        } else {
+          // A year-to-date average hides which way this week went, so say that too.
+          var thisWk = wks[String(wk)];
+          sub = esc(t('avg'))+' '+fmt(agg, metric)+
+            gpVsLastWeek(wks, wk, metric, S.kpiWeekDraft[metric]!==undefined ? S.kpiWeekDraft[metric] : thisWk);
         }
-      } else {
-        // A year-to-date average hides which way this week went, so say that too.
-        var thisWk = wks[String(wk)];
-        sub = esc(t('avg'))+' '+fmt(agg, metric)+
-          gpVsLastWeek(wks, wk, metric, S.kpiWeekDraft[metric]!==undefined ? S.kpiWeekDraft[metric] : thisWk);
-      }
-      if(S.kpiWeekDraft[metric]!==undefined) cur=S.kpiWeekDraft[metric];
-      h+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
-        '<div class="rowSub">'+sub+'</div></div>'+
-        '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
-        ' data-kpiweek="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
+        if(S.kpiWeekDraft[metric]!==undefined) cur=S.kpiWeekDraft[metric];
+        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+          '<div class="rowSub">'+sub+'</div></div>'+
+          '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
+          ' data-kpiweek="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
+      });
+      b+='<button class="btn" id="saveKpiWeekBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
+      return b+'</div>';
     });
-    h+='<button class="btn" id="saveKpiWeekBtn">'+esc(t('Save Week'))+' '+wk+'</button></div>';
   }
+
+  h += '</div>';
   return h;
 }
 
@@ -3797,7 +3837,10 @@ function bind(){
   var bds=document.getElementById('baseDeptSel');
   if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
   document.querySelectorAll('[data-acc]').forEach(function(btn){
-    btn.onclick=function(){ var id=btn.getAttribute('data-acc'); S.baseAcc[id]=!S.baseAcc[id]; render(); };
+    btn.onclick=function(){
+      var id=btn.getAttribute('data-acc'), bucket=S[btn.getAttribute('data-accbucket')];
+      bucket[id]=!bucket[id]; render();
+    };
   });
   document.querySelectorAll('[data-baseHealthPeriod]').forEach(function(btn){
     btn.onclick=function(){ S.baseHealthPeriod=btn.getAttribute('data-baseHealthPeriod'); render(); };
