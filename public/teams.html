@@ -450,9 +450,6 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .habitPick .hpBox { width:26px; height:26px; border-radius:7px; border:1.5px solid var(--border2);
   background:var(--bg); color:var(--accentInk); font-weight:700; font-size:14px; cursor:pointer; line-height:1; flex:0 0 auto; }
 .habitPick .hpBox.on { background:var(--accent); border-color:var(--accent); }
-.habitPick .hpEye { font-size:11px; color:var(--muted); background:none; border:0; cursor:pointer;
-  font-family:inherit; padding:4px 6px; white-space:nowrap; }
-.habitPick .hpEye.shared { color:var(--good); font-weight:700; }
 
 /* bible reading */
 .reading { font-family:'Koulen',sans-serif; font-size:21px; letter-spacing:.5px; color:var(--ink);
@@ -658,6 +655,21 @@ textarea { resize:vertical; min-height:64px; }
 .approveBtn { flex:1; border:0; border-radius:10px; padding:10px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
 .approveBtn.yes { background:var(--good); color:var(--goodInk); }
 .approveBtn.no { background:var(--surface2); color:var(--ink); }
+
+/* Annual Goals (SMART), from the mockup */
+.yearPick { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.yearBtn { border:1.5px solid var(--border2); background:var(--bg); border-radius:9px; width:30px; height:30px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; color:var(--ink); }
+.yearNum { font-family:'Koulen',sans-serif; font-size:17px; flex:0 0 auto; min-width:52px; text-align:center; }
+.catChips { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+.catChip { border:1.5px solid var(--border2); background:var(--bg); border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer; color:var(--muted); font-family:inherit; }
+.catChip.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
+.smartGoal { border-top:1px solid var(--border); padding:12px 0; }
+.smartGoal:first-child { border-top:0; }
+.smartTitle { font-size:13.5px; font-weight:700; margin-bottom:4px; }
+.smartMeta { font-size:11.5px; color:var(--muted); margin-bottom:8px; }
+.smartActions { display:flex; align-items:center; gap:12px; margin-top:8px; }
+.smartPct { font-size:12px; font-weight:700; color:var(--muted); flex:1; }
 
 /* the profile card that leads the Base tab */
 .baseMe { display:flex; align-items:center; gap:14px; }
@@ -895,7 +907,7 @@ var S = {
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'base', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, weekDraft:{},
-  habits:null, habitEdit:false, sharedHabits:[],
+  habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], leaveDraft:null,
   baseDept:null, okrForm:false, okrEditId:null,
@@ -904,8 +916,11 @@ var S = {
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
   baseHealthPeriod:'week',
   dbAcc:{kpiDay:false, kpiWeek:false},
+  smartGoals:[], smartYear:null, smartCategory:'Faith', smartDraft:null,
   menuOpen:false
 };
+
+var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
 
 var HABIT_LIBRARY = [
   {id:'bible',       label:'Bible reading',   icon:'📖'},
@@ -954,13 +969,20 @@ function mondayOfWeek_(week){
   d.setDate(d.getDate()+(Number(week)-1)*7);
   return d;
 }
-function weekRangeLabel_(week){
+function weekRange_(week){
   var mon=mondayOfWeek_(week);
   var sun=new Date(mon); sun.setDate(sun.getDate()+6);
   var a=MONTH_ABBR[mon.getMonth()]+' '+mon.getDate();
   var b=sun.getMonth()===mon.getMonth() ? String(sun.getDate()) : MONTH_ABBR[sun.getMonth()]+' '+sun.getDate();
-  return gpT('Week of {range}, {year}',{range:a+' – '+b, year:sun.getFullYear()});
+  return { short:a+' – '+b, year:sun.getFullYear() };
 }
+function weekRangeLabel_(week){
+  var r=weekRange_(week);
+  return gpT('Week of {range}, {year}',{range:r.short, year:r.year});
+}
+/* A compact "Aug 17 – 23" for secondary labels (the ministry KPI card),
+   where the full "Week of …, 2026" sentence would be too long. */
+function weekRangeShort_(week){ return weekRange_(week).short; }
 function goalsForWeek(week){
   for(var i=0;i<S.goals.length;i++) if(Number(S.goals[i].week)===Number(week)) return S.goals[i];
   return null;
@@ -1157,6 +1179,7 @@ function applyBoot(d){
   if(d.trips) S.trips = d.trips;
   S.tripRequests = d.tripRequests || [];
   if(d.ministry) S.ministry = d.ministry;
+  S.smartGoals = d.smartGoals || [];
   if(d.base && d.base.entries) S.base = d.base;
   if(!S.view) S.view = 'base';
   render();
@@ -1167,6 +1190,7 @@ function logout(){
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
+  S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   render();
 }
 
@@ -1942,6 +1966,53 @@ function phaseBanner(phase, wk){
   return '';
 }
 
+/* --- annual goals (SMART) ---
+   A personal list, by year and category — nothing here feeds the base's own
+   figures the way a ministry KPI or a weekly check-in does. Six fixed
+   categories from the mockup; the chips are a filter, not a per-goal field,
+   so switching category only changes what's showing, never what's saved. */
+function smartYear_(){ return S.smartYear==null ? new Date().getFullYear() : S.smartYear; }
+function annualGoalsHtml(){
+  var year=smartYear_(), cat=S.smartCategory||'Faith';
+  var h='<h3 id="sec-annual">'+esc(t('Annual Goals · SMART'))+'</h3><div class="card">';
+  h+='<div class="yearPick"><button class="yearBtn" id="smartPrevYear" aria-label="'+esc(t('Previous year'))+'">‹</button>'+
+     '<span class="yearNum">'+year+'</span>'+
+     '<button class="yearBtn" id="smartNextYear" aria-label="'+esc(t('Next year'))+'">›</button></div>';
+  h+='<div class="catChips">'+SMART_CATEGORIES.map(function(c){
+    return '<button class="catChip'+(cat===c?' on':'')+'" data-smartcat="'+c+'">'+esc(t(c))+'</button>';
+  }).join('')+'</div>';
+
+  var mine=S.smartGoals.filter(function(g){ return Number(g.year)===Number(year) && g.category===cat; });
+  if(!mine.length && !(S.smartDraft && !S.smartDraft.id)){
+    h+='<p class="sub" style="margin:4px 0 10px">'+esc(t('No goals set for this category yet.'))+'</p>';
+  }
+  mine.forEach(function(g){
+    if(S.smartDraft && S.smartDraft.id===g.id){ h+=smartGoalFormHtml(S.smartDraft); return; }
+    h+='<div class="smartGoal"><div class="smartTitle">'+esc(g.title)+'</div>'+
+      (g.meta?'<div class="smartMeta">'+esc(g.meta)+'</div>':'')+
+      '<div class="bar"><div class="barFill'+(g.pct>=100?' done':'')+'" style="width:'+g.pct+'%"></div></div>'+
+      '<div class="smartActions"><span class="smartPct">'+g.pct+'%</span>'+
+        '<button class="linkbtn inline" data-smartedit="'+esc(g.id)+'">'+esc(t('Edit'))+'</button>'+
+        '<button class="danger" data-smartdel="'+esc(g.id)+'">'+esc(t('Delete'))+'</button></div></div>';
+  });
+
+  if(S.smartDraft && !S.smartDraft.id) h+=smartGoalFormHtml(S.smartDraft);
+  else if(!S.smartDraft) h+='<button class="btn ghost" id="smartNewBtn">+ '+esc(t('New goal'))+'</button>';
+  return h+'</div>';
+}
+function smartGoalFormHtml(draft){
+  return '<div class="smartGoal">'+
+    '<label class="f">'+esc(t('Goal'))+'</label>'+
+    '<input type="text" id="sg_title" maxlength="200" value="'+esc(draft.title||'')+'" placeholder="'+esc(t('What are you aiming for this year?'))+'">'+
+    '<label class="f">'+esc(t('Detail (optional)'))+'</label>'+
+    '<input type="text" id="sg_meta" maxlength="200" value="'+esc(draft.meta||'')+'" placeholder="'+esc(t('e.g. Measurable · by Dec 2026'))+'">'+
+    '<label class="f">'+esc(t('Progress'))+'</label>'+
+    '<input type="number" id="sg_pct" min="0" max="100" value="'+(draft.pct||0)+'"> %'+
+    '<button class="btn" id="smartSaveBtn">'+esc(t(draft.id?'Save changes':'Add goal'))+'</button>'+
+    '<button class="btn ghost" id="smartCancelBtn">'+esc(t('Cancel'))+'</button>'+
+  '</div>';
+}
+
 /* Who you mentor, and who mentors you — from the redesign mockup. The data
    already exists (S.mentees from getMyMentees, S.me.mentorId from the
    profile); this just gives it a home on My Database instead of only living
@@ -1996,16 +2067,17 @@ function homeHtml(){
   h+=phaseBanner(phase, wk);
 
   /* Fixed order, matching the redesign mockup: Weekly Goals, Habit Tracker,
-     OKR, (Annual Goals — not built yet), Mentorship, Health, Leave, Account.
-     This used to lead with whichever of Goals/Habits the day's phase favored;
-     that's gone in favor of the mockup's fixed order. */
+     OKR, Annual Goals, Mentorship, Health, Leave, Account. This used to lead
+     with whichever of Goals/Habits the day's phase favored; that's gone in
+     favor of the mockup's fixed order. */
   h += goalsCardHtml(goalsViewWeek());
   h += habitsCardHtml();
   h += kpiCardHtml(wk);
   h += okrSectionHtml(S.me, true);
+  h += annualGoalsHtml();
   h += mentorshipCardHtml();
   h += weekSummaryHtml(wk);
-  h += myProgressHtml();
+  h += weekStatsHtml();
   h += leaveEntryHtml();
 
   // Profile and settings live under My Database now rather than owning a tab of their own.
@@ -2021,8 +2093,8 @@ function homeHtml(){
    its own to scroll to — it's a card at the very bottom that opens the
    profile screen — so that chip still navigates rather than scrolling. */
 function quickJumpHtml(){
-  var jumps=[['sec-goals','Weekly Goals'],['sec-habits','Habit Tracker'],['sec-okr','OKRs'],
-    ['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
+  var jumps=[['sec-goals','Weekly Goals'],['sec-habits','Habit Tracker'],['sec-kpi','Ministry Tracker'],['sec-okr','OKRs'],
+    ['sec-annual','Annual Goals'],['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
   var h='<div class="quickBar">';
   jumps.forEach(function(j){
     h+='<button class="quickChip" data-jump="'+j[0]+'">'+esc(t(j[1]))+'</button>';
@@ -2034,24 +2106,11 @@ function quickJumpHtml(){
 /* Streaks, this week's totals, and recent days — carried over from the old
    Me tab verbatim. Folded in here as its own block rather than interleaved
    with the goal/habit/KPI cards above, since it's a look-back, not a task. */
-function myProgressHtml(){
+/* This week's totals — sits with My Health, since every figure in it is a
+   health-adjacent tally (hours, workouts, one-on-ones), not a habit tap. */
+function weekStatsHtml(){
   var wl=thisWeekLogs();
-  var h='';
-  var runs=myHabits().map(function(hb){
-    var meta=habitMeta(hb.id);
-    return { label:meta.label, icon:meta.icon, now:graceStreak(habitPred(hb.id)), best:bestStreak(habitPred(hb.id)) };
-  }).filter(function(r){ return r.now>0 || r.best>0; });
-  if(runs.length){
-    h+='<h3>🔥 '+esc(t('Streaks'))+'</h3><div class="card">';
-    runs.forEach(function(r){
-      h+='<div class="row"><span class="rowName">'+r.icon+' '+esc(t(r.label))+
-        '<div class="pmeta">'+esc(gpT('best {n} days',{n:r.best}))+'</div></span>'+
-        '<span class="pctSm">'+r.now+'d</span></div>';
-    });
-    h+='</div>';
-  }
-
-  h+='<h3>📅 '+esc(t('This week'))+'</h3><div class="grid">';
+  var h='<h3>📅 '+esc(t('This week'))+'</h3><div class="grid">';
   var cells=[
     [sum(wl,function(r){return r.langHours;}).toFixed(1),'Language hrs'],
     [sum(wl,function(r){return r.minHours;}).toFixed(1),'Ministry hrs'],
@@ -2063,9 +2122,13 @@ function myProgressHtml(){
     [count(wl,function(r){return r.sabbath;}),'Sabbaths']
   ];
   cells.forEach(function(c){ h+='<div class="stat"><div class="statNum">'+c[0]+'</div><div class="statLabel">'+esc(t(c[1]))+'</div></div>'; });
-  h+='</div>';
+  return h+'</div>';
+}
 
-  h+='<h3>🗓️ '+esc(t('Recent days'))+'</h3><div class="card">';
+/* The daily log, day by day — sits with Habit Tracker, since it's the same
+   daily taps read back as a history instead of a run. */
+function recentDaysHtml(){
+  var h='<h3>🗓️ '+esc(t('Recent days'))+'</h3><div class="card">';
   if(!S.logs.length) h+='<p class="sub" style="margin:6px 0">No entries yet — log your first day on the Today tab.</p>';
   S.logs.slice(0,7).forEach(function(l){
     var bits=[];
@@ -2076,8 +2139,7 @@ function myProgressHtml(){
     if(l.bible) bits.push('Bible');
     h+='<div class="row"><span class="rowName">'+esc(l.date)+'<div class="pmeta">'+(bits.join(' · ')||'—')+'</div></span></div>';
   });
-  h+='</div>';
-  return h;
+  return h+'</div>';
 }
 
 /* One line, not a form. If you log days, this is the week those days work out to
@@ -2150,18 +2212,13 @@ function habitsCardHtml(){
     '<div class="pmeta">'+esc(log?t('Saved — tap to change'):t('Nothing logged yet'))+'</div></span>'+
     '<span class="pctBig">'+Math.round(doneN/list.length*100)+'%</span></div>';
   if(S.habitEdit){
-    h+='<p class="sub" style="margin:2px 0 8px">Pick up to '+MAX_HABITS+'. The eye controls whether '+
-      (S.me.mentorId?esc(nameOf(S.me.mentorId)):'your mentor')+' can see that one — your choice, per habit.</p>';
+    h+='<p class="sub" style="margin:2px 0 8px">'+esc(gpT('Pick up to {n}.',{n:MAX_HABITS}))+'</p>';
     HABIT_LIBRARY.forEach(function(meta){
       var on=null;
       list.forEach(function(hb){ if(hb.id===meta.id) on=hb; });
       h+='<div class="habitPick">'+
         '<button class="hpBox'+(on?' on':'')+'" data-hpick="'+esc(meta.id)+'">'+(on?'✓':'')+'</button>'+
         '<span class="hpLabel">'+meta.icon+' '+esc(t(meta.label))+'</span>'+
-        (on
-          ? '<button class="hpEye'+(on.mentorVisible?' shared':'')+'" data-hpeye="'+esc(meta.id)+'">'+
-            (on.mentorVisible?'👁 mentor sees':'🔒 private')+'</button>'
-          : '')+
         '</div>';
     });
     h+='<button class="btn" id="saveHabits" style="margin-top:12px">Done</button>';
@@ -2213,6 +2270,26 @@ function habitsCardHtml(){
     h+='<button class="btn" id="saveDayBtn">'+esc(t('Save today'))+'</button>';
   }
   h+='<button class="linkbtn" id="editHabits" style="margin-top:8px">'+esc(t('Choose my habits'))+'</button>';
+  h += '</div>';
+  h += streaksHtml();
+  h += recentDaysHtml();
+  return h;
+}
+
+/* How many days running for each habit you're still keeping. Lives right
+   under Habit Tracker — it's the same daily taps, read back as a run. */
+function streaksHtml(){
+  var runs=myHabits().map(function(hb){
+    var meta=habitMeta(hb.id);
+    return { label:meta.label, icon:meta.icon, now:graceStreak(habitPred(hb.id)), best:bestStreak(habitPred(hb.id)) };
+  }).filter(function(r){ return r.now>0 || r.best>0; });
+  if(!runs.length) return '';
+  var h='<h3>🔥 '+esc(t('Streaks'))+'</h3><div class="card">';
+  runs.forEach(function(r){
+    h+='<div class="row"><span class="rowName">'+r.icon+' '+esc(t(r.label))+
+      '<div class="pmeta">'+esc(gpT('best {n} days',{n:r.best}))+'</div></span>'+
+      '<span class="pctSm">'+r.now+'d</span></div>';
+  });
   return h+'</div>';
 }
 
@@ -2243,6 +2320,15 @@ function goalItemPct(g){
    about what 60% looks like. */
 function pctColor(p){ return gpPctColor(p); }
 function pctWord(p){ return gpPctWord(p); }
+/* The Weekly Goals slider wants a classic red→yellow→green gauge rather than
+   the rings' discrete warm/amber/cobalt/green bands — a continuous hue sweep
+   reads as "how full is this" the way a fuel gauge does. Scoped to the
+   slider only; gpPctColor (and everything using it — the rings on Team and
+   Mentor screens) is untouched. */
+function sliderColor(p){
+  var v=Math.max(0, Math.min(100, Number(p)||0));
+  return 'hsl('+Math.round(v/100*120)+', 85%, 45%)';
+}
 function ringVars(p){ return gpRingVars(p); }
 function ringHtml(p, big){ return gpRingHtml(p, big ? 'lg' : ''); }
 
@@ -2293,10 +2379,10 @@ function goalsCardHtml(wk){
       var gp=goalItemPct(g);
       h+='<div class="wgRow'+(gp>=100?' done':'')+'">'+
         '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
-          '<span class="wgPct" style="color:'+pctColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>'+
+          '<span class="wgPct" style="color:'+sliderColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>'+
         (mm?'<div class="goalLink">📊 '+esc(t('moves'))+' '+esc(t(mm))+'</div>':'')+
         '<input type="range" min="0" max="100" step="5" value="'+gp+'" data-goalpct="'+i+'"'+
-          ' style="background:linear-gradient(to right, '+pctColor(gp)+' '+gp+'%, var(--surface2) '+gp+'%)"'+
+          ' style="background:linear-gradient(to right, '+sliderColor(gp)+' '+gp+'%, var(--surface2) '+gp+'%)"'+
           ' aria-label="'+esc(t('Progress'))+': '+esc(g.text)+'">'+
         '<div class="wgActions">'+
           (gp<100?'<button class="completePill" data-goalcomplete="'+i+'">'+esc(t('Mark Complete'))+'</button>':'')+
@@ -2391,7 +2477,7 @@ function kpiCardHtml(wk){
      Collapsed by default: these boxes are useful when you have numbers to
      log, but sitting open on every visit to My Database pushes everything
      else below the fold. */
-  h += '<h3>📊 '+esc(t(S.me.ministry))+'</h3><div class="accCard">';
+  h += '<h3 id="sec-kpi">📊 '+esc(t(S.me.ministry))+'</h3><div class="accCard">';
 
   if(counts.length){
     var daySummary = gpT('{n} to log today', {n: showing.length});
@@ -2427,7 +2513,7 @@ function kpiCardHtml(wk){
   }
 
   if(levels.length){
-    var weekSummary = gpT('{n} for week {wk}', {n: levels.length, wk: wk});
+    var weekSummary = gpT('{n} for {range}', {n: levels.length, range: weekRangeShort_(wk)});
     h += accRowHtml('dbAcc', 'kpiWeek', esc(t('This week')), weekSummary, function(){
       var b = '<div id="kpiWeekCard">';
       b += '<p class="sub" style="margin:4px 0 10px">'+
@@ -3178,21 +3264,21 @@ function mentorHtml(){
 
     // Trajectory beats a compliance grid: last 7 days against the 7 before, so
     // you see direction rather than policing individual days.
-    var shared=S.sharedHabits||[];
-    if(shared.length){
+    var menteeHabits=S.menteeHabits||[];
+    if(menteeHabits.length){
       var recent=wl.slice(0,7), prior=wl.slice(7,14);
       var cnt=function(rows,id){ var n=0; rows.forEach(function(l){ if(l.habits&&l.habits[id]) n++; }); return n; };
-      h+='<h3>Habits '+esc(m.name.split(' ')[0])+' shares</h3><div class="card">';
-      shared.forEach(function(hb){
+      h+='<h3>'+esc(gpT('{name}’s habits',{name:m.name.split(' ')[0]}))+'</h3><div class="card">';
+      menteeHabits.forEach(function(hb){
         var meta=habitMeta(hb.id);
         var a=cnt(recent,hb.id), b=cnt(prior,hb.id);
         var arrow = !prior.length ? '' :
           (a>b?' <span class="trend up">▲</span>':(a<b?' <span class="trend down">▼</span>':' <span class="trend flat">–</span>'));
         h+='<div class="row"><span class="rowName">'+meta.icon+' '+esc(t(meta.label))+
-          '<div class="pmeta">'+(prior.length?'previous 7 days: '+b:'first week of data')+'</div></span>'+
+          '<div class="pmeta">'+(prior.length?esc(t('previous 7 days'))+': '+b:esc(t('first week of data')))+'</div></span>'+
           '<span class="pctSm">'+a+'/7'+arrow+'</span></div>';
       });
-      h+='</div><p class="hint" style="margin:-4px 0 14px">Only the habits they chose to share show up here.</p>';
+      h+='</div>';
     }
 
     // weekly goals + how they're tracking against them
@@ -3230,6 +3316,50 @@ function mentorHtml(){
       h+='<div class="row"><span class="rowName">'+esc(l.date)+'<div class="pmeta">'+(flags.join(' · ')||'—')+'</div></span></div>';
     });
     h+='</div>';
+
+    /* A mentor relationship is consent to see everything below too — the
+       ministry numbers they log, their annual goals, and their leave
+       history — read-only, since none of this is the mentor's to edit. */
+    var mmin=S.menteeMinistry;
+    if(mmin && mmin.ministry){
+      var mMetrics=metricsFor(mmin.campus, mmin.dept, mmin.ministry);
+      if(mMetrics.length){
+        h+='<h3>📊 '+esc(t(mmin.ministry))+'</h3><div class="card">';
+        mMetrics.forEach(function(metric){
+          var mode=modeOf(metric);
+          var wks=mmin.entries[metric]||{};
+          var agg=aggregate(wks, mode);
+          h+='<div class="row"><span class="rowName">'+esc(t(metric))+'</span>'+
+            '<span class="pctSm">'+fmt(agg, metric)+'</span></div>';
+        });
+        h+='</div>';
+      }
+    }
+
+    var msmart=(S.menteeSmart||[]).filter(function(g){ return Number(g.year)===new Date().getFullYear(); });
+    if(msmart.length){
+      h+='<h3>'+esc(t('Annual Goals · SMART'))+'</h3><div class="card">';
+      msmart.forEach(function(g){
+        h+='<div class="smartGoal"><div class="smartTitle">'+esc(g.title)+'</div>'+
+          (g.meta?'<div class="smartMeta">'+esc(g.meta)+'</div>':'')+
+          '<div class="bar"><div class="barFill'+(g.pct>=100?' done':'')+'" style="width:'+g.pct+'%"></div></div>'+
+          '<div class="smartActions"><span class="smartPct">'+g.pct+'%</span></div></div>';
+      });
+      h+='</div>';
+    }
+
+    var mtrips=S.menteeTrips;
+    if(mtrips && mtrips.trips && mtrips.trips.length){
+      h+='<h3>'+esc(t('Leave Request'))+'</h3><div class="card">';
+      mtrips.trips.slice(0,10).forEach(function(r){
+        var pillCls = r.status==='declined'?'denied':(r.status==='approved'||r.status==='noted')?'approved':'pending';
+        var pillLabel = r.status==='declined'?t('Denied'):r.status==='approved'?t('Approved'):r.status==='noted'?t('Noted'):t('Pending');
+        h+='<div class="histRow"><div class="histTop"><span class="histType">'+esc(t(leaveTypeLabel_(r.type)))+'</span>'+
+          '<span class="pill '+pillCls+'">'+esc(pillLabel)+'</span></div>'+
+          '<div class="histDates">'+esc(r.from)+(r.to!==r.from?' → '+esc(r.to):'')+' · '+esc(gpT('{n} work days',{n:r.workDays}))+'</div></div>';
+      });
+      h+='</div>';
+    }
     return h;
   }
   var h='';
@@ -3520,7 +3650,12 @@ function bindHome(){
     b.onclick=function(){
       var id=b.getAttribute('data-openmentee');
       run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(d){
-        if(d.ok){ S.view='mentor'; S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[]; S.sharedHabits=d.sharedHabits||[]; S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[]; render(); }
+        if(d.ok){
+          S.view='mentor'; S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[];
+          S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[];
+          S.menteeHabits=d.habits||[]; S.menteeMinistry=d.ministry||null; S.menteeTrips=d.trips||null; S.menteeSmart=d.smartGoals||[];
+          render();
+        }
         else showMsg('Not available');
       });
     };
@@ -3602,16 +3737,6 @@ function bindHome(){
       S.habits=list; render();
     };
   });
-  document.querySelectorAll('[data-hpeye]').forEach(function(b){
-    b.onclick=function(){
-      var id=b.getAttribute('data-hpeye');
-      S.habits=myHabits().map(function(hb){
-        return hb.id===id ? {id:hb.id, mentorVisible:!hb.mentorVisible} : hb;
-      });
-      render();
-    };
-  });
-
   // --- goals ---
   var gpw=document.getElementById('goalsPrevWeek');
   if(gpw) gpw.onclick=function(){ if(goalsViewWeek()<=1) return; gpTap(); S.goalsWeek=goalsViewWeek()-1; render(); };
@@ -3708,8 +3833,8 @@ function bindHome(){
     var pctLabel=row&&row.querySelector('.wgPct');
     function paint(){
       var v=Number(sl.value)||0;
-      sl.setAttribute('style', 'background:linear-gradient(to right, '+pctColor(v)+' '+v+'%, var(--surface2) '+v+'%)');
-      if(pctLabel){ pctLabel.style.color=pctColor(v); pctLabel.textContent=v+'% · '+pctWord(v); }
+      sl.setAttribute('style', 'background:linear-gradient(to right, '+sliderColor(v)+' '+v+'%, var(--surface2) '+v+'%)');
+      if(pctLabel){ pctLabel.style.color=sliderColor(v); pctLabel.textContent=v+'% · '+pctWord(v); }
       if(row) row.classList.toggle('done', v>=100);
     }
     sl.oninput=function(){ paint(); gpTap(4); };
@@ -3921,6 +4046,62 @@ function bind(){
     };
   });
 
+  /* --- Annual Goals (SMART) --- */
+  var spy=document.getElementById('smartPrevYear');
+  if(spy) spy.onclick=function(){ S.smartYear=smartYear_()-1; render(); };
+  var sny=document.getElementById('smartNextYear');
+  if(sny) sny.onclick=function(){ S.smartYear=smartYear_()+1; render(); };
+  document.querySelectorAll('[data-smartcat]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.smartCategory=b.getAttribute('data-smartcat'); S.smartDraft=null; render(); };
+  });
+  var snb=document.getElementById('smartNewBtn');
+  if(snb) snb.onclick=function(){ S.smartDraft={ id:null, title:'', meta:'', pct:0 }; render(); };
+  document.querySelectorAll('[data-smartedit]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-smartedit');
+      var g=S.smartGoals.filter(function(x){ return x.id===id; })[0];
+      if(g) S.smartDraft={ id:g.id, title:g.title, meta:g.meta, pct:g.pct };
+      render();
+    };
+  });
+  var scb=document.getElementById('smartCancelBtn');
+  if(scb) scb.onclick=function(){ S.smartDraft=null; render(); };
+  var sgt=document.getElementById('sg_title');
+  if(sgt) sgt.oninput=function(){ if(S.smartDraft) S.smartDraft.title=sgt.value; };
+  var sgm=document.getElementById('sg_meta');
+  if(sgm) sgm.oninput=function(){ if(S.smartDraft) S.smartDraft.meta=sgm.value; };
+  var sgp=document.getElementById('sg_pct');
+  if(sgp) sgp.oninput=function(){ if(S.smartDraft) S.smartDraft.pct=sgp.value; };
+  var ssb=document.getElementById('smartSaveBtn');
+  if(ssb) ssb.onclick=function(){
+    if(S.busy) return;
+    var d=S.smartDraft;
+    var title=(document.getElementById('sg_title').value||'').trim();
+    if(!title){ showMsg(t('Give the goal a title first.')); return; }
+    var payload={ id:d.id, year:smartYear_(), category:S.smartCategory, title:title,
+      meta:(document.getElementById('sg_meta').value||'').trim(),
+      pct:Number(document.getElementById('sg_pct').value)||0 };
+    S.busy=true; ssb.disabled=true;
+    run('saveSmartGoal',[S.auth.user,S.auth.pin,payload],function(r){
+      S.busy=false;
+      if(r && r.ok){ S.smartGoals=r.smartGoals||[]; S.smartDraft=null; showMsg(t('Saved')); }
+      else showMsg(t('That didn’t save — try again.'));
+      render();
+    });
+  };
+  document.querySelectorAll('[data-smartdel]').forEach(function(b){
+    b.onclick=function(){
+      if(S.busy) return;
+      if(!confirm(t('Delete this goal?'))) return;
+      S.busy=true;
+      run('deleteSmartGoal',[S.auth.user,S.auth.pin,b.getAttribute('data-smartdel')],function(r){
+        S.busy=false;
+        if(r && r.ok) S.smartGoals=r.smartGoals||[];
+        render();
+      });
+    };
+  });
+
   bindHome();
   bindMinistrySelects();
   bindCountryOther();
@@ -3994,7 +4175,12 @@ function bind(){
     c.onclick=function(){
       var id=c.getAttribute('data-mentee');
       run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(d){
-        if(d.ok){ S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[]; S.sharedHabits=d.sharedHabits||[]; S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[]; render(); }
+        if(d.ok){
+          S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[];
+          S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[];
+          S.menteeHabits=d.habits||[]; S.menteeMinistry=d.ministry||null; S.menteeTrips=d.trips||null; S.menteeSmart=d.smartGoals||[];
+          render();
+        }
         else showMsg('Not available');
       });
     };

@@ -643,3 +643,51 @@ instead of always sitting open and pushing everything else down the page.
 | Week of {range}, {year} | សប្តាហ៍នៃ {range}, {year} |
 | {n} to log today | {n} ត្រូវកត់ត្រាថ្ងៃនេះ |
 | {n} for week {wk} | {n} សម្រាប់សប្តាហ៍ {wk} |
+
+## 11. Ministry Tracker jump chip, red→yellow→green slider
+
+Two more from the same round: the goal-progress slider now uses a real
+red→yellow→green gauge (a continuous hue sweep) instead of the discrete
+warm/amber/cobalt/green bands the rings use — those stayed as-is, only the
+slider changed. And the quick-jump bar gained a "Ministry Tracker" chip,
+since the collapsible KPI card now needs one to reach it without scrolling.
+
+| English | ខ្មែរ |
+|---|---|
+| Ministry Tracker | កម្មវិធីតាមដានកិច្ចការបម្រើ |
+| {n} for {range} | {n} សម្រាប់ {range} |
+
+## 12. Annual Goals (SMART) — new feature
+
+A personal, year-and-category goal list, matching the mockup: a year
+picker, six fixed categories (Faith, Health, Finance, Language, Skills,
+Fun), and add/edit/delete for each goal (title, an optional freeform detail
+line, and a percent). Nothing here feeds any base or ministry figure.
+
+| English | ខ្មែរ |
+|---|---|
+| Annual Goals | គោលដៅប្រចាំឆ្នាំ |
+| Annual Goals · SMART | គោលដៅប្រចាំឆ្នាំ · SMART |
+| Previous year / Next year | ឆ្នាំមុន / ឆ្នាំក្រោយ |
+| Faith / Finance / Language / Skills / Fun | ជំនឿ / ហិរញ្ញវត្ថុ / ភាសា / ជំនាញ / កម្សាន្ត |
+| No goals set for this category yet. | មិនទាន់មានគោលដៅសម្រាប់ប្រភេទនេះនៅឡើយទេ។ |
+| New goal / Goal / Detail (optional) | គោលដៅថ្មី / គោលដៅ / សេចក្តីលម្អិត (ស្រេចចិត្ត) |
+| What are you aiming for this year? | តើអ្នកកំពុងសំដៅទៅរកអ្វីក្នុងឆ្នាំនេះ? |
+| e.g. Measurable · by Dec 2026 | ឧ. អាចវាស់វែងបាន · មុនខែធ្នូ ២០២៦ |
+| Give the goal a title first. | សូមដាក់ចំណងជើងឱ្យគោលដៅជាមុនសិន។ |
+| Delete this goal? | លុបគោលដៅនេះមែនទេ? |
+
+## 13. Mentors see the whole database, not just shared habits
+
+A mentor relationship is now full consent, not partial: the per-habit
+"private / mentor sees" toggle is gone (it always showed all habits to the
+mentor from here on, so a toggle that did nothing would just be confusing).
+A mentee's ministry KPI numbers, Annual Goals, and Leave history are now
+visible on their mentor's mentee-detail page too, read-only.
+
+| English | ខ្មែរ |
+|---|---|
+| Pick up to {n}. | ជ្រើសរើសបានរហូតដល់ {n}។ |
+| {name}'s habits | ទម្លាប់របស់ {name} |
+| previous 7 days | ៧ ថ្ងៃមុន |
+| first week of data | សប្តាហ៍ដំបូងនៃទិន្នន័យ |

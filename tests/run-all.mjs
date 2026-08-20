@@ -22,6 +22,7 @@ const SERVER = [
   'test-okr-auth.mjs',   // OKR writes stay inside your campus + department
   'test-year.mjs',       // weeks belong to a year; writing numbers needs a name
   'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read
+  'test-smart-goals.mjs', // Annual Goals (SMART): year+category isolation, ownership
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted

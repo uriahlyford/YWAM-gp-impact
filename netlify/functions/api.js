@@ -527,7 +527,6 @@ async function getMenteeLogs(username, pin, menteeId) {
   const m = rows.find(function (x) { return x.id === menteeId; });
   if (!m || m.mentorId !== s.id || m.mentorStatus !== 'approved') return { ok: false, err: 'not_your_mentee' };
   const dailyRows = await getDaily_();
-  // Only the habits this person chose to share, and they're told which those are.
   const cfg = habitsOf_(m);
   /* Their weekly check-ins, by name, to their ONE approved mentor. Survey rows
      are keyed by token, so this join — token back to person — happens nowhere
@@ -547,13 +546,25 @@ async function getMenteeLogs(username, pin, menteeId) {
       })
       .sort(function (a, b) { return b.week - a.week; });
   }
+  /* A mentor relationship is opt-in and per-person consent to see everything
+     in this database, not just the pooled figures the base gets — so once
+     approved, nothing here is filtered back out: full daily logs (every
+     habit, not just ones marked "shared" — that per-habit toggle no longer
+     exists), the ministry numbers they log, their annual SMART goals, and
+     their leave history. */
+  const menteeTrips = (await getTrips_()).filter(function (r) { return r.staffId === m.id; })
+    .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
+  const menteeSmart = (await getSmartGoals_()).filter(function (r) { return r.staffId === m.id; });
   return {
     ok: true, mentee: publicStaff_(m),
-    logs: logsFor_(dailyRows, m.id, cfg),
-    sharedHabits: cfg.filter(function (h) { return h.mentorVisible; }),
+    logs: logsFor_(dailyRows, m.id),
+    habits: cfg,
     goals: goalsFor_(await getGoals_(), m.id),
     checkins: checkins,
-    profile: { debt: m.debt }
+    profile: { debt: m.debt },
+    ministry: await ministryDataFor_(m),
+    trips: { trips: menteeTrips.map(tripOut_), totals: awayTotals_(menteeTrips), ptoCap: PTO_ANNUAL_CAP },
+    smartGoals: menteeSmart.map(smartGoalOut_)
   };
 }
 async function getMyMentorRequests(username, pin) {
@@ -1033,9 +1044,7 @@ async function getMyWeekly(username, pin) {
    Scoped harder than the leader path on purpose: a staff member can only read
    and write their OWN campus + department + ministry, and never a SENSITIVE
    metric, regardless of what the client sends. */
-async function getMyMinistry(username, pin) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
+async function ministryDataFor_(s) {
   const out = {}, daily = {};
   const yr = currentYear_();
   if (s.ministry) {
@@ -1059,6 +1068,12 @@ async function getMyMinistry(username, pin) {
     ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '',
     entries: out, daily: daily, pins: Array.isArray(s.kpiPins) ? s.kpiPins : []
   };
+}
+
+async function getMyMinistry(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  return ministryDataFor_(s);
 }
 
 async function saveMyMinistry(username, pin, week, updates) {
@@ -1320,6 +1335,65 @@ async function respondToTrip(username, pin, tripId, approve) {
   return getTripRequests(username, pin);
 }
 
+/* ==================== annual goals (SMART) ====================
+   A personal, year-and-category list — not tied to any ministry KPI or to
+   the base's own figures, so it lives entirely under the staff member who
+   wrote it. Six fixed categories, matching the redesign: adding a seventh
+   is a code change, not a per-goal choice, so the category chips can never
+   drift out of sync with what a saved goal actually holds. */
+const SMART_CATEGORIES = ['Faith', 'Health', 'Finance', 'Language', 'Skills', 'Fun'];
+const MAX_SMART_GOALS_PER_YEAR = 30;
+
+async function getSmartGoals_() { return readJSON('smartGoals', []); }
+
+function smartGoalOut_(r) {
+  return { id: r.id, year: r.year, category: r.category, title: r.title, meta: r.meta || '', pct: r.pct };
+}
+
+async function getMySmartGoals(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const mine = (await getSmartGoals_()).filter(function (r) { return r.staffId === s.id; });
+  return { ok: true, smartGoals: mine.map(smartGoalOut_) };
+}
+
+async function saveSmartGoal(username, pin, goal) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const g = goal || {};
+  const year = finiteNum_(g.year, 2020, 2100);
+  if (year == null) return { ok: false, err: 'bad_year' };
+  if (SMART_CATEGORIES.indexOf(g.category) === -1) return { ok: false, err: 'bad_category' };
+  const title = str_(g.title, 200);
+  if (!title) return { ok: false, err: 'bad_title' };
+  const pct = Math.max(0, Math.min(100, Math.round(Number(g.pct)) || 0));
+
+  const rows = await getSmartGoals_();
+  const now = new Date().toISOString();
+  const existingIdx = g.id ? rows.findIndex(function (r) { return r.id === g.id && r.staffId === s.id; }) : -1;
+  if (existingIdx === -1) {
+    const mineThisYear = rows.filter(function (r) { return r.staffId === s.id && Number(r.year) === year; });
+    if (mineThisYear.length >= MAX_SMART_GOALS_PER_YEAR) return { ok: false, err: 'too_many' };
+  }
+  const rec = {
+    id: existingIdx > -1 ? rows[existingIdx].id : ('sg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    staffId: s.id, year: year, category: g.category, title: title, meta: str_(g.meta, 200) || '', pct: pct,
+    created: existingIdx > -1 ? rows[existingIdx].created : now, updated: now
+  };
+  if (existingIdx > -1) rows[existingIdx] = rec; else rows.push(rec);
+  await writeJSON('smartGoals', rows);
+  return getMySmartGoals(username, pin);
+}
+
+async function deleteSmartGoal(username, pin, goalId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  let rows = await getSmartGoals_();
+  rows = rows.filter(function (r) { return !(r.id === goalId && r.staffId === s.id); });
+  await writeJSON('smartGoals', rows);
+  return getMySmartGoals(username, pin);
+}
+
 /* ==================== a teammate's public profile ====================
    What one staff member may see about another: who they are, what ministry
    they're in, and their weekly goals — work commitments the team is meant to
@@ -1399,7 +1473,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -1410,7 +1484,8 @@ async function getMyBoot(username, pin) {
       part(function () { return getTripRequests(username, pin); }),
       part(function () { return getMyMinistry(username, pin); }),
       // No leader code: the two money metrics leadership can see never reach here.
-      part(function () { return getData(''); })
+      part(function () { return getData(''); }),
+      part(function () { return getMySmartGoals(username, pin); })
     ]);
 
   return {
@@ -1427,6 +1502,7 @@ async function getMyBoot(username, pin) {
     trips: trips || null,
     tripRequests: (tripReqs && tripReqs.requests) || [],
     ministry: ministry || null,
+    smartGoals: (smart && smart.smartGoals) || [],
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -1465,7 +1541,10 @@ const HANDLERS = {
   respondToTrip: function (a) { return respondToTrip(a[0], a[1], a[2], a[3]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   saveMyWeek: function (a) { return saveMyWeek(a[0], a[1], a[2], a[3]); },
-  deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); }
+  deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); },
+  getMySmartGoals: function (a) { return getMySmartGoals(a[0], a[1]); },
+  saveSmartGoal: function (a) { return saveSmartGoal(a[0], a[1], a[2]); },
+  deleteSmartGoal: function (a) { return deleteSmartGoal(a[0], a[1], a[2]); }
 };
 
 export default async (req) => {
