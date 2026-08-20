@@ -757,6 +757,17 @@ function gpPctColor(p){
   if(p>0)    return 'var(--warm)';
   return 'var(--faint)';
 }
+/* Same bands as gpPctColor, but for the ring/slider FILL rather than text —
+   --amberDeep was picked dark enough to read as text on a light background,
+   which makes the 25-74% band look brown rather than yellow once it's a fill
+   instead of a letterform. --amber is the same hue at full brightness. */
+function gpRingColor(p){
+  if(p>=100) return 'var(--good)';
+  if(p>=75)  return 'var(--accent)';
+  if(p>=25)  return 'var(--amber)';
+  if(p>0)    return 'var(--warm)';
+  return 'var(--faint)';
+}
 function gpPctWord(p){
   var T = (typeof t === 'function') ? t : function(s){ return s; };
   if(p>=100) return T('Done');
@@ -767,7 +778,7 @@ function gpPctWord(p){
   return T('Not started');
 }
 /* One string drives both the ring's sweep and a slider track's fill. */
-function gpRingVars(p){ return '--p:'+p+';--p1:'+p+'%;--gc:'+gpPctColor(p)+';'; }
+function gpRingVars(p){ return '--p:'+p+';--p1:'+p+'%;--gc:'+gpRingColor(p)+';'; }
 function gpRingHtml(p, size, label){
   var cls = 'gRing' + (size ? ' ' + size : '');
   return '<div class="'+cls+'" style="'+gpRingVars(p)+'" role="img" aria-label="'+

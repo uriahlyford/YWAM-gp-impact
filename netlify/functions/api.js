@@ -308,8 +308,10 @@ async function updateProfile(username, pin, payload) {
   if (payload.phone !== undefined) rec.phone = payload.phone;
   if (payload.joined !== undefined) rec.joined = payload.joined;
   if (payload.debt !== undefined) rec.debt = !!payload.debt;
+  // A free color wheel rather than a fixed palette — any hex works, so the
+  // only guard is the shape, not membership in some list.
   if (payload.dashboardColor !== undefined) {
-    rec.dashboardColor = DASHBOARD_COLORS.indexOf(payload.dashboardColor) > -1 ? payload.dashboardColor : '';
+    rec.dashboardColor = /^#[0-9a-fA-F]{6}$/.test(payload.dashboardColor) ? payload.dashboardColor : '';
   }
   rec.updated = new Date().toISOString();
   rows[idx] = rec;
@@ -350,11 +352,6 @@ async function uploadPhoto(username, pin, base64, mime) {
   await saveStaff_(rows);
   return { ok: true, photo: dataUri };
 }
-
-/* A fixed palette rather than a free color picker — every one of these reads
-   fine with the dashboard's fixed white/light text, in both themes, so there
-   is no way to end up with unreadable white-on-white. */
-const DASHBOARD_COLORS = ['#17150F', '#1F44FF', '#0A7D3C', '#A84E1C', '#7B4B94', '#B3261E'];
 
 async function uploadDashboardBg(username, pin, base64, mime) {
   const s = await verifyStaff_(username, pin);
@@ -1378,6 +1375,65 @@ async function respondToTrip(username, pin, tripId, approve) {
   return getTripRequests(username, pin);
 }
 
+/* ==================== 1-on-1 requests ====================
+   Either side of an approved mentor/mentee relationship can ask the other
+   for a 1-on-1 — a mentor asking a mentee, or a mentee asking their mentor.
+   Nothing here is tied to a calendar; it's just a request-and-respond flow
+   living next to the relationship itself. */
+async function getOneOnOnes_() { return readJSON('oneOnOnes', []); }
+
+async function getMyOneOnOnes(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const staff = await getStaff_();
+  const list = (await getOneOnOnes_())
+    .filter(function (r) { return r.fromId === s.id || r.toId === s.id; })
+    .map(function (r) {
+      const mine = r.fromId === s.id;
+      const otherId = mine ? r.toId : r.fromId;
+      const who = staff.find(function (x) { return x.id === otherId; });
+      return {
+        id: r.id, otherId: otherId, otherName: who ? who.name : '—', mine: mine,
+        status: r.status, note: r.note || '', created: r.created, decidedAt: r.decidedAt || ''
+      };
+    })
+    .sort(function (a, b) { return (b.created || '') < (a.created || '') ? -1 : 1; });
+  return { ok: true, oneOnOnes: list };
+}
+
+async function requestOneOnOne(username, pin, otherId, note) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const staff = await getStaff_();
+  const other = staff.find(function (x) { return x.id === otherId; });
+  if (!other) return { ok: false, err: 'not_found' };
+  const isMentee = other.mentorId === s.id && other.mentorStatus === 'approved';
+  const isMentor = s.mentorId === other.id && s.mentorStatus === 'approved';
+  if (!isMentee && !isMentor) return { ok: false, err: 'not_mentor_pair' };
+  const rows = await getOneOnOnes_();
+  const now = new Date().toISOString();
+  rows.push({
+    id: 'oo' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    fromId: s.id, toId: otherId, note: str_(note, 300) || '', status: 'pending',
+    created: now, updated: now, decidedAt: ''
+  });
+  await writeJSON('oneOnOnes', rows);
+  return getMyOneOnOnes(username, pin);
+}
+
+async function respondToOneOnOne(username, pin, requestId, approve) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getOneOnOnes_();
+  const idx = rows.findIndex(function (r) { return r.id === requestId && r.toId === s.id && r.status === 'pending'; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  rows[idx].status = approve ? 'accepted' : 'declined';
+  rows[idx].decidedAt = new Date().toISOString();
+  rows[idx].updated = rows[idx].decidedAt;
+  await writeJSON('oneOnOnes', rows);
+  return getMyOneOnOnes(username, pin);
+}
+
 /* ==================== annual goals (SMART) ====================
    A personal, year-and-category list — not tied to any ministry KPI or to
    the base's own figures, so it lives entirely under the staff member who
@@ -1516,7 +1572,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -1528,13 +1584,17 @@ async function getMyBoot(username, pin) {
       part(function () { return getMyMinistry(username, pin); }),
       // No leader code: the two money metrics leadership can see never reach here.
       part(function () { return getData(''); }),
-      part(function () { return getMySmartGoals(username, pin); })
+      part(function () { return getMySmartGoals(username, pin); }),
+      part(function () { return getMyOneOnOnes(username, pin); })
     ]);
 
   return {
     ok: true,
     staff: publicStaff_(s),
-    profile: { phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '' },
+    profile: {
+      phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
+      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+    },
     roster: (staffRows || []).filter(function (r) { return r.active; }).map(publicStaff_),
     logs: (logs && logs.logs) || [],
     habits: (logs && logs.habits) || null,
@@ -1546,6 +1606,7 @@ async function getMyBoot(username, pin) {
     tripRequests: (tripReqs && tripReqs.requests) || [],
     ministry: ministry || null,
     smartGoals: (smart && smart.smartGoals) || [],
+    oneOnOnes: (oneOnOnes && oneOnOnes.oneOnOnes) || [],
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -1589,7 +1650,10 @@ const HANDLERS = {
   deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); },
   getMySmartGoals: function (a) { return getMySmartGoals(a[0], a[1]); },
   saveSmartGoal: function (a) { return saveSmartGoal(a[0], a[1], a[2]); },
-  deleteSmartGoal: function (a) { return deleteSmartGoal(a[0], a[1], a[2]); }
+  deleteSmartGoal: function (a) { return deleteSmartGoal(a[0], a[1], a[2]); },
+  getMyOneOnOnes: function (a) { return getMyOneOnOnes(a[0], a[1]); },
+  requestOneOnOne: function (a) { return requestOneOnOne(a[0], a[1], a[2], a[3]); },
+  respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); }
 };
 
 export default async (req) => {

@@ -427,6 +427,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .kpiIn { width:88px !important; text-align:right; }
 
 /* team directory grouped by department then ministry */
+.campusSeg { display:inline-flex; background:var(--surface2); border-radius:12px; padding:3px; gap:3px; margin-bottom:14px; max-width:280px; }
+.campusBtn { border:0; background:none; border-radius:9px; padding:7px 14px; font-size:12px; font-weight:600;
+  color:var(--muted); cursor:pointer; font-family:inherit; text-align:center; }
+.campusBtn.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(23,21,15,.12); }
 .deptBlock { border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:12px 13px; margin-bottom:12px; }
 .deptHead { display:flex; align-items:center; gap:7px; font-size:15px; font-weight:700; }
 .deptHead .deptN { margin-left:auto; font-family:'Koulen',sans-serif; font-size:17px; color:var(--accent); }
@@ -607,6 +611,39 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); border-radius:999px; padding:11px 15px; font:inherit; font-size:14px; background:var(--bg); color:var(--ink); width:auto; }
 .addGoalBtn { flex:0 0 auto; width:38px; height:38px; border-radius:50%; border:0; background:var(--headerBg); cursor:pointer;
   display:flex; align-items:center; justify-content:center; }
+
+/* Personal dashboard — matches the app's own card style (light or dark
+   theme) by default. Once a custom color or photo is set, .custom pins
+   text to the fixed --onDark pair so it stays readable either way, same
+   as .allowCard below and any other photo-backed card. */
+.miniDash { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px; margin-bottom:14px;
+  background-size:cover; background-position:center; }
+.miniDashHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.miniDashGreet { font-family:'Koulen',sans-serif; font-size:19px; letter-spacing:.4px; }
+/* An on/off switch, not an icon button — used for the customize panel's
+   open/closed state, and reusable anywhere else a toggle beats a button. */
+.toggleSwitch { position:relative; width:44px; height:26px; border-radius:999px; border:1.5px solid var(--border2);
+  background:var(--surface2); cursor:pointer; padding:0; flex:0 0 auto; transition:background .15s ease, border-color .15s ease; }
+.toggleSwitch.on { background:var(--accent); border-color:var(--accent); }
+.toggleKnob { position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:var(--surface);
+  box-shadow:0 1px 2px rgba(23,21,15,.3); transition:transform .15s ease; }
+.toggleSwitch.on .toggleKnob { transform:translateX(18px); }
+.miniDashStats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:16px; }
+.mdStat { text-align:center; border:1px solid var(--border); border-radius:10px; padding:10px 4px 8px; }
+.mdNum { font-family:'Koulen',sans-serif; font-size:20px; }
+.mdLabel { font-size:10px; color:var(--muted); line-height:1.25; margin-top:2px; }
+/* A dark gradient under the text, not the color/photo itself, is what keeps
+   this legible no matter which color someone picks or how bright their photo is. */
+.miniDash.custom { border-color:transparent; position:relative; }
+.miniDash.custom::before { content:''; position:absolute; inset:0; border-radius:inherit;
+  background:linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.45)); }
+.miniDash.custom .miniDashHead, .miniDash.custom .miniDashStats { position:relative; }
+.miniDash.custom .miniDashGreet, .miniDash.custom .mdNum { color:var(--onDark); }
+.miniDash.custom .mdLabel { color:var(--onDarkFaint); }
+.miniDash.custom .toggleSwitch, .miniDash.custom .mdStat { border-color:var(--onDarkBorder); }
+input[type=color] { width:42px; height:42px; padding:0; border:1.5px solid var(--border2); border-radius:50%; cursor:pointer; background:none; }
+input[type=color]::-webkit-color-swatch-wrapper { padding:2px; border-radius:50%; }
+input[type=color]::-webkit-color-swatch { border:none; border-radius:50%; }
 
 /* Leave Request screen, from the mockup */
 .allowCard { background:var(--headerBg); color:var(--onDark); border-radius:var(--r); padding:16px 18px; margin-bottom:14px; }
@@ -903,14 +940,15 @@ var S = {
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, weekDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
-  trips:null, tripRequests:[], leaveDraft:null,
-  baseDept:null, okrForm:false, okrEditId:null, krOpen:{},
+  trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[],
+  baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null,
   healthWeek:null, weekForm:null, weekDraftFor:null,
   healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{},
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
   baseHealthPeriod:'week',
   dbAcc:{kpiDay:false, kpiWeek:false},
   smartGoals:[], smartYear:null, smartCategory:'Faith', smartDraft:null,
+  dbCustomize:false,
   menuOpen:false
 };
 
@@ -1174,6 +1212,7 @@ function applyBoot(d){
   S.tripRequests = d.tripRequests || [];
   if(d.ministry) S.ministry = d.ministry;
   S.smartGoals = d.smartGoals || [];
+  S.oneOnOnes = d.oneOnOnes || [];
   if(d.base && d.base.entries) S.base = d.base;
   if(!S.view) S.view = 'base';
   render();
@@ -1185,6 +1224,7 @@ function logout(){
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
+  S.dbCustomize=false; S.oneOnOnes=[];
   render();
 }
 
@@ -2018,6 +2058,16 @@ function smartGoalFormHtml(draft){
    profile); this just gives it a home on My Database instead of only living
    on Team. Tapping a mentee opens their page the same way Team's directory
    does — it just also has to switch tabs to get there. */
+/* A 1-on-1 icon button next to a mentor/mentee row — either side of the
+   relationship can ask the other for a 1-on-1, so this shows up in both
+   "You're Mentoring" and "Your Mentor". Suppressed once a request between
+   these two is already pending, so the row can't be double-tapped. */
+function oneOnOneBtnHtml(personId){
+  var pending=(S.oneOnOnes||[]).some(function(o){ return o.otherId===personId && o.status==='pending'; });
+  if(pending) return '<span class="pill pending">'+esc(t('Pending'))+'</span>';
+  return '<button class="openBtn" data-request121="'+esc(personId)+'" aria-label="'+esc(t('Request a 1-on-1'))+'">☕</button>';
+}
+
 function mentorshipCardHtml(){
   var h='<div class="card" id="sec-mentor">';
   h+='<div class="mentorLabel">'+esc(t("You're Mentoring"))+'</div>';
@@ -2026,6 +2076,7 @@ function mentorshipCardHtml(){
       h+='<div class="mentorBlock">'+avatarHtml(p,'sm')+
         '<div style="flex:1"><div class="mentorName">'+esc(p.name)+'</div>'+
         '<div class="mentorMeta">'+esc(t(p.ministry||p.dept||''))+'</div></div>'+
+        oneOnOneBtnHtml(p.id)+
         '<button class="openBtn" data-openmentee="'+esc(p.id)+'" aria-label="'+esc(t('Open their database'))+'">'+
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>';
     });
@@ -2038,10 +2089,116 @@ function mentorshipCardHtml(){
     var m=personOf(S.me.mentorId);
     h+='<div class="mentorBlock" style="padding-bottom:2px">'+avatarHtml(m,'sm')+
       '<div style="flex:1"><div class="mentorName">'+esc(m?m.name:nameOf(S.me.mentorId))+'</div>'+
-      '<div class="mentorMeta">'+esc(t(m?(m.ministry||m.dept||''):''))+'</div></div></div>';
+      '<div class="mentorMeta">'+esc(t(m?(m.ministry||m.dept||''):''))+'</div></div>'+
+      oneOnOneBtnHtml(S.me.mentorId)+
+    '</div>';
   } else {
     h+='<div class="emptyLine">'+esc(t('No mentor set yet.'))+'</div>';
   }
+  var incoming=(S.oneOnOnes||[]).filter(function(o){ return !o.mine && o.status==='pending'; });
+  if(incoming.length){
+    h+='<div class="mentorDivider"></div><div class="mentorLabel">'+esc(t('1-on-1 Requests'))+'</div>';
+    incoming.forEach(function(o){
+      h+='<div class="row"><span class="rowName">'+esc(gpT('{name} would like a 1-on-1',{name:o.otherName}))+'</span>'+
+        '<span class="chips" style="margin:0"><button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-121accept="'+esc(o.id)+'">'+esc(t('Accept'))+'</button>'+
+        '<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px;color:var(--faint)" data-121decline="'+esc(o.id)+'">'+esc(t('Decline'))+'</button></span></div>';
+    });
+  }
+  return h+'</div>';
+}
+
+/* A small at-a-glance summary at the very top of My Database — streak,
+   this week's goals, today's habits, PTO left. By default it just blends
+   into the app's own theme (light or dark) like any other card; a gear
+   icon in the top-right reveals a hidden customize panel — a free color
+   wheel and a background photo — for the one card that's actually yours.
+   The moment either is set, text switches to the fixed --onDark pair so
+   it stays readable over any color or photo, the same trick .allowCard
+   and photo-backed cards already use. */
+function miniDashboardHtml(){
+  var st=graceStreak(function(){return true;});
+  var rec=goalsForWeek(thisWeek());
+  var written=(rec && rec.items ? rec.items : []).filter(function(i){return i && i.text;});
+  var goalsDone=written.filter(function(i){return goalItemPct(i)>=100;}).length;
+  var list=myHabits();
+  var log=logForDate(todayStr());
+  var habitsDone=list.filter(function(hb){return log && didHabit(log,hb.id);}).length;
+  var year=String(new Date().getFullYear());
+  var yt=(S.trips && S.trips.totals && S.trips.totals[year]) || {personal:0};
+  var cap=(S.trips && S.trips.ptoCap) || 30;
+  var ptoLeft=Math.max(0, cap-yt.personal);
+  var firstName=(S.me && S.me.name ? S.me.name.split(' ')[0] : '');
+
+  var p=S.profile||{};
+  var color=p.dashboardColor||'';
+  var bg=p.dashboardBg||'';
+  var custom=!!(color||bg);
+  var open=!!S.dbCustomize;
+
+  var h='<div class="miniDash'+(custom?' custom':'')+'"'+
+    (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
+    '<div class="miniDashHead">'+
+      '<div class="miniDashGreet">'+esc(gpT('Welcome, {name}, to your database',{name:firstName}))+'</div>'+
+      '<button class="toggleSwitch'+(open?' on':'')+'" id="dashCustomizeBtn" role="switch" aria-checked="'+(open?'true':'false')+'" aria-label="'+esc(t('Customize dashboard'))+'"><span class="toggleKnob"></span></button>'+
+    '</div>'+
+    '<div class="miniDashStats">'+
+      '<div class="mdStat"><div class="mdNum">'+st+'</div><div class="mdLabel">'+esc(t('day streak'))+'</div></div>'+
+      '<div class="mdStat"><div class="mdNum">'+goalsDone+'/'+written.length+'</div><div class="mdLabel">'+esc(t('goals done'))+'</div></div>'+
+      '<div class="mdStat"><div class="mdNum">'+habitsDone+'/'+list.length+'</div><div class="mdLabel">'+esc(t('habits today'))+'</div></div>'+
+      '<div class="mdStat"><div class="mdNum">'+ptoLeft+'</div><div class="mdLabel">'+esc(t('PTO days left'))+'</div></div>'+
+    '</div>'+
+  '</div>';
+
+  if(open){
+    h+='<div class="card">'+
+      '<label class="f">'+esc(t('Accent color'))+'</label>'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+        '<input type="color" id="dashColorInput" value="'+esc(color||'#1F44FF')+'" aria-label="'+esc(t('Choose color'))+'">'+
+        (color?'<button class="linkbtn" id="dashColorReset" style="width:auto;margin:0;padding:0">'+esc(t('Match app theme'))+'</button>':'')+
+      '</div>'+
+      '<label class="f">'+esc(t('Background image'))+'</label>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="btn ghost" id="dashBgBtn" style="width:auto;margin:0;padding:9px 14px">'+(bg?esc(t('Change image')):esc(t('Add image')))+'</button>'+
+        (bg?'<button class="btn ghost" id="dashBgClearBtn" style="width:auto;margin:0;padding:9px 14px">'+esc(t('Remove'))+'</button>':'')+
+      '</div>'+
+      '<input type="file" accept="image/*" id="dashBgInput" style="display:none">'+
+    '</div>';
+  }
+  return h;
+}
+
+/* Recent updates for the personal dashboard — leave decisions on my own
+   requests, a mentee's leave request waiting on me, and 1-on-1 activity.
+   Purely computed from state already on the page (trips, tripRequests,
+   oneOnOnes), the same way streaks and badges are derived rather than
+   stored — there's no separate "seen/unseen" tracking, just what's recent. */
+function notificationsHtml(){
+  var items=[];
+  (S.trips && S.trips.trips || []).forEach(function(r){
+    var range=r.from+(r.to!==r.from?' → '+r.to:'');
+    if(r.status==='approved'){
+      items.push({ when: r.decidedAt||r.from, text: gpT('Your {range} leave request was approved', {range:range}) });
+    } else if(r.status==='declined'){
+      items.push({ when: r.decidedAt||r.from, text: gpT('Your {range} leave request was declined', {range:range}) });
+    }
+  });
+  (S.tripRequests||[]).forEach(function(r){
+    items.push({ when:r.from, text: gpT('{name} requested leave {range}',
+      {name:r.name, range:r.from+(r.to!==r.from?' → '+r.to:'')}) });
+  });
+  (S.oneOnOnes||[]).forEach(function(o){
+    if(!o.mine && o.status==='pending'){
+      items.push({ when:o.created, text: gpT('{name} requested a 1-on-1', {name:o.otherName}) });
+    } else if(o.mine && o.status==='accepted'){
+      items.push({ when:o.decidedAt||o.created, text: gpT('{name} accepted your 1-on-1 request', {name:o.otherName}) });
+    } else if(o.mine && o.status==='declined'){
+      items.push({ when:o.decidedAt||o.created, text: gpT('{name} declined your 1-on-1 request', {name:o.otherName}) });
+    }
+  });
+  if(!items.length) return '';
+  items.sort(function(a,b){ return (b.when||'')<(a.when||'')?-1:1; });
+  var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🔔 '+esc(t('Updates'))+'</div>';
+  items.slice(0,5).forEach(function(it){ h+='<div class="row"><span class="rowName">'+esc(it.text)+'</span></div>'; });
   return h+'</div>';
 }
 
@@ -2055,7 +2212,9 @@ function homeHtml(){
      folded into one "My Database" tab now, so the quick-jump bar below is what
      replaces the old tab bar for getting straight to one section. */
   var st=graceStreak(function(){return true;});
-  var h='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>'+
+  var h=miniDashboardHtml();
+  h+=notificationsHtml();
+  h+='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>'+
     '<div class="chips" style="margin:0 0 12px">'+
     (st>0?'<span class="chip'+(st>=7?' milestone':'')+'">🔥 '+esc(gpT('{n}-day streak',{n:st}))+
            (st>=30?' · '+esc(t('a month!')):(st>=7?' · '+esc(t('a week!')):''))+'</span>'
@@ -3097,17 +3256,25 @@ function leaveHtml(){
 function teamHtml(){
   if(S.person) return personHtml();
 
-  /* Campus → department → ministry, so the directory reads like the base is
-     actually organised rather than one long alphabetical wall. */
+  /* One campus at a time, via the toggle, matching the mockup — the directory
+     used to stack both campuses stacked at once, which read as one long list
+     rather than "which base am I looking at right now". Defaults to your own
+     campus, since that's whose team you open this tab to see. */
+  var campus = S.teamCampus || (S.me && S.me.campus) || CAMPUSES[0].id;
+  var cInfo = CAMPUSES.filter(function(c){ return c.id===campus; })[0];
+  var here = S.roster.filter(function(p){ return p.campus===campus; });
+
   var h='<h2>'+esc(t('Team'))+' <small>· '+S.roster.length+' '+esc(t('staff'))+'</small></h2>'+
     mentorEntryHtml()+
     '<p class="sub">'+esc(t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
 
-  CAMPUSES.forEach(function(c){
-    var here=S.roster.filter(function(p){ return p.campus===c.id; });
-    if(!here.length) return;
-    h+='<h3>'+esc(t(c.name))+' <small>· '+here.length+'</small></h3>';
+  h+='<div class="campusSeg">'+CAMPUSES.map(function(c){
+    return '<button class="campusBtn'+(campus===c.id?' on':'')+'" data-teamcampus="'+esc(c.id)+'">'+esc(t(c.name))+'</button>';
+  }).join('')+'</div>';
 
+  h+='<h3>'+esc(t(cInfo?cInfo.name:campus))+' <small>· '+here.length+'</small></h3>';
+
+  if(here.length){
     // group by department, then ministry inside it
     var byDept={};
     here.forEach(function(p){ (byDept[p.dept||'—']=byDept[p.dept||'—']||[]).push(p); });
@@ -3130,8 +3297,9 @@ function teamHtml(){
       });
       h+='</div>';
     });
-  });
-  if(!S.roster.length) h+='<p class="sub">'+esc(t('No profiles yet.'))+'</p>';
+  } else {
+    h+='<p class="sub">'+esc(t('No profiles yet.'))+'</p>';
+  }
   return h;
 }
 
@@ -3477,6 +3645,29 @@ function handlePhoto(file){
   reader.readAsDataURL(file);
 }
 
+/* Same resize-then-upload shape as handlePhoto, just a wider frame since this
+   sits behind a whole card rather than a small avatar circle. */
+function handleDashboardBg(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var max=800, w=img.width, h=img.height;
+      if(w>h && w>max){ h=Math.round(h*max/w); w=max; } else if(h>max){ w=Math.round(w*max/h); h=max; }
+      var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      var data=cv.toDataURL('image/jpeg',0.6).split(',')[1];
+      showMsg(t('Uploading image…'));
+      run('uploadDashboardBg',[S.auth.user,S.auth.pin,data,'image/jpeg'],function(d){
+        if(d.ok){ S.profile=S.profile||{}; S.profile.dashboardBg=d.dashboardBg; showMsg(t('Dashboard updated')); render(); }
+        else showMsg(d && d.err==='bad_type' ? t('That image type isn’t supported') : (d && d.err==='too_large' ? t('Image too large — try a smaller one') : t('Upload failed')));
+      });
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 /* ---------- bind ---------- */
 /* Ministry dropdowns depend on the chosen department, so repopulate them in
    place rather than re-rendering the whole form and losing typed input. */
@@ -3655,6 +3846,36 @@ function bindHome(){
   });
   var ja=document.getElementById('jumpAccount');
   if(ja) ja.onclick=function(){ S.view='profile'; render(); };
+
+  /* Personal dashboard customize panel, hidden behind the gear icon. The
+     color wheel saves on change (one control, no separate Save button);
+     the background photo goes through the same resize-then-upload path
+     as the profile photo. */
+  var dcb=document.getElementById('dashCustomizeBtn');
+  if(dcb) dcb.onclick=function(){ S.dbCustomize=!S.dbCustomize; render(); };
+  var dci=document.getElementById('dashColorInput');
+  if(dci) dci.onchange=function(){
+    var c=dci.value;
+    S.profile=S.profile||{}; S.profile.dashboardColor=c; render();
+    run('updateProfile',[S.auth.user,S.auth.pin,{dashboardColor:c}],function(d){
+      if(d.ok){ S.me=d.staff; S.profile=d.profile; render(); }
+    });
+  };
+  var dcr=document.getElementById('dashColorReset');
+  if(dcr) dcr.onclick=function(){
+    S.profile=S.profile||{}; S.profile.dashboardColor=''; render();
+    run('updateProfile',[S.auth.user,S.auth.pin,{dashboardColor:''}],function(d){
+      if(d.ok){ S.me=d.staff; S.profile=d.profile; render(); }
+    });
+  };
+  var dbb=document.getElementById('dashBgBtn'), dbi=document.getElementById('dashBgInput');
+  if(dbb&&dbi){ dbb.onclick=function(){ dbi.click(); }; dbi.onchange=function(){ if(dbi.files&&dbi.files[0]) handleDashboardBg(dbi.files[0]); }; }
+  var dbc=document.getElementById('dashBgClearBtn');
+  if(dbc) dbc.onclick=function(){
+    run('clearDashboardBg',[S.auth.user,S.auth.pin],function(d){
+      if(d.ok){ S.profile=S.profile||{}; S.profile.dashboardBg=''; render(); }
+    });
+  };
 
   /* Mentorship card's "open" arrow — same fetch the mentor screen's own
      mentee list uses, but from My Database this also has to switch to that
@@ -4176,6 +4397,9 @@ function bind(){
   };
 
   // team + mentor cards
+  document.querySelectorAll('[data-teamcampus]').forEach(function(b){
+    b.onclick=function(){ S.teamCampus=b.getAttribute('data-teamcampus'); render(); };
+  });
   // tapping a teammate in the directory opens their public profile
   document.querySelectorAll('[data-person]').forEach(function(c){
     c.onclick=function(){
@@ -4219,6 +4443,33 @@ function bind(){
       run('respondToMentorRequest',[S.auth.user,S.auth.pin,id,false],function(d){
         if(d.ok) S.mentorRequests=d.requests;
         render();
+      });
+    };
+  });
+
+  /* 1-on-1 requests, either direction of a mentor/mentee pair. */
+  document.querySelectorAll('[data-request121]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-request121');
+      run('requestOneOnOne',[S.auth.user,S.auth.pin,id,''],function(d){
+        if(d.ok){ S.oneOnOnes=d.oneOnOnes; showMsg(t('Request sent')); render(); }
+        else showMsg(t('Could not save'));
+      });
+    };
+  });
+  document.querySelectorAll('[data-121accept]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-121accept');
+      run('respondToOneOnOne',[S.auth.user,S.auth.pin,id,true],function(d){
+        if(d.ok){ S.oneOnOnes=d.oneOnOnes; render(); }
+      });
+    };
+  });
+  document.querySelectorAll('[data-121decline]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-121decline');
+      run('respondToOneOnOne',[S.auth.user,S.auth.pin,id,false],function(d){
+        if(d.ok){ S.oneOnOnes=d.oneOnOnes; render(); }
       });
     };
   });

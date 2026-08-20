@@ -691,3 +691,51 @@ visible on their mentor's mentee-detail page too, read-only.
 | {name}'s habits | ទម្លាប់របស់ {name} |
 | previous 7 days | ៧ ថ្ងៃមុន |
 | first week of data | សប្តាហ៍ដំបូងនៃទិន្នន័យ |
+
+## 14. Personal dashboard — at the top of My Database
+
+A small at-a-glance card now sits above everything else on My Database: a
+greeting by first name, and four stats (streak, this week's goals done,
+today's habits done, PTO days left). By default it matches the app's own
+light/dark theme like any other card. A gear icon in the top-right hides a
+customize panel — a free color wheel (any color, not a fixed palette) and
+a background photo — for the one card that's actually yours. The moment
+either is set, the text switches to a fixed light-on-dark pair so it stays
+readable no matter what color or photo someone picks.
+
+| English | ខ្មែរ |
+|---|---|
+| Welcome, {name}, to your database | សូមស្វាគមន៍ {name} មកកាន់ទិន្នន័យរបស់អ្នក |
+| Customize dashboard | កែសម្រួលផ្ទាំងគ្រប់គ្រង |
+| day streak / goals done / habits today / PTO days left | ថ្ងៃជាប់គ្នា / គោលដៅបានបញ្ចប់ / ទម្លាប់ថ្ងៃនេះ / ថ្ងៃឈប់សម្រាកនៅសល់ |
+| Accent color / Background image | ពណ៌សំខាន់ / រូបភាពផ្ទៃខាងក្រោយ |
+| Change image / Add image / Choose color | ប្តូររូបភាព / បន្ថែមរូបភាព / ជ្រើសរើសពណ៌ |
+| Match app theme | តាមម៉ូតកម្មវិធី |
+| Uploading image… / Dashboard updated | កំពុងផ្ទុករូបភាព… / បានធ្វើបច្ចុប្បន្នភាពផ្ទាំងគ្រប់គ្រង |
+| That image type isn't supported | ប្រភេទរូបភាពនេះមិនគាំទ្រទេ |
+| Image too large — try a smaller one | រូបភាពធំពេក — សូមសាកល្បងរូបតូចជាងនេះ |
+| Upload failed | ការផ្ទុកឡើងបរាជ័យ |
+
+## 15. 1-on-1 requests, and an Updates feed on the personal dashboard
+
+Either side of an approved mentor/mentee relationship can now ask the other
+for a 1-on-1 — a ☕ button next to their row in the Mentorship card, on both
+"You're Mentoring" and "Your Mentor". The other person accepts or declines
+from a small list in the same card. Separately, the personal dashboard now
+carries an Updates card: leave decisions on your own requests, a mentee's
+leave request waiting on you, and 1-on-1 activity — computed from state
+already on the page, not a separately stored notification log.
+
+| English | ខ្មែរ |
+|---|---|
+| Request a 1-on-1 | ស្នើសុំការជួបគ្នាមួយទល់មួយ |
+| 1-on-1 Requests | សំណើសុំជួបគ្នាមួយទល់មួយ |
+| {name} would like a 1-on-1 | {name} ចង់ជួបគ្នាមួយទល់មួយជាមួយអ្នក |
+| Request sent | បានផ្ញើសំណើ |
+| Updates | ព័ត៌មានថ្មី |
+| Your {range} leave request was approved | សំណើសុំចាកឆ្ងាយរបស់អ្នកសម្រាប់ {range} ត្រូវបានអនុម័ត |
+| Your {range} leave request was declined | សំណើសុំចាកឆ្ងាយរបស់អ្នកសម្រាប់ {range} ត្រូវបានបដិសេធ |
+| {name} requested leave {range} | {name} បានស្នើសុំចាកឆ្ងាយ {range} |
+| {name} requested a 1-on-1 | {name} បានស្នើសុំជួបគ្នាមួយទល់មួយ |
+| {name} accepted your 1-on-1 request | {name} បានទទួលយកសំណើជួបគ្នារបស់អ្នក |
+| {name} declined your 1-on-1 request | {name} បានបដិសេធសំណើជួបគ្នារបស់អ្នក |
