@@ -739,3 +739,16 @@ already on the page, not a separately stored notification log.
 | {name} requested a 1-on-1 | {name} បានស្នើសុំជួបគ្នាមួយទល់មួយ |
 | {name} accepted your 1-on-1 request | {name} បានទទួលយកសំណើជួបគ្នារបស់អ្នក |
 | {name} declined your 1-on-1 request | {name} បានបដិសេធសំណើជួបគ្នារបស់អ្នក |
+
+## 16. Dashboard customize button restyled, quick-jump bar now scrolls
+
+The dashboard's customize trigger is now an icon-over-label button matching
+`nav.bottom button`'s shape (was a switch, then a gear-only icon button)
+and each of the four stat tiles now carries an emoji matching its section
+elsewhere in My Database (🔥 streak, 🎯 goals, ✅ habits, 🌴 leave). The
+quick-jump chip row scrolls horizontally in one line instead of wrapping
+onto several.
+
+| English | ខ្មែរ |
+|---|---|
+| Customize | កែសម្រួល |
