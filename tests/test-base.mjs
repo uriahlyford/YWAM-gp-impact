@@ -407,10 +407,11 @@ console.log('\n=== HEALTH TAB ===');
 await page.click('nav.bottom [data-tab="health"]');
 await page.waitForTimeout(1200);
 console.log('sections: ' + (await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()))).join(' / '));
-console.log('week options: ' + (await page.$$eval('#healthWeekSel option', e => e.map(x => x.textContent.trim()))).slice(0,4).join(' | '));
+console.log('week nav present: ' + await page.evaluate(() => !!document.querySelector('#healthPrevWeek')));
 
-// an unanswered week opens the form
-await page.selectOption('#healthWeekSel', String(NOWWK - 5));
+// an unanswered week opens the form — same arrow/pill week nav as Weekly Goals,
+// jumped straight there by state rather than clicking Prev N times.
+await page.evaluate((wk) => { S.healthWeek = wk; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, NOWWK - 5);
 await page.waitForTimeout(900);
 console.log('\nunanswered week -> form open: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
 console.log('  1-10 questions: ' + await page.$$eval('#weekForm [data-wslide]', e => e.length));
@@ -466,7 +467,7 @@ console.log('\nedit reopens prefilled: ' + await page.evaluate(() => {
 }));
 
 // a week WITH a previous week shows progress/regress per question
-await page.selectOption('#healthWeekSel', String(NOWWK));
+await page.evaluate((wk) => { S.healthWeek = wk; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, NOWWK);
 await page.waitForTimeout(1000);
 console.log('\nweek ' + NOWWK + ' (has a prior week):');
 console.log('  trend badges: ' + await page.$$eval('#main .trend', e => e.length));
@@ -485,7 +486,7 @@ console.log('  up vs down badges: ' + await page.$$eval('#main .trend', e => {
 
 // 10b. Khmer toggle over the new markup
 // a week WITH a previous week shows progress/regress per question
-await page.selectOption('#healthWeekSel', String(NOWWK));
+await page.evaluate((wk) => { S.healthWeek = wk; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, NOWWK);
 await page.waitForTimeout(1000);
 console.log('\nweek ' + NOWWK + ' (has a prior week):');
 console.log('  trend badges: ' + await page.$$eval('#main .trend', e => e.length));

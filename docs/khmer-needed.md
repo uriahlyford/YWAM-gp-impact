@@ -842,3 +842,40 @@ apart on how a ministry's numbers are shown.
 | English | ខ្មែរ |
 |---|---|
 | Ministries You Oversee · {dept} | កិច្ចការបម្រើដែលអ្នកគ្រប់គ្រង · {dept} |
+
+## 22. Ministries You Oversee becomes loggable, by week; Individual vs Ministry labels; Mentorship gets its own heading; Health week picker matches Weekly Goals
+
+The read-only "Ministries You Oversee" section from #21 can now be logged
+into directly, the same day/week split and week-by-week navigation as a
+person's own Ministry Tracker — a department overseer no longer has to
+go through the Base tab to put in a number for a ministry they lead.
+Each ministry gets its own card with its own week pointer and draft, so
+logging Cafe's week 30 doesn't disturb what Outreach Teams' card is
+showing. Saves go through new authorized endpoints
+(`saveKpiDayFor`/`saveMinistryFor`/`getMinistryFor`) that let an overseer
+write any ministry under the department they lead, in addition to their
+own — the same rule the server already enforces, now reachable from the
+UI. Added a plain-language label above each block on My Ministry: an
+overseer's own figures are marked "Individual" (personal to them, not a
+department rollup), and a regular ministry member's own ministry section
+is marked "Ministry" (logged by anyone on the team). The "Ministries You
+Oversee" section itself now says these numbers are normally logged by the
+teams in them, with the overseer's own logging as a backup path.
+
+Two smaller fixes: "Mentorship" (You're Mentoring / Your Mentor) sat right
+under the "Annual Goals" card with no heading of its own, reading as if it
+were still part of Annual Goals — it now gets its own section title. And
+the Health tab's week picker was a plain dropdown; it now uses the same
+arrow/pill week-navigation layout as Weekly Goals and My Ministry, so
+switching or backfilling a week's health check-in looks and works the
+same way everywhere in the app.
+
+| English | ខ្មែរ |
+|---|---|
+| No KPIs are defined for {ministry} yet. | មិនទាន់មានការកំណត់សូចនាករសម្រាប់ {ministry} នៅឡើយទេ។ |
+| Individual | បុគ្គល |
+| Your own numbers as {dept} — logged by you, separate from the ministries you oversee below. | ចំនួនផ្ទាល់ខ្លួនរបស់អ្នកជា {dept} — កត់ត្រាដោយអ្នកផ្ទាល់ ដាច់ដោយឡែកពីកិច្ចការបម្រើដែលអ្នកគ្រប់គ្រងខាងក្រោម។ |
+| {ministry}'s numbers — anyone on the team can log them, and they feed the GP Dashboard for both campuses. | ចំនួនរបស់ {ministry} — នរណាម្នាក់ក្នុងក្រុមអាចកត់ត្រាបាន ហើយវានឹងបញ្ចូលទៅផ្ទាំងគ្រប់គ្រង GP សម្រាប់ទាំងពីរសាខា។ |
+| Ministry numbers — normally logged by the teams in them. You can log for any of these too, as their overseer. | ចំនួនកិច្ចការបម្រើ — ជាធម្មតាកត់ត្រាដោយក្រុមនៅក្នុងនោះ។ អ្នកក៏អាចកត់ត្រាសម្រាប់ណាមួយក្នុងចំណោមនេះបានដែរ ក្នុងនាមជាអ្នកគ្រប់គ្រងរបស់ពួកគេ។ |
+| Saved — week {wk} updated | បានរក្សាទុក — សប្តាហ៍ {wk} ត្រូវបានធ្វើបច្ចុប្បន្នភាព |
+| Saved — week total updated | បានរក្សាទុក — សរុបប្រចាំសប្តាហ៍ត្រូវបានធ្វើបច្ចុប្បន្នភាព |

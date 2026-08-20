@@ -338,7 +338,13 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
    single scrolling row rather than wrapping onto several, so it reads as one
    strip of chips instead of pushing everything else down the page. */
 .quickBar { display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; margin:0 0 14px; padding-bottom:2px;
-  scrollbar-width:none; -ms-overflow-style:none; }
+  scrollbar-width:none; -ms-overflow-style:none;
+  /* Without this, a touch that starts anywhere over the strip gets locked to
+     horizontal panning for its whole gesture — including a mostly-vertical
+     swipe meant to scroll the page. pan-x tells the browser this element
+     only claims the horizontal axis, so a vertical swipe still falls through
+     to the page instead of doing nothing. */
+  touch-action:pan-x; }
 .quickBar::-webkit-scrollbar { display:none; }
 .quickChip { background:var(--surface); border:1.5px solid var(--border2); color:var(--ink); border-radius:999px;
   padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; flex:0 0 auto; white-space:nowrap; }
@@ -969,7 +975,10 @@ var S = {
   dbAcc:{kpiDay:false, kpiWeek:false},
   smartGoals:[], smartYear:null, smartCategory:'Faith', smartDraft:null,
   dbCustomize:false,
-  menuOpen:false
+  menuOpen:false,
+  /* Ministries a department overseer logs on behalf of, keyed by ministry name
+     so more than one can sit on the same page without their state colliding. */
+  oversee:{}, ovWeek:{}, ovDraft:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}
 };
 
 var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
@@ -1009,6 +1018,17 @@ function isoWeekOf(d){
 function thisWeek(){ return isoWeekOf(new Date()); }
 function goalsViewWeek(){ return S.goalsWeek==null ? thisWeek() : S.goalsWeek; }
 function kpiViewWeek(){ return S.kpiWeek==null ? thisWeek() : S.kpiWeek; }
+/* Same idea as kpiViewWeek, but one week pointer per oversee-ministry — so
+   backfilling Cafe's week 30 doesn't move what Outreach Teams' card is showing. */
+function ovWeekFor_(min){ return (S.ovWeek[min]==null) ? thisWeek() : S.ovWeek[min]; }
+/* A "Base Leadership" profile whose ministry is itself a real department name
+   means that person oversees every ministry under it — see getDepartments()
+   in taxonomy.js. Returns that department name, or null for everyone else. */
+function myOversightDept_(){
+  if(!S.me || S.me.dept!=='Base Leadership') return null;
+  var deps=getDepartments(S.me.campus);
+  return deps[S.me.ministry] ? S.me.ministry : null;
+}
 
 /* Same Monday-anchored math as isoWeekOf, run backwards: a week NUMBER back
    to the calendar date its Monday actually falls on, so the Weekly Goals
@@ -1257,6 +1277,7 @@ function logout(){
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[];
+  S.oversee={}; S.ovWeek={}; S.ovDraft={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={};
   render();
 }
 
@@ -2125,7 +2146,8 @@ function oneOnOneBtnHtml(personId){
 }
 
 function mentorshipCardHtml(){
-  var h='<div class="card" id="sec-mentor">';
+  var h='<h3 id="sec-mentor">'+esc(t('Mentorship'))+'</h3>';
+  h+='<div class="card">';
   h+='<div class="mentorLabel">'+esc(t("You're Mentoring"))+'</div>';
   if(S.mentees && S.mentees.length){
     S.mentees.forEach(function(p){
@@ -2814,6 +2836,120 @@ function kpiCardHtml(wk){
   return h;
 }
 
+/* Same card body kpiCardHtml builds for S.me's own ministry, but addressed by
+   an explicit dept+ministry and keyed by ministry name in every piece of state
+   and every data-* attribute — so a department overseer can have several of
+   these open on one page (one per ministry they oversee) without one's draft
+   or week pointer clobbering another's. Saves go through the *For endpoints
+   (saveKpiDayFor / saveMinistryFor), which check the same overseer-or-own-
+   ministry rule the server enforces everywhere else. No pin-picking here:
+   hiding a count saves nobody's time when you are not the one filling it in
+   most days. */
+function oversightKpiCardHtml_(dept, ministry, data){
+  var wk = ovWeekFor_(ministry);
+  var metrics = metricsFor(S.me.campus, dept, ministry);
+  if(!metrics.length){
+    return '<div class="card"><p class="sub" style="margin:4px 0">'+
+      esc(gpT('No KPIs are defined for {ministry} yet.',{ministry:t(ministry)}))+'</p></div>';
+  }
+  var entries=(data&&data.entries)||{};
+  var daily=(data&&data.daily)||{};
+  var isCurWk=Number(wk)===Number(thisWeek());
+  var entryDate = kpiEntryDate_(wk);
+  var counts=metrics.filter(function(m){ return modeOf(m)==='sum'; });
+  var levels=metrics.filter(function(m){ return modeOf(m)!=='sum'; });
+  var draft = S.ovDraft[ministry] || (S.ovDraft[ministry]={});
+  var weekDraft = S.ovWeekDraft[ministry] || (S.ovWeekDraft[ministry]={});
+
+  var h='<div class="card">'+
+    '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
+    '<div class="weekNavRow">'+
+      '<button class="weekArrow" data-ovprev="'+esc(ministry)+'" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
+      '<div class="weekPill">'+esc(weekRangeLabel_(wk))+
+        '<span class="currentTag'+(isCurWk?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
+      '<button class="weekArrow" data-ovnext="'+esc(ministry)+'" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
+    '</div>'+
+    (isCurWk?'':'<button class="linkbtn" style="padding:6px 0 0" data-ovjump="'+esc(ministry)+'">'+esc(t('Jump back to this week'))+'</button>')+
+  '</div>';
+  h += '<div class="accCard">';
+
+  if(counts.length){
+    var dayTitle = isCurWk ? t('Today') : entryDate;
+    var daySummary = isCurWk ? gpT('{n} to log today', {n: counts.length})
+      : gpT('{n} to log for {range}', {n: counts.length, range: weekRangeShort_(wk)});
+    h += accRowHtml('ovAcc', ministry+'|day', esc(dayTitle), daySummary, function(){
+      var b = '<div>';
+      b += '<p class="sub" style="margin:4px 0 10px">'+
+        (isCurWk
+          ? esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))
+          : esc(gpT('Backfilling week {wk} — this lands on {date}.',{wk:wk, date:entryDate})))+
+        '</p>';
+      counts.forEach(function(metric){
+        var days=daily[metric]||{};
+        var savedToday = days[entryDate];
+        var cur = draft[metric]!==undefined ? draft[metric]
+          : (savedToday!==undefined ? savedToday : '');
+        var weekVal=(entries[metric]||{})[String(wk)];
+        var base = (weekVal===undefined?0:Number(weekVal)) - (savedToday===undefined?0:Number(savedToday));
+        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+          '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
+          gpVsLastWeek(entries[metric], wk, metric, weekVal)+
+          '<span class="newTot"></span></div></div>'+
+          '<input type="number" inputmode="decimal" class="kpiIn" placeholder="+0" data-ovday="'+esc(ministry)+
+          '" data-ovmetric="'+esc(metric)+'" data-metric="'+esc(metric)+'" data-mode="sum" data-run="'+base+
+          '" value="'+esc(String(cur))+'"></div>';
+      });
+      b+='<button class="btn" data-ovsaveday="'+esc(ministry)+'">'+esc(t('Save today'))+'</button>';
+      return b+'</div>';
+    });
+  }
+
+  if(levels.length){
+    var weekSummary = gpT('{n} for {range}', {n: levels.length, range: weekRangeShort_(wk)});
+    h += accRowHtml('ovAcc', ministry+'|week', esc(t('This week')), weekSummary, function(){
+      var b = '<div>';
+      b += '<p class="sub" style="margin:4px 0 10px">'+
+        esc(t('Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed.'))+'</p>';
+      levels.forEach(function(metric){
+        var mode=modeOf(metric);
+        var wks=entries[metric]||{};
+        var agg=aggregate(wks, mode);
+        var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
+        var carried=false;
+        var sub='', extra='';
+        if(mode==='latest'){
+          var prev=lastBefore(wks, wk);
+          carried = (cur==='' && prev!==null);
+          if(carried){ cur=prev.value; extra=' data-carried="1"'; }
+          sub = esc(t('now'))+' '+fmt(agg, metric);
+          if(prev!==null){
+            sub += ' · ' + (carried
+              ? esc(t('carried from week'))+' '+prev.week
+              : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
+            var typed = weekDraft[metric]!==undefined ? Number(weekDraft[metric]) : Number(cur);
+            var d = typed - prev.value;
+            if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+          }
+        } else {
+          var thisWk = wks[String(wk)];
+          sub = esc(t('avg'))+' '+fmt(agg, metric)+
+            gpVsLastWeek(wks, wk, metric, weekDraft[metric]!==undefined ? weekDraft[metric] : thisWk);
+        }
+        if(weekDraft[metric]!==undefined) cur=weekDraft[metric];
+        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+          '<div class="rowSub">'+sub+'</div></div>'+
+          '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
+          ' data-ovweek="'+esc(ministry)+'" data-ovmetric="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
+      });
+      b+='<button class="btn" data-ovsaveweek="'+esc(ministry)+'">'+esc(t('Save Week'))+' '+wk+'</button>';
+      return b+'</div>';
+    });
+  }
+
+  h += '</div>';
+  return h;
+}
+
 /* Entry point on My Database — a tappable card like Leave Request's, so the
    Ministry Tracker is its own full page instead of an inline accordion.
    Generic label for everyone ("My Ministry"), personalized subtitle once
@@ -2836,11 +2972,22 @@ function myMinistryEntryHtml(){
    Dashboard reads (ministryDataFor_/getData in api.js) — there is no
    separate sync step. */
 function myMinistryHtml(){
+  var oversees = myOversightDept_();
   var h='<button class="linkbtn" id="ministryBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
   h+='<h2>'+esc(t('My Ministry'))+'</h2>';
   if(S.me.ministry){
     var minName=t(S.me.ministry);
-    h+='<p class="sub">'+esc(gpT('{ministry} — these numbers feed the GP Dashboard for both campuses.',{ministry:minName}))+'</p>';
+    if(oversees){
+      /* A Base Leadership overseer's own "ministry" is really their own
+         leadership figures — one-on-ones held, hours sharing the gospel and
+         the like — personal to them, not a rollup of the department they run.
+         The department's real ministries sit in their own section below. */
+      h+='<p class="sub" style="margin:0 0 2px"><b>'+esc(t('Individual'))+'</b> — '+
+        esc(gpT('Your own numbers as {dept} — logged by you, separate from the ministries you oversee below.',{dept:minName}))+'</p>';
+    } else {
+      h+='<p class="sub" style="margin:0 0 2px"><b>'+esc(t('Ministry'))+'</b> — '+
+        esc(gpT('{ministry}’s numbers — anyone on the team can log them, and they feed the GP Dashboard for both campuses.',{ministry:minName}))+'</p>';
+    }
   } else {
     h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
   }
@@ -2849,14 +2996,21 @@ function myMinistryHtml(){
   /* A "Base Leadership" ministry that's itself a real department name (e.g.
      dept: Base Leadership, ministry: Community Service) means this person
      oversees that whole department — so beyond their own leadership figures
-     above, show every ministry under it, read-only, the same ledger the Base
-     tab's Department Explorer shows for any department. */
-  var deps=getDepartments(S.me.campus);
-  var oversees = (S.me.dept==='Base Leadership' && deps[S.me.ministry]) ? S.me.ministry : null;
+     above, show every real ministry under it, one card each, with the same
+     week-by-week logging their own ministry gets. Normally the ministry's
+     own staff log these; the overseer logging here is a backup path, not a
+     replacement for that. */
   if(oversees){
     h+='<h3>'+esc(gpT('Ministries You Oversee · {dept}',{dept:t(oversees)}))+'</h3>';
-    if(!S.base) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
-    else h+=deptMinistriesHtml_(oversees, baseR(), [S.me.campus]);
+    h+='<p class="sub" style="margin:0 0 8px">'+
+      esc(t('Ministry numbers — normally logged by the teams in them. You can log for any of these too, as their overseer.'))+'</p>';
+    var deps=getDepartments(S.me.campus);
+    Object.keys(deps[oversees]||{}).forEach(function(min){
+      h+='<h4 style="margin:14px 0 4px;font-size:13px;color:var(--muted)">'+
+        (MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</h4>';
+      if(S.oversee[min]) h+=oversightKpiCardHtml_(oversees, min, S.oversee[min]);
+      else h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+    });
   }
   return h;
 }
@@ -3032,19 +3186,21 @@ function myTrend(wk, id, higherBetter, asPct){
 function healthHtml(){
   var cur = thisWeek();
   var wk = Number(S.healthWeek || cur);
+  var isCurWk = wk===cur;
   var h = '<h2>'+esc(t('Health'))+'</h2>';
 
-  /* --- which week --- */
-  var weeks = {}; weeks[cur]=1;
-  (S.checkins||[]).forEach(function(c){ weeks[Number(c.week)]=1; });
-  for(var w=Math.max(1,cur-7); w<=cur; w++) weeks[w]=1;
-  var weekList = Object.keys(weeks).map(Number).sort(function(a,b){ return b-a; });
-  h += '<div class="pickerRow"><label class="pick"><span>'+esc(t('Week'))+'</span>'+
-    '<select id="healthWeekSel">'+weekList.map(function(w){
-      var done = !!myWeekRow(w);
-      return '<option value="'+w+'"'+(w===wk?' selected':'')+'>'+esc(t('Week'))+' '+w+
-        (w===cur?' · '+esc(t('this week')):'')+(done?' ✓':'')+'</option>';
-    }).join('')+'</select></label></div>';
+  /* --- which week --- same week-nav layout as Weekly Goals and My Ministry,
+     so backfilling a past check-in works the same way everywhere in the app. */
+  h += '<div class="card">'+
+    '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
+    '<div class="weekNavRow">'+
+      '<button class="weekArrow" id="healthPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
+      '<div class="weekPill">'+esc(weekRangeLabel_(wk))+
+        '<span class="currentTag'+(isCurWk?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
+      '<button class="weekArrow" id="healthNextWeek" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
+    '</div>'+
+    (isCurWk?'':'<button class="linkbtn" style="padding:6px 0 0" id="healthJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
+  '</div>';
 
   /* --- my check-in for that week --- */
   var row = myWeekRow(wk);
@@ -3925,6 +4081,24 @@ function bindAway(){
   var gm=document.getElementById('goMinistryFromMe');
   if(gm) gm.onclick=function(){ S.view='ministry'; render(); };
 
+  // Ministries an overseer logs for load lazily, one request each, the first
+  // time this page is open — cached in S.oversee after that until logout.
+  if(S.view==='ministry'){
+    var oDept=myOversightDept_();
+    if(oDept){
+      var oDeps=getDepartments(S.me.campus);
+      Object.keys(oDeps[oDept]||{}).forEach(function(min){
+        if(S.oversee[min] || S.ovLoading[min]) return;
+        S.ovLoading[min]=true;
+        run('getMinistryFor',[S.auth.user,S.auth.pin,oDept,min],function(d){
+          S.ovLoading[min]=false;
+          if(d && d.ok) S.oversee[min]=d;
+          render();
+        });
+      });
+    }
+  }
+
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
   ['lv_from','lv_to'].forEach(function(id){
     var el=document.getElementById(id);
@@ -4253,7 +4427,10 @@ function bindHome(){
     inp.oninput=function(){ S.kpiWeekDraft[inp.getAttribute('data-kpiweek')]=inp.value; };
   });
   // "+5" on top of 286 reads as 291 before it is saved (shared with the dashboard).
-  gpBindRunningTotals(document.getElementById('kpiDayCard'));
+  // Whole document, not just kpiDayCard — an oversight card's day inputs use
+  // the same data-mode="sum" data-run pattern and need the same "+5 on top of
+  // 286 reads as 291" running total before it saves.
+  gpBindRunningTotals();
   // --- which KPIs show on the daily card ---
   var ksa=document.getElementById('kpiShowAll');
   if(ksa) ksa.onclick=function(){ S.kpiAll=true; render(); };
@@ -4336,6 +4513,77 @@ function bindHome(){
       render();
     });
   };
+
+  // --- ministries you oversee: same day/week split as your own, keyed by
+  // ministry name so several of these cards can sit on the page at once.
+  document.querySelectorAll('[data-ovday]').forEach(function(inp){
+    var min=inp.getAttribute('data-ovday'), metric=inp.getAttribute('data-ovmetric');
+    inp.oninput=function(){ (S.ovDraft[min]||(S.ovDraft[min]={}))[metric]=inp.value; };
+  });
+  document.querySelectorAll('[data-ovweek]').forEach(function(inp){
+    var min=inp.getAttribute('data-ovweek'), metric=inp.getAttribute('data-ovmetric');
+    inp.oninput=function(){ (S.ovWeekDraft[min]||(S.ovWeekDraft[min]={}))[metric]=inp.value; };
+  });
+  document.querySelectorAll('[data-ovprev]').forEach(function(btn){
+    btn.onclick=function(){
+      var min=btn.getAttribute('data-ovprev');
+      if(ovWeekFor_(min)<=1) return;
+      gpTap(); S.ovWeek[min]=ovWeekFor_(min)-1; S.ovDraft[min]={}; S.ovWeekDraft[min]={}; render();
+    };
+  });
+  document.querySelectorAll('[data-ovnext]').forEach(function(btn){
+    btn.onclick=function(){
+      var min=btn.getAttribute('data-ovnext');
+      if(ovWeekFor_(min)>=52) return;
+      gpTap(); S.ovWeek[min]=ovWeekFor_(min)+1; S.ovDraft[min]={}; S.ovWeekDraft[min]={}; render();
+    };
+  });
+  document.querySelectorAll('[data-ovjump]').forEach(function(btn){
+    btn.onclick=function(){
+      var min=btn.getAttribute('data-ovjump');
+      gpTap(); S.ovWeek[min]=null; S.ovDraft[min]={}; S.ovWeekDraft[min]={}; render();
+    };
+  });
+  document.querySelectorAll('[data-ovsaveday]').forEach(function(btn){
+    btn.onclick=function(){
+      if(S.busy) return;
+      var min=btn.getAttribute('data-ovsaveday'), dept=myOversightDept_();
+      if(!dept) return;
+      var updates=[];
+      document.querySelectorAll('[data-ovday]').forEach(function(inp){
+        if(inp.getAttribute('data-ovday')!==min) return;
+        updates.push({ metric:inp.getAttribute('data-ovmetric'), mode:'sum',
+          value: inp.value==='' ? null : Number(inp.value) });
+      });
+      S.busy=true; btn.disabled=true; btn.textContent='…';
+      run('saveKpiDayFor',[S.auth.user,S.auth.pin,dept,min,kpiEntryDate_(ovWeekFor_(min)),updates],function(d){
+        S.busy=false;
+        if(d && d.ok){ S.oversee[min]=d; S.ovDraft[min]={}; showMsg(t('Saved — week total updated')); }
+        else showMsg(t('Could not save'));
+        render();
+      });
+    };
+  });
+  document.querySelectorAll('[data-ovsaveweek]').forEach(function(btn){
+    btn.onclick=function(){
+      if(S.busy) return;
+      var min=btn.getAttribute('data-ovsaveweek'), dept=myOversightDept_();
+      if(!dept) return;
+      var wk=ovWeekFor_(min), updates=[];
+      document.querySelectorAll('[data-ovweek]').forEach(function(inp){
+        if(inp.getAttribute('data-ovweek')!==min) return;
+        updates.push({ metric:inp.getAttribute('data-ovmetric'),
+          value: inp.value==='' ? null : Number(inp.value) });
+      });
+      S.busy=true; btn.disabled=true; btn.textContent=t('Saving…');
+      run('saveMinistryFor',[S.auth.user,S.auth.pin,dept,min,wk,updates],function(d){
+        S.busy=false;
+        if(d && d.ok){ S.oversee[min]=d; S.ovWeekDraft[min]={}; showMsg(gpT('Saved — week {wk} updated',{wk:wk})); }
+        else showMsg(t('Could not save'));
+        render();
+      });
+    };
+  });
 }
 
 function bind(){
@@ -4368,11 +4616,23 @@ function bind(){
   document.querySelectorAll('[data-baseHealthPeriod]').forEach(function(btn){
     btn.onclick=function(){ S.baseHealthPeriod=btn.getAttribute('data-baseHealthPeriod'); render(); };
   });
-  var hws=document.getElementById('healthWeekSel');
-  if(hws) hws.onchange=function(){
-    S.healthWeek=Number(hws.value);
-    S.weekDraft=null; S.weekDraftFor=null; S.weekForm=null;   // a different week, a different set of answers
-    render();
+  // A different week means a different set of answers, same as switching a
+  // Goals or Ministry week drops whatever was drafted for the last one.
+  var hpw=document.getElementById('healthPrevWeek');
+  if(hpw) hpw.onclick=function(){
+    var wk=Number(S.healthWeek||thisWeek());
+    if(wk<=1) return;
+    gpTap(); S.healthWeek=wk-1; S.weekDraft=null; S.weekDraftFor=null; S.weekForm=null; render();
+  };
+  var hnw=document.getElementById('healthNextWeek');
+  if(hnw) hnw.onclick=function(){
+    var wk=Number(S.healthWeek||thisWeek());
+    if(wk>=52) return;
+    gpTap(); S.healthWeek=wk+1; S.weekDraft=null; S.weekDraftFor=null; S.weekForm=null; render();
+  };
+  var hjc=document.getElementById('healthJumpCurrent');
+  if(hjc) hjc.onclick=function(){
+    gpTap(); S.healthWeek=null; S.weekDraft=null; S.weekDraftFor=null; S.weekForm=null; render();
   };
   var hSc=document.getElementById('healthScopeSel');
   if(hSc) hSc.onchange=function(){ S.healthScope=hSc.value; render(); };

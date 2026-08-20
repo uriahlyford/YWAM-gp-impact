@@ -1084,12 +1084,12 @@ async function getMyWeekly(username, pin) {
    Scoped harder than the leader path on purpose: a staff member can only read
    and write their OWN campus + department + ministry, and never a SENSITIVE
    metric, regardless of what the client sends. */
-async function ministryDataFor_(s) {
+async function ministryDataFor2_(campus, dept, ministry) {
   const out = {}, daily = {};
   const yr = currentYear_();
-  if (s.ministry) {
+  if (ministry) {
     (await getEntries_()).forEach(function (r) {
-      if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
+      if (r.campus !== campus || r.dept !== dept || r.ministry !== ministry) return;
       if (SENSITIVE.indexOf(r.metric) > -1) return;
       if (yearOf_(r) !== yr) return;
       if (!out[r.metric]) out[r.metric] = {};
@@ -1098,16 +1098,19 @@ async function ministryDataFor_(s) {
     // Per-day values so the UI can show what's already logged for today and
     // for the rest of this week.
     (await getKpiDaily_()).forEach(function (r) {
-      if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
+      if (r.campus !== campus || r.dept !== dept || r.ministry !== ministry) return;
       if (yearOf_(r) !== yr) return;
       if (!daily[r.metric]) daily[r.metric] = {};
       daily[r.metric][r.date] = Number(r.value);
     });
   }
-  return {
-    ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '',
-    entries: out, daily: daily, pins: Array.isArray(s.kpiPins) ? s.kpiPins : []
-  };
+  return { ok: true, campus: campus, dept: dept, ministry: ministry || '', entries: out, daily: daily, pins: [] };
+}
+
+async function ministryDataFor_(s) {
+  const d = await ministryDataFor2_(s.campus, s.dept, s.ministry);
+  d.pins = Array.isArray(s.kpiPins) ? s.kpiPins : [];
+  return d;
 }
 
 async function getMyMinistry(username, pin) {
@@ -1116,10 +1119,25 @@ async function getMyMinistry(username, pin) {
   return ministryDataFor_(s);
 }
 
-async function saveMyMinistry(username, pin, week, updates) {
+/* A department's own "Base Leadership" ministry oversees every ministry
+   under that real department — the same relationship getDepartments()
+   encodes on the client (dept:'Base Leadership', ministry: e.g. 'Community
+   Service'). That overseer can log on behalf of any ministry in their own
+   department; nobody else gets to log outside their own ministry. */
+function canLogFor_(s, campus, dept, ministry) {
+  if (campus !== s.campus) return false;
+  if (dept === s.dept && ministry === s.ministry) return true;
+  return s.dept === 'Base Leadership' && s.ministry === dept;
+}
+
+async function getMinistryFor(username, pin, dept, ministry) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  return ministryDataFor2_(s.campus, dept, ministry);
+}
+
+async function saveMinistryInternal_(campus, dept, ministry, week, updates) {
   const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   const rows = await getEntries_();
@@ -1129,7 +1147,7 @@ async function saveMyMinistry(username, pin, week, updates) {
     const metric = str_(u && u.metric, 80);
     if (!metric || SENSITIVE.indexOf(metric) > -1) return;
     const idx = rows.findIndex(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && String(r.week) === String(wk) && yearOf_(r) === yr;
     });
     if (u.value === null || u.value === '' || u.value === undefined) {
@@ -1139,10 +1157,26 @@ async function saveMyMinistry(username, pin, week, updates) {
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
     if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; }
-    else rows.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, year: yr, value: value, updated: now });
+    else rows.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: yr, value: value, updated: now });
   });
   await writeJSON('entries', rows);
+  return { ok: true };
+}
+
+async function saveMyMinistry(username, pin, week, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  await saveMinistryInternal_(s.campus, s.dept, s.ministry, week, updates);
   return getMyMinistry(username, pin);
+}
+
+async function saveMinistryFor(username, pin, dept, ministry, week, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  await saveMinistryInternal_(s.campus, dept, ministry, week, updates);
+  return getMinistryFor(username, pin, dept, ministry);
 }
 
 /* ==================== ministry KPIs, logged day by day ====================
@@ -1171,10 +1205,7 @@ function rollUpKpi_(dayRows, mode) {
   return nums.reduce(function (a, b) { return a + b; }, 0);
 }
 
-async function saveMyKpiDay(username, pin, dateStr, updates) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
-  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+async function saveKpiDayInternal_(campus, dept, ministry, dateStr, updates, staffId) {
   const date = str_(dateStr, 10);
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, err: 'bad_date' };
   const wk = isoWeek_(date);
@@ -1187,7 +1218,7 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
     const mode = KPI_MODES.indexOf(u && u.mode) > -1 ? u.mode : 'sum';
     touched[metric] = mode;
     const idx = daily.findIndex(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && r.date === date;
     });
     if (u.value === null || u.value === '' || u.value === undefined) {
@@ -1197,9 +1228,9 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
     const rec = {
-      campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric,
+      campus: campus, dept: dept, ministry: ministry, metric: metric,
       date: date, week: wk, year: yearFromDate_(date) || currentYear_(),
-      value: value, staffId: s.id, updated: new Date().toISOString()
+      value: value, staffId: staffId, updated: new Date().toISOString()
     };
     if (idx > -1) daily[idx] = rec; else daily.push(rec);
   });
@@ -1213,20 +1244,36 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
   const dayYear = yearFromDate_(date) || currentYear_();
   Object.keys(touched).forEach(function (metric) {
     const days = daily.filter(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && Number(r.week) === wk && yearOf_(r) === dayYear;
     });
     const total = rollUpKpi_(days, touched[metric]);
     const ei = entries.findIndex(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && String(r.week) === String(wk) && yearOf_(r) === dayYear;
     });
     if (total === null) { if (ei > -1) entries.splice(ei, 1); return; }
     if (ei > -1) { entries[ei].value = total; entries[ei].updated = now; }
-    else entries.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, year: dayYear, value: total, updated: now });
+    else entries.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: dayYear, value: total, updated: now });
   });
   await writeJSON('entries', entries);
+  return { ok: true };
+}
+
+async function saveMyKpiDay(username, pin, dateStr, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  await saveKpiDayInternal_(s.campus, s.dept, s.ministry, dateStr, updates, s.id);
   return getMyMinistry(username, pin);
+}
+
+async function saveKpiDayFor(username, pin, dept, ministry, dateStr, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  await saveKpiDayInternal_(s.campus, dept, ministry, dateStr, updates, s.id);
+  return getMinistryFor(username, pin, dept, ministry);
 }
 
 /* ==================== leave request ====================
@@ -1638,6 +1685,9 @@ const HANDLERS = {
   getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
   saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
+  getMinistryFor: function (a) { return getMinistryFor(a[0], a[1], a[2], a[3]); },
+  saveMinistryFor: function (a) { return saveMinistryFor(a[0], a[1], a[2], a[3], a[4], a[5]); },
+  saveKpiDayFor: function (a) { return saveKpiDayFor(a[0], a[1], a[2], a[3], a[4], a[5]); },
   saveMyKpiPins: function (a) { return saveMyKpiPins(a[0], a[1], a[2]); },
   staffProfile: function (a) { return staffProfile(a[0], a[1], a[2]); },
   getMyTrips: function (a) { return getMyTrips(a[0], a[1]); },
