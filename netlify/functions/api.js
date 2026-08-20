@@ -269,14 +269,20 @@ async function staffRegister(payload) {
   await saveStaff_(rows);
   return {
     ok: true, staff: publicStaff_(rec),
-    profile: { phone: rec.phone, joined: rec.joined, debt: false, mentorStatus: rec.mentorStatus }
+    profile: { phone: rec.phone, joined: rec.joined, debt: false, mentorStatus: rec.mentorStatus, dashboardColor: '', dashboardBg: '' }
   };
 }
 
 async function staffLogin(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  return { ok: true, staff: publicStaff_(s), profile: { phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '' } };
+  return {
+    ok: true, staff: publicStaff_(s),
+    profile: {
+      phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
+      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+    }
+  };
 }
 
 async function updateProfile(username, pin, payload) {
@@ -302,10 +308,19 @@ async function updateProfile(username, pin, payload) {
   if (payload.phone !== undefined) rec.phone = payload.phone;
   if (payload.joined !== undefined) rec.joined = payload.joined;
   if (payload.debt !== undefined) rec.debt = !!payload.debt;
+  if (payload.dashboardColor !== undefined) {
+    rec.dashboardColor = DASHBOARD_COLORS.indexOf(payload.dashboardColor) > -1 ? payload.dashboardColor : '';
+  }
   rec.updated = new Date().toISOString();
   rows[idx] = rec;
   await saveStaff_(rows);
-  return { ok: true, staff: publicStaff_(rec), profile: { phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '' } };
+  return {
+    ok: true, staff: publicStaff_(rec),
+    profile: {
+      phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '',
+      dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || ''
+    }
+  };
 }
 
 async function changePin(username, pin, newPin) {
@@ -334,6 +349,34 @@ async function uploadPhoto(username, pin, base64, mime) {
   rows[idx].photo = dataUri;
   await saveStaff_(rows);
   return { ok: true, photo: dataUri };
+}
+
+/* A fixed palette rather than a free color picker — every one of these reads
+   fine with the dashboard's fixed white/light text, in both themes, so there
+   is no way to end up with unreadable white-on-white. */
+const DASHBOARD_COLORS = ['#17150F', '#1F44FF', '#0A7D3C', '#A84E1C', '#7B4B94', '#B3261E'];
+
+async function uploadDashboardBg(username, pin, base64, mime) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (mime && PHOTO_MIME_ALLOWLIST.indexOf(mime) === -1) return { ok: false, err: 'bad_type' };
+  const dataUri = 'data:' + (mime || 'image/jpeg') + ';base64,' + base64;
+  if (dataUri.length > 400000) return { ok: false, err: 'too_large' };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === s.id; });
+  rows[idx].dashboardBg = dataUri;
+  await saveStaff_(rows);
+  return { ok: true, dashboardBg: dataUri };
+}
+
+async function clearDashboardBg(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === s.id; });
+  rows[idx].dashboardBg = '';
+  await saveStaff_(rows);
+  return { ok: true };
 }
 
 /* ==================== personal habits ====================
@@ -1521,6 +1564,8 @@ const HANDLERS = {
   updateProfile: function (a) { return updateProfile(a[0], a[1], a[2]); },
   changePin: function (a) { return changePin(a[0], a[1], a[2]); },
   uploadPhoto: function (a) { return uploadPhoto(a[0], a[1], a[2], a[3]); },
+  uploadDashboardBg: function (a) { return uploadDashboardBg(a[0], a[1], a[2], a[3]); },
+  clearDashboardBg: function (a) { return clearDashboardBg(a[0], a[1]); },
   saveDaily: function (a) { return saveDaily(a[0], a[1], a[2], a[3]); },
   getMyLogs: function (a) { return getMyLogs(a[0], a[1]); },
   getMyMentees: function (a) { return getMyMentees(a[0], a[1]); },

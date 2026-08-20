@@ -365,7 +365,14 @@ await page.fill('#okrObjText', 'Plant a church in every village (revised)');
 await page.click('#okrSaveBtn'); await page.waitForTimeout(1800);
 console.log('after edit: ' + (await page.$$eval('.okrObj', e => e.map(x => x.textContent.trim()))).join(' | '));
 
-// hand-tracked percentage saves on change
+// hand-tracked percentage saves on change — key results are collapsed by
+// default now, so open the card's key results first
+await page.evaluate(() => {
+  const c = Array.from(document.querySelectorAll('.okrCard')).find(x => /Plant a church/.test(x.textContent));
+  const btn = c && c.querySelector('[data-kr-toggle]');
+  if (btn) btn.click();
+});
+await page.waitForTimeout(500);
 const manKey = await page.$eval('[data-okr-manual]', e => e.getAttribute('data-okr-manual'));
 console.log('editing manual kr: ' + manKey);
 await page.fill('[data-okr-manual="' + manKey + '"]', '80');

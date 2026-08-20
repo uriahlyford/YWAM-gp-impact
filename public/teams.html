@@ -594,18 +594,12 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .goalCardDate { font-size:12px; color:var(--muted); }
 .lastGoalRow { font-size:13px; color:var(--muted); padding:6px 0; border-top:1px solid var(--border); }
 .lastGoalRow:first-child { border-top:0; }
-.wgRow { padding:11px 0; border-top:1px solid var(--border); }
+.wgRow { display:flex; align-items:flex-start; gap:11px; padding:11px 0; border-top:1px solid var(--border); }
 .wgRow:first-child { border-top:0; }
 .wgTop { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px; }
 .wgText { font-size:13.5px; font-weight:600; }
 .wgPct { font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .wgActions { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:9px; }
-input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:99px; outline:none; margin:0; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
-  background:var(--accent); border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
-input[type=range]::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:var(--accent);
-  border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
-input[type=range]::-moz-range-track { height:6px; border-radius:99px; background:var(--surface2); }
 .completePill { border:1.5px solid var(--good); background:var(--goodSoft); color:var(--good); border-radius:999px;
   padding:6px 13px; font-size:10.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; font-family:inherit; }
 .removeX { border:0; background:none; color:var(--faint); cursor:pointer; padding:4px; display:flex; }
@@ -910,7 +904,7 @@ var S = {
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null,
   trips:null, tripRequests:[], leaveDraft:null,
-  baseDept:null, okrForm:false, okrEditId:null,
+  baseDept:null, okrForm:false, okrEditId:null, krOpen:{},
   healthWeek:null, weekForm:null, weekDraftFor:null,
   healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{},
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
@@ -1723,12 +1717,18 @@ function baseHtml(){
    behind the leader code; this is for the people carrying them. */
 function okrCardHtml(o, R, editable){
   var p = R.objProgress(o);
+  var krs = o.krs||[];
+  var open = !!S.krOpen[o.id];
   var h = '<div class="okrCard">'+
     '<div class="okrHead"><div><div class="okrObj">'+esc(o.objective)+'</div>'+
     '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+'</div></div>'+
     '<div class="okrPct'+(p>=100?' done':'')+'">'+p+'%</div></div>'+
     '<div class="bar"><div class="barFill'+(p>=100?' done':'')+'" style="width:'+Math.min(100,p)+'%"></div></div>';
-  (o.krs||[]).forEach(function(kr, ki){
+  if(krs.length){
+    h += '<button class="linkbtn inline" data-kr-toggle="'+esc(o.id)+'" style="padding:8px 0 0">'+
+      (open ? esc(t('Hide key results')) : esc(gpT('Show {n} key results',{n:krs.length})))+'</button>';
+  }
+  if(open) krs.forEach(function(kr, ki){
     var kp = R.krProgress(o, kr);
     /* A key result tied to a KPI shows the quarter's real figure against the
        target, so it is obvious the number came from what the ministry logged —
@@ -2128,7 +2128,7 @@ function weekStatsHtml(){
 /* The daily log, day by day — sits with Habit Tracker, since it's the same
    daily taps read back as a history instead of a run. */
 function recentDaysHtml(){
-  var h='<h3>🗓️ '+esc(t('Recent days'))+'</h3><div class="card">';
+  var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🗓️ '+esc(t('Recent days'))+'</div>';
   if(!S.logs.length) h+='<p class="sub" style="margin:6px 0">No entries yet — log your first day on the Today tab.</p>';
   S.logs.slice(0,7).forEach(function(l){
     var bits=[];
@@ -2206,8 +2206,10 @@ function habitsCardHtml(){
   var list=myHabits();
   var doneN=list.filter(function(hb){ return log && didHabit(log,hb.id); }).length;
 
-  var h='<h3 id="sec-habits">✅ '+esc(t('Today'))+' <small>· '+esc(today)+'</small></h3>'+
-    '<div class="card"><div class="row" style="border:0;padding-top:0">'+
+  var h='<h3 id="sec-habits">✅ '+esc(t('Habit Tracker'))+'</h3>'+
+    '<div class="card"><div class="goalCardHead"><span class="goalCardTitle">'+esc(t('Today'))+'</span>'+
+    '<span class="goalCardDate">'+esc(today)+'</span></div>'+
+    '<div class="row" style="border:0;padding-top:0">'+
     '<span class="rowName">'+esc(doneN?gpT('{done} of {total} done',{done:doneN,total:list.length}):t('Tap what you’ve done today'))+
     '<div class="pmeta">'+esc(log?t('Saved — tap to change'):t('Nothing logged yet'))+'</div></span>'+
     '<span class="pctBig">'+Math.round(doneN/list.length*100)+'%</span></div>';
@@ -2284,7 +2286,7 @@ function streaksHtml(){
     return { label:meta.label, icon:meta.icon, now:graceStreak(habitPred(hb.id)), best:bestStreak(habitPred(hb.id)) };
   }).filter(function(r){ return r.now>0 || r.best>0; });
   if(!runs.length) return '';
-  var h='<h3>🔥 '+esc(t('Streaks'))+'</h3><div class="card">';
+  var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🔥 '+esc(t('Streaks'))+'</div>';
   runs.forEach(function(r){
     h+='<div class="row"><span class="rowName">'+r.icon+' '+esc(t(r.label))+
       '<div class="pmeta">'+esc(gpT('best {n} days',{n:r.best}))+'</div></span>'+
@@ -2320,15 +2322,6 @@ function goalItemPct(g){
    about what 60% looks like. */
 function pctColor(p){ return gpPctColor(p); }
 function pctWord(p){ return gpPctWord(p); }
-/* The Weekly Goals slider wants a classic red→yellow→green gauge rather than
-   the rings' discrete warm/amber/cobalt/green bands — a continuous hue sweep
-   reads as "how full is this" the way a fuel gauge does. Scoped to the
-   slider only; gpPctColor (and everything using it — the rings on Team and
-   Mentor screens) is untouched. */
-function sliderColor(p){
-  var v=Math.max(0, Math.min(100, Number(p)||0));
-  return 'hsl('+Math.round(v/100*120)+', 85%, 45%)';
-}
 function ringVars(p){ return gpRingVars(p); }
 function ringHtml(p, big){ return gpRingHtml(p, big ? 'lg' : ''); }
 
@@ -2378,16 +2371,19 @@ function goalsCardHtml(wk){
       var mm=g.metricKey?g.metricKey.split('|')[2]:'';
       var gp=goalItemPct(g);
       h+='<div class="wgRow'+(gp>=100?' done':'')+'">'+
-        '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
-          '<span class="wgPct" style="color:'+sliderColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>'+
-        (mm?'<div class="goalLink">📊 '+esc(t('moves'))+' '+esc(t(mm))+'</div>':'')+
-        '<input type="range" min="0" max="100" step="5" value="'+gp+'" data-goalpct="'+i+'"'+
-          ' style="background:linear-gradient(to right, '+sliderColor(gp)+' '+gp+'%, var(--surface2) '+gp+'%)"'+
-          ' aria-label="'+esc(t('Progress'))+': '+esc(g.text)+'">'+
-        '<div class="wgActions">'+
-          (gp<100?'<button class="completePill" data-goalcomplete="'+i+'">'+esc(t('Mark Complete'))+'</button>':'')+
-          '<button class="removeX" data-goalremove="'+i+'" aria-label="'+esc(t('Remove goal'))+'">'+
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>'+
+        ringHtml(gp)+
+        '<div class="goalBody">'+
+          '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
+            '<span class="wgPct" style="color:'+pctColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>'+
+          (mm?'<div class="goalLink">📊 '+esc(t('moves'))+' '+esc(t(mm))+'</div>':'')+
+          '<input type="range" class="gSlide" min="0" max="100" step="5" value="'+gp+'" data-goalpct="'+i+'"'+
+            ' style="'+ringVars(gp)+'"'+
+            ' aria-label="'+esc(t('Progress'))+': '+esc(g.text)+'">'+
+          '<div class="wgActions">'+
+            (gp<100?'<button class="completePill" data-goalcomplete="'+i+'">'+esc(t('Mark Complete'))+'</button>':'')+
+            '<button class="removeX" data-goalremove="'+i+'" aria-label="'+esc(t('Remove goal'))+'">'+
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>'+
+          '</div>'+
         '</div></div>';
     });
   } else {
@@ -3523,10 +3519,22 @@ function pushHabits(){
   });
 }
 /* Write today's habit ticks through the existing daily-log endpoint, merged
-   with whatever else today already holds so the full check-in isn't clobbered. */
+   with whatever else today already holds so the full check-in isn't clobbered.
+
+   The tap has to read as instant — waiting on a round trip before the button
+   fills in is exactly what "not smooth" looks like — so the local copy of
+   today's log is updated and rendered right away, and the save happens
+   underneath that. The server's own answer still wins once it lands, the
+   same way the goal slider and KPI running totals already work. */
 function saveTodayHabits(map){
   var today=todayStr();
-  var log=logForDate(today)||{};
+  var log=logForDate(today);
+  if(!log){
+    log={date:today, week:thisWeek(), langHours:0, minHours:0,
+      workout:false, bible:false, quietTime:false, oneOnOne:false, sharedFaith:false, sabbath:false,
+      clarity:null, growth:null, lonely:null, porn:false, habits:{}};
+    S.logs=[log].concat(S.logs);
+  }
   var payload={
     langHours:log.langHours||0, minHours:log.minHours||0,
     workout:log.workout, bible:log.bible, quietTime:log.quietTime,
@@ -3539,6 +3547,11 @@ function saveTodayHabits(map){
   ['workout','bible','quietTime','oneOnOne','sharedFaith','sabbath'].forEach(function(k){
     if(map[k]!==undefined) payload[k]=map[k];
   });
+  log.habits=map;
+  ['workout','bible','quietTime','oneOnOne','sharedFaith','sabbath'].forEach(function(k){
+    if(map[k]!==undefined) log[k]=map[k];
+  });
+  render();
   run('saveDaily',[S.auth.user,S.auth.pin,today,payload],function(d){
     S.busy=false;
     if(d.ok){
@@ -3830,11 +3843,13 @@ function bindHome(){
      the slider out from under a thumb that is still down. */
   document.querySelectorAll('[data-goalpct]').forEach(function(sl){
     var row=sl.closest('.wgRow');
+    var ring=row&&row.querySelector('.gRing');
     var pctLabel=row&&row.querySelector('.wgPct');
     function paint(){
       var v=Number(sl.value)||0;
-      sl.setAttribute('style', 'background:linear-gradient(to right, '+sliderColor(v)+' '+v+'%, var(--surface2) '+v+'%)');
-      if(pctLabel){ pctLabel.style.color=sliderColor(v); pctLabel.textContent=v+'% · '+pctWord(v); }
+      sl.setAttribute('style', ringVars(v));
+      if(ring){ ring.setAttribute('style', ringVars(v)); var sp=ring.querySelector('span'); if(sp) sp.textContent=v; }
+      if(pctLabel){ pctLabel.style.color=pctColor(v); pctLabel.textContent=v+'% · '+pctWord(v); }
       if(row) row.classList.toggle('done', v>=100);
     }
     sl.oninput=function(){ paint(); gpTap(4); };
@@ -4024,6 +4039,9 @@ function bind(){
   };
 
   /* --- OKR editing, on Me only --- */
+  document.querySelectorAll('[data-kr-toggle]').forEach(function(b){
+    b.onclick=function(){ var id=b.getAttribute('data-kr-toggle'); S.krOpen[id]=!S.krOpen[id]; render(); };
+  });
   var onb=document.getElementById('okrNewBtn');
   if(onb) onb.onclick=function(){ S.okrForm=true; S.okrEditId=null; render(); };
   var ocb=document.getElementById('okrCancelBtn');
