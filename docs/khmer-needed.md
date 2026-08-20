@@ -879,3 +879,22 @@ same way everywhere in the app.
 | Ministry numbers — normally logged by the teams in them. You can log for any of these too, as their overseer. | ចំនួនកិច្ចការបម្រើ — ជាធម្មតាកត់ត្រាដោយក្រុមនៅក្នុងនោះ។ អ្នកក៏អាចកត់ត្រាសម្រាប់ណាមួយក្នុងចំណោមនេះបានដែរ ក្នុងនាមជាអ្នកគ្រប់គ្រងរបស់ពួកគេ។ |
 | Saved — week {wk} updated | បានរក្សាទុក — សប្តាហ៍ {wk} ត្រូវបានធ្វើបច្ចុប្បន្នភាព |
 | Saved — week total updated | បានរក្សាទុក — សរុបប្រចាំសប្តាហ៍ត្រូវបានធ្វើបច្ចុប្បន្នភាព |
+
+## 23. Habit Tracker's two titles swapped; Streaks and Recent days collapse behind Load more
+
+The section heading over the whole daily block used to say "Habit
+Tracker", with the card underneath it titled "Today" — easy to misread
+as "today's habit tracker" when actually the card itself IS the habit
+tracker and the section is broader than just habits (it also holds the
+Daily check-in disclosure). Swapped the two: the section heading is now
+"Daily", and the card with the habit grid is titled "Habit Tracker". The
+quick-jump chip that scrolls here was relabeled to match. Streaks and
+Recent days — a look-back, not something to load on every visit — now
+sit behind a "Load more" button under the Daily check-in, the same way
+KPI counts already hide behind "show all".
+
+| English | ខ្មែរ |
+|---|---|
+| Daily | ប្រចាំថ្ងៃ |
+| Load more | មើលបន្ថែម |
+| Show less | បង្ហាញតិចជាង |
