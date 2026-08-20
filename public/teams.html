@@ -1416,6 +1416,8 @@ function renderMenu(){
   var items = [
     { id:'dashboard', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="20" x2="5" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="14"/></svg>',
       label:t('GP Dashboard') },
+    { id:'ministry', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+      label:t('My Ministry') },
     { id:'leave', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><line x1="3.5" y1="10" x2="20.5" y2="10"/><path d="M8 8V3.5M16 8V3.5"/><path d="M8.5 14.5l2 2 4-4"/></svg>',
       label:t('Leave Request') },
     { id:'checkin', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>',
@@ -1438,6 +1440,7 @@ function renderMenu(){
       var id=btn.getAttribute('data-menu-item');
       S.menuOpen=false;
       if(id==='dashboard') gpGo('index');
+      else if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='checkin'){ S.view='health'; render(); }
       else renderMenu();
@@ -1522,6 +1525,38 @@ function baseHealthAccHtml(){
     });
     return b+'<p class="hint">🔒 '+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
   });
+}
+
+/* One card per ministry under a department, every metric it tracks with its
+   current figure and trend — the same raw ledger the Base tab's Department
+   Explorer shows for any department, reusable here for a department leader's
+   own page (My Ministry) so they don't have to leave it to check on the
+   ministries they oversee. Read-only either way: nothing here is typed, it's
+   all rolled up from what each ministry already logged. */
+function deptMinistriesHtml_(dept, R, ids){
+  var deps=getDepartments(S.me.campus);
+  if(!deps[dept]) return '';
+  var entries=(S.base && S.base.entries || {})[S.me.campus]||{};
+  var b='';
+  Object.keys(deps[dept]).forEach(function(min){
+    b+='<div class="card"><div class="row" style="border-bottom:2px solid var(--ink)">'+
+       '<span class="rowName" style="font-weight:700">'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span><span></span></div>';
+    deps[dept][min].forEach(function(metric){
+      var mode=modeOf(metric);
+      var mkey=dept+'|'+min+'|'+metric;
+      var v=aggregate(entries[mkey], mode);
+      var lbl=mode==='latest'?'now':(mode==='avg'?'avg':'YTD');
+      var tr=R.trendFor(function(w){
+        var en=entries[mkey];
+        return (en && en[w]!==undefined && en[w]!==null && !isNaN(Number(en[w]))) ? Number(en[w]) : null;
+      }, metric);
+      b+='<div class="row drillable"'+gpDrillAttrs(metric, ids, dept, min)+'>'+
+         '<span class="rowName">'+esc(t(metric))+' <span style="color:var(--faint);font-size:11px">'+lbl+'</span></span>'+
+         '<span class="rowVal">'+fmt(v,metric)+tr+'</span></div>';
+    });
+    b+='</div>';
+  });
+  return b;
 }
 
 function baseHtml(){
@@ -1742,7 +1777,6 @@ function baseHtml(){
      card per ministry. Same picker the dashboard uses, scoped to this campus. */
   var deps=getDepartments(S.me.campus);
   if(!S.baseDept || !deps[S.baseDept]) S.baseDept = (deps[myDept] ? myDept : Object.keys(deps)[0]);
-  var entries=(S.base.entries||{})[S.me.campus]||{};
   h+=accRowHtml('baseAcc', 'explorer', '🗂️ '+esc(t('Department Explorer')), t('Browse any department’s own numbers'),
     function(){
       var b='<div class="pickerRow"><label class="pick"><span>'+esc(t('Department'))+'</span>'+
@@ -1750,24 +1784,7 @@ function baseHtml(){
           return '<option value="'+esc(d)+'"'+(S.baseDept===d?' selected':'')+'>'+
             (MIN_EMOJI[d]?MIN_EMOJI[d]+' ':'')+esc(t(d))+'</option>';
         }).join('')+'</select></label></div>';
-      Object.keys(deps[S.baseDept]).forEach(function(min){
-        b+='<div class="card"><div class="row" style="border-bottom:2px solid var(--ink)">'+
-           '<span class="rowName" style="font-weight:700">'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span><span></span></div>';
-        deps[S.baseDept][min].forEach(function(metric){
-          var mode=modeOf(metric);
-          var mkey=S.baseDept+'|'+min+'|'+metric;
-          var v=aggregate(entries[mkey], mode);
-          var lbl=mode==='latest'?'now':(mode==='avg'?'avg':'YTD');
-          var tr=R.trendFor(function(w){
-            var en=entries[mkey];
-            return (en && en[w]!==undefined && en[w]!==null && !isNaN(Number(en[w]))) ? Number(en[w]) : null;
-          }, metric);
-          b+='<div class="row drillable"'+gpDrillAttrs(metric, ids, S.baseDept, min)+'>'+
-             '<span class="rowName">'+esc(t(metric))+' <span style="color:var(--faint);font-size:11px">'+lbl+'</span></span>'+
-             '<span class="rowVal">'+fmt(v,metric)+tr+'</span></div>';
-        });
-        b+='</div>';
-      });
+      b+=deptMinistriesHtml_(S.baseDept, R, ids);
       return b;
     });
 
@@ -2286,8 +2303,8 @@ function homeHtml(){
      favor of the mockup's fixed order. */
   h += habitsCardHtml();
   h += goalsCardHtml(goalsViewWeek());
-  h += myMinistryEntryHtml();
   h += okrSectionHtml(S.me, true);
+  h += myMinistryEntryHtml();
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
   h += weekSummaryHtml(wk);
@@ -2307,7 +2324,7 @@ function homeHtml(){
    its own to scroll to — it's a card at the very bottom that opens the
    profile screen — so that chip still navigates rather than scrolling. */
 function quickJumpHtml(){
-  var jumps=[['sec-habits','Habit Tracker'],['sec-goals','Weekly Goals'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
+  var jumps=[['sec-habits','Habit Tracker'],['sec-goals','Weekly Goals'],['sec-okr','OKRs'],['sec-kpi','My Ministry'],
     ['sec-annual','Annual Goals'],['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
   var h='<div class="quickBar">';
   jumps.forEach(function(j){
@@ -2828,6 +2845,19 @@ function myMinistryHtml(){
     h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
   }
   h+=kpiCardHtml(kpiViewWeek());
+
+  /* A "Base Leadership" ministry that's itself a real department name (e.g.
+     dept: Base Leadership, ministry: Community Service) means this person
+     oversees that whole department — so beyond their own leadership figures
+     above, show every ministry under it, read-only, the same ledger the Base
+     tab's Department Explorer shows for any department. */
+  var deps=getDepartments(S.me.campus);
+  var oversees = (S.me.dept==='Base Leadership' && deps[S.me.ministry]) ? S.me.ministry : null;
+  if(oversees){
+    h+='<h3>'+esc(gpT('Ministries You Oversee · {dept}',{dept:t(oversees)}))+'</h3>';
+    if(!S.base) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading your base…'))+'</p></div>';
+    else h+=deptMinistriesHtml_(oversees, baseR(), [S.me.campus]);
+  }
   return h;
 }
 

@@ -819,3 +819,26 @@ whose profile carries that ministry can log for it, same as before.
 |---|---|
 | My Ministry | កិច្ចការបម្រើរបស់ខ្ញុំ |
 | {ministry} — these numbers feed the GP Dashboard for both campuses. | {ministry} — ចំនួនទាំងនេះបញ្ចូលទៅក្នុងផ្ទាំងគ្រប់គ្រង GP សម្រាប់ទាំងពីរសាខា។ |
+
+## 21. My Ministry: department overseers now see the ministries under them
+
+"My Ministry" moved after OKRs (was before) and was added to the
+hamburger menu. Bigger change: a department's "Base Leadership" role
+(dept: Base Leadership, ministry: e.g. Community Service — the person
+overseeing that whole department, not one front-line ministry in it) only
+ever showed their own leadership-activity figures (one-on-ones held,
+meetings led). It never showed the actual ministries they oversee
+(Outreach Teams, Cafe, GP Education, Intercession, for Community
+Service) — those were only reachable via the Base tab's Department
+Explorer, several taps away and not defaulted to their own department.
+"My Ministry" now adds a "Ministries You Oversee" section listing every
+ministry under the department they lead, every metric each one tracks,
+current figure and trend — read-only, the same ledger Department Explorer
+already showed, just surfaced where a department leader actually looks.
+Extracted the per-ministry rendering into one shared function
+(`deptMinistriesHtml_`) so Department Explorer and My Ministry can't drift
+apart on how a ministry's numbers are shown.
+
+| English | ខ្មែរ |
+|---|---|
+| Ministries You Oversee · {dept} | កិច្ចការបម្រើដែលអ្នកគ្រប់គ្រង · {dept} |
