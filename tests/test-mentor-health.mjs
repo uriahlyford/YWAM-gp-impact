@@ -35,8 +35,8 @@ await p.route('**/.netlify/functions/api',r=>{const q=JSON.parse(r.request().pos
   else   if(q.fn==='teamRoster')o=[DARA,SOKHA];
   else if(q.fn==='staffLogin')o={ok:true,staff:DARA,profile:{}};
   else if(q.fn==='getMyMentees')o={ok:true,mentees:[SOKHA]};
-  else if(q.fn==='getMenteeLogs')o={ok:true,mentee:SOKHA,logs:[],sharedHabits:[],goals:[],
-    checkins:MENTEE_CHECKINS,profile:{debt:false}};
+  else if(q.fn==='getMenteeLogs')o={ok:true,mentee:SOKHA,logs:[],habits:[],goals:[],
+    checkins:MENTEE_CHECKINS,profile:{debt:false},ministry:null,trips:{trips:[],totals:{},ptoCap:30},smartGoals:[]};
   else if(q.fn==='getMyTrips')o={ok:true,trips:[],totals:{},reasons:{work:['x'],personal:['y']},hasMentor:false};
   else if(q.fn==='getTripRequests')o={ok:true,requests:[]};
   else if(/^getMy/.test(q.fn))o={ok:true,logs:[],goals:[],checkins:[],mentees:[],requests:[]};

@@ -269,14 +269,20 @@ async function staffRegister(payload) {
   await saveStaff_(rows);
   return {
     ok: true, staff: publicStaff_(rec),
-    profile: { phone: rec.phone, joined: rec.joined, debt: false, mentorStatus: rec.mentorStatus }
+    profile: { phone: rec.phone, joined: rec.joined, debt: false, mentorStatus: rec.mentorStatus, dashboardColor: '', dashboardBg: '' }
   };
 }
 
 async function staffLogin(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  return { ok: true, staff: publicStaff_(s), profile: { phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '' } };
+  return {
+    ok: true, staff: publicStaff_(s),
+    profile: {
+      phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
+      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+    }
+  };
 }
 
 async function updateProfile(username, pin, payload) {
@@ -302,10 +308,21 @@ async function updateProfile(username, pin, payload) {
   if (payload.phone !== undefined) rec.phone = payload.phone;
   if (payload.joined !== undefined) rec.joined = payload.joined;
   if (payload.debt !== undefined) rec.debt = !!payload.debt;
+  // A free color wheel rather than a fixed palette — any hex works, so the
+  // only guard is the shape, not membership in some list.
+  if (payload.dashboardColor !== undefined) {
+    rec.dashboardColor = /^#[0-9a-fA-F]{6}$/.test(payload.dashboardColor) ? payload.dashboardColor : '';
+  }
   rec.updated = new Date().toISOString();
   rows[idx] = rec;
   await saveStaff_(rows);
-  return { ok: true, staff: publicStaff_(rec), profile: { phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '' } };
+  return {
+    ok: true, staff: publicStaff_(rec),
+    profile: {
+      phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '',
+      dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || ''
+    }
+  };
 }
 
 async function changePin(username, pin, newPin) {
@@ -334,6 +351,29 @@ async function uploadPhoto(username, pin, base64, mime) {
   rows[idx].photo = dataUri;
   await saveStaff_(rows);
   return { ok: true, photo: dataUri };
+}
+
+async function uploadDashboardBg(username, pin, base64, mime) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (mime && PHOTO_MIME_ALLOWLIST.indexOf(mime) === -1) return { ok: false, err: 'bad_type' };
+  const dataUri = 'data:' + (mime || 'image/jpeg') + ';base64,' + base64;
+  if (dataUri.length > 400000) return { ok: false, err: 'too_large' };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === s.id; });
+  rows[idx].dashboardBg = dataUri;
+  await saveStaff_(rows);
+  return { ok: true, dashboardBg: dataUri };
+}
+
+async function clearDashboardBg(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === s.id; });
+  rows[idx].dashboardBg = '';
+  await saveStaff_(rows);
+  return { ok: true };
 }
 
 /* ==================== personal habits ====================
@@ -527,7 +567,6 @@ async function getMenteeLogs(username, pin, menteeId) {
   const m = rows.find(function (x) { return x.id === menteeId; });
   if (!m || m.mentorId !== s.id || m.mentorStatus !== 'approved') return { ok: false, err: 'not_your_mentee' };
   const dailyRows = await getDaily_();
-  // Only the habits this person chose to share, and they're told which those are.
   const cfg = habitsOf_(m);
   /* Their weekly check-ins, by name, to their ONE approved mentor. Survey rows
      are keyed by token, so this join — token back to person — happens nowhere
@@ -547,13 +586,25 @@ async function getMenteeLogs(username, pin, menteeId) {
       })
       .sort(function (a, b) { return b.week - a.week; });
   }
+  /* A mentor relationship is opt-in and per-person consent to see everything
+     in this database, not just the pooled figures the base gets — so once
+     approved, nothing here is filtered back out: full daily logs (every
+     habit, not just ones marked "shared" — that per-habit toggle no longer
+     exists), the ministry numbers they log, their annual SMART goals, and
+     their leave history. */
+  const menteeTrips = (await getTrips_()).filter(function (r) { return r.staffId === m.id; })
+    .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
+  const menteeSmart = (await getSmartGoals_()).filter(function (r) { return r.staffId === m.id; });
   return {
     ok: true, mentee: publicStaff_(m),
-    logs: logsFor_(dailyRows, m.id, cfg),
-    sharedHabits: cfg.filter(function (h) { return h.mentorVisible; }),
+    logs: logsFor_(dailyRows, m.id),
+    habits: cfg,
     goals: goalsFor_(await getGoals_(), m.id),
     checkins: checkins,
-    profile: { debt: m.debt }
+    profile: { debt: m.debt },
+    ministry: await ministryDataFor_(m),
+    trips: { trips: menteeTrips.map(tripOut_), totals: awayTotals_(menteeTrips), ptoCap: PTO_ANNUAL_CAP },
+    smartGoals: menteeSmart.map(smartGoalOut_)
   };
 }
 async function getMyMentorRequests(username, pin) {
@@ -1033,14 +1084,12 @@ async function getMyWeekly(username, pin) {
    Scoped harder than the leader path on purpose: a staff member can only read
    and write their OWN campus + department + ministry, and never a SENSITIVE
    metric, regardless of what the client sends. */
-async function getMyMinistry(username, pin) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
+async function ministryDataFor2_(campus, dept, ministry) {
   const out = {}, daily = {};
   const yr = currentYear_();
-  if (s.ministry) {
+  if (ministry) {
     (await getEntries_()).forEach(function (r) {
-      if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
+      if (r.campus !== campus || r.dept !== dept || r.ministry !== ministry) return;
       if (SENSITIVE.indexOf(r.metric) > -1) return;
       if (yearOf_(r) !== yr) return;
       if (!out[r.metric]) out[r.metric] = {};
@@ -1049,22 +1098,46 @@ async function getMyMinistry(username, pin) {
     // Per-day values so the UI can show what's already logged for today and
     // for the rest of this week.
     (await getKpiDaily_()).forEach(function (r) {
-      if (r.campus !== s.campus || r.dept !== s.dept || r.ministry !== s.ministry) return;
+      if (r.campus !== campus || r.dept !== dept || r.ministry !== ministry) return;
       if (yearOf_(r) !== yr) return;
       if (!daily[r.metric]) daily[r.metric] = {};
       daily[r.metric][r.date] = Number(r.value);
     });
   }
-  return {
-    ok: true, campus: s.campus, dept: s.dept, ministry: s.ministry || '',
-    entries: out, daily: daily, pins: Array.isArray(s.kpiPins) ? s.kpiPins : []
-  };
+  return { ok: true, campus: campus, dept: dept, ministry: ministry || '', entries: out, daily: daily, pins: [] };
 }
 
-async function saveMyMinistry(username, pin, week, updates) {
+async function ministryDataFor_(s) {
+  const d = await ministryDataFor2_(s.campus, s.dept, s.ministry);
+  d.pins = Array.isArray(s.kpiPins) ? s.kpiPins : [];
+  return d;
+}
+
+async function getMyMinistry(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  return ministryDataFor_(s);
+}
+
+/* A department's own "Base Leadership" ministry oversees every ministry
+   under that real department — the same relationship getDepartments()
+   encodes on the client (dept:'Base Leadership', ministry: e.g. 'Community
+   Service'). That overseer can log on behalf of any ministry in their own
+   department; nobody else gets to log outside their own ministry. */
+function canLogFor_(s, campus, dept, ministry) {
+  if (campus !== s.campus) return false;
+  if (dept === s.dept && ministry === s.ministry) return true;
+  return s.dept === 'Base Leadership' && s.ministry === dept;
+}
+
+async function getMinistryFor(username, pin, dept, ministry) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  return ministryDataFor2_(s.campus, dept, ministry);
+}
+
+async function saveMinistryInternal_(campus, dept, ministry, week, updates) {
   const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   const rows = await getEntries_();
@@ -1074,7 +1147,7 @@ async function saveMyMinistry(username, pin, week, updates) {
     const metric = str_(u && u.metric, 80);
     if (!metric || SENSITIVE.indexOf(metric) > -1) return;
     const idx = rows.findIndex(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && String(r.week) === String(wk) && yearOf_(r) === yr;
     });
     if (u.value === null || u.value === '' || u.value === undefined) {
@@ -1084,10 +1157,26 @@ async function saveMyMinistry(username, pin, week, updates) {
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
     if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; }
-    else rows.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, year: yr, value: value, updated: now });
+    else rows.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: yr, value: value, updated: now });
   });
   await writeJSON('entries', rows);
+  return { ok: true };
+}
+
+async function saveMyMinistry(username, pin, week, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  await saveMinistryInternal_(s.campus, s.dept, s.ministry, week, updates);
   return getMyMinistry(username, pin);
+}
+
+async function saveMinistryFor(username, pin, dept, ministry, week, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  await saveMinistryInternal_(s.campus, dept, ministry, week, updates);
+  return getMinistryFor(username, pin, dept, ministry);
 }
 
 /* ==================== ministry KPIs, logged day by day ====================
@@ -1116,10 +1205,7 @@ function rollUpKpi_(dayRows, mode) {
   return nums.reduce(function (a, b) { return a + b; }, 0);
 }
 
-async function saveMyKpiDay(username, pin, dateStr, updates) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
-  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+async function saveKpiDayInternal_(campus, dept, ministry, dateStr, updates, staffId) {
   const date = str_(dateStr, 10);
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, err: 'bad_date' };
   const wk = isoWeek_(date);
@@ -1132,7 +1218,7 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
     const mode = KPI_MODES.indexOf(u && u.mode) > -1 ? u.mode : 'sum';
     touched[metric] = mode;
     const idx = daily.findIndex(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && r.date === date;
     });
     if (u.value === null || u.value === '' || u.value === undefined) {
@@ -1142,9 +1228,9 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
     const rec = {
-      campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric,
+      campus: campus, dept: dept, ministry: ministry, metric: metric,
       date: date, week: wk, year: yearFromDate_(date) || currentYear_(),
-      value: value, staffId: s.id, updated: new Date().toISOString()
+      value: value, staffId: staffId, updated: new Date().toISOString()
     };
     if (idx > -1) daily[idx] = rec; else daily.push(rec);
   });
@@ -1158,39 +1244,59 @@ async function saveMyKpiDay(username, pin, dateStr, updates) {
   const dayYear = yearFromDate_(date) || currentYear_();
   Object.keys(touched).forEach(function (metric) {
     const days = daily.filter(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && Number(r.week) === wk && yearOf_(r) === dayYear;
     });
     const total = rollUpKpi_(days, touched[metric]);
     const ei = entries.findIndex(function (r) {
-      return r.campus === s.campus && r.dept === s.dept && r.ministry === s.ministry &&
+      return r.campus === campus && r.dept === dept && r.ministry === ministry &&
         r.metric === metric && String(r.week) === String(wk) && yearOf_(r) === dayYear;
     });
     if (total === null) { if (ei > -1) entries.splice(ei, 1); return; }
     if (ei > -1) { entries[ei].value = total; entries[ei].updated = now; }
-    else entries.push({ campus: s.campus, dept: s.dept, ministry: s.ministry, metric: metric, week: wk, year: dayYear, value: total, updated: now });
+    else entries.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: dayYear, value: total, updated: now });
   });
   await writeJSON('entries', entries);
+  return { ok: true };
+}
+
+async function saveMyKpiDay(username, pin, dateStr, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!s.ministry) return { ok: false, err: 'no_ministry' };
+  await saveKpiDayInternal_(s.campus, s.dept, s.ministry, dateStr, updates, s.id);
   return getMyMinistry(username, pin);
 }
 
-/* ==================== away from campus ====================
-   Staff record the days they're off base and what for, and it doubles as the
-   check-in with their mentor: if they have an approved mentor the trip lands as
-   'pending' for that mentor to acknowledge; if they don't, it's simply 'noted'
-   so nobody is blocked from recording their own days by not having a mentor.
+async function saveKpiDayFor(username, pin, dept, ministry, dateStr, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  await saveKpiDayInternal_(s.campus, dept, ministry, dateStr, updates, s.id);
+  return getMinistryFor(username, pin, dept, ministry);
+}
 
-   Two kinds only — work and personal — because that's what the annual total
-   needs to separate. The reason is finer detail for context, not a third
-   category, so adding reasons later never breaks the totals.
+/* ==================== leave request ====================
+   Staff request days off base and what for, and it doubles as the check-in
+   with their mentor: if they have an approved mentor the request lands as
+   'pending' for that mentor to acknowledge; if they don't, it's simply
+   'noted' so nobody is blocked from recording their own days by not having a
+   mentor.
 
-   Days are whole and inclusive: leaving Friday and back Sunday is 3 days. No
-   half-days; the annual figure is for planning, not payroll. */
-const AWAY_KINDS = ['work', 'personal'];
-const AWAY_REASONS = {
-  work:     ['Outreach', 'Conference or training', 'Ministry travel', 'Base business', 'Other work'],
-  personal: ['Fundraising / home ministry', 'Visiting family', 'Medical', 'Holiday / rest', 'Other personal']
-};
+   Three types, matching UofN Cambodia's own leave categories: Personal Time
+   Off is capped at 30 work days a year (checked client-side as a heads-up,
+   not enforced here — a mentor can still approve an over-cap request), while
+   Working Outside Siem Reap and Special Condition are tracked but uncapped.
+
+   Legacy rows written before this shipped only have `kind` ('work'/
+   'personal') — leaveTypeOf_ maps those onto the new types so old data still
+   reads sensibly instead of vanishing.
+
+   Work days are Monday–Friday only, matching how the allowance is actually
+   spent; `days` (whole calendar days, inclusive) is kept alongside for any
+   older row that only has that. */
+const LEAVE_TYPES = ['outside', 'special', 'personal'];
+const PTO_ANNUAL_CAP = 30;
 const MAX_TRIP_DAYS = 365;
 
 async function getTrips_() { return readJSON('trips', []); }
@@ -1200,18 +1306,31 @@ function tripDays_(from, to) {
   const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
   return Math.round((b - a) / 86400000) + 1;
 }
+function workDays_(from, to) {
+  const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
+  let n = 0;
+  for (let d = new Date(a); d <= b; d.setUTCDate(d.getUTCDate() + 1)) {
+    const dow = d.getUTCDay();
+    if (dow !== 0 && dow !== 6) n++;
+  }
+  return n;
+}
+function leaveTypeOf_(r) {
+  if (LEAVE_TYPES.indexOf(r.type) > -1) return r.type;
+  return r.kind === 'personal' ? 'personal' : 'outside';
+}
 
-/* Totals per calendar year, split by kind. Declined trips never count; a trip
-   is attributed to the year it starts in so a New Year crossing lands in one
-   place rather than being split. */
+/* Totals per calendar year, in work days, split by type. Declined requests
+   never count; a request is attributed to the year it starts in so a New
+   Year crossing lands in one place rather than being split. */
 function awayTotals_(trips) {
   const out = {};
   trips.forEach(function (r) {
     if (r.status === 'declined') return;
     const year = String(r.from).slice(0, 4);
-    if (!out[year]) out[year] = { work: 0, personal: 0, trips: 0 };
-    if (AWAY_KINDS.indexOf(r.kind) === -1) return;
-    out[year][r.kind] += Number(r.days) || 0;
+    if (!out[year]) out[year] = { outside: 0, special: 0, personal: 0, trips: 0 };
+    const wd = r.workDays != null ? r.workDays : workDays_(r.from, r.to);
+    out[year][leaveTypeOf_(r)] += wd;
     out[year].trips += 1;
   });
   return out;
@@ -1219,8 +1338,9 @@ function awayTotals_(trips) {
 
 function tripOut_(r) {
   return {
-    id: r.id, from: r.from, to: r.to, days: r.days, kind: r.kind,
-    reason: r.reason || '', where: r.where || '', note: r.note || '',
+    id: r.id, from: r.from, to: r.to, days: r.days,
+    type: leaveTypeOf_(r), workDays: r.workDays != null ? r.workDays : workDays_(r.from, r.to),
+    reason: r.reason || '', coverage: r.coverage || '',
     status: r.status, decidedAt: r.decidedAt || ''
   };
 }
@@ -1231,8 +1351,7 @@ async function getMyTrips(username, pin) {
   const mine = (await getTrips_()).filter(function (r) { return r.staffId === s.id; })
     .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
   return {
-    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine),
-    reasons: AWAY_REASONS,
+    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine), ptoCap: PTO_ANNUAL_CAP,
     hasMentor: !!(s.mentorId && s.mentorStatus === 'approved')
   };
 }
@@ -1245,26 +1364,22 @@ async function saveTrip(username, pin, trip) {
   if (t.to < t.from) return { ok: false, err: 'end_before_start' };
   const days = tripDays_(t.from, t.to);
   if (days < 1 || days > MAX_TRIP_DAYS) return { ok: false, err: 'bad_span' };
-  const kind = AWAY_KINDS.indexOf(t.kind) > -1 ? t.kind : 'work';
-  const reason = (AWAY_REASONS[kind].indexOf(t.reason) > -1) ? t.reason : AWAY_REASONS[kind][0];
+  const type = LEAVE_TYPES.indexOf(t.type) > -1 ? t.type : 'personal';
 
   const rows = await getTrips_();
   const now = new Date().toISOString();
   const mentored = !!(s.mentorId && s.mentorStatus === 'approved');
-  // Editing an existing trip re-opens it for the mentor rather than keeping a
-  // stale approval for dates that have since changed.
-  const existingIdx = t.id ? rows.findIndex(function (r) { return r.id === t.id && r.staffId === s.id; }) : -1;
   const rec = {
-    id: existingIdx > -1 ? rows[existingIdx].id : ('tr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    id: 'tr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     staffId: s.id, campus: s.campus,
-    from: t.from, to: t.to, days: days, kind: kind, reason: reason,
-    where: str_(t.where, 120) || '', note: str_(t.note, 300) || '',
+    from: t.from, to: t.to, days: days, type: type, workDays: workDays_(t.from, t.to),
+    reason: str_(t.reason, 500) || '', coverage: str_(t.coverage, 500) || '',
     mentorId: mentored ? s.mentorId : '',
     status: mentored ? 'pending' : 'noted',
     decidedBy: '', decidedAt: '',
-    created: existingIdx > -1 ? rows[existingIdx].created : now, updated: now
+    created: now, updated: now
   };
-  if (existingIdx > -1) rows[existingIdx] = rec; else rows.push(rec);
+  rows.push(rec);
   await writeJSON('trips', rows);
   return getMyTrips(username, pin);
 }
@@ -1305,6 +1420,124 @@ async function respondToTrip(username, pin, tripId, approve) {
   rows[idx].updated = rows[idx].decidedAt;
   await writeJSON('trips', rows);
   return getTripRequests(username, pin);
+}
+
+/* ==================== 1-on-1 requests ====================
+   Either side of an approved mentor/mentee relationship can ask the other
+   for a 1-on-1 — a mentor asking a mentee, or a mentee asking their mentor.
+   Nothing here is tied to a calendar; it's just a request-and-respond flow
+   living next to the relationship itself. */
+async function getOneOnOnes_() { return readJSON('oneOnOnes', []); }
+
+async function getMyOneOnOnes(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const staff = await getStaff_();
+  const list = (await getOneOnOnes_())
+    .filter(function (r) { return r.fromId === s.id || r.toId === s.id; })
+    .map(function (r) {
+      const mine = r.fromId === s.id;
+      const otherId = mine ? r.toId : r.fromId;
+      const who = staff.find(function (x) { return x.id === otherId; });
+      return {
+        id: r.id, otherId: otherId, otherName: who ? who.name : '—', mine: mine,
+        status: r.status, note: r.note || '', created: r.created, decidedAt: r.decidedAt || ''
+      };
+    })
+    .sort(function (a, b) { return (b.created || '') < (a.created || '') ? -1 : 1; });
+  return { ok: true, oneOnOnes: list };
+}
+
+async function requestOneOnOne(username, pin, otherId, note) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const staff = await getStaff_();
+  const other = staff.find(function (x) { return x.id === otherId; });
+  if (!other) return { ok: false, err: 'not_found' };
+  const isMentee = other.mentorId === s.id && other.mentorStatus === 'approved';
+  const isMentor = s.mentorId === other.id && s.mentorStatus === 'approved';
+  if (!isMentee && !isMentor) return { ok: false, err: 'not_mentor_pair' };
+  const rows = await getOneOnOnes_();
+  const now = new Date().toISOString();
+  rows.push({
+    id: 'oo' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    fromId: s.id, toId: otherId, note: str_(note, 300) || '', status: 'pending',
+    created: now, updated: now, decidedAt: ''
+  });
+  await writeJSON('oneOnOnes', rows);
+  return getMyOneOnOnes(username, pin);
+}
+
+async function respondToOneOnOne(username, pin, requestId, approve) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getOneOnOnes_();
+  const idx = rows.findIndex(function (r) { return r.id === requestId && r.toId === s.id && r.status === 'pending'; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  rows[idx].status = approve ? 'accepted' : 'declined';
+  rows[idx].decidedAt = new Date().toISOString();
+  rows[idx].updated = rows[idx].decidedAt;
+  await writeJSON('oneOnOnes', rows);
+  return getMyOneOnOnes(username, pin);
+}
+
+/* ==================== annual goals (SMART) ====================
+   A personal, year-and-category list — not tied to any ministry KPI or to
+   the base's own figures, so it lives entirely under the staff member who
+   wrote it. Six fixed categories, matching the redesign: adding a seventh
+   is a code change, not a per-goal choice, so the category chips can never
+   drift out of sync with what a saved goal actually holds. */
+const SMART_CATEGORIES = ['Faith', 'Health', 'Finance', 'Language', 'Skills', 'Fun'];
+const MAX_SMART_GOALS_PER_YEAR = 30;
+
+async function getSmartGoals_() { return readJSON('smartGoals', []); }
+
+function smartGoalOut_(r) {
+  return { id: r.id, year: r.year, category: r.category, title: r.title, meta: r.meta || '', pct: r.pct };
+}
+
+async function getMySmartGoals(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const mine = (await getSmartGoals_()).filter(function (r) { return r.staffId === s.id; });
+  return { ok: true, smartGoals: mine.map(smartGoalOut_) };
+}
+
+async function saveSmartGoal(username, pin, goal) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const g = goal || {};
+  const year = finiteNum_(g.year, 2020, 2100);
+  if (year == null) return { ok: false, err: 'bad_year' };
+  if (SMART_CATEGORIES.indexOf(g.category) === -1) return { ok: false, err: 'bad_category' };
+  const title = str_(g.title, 200);
+  if (!title) return { ok: false, err: 'bad_title' };
+  const pct = Math.max(0, Math.min(100, Math.round(Number(g.pct)) || 0));
+
+  const rows = await getSmartGoals_();
+  const now = new Date().toISOString();
+  const existingIdx = g.id ? rows.findIndex(function (r) { return r.id === g.id && r.staffId === s.id; }) : -1;
+  if (existingIdx === -1) {
+    const mineThisYear = rows.filter(function (r) { return r.staffId === s.id && Number(r.year) === year; });
+    if (mineThisYear.length >= MAX_SMART_GOALS_PER_YEAR) return { ok: false, err: 'too_many' };
+  }
+  const rec = {
+    id: existingIdx > -1 ? rows[existingIdx].id : ('sg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    staffId: s.id, year: year, category: g.category, title: title, meta: str_(g.meta, 200) || '', pct: pct,
+    created: existingIdx > -1 ? rows[existingIdx].created : now, updated: now
+  };
+  if (existingIdx > -1) rows[existingIdx] = rec; else rows.push(rec);
+  await writeJSON('smartGoals', rows);
+  return getMySmartGoals(username, pin);
+}
+
+async function deleteSmartGoal(username, pin, goalId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  let rows = await getSmartGoals_();
+  rows = rows.filter(function (r) { return !(r.id === goalId && r.staffId === s.id); });
+  await writeJSON('smartGoals', rows);
+  return getMySmartGoals(username, pin);
 }
 
 /* ==================== a teammate's public profile ====================
@@ -1386,7 +1619,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -1397,13 +1630,18 @@ async function getMyBoot(username, pin) {
       part(function () { return getTripRequests(username, pin); }),
       part(function () { return getMyMinistry(username, pin); }),
       // No leader code: the two money metrics leadership can see never reach here.
-      part(function () { return getData(''); })
+      part(function () { return getData(''); }),
+      part(function () { return getMySmartGoals(username, pin); }),
+      part(function () { return getMyOneOnOnes(username, pin); })
     ]);
 
   return {
     ok: true,
     staff: publicStaff_(s),
-    profile: { phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '' },
+    profile: {
+      phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
+      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+    },
     roster: (staffRows || []).filter(function (r) { return r.active; }).map(publicStaff_),
     logs: (logs && logs.logs) || [],
     habits: (logs && logs.habits) || null,
@@ -1414,6 +1652,8 @@ async function getMyBoot(username, pin) {
     trips: trips || null,
     tripRequests: (tripReqs && tripReqs.requests) || [],
     ministry: ministry || null,
+    smartGoals: (smart && smart.smartGoals) || [],
+    oneOnOnes: (oneOnOnes && oneOnOnes.oneOnOnes) || [],
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -1432,6 +1672,8 @@ const HANDLERS = {
   updateProfile: function (a) { return updateProfile(a[0], a[1], a[2]); },
   changePin: function (a) { return changePin(a[0], a[1], a[2]); },
   uploadPhoto: function (a) { return uploadPhoto(a[0], a[1], a[2], a[3]); },
+  uploadDashboardBg: function (a) { return uploadDashboardBg(a[0], a[1], a[2], a[3]); },
+  clearDashboardBg: function (a) { return clearDashboardBg(a[0], a[1]); },
   saveDaily: function (a) { return saveDaily(a[0], a[1], a[2], a[3]); },
   getMyLogs: function (a) { return getMyLogs(a[0], a[1]); },
   getMyMentees: function (a) { return getMyMentees(a[0], a[1]); },
@@ -1443,6 +1685,9 @@ const HANDLERS = {
   getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
   saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
+  getMinistryFor: function (a) { return getMinistryFor(a[0], a[1], a[2], a[3]); },
+  saveMinistryFor: function (a) { return saveMinistryFor(a[0], a[1], a[2], a[3], a[4], a[5]); },
+  saveKpiDayFor: function (a) { return saveKpiDayFor(a[0], a[1], a[2], a[3], a[4], a[5]); },
   saveMyKpiPins: function (a) { return saveMyKpiPins(a[0], a[1], a[2]); },
   staffProfile: function (a) { return staffProfile(a[0], a[1], a[2]); },
   getMyTrips: function (a) { return getMyTrips(a[0], a[1]); },
@@ -1452,7 +1697,13 @@ const HANDLERS = {
   respondToTrip: function (a) { return respondToTrip(a[0], a[1], a[2], a[3]); },
   respondToMentorRequest: function (a) { return respondToMentorRequest(a[0], a[1], a[2], a[3]); },
   saveMyWeek: function (a) { return saveMyWeek(a[0], a[1], a[2], a[3]); },
-  deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); }
+  deleteMyWeek: function (a) { return deleteMyWeek(a[0], a[1], a[2]); },
+  getMySmartGoals: function (a) { return getMySmartGoals(a[0], a[1]); },
+  saveSmartGoal: function (a) { return saveSmartGoal(a[0], a[1], a[2]); },
+  deleteSmartGoal: function (a) { return deleteSmartGoal(a[0], a[1], a[2]); },
+  getMyOneOnOnes: function (a) { return getMyOneOnOnes(a[0], a[1]); },
+  requestOneOnOne: function (a) { return requestOneOnOne(a[0], a[1], a[2], a[3]); },
+  respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); }
 };
 
 export default async (req) => {

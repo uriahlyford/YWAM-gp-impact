@@ -365,7 +365,14 @@ await page.fill('#okrObjText', 'Plant a church in every village (revised)');
 await page.click('#okrSaveBtn'); await page.waitForTimeout(1800);
 console.log('after edit: ' + (await page.$$eval('.okrObj', e => e.map(x => x.textContent.trim()))).join(' | '));
 
-// hand-tracked percentage saves on change
+// hand-tracked percentage saves on change — key results are collapsed by
+// default now, so open the card's key results first
+await page.evaluate(() => {
+  const c = Array.from(document.querySelectorAll('.okrCard')).find(x => /Plant a church/.test(x.textContent));
+  const btn = c && c.querySelector('[data-kr-toggle]');
+  if (btn) btn.click();
+});
+await page.waitForTimeout(500);
 const manKey = await page.$eval('[data-okr-manual]', e => e.getAttribute('data-okr-manual'));
 console.log('editing manual kr: ' + manKey);
 await page.fill('[data-okr-manual="' + manKey + '"]', '80');
@@ -400,23 +407,28 @@ console.log('\n=== HEALTH TAB ===');
 await page.click('nav.bottom [data-tab="health"]');
 await page.waitForTimeout(1200);
 console.log('sections: ' + (await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()))).join(' / '));
-console.log('week options: ' + (await page.$$eval('#healthWeekSel option', e => e.map(x => x.textContent.trim()))).slice(0,4).join(' | '));
+console.log('week nav present: ' + await page.evaluate(() => !!document.querySelector('#healthPrevWeek')));
 
-// an unanswered week opens the form
-await page.selectOption('#healthWeekSel', String(NOWWK - 5));
+// an unanswered week opens the form — same arrow/pill week nav as Weekly Goals,
+// jumped straight there by state rather than clicking Prev N times.
+await page.evaluate((wk) => { S.healthWeek = wk; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, NOWWK - 5);
 await page.waitForTimeout(900);
 console.log('\nunanswered week -> form open: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
-console.log('  1-10 questions: ' + await page.$$eval('#weekForm .scale', e => e.length));
+console.log('  1-10 questions: ' + await page.$$eval('#weekForm [data-wslide]', e => e.length));
 console.log('  yes/no questions: ' + await page.$$eval('#weekForm .seg', e => e.length));
 console.log('  hour boxes: ' + await page.$$eval('#weekForm [data-wnum]', e => e.length));
 
-// submitting with the scales unanswered is refused
+// submitting with the scales unanswered is refused — sliders show a default
+// position but don't count as answered until dragged
 await page.click('#weekSubmit'); await page.waitForTimeout(700);
 console.log('  incomplete refused: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
 
 // fill it in and submit
 for (const [q, v] of [['lonely', 2], ['clarity', 9], ['growth', 8]]) {
-  await page.click(`[data-wscale="${q}|${v}"]`); await page.waitForTimeout(250);
+  await page.$eval(`[data-wslide="${q}"]`, (el, val) => {
+    el.value = val; el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, v);
+  await page.waitForTimeout(250);
 }
 await page.fill('[data-wnum="langHours"]', '3');
 await page.dispatchEvent('[data-wnum="langHours"]', 'change');
@@ -450,12 +462,12 @@ await page.screenshot({ path: OUT + 'health-weekly.png', fullPage: true });
 // editing an answered week reopens with the answers in place
 await page.click('#weekEdit'); await page.waitForTimeout(800);
 console.log('\nedit reopens prefilled: ' + await page.evaluate(() => {
-  const on = document.querySelector('[data-wscale="clarity|9"]');
-  return !!on && on.classList.contains('on');
+  const sl = document.querySelector('[data-wslide="clarity"]');
+  return !!sl && Number(sl.value) === 9;
 }));
 
 // a week WITH a previous week shows progress/regress per question
-await page.selectOption('#healthWeekSel', String(NOWWK));
+await page.evaluate((wk) => { S.healthWeek = wk; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, NOWWK);
 await page.waitForTimeout(1000);
 console.log('\nweek ' + NOWWK + ' (has a prior week):');
 console.log('  trend badges: ' + await page.$$eval('#main .trend', e => e.length));
@@ -474,7 +486,7 @@ console.log('  up vs down badges: ' + await page.$$eval('#main .trend', e => {
 
 // 10b. Khmer toggle over the new markup
 // a week WITH a previous week shows progress/regress per question
-await page.selectOption('#healthWeekSel', String(NOWWK));
+await page.evaluate((wk) => { S.healthWeek = wk; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, NOWWK);
 await page.waitForTimeout(1000);
 console.log('\nweek ' + NOWWK + ' (has a prior week):');
 console.log('  trend badges: ' + await page.$$eval('#main .trend', e => e.length));

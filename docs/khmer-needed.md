@@ -530,3 +530,352 @@ Two are real renames, not just re-casing, and got their own new translation:
 (Both replace a heading that still exists, unchanged, on the leadership
 dashboard — "Across every ministry" and "Department dashboards" respectively
 — which this redesign pass didn't touch.)
+
+## 7. My Database — reordered, plus a new Mentorship card
+
+My Database's sections now follow a fixed order (Weekly Goals, Habit
+Tracker, OKRs, Mentorship, My Health, Leave, Account) instead of the old
+day-dependent one. The one genuinely new piece is a Mentorship card: who you
+mentor, and who mentors you — previously that only lived on the Team tab's
+own Mentor screen; now there's a summary here too, with an arrow to open a
+mentee's full page.
+
+| English | ខ្មែរ |
+|---|---|
+| You're Mentoring | អ្នកកំពុងណែនាំ |
+| Your Mentor | អ្នកណែនាំរបស់អ្នក |
+| Open their database | បើកទិន្នន័យរបស់គាត់ |
+| You're not mentoring anyone yet. | អ្នកមិនទាន់កំពុងណែនាំនរណាម្នាក់នៅឡើយទេ។ |
+| No mentor set yet. | មិនទាន់បានកំណត់អ្នកណែនាំនៅឡើយទេ។ |
+
+## 8. Weekly Goals — mockup layout (week nav, Last/This week cards, add/remove)
+
+Weekly Goals was rebuilt to match the mockup: a week-navigation card (prev
+arrow / week pill with a "Current Week" tag / next arrow), a read-only
+"Last week" card, and a "This week" card where each goal has a slider, a
+"Mark Complete" button, and a remove button, plus an input to add a new goal
+(up to three, matching the existing three-goal limit).
+
+| English | ខ្មែរ |
+|---|---|
+| Previous week | សប្តាហ៍មុន |
+| Next week | សប្តាហ៍ក្រោយ |
+| Current Week | សប្តាហ៍បច្ចុប្បន្ន |
+| Week {wk} | សប្តាហ៍ {wk} |
+| Review last week, plan this week. | ពិនិត្យសប្តាហ៍មុន ហើយរៀបចំផែនការសប្តាហ៍នេះ។ |
+| Jump back to this week | ត្រឡប់ទៅសប្តាហ៍នេះវិញ |
+| Last week | សប្តាហ៍មុន |
+| You didn't set goals last week. | អ្នកមិនបានកំណត់គោលដៅសម្រាប់សប្តាហ៍មុនទេ។ |
+| Mark Complete | សម្គាល់ថារួចរាល់ |
+| Remove goal | ដកគោលដៅចេញ |
+| No goals set for this week yet. Three is the whole point — pick the three that matter. | មិនទាន់មានគោលដៅសម្រាប់សប្តាហ៍នេះនៅឡើយទេ។ បីគឺជាចំណុចសំខាន់ — សូមជ្រើសរើសបីដែលសំខាន់បំផុត។ |
+| Add a goal for this week… | បន្ថែមគោលដៅសម្រាប់សប្តាហ៍នេះ… |
+| Add goal | បន្ថែមគោលដៅ |
+
+The old "Edit goals" flow (three always-shown text fields, a metric picker,
+Save/Cancel) is gone — goals are added and removed one at a time now,
+matching the mockup, so `"Edit goals"` and `"Set this week's goals"` are no
+longer used anywhere in the code but stay in the dictionary as harmless
+leftovers.
+
+## 9. Leave Request — full screen, matching the mockup
+
+Leave Request is now its own screen (reached from a tappable entry card on
+My Database, like Profile & Settings already was) instead of the old inline
+"Away from campus" card. It adds a Personal Time Off allowance tracker
+(30 work days/year, with Working Outside Siem Reap and Special Condition
+tracked separately and uncapped), a request form with a leave-type picker,
+reason/coverage text fields, and an acknowledgement checkbox, plus an
+"Awaiting Your Approval" section for mentors and a "My Requests" history.
+
+This replaces the old two-kind (work/personal) trip model server-side; a
+trip logged before this shipped still reads correctly (its `kind` maps onto
+the new `type`), it just displays as "Working Outside Siem Reap" for a
+former "work" trip.
+
+| English | ខ្មែរ |
+|---|---|
+| Baked into My GP — nothing to fill out on another site. | បង្កប់នៅក្នុង My GP រួចហើយ — មិនចាំបាច់បំពេញនៅគេហទំព័រផ្សេងទៀតទេ។ |
+| Personal Time Off | ថ្ងៃឈប់សម្រាកផ្ទាល់ខ្លួន |
+| UofN Cambodia allocates a maximum of 6 weeks (30 work days) off per year for vacation, furlough, support raising and home visits. | UofN កម្ពុជា បម្រុងទុកអតិបរមា ៦ សប្តាហ៍ (៣០ ថ្ងៃធ្វើការ) ក្នុងមួយឆ្នាំ សម្រាប់ការឈប់សម្រាក ការត្រឡប់ទៅផ្ទះ ការរៃអង្គាសមូលនិធិ និងការទស្សនាគ្រួសារ។ |
+| / {cap} days used | / {cap} ថ្ងៃបានប្រើ |
+| Working Outside Siem Reap | ធ្វើការនៅក្រៅសៀមរាប |
+| Special Condition | លក្ខខណ្ឌពិសេស |
+| Not capped, tracked separately | មិនកំណត់ដែនកំណត់ទេ តាមដានដោយឡែក |
+| Counts against your 30-day allowance | រាប់ចូលក្នុងកម្រិតកំណត់ ៣០ ថ្ងៃរបស់អ្នក |
+| Awaiting Your Approval | កំពុងរង់ចាំការអនុម័តរបស់អ្នក |
+| Pending | កំពុងរង់ចាំ |
+| Deny | បដិសេធ |
+| {n} work days | {n} ថ្ងៃធ្វើការ |
+| New Request | សំណើថ្មី |
+| Leave Dates | កាលបរិច្ឆេទឈប់សម្រាក |
+| work days requested (Mon–Fri) | ថ្ងៃធ្វើការដែលបានស្នើ (ច័ន្ទ–សុក្រ) |
+| Leave Type | ប្រភេទការឈប់សម្រាក |
+| This request would put you over your 30-day Personal Time Off allowance for the year. | សំណើនេះនឹងធ្វើឱ្យអ្នកលើសកម្រិតកំណត់ ៣០ ថ្ងៃនៃការឈប់សម្រាកផ្ទាល់ខ្លួនប្រចាំឆ្នាំ។ |
+| Why are you requesting this leave? | ហេតុអ្វីបានជាអ្នកស្នើសុំការឈប់សម្រាកនេះ? |
+| Ministry Coverage | អ្នកគ្របដណ្តប់កិច្ចការបម្រើ |
+| Who will cover your ministries while you're away? | នរណានឹងគ្របដណ្តប់កិច្ចការបម្រើរបស់អ្នក ខណៈពេលអ្នកចាកឆ្ងាយ? |
+| In-country leave needs at least 1 week notice · out-of-country leave needs at least 1 month notice. | ការឈប់សម្រាកក្នុងប្រទេសត្រូវការជូនដំណឹងយ៉ាងតិច ១ សប្តាហ៍ · ការឈប់សម្រាកក្រៅប្រទេសត្រូវការជូនដំណឹងយ៉ាងតិច ១ ខែ។ |
+| I understand the 6-week (30-day) allowance for personal time off. | ខ្ញុំយល់ដឹងអំពីកម្រិតកំណត់ ៦ សប្តាហ៍ (៣០ ថ្ងៃ) សម្រាប់ការឈប់សម្រាកផ្ទាល់ខ្លួន។ |
+| Send to {name} for Approval | ផ្ញើទៅ {name} ដើម្បីអនុម័ត |
+| Save this request | រក្សាទុកសំណើនេះ |
+| My Requests | សំណើរបស់ខ្ញុំ |
+| Denied / Approved / Noted | បានបដិសេធ / បានអនុម័ត / បានកត់ត្រា |
+| No requests yet. | មិនទាន់មានសំណើនៅឡើយទេ។ |
+| Pick both dates / Pick a leave type | សូមជ្រើសរើសកាលបរិច្ឆេទទាំងពីរ / សូមជ្រើសរើសប្រភេទការឈប់សម្រាក |
+| Please confirm you understand the allowance. | សូមបញ្ជាក់ថាអ្នកយល់ដឹងអំពីកម្រិតកំណត់នេះ។ |
+
+## 10. Weekly Goals layout fixes + ministry KPIs collapsed
+
+Two fixes to the Weekly Goals rebuild from section 8: the progress slider
+was rendering at the browser's tiny default size (no `input[type=range]`
+styling existed yet) instead of the mockup's full-width track, and the week
+pill/card headers showed a bare week number instead of an actual date
+range. Both now match the mockup: full-width sliders with a colored fill,
+and "Week of Aug 17 – 23, 2026"-style labels computed from the week number.
+
+The "log your ministry's numbers" cards (daily counts + weekly levels) are
+now collapsed into an accordion too, matching the Base tab's pattern,
+instead of always sitting open and pushing everything else down the page.
+
+| English | ខ្មែរ |
+|---|---|
+| Week of {range}, {year} | សប្តាហ៍នៃ {range}, {year} |
+| {n} to log today | {n} ត្រូវកត់ត្រាថ្ងៃនេះ |
+| {n} for week {wk} | {n} សម្រាប់សប្តាហ៍ {wk} |
+
+## 11. Ministry Tracker jump chip, red→yellow→green slider
+
+Two more from the same round: the goal-progress slider now uses a real
+red→yellow→green gauge (a continuous hue sweep) instead of the discrete
+warm/amber/cobalt/green bands the rings use — those stayed as-is, only the
+slider changed. And the quick-jump bar gained a "Ministry Tracker" chip,
+since the collapsible KPI card now needs one to reach it without scrolling.
+
+| English | ខ្មែរ |
+|---|---|
+| Ministry Tracker | កម្មវិធីតាមដានកិច្ចការបម្រើ |
+| {n} for {range} | {n} សម្រាប់ {range} |
+
+## 12. Annual Goals (SMART) — new feature
+
+A personal, year-and-category goal list, matching the mockup: a year
+picker, six fixed categories (Faith, Health, Finance, Language, Skills,
+Fun), and add/edit/delete for each goal (title, an optional freeform detail
+line, and a percent). Nothing here feeds any base or ministry figure.
+
+| English | ខ្មែរ |
+|---|---|
+| Annual Goals | គោលដៅប្រចាំឆ្នាំ |
+| Annual Goals · SMART | គោលដៅប្រចាំឆ្នាំ · SMART |
+| Previous year / Next year | ឆ្នាំមុន / ឆ្នាំក្រោយ |
+| Faith / Finance / Language / Skills / Fun | ជំនឿ / ហិរញ្ញវត្ថុ / ភាសា / ជំនាញ / កម្សាន្ត |
+| No goals set for this category yet. | មិនទាន់មានគោលដៅសម្រាប់ប្រភេទនេះនៅឡើយទេ។ |
+| New goal / Goal / Detail (optional) | គោលដៅថ្មី / គោលដៅ / សេចក្តីលម្អិត (ស្រេចចិត្ត) |
+| What are you aiming for this year? | តើអ្នកកំពុងសំដៅទៅរកអ្វីក្នុងឆ្នាំនេះ? |
+| e.g. Measurable · by Dec 2026 | ឧ. អាចវាស់វែងបាន · មុនខែធ្នូ ២០២៦ |
+| Give the goal a title first. | សូមដាក់ចំណងជើងឱ្យគោលដៅជាមុនសិន។ |
+| Delete this goal? | លុបគោលដៅនេះមែនទេ? |
+
+## 13. Mentors see the whole database, not just shared habits
+
+A mentor relationship is now full consent, not partial: the per-habit
+"private / mentor sees" toggle is gone (it always showed all habits to the
+mentor from here on, so a toggle that did nothing would just be confusing).
+A mentee's ministry KPI numbers, Annual Goals, and Leave history are now
+visible on their mentor's mentee-detail page too, read-only.
+
+| English | ខ្មែរ |
+|---|---|
+| Pick up to {n}. | ជ្រើសរើសបានរហូតដល់ {n}។ |
+| {name}'s habits | ទម្លាប់របស់ {name} |
+| previous 7 days | ៧ ថ្ងៃមុន |
+| first week of data | សប្តាហ៍ដំបូងនៃទិន្នន័យ |
+
+## 14. Personal dashboard — at the top of My Database
+
+A small at-a-glance card now sits above everything else on My Database: a
+greeting by first name, and four stats (streak, this week's goals done,
+today's habits done, PTO days left). By default it matches the app's own
+light/dark theme like any other card. A gear icon in the top-right hides a
+customize panel — a free color wheel (any color, not a fixed palette) and
+a background photo — for the one card that's actually yours. The moment
+either is set, the text switches to a fixed light-on-dark pair so it stays
+readable no matter what color or photo someone picks.
+
+| English | ខ្មែរ |
+|---|---|
+| Welcome, {name}, to your database | សូមស្វាគមន៍ {name} មកកាន់ទិន្នន័យរបស់អ្នក |
+| Customize dashboard | កែសម្រួលផ្ទាំងគ្រប់គ្រង |
+| day streak / goals done / habits today / PTO days left | ថ្ងៃជាប់គ្នា / គោលដៅបានបញ្ចប់ / ទម្លាប់ថ្ងៃនេះ / ថ្ងៃឈប់សម្រាកនៅសល់ |
+| Accent color / Background image | ពណ៌សំខាន់ / រូបភាពផ្ទៃខាងក្រោយ |
+| Change image / Add image / Choose color | ប្តូររូបភាព / បន្ថែមរូបភាព / ជ្រើសរើសពណ៌ |
+| Match app theme | តាមម៉ូតកម្មវិធី |
+| Uploading image… / Dashboard updated | កំពុងផ្ទុករូបភាព… / បានធ្វើបច្ចុប្បន្នភាពផ្ទាំងគ្រប់គ្រង |
+| That image type isn't supported | ប្រភេទរូបភាពនេះមិនគាំទ្រទេ |
+| Image too large — try a smaller one | រូបភាពធំពេក — សូមសាកល្បងរូបតូចជាងនេះ |
+| Upload failed | ការផ្ទុកឡើងបរាជ័យ |
+
+## 15. 1-on-1 requests, and an Updates feed on the personal dashboard
+
+Either side of an approved mentor/mentee relationship can now ask the other
+for a 1-on-1 — a ☕ button next to their row in the Mentorship card, on both
+"You're Mentoring" and "Your Mentor". The other person accepts or declines
+from a small list in the same card. Separately, the personal dashboard now
+carries an Updates card: leave decisions on your own requests, a mentee's
+leave request waiting on you, and 1-on-1 activity — computed from state
+already on the page, not a separately stored notification log.
+
+| English | ខ្មែរ |
+|---|---|
+| Request a 1-on-1 | ស្នើសុំការជួបគ្នាមួយទល់មួយ |
+| 1-on-1 Requests | សំណើសុំជួបគ្នាមួយទល់មួយ |
+| {name} would like a 1-on-1 | {name} ចង់ជួបគ្នាមួយទល់មួយជាមួយអ្នក |
+| Request sent | បានផ្ញើសំណើ |
+| Updates | ព័ត៌មានថ្មី |
+| Your {range} leave request was approved | សំណើសុំចាកឆ្ងាយរបស់អ្នកសម្រាប់ {range} ត្រូវបានអនុម័ត |
+| Your {range} leave request was declined | សំណើសុំចាកឆ្ងាយរបស់អ្នកសម្រាប់ {range} ត្រូវបានបដិសេធ |
+| {name} requested leave {range} | {name} បានស្នើសុំចាកឆ្ងាយ {range} |
+| {name} requested a 1-on-1 | {name} បានស្នើសុំជួបគ្នាមួយទល់មួយ |
+| {name} accepted your 1-on-1 request | {name} បានទទួលយកសំណើជួបគ្នារបស់អ្នក |
+| {name} declined your 1-on-1 request | {name} បានបដិសេធសំណើជួបគ្នារបស់អ្នក |
+
+## 16. Dashboard customize button restyled, quick-jump bar now scrolls
+
+The dashboard's customize trigger is now an icon-over-label button matching
+`nav.bottom button`'s shape (was a switch, then a gear-only icon button)
+and each of the four stat tiles now carries an emoji matching its section
+elsewhere in My Database (🔥 streak, 🎯 goals, ✅ habits, 🌴 leave). The
+quick-jump chip row scrolls horizontally in one line instead of wrapping
+onto several.
+
+| English | ខ្មែរ |
+|---|---|
+| Customize | កែសម្រួល |
+
+## 17. Habit Tracker: reordered, and "Hours, mood & private" renamed
+
+"Choose my habits" now sits above the daily-entry disclosure instead of
+below it. That disclosure is renamed "Daily check-in" (was "Hours, mood &
+private") with a new line explaining what it actually does: once
+MIN_WEEK_DAYS (3) days are logged in a week, the server rolls them into
+that week's Health check-in automatically — filling in the Health tab's
+form by hand always overrides that roll-up. This was already true; it just
+wasn't visible anywhere in the UI.
+
+| English | ខ្មែរ |
+|---|---|
+| Daily check-in | ការរាយការណ៍ប្រចាំថ្ងៃ |
+| Log {n}+ days this week and it fills in your weekly Health check-in — submit that form any time to override it by hand. | កត់ត្រា {n}+ ថ្ងៃក្នុងសប្តាហ៍នេះ វានឹងបំពេញការរាយការណ៍សុខភាពប្រចាំសប្តាហ៍របស់អ្នកដោយស្វ័យប្រវត្តិ — អ្នកអាចដាក់ស្នើទម្រង់នោះដោយផ្ទាល់ ដើម្បីជំនួសវានៅពេលណាក៏បាន។ |
+
+## 18. Weekly Health's 1-10 questions are now sliders
+
+Matching the mockup: the loneliness/clarity/growth questions on the Health
+tab's weekly check-in form are sliders with low/high captions and a live
+readout, instead of a row of ten number buttons. Hour fields now show a
+"hours" unit. A slider shows a default midpoint before you touch it, but
+that default doesn't count as answered — submitting still asks you to
+actually drag each one first, same as before.
+
+| English | ខ្មែរ |
+|---|---|
+| hours | ម៉ោង |
+| 1 · Very connected / 10 · Very lonely | 1 · ភ្ជាប់ចិត្តជាមួយគេ / 10 · ឯកោខ្លាំង |
+| 1 · Unclear / 10 · Very clear | 1 · មិនច្បាស់ / 10 · ច្បាស់ណាស់ |
+| 1 · Stagnant / 10 · Thriving | 1 · ឈប់នឹង / 10 · រីកចម្រើនល្អ |
+
+## 19. Ministry Tracker: week navigation, so a missed week can be backfilled
+
+The Ministry Tracker now has the same week picker as Weekly Goals (prev/
+next arrows, "Jump back to this week"). "This week" (headcounts and
+scores) already keyed off the week number, so navigating back now lets you
+fill in a week you missed. "Today" (daily running totals like Salvations)
+doesn't have a "today" in a past week, so backfilling a past week lands
+the number on that week's last day instead, and the card's heading and
+copy say so explicitly.
+
+| English | ខ្មែរ |
+|---|---|
+| {n} to log for {range} | {n} ត្រូវកត់ត្រាសម្រាប់ {range} |
+| Backfilling week {wk} — this lands on {date}. | កំពុងបំពេញត្រឡប់ក្រោយសម្រាប់សប្តាហ៍ {wk} — វានឹងចូលទៅក្នុងកាលបរិច្ឆេទ {date}។ |
+
+## 20. My Database reordering, Updates inbox actions, and "My Ministry" as its own page
+
+Habit Tracker now sits above Weekly Goals (was below it). The hamburger
+menu's "Leave Request" item now opens the Leave Request page directly
+instead of scrolling My Database to its entry card. The dashboard's
+Updates card is now a small inbox: a mentee's leave request and an
+incoming 1-on-1 request get inline Approve/Deny or Accept/Decline right
+there, using the same handlers the full Leave Request page and Mentorship
+card already call — nothing new on the backend. The Ministry Tracker is
+no longer an inline accordion in My Database; it's its own full page
+("My Ministry"), reached the same way Leave Request is — a tappable card
+in My Database — showing the actual ministry name and confirming these
+numbers already feed the GP Dashboard for both campuses (they always
+did; this just makes it visible). Logging permission is unchanged: anyone
+whose profile carries that ministry can log for it, same as before.
+
+| English | ខ្មែរ |
+|---|---|
+| My Ministry | កិច្ចការបម្រើរបស់ខ្ញុំ |
+| {ministry} — these numbers feed the GP Dashboard for both campuses. | {ministry} — ចំនួនទាំងនេះបញ្ចូលទៅក្នុងផ្ទាំងគ្រប់គ្រង GP សម្រាប់ទាំងពីរសាខា។ |
+
+## 21. My Ministry: department overseers now see the ministries under them
+
+"My Ministry" moved after OKRs (was before) and was added to the
+hamburger menu. Bigger change: a department's "Base Leadership" role
+(dept: Base Leadership, ministry: e.g. Community Service — the person
+overseeing that whole department, not one front-line ministry in it) only
+ever showed their own leadership-activity figures (one-on-ones held,
+meetings led). It never showed the actual ministries they oversee
+(Outreach Teams, Cafe, GP Education, Intercession, for Community
+Service) — those were only reachable via the Base tab's Department
+Explorer, several taps away and not defaulted to their own department.
+"My Ministry" now adds a "Ministries You Oversee" section listing every
+ministry under the department they lead, every metric each one tracks,
+current figure and trend — read-only, the same ledger Department Explorer
+already showed, just surfaced where a department leader actually looks.
+Extracted the per-ministry rendering into one shared function
+(`deptMinistriesHtml_`) so Department Explorer and My Ministry can't drift
+apart on how a ministry's numbers are shown.
+
+| English | ខ្មែរ |
+|---|---|
+| Ministries You Oversee · {dept} | កិច្ចការបម្រើដែលអ្នកគ្រប់គ្រង · {dept} |
+
+## 22. Ministries You Oversee becomes loggable, by week; Individual vs Ministry labels; Mentorship gets its own heading; Health week picker matches Weekly Goals
+
+The read-only "Ministries You Oversee" section from #21 can now be logged
+into directly, the same day/week split and week-by-week navigation as a
+person's own Ministry Tracker — a department overseer no longer has to
+go through the Base tab to put in a number for a ministry they lead.
+Each ministry gets its own card with its own week pointer and draft, so
+logging Cafe's week 30 doesn't disturb what Outreach Teams' card is
+showing. Saves go through new authorized endpoints
+(`saveKpiDayFor`/`saveMinistryFor`/`getMinistryFor`) that let an overseer
+write any ministry under the department they lead, in addition to their
+own — the same rule the server already enforces, now reachable from the
+UI. Added a plain-language label above each block on My Ministry: an
+overseer's own figures are marked "Individual" (personal to them, not a
+department rollup), and a regular ministry member's own ministry section
+is marked "Ministry" (logged by anyone on the team). The "Ministries You
+Oversee" section itself now says these numbers are normally logged by the
+teams in them, with the overseer's own logging as a backup path.
+
+Two smaller fixes: "Mentorship" (You're Mentoring / Your Mentor) sat right
+under the "Annual Goals" card with no heading of its own, reading as if it
+were still part of Annual Goals — it now gets its own section title. And
+the Health tab's week picker was a plain dropdown; it now uses the same
+arrow/pill week-navigation layout as Weekly Goals and My Ministry, so
+switching or backfilling a week's health check-in looks and works the
+same way everywhere in the app.
+
+| English | ខ្មែរ |
+|---|---|
+| No KPIs are defined for {ministry} yet. | មិនទាន់មានការកំណត់សូចនាករសម្រាប់ {ministry} នៅឡើយទេ។ |
+| Individual | បុគ្គល |
+| Your own numbers as {dept} — logged by you, separate from the ministries you oversee below. | ចំនួនផ្ទាល់ខ្លួនរបស់អ្នកជា {dept} — កត់ត្រាដោយអ្នកផ្ទាល់ ដាច់ដោយឡែកពីកិច្ចការបម្រើដែលអ្នកគ្រប់គ្រងខាងក្រោម។ |
+| {ministry}'s numbers — anyone on the team can log them, and they feed the GP Dashboard for both campuses. | ចំនួនរបស់ {ministry} — នរណាម្នាក់ក្នុងក្រុមអាចកត់ត្រាបាន ហើយវានឹងបញ្ចូលទៅផ្ទាំងគ្រប់គ្រង GP សម្រាប់ទាំងពីរសាខា។ |
+| Ministry numbers — normally logged by the teams in them. You can log for any of these too, as their overseer. | ចំនួនកិច្ចការបម្រើ — ជាធម្មតាកត់ត្រាដោយក្រុមនៅក្នុងនោះ។ អ្នកក៏អាចកត់ត្រាសម្រាប់ណាមួយក្នុងចំណោមនេះបានដែរ ក្នុងនាមជាអ្នកគ្រប់គ្រងរបស់ពួកគេ។ |
+| Saved — week {wk} updated | បានរក្សាទុក — សប្តាហ៍ {wk} ត្រូវបានធ្វើបច្ចុប្បន្នភាព |
+| Saved — week total updated | បានរក្សាទុក — សរុបប្រចាំសប្តាហ៍ត្រូវបានធ្វើបច្ចុប្បន្នភាព |

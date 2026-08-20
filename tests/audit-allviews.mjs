@@ -113,9 +113,12 @@ await visit(p,'Team: mentor view',async p=>{await p.click('nav.bottom [data-tab=
   const c=await p.$('#main [data-mentee], #main button'); if(c){await c.click();await p.waitForTimeout(900);
     const m=await p.$('#main [data-mentee]'); if(m){await m.click();await p.waitForTimeout(900);}}});
 await visit(p,'My Database: away card',async p=>{await p.click('nav.bottom [data-tab="week"]');await p.waitForTimeout(800);});
-await visit(p,'My Database: profile & settings',async p=>{const b2=await p.$('#goProfileFromMe'); if(b2){await b2.click();await p.waitForTimeout(900);}});
+await visit(p,'My Database: leave request screen',async p=>{await p.click('nav.bottom [data-tab="week"]');await p.waitForTimeout(800);
+  const b3=await p.$('#goLeaveFromMe'); if(b3){await b3.click();await p.waitForTimeout(900);}});
+await visit(p,'My Database: profile & settings',async p=>{await p.click('nav.bottom [data-tab="week"]');await p.waitForTimeout(800);
+  const b2=await p.$('#goProfileFromMe'); if(b2){await b2.click();await p.waitForTimeout(900);}});
 await visit(p,'Health: week switch',async p=>{await p.click('nav.bottom [data-tab="health"]');await p.waitForTimeout(800);
-  await p.selectOption('#healthWeekSel',String(NOWWK-1));await p.waitForTimeout(800);});
+  await p.click('#healthPrevWeek');await p.waitForTimeout(800);});
 await visit(p,'Khmer across all tabs',async p=>{await p.click('#langBtn');await p.waitForTimeout(700);
   for(const tb of ['base','week','team','health']){await p.click(`nav.bottom [data-tab="${tb}"]`);await p.waitForTimeout(650);}
   await p.click('#langBtn');});
