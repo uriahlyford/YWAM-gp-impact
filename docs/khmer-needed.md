@@ -752,3 +752,18 @@ onto several.
 | English | ខ្មែរ |
 |---|---|
 | Customize | កែសម្រួល |
+
+## 17. Habit Tracker: reordered, and "Hours, mood & private" renamed
+
+"Choose my habits" now sits above the daily-entry disclosure instead of
+below it. That disclosure is renamed "Daily check-in" (was "Hours, mood &
+private") with a new line explaining what it actually does: once
+MIN_WEEK_DAYS (3) days are logged in a week, the server rolls them into
+that week's Health check-in automatically — filling in the Health tab's
+form by hand always overrides that roll-up. This was already true; it just
+wasn't visible anywhere in the UI.
+
+| English | ខ្មែរ |
+|---|---|
+| Daily check-in | ការរាយការណ៍ប្រចាំថ្ងៃ |
+| Log {n}+ days this week and it fills in your weekly Health check-in — submit that form any time to override it by hand. | កត់ត្រា {n}+ ថ្ងៃក្នុងសប្តាហ៍នេះ វានឹងបំពេញការរាយការណ៍សុខភាពប្រចាំសប្តាហ៍របស់អ្នកដោយស្វ័យប្រវត្តិ — អ្នកអាចដាក់ស្នើទម្រង់នោះដោយផ្ទាល់ ដើម្បីជំនួសវានៅពេលណាក៏បាន។ |

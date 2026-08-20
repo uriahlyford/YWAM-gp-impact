@@ -2412,9 +2412,15 @@ function habitsCardHtml(){
   });
   h+='</div>';
 
+  h+='<button class="linkbtn" id="editHabits" style="margin:8px 0 4px">'+esc(t('Choose my habits'))+'</button>';
+
   /* Hours, mood and the private questions used to live on a separate Today
      screen. They're the same daily entry, so they're folded in here behind a
-     disclosure — one place to log the day, without a wall of inputs. */
+     disclosure — one place to log the day, without a wall of inputs. Once
+     MIN_WEEK_DAYS days are logged in a week, syncWeekSurvey_ in api.js rolls
+     them straight into that week's Health check-in — a form filled in by
+     hand there always wins over the roll-up, so this is a floor under your
+     score, not something that has to be overridden to make Health accurate. */
   var d=S.todayDraft;
   if(log && !d._loaded){
     ['langHours','minHours','clarity','growth','lonely','porn'].forEach(function(k){
@@ -2422,9 +2428,12 @@ function habitsCardHtml(){
     });
     d._loaded=true;
   }
-  h+='<button class="discloseBtn" id="moreToday"><span><strong>'+esc(t('Hours, mood & private'))+'</strong>'+
+  h+='<button class="discloseBtn" id="moreToday"><span><strong>'+esc(t('Daily check-in'))+'</strong>'+
      '<div class="pmeta">'+todaySummaryLine(log)+'</div></span>'+
-     '<span class="chev">'+(S.todayOpen?'▴':'▾')+'</span></button>';
+     '<span class="chev">'+(S.todayOpen?'▴':'▾')+'</span></button>'+
+     '<p class="hint" style="margin:4px 0 0">'+
+     esc(gpT('Log {n}+ days this week and it fills in your weekly Health check-in — submit that form any time to override it by hand.',{n:MIN_WEEK_DAYS}))+
+     '</p>';
   if(S.todayOpen){
     h+='<div class="qBlock"><div class="qText">Language study today</div><div class="numIn">'+
        '<input type="number" inputmode="decimal" min="0" step="0.5" id="n_langHours" value="'+(d.langHours!=null?d.langHours:'')+'"> hours</div></div>'+
@@ -2444,7 +2453,6 @@ function habitsCardHtml(){
        '<button data-yn="porn|0" class="'+(d.porn===false||d.porn===0?'on':'')+'">No</button></div></div></div>';
     h+='<button class="btn" id="saveDayBtn">'+esc(t('Save today'))+'</button>';
   }
-  h+='<button class="linkbtn" id="editHabits" style="margin-top:8px">'+esc(t('Choose my habits'))+'</button>';
   h += '</div>';
   h += streaksHtml();
   h += recentDaysHtml();
