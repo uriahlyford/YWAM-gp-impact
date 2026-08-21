@@ -93,6 +93,25 @@ const checks = [
   ['OKR manual progress', `R.krProgress({campus:'poipet',quarter:1},{manual:70}).pct`, 70],
   ['OKR objective averages its key results',
     `R.objProgress({campus:'poipet',quarter:1,krs:[{manual:100},{manual:40}]})`, 70],
+
+  /* A target set below what the ministry already logs. The percentage is capped
+     so no screen prints 7668%, but the uncapped figure has to survive that cap —
+     it is the only thing that can tell anyone the target, not the ministry, is
+     what needs fixing. Teams Hosted sums to 3 in Q1, so a target of 1 is 300%. */
+  ['a target under the actual caps the percentage at 100',
+    `R.krProgress({campus:'poipet',quarter:1},{metricKey:'Community Service|Outreach Teams|Teams Hosted',target:1}).pct`, 100],
+  ['…and the uncapped figure survives the cap',
+    `R.krProgress({campus:'poipet',quarter:1},{metricKey:'Community Service|Outreach Teams|Teams Hosted',target:1}).raw`, 300],
+  ['a hand-tracked key result carries raw too',
+    `R.krProgress({campus:'poipet',quarter:1},{manual:70}).raw`, 70],
+  ['the warning names how far past the target it already is',
+    `/already at 300% of it/.test(gpKrWarnHtml({raw:300}))`, true],
+  ['nothing is said when the target has not been passed',
+    `gpKrWarnHtml({raw:100}) === '' && gpKrWarnHtml({raw:0}) === ''`, true],
+  ['the editor is told while the target is being typed',
+    `/Already 3 this quarter — a target of 1 is passed/.test(gpKrTargetNote(R,'poipet',1,'Community Service|Outreach Teams|Teams Hosted',1))`, true],
+  ['…and says nothing about a target that is still ahead',
+    `gpKrTargetNote(R,'poipet',1,'Community Service|Outreach Teams|Teams Hosted',6) === ''`, true],
 ];
 
 let bad = 0;

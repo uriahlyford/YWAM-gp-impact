@@ -936,3 +936,30 @@ everything else in the app already uses.
 | Next | បន្ទាប់ |
 | {n} of {total} | {n} នៃ {total} |
 | Logged weekly only — day by day belongs to the ministry's own team on their My Ministry page. The ones that rarely change are already filled in from last time. | កត់ត្រាតែប្រចាំសប្តាហ៍ប៉ុណ្ណោះ — ការកត់ត្រាថ្ងៃនិមួយៗជាកម្មសិទ្ធិរបស់ក្រុមផ្ទាល់នៃកិច្ចការបម្រើនៅលើទំព័រ My Ministry របស់ពួកគេ។ អ្វីដែលកម្រផ្លាស់ប្តូរត្រូវបានបំពេញស្រាប់ពីលើកមុន។ |
+
+## 25. A key result whose target is already passed now says so
+
+#24 clamped the key-result percentage at 100 so nothing prints "7668%
+complete" any more. On its own, though, the clamp hides the problem: a
+target set below what the ministry already logs now shows a full bar
+reading 100% for the whole quarter, which looks like an objective that
+was met rather than a target that was typed wrong.
+
+So `krProgress()` also returns the uncapped percentage, and two places
+use it. Under the key result — on the GP Dashboard and on My Database —
+a line in amber says how far past the target the ministry already is.
+And in the OKR editor, the moment a target is typed under a metric, a
+line under the box says what that metric has already logged this
+quarter, so it can be got right where it is set instead of read wrong
+for three months. Both lines come from one helper in `rollup.js`
+(`gpKrWarnHtml` / `gpKrTargetNote`) so the two pages cannot word the
+same wrong target two different ways.
+
+Both strings carry numbers, so the placeholders have to survive
+translation: `{n}` is a percentage, `{a}` and `{b}` are a metric's own
+figures (already formatted).
+
+| English | ខ្មែរ |
+|---|---|
+| Target looks too low — already at {n}% of it. | គោលដៅនេះទំនងជាទាបពេក — សម្រេចបាន {n}% នៃវារួចហើយ។ |
+| Already {a} this quarter — a target of {b} is passed before you start. | ត្រីមាសនេះមាន {a} រួចហើយ — គោលដៅ {b} ត្រូវបានឆ្លងផុតមុនពេលចាប់ផ្តើម។ |

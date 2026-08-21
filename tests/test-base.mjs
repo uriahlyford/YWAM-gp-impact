@@ -199,9 +199,12 @@ const strip = s => s.replace(/^[^\w]*/, '').replace(/Q\d /, '').toLowerCase();
    mockup's own wording for those two. Everything else must match, so real
    drift still fails. */
 const EXPECTED_OFF_BASE = ['OKRs', 'Base health', 'Across every ministry', 'Department dashboards'];
+/* Both sides go through strip() — it lowercases, so comparing raw names against
+   it excluded nothing and every allowed section counted as drift. */
+const allowed = EXPECTED_OFF_BASE.map(strip);
 const missing = dashSections.map(strip)
   .filter(d => !sections.map(strip).includes(d))
-  .filter(d => !EXPECTED_OFF_BASE.includes(d));
+  .filter(d => !allowed.includes(d));
 console.log('\non the dashboard but NOT on Base (unexpected): ' + (missing.length ? missing.join(', ') : '(none)'));
 if (missing.length) { console.log('  ^ that is drift, not a decision'); process.exitCode = 1; }
 
@@ -359,7 +362,16 @@ await page.click('#okrNewBtn'); await page.waitForTimeout(600);
 await page.fill('#okrObjText', 'Plant a church in every village we reach');
 await page.fill('#okrKrText0', 'Villages with a new church');
 await page.selectOption('#okrKrMetric0', 'Community Service|Outreach Teams|People Connected to Local Church');
+/* 5 is under what Outreach Teams has already logged for this metric this
+   quarter, so the editor has to say so before the objective is ever saved —
+   this is the one moment the target can be got right. */
 await page.fill('#okrKrTarget0', '5');
+await page.waitForTimeout(300);
+const tgtNote = await page.$eval('#okrKrWarn0', e => e.textContent.trim()).catch(() => '');
+console.log('editor warns on a too-low target: ' + (tgtNote || '(nothing said)'));
+if (!/a target of 5 is passed/.test(tgtNote)) {
+  console.log('  ^ a target already passed was accepted in silence'); process.exitCode = 1;
+}
 await page.fill('#okrKrText1', 'Debrief within a week');
 await page.click('#okrSaveBtn'); await page.waitForTimeout(1800);
 console.log('pager present after 2nd objective: ' + await page.evaluate(() => !!document.querySelector('#okrNext')));
@@ -383,6 +395,19 @@ console.log('after edit: ' + await page.$eval('.okrObj', e => e.textContent.trim
 // default now, so open the card's key results first
 await page.click('[data-kr-toggle]');
 await page.waitForTimeout(500);
+
+/* Same target, now saved: the row reads 100% because the percentage is capped,
+   so the row itself has to say the target is the thing that is wrong. */
+const krWarn = await page.evaluate(() => {
+  const c = Array.from(document.querySelectorAll('.okrCard')).find(x => /revised/.test(x.textContent));
+  const w = c && c.querySelector('.krWarn');
+  return w ? w.textContent.trim() : '';
+});
+console.log('row says the target was passed: ' + (krWarn || '(nothing said)'));
+const krPct = Number((krWarn.match(/(\d+)%/) || [])[1]);
+if (!(krPct > 100)) {
+  console.log('  ^ a full bar with nothing saying why reads as an objective met'); process.exitCode = 1;
+}
 const manKey = await page.$eval('[data-okr-manual]', e => e.getAttribute('data-okr-manual'));
 console.log('editing manual kr: ' + manKey);
 await page.fill('[data-okr-manual="' + manKey + '"]', '80');
@@ -528,4 +553,7 @@ console.log('Khmer toggle ok:   ' + await page.evaluate(() => /[ក-៿]/.test(d
 console.log('\nERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));
 await browser.close();
 server.close();
-process.exit(errors.length ? 1 : 0);
+/* process.exitCode is how the drift checks above fail — a bare
+   process.exit(errors.length ? 1 : 0) threw their verdict away, so every one of
+   them could only ever print. */
+process.exit(errors.length || process.exitCode ? 1 : 0);

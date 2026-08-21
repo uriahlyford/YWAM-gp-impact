@@ -40,7 +40,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-okr-auth.mjs` | Someone can write objectives outside their own campus and department |
 | `test-year.mjs` | A new year overwrites last year's figures, legacy rows lose their history, or anyone can POST numbers for any campus |
 | `test-goals.mjs` | Goal percentages, and whether goals ticked before the change still read as 100% |
-| `test-rollups.mjs` | The dashboard maths — headcounts summed instead of levelled, OKR progress wrong |
+| `test-rollups.mjs` | The dashboard maths — headcounts summed instead of levelled, OKR progress wrong, or a key result whose target has already been passed stops saying so |
 | `test-jobfocus.mjs` | `jobfocus.js` and `help.html` drift apart |
 | `test-stafftype.mjs` | The staff breakdown: kind of staff and home country stored, carried on the roster, counted the same on both pages — and country spellings folding to one name |
 | `test-pull-drill.mjs` | The pull coin stops turning as you drag, the two pages stop offering the same breakdowns, or a tappable number stops looking tappable |
@@ -51,7 +51,7 @@ than failing. Chromium is found automatically at the usual locations; set
 | `test-chrome.mjs` | The dashboard flashes before the staff page, the boot coin goes hollow, or the chrome stops being padded for the notch and home indicator |
 | `test-storage.mjs` | Khmer does not survive a reload, or blocked storage blanks the page / breaks login |
 | `test-degraded.mjs` | A missing optional script kills a page instead of degrading |
-| `test-base.mjs` | The Base tab or the weekly health form |
+| `test-base.mjs` | The Base tab or the weekly health form — and whether a key-result target set below what the ministry already logs is called out both in the editor and on the card. Its drift checks report through `process.exitCode`, so the final `process.exit` must not overwrite them |
 | `test-ministry-kpis.mjs` | My week's ministry cards: every KPI present, counts saved per day and levels per week, headcounts carried forward, and a level never written as a daily row |
 | `test-mentor-health.mjs` | A mentor can no longer see their mentee by name |
 | `audit-load.mjs` | Invocations per page open, and duplicate PIN verification |

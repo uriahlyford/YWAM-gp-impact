@@ -394,6 +394,7 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:30px;
 .krText { font-size:13.5px; line-height:1.35; }
 .krMeta { font-size:12px; color:var(--muted); margin-top:2px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .krBar { height:5px; background:var(--surface2); border-radius:99px; margin-top:6px; overflow:hidden; }
+.krWarn { font-size:12px; line-height:1.35; color:var(--amberDeep); margin-top:6px; }
 .manualIn { width:64px !important; font-size:14px !important; padding:5px 8px !important; }
 .formBlock { border-top:1px dashed var(--border); padding-top:12px; margin-top:12px; }
 .formBlock label, .qLabel { display:block; font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:10px 0 4px; }
@@ -1331,6 +1332,16 @@ function logHtml(){
 /* ---------- OKR ---------- */
 function objProgress(o){ return R().objProgress(o); }
 function krProgress(o, kr){ return R().krProgress(o, kr); }
+/* Fills the note under one key-result slot in the editor. textContent, so there
+   is nothing to escape. */
+function krTargetCheck(k){
+  var el = document.getElementById('krWarn'+k);
+  var sel = document.getElementById('krMetric'+k);
+  var tin = document.getElementById('krTarget'+k);
+  if(!el || !sel || !tin) return;
+  el.textContent = gpKrTargetNote(R(), state.campus, state.okrQuarter, sel.value,
+    Number(tin.value)||0);
+}
 
 function metricOptions(selected){
   var deps = getDepartments(state.campus);
@@ -1371,7 +1382,7 @@ function okrHtml(){
       } else {
         h += '<span>'+esc(t('manual'))+'</span><span><input type="number" class="manualIn" min="0" max="100" value="'+(Number(kr.manual)||0)+'" data-manual="'+o.id+'|'+ki+'"'+(state.data.leader?'':' disabled')+'> %</span>';
       }
-      h += '</div><div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div></div>';
+      h += '</div><div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div>'+gpKrWarnHtml(kp)+'</div>';
     });
     if(state.data.leader){
       h += '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'+
@@ -1399,6 +1410,7 @@ function okrHtml(){
         '<input type="text" id="krText'+k+'" value="'+esc(kr.text)+'">'+
         '<label>'+esc(t('Measure by'))+'</label><select id="krMetric'+k+'">'+metricOptions(kr.metricKey)+'</select>'+
         '<label>'+esc(t('Target (if linked to a KPI)'))+'</label><input type="number" id="krTarget'+k+'" inputmode="decimal" placeholder="0" value="'+(kr.target||'')+'" style="width:130px">'+
+        '<div class="krWarn" id="krWarn'+k+'"></div>'+
       '</div>';
     }
     h += '<button class="saveBtn" id="saveOkrBtn">'+esc(t(editing?'Save changes':'Add objective'))+'</button>'+
@@ -1496,6 +1508,13 @@ function bindEvents(){
   if(cb) cb.onclick=function(){ state.okrFormOpen=false; state.editingId=null; render(); };
   var sob=document.getElementById('saveOkrBtn');
   if(sob) sob.onclick=function(){ saveOkrForm(sob); };
+  for(var kw=0;kw<3;kw++)(function(k){
+    var sel=document.getElementById('krMetric'+k), tin=document.getElementById('krTarget'+k);
+    if(!sel || !tin) return;
+    sel.addEventListener('change', function(){ krTargetCheck(k); });
+    tin.addEventListener('input', function(){ krTargetCheck(k); });
+    krTargetCheck(k);   /* an objective opened for editing says it straight away */
+  })(kw);
   document.querySelectorAll('[data-edit]').forEach(function(b){
     b.onclick=function(){ state.editingId=b.getAttribute('data-edit'); state.okrFormOpen=true; render(); };
   });

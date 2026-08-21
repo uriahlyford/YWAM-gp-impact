@@ -611,6 +611,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .krText { font-size:13.5px; line-height:1.35; }
 .krMeta { font-size:12px; color:var(--muted); margin-top:2px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .krBar { height:5px; background:var(--surface2); border-radius:99px; margin-top:6px; overflow:hidden; }
+.krWarn { font-size:12px; line-height:1.35; color:var(--amberDeep); margin-top:6px; }
 .mineTag { background:var(--accentSoft); border:1px solid var(--accentSoftBorder); border-radius:999px; padding:1px 8px; font-size:11px; font-weight:700; }
 .okrActions { display:flex; gap:12px; justify-content:flex-end; align-items:center;
   border-top:1px solid var(--line); margin-top:12px; padding-top:10px; }
@@ -1894,7 +1895,7 @@ function okrCardHtml(o, R, editable){
     }
     h += '<div class="kr"><div class="krText">'+esc(kr.text)+'</div>'+
       '<div class="krMeta"><span>'+meta+'</span><span>'+right+'</span></div>'+
-      '<div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div></div>';
+      '<div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div>'+gpKrWarnHtml(kp)+'</div>';
   });
   if(editable){
     h += '<div class="okrActions">'+
@@ -1924,6 +1925,17 @@ function okrMetricOptions(selected){
   return h;
 }
 
+/* Same note as the dashboard's editor, from the same helper. */
+function okrTargetCheck(k){
+  var el = document.getElementById('okrKrWarn'+k);
+  var sel = document.getElementById('okrKrMetric'+k);
+  var tin = document.getElementById('okrKrTarget'+k);
+  if(!el || !sel || !tin) return;
+  var wk = thisWeek(), q = Math.min(4, Math.floor((wk-1)/13)+1);
+  el.textContent = gpKrTargetNote(baseR(), S.me.campus, q, sel.value,
+    Number(tin.value)||0);
+}
+
 /* The write form. Three key-result slots, same as the dashboard's — enough to be
    useful, few enough that an objective stays an objective. */
 function okrFormHtml(editing){
@@ -1942,6 +1954,7 @@ function okrFormHtml(editing){
       '<label class="f">'+esc(t('Target (if linked to a KPI)'))+'</label>'+
       '<input type="number" id="okrKrTarget'+k+'" inputmode="decimal" placeholder="0" value="'+
         (kr.target||'')+'" style="width:130px">'+
+      '<div class="krWarn" id="okrKrWarn'+k+'"></div>'+
       '</div>';
   }
   h += '<button class="btn" id="okrSaveBtn">'+esc(t(editing?'Save changes':'Add objective'))+'</button>'+
@@ -4721,6 +4734,13 @@ function bind(){
   if(ocb) ocb.onclick=function(){ S.okrForm=false; S.okrEditId=null; render(); };
   var osb=document.getElementById('okrSaveBtn');
   if(osb) osb.onclick=function(){ okrSave(osb); };
+  for(var kw=0;kw<3;kw++)(function(k){
+    var sel=document.getElementById('okrKrMetric'+k), tin=document.getElementById('okrKrTarget'+k);
+    if(!sel || !tin) return;
+    sel.addEventListener('change', function(){ okrTargetCheck(k); });
+    tin.addEventListener('input', function(){ okrTargetCheck(k); });
+    okrTargetCheck(k);
+  })(kw);
   document.querySelectorAll('[data-okr-edit]').forEach(function(b){
     b.onclick=function(){ S.okrEditId=b.getAttribute('data-okr-edit'); S.okrForm=true; render(); };
   });

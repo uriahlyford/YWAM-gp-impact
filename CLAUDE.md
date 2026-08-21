@@ -207,6 +207,16 @@ Three rules hold it together:
   and the daily roll-up owns any metric it touches, so the two would fight over the
   same weekly cell. `test-ministry-kpis.mjs` asserts the split from both sides.
 
+**A key result says when its own target is wrong.** `krProgress()` caps the
+percentage at 100 — nothing prints "7668% complete" any more — and returns the
+uncapped figure as `raw`, because the cap alone turns a bad target into a full bar
+reading 100% for the whole quarter, which looks like an objective that was met.
+Two places use `raw`, both from one helper so the two pages cannot word it
+differently: `gpKrWarnHtml()` puts a line under the key result on the dashboard and
+on My Database, and `gpKrTargetNote()` says the same thing in the OKR editor as the
+target is typed, against what that metric has already logged this quarter. Fix the
+target where it was set; the app is not guessing which of the two numbers is wrong.
+
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
   checks — `server tests` (seconds, no install) and `browser tests` (Playwright +
