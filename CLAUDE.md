@@ -543,9 +543,13 @@ Never `none`. The second half is that the browser moves a range input's value on
 touch *down*, before it knows the gesture was a scroll — so scrolling past a
 question answered it, and scrolling past Weekly Goals saved it. Every range input
 goes through `gpSlideGuard()`, which puts the value and the caller's own state
-back when the gesture turns out to have been a scroll. `test-touch-scroll.mjs`
-drives real CDP touch events on an Android profile, because synthetic
-`TouchEvent`s dispatched from JS never consult `touch-action` at all.
+back when the gesture turns out to have been a scroll. `test-touch-scroll.mjs` reads the
+rules off computed style and drives the guard from the event sequence a real touch
+produces. It also tries the gesture for real through CDP, but only after checking
+that the same swipe can scroll plain page at all — Chromium 141 scrolls from a
+dispatched touch sequence and 151 does not, so that layer reports skipped rather
+than failing. A test that only passes on one browser build is the same problem as
+one that only passes on one machine.
 
 ## Things that made the app fail to load (don't reintroduce)
 Each of these looked harmless and took the whole page down. `test-degraded.mjs`,
