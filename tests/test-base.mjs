@@ -199,9 +199,12 @@ const strip = s => s.replace(/^[^\w]*/, '').replace(/Q\d /, '').toLowerCase();
    mockup's own wording for those two. Everything else must match, so real
    drift still fails. */
 const EXPECTED_OFF_BASE = ['OKRs', 'Base health', 'Across every ministry', 'Department dashboards'];
+/* Both sides go through strip() — it lowercases, so comparing raw names against
+   it excluded nothing and every allowed section counted as drift. */
+const allowed = EXPECTED_OFF_BASE.map(strip);
 const missing = dashSections.map(strip)
   .filter(d => !sections.map(strip).includes(d))
-  .filter(d => !EXPECTED_OFF_BASE.includes(d));
+  .filter(d => !allowed.includes(d));
 console.log('\non the dashboard but NOT on Base (unexpected): ' + (missing.length ? missing.join(', ') : '(none)'));
 if (missing.length) { console.log('  ^ that is drift, not a decision'); process.exitCode = 1; }
 
@@ -332,6 +335,20 @@ if (card) {
 }
 
 // 10c. the editor: create, edit, hand-tracked %, delete
+// More than one objective in the same quarter now pages one card at a time
+// (#okrPrev/#okrNext) instead of stacking every card at once, so this walks
+// to whichever objective it needs by title rather than assuming position.
+async function okrPageTo(re) {
+  for (let i = 0; i < 6; i++) {
+    const cur = await page.$eval('.okrObj', e => e.textContent.trim()).catch(() => '');
+    if (re.test(cur)) return true;
+    const next = await page.$('#okrNext');
+    if (!next || await next.evaluate(b => b.disabled)) return false;
+    await next.click();
+    await page.waitForTimeout(400);
+  }
+  return false;
+}
 console.log('\n=== OKR EDITOR (on My Database) ===');
 await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(1000);
@@ -345,11 +362,20 @@ await page.click('#okrNewBtn'); await page.waitForTimeout(600);
 await page.fill('#okrObjText', 'Plant a church in every village we reach');
 await page.fill('#okrKrText0', 'Villages with a new church');
 await page.selectOption('#okrKrMetric0', 'Community Service|Outreach Teams|People Connected to Local Church');
+/* 5 is under what Outreach Teams has already logged for this metric this
+   quarter, so the editor has to say so before the objective is ever saved —
+   this is the one moment the target can be got right. */
 await page.fill('#okrKrTarget0', '5');
+await page.waitForTimeout(300);
+const tgtNote = await page.$eval('#okrKrWarn0', e => e.textContent.trim()).catch(() => '');
+console.log('editor warns on a too-low target: ' + (tgtNote || '(nothing said)'));
+if (!/a target of 5 is passed/.test(tgtNote)) {
+  console.log('  ^ a target already passed was accepted in silence'); process.exitCode = 1;
+}
 await page.fill('#okrKrText1', 'Debrief within a week');
 await page.click('#okrSaveBtn'); await page.waitForTimeout(1800);
-const objs = await page.$$eval('.okrObj', e => e.map(x => x.textContent.trim()));
-console.log('after create: ' + objs.join(' | '));
+console.log('pager present after 2nd objective: ' + await page.evaluate(() => !!document.querySelector('#okrNext')));
+console.log('paged to the new one: ' + await okrPageTo(/Plant a church/));
 console.log('new one shows figure/target: ' + await page.evaluate(() => {
   const c = Array.from(document.querySelectorAll('.okrCard')).find(x => /Plant a church/.test(x.textContent));
   if (!c) return 'card missing';
@@ -357,22 +383,31 @@ console.log('new one shows figure/target: ' + await page.evaluate(() => {
   return m ? m[0] : 'no figure/target found';
 }));
 
-// edit
-const editBtns = await page.$$('[data-okr-edit]');
-await editBtns[editBtns.length - 1].click(); await page.waitForTimeout(700);
+// edit — currently paged to the new objective, so its own edit button is the only one shown
+await page.click('[data-okr-edit]'); await page.waitForTimeout(700);
 console.log('form prefilled: ' + await page.$eval('#okrObjText', e => e.value));
 await page.fill('#okrObjText', 'Plant a church in every village (revised)');
 await page.click('#okrSaveBtn'); await page.waitForTimeout(1800);
-console.log('after edit: ' + (await page.$$eval('.okrObj', e => e.map(x => x.textContent.trim()))).join(' | '));
+console.log('paged to the edited one: ' + await okrPageTo(/revised/));
+console.log('after edit: ' + await page.$eval('.okrObj', e => e.textContent.trim()));
 
 // hand-tracked percentage saves on change — key results are collapsed by
 // default now, so open the card's key results first
-await page.evaluate(() => {
-  const c = Array.from(document.querySelectorAll('.okrCard')).find(x => /Plant a church/.test(x.textContent));
-  const btn = c && c.querySelector('[data-kr-toggle]');
-  if (btn) btn.click();
-});
+await page.click('[data-kr-toggle]');
 await page.waitForTimeout(500);
+
+/* Same target, now saved: the row reads 100% because the percentage is capped,
+   so the row itself has to say the target is the thing that is wrong. */
+const krWarn = await page.evaluate(() => {
+  const c = Array.from(document.querySelectorAll('.okrCard')).find(x => /revised/.test(x.textContent));
+  const w = c && c.querySelector('.krWarn');
+  return w ? w.textContent.trim() : '';
+});
+console.log('row says the target was passed: ' + (krWarn || '(nothing said)'));
+const krPct = Number((krWarn.match(/(\d+)%/) || [])[1]);
+if (!(krPct > 100)) {
+  console.log('  ^ a full bar with nothing saying why reads as an objective met'); process.exitCode = 1;
+}
 const manKey = await page.$eval('[data-okr-manual]', e => e.getAttribute('data-okr-manual'));
 console.log('editing manual kr: ' + manKey);
 await page.fill('[data-okr-manual="' + manKey + '"]', '80');
@@ -385,12 +420,19 @@ console.log('its bar reflects it: ' + await page.evaluate(k => {
   return kr ? kr.querySelector('.barFill').style.width : 'not found';
 }, manKey));
 
-// delete
+// delete — still paged to the revised objective from the edit step above
 page.on('dialog', d => d.accept());
-const delBtns = await page.$$('[data-okr-del]');
-const beforeDel = await page.$$eval('.okrCard', e => e.length);
-await delBtns[delBtns.length - 1].click(); await page.waitForTimeout(1800);
-console.log('objectives ' + beforeDel + ' -> ' + await page.$$eval('.okrCard', e => e.length) + ' after delete');
+// .weekPill is reused by Weekly Goals/My Ministry too, so read the one that
+// actually sits next to the OKR pager's own #okrNext button.
+const beforeDel = await page.evaluate(() => {
+  const next = document.querySelector('#okrNext');
+  const pill = next && next.previousElementSibling;
+  const m = pill && pill.textContent.match(/of (\d+)/);
+  return m ? Number(m[1]) : 1;
+});
+await page.click('[data-okr-del]'); await page.waitForTimeout(1800);
+console.log('objectives ' + beforeDel + ' -> ' + await page.$$eval('.okrCard', e => e.length) + ' after delete (pager gone: ' +
+  await page.evaluate(() => !document.querySelector('#okrNext')) + ')');
 await page.screenshot({ path: OUT + 'okr-editor.png', fullPage: true });
 
 // a teammate's page must stay read-only
@@ -511,4 +553,7 @@ console.log('Khmer toggle ok:   ' + await page.evaluate(() => /[ក-៿]/.test(d
 console.log('\nERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));
 await browser.close();
 server.close();
-process.exit(errors.length ? 1 : 0);
+/* process.exitCode is how the drift checks above fail — a bare
+   process.exit(errors.length ? 1 : 0) threw their verdict away, so every one of
+   them could only ever print. */
+process.exit(errors.length || process.exitCode ? 1 : 0);

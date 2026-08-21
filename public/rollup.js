@@ -467,11 +467,20 @@ function gpRollup(D){
     if(kr.metricKey){
       var parts = kr.metricKey.split('|');
       var actual = aggregate(entriesOf(o.campus)[kr.metricKey], modeOf(parts[2]), Number(o.quarter)-1);
-      if(actual===null) return { pct:0, actual:null };
+      if(actual===null) return { pct:0, actual:null, raw:0 };
+      /* Capped at 100 — a target set too low next to what a ministry actually
+         logs (or a key result linked to the wrong metric) used to divide out
+         to numbers like 7668%: the progress bar/ring already clamped its own
+         width, so it looked done while the number next to it did not. */
       var p = kr.target>0 ? Math.round(actual/kr.target*100) : 0;
-      return { pct:Math.max(0,p), actual:actual };
+      /* `raw` is the same percentage uncapped. The cap stops 7668% being printed,
+         but on its own it turns a wrong target into a full bar reading 100% — so
+         both pages carry `raw` and say when the target, not the ministry, is the
+         thing that needs fixing. */
+      return { pct:Math.max(0,Math.min(100,p)), actual:actual, raw:Math.max(0,p) };
     }
-    return { pct:Math.max(0,Math.min(100,Number(kr.manual)||0)), actual:null };
+    var m = Math.max(0,Number(kr.manual)||0);
+    return { pct:Math.min(100,m), actual:null, raw:m };
   }
   function objProgress(o){
     var pcts = (o.krs||[]).map(function(kr){ return krProgress(o,kr).pct; });
@@ -600,6 +609,31 @@ function gpOpenList(title, rows, note){
   gpDrillRoot().innerHTML = h;
   document.getElementById('ddClose').onclick = gpCloseDrill;
   document.getElementById('ddOverlay').onclick = function(e){ if(e.target.id==='ddOverlay') gpCloseDrill(); };
+}
+
+/* ---- a key result whose target is already passed ----
+   krProgress() caps at 100 so no screen prints 7668%, but a capped bar looks
+   exactly like an objective that was met. This names it instead. It lives here
+   because the dashboard and the staff page must not describe the same wrong
+   target two different ways. */
+function gpKrWarnHtml(kp){
+  if(!kp || !(kp.raw > 100)) return '';
+  return '<div class="krWarn">' +
+    gpDrillEsc(gpT('Target looks too low — already at {n}% of it.', { n: kp.raw })) +
+    '</div>';
+}
+
+/* What that same check says while the target is being typed, so it can be got
+   right where it is set instead of read wrong for a quarter. Returns '' when
+   there is nothing to say. `R` is a gpRollup() api. */
+function gpKrTargetNote(R, campus, quarter, metricKey, target){
+  if(!R || !metricKey || !(target > 0)) return '';
+  var actual = R.krProgress({ campus: campus, quarter: quarter },
+                            { metricKey: metricKey, target: 0 }).actual;
+  if(actual === null || actual <= target) return '';
+  var met = metricKey.split('|')[2];
+  return gpT('Already {a} this quarter — a target of {b} is passed before you start.',
+             { a: fmt(actual, met), b: fmt(target, met) });
 }
 
 /* ---- this week against the last one ----

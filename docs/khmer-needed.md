@@ -898,3 +898,68 @@ KPI counts already hide behind "show all".
 | Daily | ប្រចាំថ្ងៃ |
 | Load more | មើលបន្ថែម |
 | Show less | បង្ហាញតិចជាង |
+
+## 24. My Ministry moved under Weekly Goals; OKRs page through multiple objectives (own dept + department you oversee); Ministries You Oversee log weekly only; OKR percent clamped at 100
+
+My Ministry now sits directly under Weekly Goals instead of after OKRs —
+both are "what am I aiming at," one personal, one for the ministry.
+
+The OKR section on My Database (and on a teammate's page) used to show
+only one department's objectives — for a "Base Leadership" department
+overseer that meant their OWN leadership objectives, never the real
+department they lead (e.g. Community Service). It now shows both: the
+person's own department, plus, if they oversee one, that department's
+objectives too. Edit/delete still only appear on the person's own
+department's card — the server refuses a write against a department
+someone merely oversees, the same boundary that protects every other
+department's OKRs. When there's more than one objective to show (own
+department, overseen department, or simply more than one objective in
+the same department), they page one at a time with a "‹ 1 of 3 ›"
+control instead of stacking every card at once.
+
+"Ministries You Oversee" cards (added in #21/#22) no longer have a daily
+"Today" log — only "This week." Day-by-day logging stays where it
+belongs, on the ministry's own My Ministry page; an overseer typing here
+is filling in a week nobody on the team logged day by day, not
+duplicating that team's own daily habit.
+
+Separately: a key result's percentage could read something like "7668%
+complete" when its target was set far below what the ministry actually
+logs — the progress bar/ring already capped its own width at 100%, so it
+looked done while the number next to it did not. `krProgress` in
+rollup.js now clamps the percentage itself at 100, the same ceiling
+everything else in the app already uses.
+
+| English | ខ្មែរ |
+|---|---|
+| Previous | មុន |
+| Next | បន្ទាប់ |
+| {n} of {total} | {n} នៃ {total} |
+| Logged weekly only — day by day belongs to the ministry's own team on their My Ministry page. The ones that rarely change are already filled in from last time. | កត់ត្រាតែប្រចាំសប្តាហ៍ប៉ុណ្ណោះ — ការកត់ត្រាថ្ងៃនិមួយៗជាកម្មសិទ្ធិរបស់ក្រុមផ្ទាល់នៃកិច្ចការបម្រើនៅលើទំព័រ My Ministry របស់ពួកគេ។ អ្វីដែលកម្រផ្លាស់ប្តូរត្រូវបានបំពេញស្រាប់ពីលើកមុន។ |
+
+## 25. A key result whose target is already passed now says so
+
+#24 clamped the key-result percentage at 100 so nothing prints "7668%
+complete" any more. On its own, though, the clamp hides the problem: a
+target set below what the ministry already logs now shows a full bar
+reading 100% for the whole quarter, which looks like an objective that
+was met rather than a target that was typed wrong.
+
+So `krProgress()` also returns the uncapped percentage, and two places
+use it. Under the key result — on the GP Dashboard and on My Database —
+a line in amber says how far past the target the ministry already is.
+And in the OKR editor, the moment a target is typed under a metric, a
+line under the box says what that metric has already logged this
+quarter, so it can be got right where it is set instead of read wrong
+for three months. Both lines come from one helper in `rollup.js`
+(`gpKrWarnHtml` / `gpKrTargetNote`) so the two pages cannot word the
+same wrong target two different ways.
+
+Both strings carry numbers, so the placeholders have to survive
+translation: `{n}` is a percentage, `{a}` and `{b}` are a metric's own
+figures (already formatted).
+
+| English | ខ្មែរ |
+|---|---|
+| Target looks too low — already at {n}% of it. | គោលដៅនេះទំនងជាទាបពេក — សម្រេចបាន {n}% នៃវារួចហើយ។ |
+| Already {a} this quarter — a target of {b} is passed before you start. | ត្រីមាសនេះមាន {a} រួចហើយ — គោលដៅ {b} ត្រូវបានឆ្លងផុតមុនពេលចាប់ផ្តើម។ |
