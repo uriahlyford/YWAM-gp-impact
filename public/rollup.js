@@ -611,6 +611,44 @@ function gpOpenList(title, rows, note){
   document.getElementById('ddOverlay').onclick = function(e){ if(e.target.id==='ddOverlay') gpCloseDrill(); };
 }
 
+/* ---- a slider you can scroll past ----
+   A horizontal range input claims the horizontal axis, so a vertical swipe over
+   one has to fall through and scroll the page — that is what touch-action:pan-y
+   on the slider says. What pan-y cannot fix is that the browser moves the value
+   on touch DOWN, before it knows the gesture was a scroll: on the Health tab
+   that silently answered a 1-10 question you only swiped past, and on Weekly
+   Goals it saved the new percentage to the server on release.
+
+   So the gesture is watched. Once it has moved far enough to read, a mostly
+   vertical one is a scroll: the value goes back to what it was and restore()
+   puts the caller's own state back with it. scrolling() stays true until the
+   next touch begins, so a change event arriving after the finger lifts still
+   knows what it was looking at.
+
+   snapshot() may be null when the caller has nothing to remember beyond the
+   value itself. A tap still sets the value, which is what a tap on a track is
+   for, and mouse and keyboard never reach any of this. */
+function gpSlideGuard(sl, snapshot, restore){
+  var g = null;
+  sl.addEventListener('touchstart', function(e){
+    if(e.touches.length !== 1){ g = null; return; }
+    g = { x:e.touches[0].clientX, y:e.touches[0].clientY, v:sl.value,
+          snap:(snapshot ? snapshot() : null), read:false, scroll:false };
+  }, { passive:true });
+  sl.addEventListener('touchmove', function(e){
+    if(!g || g.read || e.touches.length !== 1) return;
+    var dx = Math.abs(e.touches[0].clientX - g.x), dy = Math.abs(e.touches[0].clientY - g.y);
+    if(Math.max(dx, dy) < 8) return;          /* too small to tell which it is */
+    g.read = true;
+    g.scroll = dy > dx;
+    if(g.scroll){
+      sl.value = g.v;
+      if(restore) restore(g.snap);
+    }
+  }, { passive:true });
+  return { scrolling: function(){ return !!(g && g.scroll); } };
+}
+
 /* ---- a key result whose target is already passed ----
    krProgress() caps at 100 so no screen prints 7668%, but a capped bar looks
    exactly like an objective that was met. This names it instead. It lives here

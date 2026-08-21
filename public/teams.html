@@ -306,10 +306,16 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
    The input box itself is a full 32px tall even though the visible track is
    a thin 10px line drawn by the track pseudo-element; a slider whose hit box
    is exactly as thin as its track is hard to grab and drag smoothly with a
-   finger, which read as "unresponsive". touch-action:none stops the browser
-   spending the first movement frames deciding whether a touch is a page
-   scroll or a drag on the thumb — the same fix as the quick-jump strip
-   needed for the opposite problem. The fill color is a CSS variable set
+   finger, which read as "unresponsive".
+
+   That 32px band is also why touch-action matters here. It was `none`, meaning
+   no gesture starting anywhere in it could pan — and with several of these
+   stacked down the Health tab, most of the page's height became somewhere you
+   could not scroll from. `pan-y` is the right half: the slider still claims the
+   horizontal axis, so a drag on the thumb starts without the browser spending
+   frames deciding, and a vertical swipe still scrolls the page. The value the
+   browser sets on touch-down is put back by gpSlideGuard() when the gesture
+   turns out to have been a scroll. The fill color is a CSS variable set
    from JS (--fillpct) rather than a `background` on the input, because the
    two-tone track lives on the ::-webkit-slider-runnable-track /
    ::-moz-range-track pseudo-elements, which inline styles on the input
@@ -318,7 +324,7 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .qReadout { font-family:'Koulen',sans-serif; font-size:15px; color:var(--accent); }
 .sliderWrap { padding:10px 2px 2px; }
 .sliderWrap input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:32px; border-radius:99px;
-  outline:none; margin:0; background:transparent; cursor:pointer; touch-action:none; }
+  outline:none; margin:0; background:transparent; cursor:pointer; touch-action:pan-y; }
 .sliderWrap input[type=range]::-webkit-slider-runnable-track { height:10px; border-radius:99px;
   background:linear-gradient(to right, var(--accent) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
 .sliderWrap input[type=range]::-moz-range-track { height:10px; border-radius:99px;
@@ -364,12 +370,13 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
    strip of chips instead of pushing everything else down the page. */
 .quickBar { display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; margin:0 0 14px; padding-bottom:2px;
   scrollbar-width:none; -ms-overflow-style:none;
-  /* Without this, a touch that starts anywhere over the strip gets locked to
-     horizontal panning for its whole gesture — including a mostly-vertical
-     swipe meant to scroll the page. pan-x tells the browser this element
-     only claims the horizontal axis, so a vertical swipe still falls through
-     to the page instead of doing nothing. */
-  touch-action:pan-x; }
+  /* Both axes, named explicitly. `pan-x` alone reads as "this element permits
+     horizontal panning and nothing else", so a vertical swipe starting on the
+     strip was not allowed to scroll the page at all — the strip is full width
+     and sits at the top of My Database, so that was a dead band across the
+     first thing you touch. With both, the browser picks by direction: sideways
+     scrolls the chips, up and down scrolls the page. */
+  touch-action:pan-x pan-y; }
 .quickBar::-webkit-scrollbar { display:none; }
 .quickChip { background:var(--surface); border:1.5px solid var(--border2); color:var(--ink); border-radius:999px;
   padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; flex:0 0 auto; white-space:nowrap; }
@@ -457,7 +464,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
    write — drag it and it saves on release. */
 .goalBody { flex:1 1 auto; min-width:0; }
 .gSlide { -webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent;
-  margin:7px 0 0; display:block; cursor:pointer; }
+  margin:7px 0 0; display:block; cursor:pointer;
+  /* Horizontal is the slider's, vertical is the page's — same split as the
+     health sliders, said out loud so nobody sets this to `none` again. */
+  touch-action:pan-y; }
 .gSlide::-webkit-slider-runnable-track { height:10px; border-radius:99px;
   background:linear-gradient(90deg, var(--gc) var(--p1), var(--surface2) var(--p1)); }
 .gSlide::-moz-range-track { height:10px; border-radius:99px;
@@ -4459,8 +4469,13 @@ function bindHome(){
       if(pctLabel){ pctLabel.style.color=pctColor(v); pctLabel.textContent=v+'% · '+pctWord(v); }
       if(row) row.classList.toggle('done', v>=100);
     }
-    sl.oninput=function(){ paint(); gpTap(4); };
+    /* Same as the health sliders, and here it reached the server: scrolling the
+       page with a finger that landed on this slider moved the percentage and
+       saved it on release. */
+    var guard = gpSlideGuard(sl, null, function(){ paint(); });
+    sl.oninput=function(){ if(guard.scrolling()) return; paint(); gpTap(4); };
     sl.onchange=function(){
+      if(guard.scrolling()) return;
       paint();
       var wk=goalsViewWeek();
       var rec=goalsForWeek(wk);
@@ -4683,12 +4698,29 @@ function bind(){
   document.querySelectorAll('[data-wslide]').forEach(function(sl){
     var block=sl.closest('.qBlock');
     var readout=block&&block.querySelector('.qReadout');
-    sl.oninput=function(){
+    var id=sl.getAttribute('data-wslide');
+    function paint(){
       var v=Number(sl.value)||1;
-      var pct=Math.round(((v-1)/9)*100);
-      sl.style.setProperty('--fillpct', pct+'%');
+      sl.style.setProperty('--fillpct', Math.round(((v-1)/9)*100)+'%');
       if(readout) readout.textContent=v+'/10';
-      weekDraftFor(S.healthWeek||thisWeek())[sl.getAttribute('data-wslide')]=v;
+      return v;
+    }
+    /* A swipe that starts on one of these is usually somebody scrolling past the
+       question rather than answering it. If it turns out to be a scroll, the
+       answer goes back exactly as it was — including back to unanswered, which
+       is the whole point: an untouched slider reads 5 and must not count as a 5
+       in the base average. */
+    var guard = gpSlideGuard(sl, function(){
+      var dr = weekDraftFor(S.healthWeek||thisWeek());
+      return { had: dr[id]!==undefined, v: dr[id] };
+    }, function(snap){
+      var dr = weekDraftFor(S.healthWeek||thisWeek());
+      if(snap.had) dr[id] = snap.v; else delete dr[id];
+      paint();
+    });
+    sl.oninput=function(){
+      if(guard.scrolling()) return;
+      weekDraftFor(S.healthWeek||thisWeek())[id]=paint();
     };
   });
   document.querySelectorAll('[data-wyn]').forEach(function(b){
