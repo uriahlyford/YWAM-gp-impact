@@ -533,6 +533,20 @@ inferred from volunteer counts.
   than interface, it is long, and it reads as teaching material, so it wants a person
   writing it rather than a translation of the English.
 
+**A slider must not be a place the page won't scroll.** Every full-width control
+is somewhere a thumb lands, so `touch-action` on one decides whether the page can
+be scrolled from there. `none` forbids panning outright and `pan-x` permits only
+the horizontal axis — both were in place, on the Health tab's 1-10 sliders and on
+My Database's chip strip, and both read as "the app doesn't scroll on Android".
+A horizontal control takes `pan-y`; a horizontal scroller takes `pan-x pan-y`.
+Never `none`. The second half is that the browser moves a range input's value on
+touch *down*, before it knows the gesture was a scroll — so scrolling past a
+question answered it, and scrolling past Weekly Goals saved it. Every range input
+goes through `gpSlideGuard()`, which puts the value and the caller's own state
+back when the gesture turns out to have been a scroll. `test-touch-scroll.mjs`
+drives real CDP touch events on an Android profile, because synthetic
+`TouchEvent`s dispatched from JS never consult `touch-action` at all.
+
 ## Things that made the app fail to load (don't reintroduce)
 Each of these looked harmless and took the whole page down. `test-degraded.mjs`,
 `test-storage.mjs` and `test-firstrun.mjs` exist to keep them fixed.
