@@ -468,8 +468,12 @@ function gpRollup(D){
       var parts = kr.metricKey.split('|');
       var actual = aggregate(entriesOf(o.campus)[kr.metricKey], modeOf(parts[2]), Number(o.quarter)-1);
       if(actual===null) return { pct:0, actual:null };
+      /* Capped at 100 — a target set too low next to what a ministry actually
+         logs (or a key result linked to the wrong metric) used to divide out
+         to numbers like 7668%: the progress bar/ring already clamped its own
+         width, so it looked done while the number next to it did not. */
       var p = kr.target>0 ? Math.round(actual/kr.target*100) : 0;
-      return { pct:Math.max(0,p), actual:actual };
+      return { pct:Math.max(0,Math.min(100,p)), actual:actual };
     }
     return { pct:Math.max(0,Math.min(100,Number(kr.manual)||0)), actual:null };
   }

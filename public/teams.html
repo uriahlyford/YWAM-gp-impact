@@ -295,32 +295,42 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 /* Weekly Health's 1-10 questions, from the mockup — a slider with low/high
    captions and a live readout, instead of a row of ten buttons. Scoped to
    .sliderWrap rather than a bare input[type=range] rule so it can't touch
-   the goal ring's own .gSlide styling elsewhere on the page.
+   the goal ring's own .gSlide styling elsewhere on the page — but the thumb
+   and track below are deliberately the SAME shape as .gSlide (hollow
+   thumb with a colored ring, 10px track, a scale-up on active) so a drag
+   feels like the same control everywhere in the app. Health doesn't get
+   .gSlide's per-value color band (higher isn't always "better" here — 10
+   on "how lonely" is bad, 10 on "clarity" is good), so the ring color
+   stays the fixed accent rather than --gc.
 
-   The input box itself is a full 32px tall — same idea as .gSlide — even
-   though the visible track is a thin 6px line drawn by the track pseudo-
-   element; a slider whose hit box is exactly as thin as its track is hard
-   to grab and drag smoothly with a finger, which read as "unresponsive".
-   touch-action:none stops the browser spending the first movement frames
-   deciding whether a touch is a page scroll or a drag on the thumb — the
-   same fix as the quick-jump strip needed for the opposite problem. The
-   fill color is a CSS variable set from JS (--fillpct) rather than a
-   `background` on the input, because the two-tone track now lives on the
-   ::-webkit-slider-runnable-track / ::-moz-range-track pseudo-elements, which
-   inline styles on the input itself cannot reach. */
+   The input box itself is a full 32px tall even though the visible track is
+   a thin 10px line drawn by the track pseudo-element; a slider whose hit box
+   is exactly as thin as its track is hard to grab and drag smoothly with a
+   finger, which read as "unresponsive". touch-action:none stops the browser
+   spending the first movement frames deciding whether a touch is a page
+   scroll or a drag on the thumb — the same fix as the quick-jump strip
+   needed for the opposite problem. The fill color is a CSS variable set
+   from JS (--fillpct) rather than a `background` on the input, because the
+   two-tone track lives on the ::-webkit-slider-runnable-track /
+   ::-moz-range-track pseudo-elements, which inline styles on the input
+   itself cannot reach. */
 .qCaps { display:flex; justify-content:space-between; font-size:10.5px; color:var(--faint); margin-top:2px; }
 .qReadout { font-family:'Koulen',sans-serif; font-size:15px; color:var(--accent); }
 .sliderWrap { padding:10px 2px 2px; }
 .sliderWrap input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:32px; border-radius:99px;
   outline:none; margin:0; background:transparent; cursor:pointer; touch-action:none; }
-.sliderWrap input[type=range]::-webkit-slider-runnable-track { height:6px; border-radius:99px;
+.sliderWrap input[type=range]::-webkit-slider-runnable-track { height:10px; border-radius:99px;
   background:linear-gradient(to right, var(--accent) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
-.sliderWrap input[type=range]::-moz-range-track { height:6px; border-radius:99px;
+.sliderWrap input[type=range]::-moz-range-track { height:10px; border-radius:99px;
   background:linear-gradient(to right, var(--accent) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
 .sliderWrap input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
-  background:var(--accent); border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
-.sliderWrap input[type=range]::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:var(--accent);
-  border:3px solid var(--surface); box-shadow:0 1px 4px rgba(23,21,15,.35); cursor:pointer; }
+  background:var(--surface); border:3px solid var(--accent); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer;
+  transition:transform .12s ease; }
+.sliderWrap input[type=range]::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:var(--surface);
+  border:3px solid var(--accent); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer; }
+.sliderWrap input[type=range]:active::-webkit-slider-thumb { transform:scale(1.18); }
+.sliderWrap input[type=range]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:99px; }
+@media (prefers-reduced-motion: reduce){ .sliderWrap input[type=range]::-webkit-slider-thumb { transition:none } }
 .numIn { display:flex; align-items:center; gap:10px; }
 .numIn input { width:110px; text-align:right; border:1.5px solid var(--border2); background:var(--bg); }
 
@@ -982,7 +992,7 @@ var S = {
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null, habitMore:false,
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[],
-  baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null,
+  baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
   healthWeek:null, weekForm:null, weekDraftFor:null,
   healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{},
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
@@ -993,7 +1003,7 @@ var S = {
   menuOpen:false,
   /* Ministries a department overseer logs on behalf of, keyed by ministry name
      so more than one can sit on the same page without their state colliding. */
-  oversee:{}, ovWeek:{}, ovDraft:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}
+  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}
 };
 
 var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
@@ -1039,10 +1049,14 @@ function ovWeekFor_(min){ return (S.ovWeek[min]==null) ? thisWeek() : S.ovWeek[m
 /* A "Base Leadership" profile whose ministry is itself a real department name
    means that person oversees every ministry under it — see getDepartments()
    in taxonomy.js. Returns that department name, or null for everyone else. */
-function myOversightDept_(){
-  if(!S.me || S.me.dept!=='Base Leadership') return null;
-  var deps=getDepartments(S.me.campus);
-  return deps[S.me.ministry] ? S.me.ministry : null;
+function myOversightDept_(){ return oversightDeptOf_(S.me); }
+/* Same check as myOversightDept_, generalized to any staff record — used so
+   a teammate's own OKR view can also add the department they lead, not just
+   S.me's. */
+function oversightDeptOf_(person){
+  if(!person || person.dept!=='Base Leadership') return null;
+  var deps=getDepartments(person.campus);
+  return deps[person.ministry] ? person.ministry : null;
 }
 
 /* Same Monday-anchored math as isoWeekOf, run backwards: a week NUMBER back
@@ -1292,7 +1306,7 @@ function logout(){
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[];
-  S.oversee={}; S.ovWeek={}; S.ovDraft={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={};
+  S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
   render();
 }
 
@@ -1938,11 +1952,22 @@ function okrFormHtml(editing){
 /* One person's objectives, with the job they belong to on top. `who` is any
    staff record — yourself or a teammate. `mine` turns on the wording addressed
    to you, and the editing controls: you may write your own department's
-   objectives, never another department's, which the server enforces too. */
+   objectives, never another department's, which the server enforces too.
+
+   A department overseer (dept: Base Leadership, ministry: e.g. Community
+   Service) sees their OWN department's objectives (Base Leadership's) plus
+   the objectives of the department they lead — two sets, same as the
+   "Ministries You Oversee" section on My Ministry. When there's more than
+   one objective to show, they're paged one at a time instead of stacked, so
+   the section stays short; each card still says which department it
+   belongs to. */
 function okrSectionHtml(who, mine){
   var wk = thisWeek();
   var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
   var dept = who.dept==='Base Director' ? 'Base Leadership' : who.dept;
+  var depts = [dept];
+  var oversees = oversightDeptOf_(who);
+  if(oversees && depts.indexOf(oversees)===-1) depts.push(oversees);
   var h = '<h3'+(mine?' id="sec-okr"':'')+'>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>';
 
   var focus = (typeof jobFocus==='function') ? jobFocus(dept, who.ministry) : null;
@@ -1958,7 +1983,7 @@ function okrSectionHtml(who, mine){
   }
   var R = baseR();
   var theirs = (S.base.okrs||[]).filter(function(o){
-    return o.campus===who.campus && Number(o.quarter)===qNow && o.dept===dept;
+    return o.campus===who.campus && Number(o.quarter)===qNow && depts.indexOf(o.dept)>-1;
   });
 
   if(!theirs.length && !(mine && S.okrForm)){
@@ -1966,9 +1991,22 @@ function okrSectionHtml(who, mine){
       esc(t(mine ? 'No objectives set for your department this quarter.'
                  : 'No objectives set for their department this quarter.'))+'</p></div>';
   }
-  theirs.forEach(function(o){
-    h += okrCardHtml(o, R, mine);
-  });
+  if(theirs.length){
+    if(theirs.length>1){
+      S.okrIdx = Math.max(0, Math.min(S.okrIdx||0, theirs.length-1));
+      h += '<div class="weekNavRow" style="margin-bottom:8px">'+
+        '<button class="weekArrow" id="okrPrev" aria-label="'+esc(t('Previous'))+'"'+(S.okrIdx<=0?' disabled':'')+'>‹</button>'+
+        '<div class="weekPill">'+esc(gpT('{n} of {total}',{n:S.okrIdx+1,total:theirs.length}))+'</div>'+
+        '<button class="weekArrow" id="okrNext" aria-label="'+esc(t('Next'))+'"'+(S.okrIdx>=theirs.length-1?' disabled':'')+'>›</button>'+
+      '</div>';
+    }
+    var shown = theirs.length>1 ? theirs[S.okrIdx] : theirs[0];
+    /* Edit/delete only on your OWN department's objective — the server
+       refuses a write against a department you merely oversee, same as
+       writing its ministries' KPIs numbers goes through a different,
+       explicitly-authorized path (saveMinistryFor), not this one. */
+    h += okrCardHtml(shown, R, mine && shown.dept===dept);
+  }
 
   if(mine){
     if(S.okrForm){
@@ -2335,13 +2373,15 @@ function homeHtml(){
   h+=phaseBanner(phase, wk);
 
   /* Fixed order, matching the redesign mockup: Weekly Goals, Habit Tracker,
-     OKR, Annual Goals, Mentorship, Health, Leave, Account. This used to lead
-     with whichever of Goals/Habits the day's phase favored; that's gone in
-     favor of the mockup's fixed order. */
+     My Ministry, OKR, Annual Goals, Mentorship, Health, Leave, Account. This
+     used to lead with whichever of Goals/Habits the day's phase favored;
+     that's gone in favor of the mockup's fixed order. My Ministry sits right
+     under Weekly Goals — both are "what am I aiming at," one personal, one
+     for the ministry. */
   h += habitsCardHtml();
   h += goalsCardHtml(goalsViewWeek());
-  h += okrSectionHtml(S.me, true);
   h += myMinistryEntryHtml();
+  h += okrSectionHtml(S.me, true);
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
   h += weekSummaryHtml(wk);
@@ -2361,7 +2401,7 @@ function homeHtml(){
    its own to scroll to — it's a card at the very bottom that opens the
    profile screen — so that chip still navigates rather than scrolling. */
 function quickJumpHtml(){
-  var jumps=[['sec-habits','Daily'],['sec-goals','Weekly Goals'],['sec-okr','OKRs'],['sec-kpi','My Ministry'],
+  var jumps=[['sec-habits','Daily'],['sec-goals','Weekly Goals'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
     ['sec-annual','Annual Goals'],['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
   var h='<div class="quickBar">';
   jumps.forEach(function(j){
@@ -2859,15 +2899,26 @@ function kpiCardHtml(wk){
   return h;
 }
 
-/* Same card body kpiCardHtml builds for S.me's own ministry, but addressed by
-   an explicit dept+ministry and keyed by ministry name in every piece of state
-   and every data-* attribute — so a department overseer can have several of
-   these open on one page (one per ministry they oversee) without one's draft
-   or week pointer clobbering another's. Saves go through the *For endpoints
-   (saveKpiDayFor / saveMinistryFor), which check the same overseer-or-own-
-   ministry rule the server enforces everywhere else. No pin-picking here:
-   hiding a count saves nobody's time when you are not the one filling it in
-   most days. */
+/* A ministry you oversee but don't work in day-to-day — so unlike your own
+   ministry (kpiCardHtml, which keeps the daily Today log), there's no daily
+   entry here at all: everything is one number a week, addressed by an
+   explicit dept+ministry and keyed by ministry name in every piece of state
+   and every data-* attribute so a department overseer can have several of
+   these open on one page (one per ministry they oversee) without one's
+   draft or week pointer clobbering another's.
+
+   A count metric (Salvations, Teams Hosted…) is normally built up from the
+   ministry's own daily logging (see kpiCardHtml/saveMyKpiDay) — this box
+   is a direct overwrite of that week's total instead, for a week nobody on
+   the team logged day by day. If the team later does log days for that same
+   week, their daily rollup takes the week back over, the same way a
+   hand-typed weekly Health check-in only holds until fresher daily logs
+   roll a week up on their own.
+
+   Saves go through saveMinistryFor, the same authorization the server
+   enforces everywhere else (own ministry, or a department you lead). No
+   pin-picking here: hiding a count saves nobody's time when you are not the
+   one filling it in most days. */
 function oversightKpiCardHtml_(dept, ministry, data){
   var wk = ovWeekFor_(ministry);
   var metrics = metricsFor(S.me.campus, dept, ministry);
@@ -2876,12 +2927,7 @@ function oversightKpiCardHtml_(dept, ministry, data){
       esc(gpT('No KPIs are defined for {ministry} yet.',{ministry:t(ministry)}))+'</p></div>';
   }
   var entries=(data&&data.entries)||{};
-  var daily=(data&&data.daily)||{};
   var isCurWk=Number(wk)===Number(thisWeek());
-  var entryDate = kpiEntryDate_(wk);
-  var counts=metrics.filter(function(m){ return modeOf(m)==='sum'; });
-  var levels=metrics.filter(function(m){ return modeOf(m)!=='sum'; });
-  var draft = S.ovDraft[ministry] || (S.ovDraft[ministry]={});
   var weekDraft = S.ovWeekDraft[ministry] || (S.ovWeekDraft[ministry]={});
 
   var h='<div class="card">'+
@@ -2896,78 +2942,49 @@ function oversightKpiCardHtml_(dept, ministry, data){
   '</div>';
   h += '<div class="accCard">';
 
-  if(counts.length){
-    var dayTitle = isCurWk ? t('Today') : entryDate;
-    var daySummary = isCurWk ? gpT('{n} to log today', {n: counts.length})
-      : gpT('{n} to log for {range}', {n: counts.length, range: weekRangeShort_(wk)});
-    h += accRowHtml('ovAcc', ministry+'|day', esc(dayTitle), daySummary, function(){
-      var b = '<div>';
-      b += '<p class="sub" style="margin:4px 0 10px">'+
-        (isCurWk
-          ? esc(gpT('Log today’s numbers — week {wk} adds up on its own.',{wk:wk}))
-          : esc(gpT('Backfilling week {wk} — this lands on {date}.',{wk:wk, date:entryDate})))+
-        '</p>';
-      counts.forEach(function(metric){
-        var days=daily[metric]||{};
-        var savedToday = days[entryDate];
-        var cur = draft[metric]!==undefined ? draft[metric]
-          : (savedToday!==undefined ? savedToday : '');
-        var weekVal=(entries[metric]||{})[String(wk)];
-        var base = (weekVal===undefined?0:Number(weekVal)) - (savedToday===undefined?0:Number(savedToday));
-        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
-          '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
-          gpVsLastWeek(entries[metric], wk, metric, weekVal)+
-          '<span class="newTot"></span></div></div>'+
-          '<input type="number" inputmode="decimal" class="kpiIn" placeholder="+0" data-ovday="'+esc(ministry)+
-          '" data-ovmetric="'+esc(metric)+'" data-metric="'+esc(metric)+'" data-mode="sum" data-run="'+base+
-          '" value="'+esc(String(cur))+'"></div>';
-      });
-      b+='<button class="btn" data-ovsaveday="'+esc(ministry)+'">'+esc(t('Save today'))+'</button>';
-      return b+'</div>';
-    });
-  }
-
-  if(levels.length){
-    var weekSummary = gpT('{n} for {range}', {n: levels.length, range: weekRangeShort_(wk)});
-    h += accRowHtml('ovAcc', ministry+'|week', esc(t('This week')), weekSummary, function(){
-      var b = '<div>';
-      b += '<p class="sub" style="margin:4px 0 10px">'+
-        esc(t('Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed.'))+'</p>';
-      levels.forEach(function(metric){
-        var mode=modeOf(metric);
-        var wks=entries[metric]||{};
+  var weekSummary = gpT('{n} for {range}', {n: metrics.length, range: weekRangeShort_(wk)});
+  h += accRowHtml('ovAcc', ministry+'|week', esc(t('This week')), weekSummary, function(){
+    var b = '<div>';
+    b += '<p class="sub" style="margin:4px 0 10px">'+
+      esc(t('Logged weekly only — day by day belongs to the ministry’s own team on their My Ministry page. The ones that rarely change are already filled in from last time.'))+'</p>';
+    metrics.forEach(function(metric){
+      var mode=modeOf(metric);
+      var wks=entries[metric]||{};
+      var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
+      var carried=false;
+      var sub='', extra='';
+      if(mode==='latest'){
         var agg=aggregate(wks, mode);
-        var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
-        var carried=false;
-        var sub='', extra='';
-        if(mode==='latest'){
-          var prev=lastBefore(wks, wk);
-          carried = (cur==='' && prev!==null);
-          if(carried){ cur=prev.value; extra=' data-carried="1"'; }
-          sub = esc(t('now'))+' '+fmt(agg, metric);
-          if(prev!==null){
-            sub += ' · ' + (carried
-              ? esc(t('carried from week'))+' '+prev.week
-              : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
-            var typed = weekDraft[metric]!==undefined ? Number(weekDraft[metric]) : Number(cur);
-            var d = typed - prev.value;
-            if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
-          }
-        } else {
-          var thisWk = wks[String(wk)];
-          sub = esc(t('avg'))+' '+fmt(agg, metric)+
-            gpVsLastWeek(wks, wk, metric, weekDraft[metric]!==undefined ? weekDraft[metric] : thisWk);
+        var prev=lastBefore(wks, wk);
+        carried = (cur==='' && prev!==null);
+        if(carried){ cur=prev.value; extra=' data-carried="1"'; }
+        sub = esc(t('now'))+' '+fmt(agg, metric);
+        if(prev!==null){
+          sub += ' · ' + (carried
+            ? esc(t('carried from week'))+' '+prev.week
+            : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
+          var typed = weekDraft[metric]!==undefined ? Number(weekDraft[metric]) : Number(cur);
+          var d = typed - prev.value;
+          if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
         }
-        if(weekDraft[metric]!==undefined) cur=weekDraft[metric];
-        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
-          '<div class="rowSub">'+sub+'</div></div>'+
-          '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
-          ' data-ovweek="'+esc(ministry)+'" data-ovmetric="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
-      });
-      b+='<button class="btn" data-ovsaveweek="'+esc(ministry)+'">'+esc(t('Save Week'))+' '+wk+'</button>';
-      return b+'</div>';
+      } else if(mode==='sum'){
+        // A count is this week's own figure here, not a running daily total.
+        sub = esc(t('week total'))+' '+fmt(cur===''?null:Number(cur), metric)+
+          gpVsLastWeek(wks, wk, metric, weekDraft[metric]!==undefined ? weekDraft[metric] : cur);
+      } else {
+        var agg2=aggregate(wks, mode);
+        sub = esc(t('avg'))+' '+fmt(agg2, metric)+
+          gpVsLastWeek(wks, wk, metric, weekDraft[metric]!==undefined ? weekDraft[metric] : cur);
+      }
+      if(weekDraft[metric]!==undefined) cur=weekDraft[metric];
+      b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+        '<div class="rowSub">'+sub+'</div></div>'+
+        '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
+        ' data-ovweek="'+esc(ministry)+'" data-ovmetric="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
     });
-  }
+    b+='<button class="btn" data-ovsaveweek="'+esc(ministry)+'">'+esc(t('Save Week'))+' '+wk+'</button>';
+    return b+'</div>';
+  });
 
   h += '</div>';
   return h;
@@ -4292,13 +4309,17 @@ function bindHome(){
   };
 
   // --- daily habits ---
+  /* No S.busy gate here on purpose: saveTodayHabits() already updates the
+     local log and re-renders before its network call goes out, so tapping a
+     second habit while the first save is still in flight should feel just
+     as instant, not get silently swallowed until the first request returns.
+     S.busy is for one-shot "Save" buttons elsewhere that must not double-
+     submit — this tap-to-toggle grid isn't that. */
   document.querySelectorAll('[data-habit]').forEach(function(b){
     b.onclick=function(){
-      if(S.busy) return;
       var id=b.getAttribute('data-habit');
       var map=todayHabitMap();
       map[id]=!map[id];
-      S.busy=true;
       gpTap();   // one definition, and it respects prefers-reduced-motion
       saveTodayHabits(map);
     };
@@ -4539,12 +4560,8 @@ function bindHome(){
     });
   };
 
-  // --- ministries you oversee: same day/week split as your own, keyed by
-  // ministry name so several of these cards can sit on the page at once.
-  document.querySelectorAll('[data-ovday]').forEach(function(inp){
-    var min=inp.getAttribute('data-ovday'), metric=inp.getAttribute('data-ovmetric');
-    inp.oninput=function(){ (S.ovDraft[min]||(S.ovDraft[min]={}))[metric]=inp.value; };
-  });
+  // --- ministries you oversee: weekly only, keyed by ministry name so
+  // several of these cards can sit on the page at once.
   document.querySelectorAll('[data-ovweek]').forEach(function(inp){
     var min=inp.getAttribute('data-ovweek'), metric=inp.getAttribute('data-ovmetric');
     inp.oninput=function(){ (S.ovWeekDraft[min]||(S.ovWeekDraft[min]={}))[metric]=inp.value; };
@@ -4553,40 +4570,20 @@ function bindHome(){
     btn.onclick=function(){
       var min=btn.getAttribute('data-ovprev');
       if(ovWeekFor_(min)<=1) return;
-      gpTap(); S.ovWeek[min]=ovWeekFor_(min)-1; S.ovDraft[min]={}; S.ovWeekDraft[min]={}; render();
+      gpTap(); S.ovWeek[min]=ovWeekFor_(min)-1; S.ovWeekDraft[min]={}; render();
     };
   });
   document.querySelectorAll('[data-ovnext]').forEach(function(btn){
     btn.onclick=function(){
       var min=btn.getAttribute('data-ovnext');
       if(ovWeekFor_(min)>=52) return;
-      gpTap(); S.ovWeek[min]=ovWeekFor_(min)+1; S.ovDraft[min]={}; S.ovWeekDraft[min]={}; render();
+      gpTap(); S.ovWeek[min]=ovWeekFor_(min)+1; S.ovWeekDraft[min]={}; render();
     };
   });
   document.querySelectorAll('[data-ovjump]').forEach(function(btn){
     btn.onclick=function(){
       var min=btn.getAttribute('data-ovjump');
-      gpTap(); S.ovWeek[min]=null; S.ovDraft[min]={}; S.ovWeekDraft[min]={}; render();
-    };
-  });
-  document.querySelectorAll('[data-ovsaveday]').forEach(function(btn){
-    btn.onclick=function(){
-      if(S.busy) return;
-      var min=btn.getAttribute('data-ovsaveday'), dept=myOversightDept_();
-      if(!dept) return;
-      var updates=[];
-      document.querySelectorAll('[data-ovday]').forEach(function(inp){
-        if(inp.getAttribute('data-ovday')!==min) return;
-        updates.push({ metric:inp.getAttribute('data-ovmetric'), mode:'sum',
-          value: inp.value==='' ? null : Number(inp.value) });
-      });
-      S.busy=true; btn.disabled=true; btn.textContent='…';
-      run('saveKpiDayFor',[S.auth.user,S.auth.pin,dept,min,kpiEntryDate_(ovWeekFor_(min)),updates],function(d){
-        S.busy=false;
-        if(d && d.ok){ S.oversee[min]=d; S.ovDraft[min]={}; showMsg(t('Saved — week total updated')); }
-        else showMsg(t('Could not save'));
-        render();
-      });
+      gpTap(); S.ovWeek[min]=null; S.ovWeekDraft[min]={}; render();
     };
   });
   document.querySelectorAll('[data-ovsaveweek]').forEach(function(btn){
@@ -4714,6 +4711,10 @@ function bind(){
   document.querySelectorAll('[data-kr-toggle]').forEach(function(b){
     b.onclick=function(){ var id=b.getAttribute('data-kr-toggle'); S.krOpen[id]=!S.krOpen[id]; render(); };
   });
+  var okp=document.getElementById('okrPrev');
+  if(okp) okp.onclick=function(){ gpTap(); S.okrIdx=Math.max(0,(S.okrIdx||0)-1); render(); };
+  var okn=document.getElementById('okrNext');
+  if(okn) okn.onclick=function(){ gpTap(); S.okrIdx=(S.okrIdx||0)+1; render(); };
   var onb=document.getElementById('okrNewBtn');
   if(onb) onb.onclick=function(){ S.okrForm=true; S.okrEditId=null; render(); };
   var ocb=document.getElementById('okrCancelBtn');
