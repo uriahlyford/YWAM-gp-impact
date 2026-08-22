@@ -963,3 +963,13 @@ figures (already formatted).
 |---|---|
 | Target looks too low — already at {n}% of it. | គោលដៅនេះទំនងជាទាបពេក — សម្រេចបាន {n}% នៃវារួចហើយ។ |
 | Already {a} this quarter — a target of {b} is passed before you start. | ត្រីមាសនេះមាន {a} រួចហើយ — គោលដៅ {b} ត្រូវបានឆ្លងផុតមុនពេលចាប់ផ្តើម។ |
+
+## 0h. When a habit tap cannot be saved
+
+| English | ខ្មែរ |
+|---|---|
+| Not saved — check your connection and tap again. | មិនបានរក្សាទុកទេ — សូមពិនិត្យការតភ្ជាប់ រួចចុចម្តងទៀត។ |
+
+_Shown when a habit tile was tapped but the save failed, at the moment the tile
+goes back to how it was. It has to be believable in one glance on a bad
+connection: the tap did not stick, try it again._

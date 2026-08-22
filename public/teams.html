@@ -1157,15 +1157,33 @@ function showMsg(t){
   clearTimeout(m._t); m._t=setTimeout(function(){ m.classList.remove('show'); }, 2200);
 }
 
-function run(fn, args, onOk){
+/* A request that never answers used to leave S.busy true forever, which killed
+   every save button on the page until somebody thought to reload. fetch() has no
+   timeout of its own, so this gives it one. */
+var REQUEST_TIMEOUT_MS = 20000;
+
+/* onErr is optional. Without it a failure does what it always did — say so and
+   release the lock. With it, the caller owns the failure (the habit tiles use
+   this to put back a toggle the server never accepted). */
+function run(fn, args, onOk, onErr){
+  var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var settled = false;
+  var timer = setTimeout(function(){ if(!settled && ctl) ctl.abort(); }, REQUEST_TIMEOUT_MS);
+  function done(){ settled = true; clearTimeout(timer); }
   fetch('/.netlify/functions/api', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fn: fn, args: args })
+    body: JSON.stringify({ fn: fn, args: args }),
+    signal: ctl ? ctl.signal : undefined
   }).then(function(res){
     if(!res.ok) throw new Error('HTTP '+res.status);
     return res.json();
-  }).then(onOk).catch(function(){ showMsg("Connection problem — try again."); S.busy=false; render(); });
+  }).then(function(d){ done(); return onOk ? onOk(d) : d; })
+    .catch(function(e){
+      done();
+      if(onErr){ onErr(e); return; }
+      showMsg("Connection problem — try again."); S.busy=false; render();
+    });
 }
 
 /* consecutive-day streak ending today or yesterday */
@@ -4085,7 +4103,29 @@ function pushHabits(){
    today's log is updated and rendered right away, and the save happens
    underneath that. The server's own answer still wins once it lands, the
    same way the goal slider and KPI running totals already work. */
-function saveTodayHabits(map){
+/*  ---------- habit tiles ----------
+    A tile is a local toggle that happens to get saved. It must never wait for
+    the network to show what you just did.
+
+    It used to take S.busy — the page-wide lock — and hold it for the whole
+    round trip, which produced both of the things the base reported: on a slow
+    connection every tap after the first was dropped in complete silence (no
+    toggle, no message, the button simply looked broken), and a request that
+    never came back left the lock set, so every save button on the page was dead
+    until somebody reloaded.
+
+    So now: apply it locally, paint it, send in the background. Taps that arrive
+    mid-send are not dropped — they accumulate and go out in one follow-up
+    request, which also stops a burst of taps becoming a burst of Netlify
+    invocations. If a send fails, the toggles the server never accepted are put
+    back, because a tile that looks saved and is not is worse than one that
+    never lit.  */
+var _habitQ = { inFlight:false, pending:false, confirmed:null };
+
+/* Write a habit map into today's log — creating the log if this is the first
+   thing logged today — including the legacy columns, so streaks and the mentor
+   view stay consistent with pre-habits history. */
+function applyHabitsLocally(map){
   var today=todayStr();
   var log=logForDate(today);
   if(!log){
@@ -4094,6 +4134,15 @@ function saveTodayHabits(map){
       clarity:null, growth:null, lonely:null, porn:false, habits:{}};
     S.logs=[log].concat(S.logs);
   }
+  log.habits=map;
+  ['workout','bible','quietTime','oneOnOne','sharedFaith','sabbath'].forEach(function(k){
+    if(map[k]!==undefined) log[k]=map[k];
+  });
+  return log;
+}
+
+function habitPayload(map){
+  var log=logForDate(todayStr())||{};
   var payload={
     langHours:log.langHours||0, minHours:log.minHours||0,
     workout:log.workout, bible:log.bible, quietTime:log.quietTime,
@@ -4101,22 +4150,54 @@ function saveTodayHabits(map){
     clarity:log.clarity, growth:log.growth, lonely:log.lonely, porn:log.porn,
     habits:map
   };
-  // Keep the legacy columns in step for habits that have one, so streaks and
-  // the mentor view stay consistent with pre-habits history.
   ['workout','bible','quietTime','oneOnOne','sharedFaith','sabbath'].forEach(function(k){
     if(map[k]!==undefined) payload[k]=map[k];
   });
-  log.habits=map;
-  ['workout','bible','quietTime','oneOnOne','sharedFaith','sabbath'].forEach(function(k){
-    if(map[k]!==undefined) log[k]=map[k];
-  });
+  return payload;
+}
+
+function toggleHabit(id){
+  var map=todayHabitMap();
+  /* Remember the last state the server agreed with, so a failure can be undone
+     without having to work out which taps of a burst got through. Only taken
+     when idle: mid-burst, the fallback point is whatever was last acknowledged. */
+  if(!_habitQ.inFlight && !_habitQ.pending) _habitQ.confirmed=map;
+  var next={};
+  Object.keys(map).forEach(function(k){ next[k]=map[k]; });
+  next[id]=!next[id];
+  applyHabitsLocally(next);
   render();
-  run('saveDaily',[S.auth.user,S.auth.pin,today,payload],function(d){
-    S.busy=false;
-    if(d.ok){
+  flushHabits();
+}
+
+function flushHabits(){
+  if(_habitQ.inFlight){ _habitQ.pending=true; return; }
+  _habitQ.inFlight=true;
+  var sending=todayHabitMap();
+  /* The day-details form writes the same daily row, and its payload carries this
+     same habit map, so the two cannot disagree about habits even if they overlap.
+     That is why this no longer needs the page-wide lock to stay correct. */
+  run('saveDaily',[S.auth.user,S.auth.pin,todayStr(),habitPayload(sending)],function(d){
+    _habitQ.inFlight=false;
+    if(d && d.ok){
+      /* This answer describes the day as it was when the request left. If taps
+         have happened since, the server's copy is OLDER than the screen — take
+         its logs for everything else, then put the newer toggles back on top,
+         or a slow connection would silently undo whatever was tapped while it
+         was in flight. Read the local map BEFORE S.logs is replaced. */
+      var newer = _habitQ.pending ? todayHabitMap() : null;
       S.logs=d.logs;
       if(d.habits) S.habits=d.habits;
+      if(d.week) upsertCheckin(d.week);
+      if(newer) applyHabitsLocally(newer);
+      _habitQ.confirmed = _habitQ.pending ? sending : null;
     }
+    if(_habitQ.pending){ _habitQ.pending=false; render(); flushHabits(); return; }
+    render();
+  }, function(){
+    _habitQ.inFlight=false; _habitQ.pending=false;
+    if(_habitQ.confirmed){ applyHabitsLocally(_habitQ.confirmed); _habitQ.confirmed=null; }
+    showMsg(t('Not saved — check your connection and tap again.'));
     render();
   });
 }
@@ -4332,19 +4413,16 @@ function bindHome(){
   };
 
   // --- daily habits ---
-  /* No S.busy gate here on purpose: saveTodayHabits() already updates the
-     local log and re-renders before its network call goes out, so tapping a
-     second habit while the first save is still in flight should feel just
-     as instant, not get silently swallowed until the first request returns.
-     S.busy is for one-shot "Save" buttons elsewhere that must not double-
-     submit — this tap-to-toggle grid isn't that. */
+  /* No S.busy gate here on purpose: toggleHabit() updates the local log and
+     re-renders before its network call goes out, so tapping a second habit
+     while the first save is still in flight feels just as instant instead of
+     being silently swallowed until the first request returns. S.busy is for
+     one-shot "Save" buttons elsewhere that must not double-submit — this
+     tap-to-toggle grid isn't that, and flushHabits() handles the overlap. */
   document.querySelectorAll('[data-habit]').forEach(function(b){
     b.onclick=function(){
-      var id=b.getAttribute('data-habit');
-      var map=todayHabitMap();
-      map[id]=!map[id];
       gpTap();   // one definition, and it respects prefers-reduced-motion
-      saveTodayHabits(map);
+      toggleHabit(b.getAttribute('data-habit'));
     };
   });
   var eh=document.getElementById('editHabits');
