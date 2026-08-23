@@ -1313,7 +1313,7 @@ function afterLogin(){
 function applyBoot(d){
   S.roster = d.roster || [];
   S.logs = d.logs || [];
-  if(d.habits) S.habits = d.habits;
+  adoptHabits(d.habits);
   S.mentees = d.mentees || [];
   S.mentorRequests = d.mentorRequests || [];
   S.goals = d.goals || [];
@@ -4089,9 +4089,40 @@ function bindMinistrySelects(){
 }
 
 /* Persist the habit set (and Bible-plan position) without blocking the UI. */
+/* The habit config the server has actually acknowledged.
+
+   The grid is drawn from S.habits, and the picker used to write straight into
+   it and render — so a save that never landed left the page showing a habit the
+   server has never heard of. From there every daily save cleans the tap against
+   the config the SERVER holds (cleanHabitMap_ in api.js) and answers with that
+   same config, which the page then adopted over its own: the tile vanished from
+   under the finger and the next press landed on whatever slid into its place.
+   That is the "sometimes when I press a habit it selects another one" report. */
+var _habitCfg = { inFlight:false, confirmed:null };
+
+/* Every save answers with the person's habit config, and adopting it is right —
+   the server is the truth. Except while a change of our own is still in flight,
+   when its answer is simply older than what we asked for. */
+function adoptHabits(list){
+  if(!list || _habitCfg.inFlight) return;
+  S.habits = list;
+  _habitCfg.confirmed = list;
+}
+
+function revertHabitCfg(){
+  if(_habitCfg.confirmed) S.habits = _habitCfg.confirmed;
+  showMsg(t('Your habits didn’t save — check your connection and pick them again.'));
+}
+
 function pushHabits(){
+  _habitCfg.inFlight = true;
   run('saveMyHabits',[S.auth.user,S.auth.pin,myHabits()],function(d){
-    if(d && d.ok){ S.habits=d.habits; }
+    _habitCfg.inFlight = false;
+    if(d && d.ok) adoptHabits(d.habits); else revertHabitCfg();
+    render();
+  }, function(){
+    _habitCfg.inFlight = false;
+    revertHabitCfg();
     render();
   });
 }
@@ -4187,7 +4218,7 @@ function flushHabits(){
          was in flight. Read the local map BEFORE S.logs is replaced. */
       var newer = _habitQ.pending ? todayHabitMap() : null;
       S.logs=d.logs;
-      if(d.habits) S.habits=d.habits;
+      adoptHabits(d.habits);
       if(d.week) upsertCheckin(d.week);
       if(newer) applyHabitsLocally(newer);
       _habitQ.confirmed = _habitQ.pending ? sending : null;
@@ -4403,7 +4434,7 @@ function bindHome(){
       S.busy=false;
       if(r.ok){
         S.logs=r.logs;
-        if(r.habits) S.habits=r.habits;
+        adoptHabits(r.habits);
         // The week's health row is recomputed server-side from the days.
         if(r.week) upsertCheckin(r.week);
         S.todayDraft={}; showMsg('Saved');
@@ -5122,7 +5153,7 @@ function refreshAll(){
   return Promise.all([
     runP('teamRoster',[]).then(function(r){ if(Array.isArray(r)) S.roster=r; }),
     runP('getMyLogs',[u,k]).then(function(d){
-      if(d&&d.ok){ S.logs=d.logs; if(d.habits) S.habits=d.habits; if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile); }
+      if(d&&d.ok){ S.logs=d.logs; adoptHabits(d.habits); if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile); }
     }),
     runP('getMyWeekly',[u,k]).then(function(d){ if(d&&d.ok){ S.goals=d.goals||[]; S.checkins=d.checkins||[]; } }),
     runP('getMyMinistry',[u,k]).then(function(d){ if(d&&d.ok) S.ministry=d; }),

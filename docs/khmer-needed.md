@@ -973,3 +973,13 @@ figures (already formatted).
 _Shown when a habit tile was tapped but the save failed, at the moment the tile
 goes back to how it was. It has to be believable in one glance on a bad
 connection: the tap did not stick, try it again._
+
+## 27. When a habit-picker change does not save
+
+The habit picker used to keep a list the server had refused, which is what made
+a later tap land on a tile that was about to vanish. It now puts the last
+acknowledged list back and says so, so there is one new sentence.
+
+| English | ខ្មែរ |
+|---|---|
+| Your habits didn’t save — check your connection and pick them again. | ទម្លាប់របស់អ្នកមិនបានរក្សាទុកទេ — សូមពិនិត្យការតភ្ជាប់ ហើយជ្រើសរើសម្តងទៀត។ |
