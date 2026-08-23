@@ -533,6 +533,18 @@ inferred from volunteer counts.
   than interface, it is long, and it reads as teaching material, so it wants a person
   writing it rather than a translation of the English.
 
+**The habit grid is drawn from a config only the server can confirm.** The picker
+writes the new list into `S.habits` and renders from it at once, but the server
+only hears about it through `saveMyHabits`. If that never lands, the page is
+drawing a habit the server has never heard of — and from there every daily save
+cleans the tap against the config the *server* holds (`cleanHabitMap_`) and
+answers with that same config, so the tile disappears from under the finger and
+the next press lands on whatever slid into its place. So `_habitCfg` remembers
+the last acknowledged list, `pushHabits()` puts it back and says so when a push
+fails, and every response's habit config goes through `adoptHabits()` — which
+declines while a change of our own is still in flight, because that answer is
+older than what we asked for. `test-habit-config.mjs` holds it.
+
 **A slider must not be a place the page won't scroll.** Every full-width control
 is somewhere a thumb lands, so `touch-action` on one decides whether the page can
 be scrolled from there. `none` forbids panning outright and `pan-x` permits only
