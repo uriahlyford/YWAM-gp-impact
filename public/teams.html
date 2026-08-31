@@ -240,6 +240,8 @@ header { background:var(--headerBg); color:var(--onDark); display:flex; justify-
 .hbtns { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .hbtn { border:1px solid var(--onDarkBorder); background:transparent; color:var(--onDark); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; }
 .hbtn.icon { padding:6px; display:flex; align-items:center; justify-content:center; }
+.notifDot { position:absolute; top:2px; right:2px; width:9px; height:9px; border-radius:999px;
+  background:var(--bad); border:2px solid var(--headerBg); }
 
 /* ---- hamburger menu drawer ---- */
 .scrim { position:fixed; inset:0; background:var(--scrim); z-index:40; }
@@ -865,6 +867,7 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 <nav class="bottom hidden" id="bottomNav"></nav>
 <div class="msg" id="msg"></div>
 <div id="menuRoot"></div>
+<div id="notifRoot"></div>
 
 <script>
 /*  Error boundary — must come first, before any other script.
@@ -1011,7 +1014,13 @@ var S = {
   dbAcc:{kpiDay:false, kpiWeek:false},
   smartGoals:[], smartYear:null, smartCategory:'Faith', smartDraft:null,
   dbCustomize:false,
-  menuOpen:false,
+  menuOpen:false, bellOpen:false,
+  /* A single "cleared before" cutoff (device-local, like gp-theme), not a
+     per-item read flag — Clear on the bell or on My Database's Updates card
+     is the same button wherever it's pressed, hiding everything up to now.
+     Nothing pending is lost: a cleared leave/1-on-1 request still has its own
+     home (Leave Request, Mentorship, Team) — this only tidies the FYI feed. */
+  notifClearedAt: lsGet('gp-notif-cleared') || '',
   /* Ministries a department overseer logs on behalf of, keyed by ministry name
      so more than one can sit on the same page without their state colliding. */
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}
@@ -1374,7 +1383,10 @@ function render(){
     bind();
     return;
   }
+  var notifN = visibleNotifItems_().length;
   hb.innerHTML = '<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+
+    '<button class="hbtn icon" id="bellBtn" style="position:relative" aria-label="'+esc(gpT('Notifications ({n})',{n:notifN}))+'">'+BELL_SVG+
+    (notifN?'<span class="notifDot"></span>':'')+'</button>'+
     '<button class="hbtn icon" id="menuBtn" aria-label="'+esc(t('Menu'))+'">'+HAMBURGER_SVG+'</button>';
   /* Base leads: signing in should show how the base is doing, not a to-do list.
      Your own week is one tap away, Profile is folded into Me, and Mentor is
@@ -1488,6 +1500,33 @@ function bquarters(label, valFn, drillFn){
    have yet, and a menu item that goes nowhere is worse than no menu item. */
 var HAMBURGER_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
 var DRAWER_CLOSE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>';
+var BELL_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 6.5-2.5 8.5-2.5 8.5h17S18 14.5 18 8Z"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/></svg>';
+
+/* ---- notification bell ----
+   Same panel style as the hamburger drawer, on the opposite side of the
+   header. Read-only — the Approve/Deny and Accept/Decline buttons live on
+   My Database's Updates card (and Leave Request / Mentorship), not here, so
+   there's exactly one place each of those actions is wired up. */
+function renderNotifPanel(){
+  var root = document.getElementById('notifRoot');
+  if(!root) return;
+  if(!S.bellOpen || !S.me){ root.innerHTML=''; return; }
+  var items = visibleNotifItems_();
+  var close=function(){ S.bellOpen=false; renderNotifPanel(); };
+  root.innerHTML = '<div class="scrim" id="notifScrim"></div>'+
+    '<div class="drawer">'+
+      '<div class="drawerHead"><span class="drawerTitle">'+BELL_SVG+' '+esc(t('Notifications'))+'</span>'+
+        '<button class="hbtn icon" id="notifCloseBtn" style="border-color:var(--border2);color:var(--ink)" aria-label="'+esc(t('Dismiss'))+'">'+DRAWER_CLOSE_SVG+'</button></div>'+
+      (items.length
+        ? items.map(function(it){ return '<div class="row"><span class="rowName">'+esc(it.text)+'</span></div>'; }).join('')+
+          '<button class="linkbtn" id="notifPanelClearBtn">'+esc(t('Clear all'))+'</button>'
+        : '<p class="sub" style="margin:4px 0">'+esc(t('Nothing new.'))+'</p>')+
+    '</div>';
+  document.getElementById('notifScrim').onclick=close;
+  document.getElementById('notifCloseBtn').onclick=close;
+  var clearBtn=document.getElementById('notifPanelClearBtn');
+  if(clearBtn) clearBtn.onclick=clearNotifications;
+}
 function renderMenu(){
   var root = document.getElementById('menuRoot');
   if(!root) return;
@@ -2351,16 +2390,19 @@ function notifActionBtnsHtml_(okAttr, okId, noAttr, noId, okLabel, noLabel){
     '<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px;color:var(--faint)" data-'+noAttr+'="'+esc(noId)+'">'+esc(noLabel)+'</button>'+
   '</span>';
 }
-/* A little inbox, not a wall of cards: things waiting on you (a mentee's
-   leave request, an incoming 1-on-1) get inline Approve/Deny or Accept/
-   Decline right here — same handlers the full Leave Request page and the
-   Mentorship card already use — so acting on one doesn't require leaving
-   the dashboard. Everything else here is just FYI, no action needed. */
-function notificationsHtml(){
+/* The full list, unfiltered — shared by the My Database card below and the
+   header bell, so the two can never show a different set of events. Nothing
+   is stored for this: it's read straight off state the page already has
+   (trips, tripRequests, oneOnOnes), the same way streaks and badges are
+   derived rather than stored. */
+function notifItems_(){
   var items=[];
   (S.tripRequests||[]).forEach(function(r){
     var range=r.from+(r.to!==r.from?' → '+r.to:'');
-    items.push({ when:r.from, text: gpT('{name} requested leave {range}', {name:r.name, range:range}),
+    /* When this was ASKED, not when the leave itself falls — a request
+       submitted today for next month must still be clearable today, the
+       same way a 1-on-1 request already sorts and clears by S.created. */
+    items.push({ when:r.created||r.from, text: gpT('{name} requested leave {range}', {name:r.name, range:range}),
       actions: notifActionBtnsHtml_('trok', r.id, 'trno', r.id, t('Approve'), t('Deny')) });
   });
   (S.oneOnOnes||[]).forEach(function(o){
@@ -2381,12 +2423,41 @@ function notificationsHtml(){
       items.push({ when: r.decidedAt||r.from, text: gpT('Your {range} leave request was declined', {range:range}) });
     }
   });
-  if(!items.length) return '';
   items.sort(function(a,b){ return (b.when||'')<(a.when||'')?-1:1; });
+  return items;
+}
+
+/* What's actually shown: everything since the last Clear. A single "cleared
+   before" cutoff rather than a per-item read flag — Clear on the bell or on
+   My Database is the same button, so both can never disagree about what's
+   left. Clearing an actionable row (a mentee's leave request, an incoming
+   1-on-1) only tidies this feed — the request itself is still sitting in
+   Leave Request / Mentorship / Team, waiting on you, either way. */
+function visibleNotifItems_(){
+  var cut = S.notifClearedAt || '';
+  return notifItems_().filter(function(it){ return (it.when||'') > cut; });
+}
+
+function clearNotifications(){
+  S.notifClearedAt = new Date().toISOString();
+  lsSet('gp-notif-cleared', S.notifClearedAt);
+  S.bellOpen=false;
+  render();
+}
+
+/* A little inbox, not a wall of cards: things waiting on you (a mentee's
+   leave request, an incoming 1-on-1) get inline Approve/Deny or Accept/
+   Decline right here — same handlers the full Leave Request page and the
+   Mentorship card already use — so acting on one doesn't require leaving
+   the dashboard. Everything else here is just FYI, no action needed. */
+function notificationsHtml(){
+  var items=visibleNotifItems_();
+  if(!items.length) return '';
   var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🔔 '+esc(t('Updates'))+'</div>';
   items.slice(0,5).forEach(function(it){
     h+='<div class="row"><span class="rowName">'+esc(it.text)+'</span>'+(it.actions||'')+'</div>';
   });
+  h+='<button class="linkbtn" id="notifClearBtn" style="margin-top:4px">'+esc(t('Clear all'))+'</button>';
   return h+'</div>';
 }
 
@@ -4753,6 +4824,11 @@ function bind(){
   var menuBtn=document.getElementById('menuBtn');
   if(menuBtn) menuBtn.onclick=function(){ S.menuOpen=true; renderMenu(); };
   renderMenu();
+  var bellBtn=document.getElementById('bellBtn');
+  if(bellBtn) bellBtn.onclick=function(){ gpTap(); S.bellOpen=!S.bellOpen; renderNotifPanel(); };
+  renderNotifPanel();
+  var notifClearBtn=document.getElementById('notifClearBtn');
+  if(notifClearBtn) notifClearBtn.onclick=clearNotifications;
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; render(); };

@@ -983,3 +983,19 @@ acknowledged list back and says so, so there is one new sentence.
 | English | ខ្មែរ |
 |---|---|
 | Your habits didn’t save — check your connection and pick them again. | ទម្លាប់របស់អ្នកមិនបានរក្សាទុកទេ — សូមពិនិត្យការតភ្ជាប់ ហើយជ្រើសរើសម្តងទៀត។ |
+
+## 28. A notification bell, next to the hamburger menu
+
+My Database's "🔔 Updates" card (leave decisions, incoming 1-on-1 requests)
+now also has a header shortcut — a bell in the top-right corner that opens
+the same list in a panel, so it's visible from any tab, not just My Database.
+"Clear all" on either the bell or the card hides everything up to that
+moment (a device-local cutoff, nothing server-side); anything still pending
+keeps its own home on Leave Request, Mentorship or Team either way.
+
+| English | ខ្មែរ |
+|---|---|
+| Notifications | ការជូនដំណឹង |
+| Notifications ({n}) | ការជូនដំណឹង ({n}) |
+| Clear all | សម្អាតទាំងអស់ |
+| Nothing new. | មិនមានអ្វីថ្មីទេ។ |
