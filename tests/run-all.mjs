@@ -24,6 +24,7 @@ const SERVER = [
   'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read
   'test-smart-goals.mjs', // Annual Goals (SMART): year+category isolation, ownership
   'test-one-on-one.mjs', // 1-on-1 requests: mentor/mentee pairing, recipient-only response
+  'test-admin.mjs',      // Base Leadership sign-ups need approval; isAdmin gates account management
   'test-ministry-oversight.mjs', // department overseers can log for ministries they oversee, nobody else can
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
@@ -33,6 +34,7 @@ const SERVER = [
 const BROWSER = [
   'test-pull-drill.mjs',    // the pull gesture on both pages, and which figures open
   'test-touch-scroll.mjs',  // a swipe over a slider or the chip strip scrolls the page, and answers nothing
+  'test-wheel-scroll.mjs',  // a trackpad's wheel events still scroll the page past the quick-jump strip
   'test-habit-config.mjs',  // a habit list the server refused never stays on the grid
   'test-khmer.mjs',         // Khmer reaches the screen, and does not overflow when it does
   'test-theme.mjs',         // dark mode, and a WCAG contrast audit of every screen

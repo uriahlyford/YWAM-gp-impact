@@ -983,3 +983,30 @@ acknowledged list back and says so, so there is one new sentence.
 | English | ខ្មែរ |
 |---|---|
 | Your habits didn’t save — check your connection and pick them again. | ទម្លាប់របស់អ្នកមិនបានរក្សាទុកទេ — សូមពិនិត្យការតភ្ជាប់ ហើយជ្រើសរើសម្តងទៀត។ |
+
+## 28. Admin: approve Base Leadership sign-ups, manage accounts
+
+A new screen, visible only to whoever holds `isAdmin` (only ever granted to a
+Base Leadership account, via the existing leader code — see CLAUDE.md).
+Lets an admin approve a pending Base Leadership sign-up, deactivate or
+reactivate any account, reset a PIN, and fix a wrong campus/department/
+ministry/role for someone else. The leader code itself still gates the
+sensitive dashboard metrics exactly as before — this is a separate door.
+
+| English | ខ្មែរ |
+|---|---|
+| Admin | អ្នកគ្រប់គ្រង |
+| Approve new leadership accounts, and manage everyone’s. | អនុម័តគណនីថ្នាក់ដឹកនាំថ្មី និងគ្រប់គ្រងគណនីរបស់អ្នកគ្រប់គ្នា។ |
+| Waiting for approval | កំពុងរង់ចាំការអនុម័ត |
+| All accounts | គណនីទាំងអស់ |
+| Pending approval | រង់ចាំការអនុម័ត |
+| Active | សកម្ម |
+| you | អ្នក |
+| Deactivate | បិទដំណើរការ |
+| Activate | បើកដំណើរការ |
+| Reset PIN | កំណត់លេខសម្ងាត់ឡើងវិញ |
+| Save | រក្សាទុក |
+| Fix campus / department / role | កែសម្រួល សាខា / ផ្នែក / តួនាទី |
+| Leader code | លេខកូដថ្នាក់ដឹកនាំ |
+| Revoke admin | ដកសិទ្ធិអ្នកគ្រប់គ្រង |
+| Make admin | ផ្តល់សិទ្ធិអ្នកគ្រប់គ្រង |

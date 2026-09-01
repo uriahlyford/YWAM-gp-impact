@@ -1014,7 +1014,9 @@ var S = {
   menuOpen:false,
   /* Ministries a department overseer logs on behalf of, keyed by ministry name
      so more than one can sit on the same page without their state colliding. */
-  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}
+  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{},
+  // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:''
 };
 
 var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
@@ -1336,6 +1338,7 @@ function logout(){
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
+  S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminPinDraft={}; S.adminCode='';
   render();
 }
 
@@ -1404,6 +1407,7 @@ function render(){
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else if(S.view==='leave') m.innerHTML=leaveHtml();
   else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
+  else if(S.view==='admin') m.innerHTML=adminHtml();
   else m.innerHTML=profileHtml();
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
@@ -1502,6 +1506,12 @@ function renderMenu(){
     { id:'checkin', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>',
       label:t('Weekly Check-in') }
   ];
+  // Only whoever actually holds isAdmin sees this — a menu item that goes
+  // nowhere is worse than no menu item, which is why it wasn't here before
+  // there was an account-approval system behind it.
+  if(S.me.isAdmin) items.push({ id:'admin',
+    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
+    label:t('Admin') });
   root.innerHTML = '<div class="scrim" id="menuScrim"></div>'+
     '<div class="drawer">'+
       '<div class="drawerHead"><span class="drawerTitle">✦ '+esc(t('Menu'))+'</span>'+
@@ -1522,6 +1532,7 @@ function renderMenu(){
       else if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='checkin'){ S.view='health'; render(); }
+      else if(id==='admin'){ S.view='admin'; render(); }
       else renderMenu();
     };
   });
@@ -3045,6 +3056,172 @@ function myMinistryEntryHtml(){
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
 }
 
+/* ---------- Admin ----------
+   Account management, not the sensitive-dashboard-numbers gate — that stays
+   the leader code, exactly as it works today. isAdmin only ever goes to a
+   Base Leadership account, and only the leader code can grant it
+   (grantAdmin in api.js), so this screen never has to ask "says who" about
+   its own visibility.
+
+   S.adminStaff loads once per visit, lazily, the same pattern the
+   ministry-oversight cards already use — nothing here rides along on
+   getMyBoot, since almost nobody who opens the app is an admin. */
+function adminHtml(){
+  var h='<button class="linkbtn" id="adminBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
+  if(S.adminStaff===null) return h+'<p class="sub">'+esc(t('Loading…'))+'</p>';
+
+  var list=S.adminStaff;
+  var pending=list.filter(function(s){ return !s.active; });
+  if(pending.length){
+    h+='<h3>'+esc(t('Waiting for approval'))+'</h3><div class="card">';
+    pending.forEach(function(s){
+      h+='<div class="row"><div><div class="rowName">'+esc(s.name)+'</div>'+
+        '<div class="rowSub">'+esc(s.username)+' · '+esc(s.campus)+' · '+esc(t(s.dept))+'</div></div>'+
+        '<button class="btn" style="width:auto;margin:0;padding:9px 14px" data-adminapprove="'+esc(s.id)+'">'+esc(t('Approve'))+'</button></div>';
+    });
+    h+='</div>';
+  }
+
+  h+='<h3>'+esc(t('All accounts'))+'</h3>';
+  list.forEach(function(s){
+    var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
+    var summary = esc(s.campus+' · '+t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status);
+    var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
+    h+=accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); });
+  });
+  return h;
+}
+
+function adminRowBodyHtml_(s){
+  var mine = s.id===S.me.id;
+  var b='<div>';
+  if(!mine){
+    b+='<button class="btn ghost" style="margin-top:0" data-admintoggleactive="'+esc(s.id)+'">'+
+      (s.active? esc(t('Deactivate')) : esc(t('Activate')))+'</button>';
+  }
+
+  var pinDraft = S.adminPinDraft[s.id]||'';
+  b+='<label class="f">'+esc(t('Reset PIN'))+'</label>'+
+    '<div class="numIn"><input type="password" inputmode="numeric" maxlength="4" data-adminpin="'+esc(s.id)+'" value="'+esc(pinDraft)+'" placeholder="••••">'+
+    '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-adminresetpin="'+esc(s.id)+'">'+esc(t('Save'))+'</button></div>';
+
+  if(S.adminEditId!==s.id){
+    b+='<button class="linkbtn" data-adminedit="'+esc(s.id)+'">'+esc(t('Fix campus / department / role'))+'</button>';
+  } else {
+    b+='<label class="f">'+esc(t('Campus'))+'</label><select id="adm_campus">'+
+      CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(s.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
+      '<label class="f">'+esc(t('Department'))+'</label><select id="adm_dept">'+
+      deptsFor(s.campus).map(function(d){return '<option value="'+esc(d)+'"'+(s.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
+      '<label class="f">'+esc(t('Ministry'))+'</label><select id="adm_ministry"></select>'+
+      '<label class="f">'+esc(t('Role / team'))+'</label><input type="text" id="adm_role" value="'+esc(s.role||'')+'">'+
+      '<button class="btn" data-adminsave="'+esc(s.id)+'">'+esc(t('Save'))+'</button>'+
+      '<button class="linkbtn" data-admincanceledit="'+esc(s.id)+'">'+esc(t('Cancel'))+'</button>';
+  }
+
+  if(!mine && s.dept==='Base Leadership'){
+    b+='<label class="f">'+esc(t('Leader code'))+'</label>'+
+      '<div class="numIn"><input type="password" id="adminCodeInput" value="'+esc(S.adminCode)+'" placeholder="'+esc(t('Leader code'))+'">'+
+      '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-admingrant="'+esc(s.id)+'" data-adminmake="'+(s.isAdmin?'0':'1')+'">'+
+      (s.isAdmin?esc(t('Revoke admin')):esc(t('Make admin')))+'</button></div>';
+  }
+  return b+'</div>';
+}
+
+function adminRefresh_(){ S.adminStaff=null; render(); }
+
+function bindAdmin(){
+  if(S.view!=='admin' || !S.me || !S.me.isAdmin) return;
+  var back=document.getElementById('adminBack');
+  if(back) back.onclick=function(){ S.view='week'; render(); };
+
+  if(S.adminStaff===null){
+    if(S.adminLoading) return;
+    S.adminLoading=true;
+    run('adminListStaff',[S.auth.user,S.auth.pin],function(d){
+      S.adminLoading=false;
+      if(d && d.ok) S.adminStaff=d.staff; else showMsg('Could not load accounts');
+      render();
+    });
+    return;
+  }
+
+  document.querySelectorAll('[data-adminapprove]').forEach(function(b){
+    b.onclick=function(){
+      run('adminSetActive',[S.auth.user,S.auth.pin,b.getAttribute('data-adminapprove'),true],function(d){
+        if(d && d.ok) adminRefresh_(); else showMsg('Could not approve');
+      });
+    };
+  });
+  document.querySelectorAll('[data-admintoggleactive]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-admintoggleactive');
+      var s=(S.adminStaff||[]).find(function(x){ return x.id===id; });
+      if(!s) return;
+      run('adminSetActive',[S.auth.user,S.auth.pin,id,!s.active],function(d){
+        if(d && d.ok) adminRefresh_(); else showMsg('Could not update');
+      });
+    };
+  });
+  document.querySelectorAll('[data-adminpin]').forEach(function(inp){
+    inp.oninput=function(){ S.adminPinDraft[inp.getAttribute('data-adminpin')]=inp.value; };
+  });
+  document.querySelectorAll('[data-adminresetpin]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-adminresetpin');
+      var pin=S.adminPinDraft[id]||'';
+      if(!/^\d{4}$/.test(pin)){ showMsg('PIN must be 4 digits'); return; }
+      run('adminResetPin',[S.auth.user,S.auth.pin,id,pin],function(d){
+        if(d && d.ok){ S.adminPinDraft[id]=''; showMsg('PIN reset'); render(); }
+        else showMsg('Could not reset PIN');
+      });
+    };
+  });
+  document.querySelectorAll('[data-adminedit]').forEach(function(b){
+    b.onclick=function(){ S.adminEditId=b.getAttribute('data-adminedit'); render(); };
+  });
+  document.querySelectorAll('[data-admincanceledit]').forEach(function(b){
+    b.onclick=function(){ S.adminEditId=null; render(); };
+  });
+  if(S.adminEditId && document.getElementById('adm_campus')){
+    fillMinistrySelect('adm_ministry','adm_campus','adm_dept',
+      (S.adminStaff.find(function(x){ return x.id===S.adminEditId; })||{}).ministry||'');
+    ['adm_campus','adm_dept'].forEach(function(id){
+      document.getElementById(id).onchange=function(){ fillMinistrySelect('adm_ministry','adm_campus','adm_dept',''); };
+    });
+  }
+  document.querySelectorAll('[data-adminsave]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-adminsave');
+      var payload={
+        campus:document.getElementById('adm_campus').value,
+        dept:document.getElementById('adm_dept').value,
+        ministry:(document.getElementById('adm_ministry')||{}).value||'',
+        role:document.getElementById('adm_role').value.trim()
+      };
+      run('adminUpdateStaff',[S.auth.user,S.auth.pin,id,payload],function(d){
+        if(d && d.ok){ S.adminEditId=null; adminRefresh_(); }
+        else showMsg('Could not save');
+      });
+    };
+  });
+  var codeInput=document.getElementById('adminCodeInput');
+  if(codeInput) codeInput.oninput=function(){ S.adminCode=codeInput.value; };
+  document.querySelectorAll('[data-admingrant]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-admingrant');
+      var make=b.getAttribute('data-adminmake')==='1';
+      var s=(S.adminStaff||[]).find(function(x){ return x.id===id; });
+      if(!s) return;
+      if(!S.adminCode){ showMsg('Enter the leader code first'); return; }
+      run('grantAdmin',[S.adminCode, s.username, make],function(d){
+        if(d && d.ok){ S.adminCode=''; adminRefresh_(); }
+        else showMsg('Could not update admin access');
+      });
+    };
+  });
+}
+
 /* The whole ministry-KPI experience — the same accCard body kpiCardHtml
    already builds, just given a real page instead of a section buried in My
    Database. Any staff member whose profile carries this ministry can log
@@ -4348,6 +4525,7 @@ function bindHome(){
   });
   var ja=document.getElementById('jumpAccount');
   if(ja) ja.onclick=function(){ S.view='profile'; render(); };
+  gpHscrollGuard(document.querySelector('.quickBar'));
 
   /* Personal dashboard customize panel, hidden behind the gear icon. The
      color wheel saves on change (one control, no separate Save button);
@@ -4959,6 +5137,7 @@ function bind(){
   bindCountryOther();
 
   bindAway();
+  bindAdmin();
 
   var gpm=document.getElementById('goProfileFromMe');
   if(gpm) gpm.onclick=function(){ S.view='profile'; render(); };
@@ -4976,7 +5155,10 @@ function bind(){
     lb.disabled=true; lb.textContent='…';
     run('staffLogin',[u,pin],function(d){
       if(d.ok){ S.auth={user:u,pin:pin}; S.me=d.staff; S.profile=d.profile; afterLogin(); }
-      else { lb.disabled=false; lb.textContent='Log in'; showMsg('Wrong username or PIN'); }
+      else {
+        lb.disabled=false; lb.textContent='Log in';
+        showMsg(d.err==='pending' ? 'Your account is waiting on approval from a base leader.' : 'Wrong username or PIN');
+      }
     });
   };
   var toReg=document.getElementById('toReg'); if(toReg) toReg.onclick=function(){ S.regMode=true; if(!S.roster.length){ run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();}); } else render(); };
@@ -5004,7 +5186,13 @@ function bind(){
     if(!/^\d{4}$/.test(payload.pin)){ showMsg('PIN must be 4 digits'); return; }
     rb.disabled=true; rb.textContent='…';
     run('staffRegister',[payload],function(d){
-      if(d.ok){ S.auth={user:payload.username.toLowerCase(),pin:payload.pin}; S.me=d.staff; S.profile=d.profile; S.regMode=false; afterLogin(); showMsg('Profile created — add a photo!'); S.view='profile'; render(); }
+      if(d.ok && d.pending){
+        // Base Leadership only — every other department signs in right away.
+        // There is no session to start: a base leader has to approve first.
+        rb.disabled=false; rb.textContent='Create profile'; S.regMode=false;
+        showMsg('Submitted — a base leader needs to approve a leadership account before you can log in.');
+        render();
+      } else if(d.ok){ S.auth={user:payload.username.toLowerCase(),pin:payload.pin}; S.me=d.staff; S.profile=d.profile; S.regMode=false; afterLogin(); showMsg('Profile created — add a photo!'); S.view='profile'; render(); }
       else { rb.disabled=false; rb.textContent='Create profile'; showMsg(d.err==='taken'?'That username is taken':'Check your details'); }
     });
   };
