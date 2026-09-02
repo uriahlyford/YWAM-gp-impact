@@ -424,6 +424,12 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 /* the ring and its sentence sit on one line, so the figure reads at a glance */
 .heroRow { display:flex; align-items:center; gap:11px; margin-top:8px; }
 .heroRow .heroTrend { margin-top:0; }
+/* My Database reuses these exact hero rows for stats that jump to a section
+   on tap — Base's own rows stay plain divs, so the reset only applies when
+   the tag is actually a button, and only those get the pointer cursor. */
+button.heroRow, button.heroSubRow { width:100%; background:none; border:none; padding:0;
+  text-align:left; font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+button.heroRow:active, button.heroSubRow:active { opacity:.72; }
 /* a streak that has crossed 7 or 30 days */
 .chip.milestone { background:var(--amber); color:var(--amberInk); border-color:var(--amber); font-weight:700; }
 .chip.cheer { animation:gpCheer .62s var(--spring) both; }
@@ -686,41 +692,26 @@ input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); borde
 .addGoalBtn { flex:0 0 auto; width:38px; height:38px; border-radius:50%; border:0; background:var(--headerBg); cursor:pointer;
   display:flex; align-items:center; justify-content:center; }
 
-/* Personal dashboard — the same dark hero card Base leads with (identical
-   background, radius and padding), not its own light-or-dark-theme card, so
-   My Database opens looking like the same app rather than a lighter-weight
-   corner of it. A custom color or photo (still available, gear icon) sits
-   on TOP of that dark base rather than replacing it: the gradient overlay
-   below only has to guarantee contrast against whatever someone picks, not
-   carry the whole legibility job itself the way it used to when the
-   un-customized card could be light. */
-.miniDash { background:var(--headerBg); color:var(--onDark); border-radius:14px; padding:17px 17px 15px; margin-bottom:14px;
-  background-size:cover; background-position:center; }
-.miniDashHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-.miniDashGreet { font-family:'Koulen',sans-serif; font-size:19px; letter-spacing:.4px; color:var(--onDark); }
+/* Personal dashboard — literally Base's own .hero (same background, radius,
+   padding, ring rows, sub row), populated with personal figures instead of
+   base ones, so My Database opens looking like the same app instead of a
+   lighter-weight corner of it. The greeting + customize gear sit above it,
+   unboxed, the same relationship Base has to its own separate white profile
+   card — customizing still colors/photographs the hero itself (gear moved
+   with it conceptually; only its home changed), the gradient overlay below
+   still doing the same job of guaranteeing contrast over whatever's picked. */
+.miniDashHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; }
+.miniDashGreet { font-family:'Koulen',sans-serif; font-size:19px; letter-spacing:.4px; }
 /* Same icon-over-label shape as nav.bottom button, so the customize trigger
    reads as one more app-level control rather than a one-off gear icon. */
 .dashSettingBtn { display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none;
-  cursor:pointer; color:var(--onDarkFaint); font-size:10.5px; padding:0; flex:0 0 auto; }
+  cursor:pointer; color:var(--muted); font-size:10.5px; padding:0; flex:0 0 auto; }
 .dashSettingBtn .ic { display:block; font-size:20px; line-height:1; }
-.dashSettingBtn.on { color:var(--amber); font-weight:700; }
-.miniDashStats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:16px; }
-/* Each stat is a button now, not just a figure — tapping one jumps to the
-   section it's about, same [data-jump] the quick-jump strip already uses.
-   font/text-align/color resets undo the button defaults a plain div never
-   needed. */
-.mdStat { text-align:center; border:1px solid var(--onDarkBorder); border-radius:10px; padding:10px 4px 8px;
-  background:none; font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.mdStat:active { background:rgba(255,255,255,.08); }
-.mdIcon { font-size:16px; line-height:1; margin-bottom:2px; }
-.mdNum { font-family:'Koulen',sans-serif; font-size:20px; color:var(--amber); }
-.mdLabel { font-size:10px; color:var(--onDarkFaint); line-height:1.25; margin-top:2px; }
-/* A dark gradient under the text, not the color/photo itself, is what keeps
-   this legible no matter which color someone picks or how bright their photo is. */
-.miniDash.custom { position:relative; }
-.miniDash.custom::before { content:''; position:absolute; inset:0; border-radius:inherit;
+.dashSettingBtn.on { color:var(--accent); font-weight:700; }
+.hero.custom { background-size:cover; background-position:center; position:relative; }
+.hero.custom::before { content:''; position:absolute; inset:0; border-radius:inherit;
   background:linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.45)); }
-.miniDash.custom .miniDashHead, .miniDash.custom .miniDashStats { position:relative; }
+.hero.custom > * { position:relative; }
 input[type=color] { width:42px; height:42px; padding:0; border:1.5px solid var(--border2); border-radius:50%; cursor:pointer; background:none; }
 input[type=color]::-webkit-color-swatch-wrapper { padding:2px; border-radius:50%; }
 input[type=color]::-webkit-color-swatch { border:none; border-radius:50%; }
@@ -2308,22 +2299,25 @@ function mentorshipCardHtml(){
   return h+'</div>';
 }
 
-/* A small at-a-glance summary at the very top of My Database — streak,
-   this week's goals, today's habits, PTO left. By default it just blends
-   into the app's own theme (light or dark) like any other card; a gear
-   icon in the top-right reveals a hidden customize panel — a free color
-   wheel and a background photo — for the one card that's actually yours.
-   The moment either is set, text switches to the fixed --onDark pair so
-   it stays readable over any color or photo, the same trick .allowCard
-   and photo-backed cards already use. */
+/* The top of My Database — Base's own hero card, styled identically and
+   populated with personal figures (streak, this week's goals, today's
+   habits, PTO left) instead of the base's. A gear icon above it reveals a
+   hidden customize panel — a free color wheel and a background photo — for
+   the one card that's actually yours; .hero's text is already the fixed
+   --onDark pair regardless, so .hero.custom only has to add a gradient
+   under whatever color or photo gets picked, the same trick .allowCard and
+   photo-backed cards already use for contrast rather than text color. */
 function miniDashboardHtml(){
+  var wk=thisWeek();
   var st=graceStreak(function(){return true;});
-  var rec=goalsForWeek(thisWeek());
+  var rec=goalsForWeek(wk);
   var written=(rec && rec.items ? rec.items : []).filter(function(i){return i && i.text;});
   var goalsDone=written.filter(function(i){return goalItemPct(i)>=100;}).length;
+  var goalsPct=written.length ? Math.round(goalsDone/written.length*100) : 0;
   var list=myHabits();
   var log=logForDate(todayStr());
   var habitsDone=list.filter(function(hb){return log && didHabit(log,hb.id);}).length;
+  var habitsPct=list.length ? Math.round(habitsDone/list.length*100) : 0;
   var year=String(new Date().getFullYear());
   var yt=(S.trips && S.trips.totals && S.trips.totals[year]) || {personal:0};
   var cap=(S.trips && S.trips.ptoCap) || 30;
@@ -2336,18 +2330,32 @@ function miniDashboardHtml(){
   var custom=!!(color||bg);
   var open=!!S.dbCustomize;
 
-  var h='<div class="miniDash'+(custom?' custom':'')+'"'+
-    (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
-    '<div class="miniDashHead">'+
-      '<div class="miniDashGreet">'+esc(gpT('Welcome, {name}, to your database',{name:firstName}))+'</div>'+
+  var h='<div class="miniDashHead">'+
+      '<div class="miniDashGreet">'+esc(gpT('Welcome, {name}',{name:firstName}))+'</div>'+
       '<button class="dashSettingBtn'+(open?' on':'')+'" id="dashCustomizeBtn" aria-pressed="'+(open?'true':'false')+'" aria-label="'+esc(t('Customize dashboard'))+'">'+
         '<span class="ic">⚙️</span><span class="dsLabel">'+esc(t('Customize'))+'</span></button>'+
-    '</div>'+
-    '<div class="miniDashStats">'+
-      '<button class="mdStat" data-jump="sec-habits"><div class="mdIcon">🔥</div><div class="mdNum">'+st+'</div><div class="mdLabel">'+esc(t('day streak'))+'</div></button>'+
-      '<button class="mdStat" data-jump="sec-goals"><div class="mdIcon">🎯</div><div class="mdNum">'+goalsDone+'/'+written.length+'</div><div class="mdLabel">'+esc(t('goals done'))+'</div></button>'+
-      '<button class="mdStat" data-jump="sec-habits"><div class="mdIcon">✅</div><div class="mdNum">'+habitsDone+'/'+list.length+'</div><div class="mdLabel">'+esc(t('habits today'))+'</div></button>'+
-      '<button class="mdStat" data-jump="sec-leave"><div class="mdIcon">🌴</div><div class="mdNum">'+ptoLeft+'</div><div class="mdLabel">'+esc(t('PTO days left'))+'</div></button>'+
+    '</div>';
+
+  /* Base's own hero, reused whole — same classes, same look, populated with
+     personal figures instead of the base's. The streak leads because it's
+     the one number here that's purely for the person holding the phone, the
+     same reason Base leads with the campus's total staff. Each ring/sub row
+     is a button now: tapping one jumps straight to the section it's about,
+     the same [data-jump] the quick-jump strip already uses. */
+  h+='<div class="hero'+(custom?' custom':'')+'"'+
+    (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
+    '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
+    '<div class="heroNum" data-count="'+st+'">0</div>'+
+    '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('DAY STREAK'))+'</div>'+
+    '<button class="heroRow" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
+      '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div></button>'+
+    '<button class="heroRow" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
+      '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+'</div></button>'+
+    '<div class="heroSub">'+
+      '<button class="heroSubRow" data-jump="sec-leave">'+
+        '<span class="heroSubLabel">'+esc(t('PTO DAYS LEFT'))+'</span>'+
+        '<span class="heroSubNum">'+ptoLeft+'</span>'+
+      '</button>'+
     '</div>'+
   '</div>';
 

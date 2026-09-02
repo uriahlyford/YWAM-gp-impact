@@ -1018,3 +1018,19 @@ access) or an existing admin spends it on someone else (this screen).
 | Admin code | លេខកូដអ្នកគ្រប់គ្រង |
 | Enter the admin code to unlock the Admin screen for this account. | បញ្ចូលលេខកូដអ្នកគ្រប់គ្រង ដើម្បីបើកទំព័រអ្នកគ្រប់គ្រងសម្រាប់គណនីនេះ។ |
 | Unlock | ដោះសោ |
+
+## 29. My Database's top card now matches Base's hero
+
+Uriah wants staff spending more time on My Database, so its top card is now
+literally Base's own hero (same look) with personal figures in place of the
+base's — streak instead of staff count, Weekly Goals/Habits Today as ring
+rows instead of check-in rate/health score, PTO days left instead of
+salvations YTD. Each ring/sub row is a button that jumps straight to that
+section further down the same page.
+
+| English | ខ្មែរ |
+|---|---|
+| Welcome, {name} | សូមស្វាគមន៍ {name} |
+| DAY STREAK | ថ្ងៃជាប់គ្នា |
+| Habits Today | ទម្លាប់ថ្ងៃនេះ |
+| PTO DAYS LEFT | ថ្ងៃឈប់សម្រាកនៅសល់ |
