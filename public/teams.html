@@ -337,6 +337,13 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
   background:linear-gradient(to right, var(--gc,var(--accent)) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
 .sliderWrap input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
   background:var(--surface); border:3px solid var(--gc,var(--accent)); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer;
+  /* -webkit-slider-thumb's margin-top is relative to the TRACK box, not the
+     input's own padding box (which is 32px tall here vs .gSlide's 26px, for
+     a bigger touch target) — so it needs the same -7px .gSlide uses
+     ((10px track - 24px thumb) / 2) regardless of that difference. Missing
+     it left the thumb sitting off-center from the track it's supposed to
+     be riding on. */
+  margin-top:-7px;
   transition:transform .12s ease; }
 .sliderWrap input[type=range]::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:var(--surface);
   border:3px solid var(--gc,var(--accent)); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer; }
