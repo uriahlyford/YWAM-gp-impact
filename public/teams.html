@@ -3110,12 +3110,26 @@ function adminHtml(){
   }
 
   h+='<h3>'+esc(t('All accounts'))+'</h3>';
-  list.forEach(function(s){
-    var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
-    var summary = esc(s.campus+' · '+t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status);
-    var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
-    h+=accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); });
+  var byCampus_ = function(campusList){
+    campusList.forEach(function(s){
+      var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
+      var summary = esc(t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status);
+      var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
+      h+=accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); });
+    });
+  };
+  CAMPUSES.forEach(function(c){
+    var campusList=list.filter(function(s){ return s.campus===c.id; });
+    h+='<h3 style="margin-top:16px">'+esc(c.name)+' <small>· '+campusList.length+'</small></h3>';
+    if(!campusList.length) h+='<p class="sub" style="margin:0 0 8px">'+esc(t('No accounts yet.'))+'</p>';
+    byCampus_(campusList);
   });
+  var known_=CAMPUSES.map(function(c){ return c.id; });
+  var other=list.filter(function(s){ return known_.indexOf(s.campus)===-1; });
+  if(other.length){
+    h+='<h3 style="margin-top:16px">'+esc(t('Other'))+' <small>· '+other.length+'</small></h3>';
+    byCampus_(other);
+  }
   return h;
 }
 
@@ -3135,14 +3149,28 @@ function adminRowBodyHtml_(s){
   if(S.adminEditId!==s.id){
     b+='<button class="linkbtn" data-adminedit="'+esc(s.id)+'">'+esc(t('Fix campus / department / role'))+'</button>';
   } else {
-    b+='<label class="f">'+esc(t('Campus'))+'</label><select id="adm_campus">'+
+    b+='<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="adm_name" value="'+esc(s.name||'')+'">'+
+      '<label class="f">'+esc(t('Campus'))+'</label><select id="adm_campus">'+
       CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(s.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
       '<label class="f">'+esc(t('Department'))+'</label><select id="adm_dept">'+
       deptsFor(s.campus).map(function(d){return '<option value="'+esc(d)+'"'+(s.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
       '<label class="f">'+esc(t('Ministry'))+'</label><select id="adm_ministry"></select>'+
       '<label class="f">'+esc(t('Role / team'))+'</label><input type="text" id="adm_role" value="'+esc(s.role||'')+'">'+
+      staffTypeFieldHtml('adm_type', s.staffType||'')+
+      countryFieldHtml('adm_country', s.country||'')+
       '<button class="btn" data-adminsave="'+esc(s.id)+'">'+esc(t('Save'))+'</button>'+
       '<button class="linkbtn" data-admincanceledit="'+esc(s.id)+'">'+esc(t('Cancel'))+'</button>';
+  }
+
+  if(!mine){
+    var mentorOpts=(S.adminStaff||[]).filter(function(x){ return x.id!==s.id && x.active; })
+      .map(function(x){ return '<option value="'+esc(x.id)+'"'+(s.mentorId===x.id?' selected':'')+'>'+esc(x.name)+' · '+esc(t(x.dept))+'</option>'; }).join('');
+    b+='<label class="f">'+esc(t('Mentor'))+'</label>'+
+      '<select data-adminmentor="'+esc(s.id)+'"><option value="">'+esc(t('— none —'))+'</option>'+mentorOpts+'</select>'+
+      '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px">'+
+      '<input type="checkbox" data-adminmentorapproved="'+esc(s.id)+'"'+(s.mentorStatus==='approved'?' checked':'')+'> '+
+      esc(t('Approved (skip the accept step)'))+'</label>'+
+      '<button class="btn ghost" data-adminsetmentor="'+esc(s.id)+'">'+esc(t('Save mentor'))+'</button>';
   }
 
   if(!mine && s.dept==='Base Leadership'){
@@ -3215,19 +3243,36 @@ function bindAdmin(){
     ['adm_campus','adm_dept'].forEach(function(id){
       document.getElementById(id).onchange=function(){ fillMinistrySelect('adm_ministry','adm_campus','adm_dept',''); };
     });
+    bindCountryOther();
   }
   document.querySelectorAll('[data-adminsave]').forEach(function(b){
     b.onclick=function(){
       var id=b.getAttribute('data-adminsave');
       var payload={
+        name:document.getElementById('adm_name').value.trim(),
         campus:document.getElementById('adm_campus').value,
         dept:document.getElementById('adm_dept').value,
         ministry:(document.getElementById('adm_ministry')||{}).value||'',
-        role:document.getElementById('adm_role').value.trim()
+        role:document.getElementById('adm_role').value.trim(),
+        staffType:document.getElementById('adm_type').value,
+        country:countryValue('adm_country')
       };
       run('adminUpdateStaff',[S.auth.user,S.auth.pin,id,payload],function(d){
         if(d && d.ok){ S.adminEditId=null; adminRefresh_(); }
         else showMsg('Could not save');
+      });
+    };
+  });
+  document.querySelectorAll('[data-adminsetmentor]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-adminsetmentor');
+      var sel=document.querySelector('[data-adminmentor="'+id+'"]');
+      var chk=document.querySelector('[data-adminmentorapproved="'+id+'"]');
+      var mentorId=sel?sel.value:'';
+      var approved=chk?chk.checked:false;
+      run('adminSetMentor',[S.auth.user,S.auth.pin,id,mentorId,approved],function(d){
+        if(d && d.ok){ showMsg('Mentor updated'); adminRefresh_(); }
+        else showMsg('Could not update mentor');
       });
     };
   });
@@ -3358,7 +3403,7 @@ function countryValue(id){
   return box ? String(box.value||'').trim() : '';
 }
 function bindCountryOther(){
-  ['r_country','p_country'].forEach(function(id){
+  ['r_country','p_country','adm_country'].forEach(function(id){
     var sel=document.getElementById(id), box=document.getElementById(id+'_other');
     if(!sel||!box) return;
     sel.onchange=function(){

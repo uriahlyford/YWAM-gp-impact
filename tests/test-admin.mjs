@@ -186,6 +186,43 @@ r = await call('adminUpdateStaff', ['uriah', '1234', 'st_staff', { isAdmin: true
 ok('adminUpdateStaff cannot be used to grant admin or deactivate — those stay in their own handlers',
   r.body && r.body.ok === true && r.body.staff.isAdmin === false && r.body.staff.active === true, JSON.stringify(r.body));
 
+seed();
+r = await call('adminUpdateStaff', ['uriah', '1234', 'st_staff', { name: 'Dara Pich', staffType: 'ministry', country: 'Cambodia' }]);
+ok('an admin can also fix name/staff type/home country',
+  r.body && r.body.ok === true && r.body.staff.name === 'Dara Pich' && r.body.staff.staffType === 'ministry' && r.body.staff.country === 'Cambodia',
+  JSON.stringify(r.body));
+
+/* ---------- 6. manual mentor assignment ---------- */
+seed();
+r = await call('adminSetMentor', ['dara', '1234', 'st_staff', 'st_leader2', true]);
+ok('non-admin cannot set anyone’s mentor', r.body && r.body.ok === false, JSON.stringify(r.body));
+
+r = await call('adminSetMentor', ['uriah', '1234', 'st_staff', 'st_leader2', true]);
+ok('an admin can assign a mentor and mark it approved immediately',
+  r.body && r.body.ok === true && r.body.staff.mentorId === 'st_leader2' && r.body.staff.mentorStatus === 'approved',
+  JSON.stringify(r.body));
+ok('and it did not go through the request/accept flow', (mem.staff || []).find(function (s) { return s.id === 'st_staff'; }).mentorStatus === 'approved');
+
+r = await call('adminSetMentor', ['uriah', '1234', 'st_staff', 'st_leader2', false]);
+ok('an admin can assign one left pending instead',
+  r.body && r.body.ok === true && r.body.staff.mentorStatus === 'pending', JSON.stringify(r.body));
+
+r = await call('adminSetMentor', ['uriah', '1234', 'st_staff', '', false]);
+ok('an admin can clear a mentor entirely',
+  r.body && r.body.ok === true && r.body.staff.mentorId === '' && r.body.staff.mentorStatus === '', JSON.stringify(r.body));
+
+r = await call('adminSetMentor', ['uriah', '1234', 'st_staff', 'st_staff', true]);
+ok('an admin cannot mentor someone to themselves', r.body && r.body.ok === false && r.body.err === 'self_mentor');
+
+r = await call('adminSetMentor', ['uriah', '1234', 'st_staff', 'does-not-exist', true]);
+ok('an admin cannot assign a mentor that does not exist', r.body && r.body.ok === false && r.body.err === 'mentor_not_found');
+
+r = await call('adminListStaff', ['uriah', '1234']);
+const staffOut = r.body.staff.find(function (s) { return s.id === 'st_staff'; });
+ok('adminListStaff exposes mentorId/mentorStatus/staffType/country for editing',
+  staffOut && 'mentorId' in staffOut && 'mentorStatus' in staffOut && 'staffType' in staffOut && 'country' in staffOut,
+  JSON.stringify(staffOut));
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);
