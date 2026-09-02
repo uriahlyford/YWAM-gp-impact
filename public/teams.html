@@ -4181,6 +4181,19 @@ function profileHtml(){
        '<button data-theme-set="light" class="'+(th==='light'?'on':'')+'">'+esc(t('Light'))+'</button>'+
        '<button data-theme-set="dark" class="'+(th==='dark'?'on':'')+'">'+esc(t('Dark'))+'</button>'+
      '</div><div class="hint">'+esc(t('Auto follows your phone.'))+'</div></div>';
+  /* Bootstrap for the Admin screen: grantAdmin only needs the leader code,
+     not an admin session, on purpose — otherwise nobody could ever become
+     the first admin. This is the one place that spends the code for
+     yourself; the Admin screen itself spends it on someone else. */
+  if(S.me.isAdmin){
+    h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
+      '<p class="hint" style="margin:0">'+esc(t('You have admin access — find it in the menu.'))+'</p></div>';
+  } else if(S.me.dept==='Base Leadership'){
+    h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
+      '<p class="hint" style="margin:0 0 8px">'+esc(t('Enter the leader code to unlock the Admin screen for this account.'))+'</p>'+
+      '<div class="numIn"><input type="password" id="p_admincode" placeholder="'+esc(t('Leader code'))+'">'+
+      '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" id="p_adminunlock">'+esc(t('Unlock'))+'</button></div></div>';
+  }
   h+='<button class="danger" id="logoutBtn" style="width:100%">Log out</button>';
   h+='<footer>✦ Every number is a person.</footer>';
   return h;
@@ -4664,6 +4677,17 @@ function bindHome(){
   document.querySelectorAll('[data-theme-set]').forEach(function(b){
     b.onclick=function(){ gpTap(); applyTheme(b.getAttribute('data-theme-set')); render(); };
   });
+  var pau=document.getElementById('p_adminunlock');
+  if(pau) pau.onclick=function(){
+    var code=(document.getElementById('p_admincode')||{}).value||'';
+    if(!code){ showMsg('Enter the leader code'); return; }
+    pau.disabled=true; pau.textContent='…';
+    run('grantAdmin',[code, S.me.username, true],function(d){
+      pau.disabled=false; pau.textContent=t('Unlock');
+      if(d && d.ok){ S.me.isAdmin=true; showMsg('Admin access unlocked'); render(); }
+      else showMsg('Wrong leader code');
+    });
+  };
   var sw=document.getElementById('shareWeek');
   if(sw) sw.onclick=function(){
     var wk=goalsViewWeek();

@@ -1010,3 +1010,7 @@ sensitive dashboard metrics exactly as before — this is a separate door.
 | Leader code | លេខកូដថ្នាក់ដឹកនាំ |
 | Revoke admin | ដកសិទ្ធិអ្នកគ្រប់គ្រង |
 | Make admin | ផ្តល់សិទ្ធិអ្នកគ្រប់គ្រង |
+| Admin access | សិទ្ធិអ្នកគ្រប់គ្រង |
+| You have admin access — find it in the menu. | អ្នកមានសិទ្ធិជាអ្នកគ្រប់គ្រង — សូមរកមើលនៅក្នុងម៉ឺនុយ។ |
+| Enter the leader code to unlock the Admin screen for this account. | បញ្ចូលលេខកូដថ្នាក់ដឹកនាំ ដើម្បីបើកទំព័រអ្នកគ្រប់គ្រងសម្រាប់គណនីនេះ។ |
+| Unlock | ដោះសោ |
