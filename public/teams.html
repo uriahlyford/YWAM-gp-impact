@@ -2450,14 +2450,14 @@ function homeHtml(){
 
   h+=phaseBanner(phase, wk);
 
-  /* Fixed order, matching the redesign mockup: Weekly Goals, Habit Tracker,
-     My Ministry, OKR, Annual Goals, Mentorship, Health, Leave, Account. This
-     used to lead with whichever of Goals/Habits the day's phase favored;
-     that's gone in favor of the mockup's fixed order. My Ministry sits right
-     under Weekly Goals — both are "what am I aiming at," one personal, one
-     for the ministry. */
-  h += habitsCardHtml();
+  /* Fixed order: Weekly Goals, Habit Tracker, My Ministry, OKR, Annual
+     Goals, Mentorship, Health, Leave, Account. Weekly Goals leads — that's
+     the section Uriah wants staff prioritizing, so it's the first thing
+     under the quick-jump bar rather than a mid-page card. My Ministry
+     sits right under it — both are "what am I aiming at," one personal,
+     one for the ministry. */
   h += goalsCardHtml(goalsViewWeek());
+  h += habitsCardHtml();
   h += myMinistryEntryHtml();
   h += okrSectionHtml(S.me, true);
   h += annualGoalsHtml();
@@ -2479,7 +2479,7 @@ function homeHtml(){
    its own to scroll to — it's a card at the very bottom that opens the
    profile screen — so that chip still navigates rather than scrolling. */
 function quickJumpHtml(){
-  var jumps=[['sec-habits','Daily'],['sec-goals','Weekly Goals'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
+  var jumps=[['sec-goals','Weekly Goals'],['sec-habits','Daily'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
     ['sec-annual','Annual Goals'],['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
   var h='<div class="quickBar">';
   jumps.forEach(function(j){
