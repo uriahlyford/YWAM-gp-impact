@@ -686,36 +686,41 @@ input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); borde
 .addGoalBtn { flex:0 0 auto; width:38px; height:38px; border-radius:50%; border:0; background:var(--headerBg); cursor:pointer;
   display:flex; align-items:center; justify-content:center; }
 
-/* Personal dashboard — matches the app's own card style (light or dark
-   theme) by default. Once a custom color or photo is set, .custom pins
-   text to the fixed --onDark pair so it stays readable either way, same
-   as .allowCard below and any other photo-backed card. */
-.miniDash { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px; margin-bottom:14px;
+/* Personal dashboard — the same dark hero card Base leads with (identical
+   background, radius and padding), not its own light-or-dark-theme card, so
+   My Database opens looking like the same app rather than a lighter-weight
+   corner of it. A custom color or photo (still available, gear icon) sits
+   on TOP of that dark base rather than replacing it: the gradient overlay
+   below only has to guarantee contrast against whatever someone picks, not
+   carry the whole legibility job itself the way it used to when the
+   un-customized card could be light. */
+.miniDash { background:var(--headerBg); color:var(--onDark); border-radius:14px; padding:17px 17px 15px; margin-bottom:14px;
   background-size:cover; background-position:center; }
 .miniDashHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-.miniDashGreet { font-family:'Koulen',sans-serif; font-size:19px; letter-spacing:.4px; }
+.miniDashGreet { font-family:'Koulen',sans-serif; font-size:19px; letter-spacing:.4px; color:var(--onDark); }
 /* Same icon-over-label shape as nav.bottom button, so the customize trigger
    reads as one more app-level control rather than a one-off gear icon. */
 .dashSettingBtn { display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none;
-  cursor:pointer; color:var(--muted); font-size:10.5px; padding:0; flex:0 0 auto; }
+  cursor:pointer; color:var(--onDarkFaint); font-size:10.5px; padding:0; flex:0 0 auto; }
 .dashSettingBtn .ic { display:block; font-size:20px; line-height:1; }
-.dashSettingBtn.on { color:var(--accent); font-weight:700; }
+.dashSettingBtn.on { color:var(--amber); font-weight:700; }
 .miniDashStats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:16px; }
-.mdStat { text-align:center; border:1px solid var(--border); border-radius:10px; padding:10px 4px 8px; }
+/* Each stat is a button now, not just a figure — tapping one jumps to the
+   section it's about, same [data-jump] the quick-jump strip already uses.
+   font/text-align/color resets undo the button defaults a plain div never
+   needed. */
+.mdStat { text-align:center; border:1px solid var(--onDarkBorder); border-radius:10px; padding:10px 4px 8px;
+  background:none; font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.mdStat:active { background:rgba(255,255,255,.08); }
 .mdIcon { font-size:16px; line-height:1; margin-bottom:2px; }
-.mdNum { font-family:'Koulen',sans-serif; font-size:20px; }
-.mdLabel { font-size:10px; color:var(--muted); line-height:1.25; margin-top:2px; }
+.mdNum { font-family:'Koulen',sans-serif; font-size:20px; color:var(--amber); }
+.mdLabel { font-size:10px; color:var(--onDarkFaint); line-height:1.25; margin-top:2px; }
 /* A dark gradient under the text, not the color/photo itself, is what keeps
    this legible no matter which color someone picks or how bright their photo is. */
-.miniDash.custom { border-color:transparent; position:relative; }
+.miniDash.custom { position:relative; }
 .miniDash.custom::before { content:''; position:absolute; inset:0; border-radius:inherit;
   background:linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.45)); }
 .miniDash.custom .miniDashHead, .miniDash.custom .miniDashStats { position:relative; }
-.miniDash.custom .miniDashGreet, .miniDash.custom .mdNum { color:var(--onDark); }
-.miniDash.custom .mdLabel { color:var(--onDarkFaint); }
-.miniDash.custom .dashSettingBtn { color:var(--onDarkFaint); }
-.miniDash.custom .dashSettingBtn.on { color:var(--onDark); }
-.miniDash.custom .mdStat { border-color:var(--onDarkBorder); }
 input[type=color] { width:42px; height:42px; padding:0; border:1.5px solid var(--border2); border-radius:50%; cursor:pointer; background:none; }
 input[type=color]::-webkit-color-swatch-wrapper { padding:2px; border-radius:50%; }
 input[type=color]::-webkit-color-swatch { border:none; border-radius:50%; }
@@ -2339,10 +2344,10 @@ function miniDashboardHtml(){
         '<span class="ic">⚙️</span><span class="dsLabel">'+esc(t('Customize'))+'</span></button>'+
     '</div>'+
     '<div class="miniDashStats">'+
-      '<div class="mdStat"><div class="mdIcon">🔥</div><div class="mdNum">'+st+'</div><div class="mdLabel">'+esc(t('day streak'))+'</div></div>'+
-      '<div class="mdStat"><div class="mdIcon">🎯</div><div class="mdNum">'+goalsDone+'/'+written.length+'</div><div class="mdLabel">'+esc(t('goals done'))+'</div></div>'+
-      '<div class="mdStat"><div class="mdIcon">✅</div><div class="mdNum">'+habitsDone+'/'+list.length+'</div><div class="mdLabel">'+esc(t('habits today'))+'</div></div>'+
-      '<div class="mdStat"><div class="mdIcon">🌴</div><div class="mdNum">'+ptoLeft+'</div><div class="mdLabel">'+esc(t('PTO days left'))+'</div></div>'+
+      '<button class="mdStat" data-jump="sec-habits"><div class="mdIcon">🔥</div><div class="mdNum">'+st+'</div><div class="mdLabel">'+esc(t('day streak'))+'</div></button>'+
+      '<button class="mdStat" data-jump="sec-goals"><div class="mdIcon">🎯</div><div class="mdNum">'+goalsDone+'/'+written.length+'</div><div class="mdLabel">'+esc(t('goals done'))+'</div></button>'+
+      '<button class="mdStat" data-jump="sec-habits"><div class="mdIcon">✅</div><div class="mdNum">'+habitsDone+'/'+list.length+'</div><div class="mdLabel">'+esc(t('habits today'))+'</div></button>'+
+      '<button class="mdStat" data-jump="sec-leave"><div class="mdIcon">🌴</div><div class="mdNum">'+ptoLeft+'</div><div class="mdLabel">'+esc(t('PTO days left'))+'</div></button>'+
     '</div>'+
   '</div>';
 
