@@ -1034,3 +1034,21 @@ section further down the same page.
 | DAY STREAK | ថ្ងៃជាប់គ្នា |
 | Habits Today | ទម្លាប់ថ្ងៃនេះ |
 | PTO DAYS LEFT | ថ្ងៃឈប់សម្រាកនៅសល់ |
+
+## 30. Admin: full profile fields, manual mentor assignment, grouped by campus
+
+The Admin screen's edit form now covers everything account management was
+missing — name, staff type, home country alongside campus/department/
+ministry/role — and adds a manual mentor override: an admin can assign (or
+clear) anyone's mentor directly and mark it approved immediately, instead of
+waiting on the normal accept-in-Team flow. The "All accounts" list is now
+grouped under YWAM Poipet / YWAM Siem Reap headings instead of one flat list.
+
+| English | ខ្មែរ |
+|---|---|
+| Mentor | អ្នកណែនាំ |
+| — none — | — គ្មាន — |
+| Approved (skip the accept step) | បានយល់ព្រម (រំលងជំហានទទួលយក) |
+| Save mentor | រក្សាទុកអ្នកណែនាំ |
+| No accounts yet. | មិនទាន់មានគណនីនៅឡើយទេ។ |
+| Other | ផ្សេងទៀត |

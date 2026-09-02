@@ -340,6 +340,8 @@ function adminStaffOut_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
     ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin,
+    staffType: s.staffType || '', country: s.country || '',
+    mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
     created: s.created || ''
   };
 }
@@ -379,6 +381,30 @@ async function adminSetActive(username, pin, staffId, active) {
   const idx = rows.findIndex(function (r) { return r.id === staffId; });
   if (idx === -1) return { ok: false, err: 'not_found' };
   rows[idx].active = !!active;
+  rows[idx].updated = new Date().toISOString();
+  await saveStaff_(rows);
+  return { ok: true, staff: adminStaffOut_(rows[idx]) };
+}
+
+/* Setting someone's mentor directly, not asking the mentor to accept —
+   updateProfile's own mentor field always lands on 'pending' for that
+   reason, and stays the only path for a staff member picking their own
+   mentor. This is the manual override: an admin can assign (or clear) a
+   pairing outright, and can mark it approved immediately so the mentor
+   doesn't have to separately accept it in Team. */
+async function adminSetMentor(username, pin, staffId, mentorId, approved) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === staffId; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  const newMentorId = mentorId || '';
+  if (newMentorId === staffId) return { ok: false, err: 'self_mentor' };
+  if (newMentorId && rows.findIndex(function (r) { return r.id === newMentorId; }) === -1) {
+    return { ok: false, err: 'mentor_not_found' };
+  }
+  rows[idx].mentorId = newMentorId;
+  rows[idx].mentorStatus = newMentorId ? (approved ? 'approved' : 'pending') : '';
   rows[idx].updated = new Date().toISOString();
   await saveStaff_(rows);
   return { ok: true, staff: adminStaffOut_(rows[idx]) };
@@ -1814,6 +1840,7 @@ const HANDLERS = {
   grantAdmin: function (a) { return grantAdmin(a[0], a[1], a[2]); },
   adminListStaff: function (a) { return adminListStaff(a[0], a[1]); },
   adminSetActive: function (a) { return adminSetActive(a[0], a[1], a[2], a[3]); },
+  adminSetMentor: function (a) { return adminSetMentor(a[0], a[1], a[2], a[3], a[4]); },
   adminResetPin: function (a) { return adminResetPin(a[0], a[1], a[2], a[3]); },
   adminUpdateStaff: function (a) { return adminUpdateStaff(a[0], a[1], a[2], a[3]); },
   updateProfile: function (a) { return updateProfile(a[0], a[1], a[2]); },
