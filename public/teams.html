@@ -296,12 +296,18 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
    captions and a live readout, instead of a row of ten buttons. Scoped to
    .sliderWrap rather than a bare input[type=range] rule so it can't touch
    the goal ring's own .gSlide styling elsewhere on the page — but the thumb
-   and track below are deliberately the SAME shape as .gSlide (hollow
-   thumb with a colored ring, 10px track, a scale-up on active) so a drag
-   feels like the same control everywhere in the app. Health doesn't get
-   .gSlide's per-value color band (higher isn't always "better" here — 10
-   on "how lonely" is bad, 10 on "clarity" is good), so the ring color
-   stays the fixed accent rather than --gc.
+   and track below are the SAME shape as .gSlide (hollow thumb with a
+   colored ring, 10px track, a scale-up on active) so a drag feels like the
+   same control everywhere in the app, and now the SAME color walk too
+   (warm -> amber -> cobalt -> green via --gc, gpRingColor in rollup.js).
+
+   The direction has to be per-question, not per-value, because higher isn't
+   always "better" here — 10 on "how lonely" is bad, 10 on "clarity" is good.
+   So --gc is computed from a goodness percentage (data-higherbetter on the
+   input decides whether that's the raw value or 100 minus it), while
+   --fillpct always tracks the RAW value — that one has to match where the
+   thumb actually sits, or the track would look empty under a thumb that's
+   dragged all the way to the "bad" end.
 
    The input box itself is a full 32px tall even though the visible track is
    a thin 10px line drawn by the track pseudo-element; a slider whose hit box
@@ -316,8 +322,8 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
    frames deciding, and a vertical swipe still scrolls the page. The value the
    browser sets on touch-down is put back by gpSlideGuard() when the gesture
    turns out to have been a scroll. The fill color is a CSS variable set
-   from JS (--fillpct) rather than a `background` on the input, because the
-   two-tone track lives on the ::-webkit-slider-runnable-track /
+   from JS (--fillpct, --gc) rather than a `background` on the input, because
+   the two-tone track lives on the ::-webkit-slider-runnable-track /
    ::-moz-range-track pseudo-elements, which inline styles on the input
    itself cannot reach. */
 .qCaps { display:flex; justify-content:space-between; font-size:10.5px; color:var(--faint); margin-top:2px; }
@@ -326,14 +332,14 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .sliderWrap input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:32px; border-radius:99px;
   outline:none; margin:0; background:transparent; cursor:pointer; touch-action:pan-y; }
 .sliderWrap input[type=range]::-webkit-slider-runnable-track { height:10px; border-radius:99px;
-  background:linear-gradient(to right, var(--accent) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
+  background:linear-gradient(to right, var(--gc,var(--accent)) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
 .sliderWrap input[type=range]::-moz-range-track { height:10px; border-radius:99px;
-  background:linear-gradient(to right, var(--accent) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
+  background:linear-gradient(to right, var(--gc,var(--accent)) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
 .sliderWrap input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
-  background:var(--surface); border:3px solid var(--accent); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer;
+  background:var(--surface); border:3px solid var(--gc,var(--accent)); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer;
   transition:transform .12s ease; }
 .sliderWrap input[type=range]::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:var(--surface);
-  border:3px solid var(--accent); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer; }
+  border:3px solid var(--gc,var(--accent)); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer; }
 .sliderWrap input[type=range]:active::-webkit-slider-thumb { transform:scale(1.18); }
 .sliderWrap input[type=range]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:99px; }
 @media (prefers-reduced-motion: reduce){ .sliderWrap input[type=range]::-webkit-slider-thumb { transition:none } }
@@ -3489,10 +3495,14 @@ function healthHtml(){
     WEEK_SCALE_QS.forEach(function(q){
       var v = d[q.id]!==undefined ? Number(d[q.id]) : 5;
       var pct = Math.round(((v-1)/9)*100);
+      // Same colour walk as the goal slider, just pointed the right way for
+      // this question — a HIGH loneliness score is bad, so it colours as a
+      // low goodPct even though the thumb itself sits at the high end.
+      var goodPct = q.higherBetter ? pct : (100-pct);
       h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div>'+
-        '<div class="sliderWrap"><input type="range" min="1" max="10" step="1" value="'+v+'" data-wslide="'+q.id+'" '+
-        'style="--fillpct:'+pct+'%"></div>'+
-        '<div class="qCaps"><span>'+esc(t(q.lowLabel))+'</span><span class="qReadout">'+v+'/10</span><span>'+esc(t(q.highLabel))+'</span></div>'+
+        '<div class="sliderWrap"><input type="range" min="1" max="10" step="1" value="'+v+'" data-wslide="'+q.id+'" data-higherbetter="'+(q.higherBetter?'1':'0')+'" '+
+        'style="--fillpct:'+pct+'%;--gc:'+gpRingColor(goodPct)+'"></div>'+
+        '<div class="qCaps"><span>'+esc(t(q.lowLabel))+'</span><span class="qReadout" style="color:'+gpPctColor(goodPct)+'">'+v+'/10</span><span>'+esc(t(q.highLabel))+'</span></div>'+
         '</div>';
     });
     WEEK_NUM_QS.forEach(function(q){
@@ -5011,10 +5021,16 @@ function bind(){
     var block=sl.closest('.qBlock');
     var readout=block&&block.querySelector('.qReadout');
     var id=sl.getAttribute('data-wslide');
+    var higherBetter=sl.getAttribute('data-higherbetter')==='1';
     function paint(){
       var v=Number(sl.value)||1;
-      sl.style.setProperty('--fillpct', Math.round(((v-1)/9)*100)+'%');
-      if(readout) readout.textContent=v+'/10';
+      var pct=Math.round(((v-1)/9)*100);
+      sl.style.setProperty('--fillpct', pct+'%');
+      // Same colour walk as the goal slider — direction-aware, so a high
+      // "how lonely" score still reads as a warning colour, not green.
+      var goodPct = higherBetter ? pct : (100-pct);
+      sl.style.setProperty('--gc', gpRingColor(goodPct));
+      if(readout){ readout.textContent=v+'/10'; readout.style.color=gpPctColor(goodPct); }
       return v;
     }
     /* A swipe that starts on one of these is usually somebody scrolling past the
