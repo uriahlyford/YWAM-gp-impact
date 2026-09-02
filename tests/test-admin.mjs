@@ -1,8 +1,9 @@
 /* Admin control: a Base Leadership sign-up needs approval before it can log
    in at all (every other department stays instant), and once someone holds
    isAdmin they can approve/deactivate, reset a PIN, or fix a wrong
-   campus/dept/ministry for someone else. The existing leader code stays the
-   one thing that can grant isAdmin in the first place. */
+   campus/dept/ministry for someone else. GP_ADMIN_CODE — not the dashboard's
+   GP_LEADER_CODE, kept deliberately separate — is the one thing that can
+   grant isAdmin in the first place. */
 import { REPO, tmpDir } from './env.mjs';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -22,6 +23,7 @@ fs.writeFileSync(TMP + '/node_modules/@netlify/blobs/package.json',
 fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
 process.env.GP_LEADER_CODE = 'leadercode';
+process.env.GP_ADMIN_CODE = 'admincode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
 const api = await import(TMP + '/api.js');
 const mem = blobs.__mem;
@@ -90,23 +92,28 @@ r = await call('staffLogin', ['dara', '1234']);
 ok('the same right PIN on a now-inactive account is refused',
   r.body && r.body.ok === false, JSON.stringify(r.body));
 
-/* ---------- 3. only the leader code can grant admin, and only to Base Leadership ---------- */
+/* ---------- 3. only GP_ADMIN_CODE can grant admin, and only to Base Leadership —
+   the dashboard's own leader code is a different door entirely ---------- */
 seed();
 r = await call('grantAdmin', ['wrongcode', 'dara', true]);
-ok('the wrong code cannot grant admin', r.body && r.body.ok === false && r.body.err === 'not_leader');
+ok('the wrong code cannot grant admin', r.body && r.body.ok === false && r.body.err === 'bad_code');
 
 r = await call('grantAdmin', ['leadercode', 'dara', true]);
-ok('the right code still refuses a non-Base-Leadership target',
+ok('the dashboard leader code does not work here — it is a separate secret',
+  r.body && r.body.ok === false && r.body.err === 'bad_code', JSON.stringify(r.body));
+
+r = await call('grantAdmin', ['admincode', 'dara', true]);
+ok('the admin code still refuses a non-Base-Leadership target',
   r.body && r.body.ok === false && r.body.err === 'not_leadership', JSON.stringify(r.body));
 ok('and nothing was written', !(mem.staff || []).find(function (s) { return s.username === 'dara'; }).isAdmin);
 
-r = await call('grantAdmin', ['leadercode', 'sina', true]);
-ok('the right code promotes a Base Leadership account',
+r = await call('grantAdmin', ['admincode', 'sina', true]);
+ok('the admin code promotes a Base Leadership account',
   r.body && r.body.ok === true && r.body.staff.isAdmin === true, JSON.stringify(r.body));
 r = await call('staffLogin', ['sina', '1234']);
 ok('and their own login now reflects it', r.body && r.body.ok === true && r.body.staff.isAdmin === true, JSON.stringify(r.body));
 
-r = await call('grantAdmin', ['leadercode', 'sina', false]);
+r = await call('grantAdmin', ['admincode', 'sina', false]);
 ok('the code can revoke it again', r.body && r.body.ok === true && r.body.staff.isAdmin === false);
 
 /* ---------- 4. the admin-only handlers refuse anyone without isAdmin ---------- */

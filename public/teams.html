@@ -3120,8 +3120,8 @@ function adminRowBodyHtml_(s){
   }
 
   if(!mine && s.dept==='Base Leadership'){
-    b+='<label class="f">'+esc(t('Leader code'))+'</label>'+
-      '<div class="numIn"><input type="password" id="adminCodeInput" value="'+esc(S.adminCode)+'" placeholder="'+esc(t('Leader code'))+'">'+
+    b+='<label class="f">'+esc(t('Admin code'))+'</label>'+
+      '<div class="numIn"><input type="password" id="adminCodeInput" value="'+esc(S.adminCode)+'" placeholder="'+esc(t('Admin code'))+'">'+
       '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-admingrant="'+esc(s.id)+'" data-adminmake="'+(s.isAdmin?'0':'1')+'">'+
       (s.isAdmin?esc(t('Revoke admin')):esc(t('Make admin')))+'</button></div>';
   }
@@ -3213,7 +3213,7 @@ function bindAdmin(){
       var make=b.getAttribute('data-adminmake')==='1';
       var s=(S.adminStaff||[]).find(function(x){ return x.id===id; });
       if(!s) return;
-      if(!S.adminCode){ showMsg('Enter the leader code first'); return; }
+      if(!S.adminCode){ showMsg('Enter the admin code first'); return; }
       run('grantAdmin',[S.adminCode, s.username, make],function(d){
         if(d && d.ok){ S.adminCode=''; adminRefresh_(); }
         else showMsg('Could not update admin access');
@@ -4181,17 +4181,18 @@ function profileHtml(){
        '<button data-theme-set="light" class="'+(th==='light'?'on':'')+'">'+esc(t('Light'))+'</button>'+
        '<button data-theme-set="dark" class="'+(th==='dark'?'on':'')+'">'+esc(t('Dark'))+'</button>'+
      '</div><div class="hint">'+esc(t('Auto follows your phone.'))+'</div></div>';
-  /* Bootstrap for the Admin screen: grantAdmin only needs the leader code,
-     not an admin session, on purpose — otherwise nobody could ever become
-     the first admin. This is the one place that spends the code for
-     yourself; the Admin screen itself spends it on someone else. */
+  /* Bootstrap for the Admin screen: grantAdmin only needs the admin code
+     (GP_ADMIN_CODE — separate from the dashboard's leader code on purpose),
+     not an admin session, otherwise nobody could ever become the first
+     admin. This is the one place that spends the code for yourself; the
+     Admin screen itself spends it on someone else. */
   if(S.me.isAdmin){
     h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
       '<p class="hint" style="margin:0">'+esc(t('You have admin access — find it in the menu.'))+'</p></div>';
   } else if(S.me.dept==='Base Leadership'){
     h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
-      '<p class="hint" style="margin:0 0 8px">'+esc(t('Enter the leader code to unlock the Admin screen for this account.'))+'</p>'+
-      '<div class="numIn"><input type="password" id="p_admincode" placeholder="'+esc(t('Leader code'))+'">'+
+      '<p class="hint" style="margin:0 0 8px">'+esc(t('Enter the admin code to unlock the Admin screen for this account.'))+'</p>'+
+      '<div class="numIn"><input type="password" id="p_admincode" placeholder="'+esc(t('Admin code'))+'">'+
       '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" id="p_adminunlock">'+esc(t('Unlock'))+'</button></div></div>';
   }
   h+='<button class="danger" id="logoutBtn" style="width:100%">Log out</button>';
@@ -4680,12 +4681,12 @@ function bindHome(){
   var pau=document.getElementById('p_adminunlock');
   if(pau) pau.onclick=function(){
     var code=(document.getElementById('p_admincode')||{}).value||'';
-    if(!code){ showMsg('Enter the leader code'); return; }
+    if(!code){ showMsg('Enter the admin code'); return; }
     pau.disabled=true; pau.textContent='…';
     run('grantAdmin',[code, S.me.username, true],function(d){
       pau.disabled=false; pau.textContent=t('Unlock');
       if(d && d.ok){ S.me.isAdmin=true; showMsg('Admin access unlocked'); render(); }
-      else showMsg('Wrong leader code');
+      else showMsg('Wrong admin code');
     });
   };
   var sw=document.getElementById('shareWeek');
@@ -5032,6 +5033,7 @@ function bind(){
     sl.oninput=function(){
       if(guard.scrolling()) return;
       weekDraftFor(S.healthWeek||thisWeek())[id]=paint();
+      gpTap(4);   // same per-tick buzz as the goal slider — a drag with no feedback at all reads as unresponsive
     };
   });
   document.querySelectorAll('[data-wyn]').forEach(function(b){

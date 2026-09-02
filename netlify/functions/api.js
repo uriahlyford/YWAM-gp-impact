@@ -323,12 +323,19 @@ async function staffLogin(username, pin) {
    Deliberately narrow: account management (approve/deactivate/reset a PIN/
    fix a wrong campus or department) for whoever holds isAdmin. It does not
    touch the existing leader code, which keeps gating the sensitive dashboard
-   metrics exactly as it does today — this is a separate door, not a
-   replacement for that one.
+   metrics exactly as it does today and nothing else — Uriah asked for the
+   two kept apart, since the dashboard is due for its own separate rework
+   later and admin access shouldn't be tangled up with whatever that becomes.
 
-   Bootstrap is the leader code too, on purpose: it is already the top-level
-   secret this app trusts, so grantAdmin spends it to flip one person's
-   isAdmin flag rather than inventing a second master key to manage. */
+   So bootstrapping isAdmin spends a second secret, GP_ADMIN_CODE, not the
+   leader code — same fail-closed shape as isLeader_ (isAdminCode_ below),
+   just a different door. */
+function isAdminCode_(code) {
+  const real = process.env.GP_ADMIN_CODE;
+  if (!real) return false;
+  return String(code || '') === real;
+}
+
 function adminStaffOut_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
@@ -342,8 +349,8 @@ async function adminGate_(username, pin) {
   return (s && s.isAdmin) ? s : null;
 }
 
-async function grantAdmin(leaderCode, targetUsername, makeAdmin) {
-  if (!isLeader_(leaderCode)) return { ok: false, err: 'not_leader' };
+async function grantAdmin(adminCode, targetUsername, makeAdmin) {
+  if (!isAdminCode_(adminCode)) return { ok: false, err: 'bad_code' };
   const rows = await getStaff_();
   const idx = rows.findIndex(function (r) { return r.username === normUser_(targetUsername); });
   if (idx === -1) return { ok: false, err: 'not_found' };

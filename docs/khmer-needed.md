@@ -987,11 +987,15 @@ acknowledged list back and says so, so there is one new sentence.
 ## 28. Admin: approve Base Leadership sign-ups, manage accounts
 
 A new screen, visible only to whoever holds `isAdmin` (only ever granted to a
-Base Leadership account, via the existing leader code — see CLAUDE.md).
-Lets an admin approve a pending Base Leadership sign-up, deactivate or
-reactivate any account, reset a PIN, and fix a wrong campus/department/
-ministry/role for someone else. The leader code itself still gates the
-sensitive dashboard metrics exactly as before — this is a separate door.
+Base Leadership account). Lets an admin approve a pending Base Leadership
+sign-up, deactivate or reactivate any account, reset a PIN, and fix a wrong
+campus/department/ministry/role for someone else.
+
+Admin access is gated by its own secret (`GP_ADMIN_CODE`), separate from the
+leader code the dashboard already uses — Uriah asked for the two kept apart,
+since the dashboard is due for its own rework later. A Base Leadership
+account spends the admin code on itself once (Profile & settings → Admin
+access) or an existing admin spends it on someone else (this screen).
 
 | English | ខ្មែរ |
 |---|---|
@@ -1007,10 +1011,10 @@ sensitive dashboard metrics exactly as before — this is a separate door.
 | Reset PIN | កំណត់លេខសម្ងាត់ឡើងវិញ |
 | Save | រក្សាទុក |
 | Fix campus / department / role | កែសម្រួល សាខា / ផ្នែក / តួនាទី |
-| Leader code | លេខកូដថ្នាក់ដឹកនាំ |
 | Revoke admin | ដកសិទ្ធិអ្នកគ្រប់គ្រង |
 | Make admin | ផ្តល់សិទ្ធិអ្នកគ្រប់គ្រង |
 | Admin access | សិទ្ធិអ្នកគ្រប់គ្រង |
 | You have admin access — find it in the menu. | អ្នកមានសិទ្ធិជាអ្នកគ្រប់គ្រង — សូមរកមើលនៅក្នុងម៉ឺនុយ។ |
-| Enter the leader code to unlock the Admin screen for this account. | បញ្ចូលលេខកូដថ្នាក់ដឹកនាំ ដើម្បីបើកទំព័រអ្នកគ្រប់គ្រងសម្រាប់គណនីនេះ។ |
+| Admin code | លេខកូដអ្នកគ្រប់គ្រង |
+| Enter the admin code to unlock the Admin screen for this account. | បញ្ចូលលេខកូដអ្នកគ្រប់គ្រង ដើម្បីបើកទំព័រអ្នកគ្រប់គ្រងសម្រាប់គណនីនេះ។ |
 | Unlock | ដោះសោ |

@@ -231,6 +231,14 @@ target where it was set; the app is not guessing which of the two numbers is wro
   repo is public and a literal in source would be a permanently known password. Gates
   reads of `SENSITIVE` metrics. If the env var is ever missing, leader access is off for
   everyone until it's restored.
+- **Admin gate is a second, separate secret.** `isAdmin` (account approval/deactivation/
+  PIN reset/fixing a wrong campus-dept, the Admin screen in `teams.html`) is deliberately
+  not gated by the leader code above — Uriah asked for the two kept apart, since the
+  dashboard is due for its own rework later and admin access shouldn't be tangled up in
+  that. `grantAdmin` checks `process.env.GP_ADMIN_CODE` instead (`isAdminCode_` in
+  `api.js`), same fail-closed shape. A Base Leadership account spends it on itself once
+  (Profile & settings → Admin access) or an existing admin spends it on someone else
+  (the Admin screen) — `grantAdmin` only ever promotes a Base Leadership account.
 - **OKR writes have two doors** (`okrWriter_`): the leader code writes any objective, and
   a signed-in staff member (username + PIN) writes **their own campus and department
   only**. Two things make that a real boundary rather than a hopeful one — the campus and
