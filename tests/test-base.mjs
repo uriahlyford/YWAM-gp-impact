@@ -245,19 +245,11 @@ if (countries.length !== 2) { console.log('  ^ expected one row per country'); p
 await page.click('#ddClose');
 await page.waitForTimeout(300);
 
-// 4c. the one-time Siem Reap check-in import: Poipet never sees it (no data
-// for that campus), Siem Reap does, with real percentages, then vs. now.
-console.log('\nSR history on Poipet Base: ' +
-  await page.evaluate(() => document.querySelector('.card')?.textContent.includes('Weekly Check-In History') ? 'WRONG, shows for Poipet' : 'not shown (correct)'));
-await page.evaluate(() => { S.me.campus = 'siemreap'; render(); });
-await page.waitForTimeout(400);
-const srRows = await page.$$eval('.card .row', els => els
-  .filter(el => el.closest('.card').textContent.includes('Weekly Check-In History'))
-  .map(el => el.textContent.trim().replace(/\s+/g, ' ')));
-console.log('SR history on Siem Reap Base (' + srRows.length + ' rows):\n  ' + srRows.join('\n  '));
-if (!srRows.length) { console.log('  ^ the import did not render for Siem Reap'); process.exitCode = 1; }
-await page.evaluate(() => { S.me.campus = 'poipet'; render(); });
-await page.waitForTimeout(400);
+// 4c. Base is ministry stats — the Siem Reap check-in import lives on
+// Health instead (see the HEALTH TAB section below), never here, for
+// either campus.
+console.log('\nSR history on Base (any campus): ' +
+  await page.evaluate(() => document.querySelector('#main')?.textContent.includes('Weekly Check-In History') ? 'WRONG, shows on Base' : 'not shown (correct)'));
 
 // 5. tapping a figure opens the breakdown
 await page.click('#main .stat[data-drill-metric="Salvations"]');
@@ -467,6 +459,24 @@ await page.click('nav.bottom [data-tab="health"]');
 await page.waitForTimeout(1200);
 console.log('sections: ' + (await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()))).join(' / '));
 console.log('week nav present: ' + await page.evaluate(() => !!document.querySelector('#healthPrevWeek')));
+
+// the one-time Siem Reap check-in import: Poipet never sees it (no data for
+// that campus), Siem Reap does — a line chart, a bar per question, and
+// tapping a question opens its own trend underneath it.
+console.log('\nSR history for Poipet: ' +
+  await page.evaluate(() => document.querySelector('#main')?.textContent.includes('Weekly Check-In History') ? 'WRONG, shows for Poipet' : 'not shown (correct)'));
+await page.evaluate(() => { S.me.campus = 'siemreap'; S.srQuarter = 2; render(); });
+await page.waitForTimeout(1000);
+console.log('SR line chart present: ' + await page.evaluate(() => !!document.querySelector('.srLineChart path')));
+const srBarCount = await page.$$eval('[data-sropen]', els => els.length);
+console.log('SR bar rows: ' + srBarCount);
+if (srBarCount) {
+  await (await page.$$('[data-sropen]'))[0].click();
+  await page.waitForTimeout(700);
+  console.log('tap a question -> its own trend opens: ' + await page.evaluate(() => !!document.querySelector('.srBarChart .srLineChart path')));
+}
+await page.evaluate(() => { S.me.campus = 'poipet'; S.srQuarter = null; S.srOpenQ = null; render(); });
+await page.waitForTimeout(600);
 
 // an unanswered week opens the form — same arrow/pill week nav as Weekly Goals,
 // jumped straight there by state rather than clicking Prev N times.
