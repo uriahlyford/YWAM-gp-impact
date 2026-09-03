@@ -749,7 +749,9 @@ async function getMenteeLogs(username, pin, menteeId) {
           oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
           langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
           sabbath: r.sabbath, growth: r.growth, days: r.days || 0,
-          source: r.source || 'daily'
+          source: r.source || 'daily',
+          familyCall: r.familyCall, lonelyMonth: r.lonelyMonth,
+          ministryUpdate: r.ministryUpdate, twoOneOnOnes: r.twoOneOnOnes
         };
       })
       .sort(function (a, b) { return b.week - a.week; });
@@ -834,7 +836,9 @@ async function getData(code, year) {
       lonely: Number(s.lonely), clarity: Number(s.clarity), porn: Number(s.porn), oneOnOne: Number(s.oneOnOne),
       exercise: Number(s.exercise), quietTime: Number(s.quietTime), debt: Number(s.debt),
       langHours: Number(s.langHours) || 0, minHours: Number(s.minHours) || 0,
-      sharedFaith: nn(s.sharedFaith), sabbath: nn(s.sabbath), growth: nn(s.growth)
+      sharedFaith: nn(s.sharedFaith), sabbath: nn(s.sabbath), growth: nn(s.growth),
+      familyCall: nn(s.familyCall), lonelyMonth: nn(s.lonelyMonth),
+      ministryUpdate: nn(s.ministryUpdate), twoOneOnOnes: nn(s.twoOneOnOnes)
     };
   });
 
@@ -1171,6 +1175,12 @@ async function syncWeekSurvey_(s, wk, dailyRows) {
 const WEEK_SCALES = ['lonely', 'clarity', 'growth'];
 const WEEK_FLAGS = ['porn', 'oneOnOne', 'exercise', 'quietTime', 'debt', 'sharedFaith', 'sabbath'];
 const WEEK_HOURS = ['langHours', 'minHours'];
+// The month-end add-on (see WEEK_MONTHLY_QS in teams.html) — unlike WEEK_FLAGS,
+// only written when the client actually sent one, so a week that never asked
+// stays truly absent rather than recording a "No" nobody answered. That's
+// what lets compositeOf() count these on the weeks they were asked and skip
+// them the rest of the time, the same way it already treats growth/sabbath.
+const WEEK_MONTHLY_FLAGS = ['familyCall', 'lonelyMonth', 'ministryUpdate', 'twoOneOnOnes'];
 
 async function saveMyWeek(username, pin, week, payload) {
   const s = await verifyStaff_(username, pin);
@@ -1193,6 +1203,7 @@ async function saveMyWeek(username, pin, week, payload) {
   WEEK_SCALES.forEach(function (k) { rec[k] = finiteNum_(p[k], 1, 10); });
   WEEK_FLAGS.forEach(function (k) { rec[k] = p[k] ? 1 : 0; });
   WEEK_HOURS.forEach(function (k) { rec[k] = finiteNum_(p[k], 0, 168) || 0; });
+  WEEK_MONTHLY_FLAGS.forEach(function (k) { if (p[k] !== undefined) rec[k] = p[k] ? 1 : 0; });
   // Every 1-10 question has to be answered, or the composite is built on gaps.
   if (WEEK_SCALES.some(function (k) { return rec[k] == null; })) return { ok: false, err: 'incomplete' };
 
@@ -1240,7 +1251,9 @@ async function getMyWeekly(username, pin) {
           oneOnOne: r.oneOnOne, exercise: r.exercise, quietTime: r.quietTime, debt: r.debt,
           langHours: r.langHours, minHours: r.minHours, sharedFaith: r.sharedFaith,
           sabbath: r.sabbath, growth: r.growth, days: r.days || 0,
-          source: r.source || 'daily'
+          source: r.source || 'daily',
+          familyCall: r.familyCall, lonelyMonth: r.lonelyMonth,
+          ministryUpdate: r.ministryUpdate, twoOneOnOnes: r.twoOneOnOnes
         };
       })
       .sort(function (a, b) { return b.week - a.week; });
