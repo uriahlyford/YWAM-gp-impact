@@ -984,7 +984,76 @@ acknowledged list back and says so, so there is one new sentence.
 |---|---|
 | Your habits didn’t save — check your connection and pick them again. | ទម្លាប់របស់អ្នកមិនបានរក្សាទុកទេ — សូមពិនិត្យការតភ្ជាប់ ហើយជ្រើសរើសម្តងទៀត។ |
 
-## 28. A notification bell, next to the hamburger menu
+## 28. Admin: approve Base Leadership sign-ups, manage accounts
+
+A new screen, visible only to whoever holds `isAdmin` (only ever granted to a
+Base Leadership account). Lets an admin approve a pending Base Leadership
+sign-up, deactivate or reactivate any account, reset a PIN, and fix a wrong
+campus/department/ministry/role for someone else.
+
+Admin access is gated by its own secret (`GP_ADMIN_CODE`), separate from the
+leader code the dashboard already uses — Uriah asked for the two kept apart,
+since the dashboard is due for its own rework later. A Base Leadership
+account spends the admin code on itself once (Profile & settings → Admin
+access) or an existing admin spends it on someone else (this screen).
+
+| English | ខ្មែរ |
+|---|---|
+| Admin | អ្នកគ្រប់គ្រង |
+| Approve new leadership accounts, and manage everyone’s. | អនុម័តគណនីថ្នាក់ដឹកនាំថ្មី និងគ្រប់គ្រងគណនីរបស់អ្នកគ្រប់គ្នា។ |
+| Waiting for approval | កំពុងរង់ចាំការអនុម័ត |
+| All accounts | គណនីទាំងអស់ |
+| Pending approval | រង់ចាំការអនុម័ត |
+| Active | សកម្ម |
+| you | អ្នក |
+| Deactivate | បិទដំណើរការ |
+| Activate | បើកដំណើរការ |
+| Reset PIN | កំណត់លេខសម្ងាត់ឡើងវិញ |
+| Save | រក្សាទុក |
+| Fix campus / department / role | កែសម្រួល សាខា / ផ្នែក / តួនាទី |
+| Revoke admin | ដកសិទ្ធិអ្នកគ្រប់គ្រង |
+| Make admin | ផ្តល់សិទ្ធិអ្នកគ្រប់គ្រង |
+| Admin access | សិទ្ធិអ្នកគ្រប់គ្រង |
+| You have admin access — find it in the menu. | អ្នកមានសិទ្ធិជាអ្នកគ្រប់គ្រង — សូមរកមើលនៅក្នុងម៉ឺនុយ។ |
+| Admin code | លេខកូដអ្នកគ្រប់គ្រង |
+| Enter the admin code to unlock the Admin screen for this account. | បញ្ចូលលេខកូដអ្នកគ្រប់គ្រង ដើម្បីបើកទំព័រអ្នកគ្រប់គ្រងសម្រាប់គណនីនេះ។ |
+| Unlock | ដោះសោ |
+
+## 29. My Database's top card now matches Base's hero
+
+Uriah wants staff spending more time on My Database, so its top card is now
+literally Base's own hero (same look) with personal figures in place of the
+base's — streak instead of staff count, Weekly Goals/Habits Today as ring
+rows instead of check-in rate/health score, PTO days left instead of
+salvations YTD. Each ring/sub row is a button that jumps straight to that
+section further down the same page.
+
+| English | ខ្មែរ |
+|---|---|
+| Welcome, {name} | សូមស្វាគមន៍ {name} |
+| DAY STREAK | ថ្ងៃជាប់គ្នា |
+| Habits Today | ទម្លាប់ថ្ងៃនេះ |
+| PTO DAYS LEFT | ថ្ងៃឈប់សម្រាកនៅសល់ |
+
+## 30. Admin: full profile fields, manual mentor assignment, grouped by campus
+
+The Admin screen's edit form now covers everything account management was
+missing — name, staff type, home country alongside campus/department/
+ministry/role — and adds a manual mentor override: an admin can assign (or
+clear) anyone's mentor directly and mark it approved immediately, instead of
+waiting on the normal accept-in-Team flow. The "All accounts" list is now
+grouped under YWAM Poipet / YWAM Siem Reap headings instead of one flat list.
+
+| English | ខ្មែរ |
+|---|---|
+| Mentor | អ្នកណែនាំ |
+| — none — | — គ្មាន — |
+| Approved (skip the accept step) | បានយល់ព្រម (រំលងជំហានទទួលយក) |
+| Save mentor | រក្សាទុកអ្នកណែនាំ |
+| No accounts yet. | មិនទាន់មានគណនីនៅឡើយទេ។ |
+| Other | ផ្សេងទៀត |
+
+## 31. A notification bell, next to the hamburger menu
 
 My Database's "🔔 Updates" card (leave decisions, incoming 1-on-1 requests)
 now also has a header shortcut — a bell in the top-right corner that opens
@@ -999,3 +1068,44 @@ keeps its own home on Leave Request, Mentorship or Team either way.
 | Notifications ({n}) | ការជូនដំណឹង ({n}) |
 | Clear all | សម្អាតទាំងអស់ |
 | Nothing new. | មិនមានអ្វីថ្មីទេ។ |
+
+## 32. My Database's hero: the greeting moved in, health and mentor added
+
+The name-and-face greeting (name, ministry, department) used to open Base;
+Base is ministry stats, not a personal page, so it now opens My Database's
+hero card instead, next to the customize gear. The hero also gained two more
+rows: My Health (this week's health-check score out of 10, same maths as the
+Health tab) and Mentor (who it's set to, or "Not set" if it isn't) — both
+buttons that jump straight to that section, like Weekly Goals and Habits
+Today already do.
+
+| English | ខ្មែរ |
+|---|---|
+| My Health | សុខភាពរបស់ខ្ញុំ |
+| MENTOR | អ្នកណែនាំ |
+| Not set | មិនទាន់កំណត់ |
+
+## 33. Base: Siem Reap's historical weekly check-in (one-time import)
+
+A separate app ("YWAM SR Weekly Check In") had its own weekly Yes/No
+check-in, Siem Reap only, since January 2026. It stopped being used in
+July, and every submission in it is anonymous — there's no way to tell
+whose answer is whose, so this can only ever be a team-wide history, never
+folded into anyone's personal health score. Imported once as a frozen
+snapshot and shown on Base (Siem Reap staff only) as each question's
+percentage then vs. now.
+
+| English | ខ្មែរ |
+|---|---|
+| Siem Reap · Weekly Check-In History | សៀមរាប · ប្រវត្តិការឆែកអង់ប្រចាំសប្តាហ៍ |
+| Imported from a separate check-in tool, Jan–Jul 2026 (it stopped being used after that). Team-wide and anonymous — not linked to any individual profile. | នាំចូលពីឧបករណ៍ឆែកអង់ផ្សេងមួយ ខែមករា–កក្កដា ២០២៦ (វាឈប់ប្រើប្រាស់បន្ទាប់ពីនោះ)។ ជាទិន្នន័យរួមក្រុម និងអនាមិក — មិនភ្ជាប់ជាមួយប្រវត្តិរូបនរណាម្នាក់ទេ។ |
+| Bible & daily quiet time | ព្រះគម្ពីរ និងពេលស្ងប់ស្ងាត់ប្រចាំថ្ងៃ |
+| Has a best friend on base | មានមិត្តភក្តិល្អបំផុតនៅមូលដ្ឋាន |
+| Looked at porn this week | បានមើលរូបភាពអាសអាភាសសប្តាហ៍នេះ |
+| Exercised 15+ min, 3 days | បានហាត់ប្រាណ ១៥នាទី+ ចំនួន ៣ថ្ងៃ |
+| Currently in debt to the base | កំពុងជំពាក់បំណុលមូលដ្ឋាន |
+| Fully honest in this report | ស្មោះត្រង់ទាំងស្រុងក្នុងរបាយការណ៍នេះ |
+| Called family this month | បានទូរស័ព្ទទៅគ្រួសារខែនេះ |
+| Often felt lonely this month | មានអារម្មណ៍ឯកកោញឹកញាប់ខែនេះ |
+| Sent a ministry update this month | បានផ្ញើដំណឹងកិច្ចការបម្រើខែនេះ |
+| Had 2+ one-on-ones this month | បានជួបគ្នាមួយទល់មួយ ២ដង+ ខែនេះ |

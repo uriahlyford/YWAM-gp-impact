@@ -176,6 +176,14 @@ async function verifyStaff_(username, pin) {
     return null;
   }
   await clearLoginThrottle_(username);
+  // `active` used to only hide someone from the roster — nothing actually
+  // stopped an inactive account from authenticating, so "deactivating"
+  // somebody was cosmetic. Gating the one shared verify function closes that
+  // for every handler at once, and doubles as the admin-approval gate: a
+  // pending Base Leadership sign-up is created with active:false and simply
+  // has no session until an admin flips it, the same switch as deactivating
+  // someone later.
+  if (s.active === false) return null;
   return s;
 }
 
@@ -246,6 +254,14 @@ async function teamRoster() {
   return rows.filter(function (s) { return s.active; }).map(publicStaff_);
 }
 
+/* Admin access only ever goes to Base Leadership, so that is the one
+   department a sign-up cannot grant itself instantly — the account is
+   created inactive and an admin has to switch it on, same as approving a
+   pending request anywhere else in this app. Every other department keeps
+   today's instant sign-up; this is deliberately narrow rather than gating
+   every new account. */
+function needsApproval_(dept) { return String(dept || '') === 'Base Leadership'; }
+
 async function staffRegister(payload) {
   const u = normUser_(payload.username);
   if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { ok: false, err: 'bad_username' };
@@ -255,6 +271,7 @@ async function staffRegister(payload) {
   const salt = pinSalt_();
   const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const now = new Date().toISOString();
+  const pending = needsApproval_(payload.dept);
   const rec = {
     id: id, username: u, name: payload.name || u, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
     campus: payload.campus || '', dept: payload.dept || '', ministry: payload.ministry || '',
@@ -262,11 +279,14 @@ async function staffRegister(payload) {
     // Asked for at sign-up, changed from Profile & settings later.
     staffType: cleanStaffType_(payload.staffType), country: cleanCountry_(payload.country),
     mentorId: payload.mentorId || '', mentorStatus: payload.mentorId ? 'pending' : '',
-    phone: payload.phone || '', joined: payload.joined || '', debt: false, active: true,
-    created: now, updated: now
+    phone: payload.phone || '', joined: payload.joined || '', debt: false, active: !pending,
+    isAdmin: false, created: now, updated: now
   };
   rows.push(rec);
   await saveStaff_(rows);
+  // No staff/profile in a pending response: this account has no session yet,
+  // and returning one would let the client log it straight in anyway.
+  if (pending) return { ok: true, pending: true };
   return {
     ok: true, staff: publicStaff_(rec),
     profile: { phone: rec.phone, joined: rec.joined, debt: false, mentorStatus: rec.mentorStatus, dashboardColor: '', dashboardBg: '' }
@@ -275,14 +295,162 @@ async function staffRegister(payload) {
 
 async function staffLogin(username, pin) {
   const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
-  return {
-    ok: true, staff: publicStaff_(s),
-    profile: {
-      phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
-      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+  if (s) {
+    return {
+      ok: true, staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin }),
+      profile: {
+        phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
+        dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+      }
+    };
+  }
+  /* verifyStaff_ already fails closed on an inactive account, same as a wrong
+     PIN — right for every other handler, but a login screen owes the person
+     a different message for "waiting on approval" than for "wrong PIN", so
+     that one distinction is re-checked here. This never grants access on its
+     own: it only decides which failure message applies. */
+  if (!(await isLoginLocked_(username))) {
+    const rows = await getStaff_();
+    const raw = findStaff_(rows, username);
+    if (raw && raw.active === false && hashPin_(pin, raw.pinSalt) === raw.pinHash) {
+      return { ok: false, err: 'pending' };
     }
+  }
+  return { ok: false };
+}
+
+/* ==================== admin ====================
+   Deliberately narrow: account management (approve/deactivate/reset a PIN/
+   fix a wrong campus or department) for whoever holds isAdmin. It does not
+   touch the existing leader code, which keeps gating the sensitive dashboard
+   metrics exactly as it does today and nothing else — Uriah asked for the
+   two kept apart, since the dashboard is due for its own separate rework
+   later and admin access shouldn't be tangled up with whatever that becomes.
+
+   So bootstrapping isAdmin spends a second secret, GP_ADMIN_CODE, not the
+   leader code — same fail-closed shape as isLeader_ (isAdminCode_ below),
+   just a different door. */
+function isAdminCode_(code) {
+  const real = process.env.GP_ADMIN_CODE;
+  if (!real) return false;
+  return String(code || '') === real;
+}
+
+function adminStaffOut_(s) {
+  return {
+    id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
+    ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin,
+    staffType: s.staffType || '', country: s.country || '',
+    mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
+    created: s.created || ''
   };
+}
+
+async function adminGate_(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  return (s && s.isAdmin) ? s : null;
+}
+
+async function grantAdmin(adminCode, targetUsername, makeAdmin) {
+  if (!isAdminCode_(adminCode)) return { ok: false, err: 'bad_code' };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.username === normUser_(targetUsername); });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  // Admin only ever goes to Base Leadership — encoded here too, not just in
+  // the sign-up gate, so a mistaken promotion can't hand it to someone else.
+  if (makeAdmin && !needsApproval_(rows[idx].dept)) return { ok: false, err: 'not_leadership' };
+  rows[idx].isAdmin = !!makeAdmin;
+  await saveStaff_(rows);
+  return { ok: true, staff: adminStaffOut_(rows[idx]) };
+}
+
+async function adminListStaff(username, pin) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const rows = await getStaff_();
+  return { ok: true, staff: rows.map(adminStaffOut_) };
+}
+
+/* One switch for both halves of account management: flipping a pending
+   Base Leadership sign-up on is the same operation as deactivating someone
+   later, since verifyStaff_ treats active:false as "no session" either way. */
+async function adminSetActive(username, pin, staffId, active) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === staffId; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  rows[idx].active = !!active;
+  rows[idx].updated = new Date().toISOString();
+  await saveStaff_(rows);
+  return { ok: true, staff: adminStaffOut_(rows[idx]) };
+}
+
+/* Setting someone's mentor directly, not asking the mentor to accept —
+   updateProfile's own mentor field always lands on 'pending' for that
+   reason, and stays the only path for a staff member picking their own
+   mentor. This is the manual override: an admin can assign (or clear) a
+   pairing outright, and can mark it approved immediately so the mentor
+   doesn't have to separately accept it in Team. */
+async function adminSetMentor(username, pin, staffId, mentorId, approved) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === staffId; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  const newMentorId = mentorId || '';
+  if (newMentorId === staffId) return { ok: false, err: 'self_mentor' };
+  if (newMentorId && rows.findIndex(function (r) { return r.id === newMentorId; }) === -1) {
+    return { ok: false, err: 'mentor_not_found' };
+  }
+  rows[idx].mentorId = newMentorId;
+  rows[idx].mentorStatus = newMentorId ? (approved ? 'approved' : 'pending') : '';
+  rows[idx].updated = new Date().toISOString();
+  await saveStaff_(rows);
+  return { ok: true, staff: adminStaffOut_(rows[idx]) };
+}
+
+async function adminResetPin(username, pin, staffId, newPin) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  if (!/^\d{4}$/.test(String(newPin))) return { ok: false, err: 'bad_pin' };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === staffId; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  const salt = pinSalt_();
+  rows[idx].pinHash = hashPin_(newPin, salt);
+  rows[idx].pinSalt = salt;
+  rows[idx].updated = new Date().toISOString();
+  await saveStaff_(rows);
+  // A reset PIN is exactly the kind of thing someone asks for after getting
+  // locked out, so lift any lockout on the account it now belongs to.
+  await clearLoginThrottle_(rows[idx].username);
+  return { ok: true };
+}
+
+/* Fixing a wrong campus/department/ministry for someone else — the same
+   fields updateProfile lets a person set for themselves, just keyed by
+   staffId instead of the caller's own id. PIN and isAdmin are deliberately
+   not here: those go through adminResetPin and grantAdmin so each stays a
+   single, obvious place to look for who changed it and why. */
+async function adminUpdateStaff(username, pin, staffId, payload) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === staffId; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  const rec = rows[idx];
+  if (payload.name !== undefined) rec.name = payload.name;
+  if (payload.campus !== undefined) rec.campus = payload.campus;
+  if (payload.dept !== undefined) rec.dept = payload.dept;
+  if (payload.ministry !== undefined) rec.ministry = payload.ministry;
+  if (payload.role !== undefined) rec.role = payload.role;
+  if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
+  if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
+  rec.updated = new Date().toISOString();
+  rows[idx] = rec;
+  await saveStaff_(rows);
+  return { ok: true, staff: adminStaffOut_(rec) };
 }
 
 async function updateProfile(username, pin, payload) {
@@ -1637,7 +1805,7 @@ async function getMyBoot(username, pin) {
 
   return {
     ok: true,
-    staff: publicStaff_(s),
+    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
@@ -1669,6 +1837,12 @@ const HANDLERS = {
   teamRoster: function () { return teamRoster(); },
   staffRegister: function (a) { return staffRegister(a[0]); },
   staffLogin: function (a) { return staffLogin(a[0], a[1]); },
+  grantAdmin: function (a) { return grantAdmin(a[0], a[1], a[2]); },
+  adminListStaff: function (a) { return adminListStaff(a[0], a[1]); },
+  adminSetActive: function (a) { return adminSetActive(a[0], a[1], a[2], a[3]); },
+  adminSetMentor: function (a) { return adminSetMentor(a[0], a[1], a[2], a[3], a[4]); },
+  adminResetPin: function (a) { return adminResetPin(a[0], a[1], a[2], a[3]); },
+  adminUpdateStaff: function (a) { return adminUpdateStaff(a[0], a[1], a[2], a[3]); },
   updateProfile: function (a) { return updateProfile(a[0], a[1], a[2]); },
   changePin: function (a) { return changePin(a[0], a[1], a[2]); },
   uploadPhoto: function (a) { return uploadPhoto(a[0], a[1], a[2], a[3]); },

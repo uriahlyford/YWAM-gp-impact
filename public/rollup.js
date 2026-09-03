@@ -649,6 +649,36 @@ function gpSlideGuard(sl, snapshot, restore){
   return { scrolling: function(){ return !!(g && g.scroll); } };
 }
 
+/* ---- a horizontal strip that does not eat the page's scroll ----
+   touch-action fixes a touchscreen swipe (see gpSlideGuard's neighbour on
+   the CSS side); it does nothing for a trackpad, which never sends touch
+   events at all — a two-finger swipe on a Mac arrives as wheel events, and a
+   real swipe is never purely vertical, it always carries a little sideways
+   drift from how a hand actually moves.
+
+   That drift is the whole bug. A wheel event with ANY horizontal component
+   lands on a horizontally-scrollable element and the browser claims the
+   entire event for it — deltaY included — rather than chaining the vertical
+   part up to the page the way it would for an element that cannot scroll
+   sideways at all. The page does not get a chance to move, which is exactly
+   what a swipe-hasn't-scrolled-anything bug looks like, on a device that
+   never even touched touch-action.
+
+   So the strip's own wheel handler decides which way each event was actually
+   headed. A gesture more vertical than horizontal is a page scroll trying to
+   pass through: this stops the browser from swallowing it into the strip and
+   applies it to the page instead. A gesture more horizontal than vertical is
+   left alone — that is the strip being used as intended, and the browser's
+   own handling already does the right thing for it. */
+function gpHscrollGuard(el){
+  if(!el) return;
+  el.addEventListener('wheel', function(e){
+    if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // sideways: let the strip take it
+    e.preventDefault();
+    (document.scrollingElement || document.documentElement).scrollTop += e.deltaY;
+  }, { passive:false });
+}
+
 /* ---- a key result whose target is already passed ----
    krProgress() caps at 100 so no screen prints 7668%, but a capped bar looks
    exactly like an objective that was met. This names it instead. It lives here

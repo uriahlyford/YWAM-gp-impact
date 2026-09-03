@@ -298,12 +298,18 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
    captions and a live readout, instead of a row of ten buttons. Scoped to
    .sliderWrap rather than a bare input[type=range] rule so it can't touch
    the goal ring's own .gSlide styling elsewhere on the page — but the thumb
-   and track below are deliberately the SAME shape as .gSlide (hollow
-   thumb with a colored ring, 10px track, a scale-up on active) so a drag
-   feels like the same control everywhere in the app. Health doesn't get
-   .gSlide's per-value color band (higher isn't always "better" here — 10
-   on "how lonely" is bad, 10 on "clarity" is good), so the ring color
-   stays the fixed accent rather than --gc.
+   and track below are the SAME shape as .gSlide (hollow thumb with a
+   colored ring, 10px track, a scale-up on active) so a drag feels like the
+   same control everywhere in the app, and now the SAME color walk too
+   (warm -> amber -> cobalt -> green via --gc, gpRingColor in rollup.js).
+
+   The direction has to be per-question, not per-value, because higher isn't
+   always "better" here — 10 on "how lonely" is bad, 10 on "clarity" is good.
+   So --gc is computed from a goodness percentage (data-higherbetter on the
+   input decides whether that's the raw value or 100 minus it), while
+   --fillpct always tracks the RAW value — that one has to match where the
+   thumb actually sits, or the track would look empty under a thumb that's
+   dragged all the way to the "bad" end.
 
    The input box itself is a full 32px tall even though the visible track is
    a thin 10px line drawn by the track pseudo-element; a slider whose hit box
@@ -318,8 +324,8 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
    frames deciding, and a vertical swipe still scrolls the page. The value the
    browser sets on touch-down is put back by gpSlideGuard() when the gesture
    turns out to have been a scroll. The fill color is a CSS variable set
-   from JS (--fillpct) rather than a `background` on the input, because the
-   two-tone track lives on the ::-webkit-slider-runnable-track /
+   from JS (--fillpct, --gc) rather than a `background` on the input, because
+   the two-tone track lives on the ::-webkit-slider-runnable-track /
    ::-moz-range-track pseudo-elements, which inline styles on the input
    itself cannot reach. */
 .qCaps { display:flex; justify-content:space-between; font-size:10.5px; color:var(--faint); margin-top:2px; }
@@ -328,14 +334,21 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .sliderWrap input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:32px; border-radius:99px;
   outline:none; margin:0; background:transparent; cursor:pointer; touch-action:pan-y; }
 .sliderWrap input[type=range]::-webkit-slider-runnable-track { height:10px; border-radius:99px;
-  background:linear-gradient(to right, var(--accent) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
+  background:linear-gradient(to right, var(--gc,var(--accent)) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
 .sliderWrap input[type=range]::-moz-range-track { height:10px; border-radius:99px;
-  background:linear-gradient(to right, var(--accent) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
+  background:linear-gradient(to right, var(--gc,var(--accent)) var(--fillpct,50%), var(--surface2) var(--fillpct,50%)); }
 .sliderWrap input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
-  background:var(--surface); border:3px solid var(--accent); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer;
+  background:var(--surface); border:3px solid var(--gc,var(--accent)); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer;
+  /* -webkit-slider-thumb's margin-top is relative to the TRACK box, not the
+     input's own padding box (which is 32px tall here vs .gSlide's 26px, for
+     a bigger touch target) — so it needs the same -7px .gSlide uses
+     ((10px track - 24px thumb) / 2) regardless of that difference. Missing
+     it left the thumb sitting off-center from the track it's supposed to
+     be riding on. */
+  margin-top:-7px;
   transition:transform .12s ease; }
 .sliderWrap input[type=range]::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:var(--surface);
-  border:3px solid var(--accent); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer; }
+  border:3px solid var(--gc,var(--accent)); box-shadow:0 2px 8px rgba(23,21,15,.22); cursor:pointer; }
 .sliderWrap input[type=range]:active::-webkit-slider-thumb { transform:scale(1.18); }
 .sliderWrap input[type=range]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:99px; }
 @media (prefers-reduced-motion: reduce){ .sliderWrap input[type=range]::-webkit-slider-thumb { transition:none } }
@@ -347,7 +360,7 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 .avatar.lg { width:96px; height:96px; }
 .avatar.sm { width:40px; height:40px; }
 .avatar.ph { display:flex; align-items:center; justify-content:center; font-family:'Koulen',sans-serif; font-size:26px; color:var(--faint); }
-.avatar.sm.ph { font-size:14px; }
+.avatar.sm.ph { font-size:14px; color:var(--muted); } /* --faint is only AA at large-text size; sm's 14px needs the darker pair */
 
 /* ---- inline entry cards: Mentorship, Leave, Account, from the mockup ---- */
 .leaveEntry { display:flex; align-items:center; gap:13px; width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:0; color:inherit; }
@@ -413,6 +426,12 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 /* the ring and its sentence sit on one line, so the figure reads at a glance */
 .heroRow { display:flex; align-items:center; gap:11px; margin-top:8px; }
 .heroRow .heroTrend { margin-top:0; }
+/* My Database reuses these exact hero rows for stats that jump to a section
+   on tap — Base's own rows stay plain divs, so the reset only applies when
+   the tag is actually a button, and only those get the pointer cursor. */
+button.heroRow, button.heroSubRow { width:100%; background:none; border:none; padding:0;
+  text-align:left; font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+button.heroRow:active, button.heroSubRow:active { opacity:.72; }
 /* a streak that has crossed 7 or 30 days */
 .chip.milestone { background:var(--amber); color:var(--amberInk); border-color:var(--amber); font-weight:700; }
 .chip.cheer { animation:gpCheer .62s var(--spring) both; }
@@ -675,13 +694,15 @@ input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); borde
 .addGoalBtn { flex:0 0 auto; width:38px; height:38px; border-radius:50%; border:0; background:var(--headerBg); cursor:pointer;
   display:flex; align-items:center; justify-content:center; }
 
-/* Personal dashboard — matches the app's own card style (light or dark
-   theme) by default. Once a custom color or photo is set, .custom pins
-   text to the fixed --onDark pair so it stays readable either way, same
-   as .allowCard below and any other photo-backed card. */
-.miniDash { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px; margin-bottom:14px;
-  background-size:cover; background-position:center; }
-.miniDashHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+/* Personal dashboard — literally Base's own .hero (same background, radius,
+   padding, ring rows, sub row), populated with personal figures instead of
+   base ones, so My Database opens looking like the same app instead of a
+   lighter-weight corner of it. The greeting + customize gear sit above it,
+   unboxed, the same relationship Base has to its own separate white profile
+   card — customizing still colors/photographs the hero itself (gear moved
+   with it conceptually; only its home changed), the gradient overlay below
+   still doing the same job of guaranteeing contrast over whatever's picked. */
+.miniDashHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; }
 .miniDashGreet { font-family:'Koulen',sans-serif; font-size:19px; letter-spacing:.4px; }
 /* Same icon-over-label shape as nav.bottom button, so the customize trigger
    reads as one more app-level control rather than a one-off gear icon. */
@@ -689,22 +710,10 @@ input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); borde
   cursor:pointer; color:var(--muted); font-size:10.5px; padding:0; flex:0 0 auto; }
 .dashSettingBtn .ic { display:block; font-size:20px; line-height:1; }
 .dashSettingBtn.on { color:var(--accent); font-weight:700; }
-.miniDashStats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:16px; }
-.mdStat { text-align:center; border:1px solid var(--border); border-radius:10px; padding:10px 4px 8px; }
-.mdIcon { font-size:16px; line-height:1; margin-bottom:2px; }
-.mdNum { font-family:'Koulen',sans-serif; font-size:20px; }
-.mdLabel { font-size:10px; color:var(--muted); line-height:1.25; margin-top:2px; }
-/* A dark gradient under the text, not the color/photo itself, is what keeps
-   this legible no matter which color someone picks or how bright their photo is. */
-.miniDash.custom { border-color:transparent; position:relative; }
-.miniDash.custom::before { content:''; position:absolute; inset:0; border-radius:inherit;
+.hero.custom { background-size:cover; background-position:center; position:relative; }
+.hero.custom::before { content:''; position:absolute; inset:0; border-radius:inherit;
   background:linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.45)); }
-.miniDash.custom .miniDashHead, .miniDash.custom .miniDashStats { position:relative; }
-.miniDash.custom .miniDashGreet, .miniDash.custom .mdNum { color:var(--onDark); }
-.miniDash.custom .mdLabel { color:var(--onDarkFaint); }
-.miniDash.custom .dashSettingBtn { color:var(--onDarkFaint); }
-.miniDash.custom .dashSettingBtn.on { color:var(--onDark); }
-.miniDash.custom .mdStat { border-color:var(--onDarkBorder); }
+.hero.custom > * { position:relative; }
 input[type=color] { width:42px; height:42px; padding:0; border:1.5px solid var(--border2); border-radius:50%; cursor:pointer; background:none; }
 input[type=color]::-webkit-color-swatch-wrapper { padding:2px; border-radius:50%; }
 input[type=color]::-webkit-color-swatch { border:none; border-radius:50%; }
@@ -962,6 +971,7 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 </script>
 <script src="km.js" data-optional></script>
 <script src="jobfocus.js" data-optional></script>
+<script src="sr-checkin-history.js" data-optional></script>
 <script src="taxonomy.js"></script>
 <script src="rollup.js"></script>
 <script>
@@ -1023,7 +1033,9 @@ var S = {
   notifClearedAt: lsGet('gp-notif-cleared') || '',
   /* Ministries a department overseer logs on behalf of, keyed by ministry name
      so more than one can sit on the same page without their state colliding. */
-  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}
+  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{},
+  // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:''
 };
 
 var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
@@ -1345,6 +1357,7 @@ function logout(){
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
+  S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminPinDraft={}; S.adminCode='';
   render();
 }
 
@@ -1416,6 +1429,7 @@ function render(){
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else if(S.view==='leave') m.innerHTML=leaveHtml();
   else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
+  else if(S.view==='admin') m.innerHTML=adminHtml();
   else m.innerHTML=profileHtml();
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
@@ -1541,6 +1555,12 @@ function renderMenu(){
     { id:'checkin', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>',
       label:t('Weekly Check-in') }
   ];
+  // Only whoever actually holds isAdmin sees this — a menu item that goes
+  // nowhere is worse than no menu item, which is why it wasn't here before
+  // there was an account-approval system behind it.
+  if(S.me.isAdmin) items.push({ id:'admin',
+    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
+    label:t('Admin') });
   root.innerHTML = '<div class="scrim" id="menuScrim"></div>'+
     '<div class="drawer">'+
       '<div class="drawerHead"><span class="drawerTitle">✦ '+esc(t('Menu'))+'</span>'+
@@ -1561,6 +1581,7 @@ function renderMenu(){
       else if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='checkin'){ S.view='health'; render(); }
+      else if(id==='admin'){ S.view='admin'; render(); }
       else renderMenu();
     };
   });
@@ -1683,14 +1704,9 @@ function baseHtml(){
   var R=baseR();
   var LD=LD_DEPT, CS=CS_DEPT;
 
-  /* --- who you are, first --- */
-  var h='<div class="card"><div class="baseMe">'+avatarHtml(S.me,'lg')+
-    '<div><div class="pmeta">'+esc(t(greeting()))+'</div>'+
-    '<div class="pname">'+esc(S.me.name)+'</div>'+
-    '<div class="pmeta">'+esc(t(S.me.role||S.me.dept))+
-      (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>'+
-    '<div class="pmeta">'+esc(t(campusName(S.me.campus)))+' · '+esc(t('week'))+' '+wk+'</div>'+
-    '</div></div></div>';
+  /* The name-and-face greeting used to open here, but Base is ministry stats,
+     not a personal page — it now lives on My Database's own hero instead. */
+  var h='';
 
   /* Asked once of the people who have not answered: these two are the only facts
      the base counts people by, so an unanswered one is a hole in the very figures
@@ -1908,11 +1924,52 @@ function baseHtml(){
 
   h+='</div>';
 
+  h+=srCheckinHistoryHtml();
+
   h+='<p class="hint" style="margin-top:14px">'+
      esc(t('Every figure here is built from what each ministry logs each week — including yours.'))+
      ' '+esc(t('Tap any number to see which ministries and weeks it came from.'))+
      ' <button class="linkbtn inline" id="goFullDash">'+esc(t('See the full dashboard'))+' →</button></p>';
   return h;
+}
+
+/* A one-time historical import, Siem Reap only — see sr-checkin-history.js
+   for where it came from and why it can only ever be team-wide. Not on the
+   Poipet Base (there's no Poipet data to show), and rendered defensively:
+   sr-checkin-history.js is data-optional like km.js, so a missing file just
+   means this card doesn't appear rather than breaking the page. */
+function srCheckinHistoryHtml(){
+  if(S.me.campus!=='siemreap') return '';
+  if(typeof SR_CHECKIN_QUESTIONS==='undefined' || typeof SR_CHECKIN_WEEKS==='undefined') return '';
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function series(qid){
+    var pts=[];
+    (SR_CHECKIN_MANUAL_MONTHS||[]).forEach(function(m){
+      if(m.pct[qid]!==undefined){
+        var ord=m.year+'-'+(m.month<10?'0':'')+m.month+'-01';
+        pts.push({order:ord, label:MONTHS[m.month-1]+' '+m.year, pct:m.pct[qid]});
+      }
+    });
+    SR_CHECKIN_WEEKS.forEach(function(w){
+      var q=w.q[qid];
+      if(q) pts.push({order:w.date, label:w.date, pct:Math.round(q.yes/q.n*100)});
+    });
+    pts.sort(function(a,b){ return a.order<b.order?-1:(a.order>b.order?1:0); });
+    return pts;
+  }
+  var h='<div class="card"><div class="goalCardTitle">'+esc(t('Siem Reap · Weekly Check-In History'))+'</div>'+
+    '<div class="pmeta" style="margin:0 0 8px">'+
+    esc(t('Imported from a separate check-in tool, Jan–Jul 2026 (it stopped being used after that). Team-wide and anonymous — not linked to any individual profile.'))+
+    '</div>';
+  SR_CHECKIN_QUESTIONS.forEach(function(q){
+    var s=series(q.id);
+    if(!s.length) return;
+    var first=s[0], last=s[s.length-1];
+    h+='<div class="row"><span class="rowName">'+esc(t(q.en))+
+       ' <span style="color:var(--faint);font-size:11px">'+esc(first.label)+' → '+esc(last.label)+'</span></span>'+
+       '<span class="rowVal">'+first.pct+'% → '+last.pct+'%</span></div>';
+  });
+  return h+'</div>';
 }
 
 /* ---------- OKRs: the objectives that belong to somebody's job ----------
@@ -2318,27 +2375,35 @@ function mentorshipCardHtml(){
   return h+'</div>';
 }
 
-/* A small at-a-glance summary at the very top of My Database — streak,
-   this week's goals, today's habits, PTO left. By default it just blends
-   into the app's own theme (light or dark) like any other card; a gear
-   icon in the top-right reveals a hidden customize panel — a free color
-   wheel and a background photo — for the one card that's actually yours.
-   The moment either is set, text switches to the fixed --onDark pair so
-   it stays readable over any color or photo, the same trick .allowCard
-   and photo-backed cards already use. */
+/* The top of My Database — Base's own hero card, styled identically and
+   populated with personal figures (streak, this week's goals, today's
+   habits, PTO left) instead of the base's. A gear icon above it reveals a
+   hidden customize panel — a free color wheel and a background photo — for
+   the one card that's actually yours; .hero's text is already the fixed
+   --onDark pair regardless, so .hero.custom only has to add a gradient
+   under whatever color or photo gets picked, the same trick .allowCard and
+   photo-backed cards already use for contrast rather than text color. */
 function miniDashboardHtml(){
+  var wk=thisWeek();
   var st=graceStreak(function(){return true;});
-  var rec=goalsForWeek(thisWeek());
+  var rec=goalsForWeek(wk);
   var written=(rec && rec.items ? rec.items : []).filter(function(i){return i && i.text;});
   var goalsDone=written.filter(function(i){return goalItemPct(i)>=100;}).length;
+  var goalsPct=written.length ? Math.round(goalsDone/written.length*100) : 0;
   var list=myHabits();
   var log=logForDate(todayStr());
   var habitsDone=list.filter(function(hb){return log && didHabit(log,hb.id);}).length;
+  var habitsPct=list.length ? Math.round(habitsDone/list.length*100) : 0;
   var year=String(new Date().getFullYear());
   var yt=(S.trips && S.trips.totals && S.trips.totals[year]) || {personal:0};
   var cap=(S.trips && S.trips.ptoCap) || 30;
   var ptoLeft=Math.max(0, cap-yt.personal);
-  var firstName=(S.me && S.me.name ? S.me.name.split(' ')[0] : '');
+  var c=checkinForWeek(wk);
+  var score=c?compositeOf(c):null;
+  var healthPct=score!==null?Math.round(score*10):0;
+  var mentorId=S.me.mentorId||'';
+  var mentorRec=mentorId?personOf(mentorId):null;
+  var mentorName=mentorId?(mentorRec?mentorRec.name:nameOf(mentorId)):'';
 
   var p=S.profile||{};
   var color=p.dashboardColor||'';
@@ -2346,18 +2411,46 @@ function miniDashboardHtml(){
   var custom=!!(color||bg);
   var open=!!S.dbCustomize;
 
-  var h='<div class="miniDash'+(custom?' custom':'')+'"'+
-    (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
-    '<div class="miniDashHead">'+
-      '<div class="miniDashGreet">'+esc(gpT('Welcome, {name}, to your database',{name:firstName}))+'</div>'+
+  /* The name-and-face greeting moved here from Base — Base is ministry
+     stats, not a personal page, and this is the one card that's actually
+     yours. Same .baseMe markup Base used to show it with. */
+  var h='<div class="miniDashHead">'+
+      '<div class="baseMe">'+avatarHtml(S.me,'sm')+
+        '<div><div class="pmeta">'+esc(t(greeting()))+'</div>'+
+        '<div class="pname" style="font-size:16px">'+esc(S.me.name)+'</div>'+
+        '<div class="pmeta">'+esc(t(S.me.role||S.me.dept))+
+          (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>'+
+        '</div></div>'+
       '<button class="dashSettingBtn'+(open?' on':'')+'" id="dashCustomizeBtn" aria-pressed="'+(open?'true':'false')+'" aria-label="'+esc(t('Customize dashboard'))+'">'+
         '<span class="ic">⚙️</span><span class="dsLabel">'+esc(t('Customize'))+'</span></button>'+
-    '</div>'+
-    '<div class="miniDashStats">'+
-      '<div class="mdStat"><div class="mdIcon">🔥</div><div class="mdNum">'+st+'</div><div class="mdLabel">'+esc(t('day streak'))+'</div></div>'+
-      '<div class="mdStat"><div class="mdIcon">🎯</div><div class="mdNum">'+goalsDone+'/'+written.length+'</div><div class="mdLabel">'+esc(t('goals done'))+'</div></div>'+
-      '<div class="mdStat"><div class="mdIcon">✅</div><div class="mdNum">'+habitsDone+'/'+list.length+'</div><div class="mdLabel">'+esc(t('habits today'))+'</div></div>'+
-      '<div class="mdStat"><div class="mdIcon">🌴</div><div class="mdNum">'+ptoLeft+'</div><div class="mdLabel">'+esc(t('PTO days left'))+'</div></div>'+
+    '</div>';
+
+  /* Base's own hero, reused whole — same classes, same look, populated with
+     personal figures instead of the base's. The streak leads because it's
+     the one number here that's purely for the person holding the phone, the
+     same reason Base leads with the campus's total staff. Each ring/sub row
+     is a button now: tapping one jumps straight to the section it's about,
+     the same [data-jump] the quick-jump strip already uses. */
+  h+='<div class="hero'+(custom?' custom':'')+'"'+
+    (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
+    '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
+    '<div class="heroNum" data-count="'+st+'">0</div>'+
+    '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('DAY STREAK'))+'</div>'+
+    '<button class="heroRow" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
+      '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div></button>'+
+    '<button class="heroRow" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
+      '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+'</div></button>'+
+    '<button class="heroRow" data-jump="sec-health">'+gpRingHtml(healthPct,'sm',t('My Health'))+
+      '<div class="heroTrend">'+esc(t('My Health'))+' <b class="heroFig">'+(score!==null?score.toFixed(1):'—')+'</b>/10</div></button>'+
+    '<div class="heroSub">'+
+      '<button class="heroSubRow" data-jump="sec-leave">'+
+        '<span class="heroSubLabel">'+esc(t('PTO DAYS LEFT'))+'</span>'+
+        '<span class="heroSubNum">'+ptoLeft+'</span>'+
+      '</button>'+
+      '<button class="heroSubRow" data-jump="sec-mentor">'+
+        '<span class="heroSubLabel">'+esc(t('MENTOR'))+'</span>'+
+        '<span class="heroSubNum" style="font-size:16px">'+(mentorId?esc(mentorName):esc(t('Not set')))+'</span>'+
+      '</button>'+
     '</div>'+
   '</div>';
 
@@ -2466,10 +2559,9 @@ function homeHtml(){
   var wl=thisWeekLogs();
   var phase=weekPhase();
 
-  /* No name-and-face card here: Base already greeted you by name. This page
-     opens on the week itself. My week and Me used to be separate tabs; they're
-     folded into one "My Database" tab now, so the quick-jump bar below is what
-     replaces the old tab bar for getting straight to one section. */
+  /* My week and Me used to be separate tabs; they're folded into one "My
+     Database" tab now, so the quick-jump bar below is what replaces the old
+     tab bar for getting straight to one section. */
   var st=graceStreak(function(){return true;});
   var h=miniDashboardHtml();
   h+=notificationsHtml();
@@ -2484,14 +2576,14 @@ function homeHtml(){
 
   h+=phaseBanner(phase, wk);
 
-  /* Fixed order, matching the redesign mockup: Weekly Goals, Habit Tracker,
-     My Ministry, OKR, Annual Goals, Mentorship, Health, Leave, Account. This
-     used to lead with whichever of Goals/Habits the day's phase favored;
-     that's gone in favor of the mockup's fixed order. My Ministry sits right
-     under Weekly Goals — both are "what am I aiming at," one personal, one
-     for the ministry. */
-  h += habitsCardHtml();
+  /* Fixed order: Weekly Goals, Habit Tracker, My Ministry, OKR, Annual
+     Goals, Mentorship, Health, Leave, Account. Weekly Goals leads — that's
+     the section Uriah wants staff prioritizing, so it's the first thing
+     under the quick-jump bar rather than a mid-page card. My Ministry
+     sits right under it — both are "what am I aiming at," one personal,
+     one for the ministry. */
   h += goalsCardHtml(goalsViewWeek());
+  h += habitsCardHtml();
   h += myMinistryEntryHtml();
   h += okrSectionHtml(S.me, true);
   h += annualGoalsHtml();
@@ -2513,7 +2605,7 @@ function homeHtml(){
    its own to scroll to — it's a card at the very bottom that opens the
    profile screen — so that chip still navigates rather than scrolling. */
 function quickJumpHtml(){
-  var jumps=[['sec-habits','Daily'],['sec-goals','Weekly Goals'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
+  var jumps=[['sec-goals','Weekly Goals'],['sec-habits','Daily'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
     ['sec-annual','Annual Goals'],['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
   var h='<div class="quickBar">';
   jumps.forEach(function(j){
@@ -3116,6 +3208,217 @@ function myMinistryEntryHtml(){
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
 }
 
+/* ---------- Admin ----------
+   Account management, not the sensitive-dashboard-numbers gate — that stays
+   the leader code, exactly as it works today. isAdmin only ever goes to a
+   Base Leadership account, and only the leader code can grant it
+   (grantAdmin in api.js), so this screen never has to ask "says who" about
+   its own visibility.
+
+   S.adminStaff loads once per visit, lazily, the same pattern the
+   ministry-oversight cards already use — nothing here rides along on
+   getMyBoot, since almost nobody who opens the app is an admin. */
+function adminHtml(){
+  var h='<button class="linkbtn" id="adminBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
+  if(S.adminStaff===null) return h+'<p class="sub">'+esc(t('Loading…'))+'</p>';
+
+  var list=S.adminStaff;
+  var pending=list.filter(function(s){ return !s.active; });
+  if(pending.length){
+    h+='<h3>'+esc(t('Waiting for approval'))+'</h3><div class="card">';
+    pending.forEach(function(s){
+      h+='<div class="row"><div><div class="rowName">'+esc(s.name)+'</div>'+
+        '<div class="rowSub">'+esc(s.username)+' · '+esc(s.campus)+' · '+esc(t(s.dept))+'</div></div>'+
+        '<button class="btn" style="width:auto;margin:0;padding:9px 14px" data-adminapprove="'+esc(s.id)+'">'+esc(t('Approve'))+'</button></div>';
+    });
+    h+='</div>';
+  }
+
+  h+='<h3>'+esc(t('All accounts'))+'</h3>';
+  var byCampus_ = function(campusList){
+    campusList.forEach(function(s){
+      var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
+      var summary = esc(t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status);
+      var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
+      h+=accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); });
+    });
+  };
+  CAMPUSES.forEach(function(c){
+    var campusList=list.filter(function(s){ return s.campus===c.id; });
+    h+='<h3 style="margin-top:16px">'+esc(c.name)+' <small>· '+campusList.length+'</small></h3>';
+    if(!campusList.length) h+='<p class="sub" style="margin:0 0 8px">'+esc(t('No accounts yet.'))+'</p>';
+    byCampus_(campusList);
+  });
+  var known_=CAMPUSES.map(function(c){ return c.id; });
+  var other=list.filter(function(s){ return known_.indexOf(s.campus)===-1; });
+  if(other.length){
+    h+='<h3 style="margin-top:16px">'+esc(t('Other'))+' <small>· '+other.length+'</small></h3>';
+    byCampus_(other);
+  }
+  return h;
+}
+
+function adminRowBodyHtml_(s){
+  var mine = s.id===S.me.id;
+  var b='<div>';
+  if(!mine){
+    b+='<button class="btn ghost" style="margin-top:0" data-admintoggleactive="'+esc(s.id)+'">'+
+      (s.active? esc(t('Deactivate')) : esc(t('Activate')))+'</button>';
+  }
+
+  var pinDraft = S.adminPinDraft[s.id]||'';
+  b+='<label class="f">'+esc(t('Reset PIN'))+'</label>'+
+    '<div class="numIn"><input type="password" inputmode="numeric" maxlength="4" data-adminpin="'+esc(s.id)+'" value="'+esc(pinDraft)+'" placeholder="••••">'+
+    '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-adminresetpin="'+esc(s.id)+'">'+esc(t('Save'))+'</button></div>';
+
+  if(S.adminEditId!==s.id){
+    b+='<button class="linkbtn" data-adminedit="'+esc(s.id)+'">'+esc(t('Fix campus / department / role'))+'</button>';
+  } else {
+    b+='<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="adm_name" value="'+esc(s.name||'')+'">'+
+      '<label class="f">'+esc(t('Campus'))+'</label><select id="adm_campus">'+
+      CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(s.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
+      '<label class="f">'+esc(t('Department'))+'</label><select id="adm_dept">'+
+      deptsFor(s.campus).map(function(d){return '<option value="'+esc(d)+'"'+(s.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
+      '<label class="f">'+esc(t('Ministry'))+'</label><select id="adm_ministry"></select>'+
+      '<label class="f">'+esc(t('Role / team'))+'</label><input type="text" id="adm_role" value="'+esc(s.role||'')+'">'+
+      staffTypeFieldHtml('adm_type', s.staffType||'')+
+      countryFieldHtml('adm_country', s.country||'')+
+      '<button class="btn" data-adminsave="'+esc(s.id)+'">'+esc(t('Save'))+'</button>'+
+      '<button class="linkbtn" data-admincanceledit="'+esc(s.id)+'">'+esc(t('Cancel'))+'</button>';
+  }
+
+  if(!mine){
+    var mentorOpts=(S.adminStaff||[]).filter(function(x){ return x.id!==s.id && x.active; })
+      .map(function(x){ return '<option value="'+esc(x.id)+'"'+(s.mentorId===x.id?' selected':'')+'>'+esc(x.name)+' · '+esc(t(x.dept))+'</option>'; }).join('');
+    b+='<label class="f">'+esc(t('Mentor'))+'</label>'+
+      '<select data-adminmentor="'+esc(s.id)+'"><option value="">'+esc(t('— none —'))+'</option>'+mentorOpts+'</select>'+
+      '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px">'+
+      '<input type="checkbox" data-adminmentorapproved="'+esc(s.id)+'"'+(s.mentorStatus==='approved'?' checked':'')+'> '+
+      esc(t('Approved (skip the accept step)'))+'</label>'+
+      '<button class="btn ghost" data-adminsetmentor="'+esc(s.id)+'">'+esc(t('Save mentor'))+'</button>';
+  }
+
+  if(!mine && s.dept==='Base Leadership'){
+    b+='<label class="f">'+esc(t('Admin code'))+'</label>'+
+      '<div class="numIn"><input type="password" id="adminCodeInput" value="'+esc(S.adminCode)+'" placeholder="'+esc(t('Admin code'))+'">'+
+      '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-admingrant="'+esc(s.id)+'" data-adminmake="'+(s.isAdmin?'0':'1')+'">'+
+      (s.isAdmin?esc(t('Revoke admin')):esc(t('Make admin')))+'</button></div>';
+  }
+  return b+'</div>';
+}
+
+function adminRefresh_(){ S.adminStaff=null; render(); }
+
+function bindAdmin(){
+  if(S.view!=='admin' || !S.me || !S.me.isAdmin) return;
+  var back=document.getElementById('adminBack');
+  if(back) back.onclick=function(){ S.view='week'; render(); };
+
+  if(S.adminStaff===null){
+    if(S.adminLoading) return;
+    S.adminLoading=true;
+    run('adminListStaff',[S.auth.user,S.auth.pin],function(d){
+      S.adminLoading=false;
+      if(d && d.ok) S.adminStaff=d.staff; else showMsg('Could not load accounts');
+      render();
+    });
+    return;
+  }
+
+  document.querySelectorAll('[data-adminapprove]').forEach(function(b){
+    b.onclick=function(){
+      run('adminSetActive',[S.auth.user,S.auth.pin,b.getAttribute('data-adminapprove'),true],function(d){
+        if(d && d.ok) adminRefresh_(); else showMsg('Could not approve');
+      });
+    };
+  });
+  document.querySelectorAll('[data-admintoggleactive]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-admintoggleactive');
+      var s=(S.adminStaff||[]).find(function(x){ return x.id===id; });
+      if(!s) return;
+      run('adminSetActive',[S.auth.user,S.auth.pin,id,!s.active],function(d){
+        if(d && d.ok) adminRefresh_(); else showMsg('Could not update');
+      });
+    };
+  });
+  document.querySelectorAll('[data-adminpin]').forEach(function(inp){
+    inp.oninput=function(){ S.adminPinDraft[inp.getAttribute('data-adminpin')]=inp.value; };
+  });
+  document.querySelectorAll('[data-adminresetpin]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-adminresetpin');
+      var pin=S.adminPinDraft[id]||'';
+      if(!/^\d{4}$/.test(pin)){ showMsg('PIN must be 4 digits'); return; }
+      run('adminResetPin',[S.auth.user,S.auth.pin,id,pin],function(d){
+        if(d && d.ok){ S.adminPinDraft[id]=''; showMsg('PIN reset'); render(); }
+        else showMsg('Could not reset PIN');
+      });
+    };
+  });
+  document.querySelectorAll('[data-adminedit]').forEach(function(b){
+    b.onclick=function(){ S.adminEditId=b.getAttribute('data-adminedit'); render(); };
+  });
+  document.querySelectorAll('[data-admincanceledit]').forEach(function(b){
+    b.onclick=function(){ S.adminEditId=null; render(); };
+  });
+  if(S.adminEditId && document.getElementById('adm_campus')){
+    fillMinistrySelect('adm_ministry','adm_campus','adm_dept',
+      (S.adminStaff.find(function(x){ return x.id===S.adminEditId; })||{}).ministry||'');
+    ['adm_campus','adm_dept'].forEach(function(id){
+      document.getElementById(id).onchange=function(){ fillMinistrySelect('adm_ministry','adm_campus','adm_dept',''); };
+    });
+    bindCountryOther();
+  }
+  document.querySelectorAll('[data-adminsave]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-adminsave');
+      var payload={
+        name:document.getElementById('adm_name').value.trim(),
+        campus:document.getElementById('adm_campus').value,
+        dept:document.getElementById('adm_dept').value,
+        ministry:(document.getElementById('adm_ministry')||{}).value||'',
+        role:document.getElementById('adm_role').value.trim(),
+        staffType:document.getElementById('adm_type').value,
+        country:countryValue('adm_country')
+      };
+      run('adminUpdateStaff',[S.auth.user,S.auth.pin,id,payload],function(d){
+        if(d && d.ok){ S.adminEditId=null; adminRefresh_(); }
+        else showMsg('Could not save');
+      });
+    };
+  });
+  document.querySelectorAll('[data-adminsetmentor]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-adminsetmentor');
+      var sel=document.querySelector('[data-adminmentor="'+id+'"]');
+      var chk=document.querySelector('[data-adminmentorapproved="'+id+'"]');
+      var mentorId=sel?sel.value:'';
+      var approved=chk?chk.checked:false;
+      run('adminSetMentor',[S.auth.user,S.auth.pin,id,mentorId,approved],function(d){
+        if(d && d.ok){ showMsg('Mentor updated'); adminRefresh_(); }
+        else showMsg('Could not update mentor');
+      });
+    };
+  });
+  var codeInput=document.getElementById('adminCodeInput');
+  if(codeInput) codeInput.oninput=function(){ S.adminCode=codeInput.value; };
+  document.querySelectorAll('[data-admingrant]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-admingrant');
+      var make=b.getAttribute('data-adminmake')==='1';
+      var s=(S.adminStaff||[]).find(function(x){ return x.id===id; });
+      if(!s) return;
+      if(!S.adminCode){ showMsg('Enter the admin code first'); return; }
+      run('grantAdmin',[S.adminCode, s.username, make],function(d){
+        if(d && d.ok){ S.adminCode=''; adminRefresh_(); }
+        else showMsg('Could not update admin access');
+      });
+    };
+  });
+}
+
 /* The whole ministry-KPI experience — the same accCard body kpiCardHtml
    already builds, just given a real page instead of a section buried in My
    Database. Any staff member whose profile carries this ministry can log
@@ -3226,7 +3529,7 @@ function countryValue(id){
   return box ? String(box.value||'').trim() : '';
 }
 function bindCountryOther(){
-  ['r_country','p_country'].forEach(function(id){
+  ['r_country','p_country','adm_country'].forEach(function(id){
     var sel=document.getElementById(id), box=document.getElementById(id+'_other');
     if(!sel||!box) return;
     sel.onchange=function(){
@@ -3383,10 +3686,14 @@ function healthHtml(){
     WEEK_SCALE_QS.forEach(function(q){
       var v = d[q.id]!==undefined ? Number(d[q.id]) : 5;
       var pct = Math.round(((v-1)/9)*100);
+      // Same colour walk as the goal slider, just pointed the right way for
+      // this question — a HIGH loneliness score is bad, so it colours as a
+      // low goodPct even though the thumb itself sits at the high end.
+      var goodPct = q.higherBetter ? pct : (100-pct);
       h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div>'+
-        '<div class="sliderWrap"><input type="range" min="1" max="10" step="1" value="'+v+'" data-wslide="'+q.id+'" '+
-        'style="--fillpct:'+pct+'%"></div>'+
-        '<div class="qCaps"><span>'+esc(t(q.lowLabel))+'</span><span class="qReadout">'+v+'/10</span><span>'+esc(t(q.highLabel))+'</span></div>'+
+        '<div class="sliderWrap"><input type="range" min="1" max="10" step="1" value="'+v+'" data-wslide="'+q.id+'" data-higherbetter="'+(q.higherBetter?'1':'0')+'" '+
+        'style="--fillpct:'+pct+'%;--gc:'+gpRingColor(goodPct)+'"></div>'+
+        '<div class="qCaps"><span>'+esc(t(q.lowLabel))+'</span><span class="qReadout" style="color:'+gpPctColor(goodPct)+'">'+v+'/10</span><span>'+esc(t(q.highLabel))+'</span></div>'+
         '</div>';
     });
     WEEK_NUM_QS.forEach(function(q){
@@ -4075,6 +4382,20 @@ function profileHtml(){
        '<button data-theme-set="light" class="'+(th==='light'?'on':'')+'">'+esc(t('Light'))+'</button>'+
        '<button data-theme-set="dark" class="'+(th==='dark'?'on':'')+'">'+esc(t('Dark'))+'</button>'+
      '</div><div class="hint">'+esc(t('Auto follows your phone.'))+'</div></div>';
+  /* Bootstrap for the Admin screen: grantAdmin only needs the admin code
+     (GP_ADMIN_CODE — separate from the dashboard's leader code on purpose),
+     not an admin session, otherwise nobody could ever become the first
+     admin. This is the one place that spends the code for yourself; the
+     Admin screen itself spends it on someone else. */
+  if(S.me.isAdmin){
+    h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
+      '<p class="hint" style="margin:0">'+esc(t('You have admin access — find it in the menu.'))+'</p></div>';
+  } else if(S.me.dept==='Base Leadership'){
+    h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
+      '<p class="hint" style="margin:0 0 8px">'+esc(t('Enter the admin code to unlock the Admin screen for this account.'))+'</p>'+
+      '<div class="numIn"><input type="password" id="p_admincode" placeholder="'+esc(t('Admin code'))+'">'+
+      '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" id="p_adminunlock">'+esc(t('Unlock'))+'</button></div></div>';
+  }
   h+='<button class="danger" id="logoutBtn" style="width:100%">Log out</button>';
   h+='<footer>✦ Every number is a person.</footer>';
   return h;
@@ -4419,6 +4740,7 @@ function bindHome(){
   });
   var ja=document.getElementById('jumpAccount');
   if(ja) ja.onclick=function(){ S.view='profile'; render(); };
+  gpHscrollGuard(document.querySelector('.quickBar'));
 
   /* Personal dashboard customize panel, hidden behind the gear icon. The
      color wheel saves on change (one control, no separate Save button);
@@ -4557,6 +4879,17 @@ function bindHome(){
   document.querySelectorAll('[data-theme-set]').forEach(function(b){
     b.onclick=function(){ gpTap(); applyTheme(b.getAttribute('data-theme-set')); render(); };
   });
+  var pau=document.getElementById('p_adminunlock');
+  if(pau) pau.onclick=function(){
+    var code=(document.getElementById('p_admincode')||{}).value||'';
+    if(!code){ showMsg('Enter the admin code'); return; }
+    pau.disabled=true; pau.textContent='…';
+    run('grantAdmin',[code, S.me.username, true],function(d){
+      pau.disabled=false; pau.textContent=t('Unlock');
+      if(d && d.ok){ S.me.isAdmin=true; showMsg('Admin access unlocked'); render(); }
+      else showMsg('Wrong admin code');
+    });
+  };
   var sw=document.getElementById('shareWeek');
   if(sw) sw.onclick=function(){
     var wk=goalsViewWeek();
@@ -4884,10 +5217,16 @@ function bind(){
     var block=sl.closest('.qBlock');
     var readout=block&&block.querySelector('.qReadout');
     var id=sl.getAttribute('data-wslide');
+    var higherBetter=sl.getAttribute('data-higherbetter')==='1';
     function paint(){
       var v=Number(sl.value)||1;
-      sl.style.setProperty('--fillpct', Math.round(((v-1)/9)*100)+'%');
-      if(readout) readout.textContent=v+'/10';
+      var pct=Math.round(((v-1)/9)*100);
+      sl.style.setProperty('--fillpct', pct+'%');
+      // Same colour walk as the goal slider — direction-aware, so a high
+      // "how lonely" score still reads as a warning colour, not green.
+      var goodPct = higherBetter ? pct : (100-pct);
+      sl.style.setProperty('--gc', gpRingColor(goodPct));
+      if(readout){ readout.textContent=v+'/10'; readout.style.color=gpPctColor(goodPct); }
       return v;
     }
     /* A swipe that starts on one of these is usually somebody scrolling past the
@@ -4906,6 +5245,7 @@ function bind(){
     sl.oninput=function(){
       if(guard.scrolling()) return;
       weekDraftFor(S.healthWeek||thisWeek())[id]=paint();
+      gpTap(4);   // same per-tick buzz as the goal slider — a drag with no feedback at all reads as unresponsive
     };
   });
   document.querySelectorAll('[data-wyn]').forEach(function(b){
@@ -5035,6 +5375,7 @@ function bind(){
   bindCountryOther();
 
   bindAway();
+  bindAdmin();
 
   var gpm=document.getElementById('goProfileFromMe');
   if(gpm) gpm.onclick=function(){ S.view='profile'; render(); };
@@ -5052,7 +5393,10 @@ function bind(){
     lb.disabled=true; lb.textContent='…';
     run('staffLogin',[u,pin],function(d){
       if(d.ok){ S.auth={user:u,pin:pin}; S.me=d.staff; S.profile=d.profile; afterLogin(); }
-      else { lb.disabled=false; lb.textContent='Log in'; showMsg('Wrong username or PIN'); }
+      else {
+        lb.disabled=false; lb.textContent='Log in';
+        showMsg(d.err==='pending' ? 'Your account is waiting on approval from a base leader.' : 'Wrong username or PIN');
+      }
     });
   };
   var toReg=document.getElementById('toReg'); if(toReg) toReg.onclick=function(){ S.regMode=true; if(!S.roster.length){ run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();}); } else render(); };
@@ -5080,7 +5424,13 @@ function bind(){
     if(!/^\d{4}$/.test(payload.pin)){ showMsg('PIN must be 4 digits'); return; }
     rb.disabled=true; rb.textContent='…';
     run('staffRegister',[payload],function(d){
-      if(d.ok){ S.auth={user:payload.username.toLowerCase(),pin:payload.pin}; S.me=d.staff; S.profile=d.profile; S.regMode=false; afterLogin(); showMsg('Profile created — add a photo!'); S.view='profile'; render(); }
+      if(d.ok && d.pending){
+        // Base Leadership only — every other department signs in right away.
+        // There is no session to start: a base leader has to approve first.
+        rb.disabled=false; rb.textContent='Create profile'; S.regMode=false;
+        showMsg('Submitted — a base leader needs to approve a leadership account before you can log in.');
+        render();
+      } else if(d.ok){ S.auth={user:payload.username.toLowerCase(),pin:payload.pin}; S.me=d.staff; S.profile=d.profile; S.regMode=false; afterLogin(); showMsg('Profile created — add a photo!'); S.view='profile'; render(); }
       else { rb.disabled=false; rb.textContent='Create profile'; showMsg(d.err==='taken'?'That username is taken':'Check your details'); }
     });
   };
