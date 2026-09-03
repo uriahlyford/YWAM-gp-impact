@@ -158,21 +158,24 @@ await page.evaluate(() => { Object.keys(S.baseAcc).forEach(k => { S.baseAcc[k] =
 await page.waitForTimeout(500);
 
 console.log('=== BASE TAB ===');
-// 1. profile card is first, above the hero
-const order = await page.evaluate(() => {
-  const me = document.querySelector('.baseMe');
-  const hero = document.querySelector('.hero');
-  if (!me || !hero) return 'missing: ' + (!me ? 'profile card' : 'hero');
-  return (me.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING) ? 'profile above hero' : 'WRONG ORDER';
-});
-console.log('order:            ' + order);
-console.log('profile shows:    ' + await page.$eval('.baseMe', el => el.innerText.replace(/\n+/g, ' | ')));
-console.log('avatar present:   ' + await page.evaluate(() => !!document.querySelector('.baseMe .avatar')));
+// 1. the name-and-face greeting moved to My Database (a personal page; Base
+// is ministry stats) — Base opens straight on its own hero now, nothing above it.
+console.log('profile card on Base: ' + await page.evaluate(() => document.querySelector('.baseMe') ? 'WRONG, still here' : 'gone (moved to My Database)'));
 
 // 2. every dashboard section present — Base's headings are accordion titles
 // now, not <h3>s (all forced open above, so every one of them is present)
 const sections = await page.$$eval('#main .accTitle', els => els.map(e => e.textContent.trim()));
 console.log('sections (' + sections.length + '):\n  ' + sections.join('\n  '));
+
+// 2b. ...and it's on My Database's hero head instead, name/ministry/department
+// right where the gear icon already was.
+await page.click('nav.bottom [data-tab="week"]');
+await page.waitForTimeout(600);
+console.log('\n=== MY DATABASE ===');
+console.log('greeting shows:   ' + await page.$eval('.miniDashHead .baseMe', el => el.innerText.replace(/\n+/g, ' | ')));
+console.log('avatar present:   ' + await page.evaluate(() => !!document.querySelector('.miniDashHead .baseMe .avatar')));
+await page.click('nav.bottom [data-tab="base"]');
+await page.waitForTimeout(600);
 
 // 3. compare against the dashboard's own section list
 const dash = await newPage(() => { sessionStorage.setItem('gp-guest', '1'); });
@@ -241,6 +244,20 @@ console.log('countries:       ' + countries.join(' | '));
 if (countries.length !== 2) { console.log('  ^ expected one row per country'); process.exitCode = 1; }
 await page.click('#ddClose');
 await page.waitForTimeout(300);
+
+// 4c. the one-time Siem Reap check-in import: Poipet never sees it (no data
+// for that campus), Siem Reap does, with real percentages, then vs. now.
+console.log('\nSR history on Poipet Base: ' +
+  await page.evaluate(() => document.querySelector('.card')?.textContent.includes('Weekly Check-In History') ? 'WRONG, shows for Poipet' : 'not shown (correct)'));
+await page.evaluate(() => { S.me.campus = 'siemreap'; render(); });
+await page.waitForTimeout(400);
+const srRows = await page.$$eval('.card .row', els => els
+  .filter(el => el.closest('.card').textContent.includes('Weekly Check-In History'))
+  .map(el => el.textContent.trim().replace(/\s+/g, ' ')));
+console.log('SR history on Siem Reap Base (' + srRows.length + ' rows):\n  ' + srRows.join('\n  '));
+if (!srRows.length) { console.log('  ^ the import did not render for Siem Reap'); process.exitCode = 1; }
+await page.evaluate(() => { S.me.campus = 'poipet'; render(); });
+await page.waitForTimeout(400);
 
 // 5. tapping a figure opens the breakdown
 await page.click('#main .stat[data-drill-metric="Salvations"]');

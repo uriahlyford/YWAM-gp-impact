@@ -1052,3 +1052,60 @@ grouped under YWAM Poipet / YWAM Siem Reap headings instead of one flat list.
 | Save mentor | រក្សាទុកអ្នកណែនាំ |
 | No accounts yet. | មិនទាន់មានគណនីនៅឡើយទេ។ |
 | Other | ផ្សេងទៀត |
+
+## 31. A notification bell, next to the hamburger menu
+
+My Database's "🔔 Updates" card (leave decisions, incoming 1-on-1 requests)
+now also has a header shortcut — a bell in the top-right corner that opens
+the same list in a panel, so it's visible from any tab, not just My Database.
+"Clear all" on either the bell or the card hides everything up to that
+moment (a device-local cutoff, nothing server-side); anything still pending
+keeps its own home on Leave Request, Mentorship or Team either way.
+
+| English | ខ្មែរ |
+|---|---|
+| Notifications | ការជូនដំណឹង |
+| Notifications ({n}) | ការជូនដំណឹង ({n}) |
+| Clear all | សម្អាតទាំងអស់ |
+| Nothing new. | មិនមានអ្វីថ្មីទេ។ |
+
+## 32. My Database's hero: the greeting moved in, health and mentor added
+
+The name-and-face greeting (name, ministry, department) used to open Base;
+Base is ministry stats, not a personal page, so it now opens My Database's
+hero card instead, next to the customize gear. The hero also gained two more
+rows: My Health (this week's health-check score out of 10, same maths as the
+Health tab) and Mentor (who it's set to, or "Not set" if it isn't) — both
+buttons that jump straight to that section, like Weekly Goals and Habits
+Today already do.
+
+| English | ខ្មែរ |
+|---|---|
+| My Health | សុខភាពរបស់ខ្ញុំ |
+| MENTOR | អ្នកណែនាំ |
+| Not set | មិនទាន់កំណត់ |
+
+## 33. Base: Siem Reap's historical weekly check-in (one-time import)
+
+A separate app ("YWAM SR Weekly Check In") had its own weekly Yes/No
+check-in, Siem Reap only, since January 2026. It stopped being used in
+July, and every submission in it is anonymous — there's no way to tell
+whose answer is whose, so this can only ever be a team-wide history, never
+folded into anyone's personal health score. Imported once as a frozen
+snapshot and shown on Base (Siem Reap staff only) as each question's
+percentage then vs. now.
+
+| English | ខ្មែរ |
+|---|---|
+| Siem Reap · Weekly Check-In History | សៀមរាប · ប្រវត្តិការឆែកអង់ប្រចាំសប្តាហ៍ |
+| Imported from a separate check-in tool, Jan–Jul 2026 (it stopped being used after that). Team-wide and anonymous — not linked to any individual profile. | នាំចូលពីឧបករណ៍ឆែកអង់ផ្សេងមួយ ខែមករា–កក្កដា ២០២៦ (វាឈប់ប្រើប្រាស់បន្ទាប់ពីនោះ)។ ជាទិន្នន័យរួមក្រុម និងអនាមិក — មិនភ្ជាប់ជាមួយប្រវត្តិរូបនរណាម្នាក់ទេ។ |
+| Bible & daily quiet time | ព្រះគម្ពីរ និងពេលស្ងប់ស្ងាត់ប្រចាំថ្ងៃ |
+| Has a best friend on base | មានមិត្តភក្តិល្អបំផុតនៅមូលដ្ឋាន |
+| Looked at porn this week | បានមើលរូបភាពអាសអាភាសសប្តាហ៍នេះ |
+| Exercised 15+ min, 3 days | បានហាត់ប្រាណ ១៥នាទី+ ចំនួន ៣ថ្ងៃ |
+| Currently in debt to the base | កំពុងជំពាក់បំណុលមូលដ្ឋាន |
+| Fully honest in this report | ស្មោះត្រង់ទាំងស្រុងក្នុងរបាយការណ៍នេះ |
+| Called family this month | បានទូរស័ព្ទទៅគ្រួសារខែនេះ |
+| Often felt lonely this month | មានអារម្មណ៍ឯកកោញឹកញាប់ខែនេះ |
+| Sent a ministry update this month | បានផ្ញើដំណឹងកិច្ចការបម្រើខែនេះ |
+| Had 2+ one-on-ones this month | បានជួបគ្នាមួយទល់មួយ ២ដង+ ខែនេះ |

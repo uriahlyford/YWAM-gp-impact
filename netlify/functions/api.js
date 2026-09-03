@@ -1509,7 +1509,7 @@ function tripOut_(r) {
     id: r.id, from: r.from, to: r.to, days: r.days,
     type: leaveTypeOf_(r), workDays: r.workDays != null ? r.workDays : workDays_(r.from, r.to),
     reason: r.reason || '', coverage: r.coverage || '',
-    status: r.status, decidedAt: r.decidedAt || ''
+    status: r.status, decidedAt: r.decidedAt || '', created: r.created || ''
   };
 }
 
