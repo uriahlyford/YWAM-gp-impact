@@ -949,6 +949,34 @@ function gpAnimateCounts(root){
   });
 }
 
+/* Bars/line for the Siem Reap check-in history chart: unlike gpAnimateCounts
+   (which drives the numbers itself frame by frame), these just flip a CSS
+   custom property/clip-path after the closed state has actually painted —
+   the growth is a transition (declared in teams.html, with its own
+   prefers-reduced-motion rule), not a JS loop, since a bar filling or a line
+   sweeping in is exactly what CSS transitions are for. Two rAFs, not one:
+   the first is merely queued before the browser has painted the 0% state,
+   so a transition started there can get collapsed into the very first frame
+   instead of animating from it. */
+function gpDoubleRaf_(fn){ requestAnimationFrame(function(){ requestAnimationFrame(fn); }); }
+function gpAnimateBars(root){
+  var scope = root || document;
+  gpDoubleRaf_(function(){
+    scope.querySelectorAll('.srBarFill[data-bar]').forEach(function(el){
+      var target = Number(el.getAttribute('data-bar'));
+      if(!isNaN(target)) el.style.width = target + '%';
+    });
+  });
+}
+function gpAnimateLine(root){
+  var scope = root || document;
+  gpDoubleRaf_(function(){
+    scope.querySelectorAll('.srChartReveal').forEach(function(el){
+      el.style.clipPath = 'inset(0 0 0 0)';
+    });
+  });
+}
+
 /* ---- a week worth sharing ----
    Draws "WEEK n · x%" as a square card on a canvas and hands it to the OS share
    sheet. Canvas rather than an <img> so there is nothing to host and nothing to

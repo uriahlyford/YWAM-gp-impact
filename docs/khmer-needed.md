@@ -1123,3 +1123,32 @@ competing headline.
 | English | ខ្មែរ |
 |---|---|
 | best {n}d streak | កំពូល {n} ថ្ងៃជាប់គ្នា |
+
+## 35. My Database: the day-streak chip under the hero is gone
+
+The hero already leads with the day streak — repeating it as its own chip
+right underneath, with its own celebration animation, was just noise.
+Removed; the 7/30-day celebration now marks the hero's own number instead.
+No new strings — this is a removal, not an addition.
+
+## 36. Siem Reap check-in history: moved to Health, now a real chart
+
+Moved off Base (it's health data, not a ministry stat) onto the Health tab,
+Siem Reap staff only, right under the campus's own Base Health figures. A
+quarter picker (same Q1-Q4 control Base Health already uses) replaces the
+old flat "started here, ended here" list: for the selected quarter, a line
+chart of the overall trend (each question's own good direction, so a
+climbing line always means things got better) and a bar chart of that
+quarter's raw percentage per question — both animate in on render. Each bar
+is also a button: tapping a question opens its own trend line right under
+it (one at a time), so comparing two questions is two taps, not ten charts
+at once.
+
+| English | ខ្មែរ |
+|---|---|
+| Not enough data points this quarter for a trend line. | មិនមានទិន្នន័យគ្រប់គ្រាន់សម្រាប់បន្ទាត់និន្នាការត្រីមាសនេះទេ។ |
+| No data for this quarter. | គ្មានទិន្នន័យសម្រាប់ត្រីមាសនេះទេ។ |
+| Trend, {a} to {b} | និន្នាការ ពី {a} ដល់ {b} |
+| Overall trend (higher is better) | និន្នាការទាំងមូល (ខ្ពស់ជាងគឺល្អជាង) |
+| This quarter, by question | ត្រីមាសនេះ តាមសំណួរនីមួយៗ |
+| Tap a question to see its own trend. | ចុចលើសំណួរណាមួយ ដើម្បីមើលនិន្នាការផ្ទាល់របស់វា។ |
