@@ -245,11 +245,11 @@ if (countries.length !== 2) { console.log('  ^ expected one row per country'); p
 await page.click('#ddClose');
 await page.waitForTimeout(300);
 
-// 4c. Base is ministry stats — the Siem Reap check-in import lives on
+// 4c. Base is ministry stats — the Siem Reap check-in chart lives on
 // Health instead (see the HEALTH TAB section below), never here, for
 // either campus.
-console.log('\nSR history on Base (any campus): ' +
-  await page.evaluate(() => document.querySelector('#main')?.textContent.includes('Weekly Check-In History') ? 'WRONG, shows on Base' : 'not shown (correct)'));
+console.log('\nSR chart on Base (any campus): ' +
+  await page.evaluate(() => document.querySelector('.srLineChart, [data-sropen]') ? 'WRONG, shows on Base' : 'not shown (correct)'));
 
 // 5. tapping a figure opens the breakdown
 await page.click('#main .stat[data-drill-metric="Salvations"]');
@@ -461,12 +461,17 @@ console.log('sections: ' + (await page.$$eval('#main h3', e => e.map(x => x.text
 console.log('week nav present: ' + await page.evaluate(() => !!document.querySelector('#healthPrevWeek')));
 
 // the one-time Siem Reap check-in import: Poipet never sees it (no data for
-// that campus), Siem Reap does — a line chart, a bar per question, and
+// that campus, so it keeps the plain Base Health list), Siem Reap gets the
+// chart INSTEAD of that list — a line chart, a bar per question, and
 // tapping a question opens its own trend underneath it.
-console.log('\nSR history for Poipet: ' +
-  await page.evaluate(() => document.querySelector('#main')?.textContent.includes('Weekly Check-In History') ? 'WRONG, shows for Poipet' : 'not shown (correct)'));
+console.log('\nSR chart for Poipet: ' +
+  await page.evaluate(() => document.querySelector('.srLineChart, [data-sropen]') ? 'WRONG, shows for Poipet' : 'not shown (correct)'));
+console.log('Poipet keeps the plain Base Health list: ' +
+  await page.evaluate(() => !!document.querySelector('#healthScopeSel')));
 await page.evaluate(() => { S.me.campus = 'siemreap'; S.srQuarter = 2; render(); });
 await page.waitForTimeout(1000);
+console.log('Siem Reap drops the plain Base Health list: ' +
+  await page.evaluate(() => !document.querySelector('#healthScopeSel')));
 console.log('SR line chart present: ' + await page.evaluate(() => !!document.querySelector('.srLineChart path')));
 const srBarCount = await page.$$eval('[data-sropen]', els => els.length);
 console.log('SR bar rows: ' + srBarCount);

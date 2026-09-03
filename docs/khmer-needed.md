@@ -1178,3 +1178,56 @@ instead of stopping in July forever.
 | Did I send a ministry update to my supporters this month? | តើខ្ញុំបានផ្ញើដំណឹងកិច្ចការបម្រើទៅអ្នកគាំទ្រទេក្នុងខែនេះ? |
 | Did I have at least 2 one-on-ones this month? | តើខ្ញុំបានជួបគ្នាមួយទល់មួយយ៉ាងហោចណាស់ ២ដងទេក្នុងខែនេះ? |
 | Starts with a Jan–Jul 2026 import from a separate check-in tool, then continues from the weekly check-in below. Team-wide and anonymous — not linked to any individual profile. | ចាប់ផ្តើមដោយការនាំចូលពីខែមករា–កក្កដា ២០២៦ ពីឧបករណ៍ឆែកអង់ផ្សេងមួយ បន្ទាប់មកបន្តពីការឆែកអង់ប្រចាំសប្តាហ៍ខាងក្រោម។ ជាទិន្នន័យរួមក្រុម និងអនាមិក — មិនភ្ជាប់ជាមួយប្រវត្តិរូបនរណាម្នាក់ទេ។ |
+
+## 38. Health tab: Siem Reap's Base Health merges with the check-in chart
+
+Siem Reap used to see two sections back to back — the check-in history
+chart, then Base Health's own list of averages and percentages right under
+it. Too much to look at for one screen, so they're one now: the chart
+became Base Health for this campus, expanded to cover every yes/no
+question Base Health used to list (one-on-ones, shared faith, sabbath —
+these never had an import, so their line is live-only, same mechanism,
+just nothing before it). The 1-10 scales and hour totals (clarity, growth,
+loneliness, language/ministry hours) have no percentage to plot and are
+left out. Poipet has no import to merge with, so its Base Health stays the
+plain list, unchanged.
+
+| English | ខ្មែរ |
+|---|---|
+| Had a one-on-one this week | បានជួបគ្នាមួយទល់មួយសប្តាហ៍នេះ |
+| Shared their faith this week | បានចែករំលែកជំនឿសប្តាហ៍នេះ |
+| Took a sabbath this week | បានឈប់សម្រាកសប្ប័ទសប្តាហ៍នេះ |
+
+## 39. Two reminders for a missed weekly check-in
+
+Friday through the end of the week, if that week's check-in is still
+unanswered, the notification bell and My Database's Updates card get a new
+item ("Your weekly health check-in is due") with a button straight to
+Health. Separately, Health itself now nudges about *last* week specifically,
+from the moment it ends, until it's answered — a small banner above this
+week's form, since the week-nav above it doesn't say anything is missing on
+its own.
+
+| English | ខ្មែរ |
+|---|---|
+| Your weekly health check-in is due | ការឆែកអង់សុខភាពប្រចាំសប្តាហ៍របស់អ្នកដល់ពេលហើយ |
+| Answer it | ឆ្លើយឥឡូវនេះ |
+| You haven’t answered week {n} yet. | អ្នកមិនទាន់បានឆ្លើយសប្តាហ៍ {n} នៅឡើយទេ។ |
+| Fill it in | បំពេញវា |
+
+## 40. Admin: delete an account
+
+For a duplicate sign-up or a test account — not the normal way someone
+leaves, which is still Deactivate (keeps their history, just blocks
+login). This is permanent: an admin can't delete their own account, and
+anyone who had the deleted person set as their mentor has that cleared
+rather than left pointing at a ghost. What they logged stays part of the
+base's history; only the account goes.
+
+| English | ខ្មែរ |
+|---|---|
+| Delete account | លុបគណនី |
+| Permanent — for a duplicate or test account, not someone leaving. Their logged history stays; only the account goes. | អចិន្ត្រៃយ៍ — សម្រាប់គណនីស្ទួន ឬគណនីសាកល្បង មិនមែនសម្រាប់អ្នកកំពុងចាកចេញទេ។ ប្រវត្តិដែលបានកត់ត្រានៅតែមាន មានតែគណនីទេដែលបាត់។ |
+| Permanently delete {name}’s account? This can’t be undone. | លុបគណនីរបស់ {name} ជាអចិន្ត្រៃយ៍មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
+| Account deleted | គណនីត្រូវបានលុប |
+| Could not delete that account | មិនអាចលុបគណនីនោះបានទេ |

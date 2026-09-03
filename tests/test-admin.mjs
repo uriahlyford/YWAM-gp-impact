@@ -223,6 +223,37 @@ ok('adminListStaff exposes mentorId/mentorStatus/staffType/country for editing',
   staffOut && 'mentorId' in staffOut && 'mentorStatus' in staffOut && 'staffType' in staffOut && 'country' in staffOut,
   JSON.stringify(staffOut));
 
+/* ---------- adminDeleteStaff: permanent, admin-only, self-delete refused ---------- */
+seed([{ id: 'st_dup', name: 'Kimla (duplicate)', username: 'kimla2', campus: 'siemreap',
+  dept: 'Community Service', ministry: 'Outreach Teams', role: '', active: true, isAdmin: false,
+  mentorId: '', mentorStatus: '' }]);
+
+r = await call('adminDeleteStaff', ['dara', '1234', 'st_dup']);
+ok('a non-admin cannot delete an account', r.body && r.body.ok === false);
+ok('and the account is still there', (mem.staff || []).some(function (s) { return s.id === 'st_dup'; }));
+
+r = await call('adminDeleteStaff', ['uriah', '1234', 'st_admin']);
+ok('an admin cannot delete their own account', r.body && r.body.ok === false && r.body.err === 'self_delete');
+ok('and the account is still there', (mem.staff || []).some(function (s) { return s.id === 'st_admin'; }));
+
+r = await call('adminDeleteStaff', ['uriah', '1234', 'does-not-exist']);
+ok('deleting an unknown id is refused', r.body && r.body.ok === false && r.body.err === 'not_found');
+
+// st_staff (Dara) mentors under st_dup — deleting the mentor must clear it,
+// not leave Dara pointing at a ghost id.
+mem.staff.find(function (s) { return s.id === 'st_staff'; }).mentorId = 'st_dup';
+mem.staff.find(function (s) { return s.id === 'st_staff'; }).mentorStatus = 'approved';
+
+r = await call('adminDeleteStaff', ['uriah', '1234', 'st_dup']);
+ok('an admin can delete a duplicate account', r.body && r.body.ok === true, JSON.stringify(r.body));
+ok('the account is actually gone', !(mem.staff || []).some(function (s) { return s.id === 'st_dup'; }));
+const daraAfter = (mem.staff || []).find(function (s) { return s.id === 'st_staff'; });
+ok('a mentee pointing at the deleted mentor is cleared, not left dangling',
+  daraAfter && daraAfter.mentorId === '' && daraAfter.mentorStatus === '', JSON.stringify(daraAfter));
+
+r = await call('staffLogin', ['kimla2', '1234']);
+ok('the deleted account can no longer log in', r.body && r.body.ok === false);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);
