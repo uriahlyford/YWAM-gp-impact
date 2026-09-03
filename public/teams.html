@@ -419,10 +419,14 @@ input[type=text], input[type=tel], input[type=number], input[type=password], sel
 /* the base hero — same black card and amber figures as the dashboard, because
    it is the dashboard: this page now leads with how the base is doing. */
 .hero { background:var(--headerBg); color:var(--onDark); border-radius:14px; padding:17px 17px 15px; margin-bottom:14px; }
+/* My Database's own hero only — a visibly framed card, since it's the one
+   thing on this page that's actually yours; Base's hero stays as it was. */
+.hero.myHero { border:2px solid var(--accent); }
 .heroLabel { font-size:11px; letter-spacing:2.6px; color:var(--amber); font-weight:700; }
 .heroNum { font-family:'Koulen',sans-serif; font-size:50px; line-height:1.05; color:var(--amber); }
 .heroTrend { margin-top:5px; font-size:13px; color:var(--onDarkFaint); }
 .heroFig { font-family:'Koulen',sans-serif; font-weight:400; color:var(--onDark); font-size:16px; }
+.heroSubtext { margin-top:1px; font-size:11px; color:var(--onDarkFaint); }
 /* the ring and its sentence sit on one line, so the figure reads at a glance */
 .heroRow { display:flex; align-items:center; gap:11px; margin-top:8px; }
 .heroRow .heroTrend { margin-top:0; }
@@ -706,10 +710,10 @@ input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); borde
 .miniDashGreet { font-family:'Koulen',sans-serif; font-size:19px; letter-spacing:.4px; }
 /* Same icon-over-label shape as nav.bottom button, so the customize trigger
    reads as one more app-level control rather than a one-off gear icon. */
-.dashSettingBtn { display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none;
-  cursor:pointer; color:var(--muted); font-size:10.5px; padding:0; flex:0 0 auto; }
-.dashSettingBtn .ic { display:block; font-size:20px; line-height:1; }
-.dashSettingBtn.on { color:var(--accent); font-weight:700; }
+.dashSettingBtn { display:flex; align-items:center; justify-content:center; background:none; border:none;
+  cursor:pointer; color:var(--faint); padding:4px; flex:0 0 auto; border-radius:999px; }
+.dashSettingBtn .ic { display:block; font-size:15px; line-height:1; }
+.dashSettingBtn.on { color:var(--accent); }
 .hero.custom { background-size:cover; background-position:center; position:relative; }
 .hero.custom::before { content:''; position:absolute; inset:0; border-radius:inherit;
   background:linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.45)); }
@@ -2401,9 +2405,14 @@ function miniDashboardHtml(){
   var c=checkinForWeek(wk);
   var score=c?compositeOf(c):null;
   var healthPct=score!==null?Math.round(score*10):0;
+  var prevC=checkinForWeek(wk-1);
+  var prevScore=prevC?compositeOf(prevC):null;
+  var healthTrend=(score!==null&&prevScore!==null)?trendBadge(pctChange(prevScore,score),true):'';
   var mentorId=S.me.mentorId||'';
   var mentorRec=mentorId?personOf(mentorId):null;
   var mentorName=mentorId?(mentorRec?mentorRec.name:nameOf(mentorId)):'';
+  var mentorPct=mentorId?100:0;
+  var habitBest=list.reduce(function(m,hb){ return Math.max(m, bestStreak(habitPred(hb.id))); }, 0);
 
   var p=S.profile||{};
   var color=p.dashboardColor||'';
@@ -2422,7 +2431,7 @@ function miniDashboardHtml(){
           (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>'+
         '</div></div>'+
       '<button class="dashSettingBtn'+(open?' on':'')+'" id="dashCustomizeBtn" aria-pressed="'+(open?'true':'false')+'" aria-label="'+esc(t('Customize dashboard'))+'">'+
-        '<span class="ic">⚙️</span><span class="dsLabel">'+esc(t('Customize'))+'</span></button>'+
+        '<span class="ic">⚙️</span></button>'+
     '</div>';
 
   /* Base's own hero, reused whole — same classes, same look, populated with
@@ -2431,7 +2440,7 @@ function miniDashboardHtml(){
      same reason Base leads with the campus's total staff. Each ring/sub row
      is a button now: tapping one jumps straight to the section it's about,
      the same [data-jump] the quick-jump strip already uses. */
-  h+='<div class="hero'+(custom?' custom':'')+'"'+
+  h+='<div class="hero myHero'+(custom?' custom':'')+'"'+
     (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
     '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
     '<div class="heroNum" data-count="'+st+'">0</div>'+
@@ -2439,17 +2448,16 @@ function miniDashboardHtml(){
     '<button class="heroRow" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
       '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div></button>'+
     '<button class="heroRow" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
-      '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+'</div></button>'+
+      '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+
+      (habitBest>0?'</div><div class="heroSubtext">🔥 '+esc(gpT('best {n}d streak',{n:habitBest}))+'</div>':'</div>')+'</button>'+
     '<button class="heroRow" data-jump="sec-health">'+gpRingHtml(healthPct,'sm',t('My Health'))+
-      '<div class="heroTrend">'+esc(t('My Health'))+' <b class="heroFig">'+(score!==null?score.toFixed(1):'—')+'</b>/10</div></button>'+
+      '<div class="heroTrend">'+esc(t('My Health'))+' <b class="heroFig">'+(score!==null?score.toFixed(1):'—')+'</b>/10 '+healthTrend+'</div></button>'+
+    '<button class="heroRow" data-jump="sec-mentor">'+gpRingHtml(mentorPct,'sm',t('Mentor'))+
+      '<div class="heroTrend">'+esc(t('Mentor'))+' <b class="heroFig">'+(mentorId?esc(mentorName):esc(t('Not set')))+'</b></div></button>'+
     '<div class="heroSub">'+
       '<button class="heroSubRow" data-jump="sec-leave">'+
         '<span class="heroSubLabel">'+esc(t('PTO DAYS LEFT'))+'</span>'+
         '<span class="heroSubNum">'+ptoLeft+'</span>'+
-      '</button>'+
-      '<button class="heroSubRow" data-jump="sec-mentor">'+
-        '<span class="heroSubLabel">'+esc(t('MENTOR'))+'</span>'+
-        '<span class="heroSubNum" style="font-size:16px">'+(mentorId?esc(mentorName):esc(t('Not set')))+'</span>'+
       '</button>'+
     '</div>'+
   '</div>';

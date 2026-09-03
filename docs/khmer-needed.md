@@ -1109,3 +1109,17 @@ percentage then vs. now.
 | Often felt lonely this month | មានអារម្មណ៍ឯកកោញឹកញាប់ខែនេះ |
 | Sent a ministry update this month | បានផ្ញើដំណឹងកិច្ចការបម្រើខែនេះ |
 | Had 2+ one-on-ones this month | បានជួបគ្នាមួយទល់មួយ ២ដង+ ខែនេះ |
+
+## 34. My Database's hero: filled in further, priority stats promoted
+
+Mentor moved out of the small PTO-style row into a full ring row, matching
+Weekly Goals/Habits/Health — Uriah asked those four to be the page's
+priority. Two more figures were added alongside them: a habit's best-ever
+streak under Habits Today, and a vs.-last-week trend arrow next to My
+Health. The card now has a visible border of its own, and the customize
+gear shrank to an icon-only button so it reads as a minor control, not a
+competing headline.
+
+| English | ខ្មែរ |
+|---|---|
+| best {n}d streak | កំពូល {n} ថ្ងៃជាប់គ្នា |
