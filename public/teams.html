@@ -1962,18 +1962,27 @@ function baseHtml(){
   return h;
 }
 
-/* A historical import (Jan-Jul 2026, Siem Reap only) that keeps growing —
-   see sr-checkin-history.js for where the import came from and why it can
-   only ever be team-wide (every submission there was anonymous, so it can
-   never be folded into anyone's personal health score). The app's own
-   weekly check-in now asks the same questions (reworded to match — see
+/* Base Health, for Siem Reap only — the plain avg/pct list further down in
+   healthHtml() is for every OTHER campus; Siem Reap gets this instead, not
+   both, because a one-time import (Jan-Jul 2026, Siem Reap only — see
+   sr-checkin-history.js) exists for it and Uriah wants one section, not the
+   import sitting next to Base Health's own numbers. Every yes/no question
+   Base Health used to list for Siem Reap is here too (see SR_CHECKIN_
+   QUESTIONS — some carry real imported history, some are live-only), so this
+   IS Base Health for this campus, just with an extra quarter or two of
+   history under the ones that have it. The 1-10 scales and hour totals
+   (clarity, growth, loneliness, language/ministry hours) have no percentage
+   to plot and are left out, same as Uriah asked.
+
+   Every submission in the import was anonymous, so it can only ever be
+   team-wide — never folded into anyone's personal health score. The app's
+   own weekly check-in now asks the same questions (reworded to match — see
    WEEK_YESNO_QS / WEEK_MONTHLY_QS), so srCheckinPoints_ below appends live
    Siem Reap answers onto the same series the moment the import stops: one
-   continuous line, not an old dataset next to a new one. Lives on Health,
-   not Base — it's health data, and Uriah wants Base kept to ministry
-   stats. Rendered defensively: sr-checkin-history.js is data-optional like
-   km.js, so a missing file just means this card doesn't appear rather than
-   breaking the page.
+   continuous line, not an old dataset next to a new one. Rendered
+   defensively: sr-checkin-history.js is data-optional like km.js, so a
+   missing file just means this card doesn't appear rather than breaking
+   the page.
 
    One quarter at a time (same Q1-Q4 picker Base Health already uses), with
    two views of that quarter: a line chart of the overall trend (each
@@ -2085,7 +2094,7 @@ function srCheckinHistoryHtml(){
   var curQ = Math.ceil((new Date().getMonth()+1)/3);
   var q = Number(S.srQuarter || curQ);
   var data = srCheckinQuarterly_(q);
-  var h='<h3 style="margin-top:16px">🇰🇭 '+esc(t('Siem Reap · Weekly Check-In History'))+'</h3>';
+  var h='<h3 style="margin-top:16px">🏠 '+esc(t('Base health'))+' · '+esc(t(campusName(S.me.campus)))+'</h3>';
   h+='<div class="card">'+
     '<div class="pmeta" style="margin-bottom:8px">'+
     esc(t('Starts with a Jan–Jul 2026 import from a separate check-in tool, then continues from the weekly check-in below. Team-wide and anonymous — not linked to any individual profile.'))+
@@ -2651,6 +2660,19 @@ function notifItems_(){
       items.push({ when: r.decidedAt||r.from, text: gpT('Your {range} leave request was declined', {range:range}) });
     }
   });
+  /* A nudge, not a server-tracked item — Friday through the end of the week,
+     if this week's check-in is still unanswered. "when" is that Friday's own
+     date, so clearing it only holds through the rest of THIS week: next
+     week's Friday is a later date, past the clear cutoff, so the same nudge
+     reappears fresh rather than staying cleared forever. */
+  if(S.me){
+    var nwk=thisWeek(), nfri=new Date(weekBounds_(nwk).from);
+    nfri.setDate(nfri.getDate()+4);
+    if(new Date(todayStr())>=nfri && !myWeekRow(nwk)){
+      items.push({ when:isoDateOf_(nfri), text:t('Your weekly health check-in is due'),
+        actions:'<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-gohealth="1">'+esc(t('Answer it'))+'</button>' });
+    }
+  }
   items.sort(function(a,b){ return (b.when||'')<(a.when||'')?-1:1; });
   return items;
 }
@@ -3435,6 +3457,15 @@ function adminRowBodyHtml_(s){
       '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-admingrant="'+esc(s.id)+'" data-adminmake="'+(s.isAdmin?'0':'1')+'">'+
       (s.isAdmin?esc(t('Revoke admin')):esc(t('Make admin')))+'</button></div>';
   }
+  /* Permanent — for a duplicate or a test account, not the normal way
+     someone leaves (that's Deactivate, further up, which keeps their
+     history). Set apart with its own divider so it doesn't get tapped by
+     habit while reaching for something else on the row. */
+  if(!mine){
+    b+='<div class="mentorDivider"></div>'+
+      '<button class="danger" data-admindelete="'+esc(s.id)+'">'+esc(t('Delete account'))+'</button>'+
+      '<p class="hint" style="margin-top:4px">'+esc(t('Permanent — for a duplicate or test account, not someone leaving. Their logged history stays; only the account goes.'))+'</p>';
+  }
   return b+'</div>';
 }
 
@@ -3470,6 +3501,18 @@ function bindAdmin(){
       if(!s) return;
       run('adminSetActive',[S.auth.user,S.auth.pin,id,!s.active],function(d){
         if(d && d.ok) adminRefresh_(); else showMsg('Could not update');
+      });
+    };
+  });
+  document.querySelectorAll('[data-admindelete]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-admindelete');
+      var s=(S.adminStaff||[]).find(function(x){ return x.id===id; });
+      if(!s) return;
+      if(!confirm(gpT('Permanently delete {name}’s account? This can’t be undone.',{name:s.name}))) return;
+      run('adminDeleteStaff',[S.auth.user,S.auth.pin,id],function(d){
+        if(d && d.ok){ showMsg(t('Account deleted')); adminRefresh_(); }
+        else showMsg(t('Could not delete that account'));
       });
     };
   });
@@ -3812,6 +3855,14 @@ function healthHtml(){
     (isCurWk?'':'<button class="linkbtn" style="padding:6px 0 0" id="healthJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
   '</div>';
 
+  /* A nudge for last week specifically, from the moment it ends — shown only
+     while looking at the current week, so it doesn't stack with the "which
+     week" nav you'd use to jump there anyway once you tap in. */
+  if(isCurWk && cur>1 && !myWeekRow(cur-1)){
+    h += '<div class="banner">'+esc(gpT('You haven’t answered week {n} yet.',{n:cur-1}))+
+      ' <button class="linkbtn inline" id="goLastWeekHealth">'+esc(t('Fill it in'))+'</button></div>';
+  }
+
   /* --- my check-in for that week --- */
   var row = myWeekRow(wk);
   var score = row ? compositeOf(row) : null;
@@ -3921,9 +3972,19 @@ function healthHtml(){
     h += '</div>';
   }
 
-  /* Doesn't depend on S.base — it's a frozen import, not live base data — so
-     it belongs before that guard, not after it. */
-  h += srCheckinHistoryHtml();
+  /* Siem Reap gets ONE section, not two: the chart view (quarter picker,
+     trend line, tap-a-question bars) IS Base Health here, not a second
+     thing sitting next to it — srCheckinHistoryHtml covers every yes/no
+     question Base Health used to list, plus the ones only the import ever
+     asked. The 1-10 scales and hour totals (clarity, growth, loneliness,
+     language/ministry hours) have no percentage to show and are left out
+     rather than forced into a chart that can't represent them. Poipet has
+     no import to merge, so it keeps the plain figures below unchanged. */
+  if(S.me.campus==='siemreap'){
+    h += srCheckinHistoryHtml();
+    h += '<p class="hint">🔒 '+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
+    return h;
+  }
 
   /* --- the base average this feeds. Anonymous: pooled from tokens, no names. --- */
   if(!S.base){
@@ -5383,6 +5444,10 @@ function bind(){
   if(hjc) hjc.onclick=function(){
     gpTap(); S.healthWeek=null; S.weekDraft=null; S.weekDraftFor=null; S.weekForm=null; render();
   };
+  var glw=document.getElementById('goLastWeekHealth');
+  if(glw) glw.onclick=function(){
+    gpTap(); S.healthWeek=thisWeek()-1; S.weekDraft=null; S.weekDraftFor=null; S.weekForm=thisWeek()-1; render();
+  };
   var hSc=document.getElementById('healthScopeSel');
   if(hSc) hSc.onchange=function(){ S.healthScope=hSc.value; render(); };
   var hQs=document.getElementById('healthQSel');
@@ -5680,6 +5745,9 @@ function bind(){
   });
 
   /* 1-on-1 requests, either direction of a mentor/mentee pair. */
+  document.querySelectorAll('[data-gohealth]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='health'; render(); };
+  });
   document.querySelectorAll('[data-request121]').forEach(function(b){
     b.onclick=function(){
       var id=b.getAttribute('data-request121');

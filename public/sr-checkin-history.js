@@ -6,18 +6,23 @@
    Mar 17 - Jul 14 2026 are real weekly submissions; the source stopped being
    used after that, so "latest" here means Jul 14, not today. */
 
-/* w2 (best friend on base) and w6 (fully honest in this report) are dropped
-   here — nothing in the app tracks either going forward, so there's nothing
-   to continue them into. The rest carry a liveId: the app's own weekly
-   check-in now asks the exact same question (reworded to match, see
-   WEEK_YESNO_QS / WEEK_MONTHLY_QS in teams.html), so srCheckinPoints_ below
-   can splice live answers onto the end of each imported line — one
-   continuous series, not two separate datasets. */
+/* This is Base Health's entire yes/no-question list for Siem Reap now, not
+   just the import — Uriah wants one section, not the import sitting next to
+   Base Health's own numbers. w2 (best friend on base) and w6 (fully honest
+   in this report) are dropped: nothing in the app tracks either going
+   forward, so there's nothing to continue them into. Every other question
+   carries a liveId, which srCheckinPoints_ (teams.html) uses to splice live
+   answers onto the imported line. Three (oneOnOne, sharedFaith, sabbath)
+   never had an import — SR_CHECKIN_WEEKS has no key by that name — so their
+   series is just live points, same mechanism, simply nothing before it. */
 var SR_CHECKIN_QUESTIONS = [
   { id: 'w1', en: 'Bible & daily quiet time', liveId: 'quietTime' },
   { id: 'w3', en: 'Looked at porn this week', lowerBetter: true, liveId: 'porn' },
   { id: 'w4', en: 'Exercised 15+ min, 3 days', liveId: 'exercise' },
   { id: 'w5', en: 'Currently in debt to the base', lowerBetter: true, liveId: 'debt' },
+  { id: 'oneOnOne', en: 'Had a one-on-one this week', liveId: 'oneOnOne' },
+  { id: 'sharedFaith', en: 'Shared their faith this week', liveId: 'sharedFaith' },
+  { id: 'sabbath', en: 'Took a sabbath this week', liveId: 'sabbath' },
   { id: 'm1', en: 'Called family this month', liveId: 'familyCall' },
   { id: 'm2', en: 'Often felt lonely this month', lowerBetter: true, liveId: 'lonelyMonth' },
   { id: 'm3', en: 'Sent a ministry update this month', liveId: 'ministryUpdate' },

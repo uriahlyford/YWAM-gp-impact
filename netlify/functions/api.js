@@ -453,6 +453,30 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
   return { ok: true, staff: adminStaffOut_(rec) };
 }
 
+/* For the real mess this exists to clean up — a duplicate sign-up, a test
+   account — not for the normal way someone leaves: that's adminSetActive
+   (deactivate), which keeps their history intact. This is permanent, so an
+   admin can't delete their own account (that would be one admin locking
+   everyone out, or locking themselves out, by mistake), and anyone who had
+   this person set as their mentor has that cleared rather than left
+   pointing at a ghost id. Their logged numbers stay — a week someone
+   answered doesn't stop being real base history just because the account
+   that wrote it is gone; only the account itself goes. */
+async function adminDeleteStaff(username, pin, staffId) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  if (admin.id === staffId) return { ok: false, err: 'self_delete' };
+  const rows = await getStaff_();
+  const idx = rows.findIndex(function (r) { return r.id === staffId; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  rows.splice(idx, 1);
+  rows.forEach(function (r) {
+    if (r.mentorId === staffId) { r.mentorId = ''; r.mentorStatus = ''; r.updated = new Date().toISOString(); }
+  });
+  await saveStaff_(rows);
+  return { ok: true };
+}
+
 async function updateProfile(username, pin, payload) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
@@ -1855,6 +1879,7 @@ const HANDLERS = {
   adminSetActive: function (a) { return adminSetActive(a[0], a[1], a[2], a[3]); },
   adminSetMentor: function (a) { return adminSetMentor(a[0], a[1], a[2], a[3], a[4]); },
   adminResetPin: function (a) { return adminResetPin(a[0], a[1], a[2], a[3]); },
+  adminDeleteStaff: function (a) { return adminDeleteStaff(a[0], a[1], a[2]); },
   adminUpdateStaff: function (a) { return adminUpdateStaff(a[0], a[1], a[2], a[3]); },
   updateProfile: function (a) { return updateProfile(a[0], a[1], a[2]); },
   changePin: function (a) { return changePin(a[0], a[1], a[2]); },
