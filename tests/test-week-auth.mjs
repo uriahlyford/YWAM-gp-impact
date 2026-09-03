@@ -138,7 +138,37 @@ await call('deleteMyWeek', ['sokha', '1234', 30]);
 check('clearing only touches my own token', !!mem.survey.find(x => x.device === pendRow.device),
   'the other person’s row went too');
 
+// 16. the month-end add-on (familyCall/lonelyMonth/ministryUpdate/twoOneOnOnes)
+// — sent, it's stored and comes back; left out, it stays truly absent rather
+// than being recorded as a "No" nobody was asked (that's what lets
+// compositeOf count it only on the weeks it was actually asked).
+r = await call('saveMyWeek', ['sokha', '1234', 40,
+  { ...ANSWERS, familyCall: true, lonelyMonth: false, ministryUpdate: true, twoOneOnOnes: false }]);
+check('monthly add-on saves', r.ok, JSON.stringify(r).slice(0, 120));
+const wk40 = mem.survey.find(x => Number(x.week) === 40 && x.device === row.device);
+check('monthly answers stored', wk40 && wk40.familyCall === 1 && wk40.ministryUpdate === 1 &&
+  wk40.lonelyMonth === 0 && wk40.twoOneOnOnes === 0, JSON.stringify(wk40));
+r = await call('getMyWeekly', ['sokha', '1234']);
+const wk40out = (r.checkins || []).find(x => Number(x.week) === 40);
+check('monthly answers round-trip to the client', wk40out && wk40out.familyCall === 1 && wk40out.lonelyMonth === 0,
+  JSON.stringify(wk40out));
+
+await call('saveMyWeek', ['sokha', '1234', 41, ANSWERS]);
+const wk41 = mem.survey.find(x => Number(x.week) === 41 && x.device === row.device);
+check('a week that skips the monthly add-on leaves it truly absent, not "No"',
+  !('familyCall' in wk41) && !('lonelyMonth' in wk41), Object.keys(wk41).join(','));
+
+r = await call('getData', ['']);
+const surveyWk40 = (r.survey || []).find(x => Number(x.week) === 40);
+check('the anonymous base read also carries the monthly add-on',
+  surveyWk40 && surveyWk40.familyCall === 1, JSON.stringify(surveyWk40));
+
+r = await call('getMenteeLogs', ['dara', '1234', 'st_sokha']);
+const menteeWk40 = (r.checkins || []).find(x => Number(x.week) === 40);
+check('the mentor view also carries the monthly add-on',
+  menteeWk40 && menteeWk40.familyCall === 1, JSON.stringify(menteeWk40));
+
 console.log(fails.length ? '\n' + fails.length + ' FAILED:\n - ' + fails.join('\n - ')
-                         : '\nall 15 weekly-health checks passed');
+                         : '\nall 26 weekly-health checks passed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fails.length ? 1 : 0);

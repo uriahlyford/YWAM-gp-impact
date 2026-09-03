@@ -1962,13 +1962,18 @@ function baseHtml(){
   return h;
 }
 
-/* A one-time historical import, Siem Reap only — see sr-checkin-history.js
-   for where it came from and why it can only ever be team-wide (every
-   submission there is anonymous, so this can never be folded into anyone's
-   personal health score). Lives on Health, not Base — it's health data, and
-   Uriah wants Base kept to ministry stats. Rendered defensively:
-   sr-checkin-history.js is data-optional like km.js, so a missing file just
-   means this card doesn't appear rather than breaking the page.
+/* A historical import (Jan-Jul 2026, Siem Reap only) that keeps growing —
+   see sr-checkin-history.js for where the import came from and why it can
+   only ever be team-wide (every submission there was anonymous, so it can
+   never be folded into anyone's personal health score). The app's own
+   weekly check-in now asks the same questions (reworded to match — see
+   WEEK_YESNO_QS / WEEK_MONTHLY_QS), so srCheckinPoints_ below appends live
+   Siem Reap answers onto the same series the moment the import stops: one
+   continuous line, not an old dataset next to a new one. Lives on Health,
+   not Base — it's health data, and Uriah wants Base kept to ministry
+   stats. Rendered defensively: sr-checkin-history.js is data-optional like
+   km.js, so a missing file just means this card doesn't appear rather than
+   breaking the page.
 
    One quarter at a time (same Q1-Q4 picker Base Health already uses), with
    two views of that quarter: a line chart of the overall trend (each
@@ -1994,6 +1999,23 @@ function srCheckinPoints_(q){
     var pct=Math.round(qq.yes/qq.n*100);
     pts.push({month:month, label:w.date.slice(5), pct:pct, good: q.lowerBetter ? 100-pct : pct});
   });
+  /* Live data picks up right where the import stopped — the app's own
+     weekly check-in now asks this exact question (q.liveId), so it's
+     aggregated for Siem Reap the same way Base Health aggregates any other
+     weekly question, and appended to the same series. One line, not two. */
+  if(q.liveId && S.base){
+    var R = baseR();
+    var monthly = q.id.charAt(0)==='m';
+    var cur = thisWeek();
+    for(var wk=1; wk<=cur; wk++){
+      var b = weekBounds_(wk);
+      if(b.to <= SR_HISTORY_CUTOFF) continue;
+      if(monthly && !isMonthEndWeek_(wk)) continue;
+      var pct = R.pct(R.surveyRows(['siemreap'], wk), q.liveId);
+      if(pct===null) continue;
+      pts.push({month:Number(b.to.slice(5,7)), label:b.to.slice(5), pct:pct, good: q.lowerBetter ? 100-pct : pct});
+    }
+  }
   return pts;
 }
 var SR_MONTHS_=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -2066,7 +2088,7 @@ function srCheckinHistoryHtml(){
   var h='<h3 style="margin-top:16px">🇰🇭 '+esc(t('Siem Reap · Weekly Check-In History'))+'</h3>';
   h+='<div class="card">'+
     '<div class="pmeta" style="margin-bottom:8px">'+
-    esc(t('Imported from a separate check-in tool, Jan–Jul 2026 (it stopped being used after that). Team-wide and anonymous — not linked to any individual profile.'))+
+    esc(t('Starts with a Jan–Jul 2026 import from a separate check-in tool, then continues from the weekly check-in below. Team-wide and anonymous — not linked to any individual profile.'))+
     '</div>'+
     '<div class="pickerRow"><label class="pick" style="max-width:120px"><span>'+esc(t('Quarter'))+'</span><select id="srQSel">'+
       [1,2,3,4].map(function(i){ return '<option value="'+i+'"'+(q===i?' selected':'')+'>Q'+i+'</option>'; }).join('')+
@@ -3694,12 +3716,17 @@ var WEEK_SCALE_QS = [
   { id:'clarity', text:'How clear am I on what to work on this week?', higherBetter:true, lowLabel:'1 · Unclear', highLabel:'10 · Very clear' },
   { id:'growth',  text:'How would I rate my personal growth this week?', higherBetter:true, lowLabel:'1 · Stagnant', highLabel:'10 · Thriving' }
 ];
+/* Four of these are worded to match the Siem Reap history's own weekly
+   questions exactly (porn, exercise, debt, quiet time) — same question, same
+   id, so an answer given from here on continues that same historical line
+   rather than starting a new, disconnected one. See srCheckinPoints_ in
+   sr-checkin-history.js for where the two get spliced together. */
 var WEEK_YESNO_QS = [
   { id:'porn',        text:'Did I look at porn this week?', higherBetter:false },
   { id:'oneOnOne',    text:'Did I have a one-on-one this week?', higherBetter:true },
-  { id:'exercise',    text:'Did I exercise at least 3 days this week?', higherBetter:true },
-  { id:'quietTime',   text:'Did I have regular quiet times this week?', higherBetter:true },
-  { id:'debt',        text:'Do I have staff debt?', higherBetter:false },
+  { id:'exercise',    text:'Did I exercise at least 15 minutes, 3 days this week?', higherBetter:true },
+  { id:'quietTime',   text:'Did I read the Bible and have daily quiet time every day this week?', higherBetter:true },
+  { id:'debt',        text:'Do I currently have debt toward the base?', higherBetter:false },
   { id:'sharedFaith', text:'Did I share my faith with someone this week?', higherBetter:true },
   { id:'sabbath',     text:'Did I take a sabbath this week?', higherBetter:true }
 ];
@@ -3707,6 +3734,26 @@ var WEEK_NUM_QS = [
   { id:'langHours', text:'Hours spent on language study this week' },
   { id:'minHours',  text:'Hours doing ministry in the local community this week' }
 ];
+/* Extra questions, once a month — the same "Monthly Check-In" add-on the
+   Siem Reap history's own tool asked, on the week that closes out a month
+   (isMonthEndWeek_ below). Only written to the server on that week (see
+   weekSubmit and saveMyWeek in api.js), so compositeOf only counts them on
+   the weeks they were actually asked — same pattern growth/sharedFaith/
+   sabbath already use for "answered, or not asked at all". */
+var WEEK_MONTHLY_QS = [
+  { id:'familyCall',     text:'Did I call my family at least once this month?', higherBetter:true },
+  { id:'lonelyMonth',    text:'Did I often feel lonely this month?', higherBetter:false },
+  { id:'ministryUpdate', text:'Did I send a ministry update to my supporters this month?', higherBetter:true },
+  { id:'twoOneOnOnes',   text:'Did I have at least 2 one-on-ones this month?', higherBetter:true }
+];
+/* The week whose Sunday is the last one still inside this calendar month —
+   exactly one per month, same cadence the Siem Reap tool used for its own
+   month-end add-on. */
+function isMonthEndWeek_(wk){
+  var thisSun = new Date(weekBounds_(wk).to);
+  var nextSun = new Date(weekBounds_(Number(wk)+1).to);
+  return thisSun.getMonth() !== nextSun.getMonth();
+}
 
 function myWeekRow(wk){
   for(var i=0;i<(S.checkins||[]).length;i++){
@@ -3724,7 +3771,7 @@ function weekDraftFor(wk){
     WEEK_SCALE_QS.concat(WEEK_NUM_QS).forEach(function(q){
       if(row[q.id]!==null && row[q.id]!==undefined) d[q.id]=Number(row[q.id]);
     });
-    WEEK_YESNO_QS.forEach(function(q){
+    WEEK_YESNO_QS.concat(WEEK_MONTHLY_QS).forEach(function(q){
       if(row[q.id]!==null && row[q.id]!==undefined) d[q.id]=row[q.id]?1:0;
     });
   }
@@ -3814,6 +3861,14 @@ function healthHtml(){
         '<button data-wyn="'+q.id+'|1" class="'+(d[q.id]===1?('on'+(q.higherBetter?'':' bad')):'')+'">'+esc(t('Yes'))+'</button>'+
         '<button data-wyn="'+q.id+'|0" class="'+(d[q.id]===0?'on':'')+'">'+esc(t('No'))+'</button></div></div>';
     });
+    if(isMonthEndWeek_(wk)){
+      h += '<div class="mentorDivider"></div><div class="mentorLabel">'+esc(t('Monthly Check-In'))+'</div>';
+      WEEK_MONTHLY_QS.forEach(function(q){
+        h += '<div class="qBlock"><div class="qText">'+esc(t(q.text))+'</div><div class="seg">'+
+          '<button data-wyn="'+q.id+'|1" class="'+(d[q.id]===1?('on'+(q.higherBetter?'':' bad')):'')+'">'+esc(t('Yes'))+'</button>'+
+          '<button data-wyn="'+q.id+'|0" class="'+(d[q.id]===0?'on':'')+'">'+esc(t('No'))+'</button></div></div>';
+      });
+    }
     h += '<button class="btn" id="weekSubmit">'+
       esc(t(row?'Update my check-in':'Submit my check-in'))+'</button>';
     h += '<p class="hint" style="margin-top:8px">🔒 '+
@@ -3840,6 +3895,14 @@ function healthHtml(){
         '<span class="rowVal">'+esc(t(row[q.id]?'Yes':'No'))+
         myTrend(wk,q.id,q.higherBetter,true)+'</span></div>';
     });
+    var monthlyAnswered = WEEK_MONTHLY_QS.filter(function(q){ return row[q.id]!==null && row[q.id]!==undefined; });
+    if(monthlyAnswered.length){
+      h += '<div class="mentorDivider"></div><div class="mentorLabel">'+esc(t('Monthly Check-In'))+'</div>';
+      monthlyAnswered.forEach(function(q){
+        h += '<div class="row"><span class="rowName">'+esc(t(q.text))+'</span>'+
+          '<span class="rowVal">'+esc(t(row[q.id]?'Yes':'No'))+'</span></div>';
+      });
+    }
     h += '</div>';
   }
 
@@ -3967,6 +4030,11 @@ function weekSubmit(btn){
   WEEK_SCALE_QS.forEach(function(q){ payload[q.id] = Number(d[q.id]); });
   WEEK_NUM_QS.forEach(function(q){ payload[q.id] = Number(d[q.id])||0; });
   WEEK_YESNO_QS.forEach(function(q){ payload[q.id] = d[q.id]===1; });
+  // Only sent on the week that closes out a month — left out entirely the
+  // rest of the time, so saveMyWeek doesn't write a "No" nobody was asked.
+  if(isMonthEndWeek_(wk)){
+    WEEK_MONTHLY_QS.forEach(function(q){ payload[q.id] = d[q.id]===1; });
+  }
 
   btn.disabled = true; btn.textContent = t('Saving…');
   run('saveMyWeek', [S.auth.user, S.auth.pin, wk, payload], function(res){

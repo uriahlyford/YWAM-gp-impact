@@ -1152,3 +1152,29 @@ at once.
 | Overall trend (higher is better) | និន្នាការទាំងមូល (ខ្ពស់ជាងគឺល្អជាង) |
 | This quarter, by question | ត្រីមាសនេះ តាមសំណួរនីមួយៗ |
 | Tap a question to see its own trend. | ចុចលើសំណួរណាមួយ ដើម្បីមើលនិន្នាការផ្ទាល់របស់វា។ |
+
+## 37. Weekly check-in: reworded to match history, monthly add-on, seamless chart
+
+Three questions (exercise, quiet time, staff debt) reworded to match the
+Siem Reap history's own wording exactly — same question going forward, so
+an answer continues that historical line on the Health chart rather than
+starting a new, disconnected one. A new "Monthly Check-In" section appears
+only on the week that closes out a month (call family, felt lonely this
+month, sent a ministry update, 2+ one-on-ones) — the same add-on the Siem
+Reap tool used. Two questions with no ongoing equivalent (best friend on
+base, honesty in the report) were dropped from the history chart — nothing
+tracks them anymore, so there's nothing to continue. The chart itself now
+appends live Siem Reap answers onto the same line the import stopped at,
+instead of stopping in July forever.
+
+| English | ខ្មែរ |
+|---|---|
+| Did I exercise at least 15 minutes, 3 days this week? | តើខ្ញុំបានហាត់ប្រាណយ៉ាងហោចណាស់ ១៥នាទី ចំនួន ៣ថ្ងៃទេក្នុងសប្តាហ៍នេះ? |
+| Did I read the Bible and have daily quiet time every day this week? | តើខ្ញុំបានអានព្រះគម្ពីរ និងមានពេលស្ងប់ស្ងាត់ជារៀងរាល់ថ្ងៃទេក្នុងសប្តាហ៍នេះ? |
+| Do I currently have debt toward the base? | តើខ្ញុំកំពុងជំពាក់បំណុលមូលដ្ឋានដែរឬទេ? |
+| Monthly Check-In | ការឆែកអង់ប្រចាំខែ |
+| Did I call my family at least once this month? | តើខ្ញុំបានទូរស័ព្ទទៅគ្រួសារយ៉ាងហោចណាស់ម្តងទេក្នុងខែនេះ? |
+| Did I often feel lonely this month? | តើខ្ញុំមានអារម្មណ៍ឯកកោញឹកញាប់ទេក្នុងខែនេះ? |
+| Did I send a ministry update to my supporters this month? | តើខ្ញុំបានផ្ញើដំណឹងកិច្ចការបម្រើទៅអ្នកគាំទ្រទេក្នុងខែនេះ? |
+| Did I have at least 2 one-on-ones this month? | តើខ្ញុំបានជួបគ្នាមួយទល់មួយយ៉ាងហោចណាស់ ២ដងទេក្នុងខែនេះ? |
+| Starts with a Jan–Jul 2026 import from a separate check-in tool, then continues from the weekly check-in below. Team-wide and anonymous — not linked to any individual profile. | ចាប់ផ្តើមដោយការនាំចូលពីខែមករា–កក្កដា ២០២៦ ពីឧបករណ៍ឆែកអង់ផ្សេងមួយ បន្ទាប់មកបន្តពីការឆែកអង់ប្រចាំសប្តាហ៍ខាងក្រោម។ ជាទិន្នន័យរួមក្រុម និងអនាមិក — មិនភ្ជាប់ជាមួយប្រវត្តិរូបនរណាម្នាក់ទេ។ |

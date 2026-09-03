@@ -166,6 +166,13 @@ function compositeOf(r){
   if(r.growth!==null && r.growth!==undefined) parts.push(Number(r.growth)||0);
   if(r.sharedFaith!==null && r.sharedFaith!==undefined) parts.push(r.sharedFaith?10:0);
   if(r.sabbath!==null && r.sabbath!==undefined) parts.push(r.sabbath?10:0);
+  // The month-end add-on (familyCall/lonelyMonth/ministryUpdate/twoOneOnOnes) —
+  // same "count it only if it was actually asked" treatment as growth/sabbath
+  // above, since these only exist on the one week a month that asks them.
+  if(r.familyCall!==null && r.familyCall!==undefined) parts.push(r.familyCall?10:0);
+  if(r.lonelyMonth!==null && r.lonelyMonth!==undefined) parts.push(r.lonelyMonth?0:10);
+  if(r.ministryUpdate!==null && r.ministryUpdate!==undefined) parts.push(r.ministryUpdate?10:0);
+  if(r.twoOneOnOnes!==null && r.twoOneOnOnes!==undefined) parts.push(r.twoOneOnOnes?10:0);
   var s=0; parts.forEach(function(p){s+=p;});
   return s/parts.length;
 }

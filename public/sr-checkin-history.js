@@ -6,18 +6,27 @@
    Mar 17 - Jul 14 2026 are real weekly submissions; the source stopped being
    used after that, so "latest" here means Jul 14, not today. */
 
+/* w2 (best friend on base) and w6 (fully honest in this report) are dropped
+   here — nothing in the app tracks either going forward, so there's nothing
+   to continue them into. The rest carry a liveId: the app's own weekly
+   check-in now asks the exact same question (reworded to match, see
+   WEEK_YESNO_QS / WEEK_MONTHLY_QS in teams.html), so srCheckinPoints_ below
+   can splice live answers onto the end of each imported line — one
+   continuous series, not two separate datasets. */
 var SR_CHECKIN_QUESTIONS = [
-  { id: 'w1', en: 'Bible & daily quiet time' },
-  { id: 'w2', en: 'Has a best friend on base' },
-  { id: 'w3', en: 'Looked at porn this week', lowerBetter: true },
-  { id: 'w4', en: 'Exercised 15+ min, 3 days' },
-  { id: 'w5', en: 'Currently in debt to the base', lowerBetter: true },
-  { id: 'w6', en: 'Fully honest in this report' },
-  { id: 'm1', en: 'Called family this month' },
-  { id: 'm2', en: 'Often felt lonely this month', lowerBetter: true },
-  { id: 'm3', en: 'Sent a ministry update this month' },
-  { id: 'm4', en: 'Had 2+ one-on-ones this month' }
+  { id: 'w1', en: 'Bible & daily quiet time', liveId: 'quietTime' },
+  { id: 'w3', en: 'Looked at porn this week', lowerBetter: true, liveId: 'porn' },
+  { id: 'w4', en: 'Exercised 15+ min, 3 days', liveId: 'exercise' },
+  { id: 'w5', en: 'Currently in debt to the base', lowerBetter: true, liveId: 'debt' },
+  { id: 'm1', en: 'Called family this month', liveId: 'familyCall' },
+  { id: 'm2', en: 'Often felt lonely this month', lowerBetter: true, liveId: 'lonelyMonth' },
+  { id: 'm3', en: 'Sent a ministry update this month', liveId: 'ministryUpdate' },
+  { id: 'm4', en: 'Had 2+ one-on-ones this month', liveId: 'twoOneOnOnes' }
 ];
+
+/* Where the import stops and live data can pick up — the last date the
+   source tool was actually used. */
+var SR_HISTORY_CUTOFF = '2026-07-14';
 
 /* Team-wide percentages for Jan/Feb 2026, before the digital form existed. */
 var SR_CHECKIN_MANUAL_MONTHS = [
