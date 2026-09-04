@@ -1361,3 +1361,20 @@ what it's actually for: your own.
 | No objectives set anywhere yet this quarter. | គ្មានគោលដៅត្រូវបានកំណត់នៅកន្លែងណាមួយសម្រាប់ត្រីមាសនេះនៅឡើយទេ។ |
 | 1 objective | គោលដៅ 1 |
 | {n} objectives | គោលដៅ {n} |
+
+## 48. My Ministry: a picker to jump to any ministry on the campus
+
+Below your own numbers (and, if you oversee a department, the ministries
+under it), everyone gets a "YWAM {campus} Ministries" department/ministry
+picker. An admin can pick anything on the campus; everyone else's picker
+resolves to just the one ministry they already work in — there for
+consistency, but nothing else to pick. Picking a ministry already shown
+elsewhere on the page (your own, or one you oversee) points back up rather
+than showing it twice.
+
+| English | ខ្មែរ |
+|---|---|
+| YWAM {campus} Ministries | កិច្ចការបម្រើ YWAM {campus} |
+| Jump to any ministry’s numbers. | រំលងទៅមើលចំនួនរបស់កិច្ចការបម្រើណាមួយ។ |
+| That’s your own ministry — see above. | នេះជាកិច្ចការបម្រើផ្ទាល់ខ្លួនរបស់អ្នក — សូមមើលខាងលើ។ |
+| You oversee this — see “Ministries You Oversee” above. | អ្នកទទួលបន្ទុកមើលការខុសត្រូវលើវា — សូមមើល “កិច្ចការបម្រើដែលអ្នកមើលការខុសត្រូវ” ខាងលើ។ |
