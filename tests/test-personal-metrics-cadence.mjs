@@ -1,15 +1,12 @@
-/* A Base Leadership overseer's own numbers (BL_COMMON: one-on-ones held,
-   partner connections, churches spoken at...) used to be typed as a daily
-   count, summed into the week by the server — same as a real ministry's
-   Cups Sold. That's wrong for a personal figure: nobody wants a "how many
-   one-on-ones today" box, they want to log the week once, like the health
-   check-in. So these move to the weekly card instead of the daily one, with
-   no daily entry at all.
-
-   Total Staff and Staff Debt stay level metrics (unchanged aggregation —
-   they still feed rollup.js's blAgg() base-wide headcount), but move OUT of
-   the personal weekly card into their own "Department Headcount" section:
-   they're about the department, not the overseer's own week. */
+/* A Base Leadership overseer's own page is entirely weekly — no daily
+   "Today" list at all, and no separate "Department Headcount" section
+   either: everything (BL_COMMON personal figures, Total Staff/Staff Debt,
+   Funds Raised) lands in the one "This week" box, merged with the
+   week-picker into a single card. That's a deliberate simplification from
+   an earlier design (daily Today for Funds Raised, a separate headcount
+   section) that turned out to read as two confusing boxes instead of one.
+   Every other ministry (Cups Sold, Days Open…) keeps its normal
+   daily/weekly split — this collapse is Base Leadership-only. */
 import { PUBLIC, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
@@ -73,52 +70,56 @@ function ok(name, cond, extra) {
   else { fail++; console.log('FAIL ' + name + (extra ? '  → ' + extra : '')); }
 }
 
-// Funds Raised ($) is still a plain daily count (never asked to change), so the
-// Today box can still exist — what matters is BL_COMMON is gone from it.
-const dayAcc = await p.$('[data-acc="kpiDay"]');
-if (dayAcc) { await dayAcc.click(); await p.waitForTimeout(300); }
-const dayMetrics = await p.$$eval('[data-kpi]', els => els.map(e => e.getAttribute('data-kpi'))).catch(() => []);
-ok('One-on-Ones Held is not in the daily "Today" box', !dayMetrics.includes('One-on-Ones Held'), dayMetrics.join(', '));
-ok('Total Staff is not in the daily "Today" box', !dayMetrics.includes('Total Staff'));
-ok('Funds Raised ($) is still a daily figure, unchanged', dayMetrics.includes('Funds Raised ($)'), dayMetrics.join(', '));
+ok('there is no daily "Today" box at all for a Base Leadership overseer', !(await p.$('[data-acc="kpiDay"]')));
+ok('there is no separate Department Headcount section either', !(await p.$('[data-acc="kpiHeadcount"]')));
+
+// The week-picker and the metrics accordion are one box now, not two.
+const boxes = await p.evaluate(() => {
+  const acc = document.querySelector('[data-acc="kpiWeek"]');
+  const card = acc ? acc.closest('.accCard') : null;
+  return {
+    weekNavInsideAccCard: !!(card && card.querySelector('.weekNavBlock')),
+    noSeparateCardAbove: !document.querySelector('.card + .accCard'),
+  };
+});
+ok('the week picker lives inside the same box as the metrics accordion', boxes.weekNavInsideAccCard, JSON.stringify(boxes));
+ok('there is no separate week-nav card sitting above the accordion', boxes.noSeparateCardAbove, JSON.stringify(boxes));
 
 await p.click('[data-acc="kpiWeek"]');
 await p.waitForTimeout(300);
 const weekMetrics = await p.$$eval('#kpiWeekCard [data-kpiweek]', els => els.map(e => e.getAttribute('data-kpiweek')));
-ok('One-on-Ones Held is in the weekly card', weekMetrics.includes('One-on-Ones Held'), weekMetrics.join(', '));
+ok('One-on-Ones Held is in the one weekly card', weekMetrics.includes('One-on-Ones Held'), weekMetrics.join(', '));
 ok('Partner Connections is in the weekly card', weekMetrics.includes('Partner Connections'));
-ok('Total Staff is NOT in the weekly card', !weekMetrics.includes('Total Staff'));
-ok('Staff Debt is NOT in the weekly card', !weekMetrics.includes('Staff Debt ($)'));
+ok('Total Staff is in the SAME weekly card now (no separate headcount box)', weekMetrics.includes('Total Staff'), weekMetrics.join(', '));
+ok('Staff Debt is in the same weekly card too', weekMetrics.includes('Staff Debt ($)'));
+ok('Funds Raised ($) also moved in — no daily figures left for this ministry', weekMetrics.includes('Funds Raised ($)'), weekMetrics.join(', '));
 
 const oneOnOneSub = await p.evaluate(() => {
   const row = [...document.querySelectorAll('#kpiWeekCard .row')].find(r => r.textContent.includes('One-on-Ones Held'));
   return row ? row.querySelector('.rowSub').textContent.trim() : null;
 });
-ok('it reads as a week total, not a carried-forward level', /week total/i.test(oneOnOneSub || ''), oneOnOneSub);
+ok('One-on-Ones Held still reads as a week total, not a carried-forward level', /week total/i.test(oneOnOneSub || ''), oneOnOneSub);
 
-const hc = await p.$('[data-acc="kpiHeadcount"]');
-ok('there is a separate Department Headcount section', !!hc);
-if (hc) {
-  await hc.click();
-  await p.waitForTimeout(300);
-  const hcMetrics = await p.$$eval('#kpiHeadcountCard [data-kpiweek]', els => els.map(e => e.getAttribute('data-kpiweek')));
-  ok('Total Staff is in the headcount section', hcMetrics.includes('Total Staff'), hcMetrics.join(', '));
-  ok('Staff Debt is in the headcount section', hcMetrics.includes('Staff Debt ($)'));
-  const carried = await p.evaluate(() => {
-    const inp = document.querySelector('#kpiHeadcountCard [data-kpiweek="Total Staff"]');
-    return inp ? { value: inp.value, carried: inp.hasAttribute('data-carried') } : null;
-  });
-  ok('last week’s Total Staff carries forward as before', carried && carried.value === '9' && carried.carried === true,
-    JSON.stringify(carried));
-}
+const carried = await p.evaluate(() => {
+  const inp = document.querySelector('#kpiWeekCard [data-kpiweek="Total Staff"]');
+  return inp ? { value: inp.value, carried: inp.hasAttribute('data-carried') } : null;
+});
+ok('Total Staff still carries forward from last week as before', carried && carried.value === '9' && carried.carried === true,
+  JSON.stringify(carried));
 
-// Saving from either section's button writes every pending weekly figure.
+// One Save Week button now, and it writes everything together.
+const saveBtns = await p.$$eval('.saveKpiWeekBtn', els => els.length);
+ok('there is exactly one Save Week button', saveBtns === 1, saveBtns);
+
 await p.fill('[data-kpiweek="One-on-Ones Held"]', '4');
 await p.click('#saveKpiWeekBtn');
 await p.waitForTimeout(500);
 const saved = sent.filter(q => q.fn === 'saveMyMinistry');
 ok('Save Week posted the personal weekly figure', saved.length > 0 &&
   saved[saved.length - 1].args[3].some(u => u.metric === 'One-on-Ones Held' && u.value === 4),
+  JSON.stringify(saved[saved.length - 1] || null));
+ok('and it posted Total Staff too, in the same call (one box, one save)', saved.length > 0 &&
+  saved[saved.length - 1].args[3].some(u => u.metric === 'Total Staff'),
   JSON.stringify(saved[saved.length - 1] || null));
 
 ok('no console/page errors', errs.length === 0, errs.slice(0, 3).join(' | '));

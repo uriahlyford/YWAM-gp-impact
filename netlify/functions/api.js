@@ -1265,7 +1265,7 @@ function weekSurveyFrom_(logs, s, token, wk) {
     exercise: days.length && countOf('workout') / days.length >= WEEK_EXERCISE_RATE ? 1 : 0,
     quietTime: days.length && countOf('quietTime') / days.length >= WEEK_QUIETTIME_RATE ? 1 : 0,
     debt: s.debt ? 1 : 0,
-    langHours: sumOf('langHours'), minHours: sumOf('minHours'),
+    langHours: sumOf('langHours'),
     days: days.length,
     updated: new Date().toISOString()
   };
@@ -1322,7 +1322,7 @@ async function syncWeekSurvey_(s, wk, dailyRows) {
    approved mentor — and nobody else — can be shown their answers. */
 const WEEK_SCALES = ['lonely', 'clarity', 'growth'];
 const WEEK_FLAGS = ['porn', 'oneOnOne', 'exercise', 'quietTime', 'debt', 'sharedFaith', 'sabbath'];
-const WEEK_HOURS = ['langHours', 'minHours'];
+const WEEK_HOURS = ['langHours'];
 // The month-end add-on (see WEEK_MONTHLY_QS in teams.html) — unlike WEEK_FLAGS,
 // only written when the client actually sent one, so a week that never asked
 // stays truly absent rather than recording a "No" nobody answered. That's

@@ -516,8 +516,6 @@ for (const [q, v] of [['lonely', 2], ['clarity', 9], ['growth', 8]]) {
 }
 await page.fill('[data-wnum="langHours"]', '3');
 await page.dispatchEvent('[data-wnum="langHours"]', 'change');
-await page.fill('[data-wnum="minHours"]', '7');
-await page.dispatchEvent('[data-wnum="minHours"]', 'change');
 for (const q of ['oneOnOne', 'exercise', 'quietTime', 'sharedFaith', 'sabbath']) {
   await page.click(`[data-wyn="${q}|1"]`); await page.waitForTimeout(200);
 }
