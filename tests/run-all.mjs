@@ -50,6 +50,7 @@ const BROWSER = [
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
   'test-mentor-health.mjs', // a mentor sees a mentee by name
   'test-notif-bell-actions.mjs', // an action button drawn in the bell drawer actually works, not just the inline card
+  'test-okr-admin-view.mjs', // admin sees every department's OKRs, collapsed, read-only; non-admin sees none of it
   'audit-load.mjs',         // one function invocation per page open
   'audit-paint.mjs',        // first paint even with the font CDN hanging
   'audit-allviews.mjs',     // every screen, no console errors

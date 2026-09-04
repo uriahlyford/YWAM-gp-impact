@@ -1065,7 +1065,8 @@ var S = {
      so more than one can sit on the same page without their state colliding. */
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
-  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', broadcastDraft:''
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', broadcastDraft:'',
+  adminOkrAcc:{}
 };
 
 var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
@@ -3506,6 +3507,35 @@ function myOkrHtml(){
   h+='<h2>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h2>';
   h+='<p class="sub" style="margin:0 0 2px">'+esc(t(S.me.dept))+(S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</p>';
   h+=okrSectionHtml(S.me, true, true);
+
+  /* Admin sees every department's objectives too, read-only and collapsed by
+     default — a full page of every OKR on both campuses open at once would
+     bury the one thing this page is actually for: editing your own. */
+  if(S.me.isAdmin && S.base){
+    var qOkrs = (S.base.okrs||[]).filter(function(o){ return Number(o.quarter)===qNow; });
+    h += '<h3>🗂️ '+esc(t('Every department’s OKRs'))+'</h3>';
+    if(!qOkrs.length){
+      h += '<p class="sub">'+esc(t('No objectives set anywhere yet this quarter.'))+'</p>';
+    } else {
+      var groups = {};
+      qOkrs.forEach(function(o){
+        var key = o.campus+'|'+o.dept;
+        (groups[key] = groups[key] || []).push(o);
+      });
+      var R = baseR();
+      Object.keys(groups).sort().forEach(function(key){
+        var parts = key.split('|'), campus = parts[0], dept = parts[1];
+        var list = groups[key];
+        var title = (MIN_EMOJI[dept]?MIN_EMOJI[dept]+' ':'')+esc(t(dept))+' · '+esc(campusName(campus));
+        var summary = list.length===1 ? esc(t('1 objective')) : esc(gpT('{n} objectives',{n:list.length}));
+        h += accRowHtml('adminOkrAcc', key, title, summary, function(){
+          var b = '';
+          list.forEach(function(o){ b += okrCardHtml(o, R, false); });
+          return b;
+        });
+      });
+    }
+  }
   return h;
 }
 

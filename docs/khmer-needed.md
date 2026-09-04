@@ -1347,3 +1347,17 @@ against a custom metric go through the exact same pipeline as any other
 | Ministry KPIs | សូចនាករកិច្ចការបម្រើ |
 | Pick a ministry to edit what it tracks. | ជ្រើសរើសកិច្ចការបម្រើមួយ ដើម្បីកែសម្រួលអ្វីដែលវាតាមដាន។ |
 | No ministries under this department. | គ្មានកិច្ចការបម្រើនៅក្រោមផ្នែកនេះទេ។ |
+
+## 47. Admin sees every department's OKRs from the OKR page
+
+Below your own department's objectives (still the only ones you can edit
+here), an admin now gets every other department's OKRs too — grouped by
+department and campus, collapsed by default so the page still opens on
+what it's actually for: your own.
+
+| English | ខ្មែរ |
+|---|---|
+| Every department’s OKRs | OKR របស់គ្រប់ផ្នែកទាំងអស់ |
+| No objectives set anywhere yet this quarter. | គ្មានគោលដៅត្រូវបានកំណត់នៅកន្លែងណាមួយសម្រាប់ត្រីមាសនេះនៅឡើយទេ។ |
+| 1 objective | គោលដៅ 1 |
+| {n} objectives | គោលដៅ {n} |
