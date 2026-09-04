@@ -1407,11 +1407,44 @@ async function getMyWeekly(username, pin) {
    Scoped harder than the leader path on purpose: a staff member can only read
    and write their OWN campus + department + ministry, and never a SENSITIVE
    metric, regardless of what the client sends. */
+/*  A level's last known figure, wherever it was recorded.
+
+    `entries` is scoped to this year, which is right for totals and wrong for the
+    headcounts that barely move: a ministry whose "Students Enrolled" was last
+    touched in week 50 of last year had nothing to carry forward, so the box came
+    up empty and somebody had to remember 280 and retype it. A headcount does not
+    reset because the calendar did.
+
+    So this looks across every year and returns, per metric, the most recent
+    figure recorded strictly BEFORE the current week — with the year it came
+    from, so the screen can say "carried from week 50, 2025" rather than
+    implying it was last week.  */
+function prevLevels_(rows, campus, dept, ministry, yr, wk) {
+  const prev = {};
+  rows.forEach(function (r) {
+    if (r.campus !== campus || r.dept !== dept || r.ministry !== ministry) return;
+    if (SENSITIVE.indexOf(r.metric) > -1) return;
+    const y = yearOf_(r), w = Number(r.week);
+    if (!isFinite(w)) return;
+    if (y > yr || (y === yr && w >= wk)) return;          // not earlier than now
+    const val = Number(r.value);
+    if (!isFinite(val)) return;
+    const best = prev[r.metric];
+    if (!best || y > best.year || (y === best.year && w > best.week)) {
+      prev[r.metric] = { year: y, week: w, value: val };
+    }
+  });
+  return prev;
+}
+
 async function ministryDataFor2_(campus, dept, ministry) {
   const out = {}, daily = {};
   const yr = currentYear_();
+  let prev = {};
   if (ministry) {
-    (await getEntries_()).forEach(function (r) {
+    const rows = await getEntries_();
+    prev = prevLevels_(rows, campus, dept, ministry, yr, isoWeek_(new Date().toISOString().slice(0, 10)));
+    rows.forEach(function (r) {
       if (r.campus !== campus || r.dept !== dept || r.ministry !== ministry) return;
       if (SENSITIVE.indexOf(r.metric) > -1) return;
       if (yearOf_(r) !== yr) return;
@@ -1427,7 +1460,8 @@ async function ministryDataFor2_(campus, dept, ministry) {
       daily[r.metric][r.date] = Number(r.value);
     });
   }
-  return { ok: true, campus: campus, dept: dept, ministry: ministry || '', entries: out, daily: daily, pins: [] };
+  return { ok: true, campus: campus, dept: dept, ministry: ministry || '',
+    entries: out, daily: daily, prev: prev, pins: [] };
 }
 
 async function ministryDataFor_(s) {

@@ -3124,6 +3124,46 @@ function goalsCardHtml(wk){
     Formats come from fmt() and modeOf() — the same two functions the dashboard
     uses — so a dollar figure, a 1-10 score and a percentage read the same in both
     places. */
+/*  The last figure a level actually had, and which week it came from.
+
+    `entries` only covers this year, which is right for totals and wrong for the
+    headcounts that barely move: "Students Enrolled" last typed in week 50 of last
+    year is still the enrolment in week 2 of this one, so the box came up empty and
+    somebody had to remember 280 and retype it. A headcount does not reset because
+    the calendar did.
+
+    So when this year holds nothing earlier, fall back to the server's `prev` map
+    (prevLevels_ in api.js), which looks across every year. Returns
+    {week, value, year} — the year is carried through so the label can say week 50,
+    2025 instead of implying last week. */
+function prevLevel_(wks, wk, metric, prevMap){
+  var p = lastBefore(wks, wk);
+  if(p !== null) return { week:p.week, value:p.value, year:kpiYear_() };
+  var q = prevMap && prevMap[metric];
+  if(!q) return null;
+  var qy=Number(q.year), qw=Number(q.week), qv=Number(q.value);
+  if(!isFinite(qy) || !isFinite(qw) || !isFinite(qv)) return null;
+  /* This year's earlier weeks are already in `wks`, so anything the map offers
+     from this year is at or after the week on screen — not something to carry. */
+  if(qy > kpiYear_() || (qy === kpiYear_() && qw >= Number(wk))) return null;
+  return { week:qw, value:qv, year:qy };
+}
+
+function kpiYear_(){ return new Date().getFullYear(); }
+
+/*  The " · carried from week 50, 2025 ▲ 12" tail under a level's box. Your own
+    ministry's weekly card and an overseer's had drifted into two copies of this
+    paragraph; they share it now so a fix lands in both. */
+function levelPrevSubHtml_(p, metric, carried, typed){
+  var stamp = String(p.week) + ((p.year && p.year !== kpiYear_()) ? ', '+p.year : '');
+  var out = ' \u00b7 ' + (carried
+    ? esc(t('carried from week'))+' '+stamp
+    : esc(t('week'))+' '+stamp+': '+fmt(p.value, metric));
+  var d = Number(typed) - p.value;
+  if(d && !isNaN(d)) out += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'\u25b2':'\u25bc')+' '+fmt(Math.abs(d), metric)+'</span>';
+  return out;
+}
+
 function kpiCardHtml(wk){
   if(!S.me.ministry){
     return '<div class="card"><p class="sub" style="margin:4px 0 10px">'+
@@ -3136,6 +3176,7 @@ function kpiCardHtml(wk){
       'No KPIs are defined for '+esc(S.me.ministry)+' yet.</p></div>';
   }
   var entries=(S.ministry&&S.ministry.entries)||{};
+  var prevMap=(S.ministry&&S.ministry.prev)||{};
   var daily=(S.ministry&&S.ministry.daily)||{};
   var pins=(S.ministry&&S.ministry.pins)||[];
   var today=todayStr();
@@ -3239,17 +3280,15 @@ function kpiCardHtml(wk){
         var carried=false;
         var sub='', extra='';
         if(mode==='latest'){
-          var prev=lastBefore(wks, wk);
+          var prev=prevLevel_(wks, wk, metric, prevMap);
           carried = (cur==='' && prev!==null);
           if(carried){ cur=prev.value; extra=' data-carried="1"'; }
-          sub = esc(t('now'))+' '+fmt(agg, metric);
+          sub = esc(t('now'))+' '+fmt(agg===null&&prev?prev.value:agg, metric);
           if(prev!==null){
-            sub += ' · ' + (carried
-              ? esc(t('carried from week'))+' '+prev.week
-              : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
-            var typed = S.kpiWeekDraft[metric]!==undefined ? Number(S.kpiWeekDraft[metric]) : Number(cur);
-            var d = typed - prev.value;
-            if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+            sub += levelPrevSubHtml_(prev, metric, carried,
+              S.kpiWeekDraft[metric]!==undefined ? S.kpiWeekDraft[metric] : cur);
+          } else {
+            sub += ' · ' + esc(t('nothing logged before this week'));
           }
         } else {
           // A year-to-date average hides which way this week went, so say that too.
@@ -3300,6 +3339,7 @@ function oversightKpiCardHtml_(dept, ministry, data){
       esc(gpT('No KPIs are defined for {ministry} yet.',{ministry:t(ministry)}))+'</p></div>';
   }
   var entries=(data&&data.entries)||{};
+  var prevMap=(data&&data.prev)||{};
   var isCurWk=Number(wk)===Number(thisWeek());
   var weekDraft = S.ovWeekDraft[ministry] || (S.ovWeekDraft[ministry]={});
 
@@ -3328,17 +3368,15 @@ function oversightKpiCardHtml_(dept, ministry, data){
       var sub='', extra='';
       if(mode==='latest'){
         var agg=aggregate(wks, mode);
-        var prev=lastBefore(wks, wk);
+        var prev=prevLevel_(wks, wk, metric, prevMap);
         carried = (cur==='' && prev!==null);
         if(carried){ cur=prev.value; extra=' data-carried="1"'; }
-        sub = esc(t('now'))+' '+fmt(agg, metric);
+        sub = esc(t('now'))+' '+fmt(agg===null&&prev?prev.value:agg, metric);
         if(prev!==null){
-          sub += ' · ' + (carried
-            ? esc(t('carried from week'))+' '+prev.week
-            : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
-          var typed = weekDraft[metric]!==undefined ? Number(weekDraft[metric]) : Number(cur);
-          var d = typed - prev.value;
-          if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+          sub += levelPrevSubHtml_(prev, metric, carried,
+            weekDraft[metric]!==undefined ? weekDraft[metric] : cur);
+        } else {
+          sub += ' · ' + esc(t('nothing logged before this week'));
         }
       } else if(mode==='sum'){
         // A count is this week's own figure here, not a running daily total.
