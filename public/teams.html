@@ -3266,12 +3266,30 @@ function levelPrevSubHtml_(p, metric, carried, typed){
    above it. */
 var HEADCOUNT_METRICS = ['Total Staff','Staff Debt ($)'];
 
+/* The reverse of kr.metricKey: an OKR key result links FROM the objective TO
+   a metric (dept|ministry|metric) to pull its progress live — this is a
+   metric asking the question the other way, for whoever is typing the
+   number: does this feed anything? Reads S.base.okrs, already on the page
+   for everyone by boot time (My Database's roll-up needs it too), so no
+   extra fetch. Scoped to the metric's own campus, same as krProgress(). */
+function metricOkrNote_(campus, dept, ministry, metric){
+  var key = dept+'|'+ministry+'|'+metric;
+  var okrs = ((S.base && S.base.okrs) || []).filter(function(o){
+    return o.campus===campus && (o.krs||[]).some(function(kr){ return kr.metricKey===key; });
+  });
+  if(!okrs.length) return '';
+  var label = okrs.length===1
+    ? gpT('feeds “{objective}”', {objective: okrs[0].objective})
+    : gpT('feeds {n} objectives', {n: okrs.length});
+  return ' · <span class="okrFeeds">🎯 '+esc(label)+'</span>';
+}
+
 /* One row of a weekly figure — latest (carries forward), avg (a score), or
    sum entered directly for the week rather than built up from daily taps
    (a BL_COMMON personal figure, or an oversight card's count). Shared by
    kpiCardHtml's "This week"/"Department Headcount" sections so the three
    aggregation rules are written once. */
-function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft){
+function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft, campus, dept, ministry){
   var mode=modeOf(metric);
   var wks=entries[metric]||{};
   var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
@@ -3296,6 +3314,7 @@ function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft){
     sub = esc(t('avg'))+' '+fmt(agg2, metric)+
       gpVsLastWeek(wks, wk, metric, draft[metric]!==undefined ? draft[metric] : thisWk);
   }
+  if(campus && dept && ministry) sub += metricOkrNote_(campus, dept, ministry, metric);
   if(draft[metric]!==undefined) cur=draft[metric];
   return '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
     '<div class="rowSub">'+sub+'</div></div>'+
@@ -3307,11 +3326,12 @@ function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft){
    period, no carry-forward (a fresh month starts blank, unlike a level) and
    no day-by-day or vs-last-period breakdown, since it's typed once. attr is
    'kpimonth' or 'kpiquarter', so the two sections' inputs never collide. */
-function kpiPeriodRowHtml_(metric, anchorWeek, entries, draft, attr){
+function kpiPeriodRowHtml_(metric, anchorWeek, entries, draft, attr, campus, dept, ministry){
   var wks=entries[metric]||{};
   var stored = wks[String(anchorWeek)];
   var cur = draft[metric]!==undefined ? draft[metric] : (stored!==undefined ? stored : '');
   var sub = stored!==undefined ? (esc(t('logged'))+' '+fmt(Number(stored), metric)) : esc(t('nothing logged yet'));
+  if(campus && dept && ministry) sub += metricOkrNote_(campus, dept, ministry, metric);
   return '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
     '<div class="rowSub">'+sub+'</div></div>'+
     '<input type="number" inputmode="decimal" class="kpiIn" data-'+attr+'="'+esc(metric)+'" value="'+esc(String(cur))+'"></div>';
@@ -3432,6 +3452,7 @@ function kpiCardHtml(wk){
         b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
           '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
           gpVsLastWeek(entries[metric], wk, metric, weekVal)+
+          metricOkrNote_(S.me.campus, S.me.dept, S.me.ministry, metric)+
           '<span class="newTot"></span></div></div>'+
           '<input type="number" inputmode="decimal" class="kpiIn" placeholder="+0" data-kpi="'+esc(metric)+
           '" data-metric="'+esc(metric)+'" data-mode="sum" data-run="'+base+
@@ -3452,7 +3473,7 @@ function kpiCardHtml(wk){
       b += '<p class="sub" style="margin:4px 0 10px">'+
         esc(t('One number per week — headcounts and scores carry forward until changed; the rest is logged fresh each week.'))+'</p>';
       levels.forEach(function(metric){
-        b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft);
+        b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft, S.me.campus, S.me.dept, S.me.ministry);
       });
       b+='<button class="btn saveKpiWeekBtn" id="saveKpiWeekBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
       return b+'</div>';
@@ -3473,7 +3494,7 @@ function kpiCardHtml(wk){
       b += '<p class="sub" style="margin:4px 0 10px">'+
         esc(t('Feeds the base’s total headcount — carries forward from last time until changed.'))+'</p>';
       headcount.forEach(function(metric){
-        b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft);
+        b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft, S.me.campus, S.me.dept, S.me.ministry);
       });
       b+='<button class="btn saveKpiWeekBtn" id="saveKpiHeadcountBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
       return b+'</div>';
@@ -3492,7 +3513,7 @@ function kpiCardHtml(wk){
       b += '<p class="sub" style="margin:4px 0 10px">'+
         esc(gpT('Logged once for {month}, not built up from weekly entries.',{month:monthLabel}))+'</p>';
       monthlyCounts.forEach(function(metric){
-        b += kpiPeriodRowHtml_(metric, mwk, entries, S.kpiMonthDraft, 'kpimonth');
+        b += kpiPeriodRowHtml_(metric, mwk, entries, S.kpiMonthDraft, 'kpimonth', S.me.campus, S.me.dept, S.me.ministry);
       });
       b+='<button class="btn" id="saveKpiMonthBtn">'+esc(t('Save Month'))+'</button>';
       return b+'</div>';
@@ -3507,7 +3528,7 @@ function kpiCardHtml(wk){
       b += '<p class="sub" style="margin:4px 0 10px">'+
         esc(gpT('Logged once for Q{q}, not built up from weekly entries.',{q:qNum}))+'</p>';
       quarterlyCounts.forEach(function(metric){
-        b += kpiPeriodRowHtml_(metric, qwk, entries, S.kpiQuarterDraft, 'kpiquarter');
+        b += kpiPeriodRowHtml_(metric, qwk, entries, S.kpiQuarterDraft, 'kpiquarter', S.me.campus, S.me.dept, S.me.ministry);
       });
       b+='<button class="btn" id="saveKpiQuarterBtn">'+esc(t('Save Quarter'))+'</button>';
       return b+'</div>';
