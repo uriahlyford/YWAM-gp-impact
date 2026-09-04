@@ -1231,3 +1231,18 @@ base's history; only the account goes.
 | Permanently delete {name}’s account? This can’t be undone. | លុបគណនីរបស់ {name} ជាអចិន្ត្រៃយ៍មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
 | Account deleted | គណនីត្រូវបានលុប |
 | Could not delete that account | មិនអាចលុបគណនីនោះបានទេ |
+
+## 41. Weekly Goals→KPI link, a Health label, and a Month view
+
+A Weekly Goal can now be pointed at a live KPI number instead of a manual
+percentage — the same picker the OKR key results already use, dropped into
+each goal row. Health's "Against last week" section now says plainly that
+it's a personal, private view (Base Health further down is the shared,
+anonymous one). Base Health also gets a Month scope alongside Week/
+Quarter/Year.
+
+| English | ខ្មែរ |
+|---|---|
+| Not linked to a KPI | មិនបានភ្ជាប់ទៅនឹង KPI ទេ |
+| Your personal health check-in — nobody else sees this breakdown. | ការរាយការណ៍សុខភាពផ្ទាល់ខ្លួនរបស់អ្នក — គ្មាននរណាម្នាក់ផ្សេងទៀតឃើញការបំបែកនេះឡើយ។ |
+| Month | ខែ |
