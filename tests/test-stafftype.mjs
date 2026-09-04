@@ -48,21 +48,22 @@ function ok(name, cond, extra) {
 {
   mem.staff = [];
   const r = await call('staffRegister', [{
-    username: 'sokha', pin: '1234', name: 'Sokha Chan', campus: 'poipet',
+    username: 'sokha', pin: '1234', name: 'Sokha Chan', email: 'sokha@example.com', campus: 'poipet',
     dept: 'Community Service', ministry: 'Cafe', role: 'Barista',
     staffType: 'ministry', country: 'Cambodia'
   }]);
   ok('a new profile keeps its staff type', r.body && r.body.staff.staffType === 'ministry', r.body && r.body.staff.staffType);
   ok('a new profile keeps its country', r.body && r.body.staff.country === 'Cambodia', r.body && r.body.staff.country);
 
-  /* Nobody should be forced to answer at sign-up, and a profile made before the
-     field existed has neither — both land as '' rather than as a wrong guess. */
-  const r2 = await call('staffRegister', [{ username: 'quiet', pin: '1111', name: 'Quiet', campus: 'poipet' }]);
+  /* Nobody should be forced to answer staff type/country at sign-up, and a
+     profile made before the field existed has neither — both land as ''
+     rather than as a wrong guess. Email is required either way. */
+  const r2 = await call('staffRegister', [{ username: 'quiet', pin: '1111', name: 'Quiet', email: 'quiet@example.com', campus: 'poipet' }]);
   ok('leaving both blank is allowed', r2.body && r2.body.ok === true);
   ok('unanswered staff type is empty, not guessed', r2.body.staff.staffType === '', JSON.stringify(r2.body.staff.staffType));
   ok('unanswered country is empty, not guessed', r2.body.staff.country === '', JSON.stringify(r2.body.staff.country));
 
-  const r3 = await call('staffRegister', [{ username: 'junk', pin: '2222', name: 'Junk', campus: 'poipet', staffType: 'director' }]);
+  const r3 = await call('staffRegister', [{ username: 'junk', pin: '2222', name: 'Junk', email: 'junk@example.com', campus: 'poipet', staffType: 'director' }]);
   ok('an unknown staff type is dropped, not stored', r3.body.staff.staffType === '', JSON.stringify(r3.body.staff.staffType));
 }
 

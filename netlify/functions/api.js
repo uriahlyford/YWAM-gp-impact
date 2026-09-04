@@ -193,6 +193,16 @@ async function verifyStaff_(username, pin) {
    '' rather than being rejected: an unknown value means "not said yet", which
    the base figures count and show as exactly that. */
 const STAFF_TYPE_IDS = ['campus', 'yap', 'ministry'];
+/* Trimmed and lowercased so "Sreilea@Gmail.com" and "sreilea@gmail.com" are
+   the same address for the duplicate-account check below — email, not name,
+   is what that check is keyed on now, since two people can share a name but
+   never the same inbox. Returns null for something that isn't shaped like an
+   email at all, so the caller can tell "missing" from "wrong". */
+function cleanEmail_(v) {
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  if (!s) return '';
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) ? s : null;
+}
 function cleanStaffType_(v) {
   const s = String(v == null ? '' : v).trim().toLowerCase();
   return STAFF_TYPE_IDS.indexOf(s) > -1 ? s : '';
@@ -268,12 +278,19 @@ async function staffRegister(payload) {
   if (!/^\d{4}$/.test(String(payload.pin))) return { ok: false, err: 'bad_pin' };
   const rows = await getStaff_();
   if (findStaff_(rows, u)) return { ok: false, err: 'taken' };
+  // One profile per email, going forward — a name can repeat (two staff can
+  // share one), an inbox can't. Existing accounts made before this may still
+  // carry no email at all; those are nudged to add one, not locked out.
+  const email = cleanEmail_(payload.email);
+  if (email === null) return { ok: false, err: 'bad_email' };
+  if (!email) return { ok: false, err: 'email_required' };
+  if (rows.some(function (r) { return r.email && r.email === email; })) return { ok: false, err: 'email_taken' };
   const salt = pinSalt_();
   const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const now = new Date().toISOString();
   const pending = needsApproval_(payload.dept);
   const rec = {
-    id: id, username: u, name: payload.name || u, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
+    id: id, username: u, name: payload.name || u, email: email, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
     campus: payload.campus || '', dept: payload.dept || '', ministry: payload.ministry || '',
     role: payload.role || '', photo: '',
     // Asked for at sign-up, changed from Profile & settings later.
@@ -289,7 +306,7 @@ async function staffRegister(payload) {
   if (pending) return { ok: true, pending: true };
   return {
     ok: true, staff: publicStaff_(rec),
-    profile: { phone: rec.phone, joined: rec.joined, debt: false, mentorStatus: rec.mentorStatus, dashboardColor: '', dashboardBg: '' }
+    profile: { phone: rec.phone, joined: rec.joined, debt: false, mentorStatus: rec.mentorStatus, dashboardColor: '', dashboardBg: '', email: rec.email }
   };
 }
 
@@ -300,7 +317,7 @@ async function staffLogin(username, pin) {
       ok: true, staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin }),
       profile: {
         phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
-        dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+        dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || ''
       }
     };
   }
@@ -340,7 +357,7 @@ function adminStaffOut_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
     ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin,
-    staffType: s.staffType || '', country: s.country || '',
+    staffType: s.staffType || '', country: s.country || '', email: s.email || '',
     mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
     created: s.created || ''
   };
@@ -447,6 +464,14 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
   if (payload.role !== undefined) rec.role = payload.role;
   if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
   if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
+  if (payload.email !== undefined) {
+    const email = cleanEmail_(payload.email);
+    if (email === null) return { ok: false, err: 'bad_email' };
+    if (email && rows.some(function (r) { return r.id !== staffId && r.email && r.email === email; })) {
+      return { ok: false, err: 'email_taken' };
+    }
+    rec.email = email;
+  }
   rec.updated = new Date().toISOString();
   rows[idx] = rec;
   await saveStaff_(rows);
@@ -477,6 +502,91 @@ async function adminDeleteStaff(username, pin, staffId) {
   return { ok: true };
 }
 
+/* For the one real duplicate this exists to fix — someone who accidentally
+   made a second profile, then logged real history under both. Everything
+   keyed by staffId (daily logs, weekly goals, leave requests, SMART goals)
+   moves onto the kept account; the weekly health check-in moves the same
+   way but by surveyToken, since that's what keeps it anonymous in the base
+   average. Where BOTH accounts already have a row for the same period (the
+   same day, the same week) the kept account's own row wins and the
+   duplicate's is left behind rather than overwriting real data — merging
+   should never make today's numbers less true than before it ran. The
+   duplicate account is deleted at the end, exactly like adminDeleteStaff. */
+async function adminMergeStaff(username, pin, keepId, mergeId) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  keepId = str_(keepId, 60); mergeId = str_(mergeId, 60);
+  if (!keepId || !mergeId || keepId === mergeId) return { ok: false, err: 'bad_ids' };
+  const rows = await getStaff_();
+  const keepIdx = rows.findIndex(function (r) { return r.id === keepId; });
+  const mergeIdx = rows.findIndex(function (r) { return r.id === mergeId; });
+  if (keepIdx === -1 || mergeIdx === -1) return { ok: false, err: 'not_found' };
+  const keep = rows[keepIdx];
+
+  // Reassign ownership; where the kept account already has its own row for
+  // the same period, leave the duplicate's row under the old id rather than
+  // clobbering the kept one. keyFn returns the collision key for a row.
+  async function reassignById_(storeKey, keyFn) {
+    const all = await readJSON(storeKey, []);
+    const keptKeys = new Set(all.filter(function (r) { return r.staffId === keepId; }).map(keyFn));
+    all.forEach(function (r) {
+      if (r.staffId !== mergeId) return;
+      const k = keyFn(r);
+      if (keptKeys.has(k)) return;
+      r.staffId = keepId;
+      keptKeys.add(k);
+    });
+    await writeJSON(storeKey, all);
+  }
+  await reassignById_('dailyLogs', function (r) { return r.date; });
+  await reassignById_('goals', function (r) { return r.week + '|' + yearOf_(r); });
+  // Leave requests and SMART goals have no per-period uniqueness — every row
+  // already coexists with every other by its own id, so there is nothing to
+  // leave behind.
+  await reassignById_('trips', function (r) { return r.id; });
+  await reassignById_('smartGoals', function (r) { return r.id; });
+
+  // The weekly health check-in is anonymous by device token, not staffId —
+  // move the duplicate's rows onto the KEPT account's own token instead.
+  // surveyTokenFor_ can mint a fresh token onto `keep` right here, so this
+  // save has to happen before survey rows move, or a token generated only
+  // in memory would vanish along with this request.
+  const mergeToken = rows[mergeIdx].surveyToken;
+  if (mergeToken) {
+    const keepToken = surveyTokenFor_(keep);
+    await saveStaff_(rows);
+    const surveyRows = await getSurvey_();
+    const keptWeeks = new Set(surveyRows.filter(function (r) { return r.device === keepToken; })
+      .map(function (r) { return r.week + '|' + yearOf_(r); }));
+    surveyRows.forEach(function (r) {
+      if (r.device !== mergeToken) return;
+      const k = r.week + '|' + yearOf_(r);
+      if (keptWeeks.has(k)) return;
+      r.device = keepToken;
+      keptWeeks.add(k);
+    });
+    await writeJSON('survey', surveyRows);
+  }
+
+  // 1-on-1s have no per-period uniqueness either — a pair can already have
+  // several, so both directions just move straight over.
+  const oneOnOnes = await getOneOnOnes_();
+  oneOnOnes.forEach(function (r) {
+    if (r.fromId === mergeId) r.fromId = keepId;
+    if (r.toId === mergeId) r.toId = keepId;
+  });
+  await writeJSON('oneOnOnes', oneOnOnes);
+
+  const afterRows = await getStaff_();
+  const finalIdx = afterRows.findIndex(function (r) { return r.id === mergeId; });
+  if (finalIdx > -1) afterRows.splice(finalIdx, 1);
+  afterRows.forEach(function (r) {
+    if (r.mentorId === mergeId) { r.mentorId = ''; r.mentorStatus = ''; r.updated = new Date().toISOString(); }
+  });
+  await saveStaff_(afterRows);
+  return { ok: true };
+}
+
 async function updateProfile(username, pin, payload) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
@@ -500,6 +610,14 @@ async function updateProfile(username, pin, payload) {
   if (payload.phone !== undefined) rec.phone = payload.phone;
   if (payload.joined !== undefined) rec.joined = payload.joined;
   if (payload.debt !== undefined) rec.debt = !!payload.debt;
+  if (payload.email !== undefined) {
+    const email = cleanEmail_(payload.email);
+    if (email === null) return { ok: false, err: 'bad_email' };
+    if (email && rows.some(function (r) { return r.id !== s.id && r.email && r.email === email; })) {
+      return { ok: false, err: 'email_taken' };
+    }
+    rec.email = email;
+  }
   // A free color wheel rather than a fixed palette — any hex works, so the
   // only guard is the shape, not membership in some list.
   if (payload.dashboardColor !== undefined) {
@@ -512,7 +630,7 @@ async function updateProfile(username, pin, payload) {
     ok: true, staff: publicStaff_(rec),
     profile: {
       phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '',
-      dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || ''
+      dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || '', email: rec.email || ''
     }
   };
 }
@@ -1845,7 +1963,7 @@ async function getMyBoot(username, pin) {
     staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
-      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || ''
+      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || ''
     },
     roster: (staffRows || []).filter(function (r) { return r.active; }).map(publicStaff_),
     logs: (logs && logs.logs) || [],
@@ -1880,6 +1998,7 @@ const HANDLERS = {
   adminSetMentor: function (a) { return adminSetMentor(a[0], a[1], a[2], a[3], a[4]); },
   adminResetPin: function (a) { return adminResetPin(a[0], a[1], a[2], a[3]); },
   adminDeleteStaff: function (a) { return adminDeleteStaff(a[0], a[1], a[2]); },
+  adminMergeStaff: function (a) { return adminMergeStaff(a[0], a[1], a[2], a[3]); },
   adminUpdateStaff: function (a) { return adminUpdateStaff(a[0], a[1], a[2], a[3]); },
   updateProfile: function (a) { return updateProfile(a[0], a[1], a[2]); },
   changePin: function (a) { return changePin(a[0], a[1], a[2]); },
