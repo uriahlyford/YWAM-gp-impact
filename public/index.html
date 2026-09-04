@@ -892,6 +892,10 @@ function render(){
   /* The front door comes before anything else — and before the data has even
      arrived, so an undecided visitor never sees the dashboard flash behind it. */
   if(!isSignedIn() && !isGuest()){ renderWelcome(); return; }
+  // Every path that refreshes state.data ends up here before anything
+  // renders, so this is the one place getDepartments() needs staying in
+  // sync from — see setMetricOverrides in taxonomy.js.
+  if(state.data) setMetricOverrides(state.data.metricOverrides);
   ['lockBtn','refreshBtn','userChip'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.classList.remove('hidden');
   });

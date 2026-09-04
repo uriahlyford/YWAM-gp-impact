@@ -1231,3 +1231,34 @@ base's history; only the account goes.
 | Permanently delete {name}’s account? This can’t be undone. | លុបគណនីរបស់ {name} ជាអចិន្ត្រៃយ៍មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
 | Account deleted | គណនីត្រូវបានលុប |
 | Could not delete that account | មិនអាចលុបគណនីនោះបានទេ |
+
+## 41. Not every ministry tracks the same things
+
+My Ministry now has an "Edit what we track" panel — turn off a baseline
+metric that doesn't apply, or add one of your own (a count, a score out
+of 10, or a percentage). Admin gets the same editor for any ministry,
+from a new "Ministry KPIs" picker on the Admin page. Numbers typed
+against a custom metric go through the exact same pipeline as any other
+— they show up on the GP Dashboard the moment they're saved.
+
+| English | ខ្មែរ |
+|---|---|
+| Edit what we track | កែសម្រួលអ្វីដែលយើងតាមដាន |
+| Turn metrics on or off, or add your own | បើក ឬបិទសូចនាករ ឬបន្ថែមផ្ទាល់ខ្លួនរបស់អ្នក |
+| Turn off what this ministry doesn’t track, or add something new below. | បិទអ្វីដែលកិច្ចការបម្រើនេះមិនបានតាមដាន ឬបន្ថែមអ្វីថ្មីខាងក្រោម។ |
+| Hide | លាក់ |
+| custom | ផ្ទាល់ខ្លួន |
+| Hidden | បានលាក់ |
+| Show | បង្ហាញ |
+| Add a metric | បន្ថែមសូចនាករ |
+| What do you want to track? | តើអ្នកចង់តាមដានអ្វី? |
+| Type | ប្រភេទ |
+| Count (adds up) | រាប់ (បូកសរុប) |
+| Score out of 10 | ពិន្ទុពី 10 |
+| Percentage | ភាគរយ |
+| Add | បន្ថែម |
+| Give it a name first. | សូមដាក់ឈ្មោះឱ្យវាសិន។ |
+| Already tracking that. | កំពុងតាមដានវារួចហើយ។ |
+| Ministry KPIs | សូចនាករកិច្ចការបម្រើ |
+| Pick a ministry to edit what it tracks. | ជ្រើសរើសកិច្ចការបម្រើមួយ ដើម្បីកែសម្រួលអ្វីដែលវាតាមដាន។ |
+| No ministries under this department. | គ្មានកិច្ចការបម្រើនៅក្រោមផ្នែកនេះទេ។ |
