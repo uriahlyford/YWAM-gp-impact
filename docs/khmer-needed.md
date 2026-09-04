@@ -1271,3 +1271,18 @@ duplicate is deleted.
 | Merge {merge} into {keep}? {merge}’s history moves onto {keep} where it doesn’t already overlap, then {merge}’s account is permanently deleted. This can’t be undone. | បញ្ចូល {merge} ចូលទៅ {keep} មែនទេ? ប្រវត្តិរបស់ {merge} នឹងផ្លាស់ទីទៅ {keep} កន្លែងដែលមិនទាន់ត្រួតគ្នា បន្ទាប់មកគណនីរបស់ {merge} នឹងត្រូវបានលុបជាអចិន្ត្រៃយ៍។ សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
 | Accounts merged | គណនីត្រូវបានបញ្ចូលចូលគ្នា |
 | Could not merge those accounts | មិនអាចបញ្ចូលគណនីទាំងនោះចូលគ្នាបានទេ |
+
+## 43. Weekly Goals→KPI link, a Health label, and a Month view
+
+A Weekly Goal can now be pointed at a live KPI number instead of a manual
+percentage — the same picker the OKR key results already use, dropped into
+each goal row. Health's "Against last week" section now says plainly that
+it's a personal, private view (Base Health further down is the shared,
+anonymous one). Base Health also gets a Month scope alongside Week/
+Quarter/Year.
+
+| English | ខ្មែរ |
+|---|---|
+| Not linked to a KPI | មិនបានភ្ជាប់ទៅនឹង KPI ទេ |
+| Your personal health check-in — nobody else sees this breakdown. | ការរាយការណ៍សុខភាពផ្ទាល់ខ្លួនរបស់អ្នក — គ្មាននរណាម្នាក់ផ្សេងទៀតឃើញការបំបែកនេះឡើយ។ |
+| Month | ខែ |

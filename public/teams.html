@@ -1046,7 +1046,7 @@ var S = {
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[],
   baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
   healthWeek:null, weekForm:null, weekDraftFor:null,
-  healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{}, srQuarter:null, srOpenQ:null,
+  healthScope:'week', healthQuarter:null, healthYear:null, healthMonth:null, baseByYear:{}, srQuarter:null, srOpenQ:null,
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
   baseHealthPeriod:'week',
   dbAcc:{kpiDay:false, kpiWeek:false},
@@ -2173,9 +2173,9 @@ function okrCardHtml(o, R, editable){
 /* Every metric on this campus, for tying a key result to a real KPI. Grouped by
    department so the list is navigable — a key result can measure any ministry's
    number, not just your own. */
-function okrMetricOptions(selected){
+function okrMetricOptions(selected, noneLabel){
   var deps = getDepartments(S.me.campus);
-  var h = '<option value="">'+esc(t('Manual progress (%)'))+'</option>';
+  var h = '<option value="">'+esc(t(noneLabel||'Manual progress (%)'))+'</option>';
   Object.keys(deps).forEach(function(d){
     h += '<optgroup label="'+esc(t(d))+'">';
     Object.keys(deps[d]).forEach(function(min){
@@ -2401,11 +2401,9 @@ function phaseBanner(phase, wk){
     return '<div class="banner big">🎯 <strong>Start of the week.</strong> Pick the three things that matter for week '+wk+'.'+
       ' <button class="linkbtn inline" id="jumpGoals">Set them now</button></div>';
   if(phase==='review'){
-    var avgPct=hasGoals && rec.pct!==null ? rec.pct : 0;
-    if(hasGoals && avgPct<100)
-      return '<div class="banner big">✅ <strong>'+esc(t('End of the week.'))+'</strong> '+
-        esc(gpT('Your three goals are {pct}% of the way there.',{pct:avgPct}))+
-        ' <button class="linkbtn inline" id="jumpGoals">'+esc(gpT('Close out week {wk}',{wk:wk}))+'</button></div>';
+    /* Goals-incomplete used to show as its own big banner here — it's in the
+       notification bell now (see notifItems_) so My Database isn't stacking
+       two "end of the week" banners on top of each other. */
     if(!thisWeekLogs().length)
       return '<div class="banner big">💚 <strong>'+esc(t('End of the week.'))+'</strong> No days logged yet — '+
         'your week’s health figures come straight from these.'+
@@ -2672,6 +2670,21 @@ function notifItems_(){
     if(new Date(todayStr())>=nfri && !myWeekRow(nwk)){
       items.push({ when:isoDateOf_(nfri), text:t('Your weekly health check-in is due'),
         actions:'<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-gohealth="1">'+esc(t('Answer it'))+'</button>' });
+    }
+  }
+  /* End of the week, goals not all the way there — used to be a big banner
+     inline on My Database; it's a bell item instead now so the page isn't
+     stacking two "end of the week" banners at once. Same Friday-dated
+     "when" as the health nudge above, so it clears with the rest of the
+     week and comes back fresh next week. */
+  if(S.me && weekPhase()==='review'){
+    var ggwk=thisWeek(), ggrec=goalsForWeek(ggwk);
+    var ggHasGoals=!!(ggrec && ggrec.items.some(function(i){ return i.text; }));
+    if(ggHasGoals && ggrec.pct!==null && ggrec.pct<100){
+      var ggfri=new Date(weekBounds_(ggwk).from); ggfri.setDate(ggfri.getDate()+4);
+      items.push({ when:isoDateOf_(ggfri), text:gpT('Your three goals are {pct}% of the way there.',{pct:ggrec.pct}),
+        actions:'<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-jumpgoals="1">'+
+          esc(gpT('Close out week {wk}',{wk:ggwk}))+'</button>' });
     }
   }
   /* Every account made before email became part of sign-up has none yet —
@@ -3065,14 +3078,16 @@ function goalsCardHtml(wk){
     h+='<p class="hint" style="margin:2px 0 10px">👀 '+
        esc(t('Your team can see these on your profile. Anything personal belongs in the private check-in instead.'))+'</p>';
     written.forEach(function(g,i){
-      var mm=g.metricKey?g.metricKey.split('|')[2]:'';
       var gp=goalItemPct(g);
       h+='<div class="wgRow'+(gp>=100?' done':'')+'">'+
         ringHtml(gp)+
         '<div class="goalBody">'+
           '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
             '<span class="wgPct" style="color:'+pctColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>'+
-          (mm?'<div class="goalLink">📊 '+esc(t('moves'))+' '+esc(t(mm))+'</div>':'')+
+          '<label class="goalLink" style="display:flex;align-items:center;gap:4px">📊 '+
+            '<select class="goalLinkSel" data-goallink="'+i+'" style="border:0;background:none;color:inherit;font:inherit;padding:0">'+
+            okrMetricOptions(g.metricKey, 'Not linked to a KPI')+
+            '</select></label>'+
           '<input type="range" class="gSlide" min="0" max="100" step="5" value="'+gp+'" data-goalpct="'+i+'"'+
             ' style="'+ringVars(gp)+'"'+
             ' aria-label="'+esc(t('Progress'))+': '+esc(g.text)+'">'+
@@ -4019,7 +4034,9 @@ function healthHtml(){
 
   /* --- this week's answers against last week, question by question --- */
   if(row){
-    h += '<h3>📊 '+esc(t('Against last week'))+'</h3><div class="card">';
+    h += '<h3>📊 '+esc(t('Against last week'))+'</h3>'+
+      '<p class="pmeta" style="margin:-6px 0 8px">'+esc(t('Your personal health check-in — nobody else sees this breakdown.'))+'</p>'+
+      '<div class="card">';
     WEEK_SCALE_QS.forEach(function(q){
       var v = row[q.id];
       h += '<div class="row"><span class="rowName">'+esc(t(q.text))+'</span>'+
@@ -4085,13 +4102,17 @@ function healthHtml(){
   var scope = S.healthScope || 'week';
   var hYear = Number(S.healthYear || curYear);
   var hQ = Number(S.healthQuarter || (qOf(cur)+1)); // 1-4, human-facing like the OKR quarter picker
+  var hM = Number(S.healthMonth!=null ? S.healthMonth : new Date().getMonth()); // 0-11
 
   h += '<h3>🏠 '+esc(t('Base health'))+' · '+esc(t(campusName(S.me.campus)))+'</h3>';
   h += '<div class="pickerRow">'+
     '<label class="pick"><span>'+esc(t('View'))+'</span><select id="healthScopeSel">'+
-      [['week','Week'],['quarter','Quarter'],['year','Year']].map(function(sc){
+      [['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year']].map(function(sc){
         return '<option value="'+sc[0]+'"'+(scope===sc[0]?' selected':'')+'>'+esc(t(sc[1]))+'</option>';
       }).join('')+'</select></label>'+
+    (scope==='month' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Month'))+'</span><select id="healthMSel">'+
+      MONTH_ABBR.map(function(mn,i){ return '<option value="'+i+'"'+(hM===i?' selected':'')+'>'+mn+'</option>'; }).join('')+
+      '</select></label>' : '')+
     (scope==='quarter' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Quarter'))+'</span><select id="healthQSel">'+
       [1,2,3,4].map(function(i){ return '<option value="'+i+'"'+(hQ===i?' selected':'')+'>Q'+i+'</option>'; }).join('')+
       '</select></label>' : '')+
@@ -4108,7 +4129,11 @@ function healthHtml(){
   }
 
   var rows, score, scopeLabel;
-  if(scope==='quarter'){
+  if(scope==='month'){
+    rows = R.surveyRows(ids).filter(function(r){ return new Date(weekBounds_(r.week).to).getMonth()===hM; });
+    score = rows.length ? rows.reduce(function(s,r){ return s+compositeOf(r); },0)/rows.length : null;
+    scopeLabel = MONTH_ABBR[hM];
+  } else if(scope==='quarter'){
     rows = R.surveyRows(ids, undefined, hQ-1); score = R.healthScore(ids, undefined, hQ-1); scopeLabel = 'Q'+hQ;
   } else if(scope==='year'){
     rows = R.surveyRows(ids); score = R.healthScore(ids); scopeLabel = String(hYear);
@@ -5337,6 +5362,21 @@ function bindHome(){
       });
     };
   });
+  document.querySelectorAll('[data-goallink]').forEach(function(sel){
+    sel.onchange=function(){
+      var wk=goalsViewWeek();
+      var rec=goalsForWeek(wk);
+      if(!rec) return;
+      var i=Number(sel.getAttribute('data-goallink'));
+      var written=rec.items.filter(function(x){ return x.text; });
+      if(!written[i]) return;
+      written[i].metricKey=sel.value;
+      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
+        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
+        render();
+      });
+    };
+  });
 
   // --- ministry KPIs ---
   document.querySelectorAll('[data-kpi]').forEach(function(inp){
@@ -5542,6 +5582,8 @@ function bind(){
   };
   var hSc=document.getElementById('healthScopeSel');
   if(hSc) hSc.onchange=function(){ S.healthScope=hSc.value; render(); };
+  var hMs=document.getElementById('healthMSel');
+  if(hMs) hMs.onchange=function(){ S.healthMonth=Number(hMs.value); render(); };
   var hQs=document.getElementById('healthQSel');
   if(hQs) hQs.onchange=function(){ S.healthQuarter=Number(hQs.value); render(); };
   var hYs=document.getElementById('healthYSel');
@@ -5847,6 +5889,9 @@ function bind(){
   /* 1-on-1 requests, either direction of a mentor/mentee pair. */
   document.querySelectorAll('[data-gohealth]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='health'; render(); };
+  });
+  document.querySelectorAll('[data-jumpgoals]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='week'; render(); };
   });
   document.querySelectorAll('[data-goprofile]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='profile'; render(); };
