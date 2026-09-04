@@ -156,6 +156,85 @@ function ok(name, cond, extra) {
   ok('money keeps its format', /\$1,450/.test(sub), sub);
 }
 
+/* ---------- 2b. a headcount carries across the year boundary ---------- */
+/*  The reported bug: a level that barely changes had nothing to carry, because
+    `entries` is scoped to this year and the figure was last typed in December.
+    The server answers with a `prev` map that looks past the year line; this is
+    the page using it. Its own context, because the fixture has to have NOTHING
+    for the metric this year. */
+{
+  const c3 = await browser.newContext(devices['iPhone 13']);
+  const p3 = await c3.newPage();
+  const LASTYEAR = new Date().getFullYear() - 1;
+  const M3 = {
+    ok: true, campus: ME.campus, dept: ME.dept, ministry: ME.ministry,
+    entries: { 'Cups Sold': { [WK]: 12 } },        // nothing at all for the bank balance
+    daily: {},
+    prev: { 'Total in Bank Account ($)': { year: LASTYEAR, week: 50, value: 1450 } },
+    pins: [],
+  };
+  await p3.route('**fonts.g**', r => r.abort());
+  await p3.route('**/api', function (r) {
+    const b = r.request().postDataJSON() || {};
+    sent.push(b);
+    let out = { ok: false, err: 'unstubbed:' + b.fn };
+    if (b.fn === 'getMyBoot') out = { ...BOOT, ministry: M3 };
+    else if (b.fn === 'getData') out = BOOT.base;
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
+  });
+  await p3.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })));
+  await p3.goto(BASE + '/teams.html', { waitUntil: 'load' });
+  await p3.waitForSelector('nav.bottom button', { timeout: 15000 });
+  await p3.click('nav.bottom button:nth-child(2)');
+  await p3.click('#goMinistryFromMe');
+  await p3.waitForTimeout(300);
+  await p3.click('[data-acc="kpiWeek"]');
+  await p3.waitForSelector('#kpiWeekCard', { timeout: 10000 });
+
+  const bank = await p3.$eval('input[data-kpiweek="Total in Bank Account ($)"]',
+    i => ({ value: i.value, carried: i.hasAttribute('data-carried') }));
+  ok('a figure last typed in December still fills in the new year',
+    bank.value === '1450' && bank.carried === true, JSON.stringify(bank));
+
+  const sub = await p3.evaluate(() =>
+    [].find.call(document.querySelectorAll('#kpiWeekCard .row'),
+      r => /Total in Bank/.test(r.textContent)).querySelector('.rowSub').textContent.trim());
+  ok('and says which year it came from, not just which week',
+    sub.indexOf('carried from week 50, ' + LASTYEAR) > -1, sub);
+  /* "now" would otherwise read as blank, because this year holds nothing. */
+  ok('the current figure reads as the carried one, not empty', /\$1,450/.test(sub), sub);
+
+  /* Saving is what makes the carry real: the week has to be written. */
+  sent.length = 0;
+  await p3.click('#saveKpiWeekBtn');
+  await p3.waitForTimeout(600);
+  const wkCall = sent.find(s => s.fn === 'saveMyMinistry');
+  const w = wkCall && wkCall.args[3].find(u => u.metric === 'Total in Bank Account ($)');
+  ok('and the carried figure is written into this week', !!w && w.value === 1450,
+    w && String(w.value));
+
+  /* The rule itself, on the page's own helper: this year first, the cross-year
+     map only when this year knows nothing earlier, and never a week that has
+     not happened yet. */
+  const rule = await p3.evaluate(wk => {
+    const map = { M: { year: new Date().getFullYear() - 1, week: 50, value: 1450 } };
+    return {
+      thisYearWins: prevLevel_({ [wk - 1]: 99 }, wk, 'M', map),
+      crossYear: prevLevel_({}, wk, 'M', map),
+      nothing: prevLevel_({}, wk, 'M', {}),
+      notAhead: prevLevel_({}, 2, 'M', { M: { year: new Date().getFullYear(), week: 30, value: 5 } }),
+    };
+  }, WK);
+  ok('this year’s own earlier week beats the cross-year map',
+    rule.thisYearWins && rule.thisYearWins.value === 99, JSON.stringify(rule.thisYearWins));
+  ok('the cross-year map is used when this year has nothing earlier',
+    rule.crossYear && rule.crossYear.value === 1450 && rule.crossYear.year === LASTYEAR,
+    JSON.stringify(rule.crossYear));
+  ok('a metric nobody ever logged carries nothing', rule.nothing === null, JSON.stringify(rule.nothing));
+  ok('a later week this year is never carried backwards', rule.notAhead === null, JSON.stringify(rule.notAhead));
+  await c3.close();
+}
+
 /* ---------- 3. a count says what the week becomes ---------- */
 {
   const before = await page.evaluate(() =>
@@ -272,6 +351,15 @@ function ok(name, cond, extra) {
   const score = await p2.$eval('input[data-kpiweek="Food Taste (1-10)"]', i =>
     ({ min: i.min, max: i.max }));
   ok('a 1-10 score cannot be typed as 50', score.min === '1' && score.max === '10', JSON.stringify(score));
+  /* This ministry's fixture is empty on purpose, so every level here is the
+     genuinely-nothing case: it has to read as that, not as a blank. */
+  const blank = await p2.evaluate(() => {
+    const r = [].find.call(document.querySelectorAll('#kpiWeekCard .row'),
+      x => /Total Staff|Students Enrolled|Trainees in Track/.test(x.textContent));
+    return r ? r.querySelector('.rowSub').textContent.trim() : '(no level on the card)';
+  });
+  ok('a level with no history at all says there is nothing to carry',
+    /nothing logged before this week/.test(blank), blank);
   await c2.close();
 }
 

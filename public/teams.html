@@ -1343,7 +1343,7 @@ function saveStaffCard(){
 function afterLogin(){
   lsSet('gp-staff', JSON.stringify(S.auth));
   saveStaffCard();
-  S.view='base';
+  S.view='week';
   /* ONE request for everything this page needs. It used to be nine on top of the
      login — each verifying the same PIN, each re-rendering when it landed, so the
      page rebuilt itself nine times while it loaded. Sections that fail come back
@@ -1373,7 +1373,7 @@ function applyBoot(d){
   S.smartGoals = d.smartGoals || [];
   S.oneOnOnes = d.oneOnOnes || [];
   if(d.base && d.base.entries) S.base = d.base;
-  if(!S.view) S.view = 'base';
+  if(!S.view) S.view = 'week';
   render();
 }
 
@@ -2687,6 +2687,20 @@ function notifItems_(){
           esc(gpT('Close out week {wk}',{wk:ggwk}))+'</button>' });
     }
   }
+  /* Every account made before email became part of sign-up has none yet —
+     "when" is always right now, computed fresh every render, so this never
+     ages past a Clear the way the others above do: clearing sets
+     notifClearedAt to this same instant, and the next render's "now" is
+     always a moment later, so the item is straight back. It's meant to
+     stay until the email is actually added, not until someone taps Clear.
+     bellOnly: this is true for nearly every existing account at once, so an
+     inline card on My Database would be permanent, above-the-fold clutter
+     for almost everybody — the bell (and its dot) is visible enough. */
+  if(S.me && !(S.profile && S.profile.email)){
+    items.push({ when:new Date().toISOString(), text:t('Add your email to your profile'),
+      actions:'<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-goprofile="1">'+esc(t('Add it'))+'</button>',
+      bellOnly:true });
+  }
   items.sort(function(a,b){ return (b.when||'')<(a.when||'')?-1:1; });
   return items;
 }
@@ -2715,7 +2729,9 @@ function clearNotifications(){
    Mentorship card already use — so acting on one doesn't require leaving
    the dashboard. Everything else here is just FYI, no action needed. */
 function notificationsHtml(){
-  var items=visibleNotifItems_();
+  // bellOnly items (a standing nudge true of nearly every account, not a
+  // one-off event) live in the bell drawer only — see notifItems_.
+  var items=visibleNotifItems_().filter(function(it){ return !it.bellOnly; });
   if(!items.length) return '';
   var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🔔 '+esc(t('Updates'))+'</div>';
   items.slice(0,5).forEach(function(it){
@@ -3123,6 +3139,46 @@ function goalsCardHtml(wk){
     Formats come from fmt() and modeOf() — the same two functions the dashboard
     uses — so a dollar figure, a 1-10 score and a percentage read the same in both
     places. */
+/*  The last figure a level actually had, and which week it came from.
+
+    `entries` only covers this year, which is right for totals and wrong for the
+    headcounts that barely move: "Students Enrolled" last typed in week 50 of last
+    year is still the enrolment in week 2 of this one, so the box came up empty and
+    somebody had to remember 280 and retype it. A headcount does not reset because
+    the calendar did.
+
+    So when this year holds nothing earlier, fall back to the server's `prev` map
+    (prevLevels_ in api.js), which looks across every year. Returns
+    {week, value, year} — the year is carried through so the label can say week 50,
+    2025 instead of implying last week. */
+function prevLevel_(wks, wk, metric, prevMap){
+  var p = lastBefore(wks, wk);
+  if(p !== null) return { week:p.week, value:p.value, year:kpiYear_() };
+  var q = prevMap && prevMap[metric];
+  if(!q) return null;
+  var qy=Number(q.year), qw=Number(q.week), qv=Number(q.value);
+  if(!isFinite(qy) || !isFinite(qw) || !isFinite(qv)) return null;
+  /* This year's earlier weeks are already in `wks`, so anything the map offers
+     from this year is at or after the week on screen — not something to carry. */
+  if(qy > kpiYear_() || (qy === kpiYear_() && qw >= Number(wk))) return null;
+  return { week:qw, value:qv, year:qy };
+}
+
+function kpiYear_(){ return new Date().getFullYear(); }
+
+/*  The " · carried from week 50, 2025 ▲ 12" tail under a level's box. Your own
+    ministry's weekly card and an overseer's had drifted into two copies of this
+    paragraph; they share it now so a fix lands in both. */
+function levelPrevSubHtml_(p, metric, carried, typed){
+  var stamp = String(p.week) + ((p.year && p.year !== kpiYear_()) ? ', '+p.year : '');
+  var out = ' \u00b7 ' + (carried
+    ? esc(t('carried from week'))+' '+stamp
+    : esc(t('week'))+' '+stamp+': '+fmt(p.value, metric));
+  var d = Number(typed) - p.value;
+  if(d && !isNaN(d)) out += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'\u25b2':'\u25bc')+' '+fmt(Math.abs(d), metric)+'</span>';
+  return out;
+}
+
 function kpiCardHtml(wk){
   if(!S.me.ministry){
     return '<div class="card"><p class="sub" style="margin:4px 0 10px">'+
@@ -3135,6 +3191,7 @@ function kpiCardHtml(wk){
       'No KPIs are defined for '+esc(S.me.ministry)+' yet.</p></div>';
   }
   var entries=(S.ministry&&S.ministry.entries)||{};
+  var prevMap=(S.ministry&&S.ministry.prev)||{};
   var daily=(S.ministry&&S.ministry.daily)||{};
   var pins=(S.ministry&&S.ministry.pins)||[];
   var today=todayStr();
@@ -3238,17 +3295,15 @@ function kpiCardHtml(wk){
         var carried=false;
         var sub='', extra='';
         if(mode==='latest'){
-          var prev=lastBefore(wks, wk);
+          var prev=prevLevel_(wks, wk, metric, prevMap);
           carried = (cur==='' && prev!==null);
           if(carried){ cur=prev.value; extra=' data-carried="1"'; }
-          sub = esc(t('now'))+' '+fmt(agg, metric);
+          sub = esc(t('now'))+' '+fmt(agg===null&&prev?prev.value:agg, metric);
           if(prev!==null){
-            sub += ' · ' + (carried
-              ? esc(t('carried from week'))+' '+prev.week
-              : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
-            var typed = S.kpiWeekDraft[metric]!==undefined ? Number(S.kpiWeekDraft[metric]) : Number(cur);
-            var d = typed - prev.value;
-            if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+            sub += levelPrevSubHtml_(prev, metric, carried,
+              S.kpiWeekDraft[metric]!==undefined ? S.kpiWeekDraft[metric] : cur);
+          } else {
+            sub += ' · ' + esc(t('nothing logged before this week'));
           }
         } else {
           // A year-to-date average hides which way this week went, so say that too.
@@ -3299,6 +3354,7 @@ function oversightKpiCardHtml_(dept, ministry, data){
       esc(gpT('No KPIs are defined for {ministry} yet.',{ministry:t(ministry)}))+'</p></div>';
   }
   var entries=(data&&data.entries)||{};
+  var prevMap=(data&&data.prev)||{};
   var isCurWk=Number(wk)===Number(thisWeek());
   var weekDraft = S.ovWeekDraft[ministry] || (S.ovWeekDraft[ministry]={});
 
@@ -3327,17 +3383,15 @@ function oversightKpiCardHtml_(dept, ministry, data){
       var sub='', extra='';
       if(mode==='latest'){
         var agg=aggregate(wks, mode);
-        var prev=lastBefore(wks, wk);
+        var prev=prevLevel_(wks, wk, metric, prevMap);
         carried = (cur==='' && prev!==null);
         if(carried){ cur=prev.value; extra=' data-carried="1"'; }
-        sub = esc(t('now'))+' '+fmt(agg, metric);
+        sub = esc(t('now'))+' '+fmt(agg===null&&prev?prev.value:agg, metric);
         if(prev!==null){
-          sub += ' · ' + (carried
-            ? esc(t('carried from week'))+' '+prev.week
-            : esc(t('week'))+' '+prev.week+': '+fmt(prev.value, metric));
-          var typed = weekDraft[metric]!==undefined ? Number(weekDraft[metric]) : Number(cur);
-          var d = typed - prev.value;
-          if(d && !isNaN(d)) sub += '<span class="trend '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+fmt(Math.abs(d), metric)+'</span>';
+          sub += levelPrevSubHtml_(prev, metric, carried,
+            weekDraft[metric]!==undefined ? weekDraft[metric] : cur);
+        } else {
+          sub += ' · ' + esc(t('nothing logged before this week'));
         }
       } else if(mode==='sum'){
         // A count is this week's own figure here, not a running daily total.
@@ -3401,6 +3455,22 @@ function adminHtml(){
         '<button class="btn" style="width:auto;margin:0;padding:9px 14px" data-adminapprove="'+esc(s.id)+'">'+esc(t('Approve'))+'</button></div>';
     });
     h+='</div>';
+  }
+
+  if(list.length>1){
+    h+='<h3>🔀 '+esc(t('Merge duplicate accounts'))+'</h3><div class="card">';
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('For one person who accidentally made two profiles. Pick which to keep — its history, plus whatever the other logged that doesn’t already overlap, moves onto it. The other account is then deleted.'))+'</p>';
+    var mergeOpts_ = function(markSecond){
+      return list.map(function(s,i){
+        return '<option value="'+esc(s.id)+'"'+(markSecond && i===1?' selected':'')+'>'+
+          esc(s.name)+' · '+esc(s.username)+(s.email?' · '+esc(s.email):'')+'</option>';
+      }).join('');
+    };
+    h+='<div class="pickerRow">'+
+      '<label class="pick"><span>'+esc(t('Keep'))+'</span><select id="mergeKeepSel">'+mergeOpts_(false)+'</select></label>'+
+      '<label class="pick"><span>'+esc(t('Delete (merge from)'))+'</span><select id="mergeFromSel">'+mergeOpts_(true)+'</select></label>'+
+    '</div>'+
+    '<button class="danger" id="mergeStaffBtn">'+esc(t('Merge accounts'))+'</button></div>';
   }
 
   h+='<h3>'+esc(t('All accounts'))+'</h3>';
@@ -3510,6 +3580,23 @@ function bindAdmin(){
       });
     };
   });
+  var msb=document.getElementById('mergeStaffBtn');
+  if(msb) msb.onclick=function(){
+    var keepId=document.getElementById('mergeKeepSel').value;
+    var mergeId=document.getElementById('mergeFromSel').value;
+    if(keepId===mergeId){ showMsg(t('Pick two different accounts.')); return; }
+    var keepS=(S.adminStaff||[]).find(function(x){ return x.id===keepId; });
+    var mergeS=(S.adminStaff||[]).find(function(x){ return x.id===mergeId; });
+    if(!keepS || !mergeS) return;
+    if(!confirm(gpT('Merge {merge} into {keep}? {merge}’s history moves onto {keep} where it doesn’t already overlap, then {merge}’s account is permanently deleted. This can’t be undone.',
+      {merge:mergeS.name, keep:keepS.name}))) return;
+    msb.disabled=true;
+    run('adminMergeStaff',[S.auth.user,S.auth.pin,keepId,mergeId],function(d){
+      msb.disabled=false;
+      if(d && d.ok){ showMsg(t('Accounts merged')); adminRefresh_(); }
+      else showMsg(t('Could not merge those accounts'));
+    });
+  };
   document.querySelectorAll('[data-admintoggleactive]').forEach(function(b){
     b.onclick=function(){
       var id=b.getAttribute('data-admintoggleactive');
@@ -3734,6 +3821,8 @@ function registerHtml(){
   return '<h2>Create my profile</h2><p class="sub">Pick a username and a 4-digit PIN you\u2019ll remember. You can add a photo right after.</p>'+
     '<div class="card">'+
     '<label class="f">Full name</label><input type="text" id="r_name" placeholder="Your name">'+
+    '<label class="f">Email</label><input type="email" id="r_email" autocapitalize="none" placeholder="you@example.com">'+
+    '<div class="hint">One profile per email \u2014 this is what stops a duplicate sign-up.</div>'+
     '<label class="f">Username</label><input type="text" id="r_user" autocapitalize="none" placeholder="lowercase, no spaces"><div class="hint">Letters, numbers, . _ - (2\u201320 chars)</div>'+
     '<label class="f">PIN (4 digits)</label><input type="password" id="r_pin" inputmode="numeric" maxlength="4" placeholder="••••">'+
     '<label class="f">Campus</label><select id="r_campus">'+CAMPUSES.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>';}).join('')+'</select>'+
@@ -4626,6 +4715,8 @@ function profileHtml(){
      '<input type="file" accept="image/*" id="photoInput" style="display:none"></div></div></div>';
   h+='<div class="card">'+
     '<label class="f">Full name</label><input type="text" id="p_name" value="'+esc(S.me.name)+'">'+
+    '<label class="f">Email</label><input type="email" id="p_email" value="'+esc(p.email||'')+'" placeholder="you@example.com">'+
+    '<div class="hint">One profile per email — this is what stops a duplicate sign-up.</div>'+
     '<label class="f">Campus</label><select id="p_campus">'+CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(S.me.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
     '<label class="f">Department</label><select id="p_dept">'+deptsFor(S.me.campus).map(function(d){return '<option value="'+esc(d)+'"'+(S.me.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
     '<label class="f">Ministry</label><select id="p_ministry"></select><div class="hint">Sets which KPIs show on your home page.</div>'+
@@ -5708,6 +5799,7 @@ function bind(){
   if(rb) rb.onclick=function(){
     var payload={
       name:document.getElementById('r_name').value.trim(),
+      email:document.getElementById('r_email').value.trim(),
       username:document.getElementById('r_user').value.trim(),
       pin:document.getElementById('r_pin').value.trim(),
       campus:document.getElementById('r_campus').value,
@@ -5721,6 +5813,7 @@ function bind(){
       joined:document.getElementById('r_joined').value.trim()
     };
     if(!payload.name){ showMsg('Add your name'); return; }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)){ showMsg('Add a real email address'); return; }
     if(!/^[a-z0-9._-]{2,20}$/.test(payload.username.toLowerCase())){ showMsg('Username: lowercase letters/numbers, 2–20'); return; }
     if(!/^\d{4}$/.test(payload.pin)){ showMsg('PIN must be 4 digits'); return; }
     rb.disabled=true; rb.textContent='…';
@@ -5732,7 +5825,13 @@ function bind(){
         showMsg('Submitted — a base leader needs to approve a leadership account before you can log in.');
         render();
       } else if(d.ok){ S.auth={user:payload.username.toLowerCase(),pin:payload.pin}; S.me=d.staff; S.profile=d.profile; S.regMode=false; afterLogin(); showMsg('Profile created — add a photo!'); S.view='profile'; render(); }
-      else { rb.disabled=false; rb.textContent='Create profile'; showMsg(d.err==='taken'?'That username is taken':'Check your details'); }
+      else {
+        rb.disabled=false; rb.textContent='Create profile';
+        showMsg(d.err==='taken' ? 'That username is taken'
+          : d.err==='email_taken' ? 'There’s already a profile with that email'
+          : d.err==='bad_email' || d.err==='email_required' ? 'Add a real email address'
+          : 'Check your details');
+      }
     });
   };
 
@@ -5794,6 +5893,9 @@ function bind(){
   document.querySelectorAll('[data-jumpgoals]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='week'; render(); };
   });
+  document.querySelectorAll('[data-goprofile]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='profile'; render(); };
+  });
   document.querySelectorAll('[data-request121]').forEach(function(b){
     b.onclick=function(){
       var id=b.getAttribute('data-request121');
@@ -5829,6 +5931,7 @@ function bind(){
   if(sp) sp.onclick=function(){
     var payload={
       name:document.getElementById('p_name').value.trim(),
+      email:document.getElementById('p_email').value.trim(),
       campus:document.getElementById('p_campus').value,
       dept:document.getElementById('p_dept').value,
       ministry:(document.getElementById('p_ministry')||{}).value||'',
@@ -5848,7 +5951,12 @@ function bind(){
         run('getMyMinistry',[S.auth.user,S.auth.pin],function(mn){ if(mn.ok) S.ministry=mn; render(); });
         run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();});
       }
-      else { sp.disabled=false; sp.textContent='Save profile'; showMsg('Could not save'); }
+      else {
+        sp.disabled=false; sp.textContent='Save profile';
+        showMsg(d && d.err==='email_taken' ? 'There’s already a profile with that email'
+          : d && d.err==='bad_email' ? 'That doesn’t look like a real email address'
+          : 'Could not save');
+      }
     });
   };
   var pinBtn=document.getElementById('pinBtn');
