@@ -1286,3 +1286,14 @@ Quarter/Year.
 | Not linked to a KPI | មិនបានភ្ជាប់ទៅនឹង KPI ទេ |
 | Your personal health check-in — nobody else sees this breakdown. | ការរាយការណ៍សុខភាពផ្ទាល់ខ្លួនរបស់អ្នក — គ្មាននរណាម្នាក់ផ្សេងទៀតឃើញការបំបែកនេះឡើយ។ |
 | Month | ខែ |
+
+## 44. Weekly check-in: a clear confirmation on submit
+
+Submitting used to just show the generic toast "Saved" for two seconds,
+easy to miss since the form also closes and the base average refreshes at
+the same moment. Health now also shows a banner naming the week, once,
+right where the check-in card sits.
+
+| English | ខ្មែរ |
+|---|---|
+| Week {wk}’s check-in is saved. | ការឆែកអង់សប្តាហ៍ {wk} របស់អ្នកត្រូវបានរក្សាទុករួចហើយ។ |
