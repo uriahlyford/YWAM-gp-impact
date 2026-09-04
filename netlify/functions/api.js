@@ -942,6 +942,7 @@ async function respondToMentorRequest(username, pin, menteeId, approve) {
 async function getEntries_() { return readJSON('entries', []); }
 async function getOkrs_() { return readJSON('okrs', []); }
 async function getSurvey_() { return readJSON('survey', []); }
+async function getMetricOverrides_() { return readJSON('metricOverrides', []); }
 
 async function getData(code, year) {
   const leader = isLeader_(code);
@@ -992,7 +993,12 @@ async function getData(code, year) {
   /* `year` goes back so a page can tell which year it is looking at without
      recomputing it — the two pages disagree slightly about week numbering, and
      they must not also disagree about the year. */
-  return { leader: leader, year: yr, entries: entries, okrs: okrs, survey: survey, roster: roster };
+  // Every ministry that has ever hidden a baseline metric or added a custom
+  // one — both pages merge this into getDepartments() before they render a
+  // single tile, so a custom metric shows up on the dashboard the same week
+  // it's added, no separate sync step.
+  const metricOverrides = await getMetricOverrides_();
+  return { leader: leader, year: yr, entries: entries, okrs: okrs, survey: survey, roster: roster, metricOverrides: metricOverrides };
 }
 
 /* Writing ministry numbers now requires saying who you are.
@@ -1534,6 +1540,56 @@ async function saveMinistryFor(username, pin, dept, ministry, week, updates) {
   if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
   await saveMinistryInternal_(s.campus, dept, ministry, week, updates);
   return getMinistryFor(username, pin, dept, ministry);
+}
+
+/* ==================== ministry metric overrides ====================
+   Not every ministry tracks the same things — Cafe cares about cups sold,
+   Outreach Teams doesn't. getDepartments() in taxonomy.js still holds the
+   starting list per ministry; this is the per-(campus,dept,ministry) diff
+   from it: baseline metrics a ministry has turned off, and metrics it added
+   of its own. Both pages merge this into getDepartments() before rendering,
+   so nothing downstream (the dashboard, My Ministry, the OKR metric picker)
+   needs to know overrides exist at all.
+
+   A custom name is expected to carry its own aggregation the same way every
+   built-in metric already does — end it "(1-10)" for an average or "(%)"
+   for a percentage, plain otherwise for a running total — so modeOf() picks
+   it up with no new code. Only Base Finances/Cash Reserve are off limits:
+   those two names are how getData() decides what a non-leader may never
+   see, and a custom metric reusing one would be silently swallowed by that
+   same filter, not a way around it — but the confusion isn't worth having,
+   so it's refused outright. */
+const MAX_CUSTOM_METRICS = 25;
+const MAX_HIDDEN_METRICS = 60;
+
+function canEditMetrics_(s, campus, dept, ministry) {
+  if (s.isAdmin) return true;
+  return canLogFor_(s, campus, dept, ministry);
+}
+
+async function saveMetricOverrides(username, pin, campus, dept, ministry, hidden, custom) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  campus = str_(campus, 40); dept = str_(dept, 80); ministry = str_(ministry, 80);
+  if (!campus || !dept || !ministry) return { ok: false, err: 'bad_target' };
+  if (!canEditMetrics_(s, campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+
+  const cleanHidden = (Array.isArray(hidden) ? hidden : [])
+    .map(function (m) { return str_(m, 80); }).filter(Boolean).slice(0, MAX_HIDDEN_METRICS);
+  const cleanCustom = [];
+  (Array.isArray(custom) ? custom : []).forEach(function (m) {
+    const name = str_(m, 80);
+    if (!name || SENSITIVE.indexOf(name) > -1) return;
+    if (cleanCustom.indexOf(name) === -1) cleanCustom.push(name);
+  });
+  if (cleanCustom.length > MAX_CUSTOM_METRICS) return { ok: false, err: 'too_many' };
+
+  const rows = await getMetricOverrides_();
+  const idx = rows.findIndex(function (r) { return r.campus === campus && r.dept === dept && r.ministry === ministry; });
+  const rec = { campus: campus, dept: dept, ministry: ministry, hidden: cleanHidden, custom: cleanCustom, updated: new Date().toISOString() };
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('metricOverrides', rows);
+  return { ok: true, metricOverrides: rows };
 }
 
 /* ==================== ministry KPIs, logged day by day ====================
@@ -2101,6 +2157,7 @@ const HANDLERS = {
   getMyOneOnOnes: function (a) { return getMyOneOnOnes(a[0], a[1]); },
   requestOneOnOne: function (a) { return requestOneOnOne(a[0], a[1], a[2], a[3]); },
   respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); },
+  saveMetricOverrides: function (a) { return saveMetricOverrides(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };

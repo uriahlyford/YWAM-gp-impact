@@ -26,6 +26,7 @@ const SERVER = [
   'test-one-on-one.mjs', // 1-on-1 requests: mentor/mentee pairing, recipient-only response
   'test-admin.mjs',      // Base Leadership sign-ups need approval; isAdmin gates account management
   'test-ministry-oversight.mjs', // department overseers can log for ministries they oversee, nobody else can
+  'test-ministry-metrics.mjs', // a ministry's own staff (or its overseer, or an admin) can edit what it tracks
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted

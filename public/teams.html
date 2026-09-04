@@ -1043,6 +1043,8 @@ var S = {
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null, habitMore:false,
+  metricEditTarget:null, metricNewName:'', metricNewType:'sum',
+  adminMetricCampus:'', adminMetricDept:'', adminMetricMinistry:'',
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[], broadcasts:[],
   baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
   healthWeek:null, weekForm:null, weekDraftFor:null, weekJustSaved:null,
@@ -1420,6 +1422,11 @@ function render(){
      rather than on a timer is what makes the launch read as splash-then-profile
      instead of splash-then-pause-then-profile. */
   if(window.gpSplashDone) window.gpSplashDone();
+  // Whatever just changed S.base — a fresh boot, a pull-to-refresh, an OKR
+  // save that came back with the whole getData payload — this is the one
+  // place every one of those paths ends up before anything renders, so it's
+  // the one place getDepartments() needs to be kept in sync from.
+  if(S.base) setMetricOverrides(S.base.metricOverrides);
   var hb=document.getElementById('hbtns');
   var nav=document.getElementById('bottomNav');
   if(!S.me){
@@ -3480,6 +3487,33 @@ function adminHtml(){
       esc(t('What do you want everyone to know?'))+'">'+esc(S.broadcastDraft||'')+'</textarea></div>'+
     '<button class="btn" id="broadcastSendBtn">'+esc(t('Send to everyone'))+'</button></div>';
 
+  h+='<h3>🗂️ '+esc(t('Ministry KPIs'))+'</h3><div class="card">';
+  h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Pick a ministry to edit what it tracks.'))+'</p>';
+  var amCampus = CAMPUSES.some(function(c){ return c.id===S.adminMetricCampus; }) ? S.adminMetricCampus : CAMPUSES[0].id;
+  var amDeps = getDepartments(amCampus);
+  var amDept = amDeps[S.adminMetricDept] ? S.adminMetricDept : Object.keys(amDeps)[0];
+  var amMins = Object.keys(amDeps[amDept]||{});
+  var amMin = amMins.indexOf(S.adminMetricMinistry)>-1 ? S.adminMetricMinistry : (amMins[0]||'');
+  S.adminMetricCampus=amCampus; S.adminMetricDept=amDept; S.adminMetricMinistry=amMin;
+  h+='<div class="pickerRow">'+
+    '<label class="pick"><span>'+esc(t('Campus'))+'</span><select id="adminMetricCampusSel">'+
+      CAMPUSES.map(function(c){ return '<option value="'+esc(c.id)+'"'+(amCampus===c.id?' selected':'')+'>'+esc(c.short)+'</option>'; }).join('')+
+    '</select></label>'+
+    '<label class="pick"><span>'+esc(t('Department'))+'</span><select id="adminMetricDeptSel">'+
+      Object.keys(amDeps).map(function(d){ return '<option value="'+esc(d)+'"'+(amDept===d?' selected':'')+'>'+esc(t(d))+'</option>'; }).join('')+
+    '</select></label>'+
+    (amMins.length ? '<label class="pick"><span>'+esc(t('Ministry'))+'</span><select id="adminMetricMinSel">'+
+      amMins.map(function(m){ return '<option value="'+esc(m)+'"'+(amMin===m?' selected':'')+'>'+esc(t(m))+'</option>'; }).join('')+
+    '</select></label>' : '')+
+  '</div>';
+  if(amMin){
+    S.metricEditTarget = { campus:amCampus, dept:amDept, ministry:amMin };
+    h += metricEditorHtml_(amCampus, amDept, amMin);
+  } else {
+    h += '<p class="sub" style="margin:0">'+esc(t('No ministries under this department.'))+'</p>';
+  }
+  h+='</div>';
+
   if(S.adminStaff===null) return h+'<p class="sub">'+esc(t('Loading…'))+'</p>';
 
   var list=S.adminStaff;
@@ -3598,6 +3632,13 @@ function bindAdmin(){
   if(S.view!=='admin' || !S.me || !S.me.isAdmin) return;
   var back=document.getElementById('adminBack');
   if(back) back.onclick=function(){ S.view='week'; render(); };
+
+  var amc=document.getElementById('adminMetricCampusSel');
+  if(amc) amc.onchange=function(){ S.adminMetricCampus=amc.value; S.adminMetricMinistry=''; render(); };
+  var amd=document.getElementById('adminMetricDeptSel');
+  if(amd) amd.onchange=function(){ S.adminMetricDept=amd.value; S.adminMetricMinistry=''; render(); };
+  var amm=document.getElementById('adminMetricMinSel');
+  if(amm) amm.onchange=function(){ S.adminMetricMinistry=amm.value; render(); };
 
   var bcText=document.getElementById('broadcastText');
   if(bcText) bcText.oninput=function(){ S.broadcastDraft=bcText.value; };
@@ -3749,6 +3790,82 @@ function bindAdmin(){
   });
 }
 
+/* ---------- editing what a ministry tracks ----------
+   Not every ministry tracks the same things, so getDepartments()'s baseline
+   list is only the starting point: a ministry's own staff (or an admin, from
+   the Admin page) can turn off what doesn't apply and add what does. A
+   custom metric's name carries its own aggregation the same way every
+   built-in one already does — "(1-10)" for a score, "(%)" for a percentage,
+   plain otherwise for a running total — so modeOf() in taxonomy.js picks it
+   up with no extra code, and it shows up on the GP Dashboard, the OKR metric
+   picker, everywhere getDepartments() is read, the moment it's saved. */
+function metricOverrideFor_(campus, dept, ministry){
+  var rec = ((S.base && S.base.metricOverrides) || []).find(function(r){
+    return r.campus===campus && r.dept===dept && r.ministry===ministry;
+  });
+  return rec ? { hidden: rec.hidden||[], custom: rec.custom||[] } : { hidden:[], custom:[] };
+}
+function metricEditorHtml_(campus, dept, ministry){
+  var baseline = (getBaselineDepartments(campus)[dept]||{})[ministry] || [];
+  var ov = metricOverrideFor_(campus, dept, ministry);
+  var shown = baseline.filter(function(m){ return ov.hidden.indexOf(m)===-1; });
+  var hidden = baseline.filter(function(m){ return ov.hidden.indexOf(m)>-1; });
+
+  var h = '<p class="sub" style="margin:2px 0 8px">'+
+    esc(t('Turn off what this ministry doesn’t track, or add something new below.'))+'</p>';
+  shown.concat(ov.custom).forEach(function(m){
+    var isCustom = ov.custom.indexOf(m)>-1;
+    h += '<div class="row"><span class="rowName">'+esc(t(m))+
+      (isCustom?' <span class="pmeta" style="display:inline">· '+esc(t('custom'))+'</span>':'')+'</span>'+
+      '<button class="linkbtn" style="width:auto;margin:0;padding:4px 8px" data-metricoff="'+esc(m)+'">'+
+      esc(t(isCustom?'Remove':'Hide'))+'</button></div>';
+  });
+  if(hidden.length){
+    h += '<p class="hint" style="margin:10px 0 4px">'+esc(t('Hidden'))+'</p>';
+    hidden.forEach(function(m){
+      h += '<div class="row"><span class="rowName">'+esc(t(m))+'</span>'+
+        '<button class="linkbtn" style="width:auto;margin:0;padding:4px 8px" data-metricon="'+esc(m)+'">'+esc(t('Show'))+'</button></div>';
+    });
+  }
+  h += '<div class="field" style="margin-top:10px"><label class="fieldLabel">'+esc(t('Add a metric'))+'</label>'+
+    '<input type="text" id="metricNewName" maxlength="60" placeholder="'+esc(t('What do you want to track?'))+
+    '" value="'+esc(S.metricNewName||'')+'"></div>'+
+    '<div class="pickerRow"><label class="pick"><span>'+esc(t('Type'))+'</span><select id="metricNewType">'+
+      [['sum','Count (adds up)'],['avg','Score out of 10'],['pct','Percentage']].map(function(o){
+        return '<option value="'+o[0]+'"'+((S.metricNewType||'sum')===o[0]?' selected':'')+'>'+esc(t(o[1]))+'</option>';
+      }).join('')+'</select></label></div>'+
+    '<button class="btn" id="metricAddBtn" style="margin-top:6px">'+esc(t('Add'))+'</button>';
+  return h;
+}
+function metricEditSave_(campus, dept, ministry, hidden, custom){
+  run('saveMetricOverrides',[S.auth.user,S.auth.pin,campus,dept,ministry,hidden,custom],function(d){
+    if(d && d.ok){ if(S.base) S.base.metricOverrides = d.metricOverrides; render(); }
+    else showMsg(t('That didn’t save — try again.'));
+  });
+}
+function metricEditToggle_(target, metric, hide){
+  if(!target) return;
+  var ov = metricOverrideFor_(target.campus, target.dept, target.ministry);
+  var isCustom = ov.custom.indexOf(metric)>-1;
+  var hiddenList = ov.hidden.slice(), customList = ov.custom.slice();
+  if(isCustom && hide) customList = customList.filter(function(m){ return m!==metric; });
+  else if(hide){ if(hiddenList.indexOf(metric)===-1) hiddenList.push(metric); }
+  else hiddenList = hiddenList.filter(function(m){ return m!==metric; });
+  metricEditSave_(target.campus, target.dept, target.ministry, hiddenList, customList);
+}
+function metricEditAdd_(target){
+  if(!target) return;
+  var name = (S.metricNewName||'').trim();
+  if(!name){ showMsg(t('Give it a name first.')); return; }
+  var type = S.metricNewType||'sum';
+  if(type==='avg' && name.indexOf('(1-10)')===-1) name += ' (1-10)';
+  if(type==='pct' && name.indexOf('(%)')===-1) name += ' (%)';
+  var ov = metricOverrideFor_(target.campus, target.dept, target.ministry);
+  if(ov.custom.indexOf(name)>-1){ showMsg(t('Already tracking that.')); return; }
+  S.metricNewName=''; S.metricNewType='sum';
+  metricEditSave_(target.campus, target.dept, target.ministry, ov.hidden, ov.custom.concat([name]));
+}
+
 /* The whole ministry-KPI experience — the same accCard body kpiCardHtml
    already builds, just given a real page instead of a section buried in My
    Database. Any staff member whose profile carries this ministry can log
@@ -3777,6 +3894,13 @@ function myMinistryHtml(){
     h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
   }
   h+=kpiCardHtml(kpiViewWeek());
+
+  if(S.me.ministry){
+    S.metricEditTarget = { campus:S.me.campus, dept:S.me.dept, ministry:S.me.ministry };
+    h+='<div class="accCard">'+accRowHtml('dbAcc', 'kpiMetrics', '⚙️ '+esc(t('Edit what we track')),
+      esc(t('Turn metrics on or off, or add your own')),
+      function(){ return metricEditorHtml_(S.me.campus, S.me.dept, S.me.ministry); })+'</div>';
+  }
 
   /* A "Base Leadership" ministry that's itself a real department name (e.g.
      dept: Base Leadership, ministry: Community Service) means this person
@@ -5073,6 +5197,19 @@ function bindAway(){
   if(ob) ob.onclick=function(){ S.view='week'; render(); };
   var go=document.getElementById('goOkrFromMe');
   if(go) go.onclick=function(){ S.view='okr'; render(); };
+
+  document.querySelectorAll('[data-metricoff]').forEach(function(b){
+    b.onclick=function(){ metricEditToggle_(S.metricEditTarget, b.getAttribute('data-metricoff'), true); };
+  });
+  document.querySelectorAll('[data-metricon]').forEach(function(b){
+    b.onclick=function(){ metricEditToggle_(S.metricEditTarget, b.getAttribute('data-metricon'), false); };
+  });
+  var mnn=document.getElementById('metricNewName');
+  if(mnn) mnn.oninput=function(){ S.metricNewName=mnn.value; };
+  var mnt=document.getElementById('metricNewType');
+  if(mnt) mnt.onchange=function(){ S.metricNewType=mnt.value; };
+  var man=document.getElementById('metricAddBtn');
+  if(man) man.onclick=function(){ metricEditAdd_(S.metricEditTarget); };
 
   // Ministries an overseer logs for load lazily, one request each, the first
   // time this page is open — cached in S.oversee after that until logout.

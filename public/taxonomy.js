@@ -18,6 +18,21 @@ var BL_DEPT = 'Base Leadership';
 var SENSITIVE = ['Base Finances ($)','Base Cash Reserve ($)'];
 var PLATFORMS = ['Instagram','Facebook','YouTube','TikTok'];
 
+/* Per-(campus,dept,ministry) diff from the baseline lists below — a metric a
+   ministry has turned off, or one it added of its own. Comes from the server
+   (getData's metricOverrides) and is set once at boot; getDepartments()
+   below merges it in on every call, so nothing that reads getDepartments()
+   — the dashboard, My Ministry, the OKR metric picker — has to know
+   overrides exist. Empty until setMetricOverrides() runs, so a page that
+   never calls it (a test, an old cached script) just sees the baseline. */
+var _metricOverrides = {};
+function setMetricOverrides(list){
+  _metricOverrides = {};
+  (list||[]).forEach(function(o){
+    _metricOverrides[o.campus+'|'+o.dept+'|'+o.ministry] = { hidden:o.hidden||[], custom:o.custom||[] };
+  });
+}
+
 function mediaMetrics(){
   var out = [];
   PLATFORMS.forEach(function(p){
@@ -46,7 +61,12 @@ var BL_COMMON = ['One-on-Ones Held','Partner Connections','Spoke at Churches','S
   'Hours Sharing the Gospel','Department Meetings Held','Teachings Prepped','Meetings Led'];
 var BL_DEPT_EXTRA = ['Total Staff','Staff Debt ($)','Funds Raised ($)'];
 
-function getDepartments(campusId){
+/* The starting list, before any ministry's own overrides — what a fresh
+   metric editor needs to tell "a hidden baseline metric" from "one this
+   ministry added itself", and to offer a hidden one back. getDepartments()
+   below is what everything else in the app should call; this one is for
+   the editor alone. */
+function getBaselineDepartments(campusId){
   var d = {
     'Community Service': {
       'Outreach Teams': ['Teams Hosted','Gospel Presentations Given','People Heard the Gospel',
@@ -116,6 +136,23 @@ function getDepartments(campusId){
     d['Community Service']['LTN'] = CS_SCHOOL_METRICS.slice();
     d['Community Service']['Sry Noi'] = CS_SCHOOL_METRICS.slice();
   }
+  return d;
+}
+
+/* What everything else in the app should call — the baseline above, with
+   every ministry's own hidden-metric/custom-metric diff folded in. */
+function getDepartments(campusId){
+  var d = getBaselineDepartments(campusId);
+  Object.keys(d).forEach(function(dept){
+    Object.keys(d[dept]).forEach(function(min){
+      var ov = _metricOverrides[campusId+'|'+dept+'|'+min];
+      if (!ov) return;
+      var list = d[dept][min];
+      if (ov.hidden.length) list = list.filter(function(m){ return ov.hidden.indexOf(m)===-1; });
+      ov.custom.forEach(function(m){ if (list.indexOf(m)===-1) list = list.concat([m]); });
+      d[dept][min] = list;
+    });
+  });
   return d;
 }
 
