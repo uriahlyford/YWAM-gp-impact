@@ -443,9 +443,10 @@ button.srBarRow:active { opacity:.72; }
 /* the base hero — same black card and amber figures as the dashboard, because
    it is the dashboard: this page now leads with how the base is doing. */
 .hero { background:var(--headerBg); color:var(--onDark); border-radius:14px; padding:17px 17px 15px; margin-bottom:14px; }
-/* My Database's own hero only — a visibly framed card, since it's the one
-   thing on this page that's actually yours; Base's hero stays as it was. */
-.hero.myHero { border:2px solid var(--accent); }
+/* My Database's own hero only — a plain outline like any other card's,
+   just in the dark-background pair (.card's own var(--border) is tuned
+   for a light surface); Base's hero stays as it was. */
+.hero.myHero { border:1px solid var(--onDarkBorder); }
 .heroLabel { font-size:11px; letter-spacing:2.6px; color:var(--amber); font-weight:700; }
 .heroNum { font-family:'Koulen',sans-serif; font-size:50px; line-height:1.05; color:var(--amber); }
 .heroTrend { margin-top:5px; font-size:13px; color:var(--onDarkFaint); }
