@@ -1043,7 +1043,7 @@ var S = {
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null, habitMore:false,
-  trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[],
+  trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[], broadcasts:[],
   baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
   healthWeek:null, weekForm:null, weekDraftFor:null, weekJustSaved:null,
   healthScope:'week', healthQuarter:null, healthYear:null, healthMonth:null, baseByYear:{}, srQuarter:null, srOpenQ:null,
@@ -1063,7 +1063,7 @@ var S = {
      so more than one can sit on the same page without their state colliding. */
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
-  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:''
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', broadcastDraft:''
 };
 
 var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
@@ -1372,6 +1372,7 @@ function applyBoot(d){
   if(d.ministry) S.ministry = d.ministry;
   S.smartGoals = d.smartGoals || [];
   S.oneOnOnes = d.oneOnOnes || [];
+  S.broadcasts = d.broadcasts || [];
   if(d.base && d.base.entries) S.base = d.base;
   if(!S.view) S.view = 'week';
   render();
@@ -1383,7 +1384,7 @@ function logout(){
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
-  S.dbCustomize=false; S.oneOnOnes=[];
+  S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
   S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminPinDraft={}; S.adminCode='';
   render();
@@ -1461,6 +1462,7 @@ function render(){
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else if(S.view==='leave') m.innerHTML=leaveHtml();
   else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
+  else if(S.view==='okr') m.innerHTML=myOkrHtml();
   else if(S.view==='admin') m.innerHTML=adminHtml();
   else m.innerHTML=profileHtml();
   /* Switching screens should open at the top of the new one, not wherever the
@@ -2239,14 +2241,14 @@ function okrFormHtml(editing){
    one objective to show, they're paged one at a time instead of stacked, so
    the section stays short; each card still says which department it
    belongs to. */
-function okrSectionHtml(who, mine){
+function okrSectionHtml(who, mine, noHeading){
   var wk = thisWeek();
   var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
   var dept = who.dept==='Base Director' ? 'Base Leadership' : who.dept;
   var depts = [dept];
   var oversees = oversightDeptOf_(who);
   if(oversees && depts.indexOf(oversees)===-1) depts.push(oversees);
-  var h = '<h3'+(mine?' id="sec-okr"':'')+'>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>';
+  var h = noHeading ? '' : ('<h3'+(mine?' id="sec-okr"':'')+'>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>');
 
   var focus = (typeof jobFocus==='function') ? jobFocus(dept, who.ministry) : null;
   if(focus){
@@ -2659,6 +2661,12 @@ function notifItems_(){
       items.push({ when: r.decidedAt||r.from, text: gpT('Your {range} leave request was declined', {range:range}) });
     }
   });
+  /* An admin's own words, sent to everyone — free text, so it never runs
+     through t()/gpT like the rest of this list; only the "Announcement"
+     label is translated. */
+  (S.broadcasts||[]).forEach(function(b){
+    items.push({ when:b.created, text:'📣 '+t('Announcement')+': '+b.text });
+  });
   /* A nudge, not a server-tracked item — Friday through the end of the week,
      if this week's check-in is still unanswered. "when" is that Friday's own
      date, so clearing it only holds through the rest of THIS week: next
@@ -2767,7 +2775,7 @@ function homeHtml(){
   h += goalsCardHtml(goalsViewWeek());
   h += habitsCardHtml();
   h += myMinistryEntryHtml();
-  h += okrSectionHtml(S.me, true);
+  h += myOkrEntryHtml();
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
   h += weekSummaryHtml(wk);
@@ -3430,6 +3438,28 @@ function myMinistryEntryHtml(){
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
 }
 
+/* Same "tappable card on My Database, full page behind it" shape as My
+   Ministry just above — OKRs used to be an inline accordion here too,
+   which made the page long whether or not you had anything to update this
+   week. The department/ministry context now shows once, at the top of the
+   page, instead of being implied by wherever the card happened to sit. */
+function myOkrEntryHtml(){
+  return '<h3 id="sec-okr">🎯 '+esc(t('OKRs'))+'</h3>'+
+    '<button class="card leaveEntry" id="goOkrFromMe">'+
+    '<span class="leaveEntryIcon">🎯</span>'+
+    '<span style="flex:1"><div style="font-size:13.5px;font-weight:700">'+esc(t('OKRs'))+'</div>'+
+    (S.me.ministry?'<div class="pmeta">'+esc(t(S.me.ministry))+'</div>':'')+'</span>'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
+}
+function myOkrHtml(){
+  var wk = thisWeek(), qNow = Math.min(4, Math.floor((wk-1)/13)+1);
+  var h='<button class="linkbtn" id="okrBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  h+='<h2>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h2>';
+  h+='<p class="sub" style="margin:0 0 2px">'+esc(t(S.me.dept))+(S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</p>';
+  h+=okrSectionHtml(S.me, true, true);
+  return h;
+}
+
 /* ---------- Admin ----------
    Account management, not the sensitive-dashboard-numbers gate — that stays
    the leader code, exactly as it works today. isAdmin only ever goes to a
@@ -3443,6 +3473,13 @@ function myMinistryEntryHtml(){
 function adminHtml(){
   var h='<button class="linkbtn" id="adminBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
   h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
+
+  h+='<h3>📣 '+esc(t('Send an announcement'))+'</h3><div class="card">'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('Goes straight to everyone’s notification bell.'))+'</p>'+
+    '<div class="field"><textarea id="broadcastText" maxlength="500" placeholder="'+
+      esc(t('What do you want everyone to know?'))+'">'+esc(S.broadcastDraft||'')+'</textarea></div>'+
+    '<button class="btn" id="broadcastSendBtn">'+esc(t('Send to everyone'))+'</button></div>';
+
   if(S.adminStaff===null) return h+'<p class="sub">'+esc(t('Loading…'))+'</p>';
 
   var list=S.adminStaff;
@@ -3561,6 +3598,23 @@ function bindAdmin(){
   if(S.view!=='admin' || !S.me || !S.me.isAdmin) return;
   var back=document.getElementById('adminBack');
   if(back) back.onclick=function(){ S.view='week'; render(); };
+
+  var bcText=document.getElementById('broadcastText');
+  if(bcText) bcText.oninput=function(){ S.broadcastDraft=bcText.value; };
+  var bcSend=document.getElementById('broadcastSendBtn');
+  if(bcSend) bcSend.onclick=function(){
+    var text=(S.broadcastDraft||'').trim();
+    if(!text){ showMsg(t('Write something first.')); return; }
+    bcSend.disabled=true; bcSend.textContent=t('Sending…');
+    run('sendBroadcast',[S.auth.user,S.auth.pin,text],function(d){
+      bcSend.disabled=false; bcSend.textContent=t('Send to everyone');
+      if(d && d.ok){
+        S.broadcasts=d.broadcasts||[]; S.broadcastDraft='';
+        showMsg(t('Sent to everyone'));
+        render();
+      } else showMsg(t('That didn’t save — try again.'));
+    });
+  };
 
   if(S.adminStaff===null){
     if(S.adminLoading) return;
@@ -5015,6 +5069,10 @@ function bindAway(){
   if(mb) mb.onclick=function(){ S.view='week'; render(); };
   var gm=document.getElementById('goMinistryFromMe');
   if(gm) gm.onclick=function(){ S.view='ministry'; render(); };
+  var ob=document.getElementById('okrBack');
+  if(ob) ob.onclick=function(){ S.view='week'; render(); };
+  var go=document.getElementById('goOkrFromMe');
+  if(go) go.onclick=function(){ S.view='okr'; render(); };
 
   // Ministries an overseer logs for load lazily, one request each, the first
   // time this page is open — cached in S.oversee after that until logout.

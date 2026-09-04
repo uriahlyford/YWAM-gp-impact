@@ -1838,6 +1838,36 @@ async function respondToOneOnOne(username, pin, requestId, approve) {
   return getMyOneOnOnes(username, pin);
 }
 
+/* ==================== admin broadcasts ====================
+   A one-way announcement from an admin to every account — nothing to
+   accept or decline, it just shows up in everyone's notification bell
+   (folded into the same list as leave requests and 1-on-1s) until they
+   clear it. Kept newest-first and capped so the store can't grow forever
+   off of one very chatty admin. */
+const MAX_BROADCASTS = 50;
+async function getBroadcasts_() { return readJSON('broadcasts', []); }
+
+async function getMyBroadcasts(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await getBroadcasts_();
+  return { ok: true, broadcasts: rows };
+}
+
+async function sendBroadcast(username, pin, text) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const clean = str_(text, 500);
+  if (!clean) return { ok: false, err: 'empty' };
+  const rows = await getBroadcasts_();
+  rows.unshift({
+    id: 'bc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    text: clean, from: admin.name, created: new Date().toISOString()
+  });
+  await writeJSON('broadcasts', rows.slice(0, MAX_BROADCASTS));
+  return getMyBroadcasts(username, pin);
+}
+
 /* ==================== annual goals (SMART) ====================
    A personal, year-and-category list — not tied to any ministry KPI or to
    the base's own figures, so it lives entirely under the staff member who
@@ -1976,7 +2006,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -1989,7 +2019,8 @@ async function getMyBoot(username, pin) {
       // No leader code: the two money metrics leadership can see never reach here.
       part(function () { return getData(''); }),
       part(function () { return getMySmartGoals(username, pin); }),
-      part(function () { return getMyOneOnOnes(username, pin); })
+      part(function () { return getMyOneOnOnes(username, pin); }),
+      part(function () { return getMyBroadcasts(username, pin); })
     ]);
 
   return {
@@ -2011,6 +2042,7 @@ async function getMyBoot(username, pin) {
     ministry: ministry || null,
     smartGoals: (smart && smart.smartGoals) || [],
     oneOnOnes: (oneOnOnes && oneOnOnes.oneOnOnes) || [],
+    broadcasts: (broadcasts && broadcasts.broadcasts) || [],
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -2068,7 +2100,9 @@ const HANDLERS = {
   deleteSmartGoal: function (a) { return deleteSmartGoal(a[0], a[1], a[2]); },
   getMyOneOnOnes: function (a) { return getMyOneOnOnes(a[0], a[1]); },
   requestOneOnOne: function (a) { return requestOneOnOne(a[0], a[1], a[2], a[3]); },
-  respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); }
+  respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); },
+  getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
+  sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };
 
 export default async (req) => {

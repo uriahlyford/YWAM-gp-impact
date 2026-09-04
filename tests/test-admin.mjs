@@ -254,6 +254,33 @@ ok('a mentee pointing at the deleted mentor is cleared, not left dangling',
 r = await call('staffLogin', ['kimla2', '1234']);
 ok('the deleted account can no longer log in', r.body && r.body.ok === false);
 
+/* ---------- admin broadcasts: admin-only, everyone sees it ---------- */
+seed();
+
+r = await call('sendBroadcast', ['dara', '1234', 'This should not go out']);
+ok('a non-admin cannot send a broadcast', r.body && r.body.ok === false);
+ok('and nothing was stored', (mem.broadcasts || []).length === 0);
+
+r = await call('sendBroadcast', ['uriah', '1234', '   ']);
+ok('an empty (whitespace-only) broadcast is refused', r.body && r.body.ok === false && r.body.err === 'empty');
+
+r = await call('sendBroadcast', ['uriah', '1234', 'Staff meeting moved to Friday']);
+ok('an admin can send a broadcast', r.body && r.body.ok === true, JSON.stringify(r.body));
+ok('it comes back with who sent it', r.body.broadcasts && r.body.broadcasts[0].from === 'Uriah',
+  JSON.stringify(r.body.broadcasts && r.body.broadcasts[0]));
+ok('newest first', r.body.broadcasts[0].text === 'Staff meeting moved to Friday');
+
+r = await call('getMyBroadcasts', ['dara', '1234']);
+ok('any staff member can read the broadcast list', r.body && r.body.ok === true &&
+  r.body.broadcasts.some(function (b) { return b.text === 'Staff meeting moved to Friday'; }),
+  JSON.stringify(r.body));
+
+r = await call('getMyBoot', ['dara', '1234']);
+ok('the broadcast rides along on boot too, so it reaches the notification bell',
+  r.body && r.body.ok === true && (r.body.broadcasts || []).some(function (b) {
+    return b.text === 'Staff meeting moved to Friday';
+  }), JSON.stringify(r.body && r.body.broadcasts));
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);
