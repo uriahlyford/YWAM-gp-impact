@@ -1246,3 +1246,28 @@ nothing.
 _Sits in the small grey line under the metric's name, where "carried from week
 50" normally sits. Lower-case on purpose: it is the tail of a sentence, not its
 own heading._
+
+## 42. Email, one profile per person, and merging a duplicate
+
+Creating a profile now asks for an email, and a second sign-up with the
+same one is refused — that's the new duplicate check, in place of name
+(two people can share a name; nobody shares an inbox). Anyone whose
+account predates this gets nudged from the notification bell until they
+add one, and can from Profile. Admin also gets a "Merge duplicate
+accounts" tool: pick which of two profiles to keep, and everything the
+other logged that doesn't already overlap moves onto it before the
+duplicate is deleted.
+
+| English | ខ្មែរ |
+|---|---|
+| Add your email to your profile | បន្ថែមអុីមែលរបស់អ្នកទៅកាន់ប្រវត្តិរូបរបស់អ្នក |
+| Add it | បន្ថែមវា |
+| Merge duplicate accounts | បញ្ចូលគណនីស្ទួនចូលគ្នា |
+| For one person who accidentally made two profiles. Pick which to keep — its history, plus whatever the other logged that doesn’t already overlap, moves onto it. The other account is then deleted. | សម្រាប់មនុស្សម្នាក់ដែលបានបង្កើតប្រវត្តិរូបពីរដោយចៃដន្យ។ ជ្រើសរើសមួយដើម្បីរក្សាទុក — ប្រវត្តិរបស់វា បូកនឹងអ្វីដែលមួយទៀតបានកត់ត្រា ដែលមិនទាន់ត្រួតគ្នា នឹងផ្លាស់ទីមកកាន់វា។ គណនីមួយទៀតនឹងត្រូវបានលុបបន្ទាប់មក។ |
+| Keep | រក្សាទុក |
+| Delete (merge from) | លុប (បញ្ចូលចេញពី) |
+| Merge accounts | បញ្ចូលគណនីចូលគ្នា |
+| Pick two different accounts. | សូមជ្រើសរើសគណនីពីរផ្សេងគ្នា។ |
+| Merge {merge} into {keep}? {merge}’s history moves onto {keep} where it doesn’t already overlap, then {merge}’s account is permanently deleted. This can’t be undone. | បញ្ចូល {merge} ចូលទៅ {keep} មែនទេ? ប្រវត្តិរបស់ {merge} នឹងផ្លាស់ទីទៅ {keep} កន្លែងដែលមិនទាន់ត្រួតគ្នា បន្ទាប់មកគណនីរបស់ {merge} នឹងត្រូវបានលុបជាអចិន្ត្រៃយ៍។ សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
+| Accounts merged | គណនីត្រូវបានបញ្ចូលចូលគ្នា |
+| Could not merge those accounts | មិនអាចបញ្ចូលគណនីទាំងនោះចូលគ្នាបានទេ |
