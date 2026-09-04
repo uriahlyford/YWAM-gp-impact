@@ -60,14 +60,14 @@ function seed(extra) {
 
 /* ---------- 1. sign-up approval is scoped to Base Leadership only ---------- */
 seed();
-let r = await call('staffRegister', [{ username: 'newstaff', pin: '5555', name: 'New Staff', dept: 'Community Service', campus: 'poipet' }]);
+let r = await call('staffRegister', [{ username: 'newstaff', pin: '5555', name: 'New Staff', email: 'newstaff@example.com', dept: 'Community Service', campus: 'poipet' }]);
 ok('a non-Base-Leadership sign-up is instant, as before',
   r.body && r.body.ok === true && r.body.staff && !r.body.pending, JSON.stringify(r.body));
 r = await call('staffLogin', ['newstaff', '5555']);
 ok('and can log in right away', r.body && r.body.ok === true, JSON.stringify(r.body));
 
 seed();
-r = await call('staffRegister', [{ username: 'newleader', pin: '5555', name: 'New Leader', dept: 'Base Leadership', campus: 'poipet' }]);
+r = await call('staffRegister', [{ username: 'newleader', pin: '5555', name: 'New Leader', email: 'newleader@example.com', dept: 'Base Leadership', campus: 'poipet' }]);
 ok('a Base Leadership sign-up comes back pending, no session',
   r.body && r.body.ok === true && r.body.pending === true && !r.body.staff, JSON.stringify(r.body));
 const created = (mem.staff || []).find(function (s) { return s.username === 'newleader'; });
@@ -253,6 +253,33 @@ ok('a mentee pointing at the deleted mentor is cleared, not left dangling',
 
 r = await call('staffLogin', ['kimla2', '1234']);
 ok('the deleted account can no longer log in', r.body && r.body.ok === false);
+
+/* ---------- admin broadcasts: admin-only, everyone sees it ---------- */
+seed();
+
+r = await call('sendBroadcast', ['dara', '1234', 'This should not go out']);
+ok('a non-admin cannot send a broadcast', r.body && r.body.ok === false);
+ok('and nothing was stored', (mem.broadcasts || []).length === 0);
+
+r = await call('sendBroadcast', ['uriah', '1234', '   ']);
+ok('an empty (whitespace-only) broadcast is refused', r.body && r.body.ok === false && r.body.err === 'empty');
+
+r = await call('sendBroadcast', ['uriah', '1234', 'Staff meeting moved to Friday']);
+ok('an admin can send a broadcast', r.body && r.body.ok === true, JSON.stringify(r.body));
+ok('it comes back with who sent it', r.body.broadcasts && r.body.broadcasts[0].from === 'Uriah',
+  JSON.stringify(r.body.broadcasts && r.body.broadcasts[0]));
+ok('newest first', r.body.broadcasts[0].text === 'Staff meeting moved to Friday');
+
+r = await call('getMyBroadcasts', ['dara', '1234']);
+ok('any staff member can read the broadcast list', r.body && r.body.ok === true &&
+  r.body.broadcasts.some(function (b) { return b.text === 'Staff meeting moved to Friday'; }),
+  JSON.stringify(r.body));
+
+r = await call('getMyBoot', ['dara', '1234']);
+ok('the broadcast rides along on boot too, so it reaches the notification bell',
+  r.body && r.body.ok === true && (r.body.broadcasts || []).some(function (b) {
+    return b.text === 'Staff meeting moved to Friday';
+  }), JSON.stringify(r.body && r.body.broadcasts));
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 fs.rmSync(TMP, { recursive: true, force: true });

@@ -30,6 +30,7 @@ const SERVER = [
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted
+  'test-staff-email.mjs', // one profile per email; adminMergeStaff cleans up a real duplicate
 ];
 
 const BROWSER = [
