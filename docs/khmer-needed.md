@@ -1378,3 +1378,18 @@ than showing it twice.
 | Jump to any ministry’s numbers. | រំលងទៅមើលចំនួនរបស់កិច្ចការបម្រើណាមួយ។ |
 | That’s your own ministry — see above. | នេះជាកិច្ចការបម្រើផ្ទាល់ខ្លួនរបស់អ្នក — សូមមើលខាងលើ។ |
 | You oversee this — see “Ministries You Oversee” above. | អ្នកទទួលបន្ទុកមើលការខុសត្រូវលើវា — សូមមើល “កិច្ចការបម្រើដែលអ្នកមើលការខុសត្រូវ” ខាងលើ។ |
+
+## 49. Personal Base Leadership figures move to weekly; headcount gets its own section
+
+A department overseer's personal figures (one-on-ones, partner connections,
+churches spoken at, and the rest of the BL_COMMON list) are now entered once
+for the week, like the health check-in, instead of daily — there's no more
+"Today" box for them. Total Staff and Staff Debt, which feed the base's
+combined headcount, move into their own "Department Headcount" section
+below, since they're about the department rather than the person.
+
+| English | ខ្មែរ |
+|---|---|
+| One number per week — headcounts and scores carry forward until changed; the rest is logged fresh each week. | លេខមួយក្នុងមួយសប្តាហ៍ — ចំនួនបុគ្គលិក និងពិន្ទុនឹងបន្តពីលើកមុនរហូតដល់មានការផ្លាស់ប្តូរ ចំណែកឯផ្សេងទៀតត្រូវបញ្ចូលថ្មីរាល់សប្តាហ៍។ |
+| Department Headcount | ចំនួនបុគ្គលិកប្រចាំផ្នែក |
+| Feeds the base’s total headcount — carries forward from last time until changed. | ចំណែកចូលទៅក្នុងចំនួនបុគ្គលិកសរុបរបស់មូលដ្ឋាន — បន្តពីលើកមុនរហូតដល់មានការផ្លាស់ប្តូរ។ |

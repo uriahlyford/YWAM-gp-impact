@@ -52,6 +52,7 @@ const BROWSER = [
   'test-notif-bell-actions.mjs', // an action button drawn in the bell drawer actually works, not just the inline card
   'test-okr-admin-view.mjs', // admin sees every department's OKRs, collapsed, read-only; non-admin sees none of it
   'test-ministry-browse.mjs', // My Ministry's "jump to any ministry" picker: admin authorization, and Save Week uses the browsed ministry's own dept
+  'test-personal-metrics-cadence.mjs', // Base Leadership personal figures move to the weekly card; Total Staff/Staff Debt get their own Department Headcount section
   'audit-load.mjs',         // one function invocation per page open
   'audit-paint.mjs',        // first paint even with the font CDN hanging
   'audit-allviews.mjs',     // every screen, no console errors

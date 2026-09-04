@@ -3244,6 +3244,49 @@ function levelPrevSubHtml_(p, metric, carried, typed){
   return out;
 }
 
+/* Total Staff and Staff Debt are level metrics an overseer enters about
+   their department, not about their own week — kpiCardHtml pulls them into
+   their own "Department Headcount" section rather than the personal figures
+   above it. */
+var HEADCOUNT_METRICS = ['Total Staff','Staff Debt ($)'];
+
+/* One row of a weekly figure — latest (carries forward), avg (a score), or
+   sum entered directly for the week rather than built up from daily taps
+   (a BL_COMMON personal figure, or an oversight card's count). Shared by
+   kpiCardHtml's "This week"/"Department Headcount" sections so the three
+   aggregation rules are written once. */
+function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft){
+  var mode=modeOf(metric);
+  var wks=entries[metric]||{};
+  var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
+  var carried=false, sub='', extra='';
+  if(mode==='latest'){
+    var agg=aggregate(wks, mode);
+    var prev=prevLevel_(wks, wk, metric, prevMap);
+    carried = (cur==='' && prev!==null);
+    if(carried){ cur=prev.value; extra=' data-carried="1"'; }
+    sub = esc(t('now'))+' '+fmt(agg===null&&prev?prev.value:agg, metric);
+    if(prev!==null){
+      sub += levelPrevSubHtml_(prev, metric, carried, draft[metric]!==undefined ? draft[metric] : cur);
+    } else {
+      sub += ' · ' + esc(t('nothing logged before this week'));
+    }
+  } else if(mode==='sum'){
+    sub = esc(t('week total'))+' '+fmt(cur===''?null:Number(cur), metric)+
+      gpVsLastWeek(wks, wk, metric, draft[metric]!==undefined ? draft[metric] : cur);
+  } else {
+    var agg2=aggregate(wks, mode);
+    var thisWk = wks[String(wk)];
+    sub = esc(t('avg'))+' '+fmt(agg2, metric)+
+      gpVsLastWeek(wks, wk, metric, draft[metric]!==undefined ? draft[metric] : thisWk);
+  }
+  if(draft[metric]!==undefined) cur=draft[metric];
+  return '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+    '<div class="rowSub">'+sub+'</div></div>'+
+    '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
+    ' data-kpiweek="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
+}
+
 function kpiCardHtml(wk){
   if(!S.me.ministry){
     return '<div class="card"><p class="sub" style="margin:4px 0 10px">'+
@@ -3266,8 +3309,20 @@ function kpiCardHtml(wk){
      figure rather than a day-by-day breakdown in the section below. */
   var entryDate = kpiEntryDate_(wk);
 
-  var counts=metrics.filter(function(m){ return modeOf(m)==='sum'; });
-  var levels=metrics.filter(function(m){ return modeOf(m)!=='sum'; });
+  /* A Base Leadership overseer's own headcount figures (Total Staff, Staff
+     Debt) feed blAgg()'s base-wide totals — they still need somewhere to be
+     entered — but they read as department admin, not as "how was my week",
+     so they get their own small section below rather than sitting among the
+     personal figures. WEEKLY_ONLY_METRICS (BL_COMMON) is the opposite split:
+     those are sum-mode by aggregation, but entered once for the week like a
+     check-in, not built up from daily taps — so they join the level metrics
+     in "This week" instead of the daily "Today" list. */
+  var counts=metrics.filter(function(m){ return modeOf(m)==='sum' && WEEKLY_ONLY_METRICS.indexOf(m)===-1; });
+  var headcount=metrics.filter(function(m){ return HEADCOUNT_METRICS.indexOf(m)>-1; });
+  var levels=metrics.filter(function(m){
+    if(headcount.indexOf(m)>-1) return false;
+    return modeOf(m)!=='sum' || WEEKLY_ONLY_METRICS.indexOf(m)>-1;
+  });
 
   /* Pins are about the daily list only — how many boxes you face every day. A
      level carries itself forward, so hiding one saves nobody any typing. */
@@ -3351,38 +3406,32 @@ function kpiCardHtml(wk){
     h += accRowHtml('dbAcc', 'kpiWeek', esc(t('This week')), weekSummary, function(){
       var b = '<div id="kpiWeekCard">';
       b += '<p class="sub" style="margin:4px 0 10px">'+
-        esc(t('Headcounts and scores for the week. The ones that rarely change are already filled in from last time — only change what changed.'))+'</p>';
+        esc(t('One number per week — headcounts and scores carry forward until changed; the rest is logged fresh each week.'))+'</p>';
       levels.forEach(function(metric){
-        var mode=modeOf(metric);
-        var wks=entries[metric]||{};
-        var agg=aggregate(wks, mode);
-        var cur = wks[String(wk)]!==undefined ? wks[String(wk)] : '';
-        var carried=false;
-        var sub='', extra='';
-        if(mode==='latest'){
-          var prev=prevLevel_(wks, wk, metric, prevMap);
-          carried = (cur==='' && prev!==null);
-          if(carried){ cur=prev.value; extra=' data-carried="1"'; }
-          sub = esc(t('now'))+' '+fmt(agg===null&&prev?prev.value:agg, metric);
-          if(prev!==null){
-            sub += levelPrevSubHtml_(prev, metric, carried,
-              S.kpiWeekDraft[metric]!==undefined ? S.kpiWeekDraft[metric] : cur);
-          } else {
-            sub += ' · ' + esc(t('nothing logged before this week'));
-          }
-        } else {
-          // A year-to-date average hides which way this week went, so say that too.
-          var thisWk = wks[String(wk)];
-          sub = esc(t('avg'))+' '+fmt(agg, metric)+
-            gpVsLastWeek(wks, wk, metric, S.kpiWeekDraft[metric]!==undefined ? S.kpiWeekDraft[metric] : thisWk);
-        }
-        if(S.kpiWeekDraft[metric]!==undefined) cur=S.kpiWeekDraft[metric];
-        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
-          '<div class="rowSub">'+sub+'</div></div>'+
-          '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
-          ' data-kpiweek="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
+        b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft);
       });
-      b+='<button class="btn" id="saveKpiWeekBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
+      b+='<button class="btn saveKpiWeekBtn" id="saveKpiWeekBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
+      return b+'</div>';
+    });
+  }
+
+  /* A department overseer's own headcount, separate from their personal
+     week above — its own section so "how many staff does Cafe have" reads
+     as department admin, not as one more thing to log about yourself. Same
+     save button behavior as "This week" (both write every pending
+     data-kpiweek figure on the page for this ministry+week), so the class
+     is shared while the id stays unique — the two sections can be open at
+     the same time. */
+  if(headcount.length){
+    var hcSummary = gpT('{n} for {range}', {n: headcount.length, range: weekRangeShort_(wk)});
+    h += accRowHtml('dbAcc', 'kpiHeadcount', esc(t('Department Headcount')), hcSummary, function(){
+      var b = '<div id="kpiHeadcountCard">';
+      b += '<p class="sub" style="margin:4px 0 10px">'+
+        esc(t('Feeds the base’s total headcount — carries forward from last time until changed.'))+'</p>';
+      headcount.forEach(function(metric){
+        b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft);
+      });
+      b+='<button class="btn saveKpiWeekBtn" id="saveKpiHeadcountBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
       return b+'</div>';
     });
   }
@@ -5810,9 +5859,12 @@ function bindHome(){
 
   /* Levels and scores are the week's own figure, so they are written straight to
      the week — including the ones sitting there carried forward, which is how a
-     headcount that did not change still ends up recorded for this week. */
-  var skw=document.getElementById('saveKpiWeekBtn');
-  if(skw) skw.onclick=function(){
+     headcount that did not change still ends up recorded for this week.
+     "This week" and "Department Headcount" can both be open at once, each
+     with its own Save Week button (own id, shared class) — either one
+     writes every pending figure from both sections in one call. */
+  document.querySelectorAll('.saveKpiWeekBtn').forEach(function(skw){
+  skw.onclick=function(){
     if(S.busy) return;
     var wk=kpiViewWeek(), updates=[];
     document.querySelectorAll('[data-kpiweek]').forEach(function(inp){
@@ -5827,6 +5879,7 @@ function bindHome(){
       render();
     });
   };
+  });
 
   // --- ministries you oversee: weekly only, keyed by ministry name so
   // several of these cards can sit on the page at once.
