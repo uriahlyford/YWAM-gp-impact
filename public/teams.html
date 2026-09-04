@@ -1063,10 +1063,14 @@ var S = {
   notifClearedAt: lsGet('gp-notif-cleared') || '',
   /* Ministries a department overseer logs on behalf of, keyed by ministry name
      so more than one can sit on the same page without their state colliding. */
-  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{},
+  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovDeptOf:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
   adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', broadcastDraft:'',
-  adminOkrAcc:{}
+  adminOkrAcc:{},
+  /* The "jump to any ministry" picker on My Ministry — admin can pick any
+     department/ministry on their campus; everyone else's options resolve to
+     just the one they work in (see myMinistryBrowseHtml_). */
+  mmBrowseDept:'', mmBrowseMinistry:''
 };
 
 var SMART_CATEGORIES = ['Faith','Health','Finance','Language','Skills','Fun'];
@@ -1195,6 +1199,9 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 function initials(name){ return String(name||'?').trim().split(/\s+/).map(function(w){return w[0];}).slice(0,2).join('').toUpperCase(); }
 function campusName(id){ for(var i=0;i<CAMPUSES.length;i++) if(CAMPUSES[i].id===id) return CAMPUSES[i].name; return id; }
+// campusName() already reads "YWAM Poipet" — for a label that supplies its
+// own "YWAM" prefix (e.g. "YWAM {campus} Ministries"), this is the part after it.
+function campusShort(id){ for(var i=0;i<CAMPUSES.length;i++) if(CAMPUSES[i].id===id) return CAMPUSES[i].short; return id; }
 function nameOf(id){ for(var i=0;i<S.roster.length;i++) if(S.roster[i].id===id) return S.roster[i].name; return '—'; }
 function personOf(id){ for(var i=0;i<S.roster.length;i++) if(S.roster[i].id===id) return S.roster[i]; return null; }
 
@@ -3405,6 +3412,11 @@ function kpiCardHtml(wk){
    pin-picking here: hiding a count saves nobody's time when you are not the
    one filling it in most days. */
 function oversightKpiCardHtml_(dept, ministry, data){
+  // Which dept a ministry's Save Week button belongs to — the department
+  // overseer's loop and the "jump to any ministry" picker can each land here
+  // with a different dept, so the save handler reads this back rather than
+  // assuming myOversightDept_().
+  S.ovDeptOf[ministry] = dept;
   var wk = ovWeekFor_(ministry);
   var metrics = metricsFor(S.me.campus, dept, ministry);
   if(!metrics.length){
@@ -3992,6 +4004,52 @@ function myMinistryHtml(){
       if(S.oversee[min]) h+=oversightKpiCardHtml_(oversees, min, S.oversee[min]);
       else h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
     });
+  }
+  h+=myMinistryBrowseHtml_(oversees);
+  return h;
+}
+
+/* A department/ministry picker so any ministry on the campus is a couple of
+   taps away, not just your own and (if you oversee one) your department's.
+   An admin can jump to anything on the campus; everyone else's picker just
+   resolves to the one ministry they already work in — present for
+   consistency, but there is nothing else in it to pick. Landing on a
+   ministry already shown elsewhere on this page (your own, or one your
+   department oversees) points back up rather than rendering it twice. */
+function myMinistryBrowseHtml_(oversees){
+  var deps=getDepartments(S.me.campus);
+  var deptNames=Object.keys(deps);
+  if(!deptNames.length) return '';
+  var isAdmin=!!S.me.isAdmin;
+  var allowedDepts = isAdmin ? deptNames : (S.me.dept && deps[S.me.dept] ? [S.me.dept] : []);
+  if(!allowedDepts.length) return '';
+  var dept = allowedDepts.indexOf(S.mmBrowseDept)>-1 ? S.mmBrowseDept : allowedDepts[0];
+  var minsForDept = Object.keys(deps[dept]||{});
+  var allowedMins = isAdmin ? minsForDept
+    : (S.me.ministry && minsForDept.indexOf(S.me.ministry)>-1 ? [S.me.ministry] : []);
+  if(!allowedMins.length) return '';
+  var min = allowedMins.indexOf(S.mmBrowseMinistry)>-1 ? S.mmBrowseMinistry : allowedMins[0];
+  S.mmBrowseDept=dept; S.mmBrowseMinistry=min;
+
+  var h='<h3>🏢 '+esc(gpT('YWAM {campus} Ministries',{campus:campusShort(S.me.campus)}))+'</h3><div class="card">';
+  h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Jump to any ministry’s numbers.'))+'</p>';
+  h+='<div class="pickerRow">'+
+    '<label class="pick"><span>'+esc(t('Department'))+'</span><select id="mmBrowseDeptSel"'+(allowedDepts.length<2?' disabled':'')+'>'+
+      allowedDepts.map(function(d){ return '<option value="'+esc(d)+'"'+(dept===d?' selected':'')+'>'+esc(t(d))+'</option>'; }).join('')+
+    '</select></label>'+
+    '<label class="pick"><span>'+esc(t('Ministry'))+'</span><select id="mmBrowseMinSel"'+(allowedMins.length<2?' disabled':'')+'>'+
+      allowedMins.map(function(m){ return '<option value="'+esc(m)+'"'+(min===m?' selected':'')+'>'+(MIN_EMOJI[m]?MIN_EMOJI[m]+' ':'')+esc(t(m))+'</option>'; }).join('')+
+    '</select></label>'+
+  '</div>';
+
+  var isMine = dept===S.me.dept && min===S.me.ministry;
+  var isOverseen = !!oversees && dept===oversees;
+  if(isMine) h+='<p class="sub" style="margin:8px 0 0">'+esc(t('That’s your own ministry — see above.'))+'</p>';
+  else if(isOverseen) h+='<p class="sub" style="margin:8px 0 0">'+esc(t('You oversee this — see “Ministries You Oversee” above.'))+'</p>';
+  h+='</div>';
+  if(!isMine && !isOverseen){
+    if(S.oversee[min]) h+=oversightKpiCardHtml_(dept, min, S.oversee[min]);
+    else h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
   }
   return h;
 }
@@ -5299,6 +5357,25 @@ function bindAway(){
         });
       });
     }
+
+    var mbd=document.getElementById('mmBrowseDeptSel');
+    if(mbd) mbd.onchange=function(){ S.mmBrowseDept=mbd.value; S.mmBrowseMinistry=''; render(); };
+    var mbm=document.getElementById('mmBrowseMinSel');
+    if(mbm) mbm.onchange=function(){ S.mmBrowseMinistry=mbm.value; render(); };
+
+    // The "jump to any ministry" picker's current selection loads lazily too,
+    // one ministry at a time as you pick it — same cache as the oversight
+    // loop above, so re-picking one already open costs nothing.
+    var bDept=S.mmBrowseDept, bMin=S.mmBrowseMinistry;
+    if(bDept && bMin && !(bDept===S.me.dept && bMin===S.me.ministry) && bDept!==oDept &&
+       !S.oversee[bMin] && !S.ovLoading[bMin]){
+      S.ovLoading[bMin]=true;
+      run('getMinistryFor',[S.auth.user,S.auth.pin,bDept,bMin],function(d){
+        S.ovLoading[bMin]=false;
+        if(d && d.ok) S.oversee[bMin]=d;
+        render();
+      });
+    }
   }
 
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
@@ -5780,7 +5857,7 @@ function bindHome(){
   document.querySelectorAll('[data-ovsaveweek]').forEach(function(btn){
     btn.onclick=function(){
       if(S.busy) return;
-      var min=btn.getAttribute('data-ovsaveweek'), dept=myOversightDept_();
+      var min=btn.getAttribute('data-ovsaveweek'), dept=S.ovDeptOf[min]||myOversightDept_();
       if(!dept) return;
       var wk=ovWeekFor_(min), updates=[];
       document.querySelectorAll('[data-ovweek]').forEach(function(inp){

@@ -1486,9 +1486,12 @@ async function getMyMinistry(username, pin) {
    under that real department — the same relationship getDepartments()
    encodes on the client (dept:'Base Leadership', ministry: e.g. 'Community
    Service'). That overseer can log on behalf of any ministry in their own
-   department; nobody else gets to log outside their own ministry. */
+   department; nobody else gets to log outside their own ministry — except
+   an admin, who can jump to and log any ministry on their own campus (the
+   "YWAM {campus} Ministries" picker on My Ministry). */
 function canLogFor_(s, campus, dept, ministry) {
   if (campus !== s.campus) return false;
+  if (s.isAdmin) return true;
   if (dept === s.dept && ministry === s.ministry) return true;
   return s.dept === 'Base Leadership' && s.ministry === dept;
 }
