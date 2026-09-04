@@ -1045,7 +1045,7 @@ var S = {
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null, habitMore:false,
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[],
   baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
-  healthWeek:null, weekForm:null, weekDraftFor:null,
+  healthWeek:null, weekForm:null, weekDraftFor:null, weekJustSaved:null,
   healthScope:'week', healthQuarter:null, healthYear:null, baseByYear:{}, srQuarter:null, srOpenQ:null,
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
   baseHealthPeriod:'week',
@@ -3871,6 +3871,14 @@ function healthHtml(){
   var open = (S.weekForm===Number(wk)) || !row;
 
   h += '<h3>💚 '+esc(t('My check-in'))+' · '+esc(t('Week'))+' '+wk+'</h3>';
+  /* A one-time confirmation, not a permanent state: shown for the render
+     right after weekSubmit sets it, then cleared here so it doesn't linger
+     once you've moved on — the toast alone was too easy to miss since the
+     form also closes and the base average refreshes at the same moment. */
+  if(row && S.weekJustSaved===wk){
+    h += '<div class="banner">✅ '+esc(gpT('Week {wk}’s check-in is saved.',{wk:wk}))+'</div>';
+    S.weekJustSaved = null;
+  }
   if(row){
     h += '<div class="card">'+
       '<div class="row" style="border:0;padding-top:0"><span class="rowName">'+
@@ -4103,7 +4111,8 @@ function weekSubmit(btn){
     if(res && res.ok){
       S.checkins = res.checkins || [];
       S.weekForm = null; S.weekDraft = null; S.weekDraftFor = null;
-      showMsg(t('Saved'));
+      S.weekJustSaved = wk;
+      showMsg(gpT('Week {wk}’s check-in is saved.',{wk:wk}));
       /* The base total includes this now, so pull it fresh rather than showing a
          stale average next to a figure that just changed. */
       run('getData', [''], function(dd){ if(dd && dd.entries) S.base = dd; render(); });

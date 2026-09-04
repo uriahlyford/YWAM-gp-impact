@@ -1231,3 +1231,14 @@ base's history; only the account goes.
 | Permanently delete {name}’s account? This can’t be undone. | លុបគណនីរបស់ {name} ជាអចិន្ត្រៃយ៍មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
 | Account deleted | គណនីត្រូវបានលុប |
 | Could not delete that account | មិនអាចលុបគណនីនោះបានទេ |
+
+## 41. Weekly check-in: a clear confirmation on submit
+
+Submitting used to just show the generic toast "Saved" for two seconds,
+easy to miss since the form also closes and the base average refreshes at
+the same moment. Health now also shows a banner naming the week, once,
+right where the check-in card sits.
+
+| English | ខ្មែរ |
+|---|---|
+| Week {wk}’s check-in is saved. | ការឆែកអង់សប្តាហ៍ {wk} របស់អ្នកត្រូវបានរក្សាទុករួចហើយ។ |
