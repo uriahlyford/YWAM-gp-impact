@@ -60,6 +60,12 @@ var DTS_METRICS = ['Students Enrolled','Students Graduated',
 var BL_COMMON = ['One-on-Ones Held','Partner Connections','Spoke at Churches','Spoke at YWAM Bases',
   'Hours Sharing the Gospel','Department Meetings Held','Teachings Prepped','Meetings Led'];
 var BL_DEPT_EXTRA = ['Total Staff','Staff Debt ($)','Funds Raised ($)'];
+/* BL_COMMON figures are a leader's own week, not something that piles up
+   day by day — so unlike an ordinary count metric, there's no daily "Today"
+   box for these: they're entered once, for the week, the same shape as the
+   health check-in. metricsFor()/kpiCardHtml() key off this list to route
+   them into the weekly section instead of the daily one. */
+var WEEKLY_ONLY_METRICS = BL_COMMON.slice();
 
 /* The starting list, before any ministry's own overrides — what a fresh
    metric editor needs to tell "a hidden baseline metric" from "one this
