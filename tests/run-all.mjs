@@ -55,6 +55,7 @@ const BROWSER = [
   'test-personal-metrics-cadence.mjs', // Base Leadership personal figures move to the weekly card; Total Staff/Staff Debt get their own Department Headcount section
   'test-metric-cadence.mjs', // admin-only monthly/quarterly cadence per metric; the monthly/quarterly section writes to its own anchor week
   'test-metric-okr-feeds.mjs', // a metric's own row shows which OKR(s) it feeds, scoped to its own campus
+  'test-mentees-nav-gap.mjs', // the fixed bottom nav never gaps on a page shorter than the screen (min-height:100dvh)
   'audit-load.mjs',         // one function invocation per page open
   'audit-paint.mjs',        // first paint even with the font CDN hanging
   'audit-allviews.mjs',     // every screen, no console errors

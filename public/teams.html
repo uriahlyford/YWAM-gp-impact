@@ -223,7 +223,17 @@
    overflow-x is on html as well as body on purpose: on iOS, body alone still lets
    the document itself rubber-band sideways. */
 html { overscroll-behavior:none; overflow-x:hidden; }
+/* A page shorter than the screen (My Mentees with just a couple of people,
+   nothing scrollable below the fold) is exactly where mobile Chrome's own
+   dynamic toolbar can resize the viewport out from under a `position:fixed`
+   bottom bar — it visibly hops up, with a strip of the page background
+   showing under it until the next scroll settles things. Forcing the page
+   to always be at least one full screen tall keeps that toolbar decision
+   the same on every page, short or long. 100vh first as a fallback for a
+   browser that doesn't know 100dvh (the dynamic-viewport unit that tracks
+   the toolbar); the second declaration simply wins where it's supported. */
 body { background:var(--bg); color:var(--ink); font-family:'Kantumruy Pro',system-ui,sans-serif;
+  min-height:100vh; min-height:100dvh;
   padding-bottom:calc(76px + env(safe-area-inset-bottom));
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
   overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
@@ -433,6 +443,10 @@ button.srBarRow:active { opacity:.72; }
 .accCard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:14px; }
 .accRow { border-bottom:1px solid var(--border); }
 .accRow:last-child { border-bottom:0; }
+/* The week-picker used to sit in its own card above the accordion — two
+   boxes for one idea. It's the accCard's own first section now, styled to
+   match an accRow's own padding so the seam isn't visible. */
+.weekNavBlock { padding:14px 16px; border-bottom:1px solid var(--border); }
 .accHead { width:100%; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:16px; background:none; border:0; cursor:pointer; text-align:left; font-family:inherit; color:var(--ink); }
 .accTitle { font-weight:700; font-size:15px; }
 .accSummary { font-size:12.5px; color:var(--muted); margin-top:2px; }
@@ -1748,13 +1762,12 @@ function baseHealthAccHtml(){
     [['lonely','Loneliness (avg, lower is better)', false],
      ['clarity','Clarity (avg)', true],
      ['growth','Personal growth (avg)', true],
-     ['langHours','Language study (avg hrs)', true],
-     ['minHours','Community ministry (avg hrs)', true]
+     ['langHours','Language study (avg hrs)', true]
     ].forEach(function(q2){
       var v = rows.length ? R.avg(rows, q2[0]) : null;
       var pv = (prevRows && prevRows.length) ? R.avg(prevRows, q2[0]) : null;
       var tr = (v!==null && pv!==null) ? trendBadge(pctChange(pv,v), q2[2]) : '';
-      var suffix = (q2[0]==='langHours'||q2[0]==='minHours') ? '' : '/10';
+      var suffix = (q2[0]==='langHours') ? '' : '/10';
       b+='<div class="row"><span class="rowName">'+esc(t(q2[1]))+'</span>'+
         '<span class="rowVal">'+(v===null?'—':v.toFixed(1)+suffix)+tr+'</span></div>';
     });
@@ -2634,9 +2647,9 @@ function miniDashboardHtml(){
      stats, not a personal page, and this is the one card that's actually
      yours. Same .baseMe markup Base used to show it with. */
   var h='<div class="miniDashHead">'+
-      '<div class="baseMe">'+avatarHtml(S.me,'sm')+
+      '<div class="baseMe">'+avatarHtml(S.me,'')+
         '<div><div class="pmeta">'+esc(t(greeting()))+'</div>'+
-        '<div class="pname" style="font-size:16px">'+esc(S.me.name)+'</div>'+
+        '<div class="pname">'+esc(S.me.name)+'</div>'+
         '<div class="pmeta">'+esc(t(S.me.role||S.me.dept))+
           (S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</div>'+
         '</div></div>'+
@@ -3260,12 +3273,6 @@ function levelPrevSubHtml_(p, metric, carried, typed){
   return out;
 }
 
-/* Total Staff and Staff Debt are level metrics an overseer enters about
-   their department, not about their own week — kpiCardHtml pulls them into
-   their own "Department Headcount" section rather than the personal figures
-   above it. */
-var HEADCOUNT_METRICS = ['Total Staff','Staff Debt ($)'];
-
 /* The reverse of kr.metricKey: an OKR key result links FROM the objective TO
    a metric (dept|ministry|metric) to pull its progress live — this is a
    metric asking the question the other way, for whoever is typing the
@@ -3286,9 +3293,9 @@ function metricOkrNote_(campus, dept, ministry, metric){
 
 /* One row of a weekly figure — latest (carries forward), avg (a score), or
    sum entered directly for the week rather than built up from daily taps
-   (a BL_COMMON personal figure, or an oversight card's count). Shared by
-   kpiCardHtml's "This week"/"Department Headcount" sections so the three
-   aggregation rules are written once. */
+   (a BL_COMMON personal figure, a headcount, or — for a Base Leadership
+   overseer — every metric on their own page, which is weekly-only start to
+   finish). Used throughout kpiCardHtml's "This week" section. */
 function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft, campus, dept, ministry){
   var mode=modeOf(metric);
   var wks=entries[metric]||{};
@@ -3359,14 +3366,6 @@ function kpiCardHtml(wk){
      figure rather than a day-by-day breakdown in the section below. */
   var entryDate = kpiEntryDate_(wk);
 
-  /* A Base Leadership overseer's own headcount figures (Total Staff, Staff
-     Debt) feed blAgg()'s base-wide totals — they still need somewhere to be
-     entered — but they read as department admin, not as "how was my week",
-     so they get their own small section below rather than sitting among the
-     personal figures. WEEKLY_ONLY_METRICS (BL_COMMON) is the opposite split:
-     those are sum-mode by aggregation, but entered once for the week like a
-     check-in, not built up from daily taps — so they join the level metrics
-     in "This week" instead of the daily "Today" list. */
   /* A metric an admin has set to monthly or quarterly cadence (metricEditorHtml_)
      skips the daily "Today" list entirely and gets its own "This month"/"This
      quarter" section instead — one number for the period, same idea as a
@@ -3377,15 +3376,21 @@ function kpiCardHtml(wk){
   var quarterlyCounts=metrics.filter(function(m){
     return modeOf(m)==='sum' && cadenceOf(S.me.campus, S.me.dept, S.me.ministry, m)==='quarter';
   });
-  var counts=metrics.filter(function(m){
+  /* A Base Leadership overseer's own page is entirely weekly — no daily
+     "Today" list at all (their own figures were never really daily, and
+     Total Staff/Staff Debt, the two that used to sit in their own separate
+     Department Headcount section, are level metrics anyway) — one "This
+     week" section holds everything that isn't monthly/quarterly. Every
+     other ministry keeps the daily/weekly split its own count metrics
+     (Cups Sold, Days Open…) actually need. */
+  var isBL = S.me.dept==='Base Leadership';
+  var counts = isBL ? [] : metrics.filter(function(m){
     return modeOf(m)==='sum' && WEEKLY_ONLY_METRICS.indexOf(m)===-1 &&
       monthlyCounts.indexOf(m)===-1 && quarterlyCounts.indexOf(m)===-1;
   });
-  var headcount=metrics.filter(function(m){ return HEADCOUNT_METRICS.indexOf(m)>-1; });
   var levels=metrics.filter(function(m){
-    if(headcount.indexOf(m)>-1) return false;
     if(monthlyCounts.indexOf(m)>-1 || quarterlyCounts.indexOf(m)>-1) return false;
-    return modeOf(m)!=='sum' || WEEKLY_ONLY_METRICS.indexOf(m)>-1;
+    return counts.indexOf(m)===-1;
   });
 
   /* Pins are about the daily list only — how many boxes you face every day. A
@@ -3414,8 +3419,11 @@ function kpiCardHtml(wk){
   /* ---- what happened today / what is true of the whole week ----
      Collapsed by default: these boxes are useful when you have numbers to
      log, but sitting open on every visit to My Database pushes everything
-     else below the fold. */
-  h += '<div class="card">'+
+     else below the fold. The week picker used to be a card of its own above
+     this one — now it's just this box's first section, so switching weeks
+     and logging numbers read as one thing instead of two. */
+  h += '<div class="accCard">';
+  h += '<div class="weekNavBlock">'+
     '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
     '<div class="weekNavRow">'+
       '<button class="weekArrow" id="kpiPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
@@ -3425,7 +3433,6 @@ function kpiCardHtml(wk){
     '</div>'+
     (isCurWk?'':'<button class="linkbtn" style="padding:6px 0 0" id="kpiJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
   '</div>';
-  h += '<div class="accCard">';
 
   if(counts.length){
     var dayTitle = isCurWk ? t('Today') : entryDate;
@@ -3476,27 +3483,6 @@ function kpiCardHtml(wk){
         b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft, S.me.campus, S.me.dept, S.me.ministry);
       });
       b+='<button class="btn saveKpiWeekBtn" id="saveKpiWeekBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
-      return b+'</div>';
-    });
-  }
-
-  /* A department overseer's own headcount, separate from their personal
-     week above — its own section so "how many staff does Cafe have" reads
-     as department admin, not as one more thing to log about yourself. Same
-     save button behavior as "This week" (both write every pending
-     data-kpiweek figure on the page for this ministry+week), so the class
-     is shared while the id stays unique — the two sections can be open at
-     the same time. */
-  if(headcount.length){
-    var hcSummary = gpT('{n} for {range}', {n: headcount.length, range: weekRangeShort_(wk)});
-    h += accRowHtml('dbAcc', 'kpiHeadcount', esc(t('Department Headcount')), hcSummary, function(){
-      var b = '<div id="kpiHeadcountCard">';
-      b += '<p class="sub" style="margin:4px 0 10px">'+
-        esc(t('Feeds the base’s total headcount — carries forward from last time until changed.'))+'</p>';
-      headcount.forEach(function(metric){
-        b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft, S.me.campus, S.me.dept, S.me.ministry);
-      });
-      b+='<button class="btn saveKpiWeekBtn" id="saveKpiHeadcountBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
       return b+'</div>';
     });
   }
@@ -3576,7 +3562,8 @@ function oversightKpiCardHtml_(dept, ministry, data){
   var isCurWk=Number(wk)===Number(thisWeek());
   var weekDraft = S.ovWeekDraft[ministry] || (S.ovWeekDraft[ministry]={});
 
-  var h='<div class="card">'+
+  var h='<div class="accCard">';
+  h += '<div class="weekNavBlock">'+
     '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
     '<div class="weekNavRow">'+
       '<button class="weekArrow" data-ovprev="'+esc(ministry)+'" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
@@ -3586,7 +3573,6 @@ function oversightKpiCardHtml_(dept, ministry, data){
     '</div>'+
     (isCurWk?'':'<button class="linkbtn" style="padding:6px 0 0" data-ovjump="'+esc(ministry)+'">'+esc(t('Jump back to this week'))+'</button>')+
   '</div>';
-  h += '<div class="accCard">';
 
   var weekSummary = gpT('{n} for {range}', {n: metrics.length, range: weekRangeShort_(wk)});
   h += accRowHtml('ovAcc', ministry+'|week', esc(t('This week')), weekSummary, function(){
@@ -4354,8 +4340,7 @@ var WEEK_YESNO_QS = [
   { id:'sabbath',     text:'Did I take a sabbath this week?', higherBetter:true }
 ];
 var WEEK_NUM_QS = [
-  { id:'langHours', text:'Hours spent on language study this week' },
-  { id:'minHours',  text:'Hours doing ministry in the local community this week' }
+  { id:'langHours', text:'Hours spent on language study this week' }
 ];
 /* Extra questions, once a month — the same "Monthly Check-In" add-on the
    Siem Reap history's own tool asked, on the week that closes out a month
@@ -4643,14 +4628,13 @@ function healthHtml(){
   [['lonely','Loneliness (avg, lower is better)', false],
    ['clarity','Clarity (avg)', true],
    ['growth','Personal growth (avg)', true],
-   ['langHours','Language study (avg hrs)', true],
-   ['minHours','Community ministry (avg hrs)', true]
+   ['langHours','Language study (avg hrs)', true]
   ].forEach(function(q){
     var v = rows.length ? R.avg(rows, q[0]) : null;
     var tr = (scope==='week') ? R.trendB(function(w){
       var r = R.surveyRows(ids, w); return r.length ? R.avg(r, q[0]) : null;
     }, q[2], wk) : '';
-    var suffix = (q[0]==='langHours'||q[0]==='minHours') ? '' : '/10';
+    var suffix = (q[0]==='langHours') ? '' : '/10';
     h += '<div class="row"><span class="rowName">'+esc(t(q[1]))+'</span>'+
       '<span class="rowVal">'+(v===null?'—':v.toFixed(1)+suffix)+tr+'</span></div>';
   });
@@ -5005,8 +4989,7 @@ function mentorHtml(){
         return trendBadge(pctChange(a,b), hb);
       };
       [['lonely','Loneliness (avg)',false,'/10'],['clarity','Clarity (avg)',true,'/10'],
-       ['growth','Growth (avg)',true,'/10'],['langHours','Language hours',true,''],
-       ['minHours','Ministry hours',true,'']].forEach(function(q){
+       ['growth','Growth (avg)',true,'/10'],['langHours','Language hours',true,'']].forEach(function(q){
         var v=latest[q[0]];
         h+='<div class="row"><span class="rowName">'+esc(t(q[1]))+'</span><span class="rowVal">'+
            ((v===null||v===undefined)?'—':v+q[3])+mt(q[0],q[2],false)+'</span></div>';
@@ -5980,12 +5963,9 @@ function bindHome(){
 
   /* Levels and scores are the week's own figure, so they are written straight to
      the week — including the ones sitting there carried forward, which is how a
-     headcount that did not change still ends up recorded for this week.
-     "This week" and "Department Headcount" can both be open at once, each
-     with its own Save Week button (own id, shared class) — either one
-     writes every pending figure from both sections in one call. */
-  document.querySelectorAll('.saveKpiWeekBtn').forEach(function(skw){
-  skw.onclick=function(){
+     headcount that did not change still ends up recorded for this week. */
+  var skw=document.getElementById('saveKpiWeekBtn');
+  if(skw) skw.onclick=function(){
     if(S.busy) return;
     var wk=kpiViewWeek(), updates=[];
     document.querySelectorAll('[data-kpiweek]').forEach(function(inp){
@@ -6000,7 +5980,6 @@ function bindHome(){
       render();
     });
   };
-  });
 
   /* Monthly/quarterly-cadence figures — one number for the period, written
      to that period's own anchor week (monthAnchorWeek_/quarterAnchorWeek_)
