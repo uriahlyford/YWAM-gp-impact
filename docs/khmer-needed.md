@@ -1231,3 +1231,22 @@ base's history; only the account goes.
 | Permanently delete {name}’s account? This can’t be undone. | លុបគណនីរបស់ {name} ជាអចិន្ត្រៃយ៍មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
 | Account deleted | គណនីត្រូវបានលុប |
 | Could not delete that account | មិនអាចលុបគណនីនោះបានទេ |
+
+## 41. OKRs get their own page; admin can broadcast to everyone
+
+OKRs used to be an inline accordion on My Database, same shape as My
+Ministry before it got its own page — now it does too: a tappable card
+that opens a full screen for your department's objectives. Separately,
+an admin can now write a message and send it straight to everyone's
+notification bell — no accept or decline, just an FYI.
+
+| English | ខ្មែរ |
+|---|---|
+| Send an announcement | ផ្ញើសេចក្តីប្រកាស |
+| Goes straight to everyone’s notification bell. | ទៅដល់ប្រអប់ជូនដំណឹងរបស់អ្នកគ្រប់គ្នាភ្លាមៗ។ |
+| What do you want everyone to know? | តើអ្នកចង់ឱ្យអ្នកគ្រប់គ្នាដឹងអ្វី? |
+| Send to everyone | ផ្ញើទៅអ្នកគ្រប់គ្នា |
+| Sending… | កំពុងផ្ញើ… |
+| Sent to everyone | បានផ្ញើទៅអ្នកគ្រប់គ្នា |
+| Write something first. | សូមសរសេរអ្វីមួយសិន។ |
+| Announcement | សេចក្តីប្រកាស |

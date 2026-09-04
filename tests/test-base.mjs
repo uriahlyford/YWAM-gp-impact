@@ -313,7 +313,10 @@ console.log('tabs (no OKR tab):    ' + tabs.join(' | '));
 await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(1100);
 console.log('\n-- My Database --');
-console.log('OKR heading:   ' + await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
+console.log('OKR entry card: ' + await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
+await page.click('#goOkrFromMe');                             // OKRs — its own full page now
+await page.waitForTimeout(1100);
+console.log('OKR heading:   ' + await page.$$eval('#main h3, #main h2', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
 console.log('focus card:    ' + await page.$eval('.focusCard', e => e.innerText.replace(/\n+/g, ' | ').slice(0, 120)));
 console.log('my objectives: ' + await page.$$eval('.okrCard', e => e.length));
 console.log('key results:   ' + (await page.$$eval('.kr', e => e.map(x => x.innerText.replace(/\n+/g, ' | ')))).join('  //  '));
@@ -358,8 +361,10 @@ async function okrPageTo(re) {
   }
   return false;
 }
-console.log('\n=== OKR EDITOR (on My Database) ===');
+console.log('\n=== OKR EDITOR (on its own page) ===');
 await page.click('nav.bottom [data-tab="week"]');
+await page.waitForTimeout(1000);
+await page.click('#goOkrFromMe');
 await page.waitForTimeout(1000);
 console.log('starting objectives: ' + await page.$$eval('.okrCard', e => e.length));
 console.log('edit + delete shown: ' + await page.evaluate(() =>
