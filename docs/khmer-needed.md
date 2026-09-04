@@ -1232,7 +1232,73 @@ base's history; only the account goes.
 | Account deleted | គណនីត្រូវបានលុប |
 | Could not delete that account | មិនអាចលុបគណនីនោះបានទេ |
 
-## 41. OKRs get their own page; admin can broadcast to everyone
+## 41. When a headcount has never been logged before
+
+A headcount ("Students Enrolled", "Total Staff") is now carried forward across a
+year boundary, not just within one year — so the only time the box is genuinely
+empty is when nobody has ever logged that number. It says so instead of showing
+nothing.
+
+| English | ខ្មែរ |
+|---|---|
+| nothing logged before this week | គ្មានការកត់ត្រាមុនសប្តាហ៍នេះទេ |
+
+_Sits in the small grey line under the metric's name, where "carried from week
+50" normally sits. Lower-case on purpose: it is the tail of a sentence, not its
+own heading._
+
+## 42. Email, one profile per person, and merging a duplicate
+
+Creating a profile now asks for an email, and a second sign-up with the
+same one is refused — that's the new duplicate check, in place of name
+(two people can share a name; nobody shares an inbox). Anyone whose
+account predates this gets nudged from the notification bell until they
+add one, and can from Profile. Admin also gets a "Merge duplicate
+accounts" tool: pick which of two profiles to keep, and everything the
+other logged that doesn't already overlap moves onto it before the
+duplicate is deleted.
+
+| English | ខ្មែរ |
+|---|---|
+| Add your email to your profile | បន្ថែមអុីមែលរបស់អ្នកទៅកាន់ប្រវត្តិរូបរបស់អ្នក |
+| Add it | បន្ថែមវា |
+| Merge duplicate accounts | បញ្ចូលគណនីស្ទួនចូលគ្នា |
+| For one person who accidentally made two profiles. Pick which to keep — its history, plus whatever the other logged that doesn’t already overlap, moves onto it. The other account is then deleted. | សម្រាប់មនុស្សម្នាក់ដែលបានបង្កើតប្រវត្តិរូបពីរដោយចៃដន្យ។ ជ្រើសរើសមួយដើម្បីរក្សាទុក — ប្រវត្តិរបស់វា បូកនឹងអ្វីដែលមួយទៀតបានកត់ត្រា ដែលមិនទាន់ត្រួតគ្នា នឹងផ្លាស់ទីមកកាន់វា។ គណនីមួយទៀតនឹងត្រូវបានលុបបន្ទាប់មក។ |
+| Keep | រក្សាទុក |
+| Delete (merge from) | លុប (បញ្ចូលចេញពី) |
+| Merge accounts | បញ្ចូលគណនីចូលគ្នា |
+| Pick two different accounts. | សូមជ្រើសរើសគណនីពីរផ្សេងគ្នា។ |
+| Merge {merge} into {keep}? {merge}’s history moves onto {keep} where it doesn’t already overlap, then {merge}’s account is permanently deleted. This can’t be undone. | បញ្ចូល {merge} ចូលទៅ {keep} មែនទេ? ប្រវត្តិរបស់ {merge} នឹងផ្លាស់ទីទៅ {keep} កន្លែងដែលមិនទាន់ត្រួតគ្នា បន្ទាប់មកគណនីរបស់ {merge} នឹងត្រូវបានលុបជាអចិន្ត្រៃយ៍។ សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
+| Accounts merged | គណនីត្រូវបានបញ្ចូលចូលគ្នា |
+| Could not merge those accounts | មិនអាចបញ្ចូលគណនីទាំងនោះចូលគ្នាបានទេ |
+
+## 43. Weekly Goals→KPI link, a Health label, and a Month view
+
+A Weekly Goal can now be pointed at a live KPI number instead of a manual
+percentage — the same picker the OKR key results already use, dropped into
+each goal row. Health's "Against last week" section now says plainly that
+it's a personal, private view (Base Health further down is the shared,
+anonymous one). Base Health also gets a Month scope alongside Week/
+Quarter/Year.
+
+| English | ខ្មែរ |
+|---|---|
+| Not linked to a KPI | មិនបានភ្ជាប់ទៅនឹង KPI ទេ |
+| Your personal health check-in — nobody else sees this breakdown. | ការរាយការណ៍សុខភាពផ្ទាល់ខ្លួនរបស់អ្នក — គ្មាននរណាម្នាក់ផ្សេងទៀតឃើញការបំបែកនេះឡើយ។ |
+| Month | ខែ |
+
+## 44. Weekly check-in: a clear confirmation on submit
+
+Submitting used to just show the generic toast "Saved" for two seconds,
+easy to miss since the form also closes and the base average refreshes at
+the same moment. Health now also shows a banner naming the week, once,
+right where the check-in card sits.
+
+| English | ខ្មែរ |
+|---|---|
+| Week {wk}’s check-in is saved. | ការឆែកអង់សប្តាហ៍ {wk} របស់អ្នកត្រូវបានរក្សាទុករួចហើយ។ |
+
+## 45. OKRs get their own page; admin can broadcast to everyone
 
 OKRs used to be an inline accordion on My Database, same shape as My
 Ministry before it got its own page — now it does too: a tappable card

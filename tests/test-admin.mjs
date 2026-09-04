@@ -60,14 +60,14 @@ function seed(extra) {
 
 /* ---------- 1. sign-up approval is scoped to Base Leadership only ---------- */
 seed();
-let r = await call('staffRegister', [{ username: 'newstaff', pin: '5555', name: 'New Staff', dept: 'Community Service', campus: 'poipet' }]);
+let r = await call('staffRegister', [{ username: 'newstaff', pin: '5555', name: 'New Staff', email: 'newstaff@example.com', dept: 'Community Service', campus: 'poipet' }]);
 ok('a non-Base-Leadership sign-up is instant, as before',
   r.body && r.body.ok === true && r.body.staff && !r.body.pending, JSON.stringify(r.body));
 r = await call('staffLogin', ['newstaff', '5555']);
 ok('and can log in right away', r.body && r.body.ok === true, JSON.stringify(r.body));
 
 seed();
-r = await call('staffRegister', [{ username: 'newleader', pin: '5555', name: 'New Leader', dept: 'Base Leadership', campus: 'poipet' }]);
+r = await call('staffRegister', [{ username: 'newleader', pin: '5555', name: 'New Leader', email: 'newleader@example.com', dept: 'Base Leadership', campus: 'poipet' }]);
 ok('a Base Leadership sign-up comes back pending, no session',
   r.body && r.body.ok === true && r.body.pending === true && !r.body.staff, JSON.stringify(r.body));
 const created = (mem.staff || []).find(function (s) { return s.username === 'newleader'; });

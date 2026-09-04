@@ -186,6 +186,57 @@ for (const bad of ['abc', -5, 99999, null, {}]) {
     r.status === 200 && r.body && r.body.year === NOW, String(r.body && r.body.year));
 }
 
+/* ---------- 7. a headcount carries across the year boundary ---------- */
+/*  The year scoping above is right for totals and wrong for levels. A ministry's
+    "Total Kids" last recorded in week 50 of last year is still the headcount in
+    week 2 of this one, so my-ministry answers with a `prev` map that looks past
+    the year line — while `entries` stays scoped to this year, because that is
+    what the weekly figures are. */
+{
+  const MY = { campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams' };
+  const row = (extra) => Object.assign({}, MY, extra);
+  seed({ entries: [
+    row({ metric: 'Total Kids', week: 50, year: NOW - 1, value: 280 }),
+    row({ metric: 'Total Kids', week: 12, year: NOW - 2, value: 100 }),
+    row({ metric: 'Salvations', week: 3, year: NOW - 1, value: 9 }),
+  ] });
+  r = await call('getMyMinistry', ['sokha', '1234']);
+  const prev = (r.body && r.body.prev) || {};
+  ok('last year\'s headcount comes back as carryable',
+    prev['Total Kids'] && prev['Total Kids'].value === 280, JSON.stringify(prev['Total Kids']));
+  ok('and says which year and week it came from',
+    prev['Total Kids'] && prev['Total Kids'].year === NOW - 1 && prev['Total Kids'].week === 50,
+    JSON.stringify(prev['Total Kids']));
+  ok('the most recent one wins, not the oldest',
+    prev['Total Kids'] && prev['Total Kids'].value !== 100);
+  ok('this year\'s entries are still this year only',
+    JSON.stringify(r.body && r.body.entries) === '{}', JSON.stringify(r.body && r.body.entries));
+
+  /* A figure recorded LATER this year is not something to carry backwards. */
+  seed({ entries: [ row({ metric: 'Total Kids', week: 52, year: NOW, value: 400 }) ] });
+  r = await call('getMyMinistry', ['sokha', '1234']);
+  ok('a week still ahead of us is not offered as a previous figure',
+    !((r.body && r.body.prev) || {})['Total Kids'],
+    JSON.stringify((r.body && r.body.prev) || {}));
+
+  /* The base's own money is not a ministry's carry-forward — the same SENSITIVE
+     gate the weekly entries go through. */
+  seed({ entries: [ row({ metric: 'Base Cash Reserve ($)', week: 50, year: NOW - 1, value: 500 }) ] });
+  r = await call('getMyMinistry', ['sokha', '1234']);
+  const sens = (r.body && r.body.prev) || {};
+  ok('a sensitive metric is not carried into a ministry page',
+    !sens['Base Cash Reserve ($)'], JSON.stringify(sens));
+
+  /* Another ministry's numbers are not this ministry's history. */
+  seed({ entries: [
+    { campus: 'poipet', dept: 'Community Service', ministry: 'Cafe',
+      metric: 'Total Kids', week: 50, year: NOW - 1, value: 77 },
+  ] });
+  r = await call('getMyMinistry', ['sokha', '1234']);
+  ok('another ministry\'s figure is not carried into mine',
+    !(((r.body && r.body.prev) || {})['Total Kids']), JSON.stringify(r.body && r.body.prev));
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);
