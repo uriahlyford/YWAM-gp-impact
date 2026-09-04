@@ -151,6 +151,11 @@ await page.goto('http://localhost:4401/teams.html', { waitUntil: 'load' });
 await page.waitForSelector('.hero', { timeout: 15000 });
 await page.waitForTimeout(1200);
 
+// The app opens on My Database now, not Base — get there explicitly rather
+// than assuming it's the landing tab.
+await page.click('nav.bottom [data-tab="base"]');
+await page.waitForTimeout(600);
+
 // Base's sections collapse into an accordion now (the redesign mockup);
 // force every row open so the rest of this file — which predates the
 // accordion and expects everything on screen at once — still sees it all.

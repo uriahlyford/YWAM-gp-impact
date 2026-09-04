@@ -161,6 +161,10 @@ for (const [file, wait, label] of [
 ]) {
   const { ctx, p } = await open(file, wait, false);
   if (file === 'teams.html') {
+    // My Database, not Base, is what the app opens on now — get to Base
+    // explicitly rather than assuming it's the landing tab.
+    await p.click('nav.bottom [data-tab="base"]');
+    await p.waitForTimeout(500);
     // Base's sections collapse into an accordion now; open every row so its
     // figures are on screen to compare against the dashboard's, same as before.
     await p.evaluate(() => { Object.keys(S.baseAcc).forEach(k => { S.baseAcc[k] = true; }); render(); });

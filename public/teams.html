@@ -1038,7 +1038,7 @@ var MOODS = [
 
 var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
-  logs:[], roster:[], mentees:[], mentorRequests:[], view:'base', base:null,
+  logs:[], roster:[], mentees:[], mentorRequests:[], view:'week', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
@@ -1376,7 +1376,6 @@ function applyBoot(d){
   S.oneOnOnes = d.oneOnOnes || [];
   S.broadcasts = d.broadcasts || [];
   if(d.base && d.base.entries) S.base = d.base;
-  if(!S.view) S.view = 'week';
   render();
 }
 
@@ -1573,7 +1572,7 @@ function renderNotifPanel(){
       '<div class="drawerHead"><span class="drawerTitle">'+BELL_SVG+' '+esc(t('Notifications'))+'</span>'+
         '<button class="hbtn icon" id="notifCloseBtn" style="border-color:var(--border2);color:var(--ink)" aria-label="'+esc(t('Dismiss'))+'">'+DRAWER_CLOSE_SVG+'</button></div>'+
       (items.length
-        ? items.map(function(it){ return '<div class="row"><span class="rowName">'+esc(it.text)+'</span></div>'; }).join('')+
+        ? items.map(function(it){ return '<div class="row"><span class="rowName">'+esc(it.text)+'</span>'+(it.actions||'')+'</div>'; }).join('')+
           '<button class="linkbtn" id="notifPanelClearBtn">'+esc(t('Clear all'))+'</button>'
         : '<p class="sub" style="margin:4px 0">'+esc(t('Nothing new.'))+'</p>')+
     '</div>';
@@ -1581,6 +1580,49 @@ function renderNotifPanel(){
   document.getElementById('notifCloseBtn').onclick=close;
   var clearBtn=document.getElementById('notifPanelClearBtn');
   if(clearBtn) clearBtn.onclick=clearNotifications;
+
+  /* Same action types bind() already wires up for the inline "Updates" card
+     elsewhere on the page — duplicated here because opening the bell only
+     calls this function, not a full render()/bind() pass, so those handlers
+     never reach whatever just got drawn inside #notifRoot. */
+  document.querySelectorAll('#notifRoot [data-gohealth]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='health'; render(); };
+  });
+  document.querySelectorAll('#notifRoot [data-jumpgoals]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='week'; render(); };
+  });
+  document.querySelectorAll('#notifRoot [data-goprofile]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='profile'; render(); };
+  });
+  document.querySelectorAll('#notifRoot [data-121accept]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-121accept');
+      run('respondToOneOnOne',[S.auth.user,S.auth.pin,id,true],function(d){
+        if(d.ok){ S.oneOnOnes=d.oneOnOnes; render(); }
+      });
+    };
+  });
+  document.querySelectorAll('#notifRoot [data-121decline]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-121decline');
+      run('respondToOneOnOne',[S.auth.user,S.auth.pin,id,false],function(d){
+        if(d.ok){ S.oneOnOnes=d.oneOnOnes; render(); }
+      });
+    };
+  });
+  [['trok',true],['trno',false]].forEach(function(pair){
+    document.querySelectorAll('#notifRoot [data-'+pair[0]+']').forEach(function(b){
+      b.onclick=function(){
+        if(S.busy) return;
+        S.busy=true; b.disabled=true;
+        run('respondToTrip',[S.auth.user,S.auth.pin,b.getAttribute('data-'+pair[0]),pair[1]],function(d){
+          S.busy=false;
+          if(d && d.ok) S.tripRequests=d.requests||[];
+          render();
+        });
+      };
+    });
+  });
 }
 function renderMenu(){
   var root = document.getElementById('menuRoot');
