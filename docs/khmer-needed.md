@@ -1231,3 +1231,18 @@ base's history; only the account goes.
 | Permanently delete {name}’s account? This can’t be undone. | លុបគណនីរបស់ {name} ជាអចិន្ត្រៃយ៍មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។ |
 | Account deleted | គណនីត្រូវបានលុប |
 | Could not delete that account | មិនអាចលុបគណនីនោះបានទេ |
+
+## 41. When a headcount has never been logged before
+
+A headcount ("Students Enrolled", "Total Staff") is now carried forward across a
+year boundary, not just within one year — so the only time the box is genuinely
+empty is when nobody has ever logged that number. It says so instead of showing
+nothing.
+
+| English | ខ្មែរ |
+|---|---|
+| nothing logged before this week | គ្មានការកត់ត្រាមុនសប្តាហ៍នេះទេ |
+
+_Sits in the small grey line under the metric's name, where "carried from week
+50" normally sits. Lower-case on purpose: it is the tail of a sentence, not its
+own heading._
