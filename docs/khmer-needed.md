@@ -1417,3 +1417,14 @@ built up from daily or weekly entries.
 | {n} for Q{q} | {n} សម្រាប់ត្រីមាសទី {q} |
 | Logged once for {month}, not built up from weekly entries. | កត់ត្រាតែម្តងសម្រាប់ {month} មិនមែនបូកបញ្ចូលពីការកត់ត្រាប្រចាំសប្តាហ៍ទេ។ |
 | Logged once for Q{q}, not built up from weekly entries. | កត់ត្រាតែម្តងសម្រាប់ត្រីមាសទី {q} មិនមែនបូកបញ្ចូលពីការកត់ត្រាប្រចាំសប្តាហ៍ទេ។ |
+
+## 51. A metric's row shows which OKR(s) it feeds
+
+An OKR's key result can already link to a live KPI number (kr.metricKey);
+this is the reverse — on the metric's own input row on My Ministry, a small
+note now shows which objective(s), if any, that number feeds into.
+
+| English | ខ្មែរ |
+|---|---|
+| feeds “{objective}” | ចូលរួមចំណែកដល់ “{objective}” |
+| feeds {n} objectives | ចូលរួមចំណែកដល់គោលដៅចំនួន {n} |
