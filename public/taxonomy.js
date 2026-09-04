@@ -29,8 +29,16 @@ var _metricOverrides = {};
 function setMetricOverrides(list){
   _metricOverrides = {};
   (list||[]).forEach(function(o){
-    _metricOverrides[o.campus+'|'+o.dept+'|'+o.ministry] = { hidden:o.hidden||[], custom:o.custom||[] };
+    _metricOverrides[o.campus+'|'+o.dept+'|'+o.ministry] = { hidden:o.hidden||[], custom:o.custom||[], cadence:o.cadence||{} };
   });
+}
+/* How often a metric is entered — 'week' (the default, unset), 'month', or
+   'quarter'. Admin-set per (campus,dept,ministry,metric) from the metric
+   editor; only meaningful for a sum-mode count (kpiCardHtml is what actually
+   reads it to decide which card a metric's input lands in). */
+function cadenceOf(campus, dept, ministry, metric){
+  var ov = _metricOverrides[campus+'|'+dept+'|'+ministry];
+  return (ov && ov.cadence && ov.cadence[metric]) || 'week';
 }
 
 function mediaMetrics(){
