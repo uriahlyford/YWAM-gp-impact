@@ -1570,7 +1570,9 @@ function canEditMetrics_(s, campus, dept, ministry) {
   return canLogFor_(s, campus, dept, ministry);
 }
 
-async function saveMetricOverrides(username, pin, campus, dept, ministry, hidden, custom) {
+const CADENCE_VALUES = ['month', 'quarter'];
+
+async function saveMetricOverrides(username, pin, campus, dept, ministry, hidden, custom, cadence) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   campus = str_(campus, 40); dept = str_(dept, 80); ministry = str_(ministry, 80);
@@ -1589,7 +1591,24 @@ async function saveMetricOverrides(username, pin, campus, dept, ministry, hidden
 
   const rows = await getMetricOverrides_();
   const idx = rows.findIndex(function (r) { return r.campus === campus && r.dept === dept && r.ministry === ministry; });
-  const rec = { campus: campus, dept: dept, ministry: ministry, hidden: cleanHidden, custom: cleanCustom, updated: new Date().toISOString() };
+  const existing = idx > -1 ? rows[idx] : null;
+
+  // Cadence (weekly → monthly/quarterly) is admin-only, even for a ministry's
+  // own overseer who can otherwise hide/add metrics here — untouched
+  // (cadence omitted) just keeps whatever is already stored.
+  let cleanCadence = (existing && existing.cadence) || {};
+  if (cadence !== undefined && cadence !== null) {
+    if (!s.isAdmin) return { ok: false, err: 'not_authorized' };
+    const nextCadence = {};
+    Object.keys(cadence).forEach(function (m) {
+      const name = str_(m, 80);
+      const val = cadence[m];
+      if (name && CADENCE_VALUES.indexOf(val) > -1) nextCadence[name] = val;
+    });
+    cleanCadence = nextCadence;
+  }
+
+  const rec = { campus: campus, dept: dept, ministry: ministry, hidden: cleanHidden, custom: cleanCustom, cadence: cleanCadence, updated: new Date().toISOString() };
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('metricOverrides', rows);
   return { ok: true, metricOverrides: rows };
@@ -2160,7 +2179,7 @@ const HANDLERS = {
   getMyOneOnOnes: function (a) { return getMyOneOnOnes(a[0], a[1]); },
   requestOneOnOne: function (a) { return requestOneOnOne(a[0], a[1], a[2], a[3]); },
   respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); },
-  saveMetricOverrides: function (a) { return saveMetricOverrides(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
+  saveMetricOverrides: function (a) { return saveMetricOverrides(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };

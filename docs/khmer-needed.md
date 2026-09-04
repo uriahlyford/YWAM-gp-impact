@@ -1393,3 +1393,27 @@ below, since they're about the department rather than the person.
 | One number per week — headcounts and scores carry forward until changed; the rest is logged fresh each week. | លេខមួយក្នុងមួយសប្តាហ៍ — ចំនួនបុគ្គលិក និងពិន្ទុនឹងបន្តពីលើកមុនរហូតដល់មានការផ្លាស់ប្តូរ ចំណែកឯផ្សេងទៀតត្រូវបញ្ចូលថ្មីរាល់សប្តាហ៍។ |
 | Department Headcount | ចំនួនបុគ្គលិកប្រចាំផ្នែក |
 | Feeds the base’s total headcount — carries forward from last time until changed. | ចំណែកចូលទៅក្នុងចំនួនបុគ្គលិកសរុបរបស់មូលដ្ឋាន — បន្តពីលើកមុនរហូតដល់មានការផ្លាស់ប្តូរ។ |
+
+## 50. Monthly and quarterly cadence for a count metric
+
+An admin can set any count metric (from "Edit what we track") to Monthly or
+Quarterly instead of the default Weekly. A monthly/quarterly metric drops out
+of the daily "Today" list entirely and gets its own "This month"/"This
+quarter" section: one number for the whole period, entered whenever, not
+built up from daily or weekly entries.
+
+| English | ខ្មែរ |
+|---|---|
+| Weekly | រៀងរាល់សប្តាហ៍ |
+| Monthly | រៀងរាល់ខែ |
+| Quarterly | រៀងរាល់ត្រីមាស |
+| This month | ខែនេះ |
+| This quarter | ត្រីមាសនេះ |
+| Save Month | រក្សាទុកទិន្នន័យប្រចាំខែ |
+| Save Quarter | រក្សាទុកទិន្នន័យប្រចាំត្រីមាស |
+| logged | បានកត់ត្រា |
+| nothing logged yet | មិនទាន់មានការកត់ត្រានៅឡើយទេ |
+| {n} for {month} | {n} សម្រាប់ {month} |
+| {n} for Q{q} | {n} សម្រាប់ត្រីមាសទី {q} |
+| Logged once for {month}, not built up from weekly entries. | កត់ត្រាតែម្តងសម្រាប់ {month} មិនមែនបូកបញ្ចូលពីការកត់ត្រាប្រចាំសប្តាហ៍ទេ។ |
+| Logged once for Q{q}, not built up from weekly entries. | កត់ត្រាតែម្តងសម្រាប់ត្រីមាសទី {q} មិនមែនបូកបញ្ចូលពីការកត់ត្រាប្រចាំសប្តាហ៍ទេ។ |

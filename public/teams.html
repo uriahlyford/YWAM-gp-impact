@@ -1041,6 +1041,7 @@ var S = {
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'week', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
+  kpiMonthDraft:{}, kpiQuarterDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null, habitMore:false,
   metricEditTarget:null, metricNewName:'', metricNewType:'sum',
@@ -1108,6 +1109,21 @@ function isoWeekOf(d){
   return Math.max(1, Math.min(52, Math.floor((d-monW1)/(7*86400000))+1));
 }
 function thisWeek(){ return isoWeekOf(new Date()); }
+/* A monthly/quarterly-cadence metric still lives in the weekly-keyed
+   `entries` store — it's just always read and written under the ONE week
+   that contains the period's first day, so repeated saves within the same
+   month/quarter land on the same cell instead of spreading across several
+   (which would double-count on any sum roll-up). No back-navigation to a
+   past period yet — this is "log it whenever this month/quarter", not a
+   full picker. */
+function monthAnchorWeek_(){
+  var d=new Date();
+  return isoWeekOf(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+function quarterAnchorWeek_(){
+  var d=new Date();
+  return isoWeekOf(new Date(d.getFullYear(), Math.floor(d.getMonth()/3)*3, 1));
+}
 function goalsViewWeek(){ return S.goalsWeek==null ? thisWeek() : S.goalsWeek; }
 function kpiViewWeek(){ return S.kpiWeek==null ? thisWeek() : S.kpiWeek; }
 /* Same idea as kpiViewWeek, but one week pointer per oversee-ministry — so
@@ -3287,6 +3303,20 @@ function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft){
     ' data-kpiweek="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
 }
 
+/* One row of a monthly/quarterly-cadence metric — one number for the whole
+   period, no carry-forward (a fresh month starts blank, unlike a level) and
+   no day-by-day or vs-last-period breakdown, since it's typed once. attr is
+   'kpimonth' or 'kpiquarter', so the two sections' inputs never collide. */
+function kpiPeriodRowHtml_(metric, anchorWeek, entries, draft, attr){
+  var wks=entries[metric]||{};
+  var stored = wks[String(anchorWeek)];
+  var cur = draft[metric]!==undefined ? draft[metric] : (stored!==undefined ? stored : '');
+  var sub = stored!==undefined ? (esc(t('logged'))+' '+fmt(Number(stored), metric)) : esc(t('nothing logged yet'));
+  return '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+    '<div class="rowSub">'+sub+'</div></div>'+
+    '<input type="number" inputmode="decimal" class="kpiIn" data-'+attr+'="'+esc(metric)+'" value="'+esc(String(cur))+'"></div>';
+}
+
 function kpiCardHtml(wk){
   if(!S.me.ministry){
     return '<div class="card"><p class="sub" style="margin:4px 0 10px">'+
@@ -3317,10 +3347,24 @@ function kpiCardHtml(wk){
      those are sum-mode by aggregation, but entered once for the week like a
      check-in, not built up from daily taps — so they join the level metrics
      in "This week" instead of the daily "Today" list. */
-  var counts=metrics.filter(function(m){ return modeOf(m)==='sum' && WEEKLY_ONLY_METRICS.indexOf(m)===-1; });
+  /* A metric an admin has set to monthly or quarterly cadence (metricEditorHtml_)
+     skips the daily "Today" list entirely and gets its own "This month"/"This
+     quarter" section instead — one number for the period, same idea as a
+     level, but summed rather than carried forward (see kpiPeriodRowHtml_). */
+  var monthlyCounts=metrics.filter(function(m){
+    return modeOf(m)==='sum' && cadenceOf(S.me.campus, S.me.dept, S.me.ministry, m)==='month';
+  });
+  var quarterlyCounts=metrics.filter(function(m){
+    return modeOf(m)==='sum' && cadenceOf(S.me.campus, S.me.dept, S.me.ministry, m)==='quarter';
+  });
+  var counts=metrics.filter(function(m){
+    return modeOf(m)==='sum' && WEEKLY_ONLY_METRICS.indexOf(m)===-1 &&
+      monthlyCounts.indexOf(m)===-1 && quarterlyCounts.indexOf(m)===-1;
+  });
   var headcount=metrics.filter(function(m){ return HEADCOUNT_METRICS.indexOf(m)>-1; });
   var levels=metrics.filter(function(m){
     if(headcount.indexOf(m)>-1) return false;
+    if(monthlyCounts.indexOf(m)>-1 || quarterlyCounts.indexOf(m)>-1) return false;
     return modeOf(m)!=='sum' || WEEKLY_ONLY_METRICS.indexOf(m)>-1;
   });
 
@@ -3432,6 +3476,40 @@ function kpiCardHtml(wk){
         b += kpiWeekRowHtml_(metric, wk, entries, prevMap, S.kpiWeekDraft);
       });
       b+='<button class="btn saveKpiWeekBtn" id="saveKpiHeadcountBtn">'+esc(t('Save Week'))+' '+wk+'</button>';
+      return b+'</div>';
+    });
+  }
+
+  /* Monthly/quarterly-cadence metrics (set by an admin in "Edit what we
+     track") — their own section each, since neither is tied to the weekly
+     card's week pointer at the top of this page. */
+  if(monthlyCounts.length){
+    var mwk = monthAnchorWeek_();
+    var monthLabel = MONTH_ABBR[new Date().getMonth()];
+    var mSummary = gpT('{n} for {month}', {n: monthlyCounts.length, month: monthLabel});
+    h += accRowHtml('dbAcc', 'kpiMonth', esc(t('This month')), mSummary, function(){
+      var b = '<div id="kpiMonthCard">';
+      b += '<p class="sub" style="margin:4px 0 10px">'+
+        esc(gpT('Logged once for {month}, not built up from weekly entries.',{month:monthLabel}))+'</p>';
+      monthlyCounts.forEach(function(metric){
+        b += kpiPeriodRowHtml_(metric, mwk, entries, S.kpiMonthDraft, 'kpimonth');
+      });
+      b+='<button class="btn" id="saveKpiMonthBtn">'+esc(t('Save Month'))+'</button>';
+      return b+'</div>';
+    });
+  }
+  if(quarterlyCounts.length){
+    var qwk = quarterAnchorWeek_();
+    var qNum = Math.floor(new Date().getMonth()/3)+1;
+    var qSummary = gpT('{n} for Q{q}', {n: quarterlyCounts.length, q: qNum});
+    h += accRowHtml('dbAcc', 'kpiQuarter', esc(t('This quarter')), qSummary, function(){
+      var b = '<div id="kpiQuarterCard">';
+      b += '<p class="sub" style="margin:4px 0 10px">'+
+        esc(gpT('Logged once for Q{q}, not built up from weekly entries.',{q:qNum}))+'</p>';
+      quarterlyCounts.forEach(function(metric){
+        b += kpiPeriodRowHtml_(metric, qwk, entries, S.kpiQuarterDraft, 'kpiquarter');
+      });
+      b+='<button class="btn" id="saveKpiQuarterBtn">'+esc(t('Save Quarter'))+'</button>';
       return b+'</div>';
     });
   }
@@ -3936,20 +4014,29 @@ function metricOverrideFor_(campus, dept, ministry){
   var rec = ((S.base && S.base.metricOverrides) || []).find(function(r){
     return r.campus===campus && r.dept===dept && r.ministry===ministry;
   });
-  return rec ? { hidden: rec.hidden||[], custom: rec.custom||[] } : { hidden:[], custom:[] };
+  return rec ? { hidden: rec.hidden||[], custom: rec.custom||[], cadence: rec.cadence||{} } : { hidden:[], custom:[], cadence:{} };
 }
+/* Weekly / Monthly / Quarterly — admin-only, and only offered for a count
+   (sum-mode) metric: a level or score is already "now", not something that
+   piles up over a period, so a cadence on it wouldn't mean anything. */
+var CADENCE_OPTIONS = [['week','Weekly'],['month','Monthly'],['quarter','Quarterly']];
 function metricEditorHtml_(campus, dept, ministry){
   var baseline = (getBaselineDepartments(campus)[dept]||{})[ministry] || [];
   var ov = metricOverrideFor_(campus, dept, ministry);
   var shown = baseline.filter(function(m){ return ov.hidden.indexOf(m)===-1; });
   var hidden = baseline.filter(function(m){ return ov.hidden.indexOf(m)>-1; });
+  var canCadence = !!(S.me && S.me.isAdmin);
 
   var h = '<p class="sub" style="margin:2px 0 8px">'+
     esc(t('Turn off what this ministry doesn’t track, or add something new below.'))+'</p>';
   shown.concat(ov.custom).forEach(function(m){
     var isCustom = ov.custom.indexOf(m)>-1;
+    var isSum = modeOf(m)==='sum';
     h += '<div class="row"><span class="rowName">'+esc(t(m))+
       (isCustom?' <span class="pmeta" style="display:inline">· '+esc(t('custom'))+'</span>':'')+'</span>'+
+      (canCadence && isSum ? '<select class="cadenceSel" data-metriccadence="'+esc(m)+'">'+
+        CADENCE_OPTIONS.map(function(o){ return '<option value="'+o[0]+'"'+((ov.cadence[m]||'week')===o[0]?' selected':'')+'>'+esc(t(o[1]))+'</option>'; }).join('')+
+        '</select>' : '')+
       '<button class="linkbtn" style="width:auto;margin:0;padding:4px 8px" data-metricoff="'+esc(m)+'">'+
       esc(t(isCustom?'Remove':'Hide'))+'</button></div>';
   });
@@ -3970,8 +4057,11 @@ function metricEditorHtml_(campus, dept, ministry){
     '<button class="btn" id="metricAddBtn" style="margin-top:6px">'+esc(t('Add'))+'</button>';
   return h;
 }
-function metricEditSave_(campus, dept, ministry, hidden, custom){
-  run('saveMetricOverrides',[S.auth.user,S.auth.pin,campus,dept,ministry,hidden,custom],function(d){
+/* cadence is omitted (undefined) by every caller except metricCadenceSet_ —
+   the server keeps whatever cadence is already stored when it's left out,
+   so hiding/adding a metric never touches anyone else's cadence choice. */
+function metricEditSave_(campus, dept, ministry, hidden, custom, cadence){
+  run('saveMetricOverrides',[S.auth.user,S.auth.pin,campus,dept,ministry,hidden,custom,cadence],function(d){
     if(d && d.ok){ if(S.base) S.base.metricOverrides = d.metricOverrides; render(); }
     else showMsg(t('That didn’t save — try again.'));
   });
@@ -3985,6 +4075,13 @@ function metricEditToggle_(target, metric, hide){
   else if(hide){ if(hiddenList.indexOf(metric)===-1) hiddenList.push(metric); }
   else hiddenList = hiddenList.filter(function(m){ return m!==metric; });
   metricEditSave_(target.campus, target.dept, target.ministry, hiddenList, customList);
+}
+function metricCadenceSet_(target, metric, cadence){
+  if(!target) return;
+  var ov = metricOverrideFor_(target.campus, target.dept, target.ministry);
+  var nextCadence = Object.assign({}, ov.cadence);
+  if(cadence==='week') delete nextCadence[metric]; else nextCadence[metric]=cadence;
+  metricEditSave_(target.campus, target.dept, target.ministry, ov.hidden, ov.custom, nextCadence);
 }
 function metricEditAdd_(target){
   if(!target) return;
@@ -5383,6 +5480,9 @@ function bindAway(){
   document.querySelectorAll('[data-metricon]').forEach(function(b){
     b.onclick=function(){ metricEditToggle_(S.metricEditTarget, b.getAttribute('data-metricon'), false); };
   });
+  document.querySelectorAll('[data-metriccadence]').forEach(function(sel){
+    sel.onchange=function(){ metricCadenceSet_(S.metricEditTarget, sel.getAttribute('data-metriccadence'), sel.value); };
+  });
   var mnn=document.getElementById('metricNewName');
   if(mnn) mnn.oninput=function(){ S.metricNewName=mnn.value; };
   var mnt=document.getElementById('metricNewType');
@@ -5880,6 +5980,50 @@ function bindHome(){
     });
   };
   });
+
+  /* Monthly/quarterly-cadence figures — one number for the period, written
+     to that period's own anchor week (monthAnchorWeek_/quarterAnchorWeek_)
+     rather than kpiViewWeek(), which the week-nav arrows above can move —
+     these sections have no week-nav of their own on purpose (current period
+     only, for now). */
+  document.querySelectorAll('[data-kpimonth]').forEach(function(inp){
+    inp.oninput=function(){ S.kpiMonthDraft[inp.getAttribute('data-kpimonth')]=inp.value; };
+  });
+  var skm=document.getElementById('saveKpiMonthBtn');
+  if(skm) skm.onclick=function(){
+    if(S.busy) return;
+    var wk=monthAnchorWeek_(), updates=[];
+    document.querySelectorAll('[data-kpimonth]').forEach(function(inp){
+      updates.push({ metric:inp.getAttribute('data-kpimonth'),
+        value: inp.value==='' ? null : Number(inp.value) });
+    });
+    S.busy=true; skm.disabled=true; skm.textContent=t('Saving…');
+    run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.ministry=d; S.kpiMonthDraft={}; showMsg(t('Saved')); }
+      else showMsg(t('Could not save'));
+      render();
+    });
+  };
+  document.querySelectorAll('[data-kpiquarter]').forEach(function(inp){
+    inp.oninput=function(){ S.kpiQuarterDraft[inp.getAttribute('data-kpiquarter')]=inp.value; };
+  });
+  var skq=document.getElementById('saveKpiQuarterBtn');
+  if(skq) skq.onclick=function(){
+    if(S.busy) return;
+    var wk=quarterAnchorWeek_(), updates=[];
+    document.querySelectorAll('[data-kpiquarter]').forEach(function(inp){
+      updates.push({ metric:inp.getAttribute('data-kpiquarter'),
+        value: inp.value==='' ? null : Number(inp.value) });
+    });
+    S.busy=true; skq.disabled=true; skq.textContent=t('Saving…');
+    run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.ministry=d; S.kpiQuarterDraft={}; showMsg(t('Saved')); }
+      else showMsg(t('Could not save'));
+      render();
+    });
+  };
 
   // --- ministries you oversee: weekly only, keyed by ministry name so
   // several of these cards can sit on the page at once.
