@@ -1124,19 +1124,22 @@ function gpPullToRefresh(onRefresh, opts){
     decided = false;
   }, { passive:true });
 
-  /* A real finger touching glass always has a little settling jitter before the
-     gesture reads as one direction or the other — a scroll-down swipe (finger
-     moving up the screen) can still report a sub-pixel downward wobble on its
-     very first sample. Calling preventDefault() on THAT sample cancels native
-     scrolling for the rest of the gesture, even once the finger's real,
-     opposite direction takes over a moment later — a browser doesn't hand
-     scrolling back mid-gesture once it's been told the page is handling this
-     touch itself. So nothing is decided, and nothing is prevented, until the
-     movement is big enough to actually mean something (same margin gpSlideGuard
-     uses for the same reason). Only once it reads as a clear, mostly-vertical
-     pull down from the top does this take over the gesture at all; anything
-     else — a scroll, a sideways swipe — is released for the browser to handle
-     as it always would, for the rest of that gesture. */
+  /* This used to be a {passive:false} listener that called preventDefault()
+     once a gesture read as a downward pull, to "take over from the native
+     rubber-band" — body already has overscroll-behavior:none, though, which
+     is what actually keeps the browser from bouncing or running its own
+     native pull-to-refresh at the top of the page; this coin was always
+     layered on top of that, never the thing doing the suppressing. Merely
+     registering a non-passive touchmove listener on `document` can still
+     make a real browser hold scrolling for that event on a busy main
+     thread while it waits to find out whether preventDefault is coming —
+     reported as scrolling being dead on real Android Chrome (desktop
+     Safari has no touch events to trigger this at all, and a synthetic
+     touch sequence in a quick test doesn't reproduce a busy main thread
+     either, which is why this took two tries to find). Passive removes
+     that risk entirely: the coin still tracks the finger and still arms
+     at the same pull distance, purely as visual feedback — it just can no
+     longer be the thing standing between a real swipe and the page. */
   document.addEventListener('touchmove', function(e){
     if(startY === null || busy) return;
     var dy = e.touches[0].clientY - startY;
@@ -1148,11 +1151,10 @@ function gpPullToRefresh(onRefresh, opts){
       ptr.classList.add('dragging');
     }
     if(window.scrollY > 0){ if(pull) reset(); return; }
-    e.preventDefault();          // take over from the native rubber-band
     setPull(dy * RESIST);
     if(!armed && pull >= THRESHOLD){ armed = true; gpTap(12); }
     else if(armed && pull < THRESHOLD){ armed = false; }
-  }, { passive:false });
+  }, { passive:true });
 
   document.addEventListener('touchend', function(){
     if(startY === null || busy) return;
