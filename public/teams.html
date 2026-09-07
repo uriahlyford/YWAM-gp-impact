@@ -230,16 +230,20 @@
    scrolling ENTIRELY on their desktop Chrome: wheel events fired, arrived
    with real deltas, were never preventDefault()'d by anything, and the page
    still would not move — until `overscroll-behavior` was set back to `auto`
-   from the console, at which point it scrolled immediately. `none` is the
-   most aggressive value and the one with the most real-world Chromium bug
-   reports behind it; `contain` asks for the same thing (don't chain a
-   scroll past this element to the browser's own pull-to-refresh/back-swipe)
-   without the same history of taking scrolling down with it. */
-html { overscroll-behavior:contain; overflow-x:hidden; }
+   from the console, at which point it scrolled immediately. Switching to
+   `contain` was tried next and turned out to trip the very same Chromium
+   bug — same live symptom (wheel deltas arriving, nothing scrolling) on a
+   fresh live check. So: no overscroll-behavior at all on html/body, which
+   is exactly the `auto` the user's own console test proved fixes it. The
+   scroll-chaining it would have suppressed (native pull-to-refresh,
+   trackpad back/forward swipe) is instead kept off by the touch-gesture
+   guards in rollup.js (gpPullToRefresh, gpSlideGuard), which don't rely on
+   this CSS property. */
+html { overflow-x:hidden; }
 body { background:var(--bg); color:var(--ink); font-family:'Kantumruy Pro',system-ui,sans-serif;
   padding-bottom:calc(76px + env(safe-area-inset-bottom));
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
-  overscroll-behavior:contain; overflow-x:hidden; -webkit-text-size-adjust:100%; }
+  overflow-x:hidden; -webkit-text-size-adjust:100%; }
 button, select, input { font-family:inherit; }
 input:focus, select:focus, button:focus-visible { outline:3px solid var(--accent); outline-offset:1px; }
 

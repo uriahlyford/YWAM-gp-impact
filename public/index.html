@@ -255,15 +255,16 @@
    overscroll-behavior was `none` on both html and body — see teams.html for
    the same rule's full story: reported and confirmed live (via a real
    user's DevTools) as disabling scrolling entirely on real desktop Chrome,
-   not just the rubber-band bounce it was meant to control. `contain` keeps
-   the "don't chain a scroll past this page to the browser's own
-   pull-to-refresh/back-swipe" intent without `none`'s history of taking
-   scrolling down with it. */
-html { overscroll-behavior:contain; height:100%; overflow-x:hidden; }
+   not just the rubber-band bounce it was meant to control. `contain` was
+   tried next and, on a fresh live check, turned out to trip the same
+   Chromium bug. So: no overscroll-behavior at all on html/body (the `auto`
+   the user's own console test proved fixes it) — see teams.html for why
+   dropping it is safe. */
+html { height:100%; overflow-x:hidden; }
 body { background:var(--bg); color:var(--ink); font-family:'Kantumruy Pro',system-ui,sans-serif;
   padding-bottom:calc(44px + env(safe-area-inset-bottom));
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
-  overscroll-behavior:contain; overflow-x:hidden; -webkit-text-size-adjust:100%; }
+  overflow-x:hidden; -webkit-text-size-adjust:100%; }
 button, select, input, textarea { font-family:inherit; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline:3px solid var(--accent); outline-offset:1px; }
 
