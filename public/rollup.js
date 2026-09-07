@@ -1126,10 +1126,11 @@ function gpPullToRefresh(onRefresh, opts){
 
   /* This used to be a {passive:false} listener that called preventDefault()
      once a gesture read as a downward pull, to "take over from the native
-     rubber-band" — body's own overscroll-behavior (contain, not none — see
-     the CSS for why) is what actually keeps the browser from bouncing or
-     running its own native pull-to-refresh at the top of the page; this
-     coin was always layered on top of that, never the thing doing the
+     rubber-band" — but html/body carry no overscroll-behavior at all now
+     (both `none` and `contain` were confirmed live to disable scrolling
+     entirely on real desktop Chrome; see teams.html's CSS comment), so
+     nothing in CSS suppresses the native bounce/pull-to-refresh either —
+     this coin is purely a layered visual, never the thing doing any
      suppressing. Merely registering a non-passive touchmove listener on
      `document` can still make a real browser hold scrolling for that event
      on a busy main thread while it waits to find out whether preventDefault
