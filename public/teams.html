@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>My GP</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="YWAM GP">
 <!-- The header is dark in both themes, so the status bar matches it either way. -->
@@ -221,18 +222,24 @@
    collapses, the content shifted each time. That is the wiggle. Pad by the insets
    and the chrome stops moving.
    overflow-x is on html as well as body on purpose: on iOS, body alone still lets
-   the document itself rubber-band sideways. */
-html { overscroll-behavior:none; overflow-x:hidden; }
-/* Reverted the min-height:100dvh experiment from the previous PR (meant to
-   fix a nav-bar gap on short pages like My Mentees) — it shipped alongside
-   reports of scrolling breaking entirely on both Android Chrome and macOS
-   Safari. Correlation only, not confirmed as the cause, but it's the most
-   recent global change touching every page, so it's the first thing to
-   rule out while the real bug is still being tracked down. */
+   the document itself rubber-band sideways.
+
+   overscroll-behavior was `none` on both html and body — meant only to stop
+   the rubber-band bounce and any scroll chaining past the edges — and that
+   was reported, confirmed live in a real user's DevTools, as disabling
+   scrolling ENTIRELY on their desktop Chrome: wheel events fired, arrived
+   with real deltas, were never preventDefault()'d by anything, and the page
+   still would not move — until `overscroll-behavior` was set back to `auto`
+   from the console, at which point it scrolled immediately. `none` is the
+   most aggressive value and the one with the most real-world Chromium bug
+   reports behind it; `contain` asks for the same thing (don't chain a
+   scroll past this element to the browser's own pull-to-refresh/back-swipe)
+   without the same history of taking scrolling down with it. */
+html { overscroll-behavior:contain; overflow-x:hidden; }
 body { background:var(--bg); color:var(--ink); font-family:'Kantumruy Pro',system-ui,sans-serif;
   padding-bottom:calc(76px + env(safe-area-inset-bottom));
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
-  overscroll-behavior:none; overflow-x:hidden; -webkit-text-size-adjust:100%; }
+  overscroll-behavior:contain; overflow-x:hidden; -webkit-text-size-adjust:100%; }
 button, select, input { font-family:inherit; }
 input:focus, select:focus, button:focus-visible { outline:3px solid var(--accent); outline-offset:1px; }
 
