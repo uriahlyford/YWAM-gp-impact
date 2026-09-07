@@ -31,6 +31,7 @@ const SERVER = [
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted
   'test-staff-email.mjs', // one profile per email; adminMergeStaff cleans up a real duplicate
+  'test-overscroll-behavior.mjs', // none of the three pages' html/body may go back to overscroll-behavior:none (confirmed live: it disabled scrolling entirely on real desktop Chrome)
 ];
 
 const BROWSER = [

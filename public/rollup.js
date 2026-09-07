@@ -1126,17 +1126,17 @@ function gpPullToRefresh(onRefresh, opts){
 
   /* This used to be a {passive:false} listener that called preventDefault()
      once a gesture read as a downward pull, to "take over from the native
-     rubber-band" — body already has overscroll-behavior:none, though, which
-     is what actually keeps the browser from bouncing or running its own
-     native pull-to-refresh at the top of the page; this coin was always
-     layered on top of that, never the thing doing the suppressing. Merely
-     registering a non-passive touchmove listener on `document` can still
-     make a real browser hold scrolling for that event on a busy main
-     thread while it waits to find out whether preventDefault is coming —
-     reported as scrolling being dead on real Android Chrome (desktop
-     Safari has no touch events to trigger this at all, and a synthetic
-     touch sequence in a quick test doesn't reproduce a busy main thread
-     either, which is why this took two tries to find). Passive removes
+     rubber-band" — body's own overscroll-behavior (contain, not none — see
+     the CSS for why) is what actually keeps the browser from bouncing or
+     running its own native pull-to-refresh at the top of the page; this
+     coin was always layered on top of that, never the thing doing the
+     suppressing. Merely registering a non-passive touchmove listener on
+     `document` can still make a real browser hold scrolling for that event
+     on a busy main thread while it waits to find out whether preventDefault
+     is coming — reported as scrolling being dead on real Android Chrome
+     (desktop Safari has no touch events to trigger this at all, and a
+     synthetic touch sequence in a quick test doesn't reproduce a busy main
+     thread either, which is why this took two tries to find). Passive removes
      that risk entirely: the coin still tracks the finger and still arms
      at the same pull distance, purely as visual feedback — it just can no
      longer be the thing standing between a real swipe and the page. */
