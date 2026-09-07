@@ -1092,7 +1092,8 @@ function gpPullToRefresh(onRefresh, opts){
   var THRESHOLD = 68;    // pull needed to arm a refresh
   var MAX = 108;         // furthest the coin travels
   var RESIST = 0.55;     // <1 so the pull feels weighted
-  var startY = null, pull = 0, armed = false, busy = false;
+  var DECIDE = 8;        // px of movement before committing to a direction — see below
+  var startY = null, startX = null, pull = 0, armed = false, busy = false, decided = false;
 
   function coin(){ return ptr.querySelector('img'); }
   function setPull(px){
@@ -1108,7 +1109,7 @@ function gpPullToRefresh(onRefresh, opts){
     ptr.style.transform = ''; ptr.style.opacity = '';
     var c = coin();
     if(c) c.style.transform = '';
-    startY = null; pull = 0; armed = false;
+    startY = null; startX = null; pull = 0; armed = false; decided = false;
   }
 
   document.addEventListener('touchstart', function(e){
@@ -1119,13 +1120,34 @@ function gpPullToRefresh(onRefresh, opts){
     if(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
     if(opts.blocked && opts.blocked()) return;
     startY = e.touches[0].clientY;
-    ptr.classList.add('dragging');
+    startX = e.touches[0].clientX;
+    decided = false;
   }, { passive:true });
 
+  /* A real finger touching glass always has a little settling jitter before the
+     gesture reads as one direction or the other — a scroll-down swipe (finger
+     moving up the screen) can still report a sub-pixel downward wobble on its
+     very first sample. Calling preventDefault() on THAT sample cancels native
+     scrolling for the rest of the gesture, even once the finger's real,
+     opposite direction takes over a moment later — a browser doesn't hand
+     scrolling back mid-gesture once it's been told the page is handling this
+     touch itself. So nothing is decided, and nothing is prevented, until the
+     movement is big enough to actually mean something (same margin gpSlideGuard
+     uses for the same reason). Only once it reads as a clear, mostly-vertical
+     pull down from the top does this take over the gesture at all; anything
+     else — a scroll, a sideways swipe — is released for the browser to handle
+     as it always would, for the rest of that gesture. */
   document.addEventListener('touchmove', function(e){
     if(startY === null || busy) return;
     var dy = e.touches[0].clientY - startY;
-    if(dy <= 0 || window.scrollY > 0){ if(pull) reset(); return; }
+    var dx = e.touches[0].clientX - startX;
+    if(!decided){
+      if(Math.max(Math.abs(dy), Math.abs(dx)) < DECIDE) return;
+      decided = true;
+      if(dy <= 0 || Math.abs(dy) <= Math.abs(dx)){ startY = null; ptr.classList.remove('dragging'); return; }
+      ptr.classList.add('dragging');
+    }
+    if(window.scrollY > 0){ if(pull) reset(); return; }
     e.preventDefault();          // take over from the native rubber-band
     setPull(dy * RESIST);
     if(!armed && pull >= THRESHOLD){ armed = true; gpTap(12); }
