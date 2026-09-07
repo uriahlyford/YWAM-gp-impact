@@ -120,7 +120,9 @@ await page.waitForTimeout(900);
 console.log('\n=== TOUCH-ACTION ===');
 await page.click('nav.bottom [data-tab="health"]');
 await page.waitForTimeout(700);
-await page.evaluate(w => { S.healthWeek = w; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, WK);
+// weekForm=w opens the form directly, same as clicking #weekStart/#weekEdit
+// would — the button gate itself is test-base.mjs's concern, not this one's.
+await page.evaluate(w => { S.healthWeek = w; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = w; render(); }, WK);
 await page.waitForTimeout(700);
 
 const nSliders = await page.$$eval('#weekForm [data-wslide]', e => e.length);
@@ -178,7 +180,7 @@ const SWIPE_OVER = `(sel, dx, dy) => {
 
 await page.click('nav.bottom [data-tab="health"]');
 await page.waitForTimeout(700);
-await page.evaluate(w => { S.healthWeek = w; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, WK);
+await page.evaluate(w => { S.healthWeek = w; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = w; render(); }, WK);
 await page.waitForTimeout(700);
 
 const FIRST = '#weekForm [data-wslide="lonely"]';
@@ -265,7 +267,7 @@ if (!control || control.moved <= 40) {
 
   await page.click('nav.bottom [data-tab="health"]');
   await page.waitForTimeout(700);
-  await page.evaluate(w => { S.healthWeek = w; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, WK);
+  await page.evaluate(w => { S.healthWeek = w; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = w; render(); }, WK);
   await page.waitForTimeout(700);
   const slideUp = await swipe(FIRST, 0, -220);
   ok('an upward swipe starting on a health slider scrolls the page', slideUp && slideUp.moved > 40, 'moved ' + (slideUp && slideUp.moved) + 'px');
