@@ -478,7 +478,7 @@ console.log('\nSR chart for Poipet: ' +
   await page.evaluate(() => document.querySelector('.srLineChart, [data-sropen]') ? 'WRONG, shows for Poipet' : 'not shown (correct)'));
 console.log('Poipet keeps the plain Base Health list: ' +
   await page.evaluate(() => !!document.querySelector('#healthScopeSel')));
-await page.evaluate(() => { S.me.campus = 'siemreap'; S.srQuarter = 2; render(); });
+await page.evaluate(() => { S.me.campus = 'siemreap'; S.srScope = 'quarter'; S.srQuarter = 2; render(); });
 await page.waitForTimeout(1000);
 console.log('Siem Reap drops the plain Base Health list: ' +
   await page.evaluate(() => !document.querySelector('#healthScopeSel')));
@@ -490,14 +490,38 @@ if (srBarCount) {
   await page.waitForTimeout(700);
   console.log('tap a question -> its own trend opens: ' + await page.evaluate(() => !!document.querySelector('.srBarChart .srLineChart path')));
 }
-await page.evaluate(() => { S.me.campus = 'poipet'; S.srQuarter = null; S.srOpenQ = null; render(); });
+
+// Base Health for Siem Reap used to be quarter-only; it now has the same
+// Month/Quarter/Year View picker the generic Base health section uses.
+console.log('\nSR View picker options: ' +
+  await page.evaluate(() => [...document.querySelectorAll('#srScopeSel option')].map(o => o.value).join(',')));
+console.log('quarter scope shows #srQSel, not #srMSel: ' +
+  await page.evaluate(() => !!document.querySelector('#srQSel') && !document.querySelector('#srMSel')));
+await page.evaluate(() => { S.srScope = 'month'; S.srMonth = 7; S.srOpenQ = null; render(); });
+await page.waitForTimeout(700);
+console.log('month scope shows #srMSel, not #srQSel: ' +
+  await page.evaluate(() => !!document.querySelector('#srMSel') && !document.querySelector('#srQSel')));
+console.log('SR month line chart present: ' + await page.evaluate(() => !!document.querySelector('.srLineChart path')));
+await page.evaluate(() => { S.srScope = 'year'; S.srOpenQ = null; render(); });
+await page.waitForTimeout(700);
+console.log('year scope shows neither #srQSel nor #srMSel: ' +
+  await page.evaluate(() => !document.querySelector('#srQSel') && !document.querySelector('#srMSel')));
+console.log('SR year line chart present: ' + await page.evaluate(() => !!document.querySelector('.srLineChart path')));
+console.log('SR year bar rows >= quarter bar rows: ' +
+  await page.evaluate((n) => document.querySelectorAll('[data-sropen]').length >= n, srBarCount));
+
+await page.evaluate(() => { S.me.campus = 'poipet'; S.srScope = 'quarter'; S.srQuarter = null; S.srMonth = null; S.srOpenQ = null; render(); });
 await page.waitForTimeout(600);
 
-// an unanswered week opens the form — same arrow/pill week nav as Weekly Goals,
-// jumped straight there by state rather than clicking Prev N times.
+// an unanswered week shows a start button, not the form itself — same
+// arrow/pill week nav as Weekly Goals, jumped straight there by state rather
+// than clicking Prev N times.
 await page.evaluate((wk) => { S.healthWeek = wk; S.weekDraft = null; S.weekDraftFor = null; S.weekForm = null; render(); }, NOWWK - 5);
 await page.waitForTimeout(900);
-console.log('\nunanswered week -> form open: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
+console.log('\nunanswered week -> start button, no form yet: ' +
+  await page.evaluate(() => !!document.querySelector('#weekStart') && !document.querySelector('#weekForm')));
+await page.click('#weekStart'); await page.waitForTimeout(700);
+console.log('tap it -> form opens: ' + await page.evaluate(() => !!document.querySelector('#weekForm')));
 console.log('  1-10 questions: ' + await page.$$eval('#weekForm [data-wslide]', e => e.length));
 console.log('  yes/no questions: ' + await page.$$eval('#weekForm .seg', e => e.length));
 console.log('  hour boxes: ' + await page.$$eval('#weekForm [data-wnum]', e => e.length));
@@ -521,7 +545,9 @@ for (const q of ['oneOnOne', 'exercise', 'quietTime', 'sharedFaith', 'sabbath'])
 }
 for (const q of ['porn', 'debt']) { await page.click(`[data-wyn="${q}|0"]`); await page.waitForTimeout(200); }
 await page.click('#weekSubmit'); await page.waitForTimeout(2200);
-console.log('\nafter submit, score: ' + await page.$eval('#main .pctBig', e => e.textContent.trim()));
+console.log('\nafter submit, form and start button both gone: ' +
+  await page.evaluate(() => !document.querySelector('#weekForm') && !document.querySelector('#weekStart')));
+console.log('after submit, score: ' + await page.$eval('#main .pctBig', e => e.textContent.trim()));
 console.log('  marked hand-entered: ' + await page.evaluate(() =>
   /weekly check-in/i.test(document.querySelector('#main .card').innerText)));
 console.log('  "Against last week" rows: ' + await page.evaluate(() => {

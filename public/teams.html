@@ -1070,7 +1070,7 @@ var S = {
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[], broadcasts:[],
   baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
   healthWeek:null, weekForm:null, weekDraftFor:null, weekJustSaved:null,
-  healthScope:'week', healthQuarter:null, healthYear:null, healthMonth:null, baseByYear:{}, srQuarter:null, srOpenQ:null,
+  healthScope:'week', healthQuarter:null, healthYear:null, healthMonth:null, baseByYear:{}, srScope:'quarter', srQuarter:null, srMonth:null, srOpenQ:null,
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
   baseHealthPeriod:'week',
   dbAcc:{kpiDay:false, kpiWeek:false},
@@ -1432,7 +1432,7 @@ function logout(){
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
-  S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminPinDraft={}; S.adminCode='';
+  S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminEditDraft=null; S.adminPinDraft={}; S.adminCode='';
   render();
 }
 
@@ -2080,12 +2080,16 @@ function baseHtml(){
    missing file just means this card doesn't appear rather than breaking
    the page.
 
-   One quarter at a time (same Q1-Q4 picker Base Health already uses), with
-   two views of that quarter: a line chart of the overall trend (each
+   One period at a time — Month, Quarter (the original picker) or Year, same
+   three-way View picker the generic Base health section already uses — with
+   two views of that period: a line chart of the overall trend (each
    question's "good" direction, so a climbing line always means things got
    better — the same flip lonely/porn/debt already get everywhere else in
-   this app) and a bar chart of that quarter's raw "% said yes" per
+   this app) and a bar chart of that period's raw "% said yes" per
    question, which is what the plain numbers elsewhere on the page mean too.
+   Year has no year picker of its own (same reasoning as the generic Base
+   health section: there's only ever been one year of data so far), so it
+   just means "everything" — which for now reads the same as year-to-date.
    Both animate in on render via gpAnimateBars/gpAnimateLine (rollup.js) —
    same "grow from nothing" idea as gpAnimateCounts, just for shapes instead
    of digits. */
@@ -2124,33 +2128,43 @@ function srCheckinPoints_(q){
   return pts;
 }
 var SR_MONTHS_=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function srCheckinQuarterly_(quarter){
-  var inQ = function(month){ return Math.ceil(month/3)===quarter; };
-  // one row per data point in the quarter: { label, good } averaged across
+/* scope is 'month' | 'quarter' | 'year'; month is 1-12, quarter is 1-4 —
+   only the one that matches scope is used. */
+function srScopeMatcher_(scope, month, quarter){
+  if(scope==='month') return function(m){ return m===month; };
+  if(scope==='year') return function(){ return true; };
+  return function(m){ return Math.ceil(m/3)===quarter; };
+}
+function srCheckinForScope_(scope, month, quarter){
+  var inPeriod = srScopeMatcher_(scope, month, quarter);
+  // one row per data point in the period: { label, good } averaged across
   // whichever questions actually have that point, so the line has one value
   // per week/month rather than one per question.
   var byPoint = {};
   var order = [];
   SR_CHECKIN_QUESTIONS.forEach(function(q){
-    srCheckinPoints_(q).filter(function(p){ return inQ(p.month); }).forEach(function(p){
+    srCheckinPoints_(q).filter(function(p){ return inPeriod(p.month); }).forEach(function(p){
       if(!byPoint[p.label]){ byPoint[p.label]={label:p.label, sum:0, n:0}; order.push(p.label); }
       byPoint[p.label].sum += p.good; byPoint[p.label].n++;
     });
   });
   var line = order.map(function(l){ return {label:l, pct:Math.round(byPoint[l].sum/byPoint[l].n)}; });
-  // one bar per question: its own average raw "% yes" across the quarter, plus
+  // one bar per question: its own average raw "% yes" across the period, plus
   // its own points (same shape a line chart wants) so tapping it can show its
   // own trend without recomputing anything.
   var bars = SR_CHECKIN_QUESTIONS.map(function(q){
-    var pts = srCheckinPoints_(q).filter(function(p){ return inQ(p.month); });
+    var pts = srCheckinPoints_(q).filter(function(p){ return inPeriod(p.month); });
     if(!pts.length) return null;
     var avg = Math.round(pts.reduce(function(s,p){ return s+p.pct; },0)/pts.length);
     return {id:q.id, label:q.en, pct:avg, points:pts.map(function(p){ return {label:p.label, pct:p.pct}; })};
   }).filter(Boolean);
   return {line:line, bars:bars};
 }
-function srLineChartHtml_(points){
-  if(points.length<2) return '<p class="emptyLine">'+esc(t('Not enough data points this quarter for a trend line.'))+'</p>';
+function srScopeNoun_(scope){
+  return scope==='month' ? t('month') : scope==='year' ? t('year') : t('quarter');
+}
+function srLineChartHtml_(points, scopeNoun){
+  if(points.length<2) return '<p class="emptyLine">'+esc(gpT('Not enough data points this {scope} for a trend line.',{scope:scopeNoun||t('quarter')}))+'</p>';
   var W=280, H=90, pad=8;
   var step=(W-pad*2)/(points.length-1);
   var xy=points.map(function(p,i){ return [pad+i*step, pad+(H-pad*2)*(1-p.pct/100)]; });
@@ -2167,8 +2181,8 @@ function srLineChartHtml_(points){
    glance, tapping it opens that question's own trend line right underneath
    — one open at a time, so comparing two is still just two taps, not a wall
    of ten charts nobody asked to see. */
-function srBarChartHtml_(bars, openId){
-  if(!bars.length) return '<p class="emptyLine">'+esc(t('No data for this quarter.'))+'</p>';
+function srBarChartHtml_(bars, openId, scopeNoun){
+  if(!bars.length) return '<p class="emptyLine">'+esc(gpT('No data for this {scope}.',{scope:scopeNoun||t('quarter')}))+'</p>';
   var h='<div class="srBars">';
   bars.forEach(function(b){
     var open = openId===b.id;
@@ -2179,7 +2193,7 @@ function srBarChartHtml_(bars, openId){
         '<span class="srBarPct">'+b.pct+'%</span>'+
         '<span class="chev">'+(open?'▴':'▾')+'</span>'+
       '</button>'+
-      (open ? '<div class="srBarChart">'+srLineChartHtml_(b.points)+'</div>' : '')+
+      (open ? '<div class="srBarChart">'+srLineChartHtml_(b.points, scopeNoun)+'</div>' : '')+
     '</div>';
   });
   return h+'</div>';
@@ -2187,23 +2201,35 @@ function srBarChartHtml_(bars, openId){
 function srCheckinHistoryHtml(){
   if(S.me.campus!=='siemreap') return '';
   if(typeof SR_CHECKIN_QUESTIONS==='undefined' || typeof SR_CHECKIN_WEEKS==='undefined') return '';
+  var scope = S.srScope || 'quarter';
   var curQ = Math.ceil((new Date().getMonth()+1)/3);
   var q = Number(S.srQuarter || curQ);
-  var data = srCheckinQuarterly_(q);
+  var m = Number(S.srMonth!=null ? S.srMonth : new Date().getMonth()+1); // 1-12
+  var data = srCheckinForScope_(scope, m, q);
+  var scopeNoun = srScopeNoun_(scope);
   var h='<h3 style="margin-top:16px">🏠 '+esc(t('Base health'))+' · '+esc(t(campusName(S.me.campus)))+'</h3>';
   h+='<div class="card">'+
     '<div class="pmeta" style="margin-bottom:8px">'+
     esc(t('Starts with a Jan–Jul 2026 import from a separate check-in tool, then continues from the weekly check-in below. Team-wide and anonymous — not linked to any individual profile.'))+
     '</div>'+
-    '<div class="pickerRow"><label class="pick" style="max-width:120px"><span>'+esc(t('Quarter'))+'</span><select id="srQSel">'+
-      [1,2,3,4].map(function(i){ return '<option value="'+i+'"'+(q===i?' selected':'')+'>Q'+i+'</option>'; }).join('')+
-      '</select></label></div>'+
+    '<div class="pickerRow">'+
+      '<label class="pick"><span>'+esc(t('View'))+'</span><select id="srScopeSel">'+
+        [['month','Month'],['quarter','Quarter'],['year','Year']].map(function(sc){
+          return '<option value="'+sc[0]+'"'+(scope===sc[0]?' selected':'')+'>'+esc(t(sc[1]))+'</option>';
+        }).join('')+'</select></label>'+
+      (scope==='month' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Month'))+'</span><select id="srMSel">'+
+        MONTH_ABBR.map(function(mn,i){ return '<option value="'+(i+1)+'"'+(m===(i+1)?' selected':'')+'>'+mn+'</option>'; }).join('')+
+        '</select></label>' : '')+
+      (scope==='quarter' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Quarter'))+'</span><select id="srQSel">'+
+        [1,2,3,4].map(function(i){ return '<option value="'+i+'"'+(q===i?' selected':'')+'>Q'+i+'</option>'; }).join('')+
+        '</select></label>' : '')+
+    '</div>'+
     '<div class="mentorLabel" style="margin-top:12px">'+esc(t('Overall trend (higher is better)'))+'</div>'+
-    srLineChartHtml_(data.line)+
+    srLineChartHtml_(data.line, scopeNoun)+
     '<div class="mentorDivider"></div>'+
-    '<div class="mentorLabel">'+esc(t('This quarter, by question'))+'</div>'+
+    '<div class="mentorLabel">'+esc(gpT('This {scope}, by question',{scope:scopeNoun||t('quarter')}))+'</div>'+
     '<p class="pmeta" style="margin:0 0 8px">'+esc(t('Tap a question to see its own trend.'))+'</p>'+
-    srBarChartHtml_(data.bars, S.srOpenQ)+
+    srBarChartHtml_(data.bars, S.srOpenQ, scopeNoun)+
   '</div>';
   return h;
 }
@@ -3809,15 +3835,25 @@ function adminRowBodyHtml_(s){
   if(S.adminEditId!==s.id){
     b+='<button class="linkbtn" data-adminedit="'+esc(s.id)+'">'+esc(t('Fix campus / department / role'))+'</button>';
   } else {
-    b+='<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="adm_name" value="'+esc(s.name||'')+'">'+
+    /* Backed by S.adminEditDraft, not s directly — s is a snapshot from the
+       moment the list last loaded, so reading straight from it would throw
+       away whatever's typed the instant anything else on this long page
+       re-renders (expanding a different row, approving someone, anything).
+       That silent reset-to-original was the actual bug behind "it doesn't
+       save what I put in": nothing crashed, the fields just quietly forgot
+       what you'd typed before you got to Save. */
+    var d = S.adminEditDraft || {};
+    var dCampus = d.campus!==undefined ? d.campus : (s.campus||'');
+    var dDept = d.dept!==undefined ? d.dept : (s.dept||'');
+    b+='<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="adm_name" value="'+esc(d.name!==undefined?d.name:(s.name||''))+'">'+
       '<label class="f">'+esc(t('Campus'))+'</label><select id="adm_campus">'+
-      CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(s.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
+      CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(dCampus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
       '<label class="f">'+esc(t('Department'))+'</label><select id="adm_dept">'+
-      deptsFor(s.campus).map(function(d){return '<option value="'+esc(d)+'"'+(s.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
+      deptsFor(dCampus).map(function(dp){return '<option value="'+esc(dp)+'"'+(dDept===dp?' selected':'')+'>'+esc(t(dp))+'</option>';}).join('')+'</select>'+
       '<label class="f">'+esc(t('Ministry'))+'</label><select id="adm_ministry"></select>'+
-      '<label class="f">'+esc(t('Role / team'))+'</label><input type="text" id="adm_role" value="'+esc(s.role||'')+'">'+
-      staffTypeFieldHtml('adm_type', s.staffType||'')+
-      countryFieldHtml('adm_country', s.country||'')+
+      '<label class="f">'+esc(t('Role / team'))+'</label><input type="text" id="adm_role" value="'+esc(d.role!==undefined?d.role:(s.role||''))+'">'+
+      staffTypeFieldHtml('adm_type', d.staffType!==undefined?d.staffType:(s.staffType||''))+
+      countryFieldHtml('adm_country', d.country!==undefined?d.country:(s.country||''))+
       '<button class="btn" data-adminsave="'+esc(s.id)+'">'+esc(t('Save'))+'</button>'+
       '<button class="linkbtn" data-admincanceledit="'+esc(s.id)+'">'+esc(t('Cancel'))+'</button>';
   }
@@ -3954,18 +3990,57 @@ function bindAdmin(){
     };
   });
   document.querySelectorAll('[data-adminedit]').forEach(function(b){
-    b.onclick=function(){ S.adminEditId=b.getAttribute('data-adminedit'); render(); };
+    b.onclick=function(){
+      var id=b.getAttribute('data-adminedit');
+      var s=(S.adminStaff||[]).find(function(x){ return x.id===id; })||{};
+      S.adminEditId=id;
+      S.adminEditDraft={ name:s.name||'', campus:s.campus||'', dept:s.dept||'', ministry:s.ministry||'',
+        role:s.role||'', staffType:s.staffType||'', country:s.country||'' };
+      render();
+    };
   });
   document.querySelectorAll('[data-admincanceledit]').forEach(function(b){
-    b.onclick=function(){ S.adminEditId=null; render(); };
+    b.onclick=function(){ S.adminEditId=null; S.adminEditDraft=null; render(); };
   });
   if(S.adminEditId && document.getElementById('adm_campus')){
-    fillMinistrySelect('adm_ministry','adm_campus','adm_dept',
-      (S.adminStaff.find(function(x){ return x.id===S.adminEditId; })||{}).ministry||'');
-    ['adm_campus','adm_dept'].forEach(function(id){
-      document.getElementById(id).onchange=function(){ fillMinistrySelect('adm_ministry','adm_campus','adm_dept',''); };
-    });
+    var admD = S.adminEditDraft || {};
+    fillMinistrySelect('adm_ministry','adm_campus','adm_dept', admD.ministry||'');
+    // Typing/picking updates the draft directly rather than calling render() —
+    // same reason broadcastDraft doesn't re-render on every keystroke. That
+    // keeps whatever's typed alive if anything else on the page re-renders,
+    // and is what actually makes editing feel responsive instead of laggy.
+    var admName=document.getElementById('adm_name');
+    if(admName) admName.oninput=function(){ admD.name=admName.value; };
+    var admRole=document.getElementById('adm_role');
+    if(admRole) admRole.oninput=function(){ admD.role=admRole.value; };
+    var admType=document.getElementById('adm_type');
+    if(admType) admType.onchange=function(){ admD.staffType=admType.value; };
+    var admMin=document.getElementById('adm_ministry');
+    if(admMin) admMin.onchange=function(){ admD.ministry=admMin.value; };
+    var admCampus=document.getElementById('adm_campus');
+    if(admCampus) admCampus.onchange=function(){
+      admD.campus=admCampus.value;
+      // The department list itself belongs to the campus — refill it rather
+      // than leaving the old campus's departments on screen, which is the
+      // other half of what made this "confusing": picking a new campus
+      // silently kept the previous one's department names in the dropdown.
+      var deptSel=document.getElementById('adm_dept');
+      var deps=deptsFor(admCampus.value);
+      deptSel.innerHTML=deps.map(function(dp){ return '<option value="'+esc(dp)+'">'+esc(t(dp))+'</option>'; }).join('');
+      admD.dept=deptSel.value;
+      fillMinistrySelect('adm_ministry','adm_campus','adm_dept','');
+      admD.ministry='';
+    };
+    var admDept=document.getElementById('adm_dept');
+    if(admDept) admDept.onchange=function(){
+      admD.dept=admDept.value;
+      fillMinistrySelect('adm_ministry','adm_campus','adm_dept','');
+      admD.ministry='';
+    };
     bindCountryOther();
+    var admCountry=document.getElementById('adm_country'), admCountryOther=document.getElementById('adm_country_other');
+    if(admCountry) admCountry.addEventListener('change', function(){ admD.country=countryValue('adm_country'); });
+    if(admCountryOther) admCountryOther.addEventListener('input', function(){ admD.country=countryValue('adm_country'); });
   }
   document.querySelectorAll('[data-adminsave]').forEach(function(b){
     b.onclick=function(){
@@ -3979,9 +4054,10 @@ function bindAdmin(){
         staffType:document.getElementById('adm_type').value,
         country:countryValue('adm_country')
       };
+      b.disabled=true; b.textContent=t('Saving…');
       run('adminUpdateStaff',[S.auth.user,S.auth.pin,id,payload],function(d){
-        if(d && d.ok){ S.adminEditId=null; adminRefresh_(); }
-        else showMsg('Could not save');
+        if(d && d.ok){ S.adminEditId=null; S.adminEditDraft=null; adminRefresh_(); }
+        else { b.disabled=false; b.textContent=t('Save'); showMsg('Could not save'); }
       });
     };
   });
@@ -4439,7 +4515,13 @@ function healthHtml(){
   var row = myWeekRow(wk);
   var score = row ? compositeOf(row) : null;
   var prevScore = myWeekRow(wk-1) ? compositeOf(myWeekRow(wk-1)) : null;
-  var open = (S.weekForm===Number(wk)) || !row;
+  /* Used to default open whenever there was no row yet, so the sliders sat
+     there as clutter even for someone who just wanted to check their score
+     history and hadn't decided to answer yet. Now it only opens on request —
+     the button below for a week with no answer yet, "Edit my answers" for
+     one that already has one — and weekSubmit resetting S.weekForm on
+     success (see below) closes it again either way. */
+  var open = (S.weekForm===Number(wk));
 
   h += '<h3>💚 '+esc(t('My check-in'))+' · '+esc(t('Week'))+' '+wk+'</h3>';
   /* A one-time confirmation, not a permanent state: shown for the render
@@ -4464,6 +4546,8 @@ function healthHtml(){
         ? '<button class="danger" id="weekClear">'+esc(t('Clear this week'))+'</button>' : '')+
       '<button class="linkbtn inline" id="weekEdit">'+
         esc(t(open?'Hide the form':'Edit my answers'))+'</button></div></div>';
+  } else if(!open){
+    h += '<button class="btn" id="weekStart">'+esc(t('Fill out this week’s check-in'))+'</button>';
   }
 
   if(open){
@@ -6148,6 +6232,10 @@ function bind(){
     var y=Number(hYs.value);
     ensureBaseYear(y, function(){ S.healthYear=y; render(); });
   };
+  var srSc=document.getElementById('srScopeSel');
+  if(srSc) srSc.onchange=function(){ S.srScope=srSc.value; S.srOpenQ=null; render(); };
+  var srMs=document.getElementById('srMSel');
+  if(srMs) srMs.onchange=function(){ S.srMonth=Number(srMs.value); S.srOpenQ=null; render(); };
   var srQs=document.getElementById('srQSel');
   if(srQs) srQs.onchange=function(){ S.srQuarter=Number(srQs.value); S.srOpenQ=null; render(); };
   document.querySelectorAll('[data-sropen]').forEach(function(btn){
@@ -6220,6 +6308,8 @@ function bind(){
     S.weekForm = (S.weekForm===wk) ? null : wk;
     render();
   };
+  var wst=document.getElementById('weekStart');
+  if(wst) wst.onclick=function(){ S.weekForm=Number(S.healthWeek||thisWeek()); render(); };
   var wcl=document.getElementById('weekClear');
   if(wcl) wcl.onclick=function(){
     if(!confirm(t('Clear this week’s check-in?'))) return;
