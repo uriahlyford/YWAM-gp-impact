@@ -114,6 +114,26 @@ ok('save sent the typed name, not the stale one', lastAdminUpdatePayload && last
 ok('save sent the changed campus', lastAdminUpdatePayload && lastAdminUpdatePayload.campus === 'siemreap', lastAdminUpdatePayload && lastAdminUpdatePayload.campus);
 ok('edit form closed after a successful save', await page.evaluate(() => !document.getElementById('adm_name')));
 
+// the search box — added because finding one person in a long "All accounts"
+// list, grouped only by campus, was the other half of "confusing"
+console.log('\n=== ADMIN: SEARCH ===');
+await page.fill('#adminSearch', 'dara');
+await page.waitForTimeout(300);
+const visibleAfterSearch = await page.$$eval('[data-adminrow]', els => els.filter(e => getComputedStyle(e).display !== 'none').length);
+ok('searching narrows the list', visibleAfterSearch === 1, visibleAfterSearch + ' visible');
+ok('no "no matches" message while something matches',
+  await page.$eval('#adminSearchEmpty', el => getComputedStyle(el).display) === 'none');
+await page.fill('#adminSearch', 'zzznobody');
+await page.waitForTimeout(300);
+const visibleNoMatch = await page.$$eval('[data-adminrow]', els => els.filter(e => getComputedStyle(e).display !== 'none').length);
+ok('a search matching nobody hides every row', visibleNoMatch === 0, visibleNoMatch + ' visible');
+ok('"no matches" message shows',
+  await page.$eval('#adminSearchEmpty', el => getComputedStyle(el).display) !== 'none');
+await page.fill('#adminSearch', '');
+await page.waitForTimeout(300);
+const visibleCleared = await page.$$eval('[data-adminrow]', els => els.filter(e => getComputedStyle(e).display !== 'none').length);
+ok('clearing the search shows everyone again', visibleCleared === STAFF.length, visibleCleared + ' visible');
+
 console.log('\nERRORS: ' + (errors.length ? errors.join(' | ') : 'none'));
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 await browser.close();
