@@ -50,6 +50,7 @@ const BROWSER = [
   'test-base.mjs',          // the Base tab and the health form
   'test-admin-edit.mjs',    // editing a staff record in Admin keeps what you typed across an unrelated re-render
   'test-goals-edit.mjs',    // a weekly goal's wording can be edited in place, without losing its progress or KPI link
+  'test-offline-queue.mjs', // a bad connection queues Weekly Goals/health check-in saves instead of losing them, and replays them once back online
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward

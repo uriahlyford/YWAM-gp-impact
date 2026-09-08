@@ -1300,6 +1300,94 @@ function run(fn, args, onOk, onErr){
     });
 }
 
+/* ---- offline queue: a save on a bad connection is not lost ----
+   Weekly Goals and the weekly health check-in both write a full snapshot
+   for one week, not an incremental change, so "queue the latest attempt"
+   is always correct — a second offline edit to the same week simply
+   replaces the first, never stacks. That's what `key` buys: one pending
+   write per key, last one wins.
+
+   Deliberately narrow to these two for now — every other save in the app
+   still just fails on a bad connection like it always did. Widening this
+   to more of them is a question of picking the next one, not rebuilding
+   the mechanism. */
+var GP_QUEUE_KEY = 'gp-offline-queue';
+function gpQueueList_(){
+  try { return JSON.parse(localStorage.getItem(GP_QUEUE_KEY) || '[]'); } catch(e){ return []; }
+}
+function gpQueueSave_(list){
+  try { localStorage.setItem(GP_QUEUE_KEY, JSON.stringify(list)); } catch(e){}
+}
+function gpQueueCount(){ return gpQueueList_().length; }
+function gpQueuePut_(key, fn, args){
+  var list = gpQueueList_().filter(function(x){ return x.key!==key; });
+  list.push({ key:key, fn:fn, args:args, ts:Date.now() });
+  gpQueueSave_(list);
+  render();
+}
+function gpQueueRemove_(key){
+  gpQueueSave_(gpQueueList_().filter(function(x){ return x.key!==key; }));
+  render();
+}
+/* Real network status only, never a guess: does the browser itself think
+   it has a connection right now. */
+function gpOnline_(){ return typeof navigator==='undefined' || navigator.onLine!==false; }
+
+/* Replays whatever's queued, oldest first, one at a time — stops trying
+   (leaving the rest queued for next time) the moment one fails, so a
+   still-bad connection doesn't burn through the whole list at once. */
+var _gpQueueFlushing = false;
+function gpQueueFlush(){
+  if(_gpQueueFlushing || !gpOnline_()) return;
+  var list = gpQueueList_();
+  if(!list.length) return;
+  _gpQueueFlushing = true;
+  var i = 0;
+  function next(){
+    if(i>=list.length){ _gpQueueFlushing=false; return; }
+    var item = list[i];
+    run(item.fn, item.args, function(d){
+      gpQueueRemove_(item.key);
+      if(item.fn==='saveGoals' && d && d.goals) S.goals=d.goals;
+      if(item.fn==='saveMyWeek' && d && d.checkins) S.checkins=d.checkins;
+      i++; next();
+    }, function(){ _gpQueueFlushing=false; });
+  }
+  next();
+}
+window.addEventListener('online', gpQueueFlush);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) gpQueueFlush(); });
+
+/* Every Weekly Goals action — add, remove, mark complete, drag the slider,
+   link a KPI, edit the wording — already sends the whole week's list, not a
+   delta, so they all share one save path and it's the one place offline
+   queueing needs wiring in. cb(ok) fires once either way: true for a save
+   that reached the server OR queued cleanly, false for a real failure. */
+/* One line at the top of My Database whenever anything is still waiting to
+   sync — the only visible sign this mechanism exists at all otherwise, so
+   it's what tells someone their edit is safe rather than lost. */
+function gpQueueBannerHtml_(){
+  var n = gpQueueCount();
+  if(!n) return '';
+  return '<div class="banner">📡 '+esc(n===1
+    ? t('One change is saved on your phone and will sync once you’re back online.')
+    : gpT('{n} changes are saved on your phone and will sync once you’re back online.', {n:n}))+'</div>';
+}
+function gpSaveGoals_(wk, written, cb){
+  function queueOffline(){
+    gpQueuePut_('goals:'+wk, 'saveGoals', [S.auth.user,S.auth.pin,wk,written]);
+    S.goals = (S.goals||[]).filter(function(g){ return Number(g.week)!==Number(wk); })
+      .concat([{week:wk, pct:gpGoalsWeekPct_(written), updated:'', items:written}]);
+    showMsg(t('Saved on your phone — will sync once you’re back online.'));
+    cb(true);
+  }
+  if(!gpOnline_()){ queueOffline(); return; }
+  run('saveGoals',[S.auth.user,S.auth.pin,wk,written], function(d){
+    if(d && d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
+    cb(!!(d && d.ok));
+  }, queueOffline);
+}
+
 /* consecutive-day streak ending today or yesterday */
 function streak(pred){
   var have={}; S.logs.forEach(function(l){ if(pred(l)) have[l.date]=1; });
@@ -1439,7 +1527,23 @@ function applyBoot(d){
   S.oneOnOnes = d.oneOnOnes || [];
   S.broadcasts = d.broadcasts || [];
   if(d.base && d.base.entries) S.base = d.base;
+  /* A boot payload is always the server's view, which for a week still
+     queued offline is the OLD view — reapply the same overlay queueing
+     used, or the screen would flash back to before the edit for a moment
+     on every fresh boot until the flush below catches up. */
+  gpQueueList_().forEach(function(item){
+    if(item.fn==='saveGoals'){
+      var gwk=item.args[2], gwritten=item.args[3];
+      S.goals = (S.goals||[]).filter(function(g){ return Number(g.week)!==Number(gwk); })
+        .concat([{week:gwk, pct:gpGoalsWeekPct_(gwritten), updated:'', items:gwritten}]);
+    } else if(item.fn==='saveMyWeek'){
+      var wwk=item.args[2], wpayload=item.args[3];
+      S.checkins = (S.checkins||[]).filter(function(c){ return Number(c.week)!==Number(wwk); })
+        .concat([Object.assign({week:wwk, source:'weekly', days:7}, wpayload)]);
+    }
+  });
   render();
+  gpQueueFlush();
 }
 
 function logout(){
@@ -2896,6 +3000,7 @@ function homeHtml(){
      repeat here as its own chip right under the hero — the hero already
      leads with it, so this was just noise on a page Uriah wants decluttered. */
   var h=miniDashboardHtml();
+  h+=gpQueueBannerHtml_();
   h+=notificationsHtml();
   h+='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>';
 
@@ -3172,6 +3277,16 @@ function goalItemPct(g){
   var n = Number(g.pct);
   if(g.pct!==undefined && g.pct!==null && g.pct!=='' && isFinite(n)) return Math.max(0, Math.min(100, Math.round(n)));
   return g.done ? 100 : 0;
+}
+/* The week's own figure is the average of what's actually written — three
+   goals at 60% is a 60% week, same rule saveGoals uses server-side. Needed
+   client-side too now, for the record an offline save shows before there's
+   been any round trip to ask the server what it thinks. */
+function gpGoalsWeekPct_(items){
+  var written = (items||[]).filter(function(i){ return i && i.text; });
+  if(!written.length) return null;
+  var sum = written.reduce(function(s,i){ return s+goalItemPct(i); },0);
+  return Math.round(sum/written.length);
 }
 /* Thin wrappers over rollup.js, so the dashboard and this page cannot disagree
    about what 60% looks like. */
@@ -4871,7 +4986,20 @@ function weekSubmit(btn){
     WEEK_MONTHLY_QS.forEach(function(q){ payload[q.id] = d[q.id]===1; });
   }
 
+  /* A bad connection (or none at all) queues this instead of losing it —
+     see gpQueuePut_. Same close-the-form, same confirmation, just worded
+     for "saved here, not there yet" instead of "saved". */
+  function queueOffline(){
+    gpQueuePut_('week:'+wk, 'saveMyWeek', [S.auth.user, S.auth.pin, wk, payload]);
+    S.checkins = (S.checkins||[]).filter(function(c){ return Number(c.week)!==wk; })
+      .concat([Object.assign({week:wk, source:'weekly', days:7}, payload)]);
+    S.weekForm = null; S.weekDraft = null; S.weekDraftFor = null;
+    S.weekJustSaved = wk;
+    showMsg(gpT('Week {wk}’s check-in saved on your phone — it’ll sync once you’re back online.',{wk:wk}));
+    render();
+  }
   btn.disabled = true; btn.textContent = t('Saving…');
+  if(!gpOnline_()){ queueOffline(); return; }
   run('saveMyWeek', [S.auth.user, S.auth.pin, wk, payload], function(res){
     if(res && res.ok){
       S.checkins = res.checkins || [];
@@ -4886,7 +5014,7 @@ function weekSubmit(btn){
       showMsg(t('That didn’t save — try again.'));
       render();
     }
-  });
+  }, queueOffline);
 }
 
 function weekClear(){
@@ -5989,11 +6117,7 @@ function bindHome(){
     if(written.length>=3) return;
     written.push({text:text, pct:0, metricKey:''});
     S.busy=true; agb.disabled=true;
-    run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
-      S.busy=false;
-      if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
-      render();
-    });
+    gpSaveGoals_(wk, written, function(){ S.busy=false; render(); });
   };
   document.querySelectorAll('[data-goalcomplete]').forEach(function(b){
     b.onclick=function(){
@@ -6007,11 +6131,7 @@ function bindHome(){
       if(!written[i]) return;
       written[i].pct=100;
       S.busy=true;
-      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
-        S.busy=false;
-        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
-        render();
-      });
+      gpSaveGoals_(wk, written, function(){ S.busy=false; render(); });
     };
   });
   document.querySelectorAll('[data-goalremove]').forEach(function(b){
@@ -6026,11 +6146,7 @@ function bindHome(){
       if(!written[i]) return;
       written.splice(i,1);
       S.busy=true;
-      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
-        S.busy=false;
-        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
-        render();
-      });
+      gpSaveGoals_(wk, written, function(){ S.busy=false; render(); });
     };
   });
   /* Wording used to be fixed the moment it was typed — the only way to
@@ -6057,12 +6173,7 @@ function bindHome(){
       if(!written[i]) return;
       written[i].text=text;
       S.busy=true;
-      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
-        S.busy=false;
-        S.goalEditIdx=null;
-        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
-        render();
-      });
+      gpSaveGoals_(wk, written, function(){ S.busy=false; S.goalEditIdx=null; render(); });
     };
   });
   /* Dragging repaints the track and the label straight away — waiting on a
@@ -6095,10 +6206,7 @@ function bindHome(){
       var written=rec.items.filter(function(x){ return x.text; });
       if(!written[i]) return;
       written[i].pct=Number(sl.value)||0;
-      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
-        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
-        render();
-      });
+      gpSaveGoals_(wk, written, function(){ render(); });
     };
   });
   document.querySelectorAll('[data-goallink]').forEach(function(sel){
@@ -6110,10 +6218,7 @@ function bindHome(){
       var written=rec.items.filter(function(x){ return x.text; });
       if(!written[i]) return;
       written[i].metricKey=sel.value;
-      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
-        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
-        render();
-      });
+      gpSaveGoals_(wk, written, function(){ render(); });
     };
   });
 
