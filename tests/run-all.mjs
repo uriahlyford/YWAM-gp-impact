@@ -21,6 +21,7 @@ const SERVER = [
   'test-week-auth.mjs',  // weekly health: anonymity + mentor visibility
   'test-okr-auth.mjs',   // OKR writes stay inside your campus + department
   'test-year.mjs',       // weeks belong to a year; writing numbers needs a name
+  'test-read-your-writes.mjs', // a save answers with what it saved, not a stale read
   'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read
   'test-smart-goals.mjs', // Annual Goals (SMART): year+category isolation, ownership
   'test-one-on-one.mjs', // 1-on-1 requests: mentor/mentee pairing, recipient-only response

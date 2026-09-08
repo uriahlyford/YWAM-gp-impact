@@ -5,7 +5,9 @@
 
     Storage: one JSON blob per "sheet" (array of row objects), in the
     "gp-data" store. Concurrency: plain read-modify-write, no locking —
-    an accepted trade-off at this team's scale (see CLAUDE.md).
+    an accepted trade-off at this team's scale (see CLAUDE.md). Within one
+    request, though, reads do see that request's own writes — readJSON says
+    why that is not optional.
 
     Leadership tier: metrics in SENSITIVE are stripped unless the caller's code
     matches process.env.GP_LEADER_CODE. Fails closed — if that env var is ever
@@ -18,6 +20,7 @@
 */
 
 import { getStore } from '@netlify/blobs';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
@@ -97,17 +100,50 @@ function store() { return getStore('gp-data'); }
    shape against the fallback the caller asked for instead: a bad blob then reads
    as empty, which shows an empty page rather than taking the app down, and the
    next successful write repairs it. */
-async function readJSON(key, fallback) {
-  const v = await store().get(key, { type: 'json' });
+/*  Read your own writes, for the length of one request.
+
+    Blobs has no compare-and-swap, and a read issued straight after a write can
+    still be served the older version. That matters because nearly every write
+    handler answers by calling the matching read function — saveMyKpiDay ends
+    with getMyMinistry, saveTrip with getMyTrips — so the answer could describe
+    the data as it was BEFORE the write it just made. The client believes the
+    answer and paints the old value back: a habit tile unticking itself, a week
+    total that stays where it was, a leave request that does not appear. It
+    looked like "the save didn't work", and it was really "the reply was stale".
+
+    So: what a request writes, that same request reads back. This is scoped with
+    AsyncLocalStorage rather than a module-level Map on purpose — module scope
+    would be shared by any two invocations that ever overlap on one warm
+    instance, and one request reading another's writes would be a far worse bug
+    than the one being fixed here. The scope exists only inside the handler, so
+    anything running outside it reads the store directly, as before.
+
+    Cloning on the way in and out keeps a handler's own mutations (rows[i] = rec,
+    rows.push, .sort in place) from reaching through the cache into what a later
+    read in the same request sees. */
+const requestScope = new AsyncLocalStorage();
+const copy_ = function (v) { return v == null ? v : JSON.parse(JSON.stringify(v)); };
+
+/* The shape check, applied to a cached value as well as a stored one — a
+   handler that wrote junk must not get junk handed back by a different route
+   than the store would have used. */
+function shaped_(v, fallback) {
   if (v == null) return fallback;
   const wantArray = Array.isArray(fallback);
-  const isArray = Array.isArray(v);
-  if (wantArray !== isArray) return fallback;
+  if (wantArray !== Array.isArray(v)) return fallback;
   if (!wantArray && typeof v !== 'object') return fallback;
   return v;
 }
+
+async function readJSON(key, fallback) {
+  const mine = requestScope.getStore();
+  if (mine && mine.has(key)) return shaped_(copy_(mine.get(key)), fallback);
+  return shaped_(await store().get(key, { type: 'json' }), fallback);
+}
 async function writeJSON(key, value) {
   await store().setJSON(key, value);
+  const mine = requestScope.getStore();
+  if (mine) mine.set(key, copy_(value));
   return value;
 }
 
@@ -2229,7 +2265,11 @@ export default async (req) => {
     return new Response(JSON.stringify({ ok: false, error: 'Unknown function: ' + (body && body.fn) }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   try {
-    const result = await fn(Array.isArray(body.args) ? body.args : []);
+    /* One scope per request, so this request's writes are visible to this
+       request's reads and to nobody else's. See readJSON. */
+    const result = await requestScope.run(new Map(), function () {
+      return fn(Array.isArray(body.args) ? body.args : []);
+    });
     return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
     return new Response(JSON.stringify({ ok: false, error: String((err && err.message) || err) }), { status: 500, headers: { 'Content-Type': 'application/json' } });

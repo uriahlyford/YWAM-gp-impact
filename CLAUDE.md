@@ -528,6 +528,20 @@ inferred from volunteer counts.
 - **No locking on read-modify-write.** Every write reads a whole blob, edits it and writes
   it back. Two people saving the same sheet in the same second means one loses. Rare at
   this team size, real nonetheless.
+  - **A request reads its own writes, and that is load-bearing.** `readJSON`/`writeJSON`
+    share a per-request scope (`AsyncLocalStorage` — see the comment on `readJSON`), so
+    anything a request writes is what that same request reads back. Without it, a handler
+    that answers by calling its matching read function — `saveMyKpiDay` ends with
+    `getMyMinistry`, `saveTrip` with `getMyTrips` — can be served a version older than the
+    write it just made, and the client faithfully paints the old value back. That was one
+    root cause behind a family of reports that all sounded different: a habit tile
+    unticking itself, a week total that stays put after you type today's figure, a leave
+    request that only appears after a reload. Thirteen write paths were affected.
+    `tests/test-read-your-writes.mjs` runs them all against a store whose reads
+    deliberately lag its writes; a strongly-consistent fake hides the whole class, which
+    is why every other test passed while this was broken. The scope must stay
+    **per-request** — a module-level cache would let one invocation read another's writes
+    on a warm instance, which is worse than the bug it fixes.
 - **The last days of a 53-week year still clamp onto week 52.** Both pages compute the
   week from the Monday of week 1 of the current calendar year and clamp to 52, so the
   days belonging to the *next* year's week 1 land on week 52 instead. The year field
