@@ -91,6 +91,10 @@
   --onDark:#FAF6F0;        /* text on --headerBg */
   --onDarkFaint:#9A9384;   /* tertiary text on --headerBg, which is dark in BOTH themes */
   --onDarkBorder:#4A463D;  /* outlined buttons in the header */
+  --navBg:var(--surface);  /* bottom tab bar — a card-like surface in light, but
+    flush with --headerBg in dark (see the dark blocks below): a visibly lighter
+    grey bar was the one thing standing out against an otherwise black shell
+    while the rest of the page was still loading. */
   --shadow:rgba(31,68,255,.28);
   --shadowSoft:rgba(31,68,255,.12);
   --scrim:rgba(23,21,15,.45);
@@ -131,6 +135,7 @@
     --onDark:#F2EDE4;
     --onDarkFaint:#9A9384;
     --onDarkBorder:#3A352B;
+    --navBg:var(--headerBg);
     --shadow:rgba(108,134,255,.30);
     --shadowSoft:rgba(108,134,255,.14);
     --scrim:rgba(0,0,0,.62);
@@ -168,6 +173,7 @@
   --onDark:#F2EDE4;
   --onDarkFaint:#9A9384;
   --onDarkBorder:#3A352B;
+  --navBg:var(--headerBg);
   --shadow:rgba(108,134,255,.30);
   --shadowSoft:rgba(108,134,255,.14);
   --scrim:rgba(0,0,0,.62);
@@ -508,7 +514,7 @@ button.heroRow:active, button.heroSubRow:active { opacity:.72; }
 .dircard .avatar { margin:0 auto 8px; }
 .dircard .pname { font-size:16px; }
 
-nav.bottom { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border);
+nav.bottom { position:fixed; bottom:0; left:0; right:0; background:var(--navBg); border-top:1px solid var(--border);
   display:flex; z-index:10; padding-bottom:env(safe-area-inset-bottom);
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
 nav.bottom button { flex:1; padding:10px 2px 8px; background:none; border:none; cursor:pointer; color:var(--muted); font-size:10.5px; }
