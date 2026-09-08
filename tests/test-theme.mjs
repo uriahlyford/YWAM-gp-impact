@@ -200,6 +200,39 @@ for (const scheme of ['light', 'dark']) {
   }
 }
 
+/* ---------- 2a. the bottom tab bar is flush with the dark shell ----------
+   Reported as "the loading screen is black, but where the bottom menu is
+   it's a darker grey" — by the time nav.bottom is on screen at all (it
+   needs S.me, so the true #splash is already gone), the header/hero above
+   it are --headerBg and the bar itself was --surface, a visibly lighter
+   grey against everything else being near-black. In dark mode specifically
+   they should now be the same colour; light mode is untouched (nav.bottom
+   there is meant to read as a raised card, same as everywhere else). */
+{
+  const { ctx, p } = await page('dark', '');
+  await p.goto(BASE + '/teams.html', { waitUntil: 'commit' });
+  await p.waitForSelector('nav.bottom button', { timeout: 15000 });
+  const got = await p.evaluate(() => ({
+    nav: getComputedStyle(document.querySelector('nav.bottom')).backgroundColor,
+    header: getComputedStyle(document.querySelector('header')).backgroundColor,
+  }));
+  ok('dark mode: the bottom tab bar matches the header/hero, not a lighter grey',
+    got.nav === got.header, got.nav + ' vs ' + got.header);
+  await ctx.close();
+}
+{
+  const { ctx, p } = await page('light', '');
+  await p.goto(BASE + '/teams.html', { waitUntil: 'commit' });
+  await p.waitForSelector('nav.bottom button', { timeout: 15000 });
+  const got = await p.evaluate(() => ({
+    nav: getComputedStyle(document.querySelector('nav.bottom')).backgroundColor,
+    header: getComputedStyle(document.querySelector('header')).backgroundColor,
+  }));
+  ok('light mode: the bottom tab bar is untouched (still its own card colour, not black)',
+    got.nav !== got.header, got.nav + ' vs ' + got.header);
+  await ctx.close();
+}
+
 /* ---------- 2b. the reader can actually reach the override ----------
    The tokens read gp-theme, but nothing set it until the Appearance control existed
    — a switch with no handle. This drives it the way a person would. */
