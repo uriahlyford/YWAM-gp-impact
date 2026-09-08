@@ -192,6 +192,19 @@ ok('an admin can also fix name/staff type/home country',
   r.body && r.body.ok === true && r.body.staff.name === 'Dara Pich' && r.body.staff.staffType === 'ministry' && r.body.staff.country === 'Cambodia',
   JSON.stringify(r.body));
 
+seed();
+r = await call('adminUpdateStaff', ['uriah', '1234', 'st_staff', { username: 'sina' }]);
+ok('a username already used by someone else is refused', r.body && r.body.ok === false && r.body.err === 'username_taken', JSON.stringify(r.body));
+r = await call('adminUpdateStaff', ['uriah', '1234', 'st_staff', { username: 'a b' }]);
+ok('a badly-shaped username is refused (same rule sign-up uses)', r.body && r.body.ok === false && r.body.err === 'bad_username', JSON.stringify(r.body));
+r = await call('adminUpdateStaff', ['uriah', '1234', 'st_staff', { username: 'DaraNew' }]);
+ok('a valid, free username is accepted and lowercased',
+  r.body && r.body.ok === true && r.body.staff.username === 'daranew', JSON.stringify(r.body));
+r = await call('staffLogin', ['daranew', '1234']);
+ok('logging in with the new username now works', r.body && r.body.ok === true, JSON.stringify(r.body));
+r = await call('staffLogin', ['dara', '1234']);
+ok('the old username no longer works', r.body && r.body.ok === false, JSON.stringify(r.body));
+
 /* ---------- 6. manual mentor assignment ---------- */
 seed();
 r = await call('adminSetMentor', ['dara', '1234', 'st_staff', 'st_leader2', true]);

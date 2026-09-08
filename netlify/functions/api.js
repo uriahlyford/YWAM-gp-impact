@@ -464,6 +464,18 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
   if (payload.role !== undefined) rec.role = payload.role;
   if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
   if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
+  if (payload.username !== undefined) {
+    // Same shape sign-up already enforces (staffRegister above) — a username
+    // is also how someone logs in, so it can't collide with anyone else's.
+    // Whoever it belongs to will need the new one (and their same PIN) next
+    // time they sign in — same as adminResetPin already means a new PIN.
+    const u = normUser_(payload.username);
+    if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { ok: false, err: 'bad_username' };
+    if (rows.some(function (r) { return r.id !== staffId && r.username === u; })) {
+      return { ok: false, err: 'username_taken' };
+    }
+    rec.username = u;
+  }
   if (payload.email !== undefined) {
     const email = cleanEmail_(payload.email);
     if (email === null) return { ok: false, err: 'bad_email' };
