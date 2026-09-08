@@ -244,8 +244,20 @@
    scroll-chaining it would have suppressed (native pull-to-refresh,
    trackpad back/forward swipe) is instead kept off by the touch-gesture
    guards in rollup.js (gpPullToRefresh, gpSlideGuard), which don't rely on
-   this CSS property. */
-html { overflow-x:hidden; }
+   this CSS property.
+
+   html gets its own background too, matching the splash — reported as a
+   sliver of slightly-lighter grey at the very bottom of the splash screen,
+   on a real iPhone with a home indicator. The splash is `inset:0` and
+   correctly covers nav.bottom (it isn't even on screen yet at that point),
+   so the gap isn't from anything z-index can fix — some iOS Safari builds
+   compute a position:fixed element's extent against a viewport that
+   hasn't yet grown to include the safe area, right at first paint. Without
+   this, whatever showed through that gap was body's --bg, a shade darker
+   than the splash's --headerBg but not identical to it; with html carrying
+   the same colour as the splash, there is nothing left for that gap to
+   reveal that reads as a different tone. */
+html { overflow-x:hidden; background:var(--headerBg); }
 body { background:var(--bg); color:var(--ink); font-family:'Kantumruy Pro',system-ui,sans-serif;
   padding-bottom:calc(76px + env(safe-area-inset-bottom));
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);

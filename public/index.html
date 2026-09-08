@@ -265,8 +265,13 @@
    tried next and, on a fresh live check, turned out to trip the same
    Chromium bug. So: no overscroll-behavior at all on html/body (the `auto`
    the user's own console test proved fixes it) — see teams.html for why
-   dropping it is safe. */
-html { height:100%; overflow-x:hidden; }
+   dropping it is safe.
+
+   html also gets --headerBg as its background — see teams.html for the
+   full story: a sliver at the very bottom of the splash, on a real iPhone
+   with a home indicator, was body's --bg (a shade darker than the splash)
+   peeking through a gap some iOS Safari builds leave at first paint. */
+html { height:100%; overflow-x:hidden; background:var(--headerBg); }
 body { background:var(--bg); color:var(--ink); font-family:'Kantumruy Pro',system-ui,sans-serif;
   padding-bottom:calc(44px + env(safe-area-inset-bottom));
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
