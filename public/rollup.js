@@ -1232,3 +1232,49 @@ function gpInstallPrompt(){
     });
   });
 }
+
+/* ---- typing over a number that is already in the box ----
+
+   Uriah: "the numbers entering where they start at 0 you have to delete the
+   zero and it's annoying."
+
+   Most of these boxes open with something in them, and rightly so: today's
+   hours, a headcount carried forward from last week, a figure somebody already
+   saved. But a box with 0 in it is not an invitation to type — tapping it puts
+   the caret next to the zero, so "5" becomes "05" or "50" depending on where
+   the caret landed, and the only way to enter a number is to clear it first.
+   Every day. On every box.
+
+   Selecting the contents on focus makes the first keystroke replace what is
+   there, which is what tapping a number box means everywhere else. Anyone who
+   really wants to edit in place can tap a second time — the selection is gone
+   by then.
+
+   Delegated from the document rather than bound per input, because both pages
+   rebuild their forms on every render; a per-element listener would be
+   re-attached hundreds of times a session and would miss anything drawn later.
+
+   The click half is for iOS: there, the tap that gives focus also places the
+   caret, arriving AFTER the focus event and undoing the selection. Re-selecting
+   once on that click — and only the one that follows a focus — restores it
+   without fighting a deliberate second tap. */
+function gpSelectNumberOnFocus(){
+  if(window.__gpNumSel) return;
+  window.__gpNumSel = true;
+  var justFocused = null;
+  function isNum(el){
+    return el && el.tagName === 'INPUT' && (el.type === 'number' || el.getAttribute('type') === 'number');
+  }
+  function pick(el){ try { el.select(); } catch(e){ /* some browsers refuse; not worth caring */ } }
+  document.addEventListener('focusin', function(e){
+    if(!isNum(e.target)) return;
+    justFocused = e.target;
+    pick(e.target);
+  });
+  document.addEventListener('click', function(e){
+    if(!isNum(e.target) || e.target !== justFocused) return;
+    justFocused = null;
+    pick(e.target);
+  });
+  document.addEventListener('focusout', function(){ justFocused = null; });
+}

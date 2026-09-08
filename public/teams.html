@@ -2396,7 +2396,10 @@ function okrCardHtml(o, R, editable){
         : fmt(kp.actual, met)+' / '+fmt(kr.target, met);
     } else if(editable){
       meta = esc(t('tracked by hand'));
-      right = '<input type="number" class="manualIn" min="0" max="100" value="'+(Number(kr.manual)||0)+
+      /* Empty, not 0, when nobody has set a figure — a 0 sitting in the box is
+         a number you have to delete before you can type one. */
+      right = '<input type="number" class="manualIn" min="0" max="100" placeholder="0" value="'+
+        (Number(kr.manual) ? Number(kr.manual) : '')+
         '" data-okr-manual="'+esc(o.id)+'|'+ki+'">%';
     } else {
       meta = esc(t('tracked by hand'));
@@ -2696,7 +2699,8 @@ function smartGoalFormHtml(draft){
     '<label class="f">'+esc(t('Detail (optional)'))+'</label>'+
     '<input type="text" id="sg_meta" maxlength="200" value="'+esc(draft.meta||'')+'" placeholder="'+esc(t('e.g. Measurable · by Dec 2026'))+'">'+
     '<label class="f">'+esc(t('Progress'))+'</label>'+
-    '<input type="number" id="sg_pct" min="0" max="100" value="'+(draft.pct||0)+'"> %'+
+    '<input type="number" id="sg_pct" min="0" max="100" placeholder="0" value="'+
+      (draft.pct ? draft.pct : '')+'"> %'+
     '<button class="btn" id="smartSaveBtn">'+esc(t(draft.id?'Save changes':'Add goal'))+'</button>'+
     '<button class="btn ghost" id="smartCancelBtn">'+esc(t('Cancel'))+'</button>'+
   '</div>';
@@ -6903,6 +6907,7 @@ function refreshAll(){
 /* Shared with the dashboard — see gpPullToRefresh in rollup.js. The staff page
    also sits out the gesture while nobody is logged in. */
 gpPullToRefresh(function(){ return refreshAll(); }, { blocked: function(){ return !S.me; } });
+gpSelectNumberOnFocus();   // tapping a number box types over it, rather than beside the 0
 gpInstallPrompt();
 
 boot();

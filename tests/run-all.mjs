@@ -38,6 +38,7 @@ const SERVER = [
 const BROWSER = [
   'test-pull-drill.mjs',    // the pull gesture on both pages, and which figures open
   'test-touch-scroll.mjs',  // a swipe over a slider or the chip strip scrolls the page, and answers nothing
+  'test-number-entry.mjs',  // typing into a number box replaces what is in it, and no box starts at a 0 nobody typed
   'test-wheel-scroll.mjs',  // a trackpad's wheel events still scroll the page past the quick-jump strip
   'test-habit-config.mjs',  // a habit list the server refused never stays on the grid
   'test-khmer.mjs',         // Khmer reaches the screen, and does not overflow when it does

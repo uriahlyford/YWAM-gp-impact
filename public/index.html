@@ -1405,7 +1405,8 @@ function okrHtml(){
         var met = kr.metricKey.split('|')[2];
         h += '<span>'+fmt(kp.actual,met)+' / '+fmt(kr.target,met)+' · '+esc(t('auto from KPI'))+'</span><span>'+kp.pct+'%</span>';
       } else {
-        h += '<span>'+esc(t('manual'))+'</span><span><input type="number" class="manualIn" min="0" max="100" value="'+(Number(kr.manual)||0)+'" data-manual="'+o.id+'|'+ki+'"'+(state.data.leader?'':' disabled')+'> %</span>';
+        // Empty rather than 0 when nothing is set — see the staff page's copy.
+        h += '<span>'+esc(t('manual'))+'</span><span><input type="number" class="manualIn" min="0" max="100" placeholder="0" value="'+(Number(kr.manual) ? Number(kr.manual) : '')+'" data-manual="'+o.id+'|'+ki+'"'+(state.data.leader?'':' disabled')+'> %</span>';
       }
       h += '</div><div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div>'+gpKrWarnHtml(kp)+'</div>';
     });
@@ -1695,6 +1696,7 @@ function initialsOf(name){
 
 /* Shared with the staff page — see gpPullToRefresh in rollup.js. */
 gpPullToRefresh(function(){ return fetchData(); });
+gpSelectNumberOnFocus();   // tapping a number box types over it, rather than beside the 0
 gpInstallPrompt();
 
 render();
