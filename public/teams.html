@@ -1061,7 +1061,7 @@ var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'week', base:null,
   todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
-  goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
+  goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, goalEditIdx:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
   kpiMonthDraft:{}, kpiQuarterDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
   todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null, habitMore:false,
@@ -1428,7 +1428,7 @@ function logout(){
   lsDel('gp-staff');
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
-  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
+  S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
@@ -3206,11 +3206,14 @@ function goalsCardHtml(wk){
        esc(t('Your team can see these on your profile. Anything personal belongs in the private check-in instead.'))+'</p>';
     written.forEach(function(g,i){
       var gp=goalItemPct(g);
+      var editing = S.goalEditIdx===i;
       h+='<div class="wgRow'+(gp>=100?' done':'')+'">'+
         ringHtml(gp)+
         '<div class="goalBody">'+
-          '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
-            '<span class="wgPct" style="color:'+pctColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>'+
+          (editing
+            ? '<div class="wgTop"><input type="text" class="addGoalInput" id="editGoalText" maxlength="200" value="'+esc(g.text)+'" style="flex:1"></div>'
+            : '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
+              '<span class="wgPct" style="color:'+pctColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>')+
           '<label class="goalLink" style="display:flex;align-items:center;gap:4px">📊 '+
             '<select class="goalLinkSel" data-goallink="'+i+'" style="border:0;background:none;color:inherit;font:inherit;padding:0">'+
             okrMetricOptions(g.metricKey, 'Not linked to a KPI')+
@@ -3219,9 +3222,14 @@ function goalsCardHtml(wk){
             ' style="'+ringVars(gp)+'"'+
             ' aria-label="'+esc(t('Progress'))+': '+esc(g.text)+'">'+
           '<div class="wgActions">'+
-            (gp<100?'<button class="completePill" data-goalcomplete="'+i+'">'+esc(t('Mark Complete'))+'</button>':'')+
-            '<button class="removeX" data-goalremove="'+i+'" aria-label="'+esc(t('Remove goal'))+'">'+
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>'+
+            (editing
+              ? '<button class="linkbtn inline" data-goaleditsave="'+i+'">'+esc(t('Save'))+'</button>'+
+                '<button class="linkbtn inline" data-goaleditcancel="'+i+'">'+esc(t('Cancel'))+'</button>'
+              : (gp<100?'<button class="completePill" data-goalcomplete="'+i+'">'+esc(t('Mark Complete'))+'</button>':'')+
+                '<button class="removeX" data-goaledit="'+i+'" aria-label="'+esc(t('Edit goal text'))+'">'+
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'+
+                '<button class="removeX" data-goalremove="'+i+'" aria-label="'+esc(t('Remove goal'))+'">'+
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>')+
           '</div>'+
         '</div></div>';
     });
@@ -3796,12 +3804,21 @@ function adminHtml(){
   }
 
   h+='<h3>'+esc(t('All accounts'))+'</h3>';
+  /* Filters by hiding/showing the wrapper divs directly, no render() involved
+     — a page with real staff numbers on it shouldn't rebuild the whole
+     Admin screen (including the Ministry KPI editor above) on every
+     keystroke just to narrow a list. */
+  h+='<div class="field" style="margin-bottom:8px"><input type="text" id="adminSearch" placeholder="'+
+    esc(t('Search by name or username…'))+'"></div>'+
+    '<p class="emptyLine" id="adminSearchEmpty" style="display:none">'+esc(t('No one matches that search.'))+'</p>';
   var byCampus_ = function(campusList){
     campusList.forEach(function(s){
       var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
       var summary = esc(t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status);
       var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
-      h+=accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); });
+      h+='<div data-adminrow="'+esc((s.name+' '+s.username).toLowerCase())+'">'+
+        accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); })+
+      '</div>';
     });
   };
   CAMPUSES.forEach(function(c){
@@ -3821,6 +3838,12 @@ function adminHtml(){
 
 function adminRowBodyHtml_(s){
   var mine = s.id===S.me.id;
+  /* Grouped under a small-caps label + divider (the same pattern the Health
+     tab's monthly questions and Siem Reap's chart already use), so a row with
+     five unrelated controls in it — reset PIN, fix info, mentor, admin
+     access, delete — reads as five sections instead of one long unlabeled
+     stack. That's what "confusing" meant more than any one control being
+     broken. */
   var b='<div>';
   if(!mine){
     b+='<button class="btn ghost" style="margin-top:0" data-admintoggleactive="'+esc(s.id)+'">'+
@@ -3828,12 +3851,14 @@ function adminRowBodyHtml_(s){
   }
 
   var pinDraft = S.adminPinDraft[s.id]||'';
-  b+='<label class="f">'+esc(t('Reset PIN'))+'</label>'+
+  b+='<div class="mentorLabel">🔑 '+esc(t('Reset PIN'))+'</div>'+
     '<div class="numIn"><input type="password" inputmode="numeric" maxlength="4" data-adminpin="'+esc(s.id)+'" value="'+esc(pinDraft)+'" placeholder="••••">'+
-    '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-adminresetpin="'+esc(s.id)+'">'+esc(t('Save'))+'</button></div>';
+    '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-adminresetpin="'+esc(s.id)+'">'+esc(t('Save'))+'</button></div>'+
+    '<div class="mentorDivider"></div>';
 
+  b+='<div class="mentorLabel">✏️ '+esc(t('Profile'))+'</div>';
   if(S.adminEditId!==s.id){
-    b+='<button class="linkbtn" data-adminedit="'+esc(s.id)+'">'+esc(t('Fix campus / department / role'))+'</button>';
+    b+='<button class="btn ghost" data-adminedit="'+esc(s.id)+'">'+esc(t('Fix campus / department / role'))+'</button>';
   } else {
     /* Backed by S.adminEditDraft, not s directly — s is a snapshot from the
        moment the list last loaded, so reading straight from it would throw
@@ -3861,7 +3886,7 @@ function adminRowBodyHtml_(s){
   if(!mine){
     var mentorOpts=(S.adminStaff||[]).filter(function(x){ return x.id!==s.id && x.active; })
       .map(function(x){ return '<option value="'+esc(x.id)+'"'+(s.mentorId===x.id?' selected':'')+'>'+esc(x.name)+' · '+esc(t(x.dept))+'</option>'; }).join('');
-    b+='<label class="f">'+esc(t('Mentor'))+'</label>'+
+    b+='<div class="mentorDivider"></div><div class="mentorLabel">🤝 '+esc(t('Mentor'))+'</div>'+
       '<select data-adminmentor="'+esc(s.id)+'"><option value="">'+esc(t('— none —'))+'</option>'+mentorOpts+'</select>'+
       '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px">'+
       '<input type="checkbox" data-adminmentorapproved="'+esc(s.id)+'"'+(s.mentorStatus==='approved'?' checked':'')+'> '+
@@ -3870,7 +3895,7 @@ function adminRowBodyHtml_(s){
   }
 
   if(!mine && s.dept==='Base Leadership'){
-    b+='<label class="f">'+esc(t('Admin code'))+'</label>'+
+    b+='<div class="mentorDivider"></div><div class="mentorLabel">👑 '+esc(t('Admin access'))+'</div>'+
       '<div class="numIn"><input type="password" id="adminCodeInput" value="'+esc(S.adminCode)+'" placeholder="'+esc(t('Admin code'))+'">'+
       '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-admingrant="'+esc(s.id)+'" data-adminmake="'+(s.isAdmin?'0':'1')+'">'+
       (s.isAdmin?esc(t('Revoke admin')):esc(t('Make admin')))+'</button></div>';
@@ -3880,7 +3905,7 @@ function adminRowBodyHtml_(s){
      history). Set apart with its own divider so it doesn't get tapped by
      habit while reaching for something else on the row. */
   if(!mine){
-    b+='<div class="mentorDivider"></div>'+
+    b+='<div class="mentorDivider"></div><div class="mentorLabel">⚠️ '+esc(t('Danger zone'))+'</div>'+
       '<button class="danger" data-admindelete="'+esc(s.id)+'">'+esc(t('Delete account'))+'</button>'+
       '<p class="hint" style="margin-top:4px">'+esc(t('Permanent — for a duplicate or test account, not someone leaving. Their logged history stays; only the account goes.'))+'</p>';
   }
@@ -3893,6 +3918,20 @@ function bindAdmin(){
   if(S.view!=='admin' || !S.me || !S.me.isAdmin) return;
   var back=document.getElementById('adminBack');
   if(back) back.onclick=function(){ S.view='week'; render(); };
+
+  var asr=document.getElementById('adminSearch');
+  if(asr) asr.oninput=function(){
+    var q=asr.value.trim().toLowerCase();
+    var anyVisible=false;
+    document.querySelectorAll('[data-adminrow]').forEach(function(row){
+      var hay=row.getAttribute('data-adminrow')||'';
+      var show=!q || hay.indexOf(q)>-1;
+      row.style.display = show?'':'none';
+      if(show) anyVisible=true;
+    });
+    var empty=document.getElementById('adminSearchEmpty');
+    if(empty) empty.style.display = (q && !anyVisible) ? '' : 'none';
+  };
 
   var amc=document.getElementById('adminMetricCampusSel');
   if(amc) amc.onchange=function(){ S.adminMetricCampus=amc.value; S.adminMetricMinistry=''; render(); };
@@ -5827,11 +5866,11 @@ function bindHome(){
   });
   // --- goals ---
   var gpw=document.getElementById('goalsPrevWeek');
-  if(gpw) gpw.onclick=function(){ if(goalsViewWeek()<=1) return; gpTap(); S.goalsWeek=goalsViewWeek()-1; render(); };
+  if(gpw) gpw.onclick=function(){ if(goalsViewWeek()<=1) return; gpTap(); S.goalsWeek=goalsViewWeek()-1; S.goalEditIdx=null; render(); };
   var gnw=document.getElementById('goalsNextWeek');
-  if(gnw) gnw.onclick=function(){ if(goalsViewWeek()>=52) return; gpTap(); S.goalsWeek=goalsViewWeek()+1; render(); };
+  if(gnw) gnw.onclick=function(){ if(goalsViewWeek()>=52) return; gpTap(); S.goalsWeek=goalsViewWeek()+1; S.goalEditIdx=null; render(); };
   var gjc=document.getElementById('goalsJumpCurrent');
-  if(gjc) gjc.onclick=function(){ gpTap(); S.goalsWeek=null; render(); };
+  if(gjc) gjc.onclick=function(){ gpTap(); S.goalsWeek=null; S.goalEditIdx=null; render(); };
   document.querySelectorAll('[data-theme-set]').forEach(function(b){
     b.onclick=function(){ gpTap(); applyTheme(b.getAttribute('data-theme-set')); render(); };
   });
@@ -5918,6 +5957,38 @@ function bindHome(){
       S.busy=true;
       run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
         S.busy=false;
+        if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
+        render();
+      });
+    };
+  });
+  /* Wording used to be fixed the moment it was typed — the only way to
+     change it was delete-and-retype, which lost the progress and KPI link
+     along with it. This edits the text in place, everything else on the
+     goal untouched. */
+  document.querySelectorAll('[data-goaledit]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.goalEditIdx=Number(b.getAttribute('data-goaledit')); render(); };
+  });
+  document.querySelectorAll('[data-goaleditcancel]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.goalEditIdx=null; render(); };
+  });
+  document.querySelectorAll('[data-goaleditsave]').forEach(function(b){
+    b.onclick=function(){
+      if(S.busy) return;
+      var i=Number(b.getAttribute('data-goaleditsave'));
+      var inp=document.getElementById('editGoalText');
+      var text=(inp&&inp.value||'').trim();
+      if(!text) return;
+      var wk=goalsViewWeek();
+      var rec=goalsForWeek(wk);
+      if(!rec) return;
+      var written=rec.items.filter(function(x){ return x.text; });
+      if(!written[i]) return;
+      written[i].text=text;
+      S.busy=true;
+      run('saveGoals',[S.auth.user,S.auth.pin,wk,written],function(d){
+        S.busy=false;
+        S.goalEditIdx=null;
         if(d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
         render();
       });
