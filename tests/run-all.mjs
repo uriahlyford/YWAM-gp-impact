@@ -50,6 +50,7 @@ const BROWSER = [
   'test-admin-edit.mjs',    // editing a staff record in Admin keeps what you typed across an unrelated re-render
   'test-goals-edit.mjs',    // a weekly goal's wording can be edited in place, without losing its progress or KPI link
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
+  'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
   'test-mentor-health.mjs', // a mentor sees a mentee by name
   'test-notif-bell-actions.mjs', // an action button drawn in the bell drawer actually works, not just the inline card

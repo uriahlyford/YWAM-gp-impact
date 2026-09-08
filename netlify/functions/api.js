@@ -815,9 +815,22 @@ async function saveDaily(username, pin, dateStr, payload) {
   await writeJSON('dailyLogs', rows);
   // The week's health row follows from the days — no second form to fill in.
   const week = await syncWeekSurvey_(s, rec.week, rows);
-  const out = await getMyLogs(username, pin);
-  out.week = week;
-  return out;
+  /*  Answer from the rows we just wrote — never from a fresh read of the store.
+
+      This used to end with `getMyLogs(username, pin)`, which re-reads
+      `dailyLogs`. Blobs has no compare-and-swap and a read issued immediately
+      after a write can still be served the older version, so that re-read could
+      answer with the day as it was BEFORE this tap. The client believes the
+      answer and paints the tile off again — which is exactly the "I tap a habit
+      and it unticks itself" report. Worse than the flicker: the next tap is then
+      computed from that stale map, so taps invert and get lost.
+
+      The authoritative state is already in hand, so there is nothing to go and
+      ask for. Two blob reads and a second PIN check saved as well. */
+  return {
+    ok: true, logs: logsFor_(rows, s.id), profile: { debt: s.debt },
+    habits: habitsOf_(s), bibleDay: s.bibleDay || 0, week: week
+  };
 }
 
 /* habitConfig: pass the person's habit config for the MENTOR view and results

@@ -5603,16 +5603,25 @@ function flushHabits(){
   run('saveDaily',[S.auth.user,S.auth.pin,todayStr(),habitPayload(sending)],function(d){
     _habitQ.inFlight=false;
     if(d && d.ok){
-      /* This answer describes the day as it was when the request left. If taps
-         have happened since, the server's copy is OLDER than the screen — take
-         its logs for everything else, then put the newer toggles back on top,
-         or a slow connection would silently undo whatever was tapped while it
-         was in flight. Read the local map BEFORE S.logs is replaced. */
-      var newer = _habitQ.pending ? todayHabitMap() : null;
+      /* An answer is a snapshot of the day at the moment the request was dealt
+         with. The screen is the person's intent, right now. When the two
+         disagree, intent wins — a tile must never untick itself because a reply
+         arrived describing an older version of the day.
+
+         So: take the answer's logs for everything else (hours, mood, the
+         derived week), then put this device's habit map straight back on top —
+         the map we sent, or a newer one if more taps have landed since. Both are
+         read BEFORE S.logs is replaced, because both are read out of it.
+
+         Without this, any disagreement at all reads as "the app undid my tap":
+         a store that served a read older than its own write, another device, or
+         the day-details form saving the same row from the other card. */
+      var localNow = todayHabitMap();
+      var keep = _habitQ.pending ? localNow : sending;
       S.logs=d.logs;
       adoptHabits(d.habits);
       if(d.week) upsertCheckin(d.week);
-      if(newer) applyHabitsLocally(newer);
+      applyHabitsLocally(keep);
       _habitQ.confirmed = _habitQ.pending ? sending : null;
     }
     if(_habitQ.pending){ _habitQ.pending=false; render(); flushHabits(); return; }
