@@ -227,8 +227,12 @@
    scrolling entirely on real desktop Chrome (not just the bounce it was
    meant to control), and `contain` turned out to trip the same bug on a
    fresh live check. Leaving the property unset is the `auto` the user's own
-   console test proved fixes it. */
-html{overflow-x:hidden}
+   console test proved fixes it.
+   html also gets --headerBg as its background — see teams.html for the
+   full story: a sliver at the very bottom of the splash, on a real iPhone
+   with a home indicator, was body's --bg (a shade darker than the splash)
+   peeking through a gap some iOS Safari builds leave at first paint. */
+html{overflow-x:hidden;background:var(--headerBg)}
 body{background:var(--bg);color:var(--ink);font-family:'Hanken Grotesk','Kantumruy Pro',system-ui,sans-serif;padding-bottom:calc(60px + env(safe-area-inset-bottom));padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);line-height:1.5;overflow-x:hidden;-webkit-text-size-adjust:100%}
 .kh{font-family:'Kantumruy Pro',sans-serif}
 .wrap{max-width:820px;margin:0 auto;padding:0 16px}

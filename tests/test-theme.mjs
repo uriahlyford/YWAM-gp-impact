@@ -233,6 +233,54 @@ for (const scheme of ['light', 'dark']) {
   await ctx.close();
 }
 
+/* ---------- 2a-ii. html itself matches the splash, no gap at the edges ----------
+   Reported again after the nav-bar fix, with a screenshot: a sliver of
+   slightly-lighter grey at the very bottom of the ACTUAL splash screen (the
+   spinner + "Impact Loading" one, before nav.bottom even exists) on a real
+   iPhone with a home indicator. #splash is inset:0 and already covers
+   nav.bottom correctly (z-index 9999 vs 10) — the gap some iOS Safari
+   builds leave at first paint isn't a stacking problem, so nothing there
+   was going to fix it. What actually showed through was html/body's own
+   background, which (before this) was unset on html and --bg (not
+   --headerBg) on body — a shade darker than the splash but visible next to
+   it. Checked on all three pages, before the splash would ever be
+   dismissed. */
+for (const file of ['index.html', 'teams.html', 'help.html']) {
+  const ctx = await browser.newContext(Object.assign({}, devices['iPhone 13'], { colorScheme: 'dark' }));
+  const p = await ctx.newPage();
+  await p.route('**fonts.g**', function (r) { r.abort(); });
+  await p.goto(BASE + '/' + file, { waitUntil: 'commit' });
+  const got = await p.evaluate(() => {
+    const splash = document.getElementById('splash');
+    return {
+      hasSplash: !!splash,
+      stillUp: !!splash && !splash.classList.contains('gone'),
+      html: getComputedStyle(document.documentElement).backgroundColor,
+      splashBg: splash ? getComputedStyle(splash).backgroundColor : null,
+      headerBg: (function () {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;visibility:hidden;background:var(--headerBg)';
+        document.body.appendChild(probe);
+        const c = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return c;
+      })(),
+    };
+  });
+  // help.html is static content with nothing to wait on, so it never shows a
+  // splash at all — html's background still has to match --headerBg there
+  // (it's the same shared design token), just with nothing to compare it to.
+  if (got.hasSplash) {
+    ok(file + ': the splash is actually still up for this check', got.stillUp, JSON.stringify(got));
+    ok(file + ': html\'s own background matches the splash — no gap can show a different tone',
+      got.html === got.splashBg, JSON.stringify(got));
+  } else {
+    ok(file + ': html\'s own background is --headerBg even with no splash to compare to',
+      got.html === got.headerBg, JSON.stringify(got));
+  }
+  await ctx.close();
+}
+
 /* ---------- 2b. the reader can actually reach the override ----------
    The tokens read gp-theme, but nothing set it until the Appearance control existed
    — a switch with no handle. This drives it the way a person would. */
