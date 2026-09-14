@@ -5165,6 +5165,29 @@ function leaveHtml(){
   return h;
 }
 
+/* Role is a free-text field (set from Profile or Admin), so the leadership
+   sections below are just recognizing specific strings someone typed there —
+   no new data to maintain, and nothing here breaks for staff who leave role
+   blank or use it for something else entirely. */
+function roleIs_(p, name){ return !!(p.role && p.role.trim().toLowerCase()===name.toLowerCase()); }
+function isGpTeamRole_(role){ return /^gp\s+/i.test((role||'').trim()); }
+var GP_TEAM_ROLE_ORDER = ['gp campus director','gp music director','gp media director','gp education director'];
+function gpTeamRoleRank_(role){
+  var i=GP_TEAM_ROLE_ORDER.indexOf((role||'').trim().toLowerCase());
+  return i===-1?GP_TEAM_ROLE_ORDER.length:i;
+}
+function leaderGroupHtml_(emoji, label, people){
+  if(!people.length) return '';
+  var h='<div class="deptBlock"><div class="deptHead">'+emoji+' '+esc(t(label))+
+     '<span class="deptN">'+people.length+'</span></div><div class="dir">';
+  people.forEach(function(p){
+    h+='<div class="dircard" data-person="'+esc(p.id)+'">'+avatarHtml(p)+
+       '<div class="pname">'+esc(p.name)+'</div>'+
+       (p.role?'<div class="pmeta">'+esc(t(p.role))+'</div>':'')+'</div>';
+  });
+  return h+'</div></div>';
+}
+
 /* ---------- team directory ---------- */
 function teamHtml(){
   if(S.person) return personHtml();
@@ -5181,6 +5204,12 @@ function teamHtml(){
     mentorEntryHtml()+
     '<p class="sub">'+esc(t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
 
+  /* GP Team: the leadership over the whole program, not tied to one campus —
+     so it sits above the campus toggle rather than inside a campus's list. */
+  var gpTeam = S.roster.filter(function(p){ return isGpTeamRole_(p.role); })
+    .sort(function(a,b){ return gpTeamRoleRank_(a.role)-gpTeamRoleRank_(b.role); });
+  h+=leaderGroupHtml_('⭐','GP Team', gpTeam);
+
   h+='<div class="campusSeg">'+CAMPUSES.map(function(c){
     return '<button class="campusBtn'+(campus===c.id?' on':'')+'" data-teamcampus="'+esc(c.id)+'">'+esc(t(c.name))+'</button>';
   }).join('')+'</div>';
@@ -5188,6 +5217,10 @@ function teamHtml(){
   h+='<h3>'+esc(t(cInfo?cInfo.name:campus))+' <small>· '+here.length+'</small></h3>';
 
   if(here.length){
+    h+=leaderGroupHtml_('🧭','Campus Director', here.filter(function(p){ return roleIs_(p,'Campus Director'); }));
+    h+=leaderGroupHtml_('👥','Campus Leaders', here.filter(function(p){ return roleIs_(p,'Campus Leader'); }));
+    h+=leaderGroupHtml_('📣','Ministry Leaders', here.filter(function(p){ return roleIs_(p,'Ministry Leader'); }));
+
     // group by department, then ministry inside it
     var byDept={};
     here.forEach(function(p){ (byDept[p.dept||'—']=byDept[p.dept||'—']||[]).push(p); });
