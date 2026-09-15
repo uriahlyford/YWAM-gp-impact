@@ -404,17 +404,73 @@ async function adminGate_(username, pin) {
   return (s && s.isAdmin) ? s : null;
 }
 
+/* Every one of these used to read the whole staff list once, change one
+   record, and write the whole list back. Admin fires several of them in
+   quick succession — reset a PIN, then rename the same person, approve the
+   next one down the list — and each is its own request against a store
+   with no compare-and-swap. Two in flight at once can each read before the
+   other's write lands; whichever writes last silently overwrites the other
+   with its own now-stale copy of everyone else. That is what "I reset the
+   PIN and it didn't take" and "I changed her username and it reverted"
+   both were — not a broken button, a real write a moment later undone by
+   an older snapshot landing after it.
+
+   mutate(rows) makes the one change against the freshest copy this can get;
+   returning { abort: true, ...whatever } from it skips the write entirely —
+   for a not-found or a validation error, there's nothing to retry.
+
+   There is no compare-and-swap to ask the store for, so this checks after
+   the fact instead of before: write, then read back, and if the store still
+   holds exactly what was just written, nothing else landed in the middle
+   and this write stands. If the readback differs — someone else's write
+   raced past this one, either overwriting it or getting overwritten by it —
+   re-read the real current data, reapply the same change on top of THAT,
+   and try again, rather than declaring victory on stale grounds. A few
+   rounds of this converge even when two requests are genuinely
+   simultaneous: whichever call is left holding a mismatch keeps folding its
+   own change onto whatever the other one most recently landed.
+
+   Goes straight to the store, not getStaff_/saveStaff_, on purpose — a retry
+   within this same request must see the real current data, including what
+   an earlier attempt in this very loop just wrote and lost the race on, not
+   the per-request cache that write left behind. The cache is only updated
+   once, at the end, on the attempt that actually sticks.
+
+   The random backoff before a retry matters more than it looks: two calls
+   that started at the same moment and take the same shape of time to read,
+   mutate and write will keep landing in lockstep and clobbering each other
+   attempt after attempt otherwise — a real livelock, not a hypothetical one,
+   caught by this file's own test firing two identical-shaped admin edits at
+   once. A few milliseconds of jitter is enough to break that symmetry. */
+async function mutateStaff_(mutate) {
+  const s = store();
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if (attempt > 0) await new Promise(function (r) { setTimeout(r, Math.random() * 40); });
+    const rows = shaped_(await s.get('staff', { type: 'json' }), []);
+    const result = mutate(rows);
+    if (result && result.abort) { const out = Object.assign({}, result); delete out.abort; return out; }
+    await s.setJSON('staff', rows);
+    const after = shaped_(await s.get('staff', { type: 'json' }), []);
+    if (JSON.stringify(after) === JSON.stringify(rows)) {
+      const mine = requestScope.getStore();
+      if (mine) mine.set('staff', copy_(rows));
+      return result;
+    }
+  }
+  return { ok: false, err: 'busy' };
+}
+
 async function grantAdmin(adminCode, targetUsername, makeAdmin) {
   if (!isAdminCode_(adminCode)) return { ok: false, err: 'bad_code' };
-  const rows = await getStaff_();
-  const idx = rows.findIndex(function (r) { return r.username === normUser_(targetUsername); });
-  if (idx === -1) return { ok: false, err: 'not_found' };
-  // Admin only ever goes to Base Leadership — encoded here too, not just in
-  // the sign-up gate, so a mistaken promotion can't hand it to someone else.
-  if (makeAdmin && !needsApproval_(rows[idx].dept)) return { ok: false, err: 'not_leadership' };
-  rows[idx].isAdmin = !!makeAdmin;
-  await saveStaff_(rows);
-  return { ok: true, staff: adminStaffOut_(rows[idx]) };
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.username === normUser_(targetUsername); });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    // Admin only ever goes to Base Leadership — encoded here too, not just in
+    // the sign-up gate, so a mistaken promotion can't hand it to someone else.
+    if (makeAdmin && !needsApproval_(rows[idx].dept)) return { abort: true, ok: false, err: 'not_leadership' };
+    rows[idx].isAdmin = !!makeAdmin;
+    return { ok: true, staff: adminStaffOut_(rows[idx]) };
+  });
 }
 
 async function adminListStaff(username, pin) {
@@ -430,13 +486,13 @@ async function adminListStaff(username, pin) {
 async function adminSetActive(username, pin, staffId, active) {
   const admin = await adminGate_(username, pin);
   if (!admin) return { ok: false };
-  const rows = await getStaff_();
-  const idx = rows.findIndex(function (r) { return r.id === staffId; });
-  if (idx === -1) return { ok: false, err: 'not_found' };
-  rows[idx].active = !!active;
-  rows[idx].updated = new Date().toISOString();
-  await saveStaff_(rows);
-  return { ok: true, staff: adminStaffOut_(rows[idx]) };
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === staffId; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    rows[idx].active = !!active;
+    rows[idx].updated = new Date().toISOString();
+    return { ok: true, staff: adminStaffOut_(rows[idx]) };
+  });
 }
 
 /* Setting someone's mentor directly, not asking the mentor to accept —
@@ -448,37 +504,40 @@ async function adminSetActive(username, pin, staffId, active) {
 async function adminSetMentor(username, pin, staffId, mentorId, approved) {
   const admin = await adminGate_(username, pin);
   if (!admin) return { ok: false };
-  const rows = await getStaff_();
-  const idx = rows.findIndex(function (r) { return r.id === staffId; });
-  if (idx === -1) return { ok: false, err: 'not_found' };
-  const newMentorId = mentorId || '';
-  if (newMentorId === staffId) return { ok: false, err: 'self_mentor' };
-  if (newMentorId && rows.findIndex(function (r) { return r.id === newMentorId; }) === -1) {
-    return { ok: false, err: 'mentor_not_found' };
-  }
-  rows[idx].mentorId = newMentorId;
-  rows[idx].mentorStatus = newMentorId ? (approved ? 'approved' : 'pending') : '';
-  rows[idx].updated = new Date().toISOString();
-  await saveStaff_(rows);
-  return { ok: true, staff: adminStaffOut_(rows[idx]) };
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === staffId; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const newMentorId = mentorId || '';
+    if (newMentorId === staffId) return { abort: true, ok: false, err: 'self_mentor' };
+    if (newMentorId && rows.findIndex(function (r) { return r.id === newMentorId; }) === -1) {
+      return { abort: true, ok: false, err: 'mentor_not_found' };
+    }
+    rows[idx].mentorId = newMentorId;
+    rows[idx].mentorStatus = newMentorId ? (approved ? 'approved' : 'pending') : '';
+    rows[idx].updated = new Date().toISOString();
+    return { ok: true, staff: adminStaffOut_(rows[idx]) };
+  });
 }
 
 async function adminResetPin(username, pin, staffId, newPin) {
   const admin = await adminGate_(username, pin);
   if (!admin) return { ok: false };
   if (!/^\d{4}$/.test(String(newPin))) return { ok: false, err: 'bad_pin' };
-  const rows = await getStaff_();
-  const idx = rows.findIndex(function (r) { return r.id === staffId; });
-  if (idx === -1) return { ok: false, err: 'not_found' };
-  const salt = pinSalt_();
-  rows[idx].pinHash = hashPin_(newPin, salt);
-  rows[idx].pinSalt = salt;
-  rows[idx].updated = new Date().toISOString();
-  await saveStaff_(rows);
+  let resetUsername = '';
+  const out = await mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === staffId; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const salt = pinSalt_();
+    rows[idx].pinHash = hashPin_(newPin, salt);
+    rows[idx].pinSalt = salt;
+    rows[idx].updated = new Date().toISOString();
+    resetUsername = rows[idx].username;
+    return { ok: true };
+  });
   // A reset PIN is exactly the kind of thing someone asks for after getting
   // locked out, so lift any lockout on the account it now belongs to.
-  await clearLoginThrottle_(rows[idx].username);
-  return { ok: true };
+  if (out.ok) await clearLoginThrottle_(resetUsername);
+  return out;
 }
 
 /* Fixing a wrong campus/department/ministry for someone else — the same
@@ -489,41 +548,41 @@ async function adminResetPin(username, pin, staffId, newPin) {
 async function adminUpdateStaff(username, pin, staffId, payload) {
   const admin = await adminGate_(username, pin);
   if (!admin) return { ok: false };
-  const rows = await getStaff_();
-  const idx = rows.findIndex(function (r) { return r.id === staffId; });
-  if (idx === -1) return { ok: false, err: 'not_found' };
-  const rec = rows[idx];
-  if (payload.name !== undefined) rec.name = payload.name;
-  if (payload.campus !== undefined) rec.campus = payload.campus;
-  if (payload.dept !== undefined) rec.dept = payload.dept;
-  if (payload.ministry !== undefined) rec.ministry = payload.ministry;
-  if (payload.role !== undefined) rec.role = payload.role;
-  if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
-  if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
-  if (payload.username !== undefined) {
-    // Same shape sign-up already enforces (staffRegister above) — a username
-    // is also how someone logs in, so it can't collide with anyone else's.
-    // Whoever it belongs to will need the new one (and their same PIN) next
-    // time they sign in — same as adminResetPin already means a new PIN.
-    const u = normUser_(payload.username);
-    if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { ok: false, err: 'bad_username' };
-    if (rows.some(function (r) { return r.id !== staffId && r.username === u; })) {
-      return { ok: false, err: 'username_taken' };
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === staffId; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const rec = rows[idx];
+    if (payload.name !== undefined) rec.name = payload.name;
+    if (payload.campus !== undefined) rec.campus = payload.campus;
+    if (payload.dept !== undefined) rec.dept = payload.dept;
+    if (payload.ministry !== undefined) rec.ministry = payload.ministry;
+    if (payload.role !== undefined) rec.role = payload.role;
+    if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
+    if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
+    if (payload.username !== undefined) {
+      // Same shape sign-up already enforces (staffRegister above) — a username
+      // is also how someone logs in, so it can't collide with anyone else's.
+      // Whoever it belongs to will need the new one (and their same PIN) next
+      // time they sign in — same as adminResetPin already means a new PIN.
+      const u = normUser_(payload.username);
+      if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { abort: true, ok: false, err: 'bad_username' };
+      if (rows.some(function (r) { return r.id !== staffId && r.username === u; })) {
+        return { abort: true, ok: false, err: 'username_taken' };
+      }
+      rec.username = u;
     }
-    rec.username = u;
-  }
-  if (payload.email !== undefined) {
-    const email = cleanEmail_(payload.email);
-    if (email === null) return { ok: false, err: 'bad_email' };
-    if (email && rows.some(function (r) { return r.id !== staffId && r.email && r.email === email; })) {
-      return { ok: false, err: 'email_taken' };
+    if (payload.email !== undefined) {
+      const email = cleanEmail_(payload.email);
+      if (email === null) return { abort: true, ok: false, err: 'bad_email' };
+      if (email && rows.some(function (r) { return r.id !== staffId && r.email && r.email === email; })) {
+        return { abort: true, ok: false, err: 'email_taken' };
+      }
+      rec.email = email;
     }
-    rec.email = email;
-  }
-  rec.updated = new Date().toISOString();
-  rows[idx] = rec;
-  await saveStaff_(rows);
-  return { ok: true, staff: adminStaffOut_(rec) };
+    rec.updated = new Date().toISOString();
+    rows[idx] = rec;
+    return { ok: true, staff: adminStaffOut_(rec) };
+  });
 }
 
 /* For the real mess this exists to clean up — a duplicate sign-up, a test
@@ -539,15 +598,15 @@ async function adminDeleteStaff(username, pin, staffId) {
   const admin = await adminGate_(username, pin);
   if (!admin) return { ok: false };
   if (admin.id === staffId) return { ok: false, err: 'self_delete' };
-  const rows = await getStaff_();
-  const idx = rows.findIndex(function (r) { return r.id === staffId; });
-  if (idx === -1) return { ok: false, err: 'not_found' };
-  rows.splice(idx, 1);
-  rows.forEach(function (r) {
-    if (r.mentorId === staffId) { r.mentorId = ''; r.mentorStatus = ''; r.updated = new Date().toISOString(); }
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === staffId; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    rows.splice(idx, 1);
+    rows.forEach(function (r) {
+      if (r.mentorId === staffId) { r.mentorId = ''; r.mentorStatus = ''; r.updated = new Date().toISOString(); }
+    });
+    return { ok: true };
   });
-  await saveStaff_(rows);
-  return { ok: true };
 }
 
 /* For the one real duplicate this exists to fix — someone who accidentally
