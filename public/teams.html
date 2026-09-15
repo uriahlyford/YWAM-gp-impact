@@ -468,6 +468,11 @@ button.srBarRow:active { opacity:.72; }
 .accCard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:14px; }
 .accRow { border-bottom:1px solid var(--border); }
 .accRow:last-child { border-bottom:0; }
+/* Which row is open should be obvious at a glance, not just inferable from
+   the chevron — this is what "confusing to see what profile you selected"
+   meant more than any single control being broken. */
+.accRow.open { background:var(--surface2); }
+.accRow.open .accHead { color:var(--accent); }
 /* The week-picker used to sit in its own card above the accordion — two
    boxes for one idea. It's the accCard's own first section now, styled to
    match an accRow's own padding so the seam isn't visible. */
@@ -1105,7 +1110,7 @@ var S = {
      so more than one can sit on the same page without their state colliding. */
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovDeptOf:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
-  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, broadcastDraft:'',
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, broadcastDraft:'',
   adminOkrAcc:{},
   /* The "jump to any ministry" picker on My Ministry — admin can pick any
      department/ministry on their campus; everyone else's options resolve to
@@ -1554,7 +1559,7 @@ function logout(){
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
-  S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminEditDraft=null; S.adminPinDraft={}; S.adminCode=''; S.adminCampusTab=null;
+  S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminEditDraft=null; S.adminPinDraft={}; S.adminCode=''; S.adminCampusTab=null; S.adminSub=null;
   render();
 }
 
@@ -1843,7 +1848,7 @@ function renderMenu(){
 var ACC_CHEVRON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
 function accRowHtml(bucketName, id, title, summaryClosed, bodyFn){
   var open = !!S[bucketName][id];
-  return '<div class="accRow">'+
+  return '<div class="accRow'+(open?' open':'')+'">'+
     '<button class="accHead" data-acc="'+id+'" data-accbucket="'+bucketName+'">'+
       '<span><div class="accTitle">'+title+'</div><div class="accSummary">'+
         (open?esc(t('Tap to collapse')):summaryClosed)+'</div></span>'+
@@ -3873,17 +3878,45 @@ function myOkrHtml(){
    S.adminStaff loads once per visit, lazily, the same pattern the
    ministry-oversight cards already use — nothing here rides along on
    getMyBoot, since almost nobody who opens the app is an admin. */
+/* Admin used to be one long scroll — an announcement box, the ministry KPI
+   editor, approvals, merge, and the whole staff directory, all stacked on
+   top of each other. Finding "did I already approve so-and-so" meant
+   scrolling past the KPI picker every time. Splitting it into its own
+   sub-pages (a chip row, same pattern as the campus tabs below) means each
+   visit shows only the one thing you came here for. */
+var ADMIN_SUBS = [
+  { id:'accounts', label:'Accounts', emoji:'👤' },
+  { id:'kpis', label:'Ministry KPIs', emoji:'🗂️' },
+  { id:'broadcast', label:'Announcements', emoji:'📣' }
+];
 function adminHtml(){
   var h='<button class="linkbtn" id="adminBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
   h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
 
-  h+='<h3>📣 '+esc(t('Send an announcement'))+'</h3><div class="card">'+
+  var pendingN = (S.adminStaff||[]).filter(function(s){ return !s.active; }).length;
+  var activeSub = ADMIN_SUBS.some(function(x){ return x.id===S.adminSub; }) ? S.adminSub : ADMIN_SUBS[0].id;
+  S.adminSub = activeSub;
+  h+='<div class="deptChips">'+ADMIN_SUBS.map(function(x){
+    var badge = (x.id==='accounts' && pendingN) ? ' · '+pendingN : '';
+    return '<button class="deptChip'+(activeSub===x.id?' on':'')+'" data-adminsub="'+x.id+'">'+
+      x.emoji+' '+esc(t(x.label))+badge+'</button>';
+  }).join('')+'</div>';
+
+  if(activeSub==='broadcast') return h+adminBroadcastHtml_();
+  if(activeSub==='kpis') return h+adminKpisHtml_();
+  return h+adminAccountsHtml_();
+}
+
+function adminBroadcastHtml_(){
+  return '<div class="card">'+
     '<p class="sub" style="margin:0 0 8px">'+esc(t('Goes straight to everyone’s notification bell.'))+'</p>'+
     '<div class="field"><textarea id="broadcastText" maxlength="500" placeholder="'+
       esc(t('What do you want everyone to know?'))+'">'+esc(S.broadcastDraft||'')+'</textarea></div>'+
     '<button class="btn" id="broadcastSendBtn">'+esc(t('Send to everyone'))+'</button></div>';
+}
 
-  h+='<h3>🗂️ '+esc(t('Ministry KPIs'))+'</h3><div class="card">';
+function adminKpisHtml_(){
+  var h='<div class="card">';
   h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Pick a ministry to edit what it tracks.'))+'</p>';
   var amCampus = CAMPUSES.some(function(c){ return c.id===S.adminMetricCampus; }) ? S.adminMetricCampus : CAMPUSES[0].id;
   var amDeps = getDepartments(amCampus);
@@ -3908,10 +3941,12 @@ function adminHtml(){
   } else {
     h += '<p class="sub" style="margin:0">'+esc(t('No ministries under this department.'))+'</p>';
   }
-  h+='</div>';
+  return h+'</div>';
+}
 
-  if(S.adminStaff===null) return h+'<p class="sub">'+esc(t('Loading…'))+'</p>';
-
+function adminAccountsHtml_(){
+  if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
+  var h='';
   var list=S.adminStaff;
   var pending=list.filter(function(s){ return !s.active; });
   if(pending.length){
@@ -3960,24 +3995,30 @@ function adminHtml(){
 
   /* Filters by hiding/showing the wrapper divs directly, no render() involved
      — a page with real staff numbers on it shouldn't rebuild the whole
-     Admin screen (including the Ministry KPI editor above) on every
-     keystroke just to narrow a list. */
+     Admin screen on every keystroke just to narrow a list. */
   h+='<div class="field" style="margin:10px 0 8px"><input type="text" id="adminSearch" placeholder="'+
     esc(t('Search by name or username…'))+'"></div>'+
     '<p class="emptyLine" id="adminSearchEmpty" style="display:none">'+esc(t('No one matches that search.'))+'</p>';
-  var byCampus_ = function(campusList){
-    campusList.forEach(function(s){
-      var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
-      var summary = esc('@'+s.username+' · '+t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status);
-      var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
-      h+='<div data-adminrow="'+esc((s.name+' '+s.username).toLowerCase())+'">'+
-        accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); })+
-      '</div>';
-    });
-  };
   var shown = activeTab==='__other' ? other : list.filter(function(s){ return s.campus===activeTab; });
-  if(!shown.length) h+='<p class="sub" style="margin:0 0 8px">'+esc(t('No accounts yet.'))+'</p>';
-  byCampus_(shown);
+  if(!shown.length){
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('No accounts yet.'))+'</p>';
+    return h;
+  }
+  // One bordered box holding every row, not a loose stack of separate cards —
+  // "confusing to see what profile you selected" was as much about there
+  // being no visible boundary around the list as it was about which row was
+  // open (accRowHtml's own .open highlight, and closing any other open row
+  // on tap, handle that half).
+  h+='<div class="accCard">';
+  shown.forEach(function(s){
+    var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
+    var summary = esc('@'+s.username+' · '+t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status);
+    var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
+    h+='<div data-adminrow="'+esc((s.name+' '+s.username).toLowerCase())+'">'+
+      accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); })+
+    '</div>';
+  });
+  h+='</div>';
   return h;
 }
 
@@ -4078,6 +4119,10 @@ function bindAdmin(){
   if(S.view!=='admin' || !S.me || !S.me.isAdmin) return;
   var back=document.getElementById('adminBack');
   if(back) back.onclick=function(){ S.view='week'; render(); };
+
+  document.querySelectorAll('[data-adminsub]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.adminSub=b.getAttribute('data-adminsub'); render(); };
+  });
 
   document.querySelectorAll('[data-admincampustab]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.adminCampusTab=b.getAttribute('data-admincampustab'); render(); };
@@ -6443,7 +6488,15 @@ function bind(){
   if(bds) bds.onchange=function(){ S.baseDept=bds.value; render(); };
   document.querySelectorAll('[data-acc]').forEach(function(btn){
     btn.onclick=function(){
-      var id=btn.getAttribute('data-acc'), bucket=S[btn.getAttribute('data-accbucket')];
+      var id=btn.getAttribute('data-acc'), bucketName=btn.getAttribute('data-accbucket'), bucket=S[bucketName];
+      var opening = !bucket[id];
+      // Admin's account list only, not every accordion in the app — this is
+      // what makes "which profile am I looking at" unambiguous there: at
+      // most one row open at a time, instead of a tap here and a tap there
+      // leaving three people's edit forms stacked on screen at once.
+      if(bucketName==='adminAcc' && opening){
+        Object.keys(bucket).forEach(function(k){ bucket[k]=false; });
+      }
       bucket[id]=!bucket[id]; render();
     };
   });
