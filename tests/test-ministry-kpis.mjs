@@ -92,7 +92,7 @@ await page.route('**/api', function (r) {
 await page.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })));
 await page.goto(BASE + '/teams.html', { waitUntil: 'load' });
 await page.waitForSelector('nav.bottom button', { timeout: 15000 });
-await page.click('nav.bottom button:nth-child(2)');          // My week
+await page.click('nav.bottom button:nth-child(1)');          // My week
 await page.click('#goMinistryFromMe');                        // My Ministry — its own full page now
 await page.waitForTimeout(300);
 // the KPI cards live inside collapsed-by-default accordion rows now
@@ -185,7 +185,7 @@ function ok(name, cond, extra) {
   await p3.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })));
   await p3.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await p3.waitForSelector('nav.bottom button', { timeout: 15000 });
-  await p3.click('nav.bottom button:nth-child(2)');
+  await p3.click('nav.bottom button:nth-child(1)');
   await p3.click('#goMinistryFromMe');
   await p3.waitForTimeout(300);
   await p3.click('[data-acc="kpiWeek"]');
@@ -343,7 +343,7 @@ function ok(name, cond, extra) {
   await p2.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })));
   await p2.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await p2.waitForSelector('nav.bottom button');
-  await p2.click('nav.bottom button:nth-child(2)');
+  await p2.click('nav.bottom button:nth-child(1)');
   await p2.click('#goMinistryFromMe');
   await p2.waitForTimeout(300);
   await p2.click('[data-acc="kpiWeek"]');

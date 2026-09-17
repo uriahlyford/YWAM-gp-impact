@@ -161,7 +161,7 @@ for (const [file, wait, label] of [
 ]) {
   const { ctx, p } = await open(file, wait, false);
   if (file === 'teams.html') {
-    // My Database, not Base, is what the app opens on now — get to Base
+    // My Home, not Base, is what the app opens on now — get to Base
     // explicitly rather than assuming it's the landing tab.
     await p.click('nav.bottom [data-tab="base"]');
     await p.waitForTimeout(500);

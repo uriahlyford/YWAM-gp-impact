@@ -4,7 +4,7 @@
    anywhere your thumb was likely to land. Two rules said so:
 
      .sliderWrap input[type=range]  touch-action: none    (every 1-10 question)
-     .quickBar                      touch-action: pan-x   (top of My Database)
+     .quickBar                      touch-action: pan-x   (top of My Home)
 
    `none` forbids panning outright and `pan-x` permits only the horizontal axis,
    so a gesture starting on either could not scroll the page at all. Both are
