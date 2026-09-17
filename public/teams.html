@@ -499,6 +499,13 @@ button.srBarRow:active { opacity:.72; }
 /* the ring and its sentence sit on one line, so the figure reads at a glance */
 .heroRow { display:flex; align-items:center; gap:11px; margin-top:8px; }
 .heroRow .heroTrend { margin-top:0; }
+/* This week's actual goal wording, at a glance from the dashboard instead of
+   only as a X/Y count — pushed to the far right of the Weekly Goals row by
+   margin-left:auto, capped and ellipsised so three full sentences (up to
+   200 chars each) can never force the row to wrap or the page to scroll
+   sideways on a narrow phone. */
+.heroGoalsPreview { margin-left:auto; text-align:right; font-size:11.5px; line-height:1.4; color:var(--onDarkFaint); max-width:46%; overflow:hidden; min-width:0; }
+.heroGoalsPreview div { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* My Home reuses these exact hero rows for stats that jump to a section
    on tap — Base's own rows stay plain divs, so the reset only applies when
    the tag is actually a button, and only those get the pointer cursor. */
@@ -2835,7 +2842,9 @@ function miniDashboardHtml(){
     '<div class="heroNum" data-count="'+st+'">0</div>'+
     '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('DAY STREAK'))+'</div>'+
     '<button class="heroRow" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
-      '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div></button>'+
+      '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div>'+
+      (written.length?'<div class="heroGoalsPreview">'+written.map(function(g){ return '<div>'+esc(g.text)+'</div>'; }).join('')+'</div>':'')+
+    '</button>'+
     '<button class="heroRow" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
       '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+
       (habitBest>0?'</div><div class="heroSubtext">🔥 '+esc(gpT('best {n}d streak',{n:habitBest}))+'</div>':'</div>')+'</button>'+
