@@ -500,12 +500,18 @@ button.srBarRow:active { opacity:.72; }
 .heroRow { display:flex; align-items:center; gap:11px; margin-top:8px; }
 .heroRow .heroTrend { margin-top:0; }
 /* This week's actual goal wording, at a glance from the dashboard instead of
-   only as a X/Y count — pushed to the far right of the Weekly Goals row by
-   margin-left:auto, capped and ellipsised so three full sentences (up to
-   200 chars each) can never force the row to wrap or the page to scroll
-   sideways on a narrow phone. */
-.heroGoalsPreview { margin-left:auto; text-align:right; font-size:11.5px; line-height:1.4; color:var(--onDarkFaint); max-width:46%; overflow:hidden; min-width:0; }
+   only as a X/Y count — sits at the right of the Weekly Goals row, top-aligned
+   with the ring (align-items:flex-start on this one row only, via .withList)
+   rather than centered against three lines, which is what made it read as a
+   stray floating column instead of part of the same row. Each dot carries the
+   same warm→amber→cobalt→green colour the ring and every goal's own progress
+   ring already use, so this reads as more of that language, not a new one.
+   Ellipsised per line so up to three full sentences (up to 200 chars each)
+   can never force the row to wrap or the page to scroll sideways. */
+.heroRow.withList { align-items:flex-start; }
+.heroGoalsPreview { margin-left:auto; padding-top:1px; text-align:right; font-size:12px; font-weight:600; line-height:1.6; color:var(--onDark); max-width:48%; overflow:hidden; min-width:0; }
 .heroGoalsPreview div { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.heroGoalDot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; vertical-align:middle; }
 /* My Home reuses these exact hero rows for stats that jump to a section
    on tap — Base's own rows stay plain divs, so the reset only applies when
    the tag is actually a button, and only those get the pointer cursor. */
@@ -2841,9 +2847,11 @@ function miniDashboardHtml(){
     '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
     '<div class="heroNum" data-count="'+st+'">0</div>'+
     '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('DAY STREAK'))+'</div>'+
-    '<button class="heroRow" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
+    '<button class="heroRow'+(written.length?' withList':'')+'" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
       '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div>'+
-      (written.length?'<div class="heroGoalsPreview">'+written.map(function(g){ return '<div>'+esc(g.text)+'</div>'; }).join('')+'</div>':'')+
+      (written.length?'<div class="heroGoalsPreview">'+written.map(function(g){
+        return '<div><span class="heroGoalDot" style="background:'+gpRingColor(goalItemPct(g))+'"></span>'+esc(g.text)+'</div>';
+      }).join('')+'</div>':'')+
     '</button>'+
     '<button class="heroRow" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
       '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+
