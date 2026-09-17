@@ -438,7 +438,7 @@ button.srBarRow:active { opacity:.72; }
 .chip { background:var(--banner); border:1px solid var(--bannerBorder); color:var(--ink); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:700; }
 .chip.blue { background:var(--accentSoft); border-color:var(--accentSoftBorder); }
 
-/* Quick-jump bar at the top of My Database — one tap to any section folded in
+/* Quick-jump bar at the top of My Home — one tap to any section folded in
    from the old My week / Me tabs, instead of scrolling past all of them. A
    single scrolling row rather than wrapping onto several, so it reads as one
    strip of chips instead of pushing everything else down the page. */
@@ -447,7 +447,7 @@ button.srBarRow:active { opacity:.72; }
   /* Both axes, named explicitly. `pan-x` alone reads as "this element permits
      horizontal panning and nothing else", so a vertical swipe starting on the
      strip was not allowed to scroll the page at all — the strip is full width
-     and sits at the top of My Database, so that was a dead band across the
+     and sits at the top of My Home, so that was a dead band across the
      first thing you touch. With both, the browser picks by direction: sideways
      scrolls the chips, up and down scrolls the page. */
   touch-action:pan-x pan-y; }
@@ -487,7 +487,7 @@ button.srBarRow:active { opacity:.72; }
 /* the base hero — same black card and amber figures as the dashboard, because
    it is the dashboard: this page now leads with how the base is doing. */
 .hero { background:var(--headerBg); color:var(--onDark); border-radius:14px; padding:17px 17px 15px; margin-bottom:14px; }
-/* My Database's own hero only — a plain outline like any other card's,
+/* My Home's own hero only — a plain outline like any other card's,
    just in the dark-background pair (.card's own var(--border) is tuned
    for a light surface); Base's hero stays as it was. */
 .hero.myHero { border:1px solid var(--onDarkBorder); }
@@ -499,7 +499,7 @@ button.srBarRow:active { opacity:.72; }
 /* the ring and its sentence sit on one line, so the figure reads at a glance */
 .heroRow { display:flex; align-items:center; gap:11px; margin-top:8px; }
 .heroRow .heroTrend { margin-top:0; }
-/* My Database reuses these exact hero rows for stats that jump to a section
+/* My Home reuses these exact hero rows for stats that jump to a section
    on tap — Base's own rows stay plain divs, so the reset only applies when
    the tag is actually a button, and only those get the pointer cursor. */
 button.heroRow, button.heroSubRow { width:100%; background:none; border:none; padding:0;
@@ -768,7 +768,7 @@ input[type=text].addGoalInput { flex:1; border:1.5px solid var(--border2); borde
 
 /* Personal dashboard — literally Base's own .hero (same background, radius,
    padding, ring rows, sub row), populated with personal figures instead of
-   base ones, so My Database opens looking like the same app instead of a
+   base ones, so My Home opens looking like the same app instead of a
    lighter-weight corner of it. The greeting + customize gear sit above it,
    unboxed, the same relationship Base has to its own separate white profile
    card — customizing still colors/photographs the hero itself (gear moved
@@ -1101,7 +1101,7 @@ var S = {
   dbCustomize:false,
   menuOpen:false, bellOpen:false,
   /* A single "cleared before" cutoff (device-local, like gp-theme), not a
-     per-item read flag — Clear on the bell or on My Database's Updates card
+     per-item read flag — Clear on the bell or on My Home's Updates card
      is the same button wherever it's pressed, hiding everything up to now.
      Nothing pending is lost: a cleared leave/1-on-1 request still has its own
      home (Leave Request, Mentorship, Team) — this only tidies the FYI feed. */
@@ -1368,7 +1368,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden) g
    delta, so they all share one save path and it's the one place offline
    queueing needs wiring in. cb(ok) fires once either way: true for a save
    that reached the server OR queued cleanly, false for a real failure. */
-/* One line at the top of My Database whenever anything is still waiting to
+/* One line at the top of My Home whenever anything is still waiting to
    sync — the only visible sign this mechanism exists at all otherwise, so
    it's what tells someone their edit is safe rather than lost. */
 function gpQueueBannerHtml_(){
@@ -1619,15 +1619,17 @@ function render(){
   /* Outline icons from the redesign mockup, in place of the emoji this bar
      used before — same four glyphs (house / stacked database / two people /
      heart), traced as stroke paths so they inherit the tab's own color
-     instead of carrying an emoji font's fixed hue. */
+     instead of carrying an emoji font's fixed hue. The house belongs to
+     'week' (My Home) and the stacked database to 'base' — swapped from the
+     original mockup pairing so each tab's icon actually matches its name. */
   var NAV_SVG_OPEN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
   var NAV_ICONS = {
-    base: NAV_SVG_OPEN+'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>',
-    week: NAV_SVG_OPEN+'<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+    base: NAV_SVG_OPEN+'<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+    week: NAV_SVG_OPEN+'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>',
     team: NAV_SVG_OPEN+'<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3.5 20c.6-3.4 3-5.4 5.5-5.4s4.9 2 5.5 5.4"/><path d="M14.8 15c1.9.2 3.6 1.9 4.1 5"/></svg>',
     health: NAV_SVG_OPEN+'<path d="M12 20.5s-7.5-4.6-9.8-9.6C.6 7.3 2.4 4 5.7 4c2 0 3.5 1.1 4.3 2.5C10.8 5.1 12.3 4 14.3 4c3.3 0 5.1 3.3 3.5 6.9C15.5 15.9 12 20.5 12 20.5Z"/></svg>'
   };
-  var tabs=[['base','Base'],['week','My Database'],['team','Team'+(reqN?' ('+reqN+')':'')],['health','Health']];
+  var tabs=[['week','My Home'],['base','Base'],['team','Team'+(reqN?' ('+reqN+')':'')],['health','Health']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+NAV_ICONS[tab[0]]+'</span>'+t(tab[1])+'</button>';
@@ -1645,7 +1647,7 @@ function render(){
   else m.innerHTML=profileHtml();
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
-     Request from partway down My Database lands on whatever the leave screen
+     Request from partway down My Home lands on whatever the leave screen
      shows at that same pixel offset, which usually isn't its top. Re-renders
      of the SAME screen (an accordion opening, a slider dragging) must not
      reset scroll, so this only fires when S.view actually changed. */
@@ -1731,7 +1733,7 @@ var BELL_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stro
 /* ---- notification bell ----
    Same panel style as the hamburger drawer, on the opposite side of the
    header. Read-only — the Approve/Deny and Accept/Decline buttons live on
-   My Database's Updates card (and Leave Request / Mentorship), not here, so
+   My Home's Updates card (and Leave Request / Mentorship), not here, so
    there's exactly one place each of those actions is wired up. */
 function renderNotifPanel(){
   var root = document.getElementById('notifRoot');
@@ -1959,7 +1961,7 @@ function baseHtml(){
   var LD=LD_DEPT, CS=CS_DEPT;
 
   /* The name-and-face greeting used to open here, but Base is ministry stats,
-     not a personal page — it now lives on My Database's own hero instead. */
+     not a personal page — it now lives on My Home's own hero instead. */
   var h='';
 
   /* Asked once of the people who have not answered: these two are the only facts
@@ -2653,7 +2655,7 @@ function phaseBanner(phase, wk){
       ' <button class="linkbtn inline" id="jumpGoals">Set them now</button></div>';
   if(phase==='review'){
     /* Goals-incomplete used to show as its own big banner here — it's in the
-       notification bell now (see notifItems_) so My Database isn't stacking
+       notification bell now (see notifItems_) so My Home isn't stacking
        two "end of the week" banners on top of each other. */
     if(!thisWeekLogs().length)
       return '<div class="banner big">💚 <strong>'+esc(t('End of the week.'))+'</strong> No days logged yet — '+
@@ -2713,7 +2715,7 @@ function smartGoalFormHtml(draft){
 
 /* Who you mentor, and who mentors you — from the redesign mockup. The data
    already exists (S.mentees from getMyMentees, S.me.mentorId from the
-   profile); this just gives it a home on My Database instead of only living
+   profile); this just gives it a home on My Home instead of only living
    on Team. Tapping a mentee opens their page the same way Team's directory
    does — it just also has to switch tabs to get there. */
 /* A 1-on-1 icon button next to a mentor/mentee row — either side of the
@@ -2766,7 +2768,7 @@ function mentorshipCardHtml(){
   return h+'</div>';
 }
 
-/* The top of My Database — Base's own hero card, styled identically and
+/* The top of My Home — Base's own hero card, styled identically and
    populated with personal figures (streak, this week's goals, today's
    habits, PTO left) instead of the base's. A gear icon above it reveals a
    hidden customize panel — a free color wheel and a background photo — for
@@ -2878,7 +2880,7 @@ function notifActionBtnsHtml_(okAttr, okId, noAttr, noId, okLabel, noLabel){
     '<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px;color:var(--faint)" data-'+noAttr+'="'+esc(noId)+'">'+esc(noLabel)+'</button>'+
   '</span>';
 }
-/* The full list, unfiltered — shared by the My Database card below and the
+/* The full list, unfiltered — shared by the My Home card below and the
    header bell, so the two can never show a different set of events. Nothing
    is stored for this: it's read straight off state the page already has
    (trips, tripRequests, oneOnOnes), the same way streaks and badges are
@@ -2931,7 +2933,7 @@ function notifItems_(){
     }
   }
   /* End of the week, goals not all the way there — used to be a big banner
-     inline on My Database; it's a bell item instead now so the page isn't
+     inline on My Home; it's a bell item instead now so the page isn't
      stacking two "end of the week" banners at once. Same Friday-dated
      "when" as the health nudge above, so it clears with the rest of the
      week and comes back fresh next week. */
@@ -2952,7 +2954,7 @@ function notifItems_(){
      always a moment later, so the item is straight back. It's meant to
      stay until the email is actually added, not until someone taps Clear.
      bellOnly: this is true for nearly every existing account at once, so an
-     inline card on My Database would be permanent, above-the-fold clutter
+     inline card on My Home would be permanent, above-the-fold clutter
      for almost everybody — the bell (and its dot) is visible enough. */
   if(S.me && !(S.profile && S.profile.email)){
     items.push({ when:new Date().toISOString(), text:t('Add your email to your profile'),
@@ -2965,7 +2967,7 @@ function notifItems_(){
 
 /* What's actually shown: everything since the last Clear. A single "cleared
    before" cutoff rather than a per-item read flag — Clear on the bell or on
-   My Database is the same button, so both can never disagree about what's
+   My Home is the same button, so both can never disagree about what's
    left. Clearing an actionable row (a mentee's leave request, an incoming
    1-on-1) only tidies this feed — the request itself is still sitting in
    Leave Request / Mentorship / Team, waiting on you, either way. */
@@ -3033,7 +3035,7 @@ function homeHtml(){
   h += weekStatsHtml();
   h += leaveEntryHtml();
 
-  // Profile and settings live under My Database now rather than owning a tab of their own.
+  // Profile and settings live under My Home now rather than owning a tab of their own.
   h+='<button class="card leaveEntry" id="goProfileFromMe">'+
     '<span class="leaveEntryIcon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-7 8-7s7 2.5 8 7"/></svg></span>'+
     '<span style="flex:1"><div style="font-size:13.5px;font-weight:700">'+esc(t('Profile & settings'))+'</div></span>'+
@@ -3460,7 +3462,7 @@ function levelPrevSubHtml_(p, metric, carried, typed){
    a metric (dept|ministry|metric) to pull its progress live — this is a
    metric asking the question the other way, for whoever is typing the
    number: does this feed anything? Reads S.base.okrs, already on the page
-   for everyone by boot time (My Database's roll-up needs it too), so no
+   for everyone by boot time (My Home's roll-up needs it too), so no
    extra fetch. Scoped to the metric's own campus, same as krProgress(). */
 function metricOkrNote_(campus, dept, ministry, metric){
   var key = dept+'|'+ministry+'|'+metric;
@@ -3601,7 +3603,7 @@ function kpiCardHtml(wk){
 
   /* ---- what happened today / what is true of the whole week ----
      Collapsed by default: these boxes are useful when you have numbers to
-     log, but sitting open on every visit to My Database pushes everything
+     log, but sitting open on every visit to My Home pushes everything
      else below the fold. The week picker used to be a card of its own above
      this one — now it's just this box's first section, so switching weeks
      and logging numbers read as one thing instead of two. */
@@ -3803,7 +3805,7 @@ function oversightKpiCardHtml_(dept, ministry, data){
   return h;
 }
 
-/* Entry point on My Database — a tappable card like Leave Request's, so the
+/* Entry point on My Home — a tappable card like Leave Request's, so the
    Ministry Tracker is its own full page instead of an inline accordion.
    Generic label for everyone ("My Ministry"), personalized subtitle once
    opened — same shape as Leave Request's card always saying "Leave
@@ -3817,7 +3819,7 @@ function myMinistryEntryHtml(){
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
 }
 
-/* Same "tappable card on My Database, full page behind it" shape as My
+/* Same "tappable card on My Home, full page behind it" shape as My
    Ministry just above — OKRs used to be an inline accordion here too,
    which made the page long whether or not you had anything to update this
    week. The department/ministry context now shows once, at the top of the
@@ -3832,7 +3834,7 @@ function myOkrEntryHtml(){
 }
 function myOkrHtml(){
   var wk = thisWeek(), qNow = Math.min(4, Math.floor((wk-1)/13)+1);
-  var h='<button class="linkbtn" id="okrBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  var h='<button class="linkbtn" id="okrBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
   h+='<h2>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h2>';
   h+='<p class="sub" style="margin:0 0 2px">'+esc(t(S.me.dept))+(S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</p>';
   h+=okrSectionHtml(S.me, true, true);
@@ -3890,7 +3892,7 @@ var ADMIN_SUBS = [
   { id:'broadcast', label:'Announcements', emoji:'📣' }
 ];
 function adminHtml(){
-  var h='<button class="linkbtn" id="adminBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  var h='<button class="linkbtn" id="adminBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
   h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
 
   var pendingN = (S.adminStaff||[]).filter(function(s){ return !s.active; }).length;
@@ -4460,7 +4462,7 @@ function metricEditAdd_(target){
    separate sync step. */
 function myMinistryHtml(){
   var oversees = myOversightDept_();
-  var h='<button class="linkbtn" id="ministryBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  var h='<button class="linkbtn" id="ministryBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
   h+='<h2>'+esc(t('My Ministry'))+'</h2>';
   if(S.me.ministry){
     var minName=t(S.me.ministry);
@@ -5080,7 +5082,7 @@ function weekClear(){
 /* --- leave request ---
    A full screen (matching the mockup) rather than an inline card: the PTO
    allowance, the approval queue, and the request form all need room, and
-   burying them in an accordion inside My Database would hide the one figure
+   burying them in an accordion inside My Home would hide the one figure
    (days used against the 30-day cap) staff most need at a glance.
 
    Doubles as the mentor check-in: submitting a request is how you tell your
@@ -5109,7 +5111,7 @@ function leaveEntryHtml(){
 }
 
 function leaveHtml(){
-  var h='<button class="linkbtn" id="leaveBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Database'))+'</button>';
+  var h='<button class="linkbtn" id="leaveBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
   h+='<h2>'+esc(t('Leave Request'))+'</h2>';
   h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
 
@@ -6016,7 +6018,7 @@ function bindHome(){
   };
 
   /* Mentorship card's "open" arrow — same fetch the mentor screen's own
-     mentee list uses, but from My Database this also has to switch to that
+     mentee list uses, but from My Home this also has to switch to that
      screen to land on the detail view. */
   document.querySelectorAll('[data-openmentee]').forEach(function(b){
     b.onclick=function(){

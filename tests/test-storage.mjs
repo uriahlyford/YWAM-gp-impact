@@ -255,7 +255,7 @@ function isKhmer(s) { return /[ក-៿]/.test(String(s || '')); }
   if (loggedIn) {
     const tabs = (await p.$$eval('nav.bottom button', function (b) { return b.map(function (x) { return x.textContent.trim(); }).join(' | '); }));
     ok('staff page, storage blocked: all four tabs are there',
-      ['Base', 'My Database', 'Team', 'Health'].every(function (x) { return tabs.indexOf(x) > -1; }),
+      ['Base', 'My Home', 'Team', 'Health'].every(function (x) { return tabs.indexOf(x) > -1; }),
       tabs);
   }
   await ctx.close();

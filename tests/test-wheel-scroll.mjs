@@ -1,5 +1,5 @@
 /* A trackpad two-finger swipe never travels in a perfectly straight line, so
-   a "scroll the page" gesture over My Database's quick-jump strip always
+   a "scroll the page" gesture over My Home's quick-jump strip always
    carries a little sideways drift. touch-action (see test-touch-scroll.mjs)
    only ever covered a touchscreen — a trackpad sends wheel events, not touch
    events, and a wheel event with any horizontal component gets claimed

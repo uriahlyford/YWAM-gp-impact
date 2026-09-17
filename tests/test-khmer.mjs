@@ -160,8 +160,9 @@ const SCREENS = [
   { file: 'index.html', wait: '.hero', name: 'dashboard', steps: [] },
   { file: 'index.html', wait: '.hero', name: 'log form', steps: ['[data-view="log"]'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Base', steps: [] },
-  // My week and Me merged into one "My Database" tab (still view id 'week').
-  { file: 'teams.html', wait: 'nav.bottom button', name: 'My Database', steps: ['nav.bottom button:nth-child(2)'] },
+  // My week and Me merged into one "My Home" tab (still view id 'week') —
+  // now the first nav button, swapped with Base.
+  { file: 'teams.html', wait: 'nav.bottom button', name: 'My Home', steps: ['nav.bottom button:nth-child(1)'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Team', steps: ['nav.bottom button:nth-child(3)'] },
   { file: 'teams.html', wait: 'nav.bottom button', name: 'Health', steps: ['nav.bottom button:nth-child(4)'] },
 ];
@@ -196,7 +197,7 @@ for (const sc of SCREENS) {
 /* ---------- 3. a sentence with a number in it keeps its number ---------- */
 {
   const { ctx, p } = await open('teams.html', 'nav.bottom button', true);
-  await p.click('nav.bottom button:nth-child(2)');
+  await p.click('nav.bottom button:nth-child(1)');
   await p.waitForTimeout(700);
   const r = await p.evaluate(`(function(){
     var txt=document.getElementById('main').textContent;

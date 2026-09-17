@@ -74,7 +74,7 @@ async function open(saveDelay) {
   await page.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sokha', pin: '1234' })));
   await page.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await page.waitForSelector('nav.bottom button', { timeout: 15000 });
-  await page.click('nav.bottom button:nth-child(2)');            // My Database
+  await page.click('nav.bottom button:nth-child(1)');            // My Home
   await page.waitForSelector('[data-habit]', { timeout: 10000 });
   await page.waitForTimeout(300);
   return { ctx, page, saves };
@@ -119,7 +119,7 @@ const lit = (page, id) => page.$eval('[data-habit="' + id + '"]', b => b.classLi
 
   /* And the rest of the page has to stay alive — S.busy is shared with every
      other button, so a hung habit save used to kill the whole screen. */
-  await page.click('nav.bottom button:nth-child(1)');
+  await page.click('nav.bottom button:nth-child(2)');            // away, to Base
   await page.waitForTimeout(400);
   const movedAway = await page.evaluate(() => !document.querySelector('[data-habit]'));
   ok('the rest of the app still works while it hangs', movedAway);

@@ -151,7 +151,7 @@ await page.goto('http://localhost:4401/teams.html', { waitUntil: 'load' });
 await page.waitForSelector('.hero', { timeout: 15000 });
 await page.waitForTimeout(1200);
 
-// The app opens on My Database now, not Base — get there explicitly rather
+// The app opens on My Home now, not Base — get there explicitly rather
 // than assuming it's the landing tab.
 await page.click('nav.bottom [data-tab="base"]');
 await page.waitForTimeout(600);
@@ -163,16 +163,16 @@ await page.evaluate(() => { Object.keys(S.baseAcc).forEach(k => { S.baseAcc[k] =
 await page.waitForTimeout(500);
 
 console.log('=== BASE TAB ===');
-// 1. the name-and-face greeting moved to My Database (a personal page; Base
+// 1. the name-and-face greeting moved to My Home (a personal page; Base
 // is ministry stats) — Base opens straight on its own hero now, nothing above it.
-console.log('profile card on Base: ' + await page.evaluate(() => document.querySelector('.baseMe') ? 'WRONG, still here' : 'gone (moved to My Database)'));
+console.log('profile card on Base: ' + await page.evaluate(() => document.querySelector('.baseMe') ? 'WRONG, still here' : 'gone (moved to My Home)'));
 
 // 2. every dashboard section present — Base's headings are accordion titles
 // now, not <h3>s (all forced open above, so every one of them is present)
 const sections = await page.$$eval('#main .accTitle', els => els.map(e => e.textContent.trim()));
 console.log('sections (' + sections.length + '):\n  ' + sections.join('\n  '));
 
-// 2b. ...and it's on My Database's hero head instead, name/ministry/department
+// 2b. ...and it's on My Home's hero head instead, name/ministry/department
 // right where the gear icon already was.
 await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(600);
@@ -308,7 +308,7 @@ if (ydcRow) {
   await page.click('#ddClose');
 }
 
-// 10a. OKRs: off Base, on My Database (mine only), and on a teammate's page
+// 10a. OKRs: off Base, on My Home (mine only), and on a teammate's page
 console.log('\n=== OKRs ===');
 console.log('OKR heading on Base:  ' + await page.evaluate(() =>
   Array.from(document.querySelectorAll('#main h3')).some(h => /OKR/.test(h.textContent))));
@@ -317,7 +317,7 @@ console.log('tabs (no OKR tab):    ' + tabs.join(' | '));
 
 await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(1100);
-console.log('\n-- My Database --');
+console.log('\n-- My Home --');
 console.log('OKR entry card: ' + await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
 await page.click('#goOkrFromMe');                             // OKRs — its own full page now
 await page.waitForTimeout(1100);
