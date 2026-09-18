@@ -774,6 +774,29 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .deptChips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
 .deptChip { border:1.5px solid var(--border2); background:var(--bg); border-radius:999px; padding:7px 13px; font-size:12.5px; cursor:pointer; color:var(--muted); font-family:inherit; }
 .deptChip.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
+/* Team → Structure: the org chart as nested cards. Leads wear the crown;
+   children hang off a rule on the left, the way the Canva chart draws it. */
+.teamModeSeg { margin-bottom:8px; }
+.orgNode { border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:10px 12px; margin-bottom:10px; min-width:0; }
+.orgNode.kind-team { border-color:var(--accent); }
+.orgHead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.orgTitle { font-weight:700; font-size:14.5px; }
+.orgKind { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--faint); font-weight:700; margin-left:auto; }
+.orgPeople { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; }
+.orgPerson { display:inline-flex; align-items:center; gap:6px; background:none; border:0; padding:2px 0; font:inherit; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; }
+.orgPerson.lead span { font-weight:700; }
+.orgEmpty { font-size:12px; color:var(--faint); margin-top:6px; }
+.orgNode.compact { padding:7px 10px; margin-bottom:6px; }
+.orgNode.compact .orgTitle { font-size:13.5px; }
+.orgChildren { margin:10px 0 0 2px; padding-left:8px; border-left:2px solid var(--border); }
+.orgChildren .orgNode:last-child { margin-bottom:0; }
+.orgMore { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:4px; }
+.orgMoreLabel { font-size:11px; color:var(--faint); flex-basis:100%; }
+.orgChip { font-size:12px; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:3px 9px; }
+.orgPicker { margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+.orgRename { flex:1; min-width:120px; }
+.crownBtn { margin-left:auto; background:none; border:1px solid var(--border); border-radius:8px; padding:2px 6px; cursor:pointer; opacity:.45; font-size:13px; line-height:1; }
+.crownBtn.on { opacity:1; border-color:var(--amber); background:var(--surface2); }
 
 /* Weekly Goals — week nav card, Last week / This week cards, from the mockup */
 .card.muted { background:var(--surface2); border-color:var(--surface2); }
@@ -1133,6 +1156,10 @@ var S = {
   /* My Ministry: which of its two tabs is showing, whether the metric form
      is unfolded for the week on screen, and the person's own four numbers. */
   mmTab:'ministry', kpiInputOpen:false, mmDashAll:false, personal:null, personalDraft:{},
+  /* Team tab: the directory or the org chart; the chart is cached per
+     campus|year|quarter, and an admin's unsaved edits live in structDraft. */
+  teamMode:'dir', structCache:{}, structLoading:{}, structYear:null, structQ:null,
+  structEdit:false, structEditNode:null, structDraft:null, structAddTitle:'', structAddParent:'',
   adminMetricCampus:'', adminMetricDept:'', adminMetricMinistry:'',
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[], broadcasts:[],
   baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
@@ -1573,6 +1600,9 @@ function applyBoot(d){
   S.tripRequests = d.tripRequests || [];
   if(d.ministry) S.ministry = d.ministry;
   S.personal = d.personal || null;
+  if(d.structure && d.structure.ok){
+    S.structCache[structKey_(d.structure.campus, d.structure.year, d.structure.quarter)] = { doc:d.structure.doc, source:d.structure.source };
+  }
   S.smartGoals = d.smartGoals || [];
   S.oneOnOnes = d.oneOnOnes || [];
   S.broadcasts = d.broadcasts || [];
@@ -1602,6 +1632,7 @@ function logout(){
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.personal=null; S.personalDraft={}; S.mmTab='ministry'; S.kpiInputOpen=false; S.mmDashAll=false; S.metricRename=null;
+  S.teamMode='dir'; S.structCache={}; S.structLoading={}; S.structDraft=null; S.structEdit=false; S.structEditNode=null; S.structYear=null; S.structQ=null;
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
@@ -5455,6 +5486,169 @@ function leaveHtml(){
   return h;
 }
 
+/* ---------- team structure (the org chart) ----------
+   Who is on which team and who leads what, per campus and per quarter —
+   the Canva chart, in the app, so it can be kept current as roles move
+   around each quarter and looked back on. The default chart is built from
+   everyone's profile (department, ministry, ministry leads); an admin moves
+   people around and saves it for the quarter. A quarter nothing has been
+   saved for shows the last saved one (the server marks it 'copied'), so a
+   new quarter opens on the previous structure rather than blank. */
+var ORG_TEAM_NODES = [
+  { id:'gp', title:'GP Team', parent:'' },
+  { id:'directors', title:'Director Team', parent:'' },
+  { id:'cl', title:'Campus Leadership Team', parent:'directors' },
+  { id:'staffdev', title:'Staff Development Team', parent:'cl' },
+  { id:'hr', title:'Human Resources', parent:'cl' },
+  { id:'dir-serve', title:'Director of Serve & Educate', parent:'cl' },
+  { id:'dir-skill', title:'Director of Skill & Develop', parent:'cl' },
+  { id:'community-night', title:'Community Night', parent:'' }
+];
+var ORG_DEPT_PARENT = { 'Community Service':'dir-serve', 'Youth Education':'dir-serve',
+  'Leadership Development':'dir-skill', 'Skills Training':'dir-skill' };
+function structKey_(campus, year, q){ return campus+'|'+year+'|'+q; }
+function currentQuarter_(){ return Math.min(4, Math.floor((thisWeek()-1)/13)+1); }
+function structYear_(){ return S.structYear || new Date().getFullYear(); }
+function structQ_(){ return S.structQ || currentQuarter_(); }
+function seedStructure_(campus, year, q){
+  var here = S.roster.filter(function(p){ return p.campus===campus; });
+  var ids = function(list){ return list.map(function(p){ return p.id; }); };
+  var nodes = ORG_TEAM_NODES.map(function(n){ return { id:n.id, title:n.title, kind:'team', parent:n.parent, leads:[], members:[] }; });
+  var byId = {}; nodes.forEach(function(n){ byId[n.id]=n; });
+  // GP Team spans both campuses — anyone whose role reads "GP …"
+  byId.gp.members = ids(S.roster.filter(function(p){ return /^gp\s/i.test(p.role||''); }));
+  byId.directors.members = ids(here.filter(function(p){ return p.dept===BL_DEPT && p.ministry==='Campus Director'; }));
+  byId.cl.members = ids(here.filter(function(p){ return p.dept===BL_DEPT && p.ministry!=='Campus Director'; }));
+  var deps = getDepartments(campus);
+  Object.keys(deps).forEach(function(dept){
+    if(dept===BL_DEPT) return;
+    var dn = { id:'dept:'+dept, title:dept, kind:'dept', parent: ORG_DEPT_PARENT[dept]||'cl',
+      leads: ids(here.filter(function(p){ return p.dept===BL_DEPT && p.ministry===dept; })), members:[] };
+    nodes.push(dn);
+    Object.keys(deps[dept]).forEach(function(min){
+      var key=dept+'|'+min;
+      var leads = here.filter(function(p){ return (p.leads||[]).indexOf(key)>-1; });
+      var members = here.filter(function(p){ return p.dept===dept && p.ministry===min && leads.indexOf(p)===-1; });
+      nodes.push({ id:'min:'+key, title:min, kind:'ministry', parent:dn.id, leads:ids(leads), members:ids(members) });
+    });
+  });
+  return { campus:campus, year:year, quarter:q, nodes:nodes };
+}
+/* The chart on screen for the campus/year/quarter picked: the admin's
+   unsaved draft if there is one, else what the server holds (saved, or the
+   previous quarter's copy), else one built from profiles. */
+function structShown_(campus){
+  var year=structYear_(), q=structQ_(), c=S.structCache[structKey_(campus,year,q)];
+  if(!c) return null;
+  var d=S.structDraft;
+  if(d && d.campus===campus && d.year===year && d.quarter===q) return { doc:d, source:'draft' };
+  if(c.doc) return { doc:c.doc, source:c.source };
+  return { doc:seedStructure_(campus, year, q), source:'seeded' };
+}
+function structDraft_(campus){
+  var shown=structShown_(campus);
+  if(!shown) return null;
+  if(shown.source!=='draft'){
+    var copy=JSON.parse(JSON.stringify(shown.doc));
+    copy.campus=campus; copy.year=structYear_(); copy.quarter=structQ_();
+    S.structDraft=copy;
+  }
+  return S.structDraft;
+}
+function orgPersonHtml_(id, lead){
+  var p=personOf(id);
+  if(!p) return '';
+  return '<button class="orgPerson'+(lead?' lead':'')+'" data-person="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
+    '<span>'+(lead?'👑 ':'')+esc(p.name)+'</span></button>';
+}
+function orgPeoplePickerHtml_(n, doc){
+  // A team can draw from both campuses (GP Team does); a department or
+  // ministry is this campus's own.
+  var pool=S.roster.filter(function(p){ return n.kind==='team' || p.campus===doc.campus; })
+    .slice().sort(function(a,b){ return a.name<b.name?-1:1; });
+  var h='<div class="orgPicker">';
+  if(n.kind==='team'){
+    h+='<div class="pickerRow" style="margin-bottom:6px"><input type="text" class="orgRename" maxlength="80" data-structrename="'+esc(n.id)+'" value="'+esc(n.title)+'" aria-label="'+esc(t('Team name'))+'">'+
+      '<button class="linkbtn inline" data-structremove="'+esc(n.id)+'">'+esc(t('Remove team'))+'</button></div>';
+  }
+  h+='<p class="hint" style="margin:0 0 6px">'+esc(t('Tick who is here; the crown marks who leads it.'))+'</p>';
+  pool.forEach(function(p){
+    var isLead=n.leads.indexOf(p.id)>-1, isMem=isLead||n.members.indexOf(p.id)>-1;
+    h+='<label class="leadOpt"><input type="checkbox" data-structmember="'+esc(n.id)+'|'+esc(p.id)+'"'+(isMem?' checked':'')+'> '+esc(p.name)+
+      '<button type="button" class="crownBtn'+(isLead?' on':'')+'" data-structlead="'+esc(n.id)+'|'+esc(p.id)+'" aria-label="'+esc(t('Leads this'))+'">👑</button></label>';
+  });
+  return h+'</div>';
+}
+/* A ministry with nobody in it (and nothing under it) is a leaf that only
+   takes up room — most of a campus's ministries, on a chart built from
+   profiles. Reading the chart, those fold into one line of chips under
+   their department; editing it, each is a one-line node with its People
+   button, so the admin can still put someone there. */
+function orgBareMinistry_(n, doc){
+  return n.kind==='ministry' && !n.leads.length && !n.members.length && !doc.nodes.some(function(x){ return x.parent===n.id; });
+}
+function orgNodeHtml_(n, doc){
+  var kids=doc.nodes.filter(function(x){ return x.parent===n.id; });
+  var bare = orgBareMinistry_(n, doc);
+  var emoji = n.kind==='team' ? '' : (MIN_EMOJI[n.title]||'');
+  var h='<div class="orgNode kind-'+n.kind+(bare?' compact':'')+'">';
+  h+='<div class="orgHead"><span class="orgTitle">'+(emoji?emoji+' ':'')+esc(t(n.title))+'</span>'+
+    '<span class="orgKind">'+esc(n.kind==='team'?t('Team'):n.kind==='dept'?t('Department'):t('Ministry'))+'</span>'+
+    (S.structEdit ? '<button class="linkbtn inline" data-structpeople="'+esc(n.id)+'">'+esc(t(S.structEditNode===n.id?'Done':'People'))+'</button>' : '')+
+    '</div>';
+  var people = n.leads.map(function(id){ return orgPersonHtml_(id,true); }).join('')+
+    n.members.map(function(id){ return orgPersonHtml_(id,false); }).join('');
+  if(people) h+='<div class="orgPeople">'+people+'</div>';
+  else if(!kids.length && !bare) h+='<div class="orgEmpty">'+esc(t('Nobody here yet'))+'</div>';
+  if(S.structEdit && S.structEditNode===n.id) h+=orgPeoplePickerHtml_(n, doc);
+  if(kids.length){
+    var full = S.structEdit ? kids : kids.filter(function(k){ return !orgBareMinistry_(k, doc); });
+    var folded = S.structEdit ? [] : kids.filter(function(k){ return orgBareMinistry_(k, doc); });
+    if(full.length || folded.length) h+='<div class="orgChildren">';
+    full.forEach(function(k){ h+=orgNodeHtml_(k, doc); });
+    if(folded.length){
+      h+='<div class="orgMore"><span class="orgMoreLabel">'+esc(t('Nobody assigned yet'))+'</span>'+
+        folded.map(function(k){ var e=MIN_EMOJI[k.title]||''; return '<span class="orgChip">'+(e?e+' ':'')+esc(t(k.title))+'</span>'; }).join('')+'</div>';
+    }
+    if(full.length || folded.length) h+='</div>';
+  }
+  return h+'</div>';
+}
+function orgChartHtml_(campus){
+  var year=structYear_(), q=structQ_(), yNow=new Date().getFullYear();
+  var h='<div class="pickerRow"><label class="pick"><span>'+esc(t('Year'))+'</span><select id="structYearSel">'+
+    [yNow-2,yNow-1,yNow].map(function(y){ return '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'</option>'; }).join('')+
+    '</select></label></div>';
+  h+='<div class="deptChips">'+[1,2,3,4].map(function(n){
+    return '<button class="deptChip'+(n===q?' on':'')+'" data-structq="'+n+'">Q'+n+'</button>'; }).join('')+'</div>';
+  var shown=structShown_(campus);
+  if(!shown) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  var doc=shown.doc, source=shown.source;
+  h+='<h3 style="margin-bottom:2px">'+esc(gpT('{campus} structure · Q{q} {year}',{campus:campusShort(campus), q:q, year:year}))+'</h3>';
+  var note = source==='saved' ? t('Saved for this quarter.')
+    : source==='copied' ? gpT('Showing Q{q} {year}’s structure — nothing saved for this quarter yet.',{q:doc.quarter, year:doc.year})
+    : source==='draft' ? t('Unsaved changes.')
+    : t('Built from everyone’s profile — nothing saved for this quarter yet.');
+  h+='<p class="sub" style="margin:0 0 10px">'+esc(note)+'</p>';
+  if(S.me.isAdmin){
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
+      '<button class="btn ghost" id="structEditBtn" style="margin:0;width:auto;padding:9px 14px">'+esc(S.structEdit?t('Done editing'):t('Edit structure'))+'</button>'+
+      (source!=='saved' ? '<button class="btn" id="structSaveBtn" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Save for this quarter'))+'</button>' : '')+
+      (S.structEdit ? '<button class="linkbtn" id="structResetBtn" style="width:auto;margin:0">'+esc(t('Rebuild from profiles'))+'</button>' : '')+
+    '</div>';
+    if(S.structEdit){
+      h+='<div class="card slim"><label class="f">'+esc(t('Add a team'))+'</label>'+
+        '<div class="pickerRow"><input type="text" id="structAddTitle" maxlength="80" placeholder="'+esc(t('Team name'))+'" value="'+esc(S.structAddTitle||'')+'" style="flex:1;min-width:140px">'+
+        '<select id="structAddParent"><option value="">'+esc(t('Top level'))+'</option>'+
+          doc.nodes.map(function(n){ return '<option value="'+esc(n.id)+'"'+(S.structAddParent===n.id?' selected':'')+'>'+esc(t(n.title))+'</option>'; }).join('')+
+        '</select><button class="btn ghost" id="structAddBtn" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Add'))+'</button></div></div>';
+    }
+  }
+  var roots=doc.nodes.filter(function(n){ return !n.parent || !doc.nodes.some(function(x){ return x.id===n.parent; }); });
+  roots.forEach(function(n){ h+=orgNodeHtml_(n, doc); });
+  return h;
+}
+
 /* ---------- team directory ---------- */
 function teamHtml(){
   if(S.person) return personHtml();
@@ -5466,14 +5660,20 @@ function teamHtml(){
   var campus = S.teamCampus || (S.me && S.me.campus) || CAMPUSES[0].id;
   var cInfo = CAMPUSES.filter(function(c){ return c.id===campus; })[0];
   var here = S.roster.filter(function(p){ return p.campus===campus; });
+  var mode = S.teamMode==='org' ? 'org' : 'dir';
 
   var h='<h2>'+esc(t('Team'))+' <small>· '+S.roster.length+' '+esc(t('staff'))+'</small></h2>'+
-    mentorEntryHtml()+
-    '<p class="sub">'+esc(t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
+    mentorEntryHtml();
+  h+='<div class="campusSeg teamModeSeg">'+
+    '<button class="campusBtn'+(mode==='dir'?' on':'')+'" data-teammode="dir">👥 '+esc(t('Directory'))+'</button>'+
+    '<button class="campusBtn'+(mode==='org'?' on':'')+'" data-teammode="org">🧭 '+esc(t('Structure'))+'</button></div>';
+  h+='<p class="sub">'+esc(mode==='org' ? t('Who is on which team this quarter, and who leads what.') : t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
 
   h+='<div class="campusSeg">'+CAMPUSES.map(function(c){
     return '<button class="campusBtn'+(campus===c.id?' on':'')+'" data-teamcampus="'+esc(c.id)+'">'+esc(t(c.name))+'</button>';
   }).join('')+'</div>';
+
+  if(mode==='org') return h+orgChartHtml_(campus);
 
   h+='<h3>'+esc(t(cInfo?cInfo.name:campus))+' <small>· '+here.length+'</small></h3>';
 
@@ -7107,6 +7307,91 @@ function bind(){
   });
   var pb=document.getElementById('personBack');
   if(pb) pb.onclick=function(){ S.person=null; render(); };
+
+  // --- the org chart ---
+  document.querySelectorAll('[data-teammode]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.teamMode=b.getAttribute('data-teammode'); render(); };
+  });
+  if(S.view==='team' && S.teamMode==='org' && !S.person && S.me){
+    var sCampus=S.teamCampus || S.me.campus || CAMPUSES[0].id, sYear=structYear_(), sQ=structQ_(), sKey=structKey_(sCampus,sYear,sQ);
+    if(!S.structCache[sKey] && !S.structLoading[sKey]){
+      S.structLoading[sKey]=true;
+      run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
+        S.structLoading[sKey]=false;
+        S.structCache[sKey] = (d && d.ok) ? { doc:d.doc, source:d.source } : { doc:null, source:'none' };
+        render();
+      });
+    }
+    var sys=document.getElementById('structYearSel');
+    if(sys) sys.onchange=function(){ S.structYear=Number(sys.value); S.structDraft=null; S.structEdit=false; S.structEditNode=null; render(); };
+    document.querySelectorAll('[data-structq]').forEach(function(b){
+      b.onclick=function(){ gpTap(); S.structQ=Number(b.getAttribute('data-structq')); S.structDraft=null; S.structEdit=false; S.structEditNode=null; render(); };
+    });
+    var seb=document.getElementById('structEditBtn');
+    if(seb) seb.onclick=function(){ S.structEdit=!S.structEdit; S.structEditNode=null; if(S.structEdit) structDraft_(sCampus); render(); };
+    var srb=document.getElementById('structResetBtn');
+    if(srb) srb.onclick=function(){ S.structDraft=seedStructure_(sCampus, sYear, sQ); S.structEditNode=null; render(); };
+    var ssb=document.getElementById('structSaveBtn');
+    if(ssb) ssb.onclick=function(){
+      if(S.busy) return;
+      var shown=structShown_(sCampus); if(!shown) return;
+      var doc=JSON.parse(JSON.stringify(shown.doc)); doc.campus=sCampus; doc.year=sYear; doc.quarter=sQ;
+      S.busy=true; ssb.disabled=true; ssb.textContent=t('Saving…');
+      run('saveStructure',[S.auth.user,S.auth.pin,doc],function(d){
+        S.busy=false;
+        if(d && d.ok){ S.structCache[sKey]={ doc:d.doc, source:'saved' }; S.structDraft=null; S.structEdit=false; S.structEditNode=null; showMsg(gpT('Saved — Q{q} {year} structure',{q:sQ, year:sYear})); }
+        else showMsg(t('Could not save'));
+        render();
+      });
+    };
+    document.querySelectorAll('[data-structpeople]').forEach(function(b){
+      b.onclick=function(){ var id=b.getAttribute('data-structpeople'); structDraft_(sCampus); S.structEditNode = (S.structEditNode===id) ? null : id; render(); };
+    });
+    var nodeOf=function(id){ var d=structDraft_(sCampus); return d ? d.nodes.filter(function(n){ return n.id===id; })[0] : null; };
+    // "nodeId|staffId" — a ministry node's own id has a '|' in it, so split at the LAST one
+    var structPair_=function(v){ var i=v.lastIndexOf('|'); return [v.slice(0,i), v.slice(i+1)]; };
+    document.querySelectorAll('[data-structmember]').forEach(function(c){
+      c.onchange=function(){
+        var p=structPair_(c.getAttribute('data-structmember')), n=nodeOf(p[0]); if(!n) return;
+        n.members=n.members.filter(function(x){ return x!==p[1]; }); n.leads=n.leads.filter(function(x){ return x!==p[1]; });
+        if(c.checked) n.members.push(p[1]);
+        render();
+      };
+    });
+    document.querySelectorAll('[data-structlead]').forEach(function(b){
+      b.onclick=function(){
+        var p=structPair_(b.getAttribute('data-structlead')), n=nodeOf(p[0]); if(!n) return;
+        var was=n.leads.indexOf(p[1])>-1;
+        n.leads=n.leads.filter(function(x){ return x!==p[1]; }); n.members=n.members.filter(function(x){ return x!==p[1]; });
+        if(was) n.members.push(p[1]); else n.leads.push(p[1]);
+        render();
+      };
+    });
+    document.querySelectorAll('[data-structrename]').forEach(function(inp){
+      inp.oninput=function(){ var n=nodeOf(inp.getAttribute('data-structrename')); if(n) n.title=inp.value; };
+    });
+    document.querySelectorAll('[data-structremove]').forEach(function(b){
+      b.onclick=function(){
+        var id=b.getAttribute('data-structremove'), d=structDraft_(sCampus), n=nodeOf(id); if(!d || !n) return;
+        if(!confirm(gpT('Remove “{team}”? Anything under it moves up a level.',{team:n.title}))) return;
+        d.nodes.forEach(function(x){ if(x.parent===id) x.parent=n.parent; });
+        d.nodes=d.nodes.filter(function(x){ return x.id!==id; });
+        S.structEditNode=null; render();
+      };
+    });
+    var sat=document.getElementById('structAddTitle');
+    if(sat) sat.oninput=function(){ S.structAddTitle=sat.value; };
+    var sap=document.getElementById('structAddParent');
+    if(sap) sap.onchange=function(){ S.structAddParent=sap.value; };
+    var sab=document.getElementById('structAddBtn');
+    if(sab) sab.onclick=function(){
+      var title=(S.structAddTitle||'').trim(); if(!title){ showMsg(t('Give it a name first.')); return; }
+      var d=structDraft_(sCampus); if(!d) return;
+      var id='team:'+Date.now().toString(36);
+      d.nodes.push({ id:id, title:title, kind:'team', parent:S.structAddParent||'', leads:[], members:[] });
+      S.structAddTitle=''; S.structEditNode=id; render();
+    };
+  }
 
   document.querySelectorAll('[data-mentee]').forEach(function(c){
     c.onclick=function(){

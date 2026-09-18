@@ -29,6 +29,7 @@ const SERVER = [
   'test-admin-race.mjs', // two admin writes to the same staff record at once don't let one silently undo the other
   'test-ministry-leader.mjs', // ministry leaders (admin-assigned) own the metric list; personal numbers; renaming a custom metric moves its history
   'test-leadership-rename.mjs', // Base Leadership → Campus Leadership (and its director row → Campus Director): old-name rows read back new, old-name accounts keep every right
+  'test-structure.mjs', // Team → Structure: one saved org chart per campus/year/quarter, admin-only save that cleans the nodes, an unsaved quarter copies the last saved one forward, boot carries this quarter's
   'test-ministry-oversight.mjs', // department overseers can log for ministries they oversee, nobody else can
   'test-ministry-metrics.mjs', // a ministry's own staff (or its overseer, or an admin) can edit what it tracks
   'test-rollups.mjs',    // the roll-up maths
@@ -56,6 +57,7 @@ const BROWSER = [
   'test-goals-edit.mjs',    // a weekly goal's wording can be edited in place, without losing its progress or KPI link
   'test-offline-queue.mjs', // a bad connection queues Weekly Goals/health check-in saves instead of losing them, and replays them once back online
   'test-ministry-redesign.mjs', // My Ministry: Numbers/OKRs tabs, dashboard tiles, the logged-weeks strip, one button unfolds the form, personal numbers, leader-only editor
+  'test-org-chart.mjs', // Team → Structure: the chart built from profiles (directors, GP roles, overseers, ministry leaders), quarter chips fetch, admin edits people/teams and saves the quarter
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
