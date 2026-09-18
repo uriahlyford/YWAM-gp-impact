@@ -71,7 +71,17 @@ if (qb) {
   /* And the strip itself must still work for an actual sideways swipe —
      the fix must not just disable the strip's own scrolling to get the
      above to pass. */
+  /* The hero above the strip has grown since this was written (goals, quick
+     buttons), so at this viewport the strip can sit below the fold at
+     scroll 0 — bring it on screen and aim at where it actually is, since
+     the point is a wheel gesture OVER the strip. */
   await p.evaluate(() => window.scrollTo(0, 0));
+  // centered, not "if needed": the minimal scroll parks the strip along the
+  // bottom edge, underneath the fixed tab bar, and the wheel lands on that.
+  await qb.evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await p.waitForTimeout(150);
+  const box1 = await qb.boundingBox();
+  await p.mouse.move(box1.x + box1.width / 2, box1.y + box1.height / 2);
   const chipBefore = await p.evaluate(el => el.scrollLeft, qb);
   for (let i = 0; i < 15; i++) await p.mouse.wheel(30, 3);
   await p.waitForTimeout(200);
