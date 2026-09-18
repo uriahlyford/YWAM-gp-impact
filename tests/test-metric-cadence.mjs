@@ -44,6 +44,8 @@ const ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipe
   dept: 'Community Service', ministry: 'Outreach Teams', isAdmin: true, active: true };
 const STAFF = { id: 'st_staff', name: 'Dara', username: 'dara', campus: 'poipet',
   dept: 'Community Service', ministry: 'Outreach Teams', active: true };
+const LEADER = { id: 'st_leader', name: 'Sokha', username: 'sokha', campus: 'poipet',
+  dept: 'Community Service', ministry: 'Outreach Teams', active: true, leads: ['Community Service|Outreach Teams'] };
 
 async function call(fn, args) {
   const res = await api.default({ method: 'POST', json: async () => ({ fn, args }), headers: new Map() }, {});
@@ -51,7 +53,7 @@ async function call(fn, args) {
 }
 function seed() {
   for (const k of Object.keys(mem)) delete mem[k];
-  mem.staff = [ADMIN, STAFF].map(function (s) { return { ...s, pinSalt: s.id, pinHash: mkHash('1234', s.id) }; });
+  mem.staff = [ADMIN, STAFF, LEADER].map(function (s) { return { ...s, pinSalt: s.id, pinHash: mkHash('1234', s.id) }; });
 }
 
 seed();
@@ -63,11 +65,18 @@ ok('an admin can set cadence', r.body && r.body.ok === true &&
   r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').cadence['Teams Hosted'] === 'month',
   JSON.stringify(r.body));
 
+/* Changing the list is a leader's right now, not every member's — see
+   canEditMetrics_. Sokha leads Outreach Teams; Dara just works there. */
 r = await call('saveMetricOverrides', ['dara', '1234', 'poipet', 'Community Service', 'Outreach Teams', ['Healings'], []]);
-ok('a non-admin can still hide/add metrics without touching cadence',
+ok('an ordinary member cannot hide/add metrics either', r.body && r.body.ok === false && r.body.err === 'not_authorized', JSON.stringify(r.body));
+r = await call('saveMetricOverrides', ['sokha', '1234', 'poipet', 'Community Service', 'Outreach Teams', ['Healings'], []]);
+ok('the ministry’s leader can hide/add metrics without touching cadence',
   r.body && r.body.ok === true && r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').hidden.includes('Healings') &&
   r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').cadence['Teams Hosted'] === 'month',
   JSON.stringify(r.body));
+r = await call('saveMetricOverrides', ['sokha', '1234', 'poipet', 'Community Service', 'Outreach Teams', ['Healings'], [], { 'Teams Hosted': 'quarter' }]);
+ok('and the leader can move a count to quarterly too', r.body && r.body.ok === true &&
+  r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').cadence['Teams Hosted'] === 'quarter', JSON.stringify(r.body));
 
 r = await call('saveMetricOverrides', ['uriah', '1234', 'poipet', 'Community Service', 'Outreach Teams', [], [], { 'Teams Hosted': 'bogus' }]);
 ok('an unknown cadence value is dropped, not stored', r.body && r.body.ok === true &&
@@ -134,15 +143,16 @@ await p.click('nav.bottom [data-tab="week"]');
 await p.waitForTimeout(600);
 await p.click('#goMinistryFromMe');
 await p.waitForTimeout(700);
+// the metric form is folded behind one button now; it opens every section at once
+await p.click('#kpiInputBtn');
+await p.waitForTimeout(400);
 
 const dayAcc = await p.$('[data-acc="kpiDay"]');
-if (dayAcc) { await dayAcc.click(); await p.waitForTimeout(300); }
 const dayMetrics = await p.$$eval('[data-kpi]', els => els.map(e => e.getAttribute('data-kpi'))).catch(() => []);
 ok('Teams Hosted (cadence: month) is not in the daily Today list', !dayMetrics.includes('Teams Hosted'), dayMetrics.join(', '));
 
 const monthAcc = await p.$('[data-acc="kpiMonth"]');
 ok('there is a "This month" section', !!monthAcc);
-if (monthAcc) { await monthAcc.click(); await p.waitForTimeout(300); }
 const monthMetrics = await p.$$eval('[data-kpimonth]', els => els.map(e => e.getAttribute('data-kpimonth'))).catch(() => []);
 ok('Teams Hosted is in the monthly section', monthMetrics.includes('Teams Hosted'), monthMetrics.join(', '));
 

@@ -101,10 +101,9 @@ await page.waitForTimeout(400);
 {
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(400);
-  for (const acc of ['kpiDay', 'kpiWeek']) {
-    const el = await page.$('[data-acc="' + acc + '"]');
-    if (el) { await el.click(); await page.waitForTimeout(250); }
-  }
+  // the metric form is folded behind one button; it opens every section
+  await page.click('#kpiInputBtn');
+  await page.waitForTimeout(400);
   const cases = [
     ['[data-kpi="Days Open"]', 'a saved zero', '0'],
     ['[data-kpi="Cups Sold"]', 'a saved figure', '55'],

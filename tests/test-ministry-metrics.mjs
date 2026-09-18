@@ -1,6 +1,7 @@
-/* Not every ministry tracks the same things: a ministry's own staff (or an
+/* Not every ministry tracks the same things: a ministry's LEADER (or an
    admin, or the Base Leadership overseer of its department) can hide a
-   baseline metric or add one of their own. saveMetricOverrides is the one
+   baseline metric or add one of their own — an ordinary member can log the
+   numbers but not change the list. saveMetricOverrides is the one
    server function behind that — getDepartments() in taxonomy.js merges the
    result in client-side, so this only has to prove the write is guarded
    right and the data comes back out through getData(). */
@@ -31,7 +32,10 @@ const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + St
 
 const ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet',
   dept: 'Base Leadership', ministry: 'Campus Leadership', role: '', active: true, isAdmin: true };
+// Sreilea LEADS the Cafe (admin-assigned `leads`); Pisey just works there.
 const CAFE = { id: 'st_cafe', name: 'Sreilea', username: 'sreilea', campus: 'poipet',
+  dept: 'Community Service', ministry: 'Cafe', role: '', active: true, isAdmin: false, leads: ['Community Service|Cafe'] };
+const CAFE_MEMBER = { id: 'st_barista', name: 'Pisey', username: 'pisey', campus: 'poipet',
   dept: 'Community Service', ministry: 'Cafe', role: '', active: true, isAdmin: false };
 const OUTREACH = { id: 'st_outreach', name: 'Dara', username: 'dara', campus: 'poipet',
   dept: 'Community Service', ministry: 'Outreach Teams', role: '', active: true, isAdmin: false };
@@ -40,7 +44,7 @@ const CS_OVERSEER = { id: 'st_overseer', name: 'Sina', username: 'sina', campus:
 
 function seed() {
   for (const k of Object.keys(mem)) delete mem[k];
-  mem.staff = [ADMIN, CAFE, OUTREACH, CS_OVERSEER].map(s => ({ ...s, pinSalt: s.id, pinHash: mkHash('1234', s.id) }));
+  mem.staff = [ADMIN, CAFE, CAFE_MEMBER, OUTREACH, CS_OVERSEER].map(s => ({ ...s, pinSalt: s.id, pinHash: mkHash('1234', s.id) }));
 }
 async function call(fn, args) {
   const res = await api.default({ method: 'POST', json: async () => ({ fn, args }), headers: new Map() }, {});
@@ -56,10 +60,13 @@ let r = await call('saveMetricOverrides', ['sreilea', '9999', 'poipet', 'Communi
 check('wrong PIN is refused', r.ok === false);
 check('and nothing was stored', !(mem.metricOverrides || []).length);
 
-/* 2. a ministry's own staff can edit their own ministry */
+/* 2. the ministry's LEADER can edit their own ministry; a plain member of the
+   same ministry cannot — changing the list is the leader position's right */
+r = await call('saveMetricOverrides', ['pisey', '1234', 'poipet', 'Community Service', 'Cafe', ['Days Open'], []]);
+check('an ordinary member of the ministry is refused', r.ok === false && r.err === 'not_authorized', JSON.stringify(r));
 r = await call('saveMetricOverrides', ['sreilea', '1234', 'poipet', 'Community Service', 'Cafe',
   ['Days Open'], ['Latte Art Score (1-10)']]);
-check('own-ministry staff can save', r.ok === true, JSON.stringify(r));
+check('the ministry’s leader can save', r.ok === true, JSON.stringify(r));
 check('hidden metric stored', r.metricOverrides[0].hidden.includes('Days Open'));
 check('custom metric stored', r.metricOverrides[0].custom.includes('Latte Art Score (1-10)'));
 

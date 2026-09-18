@@ -291,8 +291,31 @@ function publicStaff_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
     ministry: s.ministry || '', role: s.role, photo: s.photo || '', mentorId: s.mentorId || '',
-    staffType: cleanStaffType_(s.staffType), country: s.country || ''
+    staffType: cleanStaffType_(s.staffType), country: s.country || '',
+    leads: leadsOf_(s)
   };
+}
+
+/* ==================== ministry leaders ====================
+   Who may change WHAT a ministry tracks (hide/add/rename a metric, move it
+   between weekly / monthly / quarterly) — as opposed to logging its numbers,
+   which any of its own staff can do. Three kinds of people: an admin, anyone
+   in the campus leadership department, and a ministry's own leader(s). A
+   leader is assigned by an admin from the Admin screen and stored on the
+   staff record as "Dept|Ministry" keys, so one person can lead more than
+   one ministry — a real situation on a staff this size. */
+function leadsOf_(s) { return Array.isArray(s && s.leads) ? s.leads : []; }
+function isLeaderOf_(s, dept, ministry) { return leadsOf_(s).indexOf(dept + '|' + ministry) > -1; }
+function isLeadership_(s) { return deptOf_(s) === 'Base Leadership'; }
+const MAX_LEADS = 20;
+function cleanLeads_(list) {
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(function (k) {
+    const key = str_(k, 160);
+    if (!key || key.indexOf('|') === -1 || out.indexOf(key) > -1) return;
+    out.push(key);
+  });
+  return out.slice(0, MAX_LEADS);
 }
 
 async function teamRoster() {
@@ -395,6 +418,7 @@ function adminStaffOut_(s) {
     ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin,
     staffType: s.staffType || '', country: s.country || '', email: s.email || '',
     mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
+    leads: leadsOf_(s),
     created: s.created || ''
   };
 }
@@ -579,6 +603,8 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
       }
       rec.email = email;
     }
+    // Which ministries this person leads — admin-assigned only; see leadsOf_.
+    if (payload.leads !== undefined) rec.leads = cleanLeads_(payload.leads);
     rec.updated = new Date().toISOString();
     rows[idx] = rec;
     return { ok: true, staff: adminStaffOut_(rec) };
@@ -1685,9 +1711,17 @@ async function saveMinistryFor(username, pin, dept, ministry, week, updates) {
 const MAX_CUSTOM_METRICS = 25;
 const MAX_HIDDEN_METRICS = 60;
 
+/* Logging a number and changing what gets logged are two different rights.
+   Everyone on a ministry logs its numbers (canLogFor_); only an admin, the
+   campus leadership department, or that ministry's own assigned leader
+   changes its metric list or cadence. A ministry's ordinary staff used to be
+   able to hide and add metrics too — Uriah asked for that to sit with the
+   leader position instead, so the list someone logs against can't quietly
+   change under the whole team. */
 function canEditMetrics_(s, campus, dept, ministry) {
   if (s.isAdmin) return true;
-  return canLogFor_(s, campus, dept, ministry);
+  if (campus !== s.campus) return false;
+  return isLeadership_(s) || isLeaderOf_(s, dept, ministry);
 }
 
 const CADENCE_VALUES = ['month', 'quarter'];
@@ -1713,12 +1747,11 @@ async function saveMetricOverrides(username, pin, campus, dept, ministry, hidden
   const idx = rows.findIndex(function (r) { return r.campus === campus && r.dept === dept && r.ministry === ministry; });
   const existing = idx > -1 ? rows[idx] : null;
 
-  // Cadence (weekly → monthly/quarterly) is admin-only, even for a ministry's
-  // own overseer who can otherwise hide/add metrics here — untouched
-  // (cadence omitted) just keeps whatever is already stored.
+  // Cadence (weekly → monthly/quarterly) takes the same right as hiding or
+  // adding a metric (canEditMetrics_ above) — untouched (cadence omitted)
+  // just keeps whatever is already stored.
   let cleanCadence = (existing && existing.cadence) || {};
   if (cadence !== undefined && cadence !== null) {
-    if (!s.isAdmin) return { ok: false, err: 'not_authorized' };
     const nextCadence = {};
     Object.keys(cadence).forEach(function (m) {
       const name = str_(m, 80);
@@ -1732,6 +1765,104 @@ async function saveMetricOverrides(username, pin, campus, dept, ministry, hidden
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('metricOverrides', rows);
   return { ok: true, metricOverrides: rows };
+}
+
+/* Renaming a metric the ministry added itself. The name is the join key for
+   every number ever logged under it (see the note at the top of taxonomy.js),
+   so a rename that only touched the list would orphan the ministry's own
+   history — the numbers, the day-by-day rows behind them, and any key result
+   pointing at the metric all move with the name. Baseline metrics can't be
+   renamed here: they belong to the shared taxonomy, not to one ministry. */
+async function renameCustomMetric(username, pin, campus, dept, ministry, oldName, newName) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  campus = str_(campus, 40); dept = str_(dept, 80); ministry = str_(ministry, 80);
+  oldName = str_(oldName, 80); newName = str_(newName, 80);
+  if (!campus || !dept || !ministry || !oldName || !newName) return { ok: false, err: 'bad_target' };
+  if (!canEditMetrics_(s, campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  if (SENSITIVE.indexOf(newName) > -1) return { ok: false, err: 'reserved' };
+
+  const rows = await getMetricOverrides_();
+  const idx = rows.findIndex(function (r) { return r.campus === campus && r.dept === dept && r.ministry === ministry; });
+  const rec = idx > -1 ? rows[idx] : null;
+  if (!rec || (rec.custom || []).indexOf(oldName) === -1) return { ok: false, err: 'not_custom' };
+  if (newName === oldName) return { ok: true, metricOverrides: rows, moved: 0 };
+  if ((rec.custom || []).indexOf(newName) > -1) return { ok: false, err: 'exists' };
+
+  const now = new Date().toISOString();
+  rec.custom = rec.custom.map(function (m) { return m === oldName ? newName : m; });
+  if (rec.cadence && rec.cadence[oldName]) { rec.cadence[newName] = rec.cadence[oldName]; delete rec.cadence[oldName]; }
+  rec.updated = now;
+  await writeJSON('metricOverrides', rows);
+
+  const same = function (r) { return r.campus === campus && r.dept === dept && r.ministry === ministry && r.metric === oldName; };
+  let moved = 0;
+  const entries = await getEntries_();
+  entries.forEach(function (r) { if (same(r)) { r.metric = newName; r.updated = now; moved++; } });
+  if (moved) await writeJSON('entries', entries);
+  let movedDays = 0;
+  const daily = await getKpiDaily_();
+  daily.forEach(function (r) { if (same(r)) { r.metric = newName; movedDays++; } });
+  if (movedDays) await writeJSON('kpiDaily', daily);
+  const oldKey = dept + '|' + ministry + '|' + oldName, newKey = dept + '|' + ministry + '|' + newName;
+  let movedKrs = 0;
+  const okrs = await getOkrs_();
+  okrs.forEach(function (o) {
+    if (o.campus !== campus) return;
+    (o.krs || []).forEach(function (kr) { if (kr.metricKey === oldKey) { kr.metricKey = newKey; movedKrs++; } });
+  });
+  if (movedKrs) await writeJSON('okrs', okrs);
+  return { ok: true, metricOverrides: rows, moved: moved };
+}
+
+/* ==================== personal metrics ====================
+   A staff member's own week — how many people they shared their faith with,
+   encouraged, met one-on-one, how many teachings they prepped — separate from
+   the ministry's numbers, which belong to the team. Keyed by the person, so
+   these never reach the dashboard or anyone else's page. Four fixed metrics
+   for now (the client owns the list); the store doesn't care which names it
+   is handed, so the list can grow without a migration. */
+async function getPersonalRows_() { return readJSON('personalKpi', []); }
+function personalOut_(rows, staffId) {
+  const yr = currentYear_();
+  const out = {};
+  rows.forEach(function (r) {
+    if (r.staffId !== staffId || yearOf_(r) !== yr) return;
+    if (!out[r.metric]) out[r.metric] = {};
+    out[r.metric][String(r.week)] = Number(r.value);
+  });
+  return { ok: true, entries: out };
+}
+async function getMyPersonal(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  return personalOut_(await getPersonalRows_(), s.id);
+}
+async function saveMyPersonalWeek(username, pin, week, updates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const wk = finiteNum_(week, 1, 52);
+  if (wk == null) return { ok: false, err: 'bad_week' };
+  const rows = await getPersonalRows_();
+  const now = new Date().toISOString();
+  const yr = currentYear_();
+  (Array.isArray(updates) ? updates : []).forEach(function (u) {
+    const metric = str_(u && u.metric, 80);
+    if (!metric) return;
+    const idx = rows.findIndex(function (r) {
+      return r.staffId === s.id && r.metric === metric && Number(r.week) === wk && yearOf_(r) === yr;
+    });
+    if (u.value === null || u.value === '' || u.value === undefined) {
+      if (idx > -1) rows.splice(idx, 1);
+      return;
+    }
+    const value = finiteNum_(u.value, -1e9, 1e9);
+    if (value == null) return;
+    if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; }
+    else rows.push({ staffId: s.id, metric: metric, week: wk, year: yr, value: value, updated: now });
+  });
+  await writeJSON('personalKpi', rows);
+  return personalOut_(rows, s.id);
 }
 
 /* ==================== ministry KPIs, logged day by day ====================
@@ -2204,7 +2335,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -2218,7 +2349,8 @@ async function getMyBoot(username, pin) {
       part(function () { return getData(''); }),
       part(function () { return getMySmartGoals(username, pin); }),
       part(function () { return getMyOneOnOnes(username, pin); }),
-      part(function () { return getMyBroadcasts(username, pin); })
+      part(function () { return getMyBroadcasts(username, pin); }),
+      part(function () { return getMyPersonal(username, pin); })
     ]);
 
   return {
@@ -2241,6 +2373,7 @@ async function getMyBoot(username, pin) {
     smartGoals: (smart && smart.smartGoals) || [],
     oneOnOnes: (oneOnOnes && oneOnOnes.oneOnOnes) || [],
     broadcasts: (broadcasts && broadcasts.broadcasts) || [],
+    personal: personal || null,
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -2300,6 +2433,9 @@ const HANDLERS = {
   requestOneOnOne: function (a) { return requestOneOnOne(a[0], a[1], a[2], a[3]); },
   respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); },
   saveMetricOverrides: function (a) { return saveMetricOverrides(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]); },
+  renameCustomMetric: function (a) { return renameCustomMetric(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
+  getMyPersonal: function (a) { return getMyPersonal(a[0], a[1]); },
+  saveMyPersonalWeek: function (a) { return saveMyPersonalWeek(a[0], a[1], a[2], a[3]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };

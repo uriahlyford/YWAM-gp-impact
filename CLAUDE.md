@@ -217,6 +217,39 @@ on My Database, and `gpKrTargetNote()` says the same thing in the OKR editor as 
 target is typed, against what that metric has already logged this quarter. Fix the
 target where it was set; the app is not guessing which of the two numbers is wrong.
 
+## My Ministry
+One page (`myMinistryHtml`), two tabs — **Numbers** and **OKRs** (`S.mmTab`); the old
+standalone OKR page is gone, `S.view==='okr'` just lands on the second tab. Numbers
+opens on a dashboard of the ministry's own metrics (`ministryDashboardHtml_` — a count
+is the quarter's total, a level its latest, a score the quarter's average, read with
+`aggregate()` exactly as the GP Dashboard reads them), then a status card: the week
+picker, an eight-week strip that shows which weeks have **nothing logged**
+(`ministryWeekLogged_` — any weekly figure or any day in the week counts), and **one
+button** (`#kpiInputBtn`) that unfolds the whole metric form with every section open.
+The form itself is still `kpiCardHtml` — daily counts, weekly levels, monthly and
+quarterly sections — just folded away until asked for.
+
+- **Ministry leaders own the metric list.** `leads` on the staff record is a list of
+  `"Dept|Ministry"` keys, set only by an admin (Admin → Accounts → Edit profile →
+  "Ministry leader of"; `adminUpdateStaff`). `canEditMetrics_` in `api.js` is now: admin,
+  or the campus leadership department, or that ministry's leader — **not** every
+  member, which it used to be. Logging numbers (`canLogFor_`) is unchanged: anyone on
+  the ministry. Cadence (weekly → monthly/quarterly) takes the same right; it was
+  admin-only. The client mirrors it in `canEditMetricsClient_` to decide whether to
+  draw "Edit what we track" at all. `publicStaff_` carries `leads`, so the page can
+  say who leads a ministry.
+- **Renaming a custom metric moves its numbers** (`renameCustomMetric`): the weekly
+  `entries`, the `kpiDaily` rows behind them and any key result's `metricKey` all
+  follow the name, scoped to that campus/dept/ministry. The name is the join key (see
+  taxonomy.js), so a rename that only edited the list would orphan the ministry's own
+  history. Baseline metrics can't be renamed here — they are the shared taxonomy.
+- **Personal numbers** (`personalKpi` blob; `saveMyPersonalWeek`/`getMyPersonal`,
+  folded into `getMyBoot` as `personal`): four fixed weekly figures per person
+  (`PERSONAL_METRICS` in teams.html), keyed by staff id. They never reach `getData`
+  or anyone else's page.
+- `test-ministry-leader.mjs` (server) and `test-ministry-redesign.mjs` (browser) hold
+  all of this; `test-ministry-kpis.mjs` and friends now press `#kpiInputBtn` first.
+
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
   checks — `server tests` (seconds, no install) and `browser tests` (Playwright +

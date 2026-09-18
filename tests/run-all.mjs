@@ -27,6 +27,7 @@ const SERVER = [
   'test-one-on-one.mjs', // 1-on-1 requests: mentor/mentee pairing, recipient-only response
   'test-admin.mjs',      // Base Leadership sign-ups need approval; isAdmin gates account management
   'test-admin-race.mjs', // two admin writes to the same staff record at once don't let one silently undo the other
+  'test-ministry-leader.mjs', // ministry leaders (admin-assigned) own the metric list; personal numbers; renaming a custom metric moves its history
   'test-ministry-oversight.mjs', // department overseers can log for ministries they oversee, nobody else can
   'test-ministry-metrics.mjs', // a ministry's own staff (or its overseer, or an admin) can edit what it tracks
   'test-rollups.mjs',    // the roll-up maths
@@ -53,6 +54,7 @@ const BROWSER = [
   'test-admin-edit.mjs',    // editing a staff record in Admin keeps what you typed across an unrelated re-render
   'test-goals-edit.mjs',    // a weekly goal's wording can be edited in place, without losing its progress or KPI link
   'test-offline-queue.mjs', // a bad connection queues Weekly Goals/health check-in saves instead of losing them, and replays them once back online
+  'test-ministry-redesign.mjs', // My Ministry: Numbers/OKRs tabs, dashboard tiles, the logged-weeks strip, one button unfolds the form, personal numbers, leader-only editor
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward

@@ -63,6 +63,9 @@ await p.click('nav.bottom [data-tab="week"]');
 await p.waitForTimeout(600);
 await p.click('#goMinistryFromMe');
 await p.waitForTimeout(700);
+// the metric form is folded behind one button; opening it unfolds every section
+await p.click('#kpiInputBtn');
+await p.waitForTimeout(400);
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra) {
@@ -73,20 +76,21 @@ function ok(name, cond, extra) {
 ok('there is no daily "Today" box at all for a Base Leadership overseer', !(await p.$('[data-acc="kpiDay"]')));
 ok('there is no separate Department Headcount section either', !(await p.$('[data-acc="kpiHeadcount"]')));
 
-// The week-picker and the metrics accordion are one box now, not two.
+// The week picker, the logged/not-logged strip and the one button that
+// unfolds the form share a status card above the accordion (the redesign).
 const boxes = await p.evaluate(() => {
-  const acc = document.querySelector('[data-acc="kpiWeek"]');
-  const card = acc ? acc.closest('.accCard') : null;
+  const btn = document.querySelector('#kpiInputBtn');
+  const card = btn ? btn.closest('.card') : null;
   return {
-    weekNavInsideAccCard: !!(card && card.querySelector('.weekNavBlock')),
-    noSeparateCardAbove: !document.querySelector('.card + .accCard'),
+    weekNavWithButton: !!(card && card.querySelector('.weekNavRow')),
+    stripWithButton: !!(card && card.querySelector('.wkStrip')),
+    // the form's own box no longer carries a second copy of the picker
+    formHasNoPicker: !document.querySelector('#kpiWeekCard') || !document.querySelector('#kpiWeekCard').closest('.accCard').querySelector('.weekNavBlock'),
   };
 });
-ok('the week picker lives inside the same box as the metrics accordion', boxes.weekNavInsideAccCard, JSON.stringify(boxes));
-ok('there is no separate week-nav card sitting above the accordion', boxes.noSeparateCardAbove, JSON.stringify(boxes));
-
-await p.click('[data-acc="kpiWeek"]');
-await p.waitForTimeout(300);
+ok('the week picker sits in the status card, with the input button', boxes.weekNavWithButton, JSON.stringify(boxes));
+ok('so does the eight-week logged strip', boxes.stripWithButton, JSON.stringify(boxes));
+ok('and the metric form itself has no second week picker', boxes.formHasNoPicker, JSON.stringify(boxes));
 const weekMetrics = await p.$$eval('#kpiWeekCard [data-kpiweek]', els => els.map(e => e.getAttribute('data-kpiweek')));
 ok('One-on-Ones Held is in the one weekly card', weekMetrics.includes('One-on-Ones Held'), weekMetrics.join(', '));
 ok('Partner Connections is in the weekly card', weekMetrics.includes('Partner Connections'));
