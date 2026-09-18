@@ -2369,7 +2369,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal, structure] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -2384,7 +2384,10 @@ async function getMyBoot(username, pin) {
       part(function () { return getMySmartGoals(username, pin); }),
       part(function () { return getMyOneOnOnes(username, pin); }),
       part(function () { return getMyBroadcasts(username, pin); }),
-      part(function () { return getMyPersonal(username, pin); })
+      part(function () { return getMyPersonal(username, pin); }),
+      // this quarter's org chart for the person's own campus — the Team tab
+      // opens on it without a second call
+      part(function () { return getStructure(username, pin, s.campus, currentYear_(), currentQuarter_()); })
     ]);
 
   return {
@@ -2408,9 +2411,75 @@ async function getMyBoot(username, pin) {
     oneOnOnes: (oneOnOnes && oneOnOnes.oneOnOnes) || [],
     broadcasts: (broadcasts && broadcasts.broadcasts) || [],
     personal: personal || null,
+    structure: structure || null,
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
+}
+
+/* ==================== team structure ====================
+   The org chart on the Team tab — who is on which team and who leads what,
+   one document per campus per quarter, because on a staff this size roles
+   move around every quarter and the point is to be able to look back.
+   The client builds the default chart from everyone's profile (department,
+   ministry, ministry leads); an admin then moves people around and saves.
+   A quarter nobody has saved yet answers with the most recent saved
+   quarter before it, marked 'copied', so a new quarter opens on the last
+   one's structure rather than blank — save it once and it belongs to the
+   new quarter. Nothing here is private: it's the same names the directory
+   already shows. */
+const STRUCT_MAX_NODES = 120;
+function currentQuarter_() {
+  const wk = isoWeek_(new Date().toISOString().slice(0, 10));
+  return Math.min(4, Math.floor((wk - 1) / 13) + 1);
+}
+async function getStructures_() { return readJSON('structure', []); }
+function structOrder_(d) { return Number(d.year) * 10 + Number(d.quarter); }
+function structFind_(rows, campus, year, quarter) {
+  const exact = rows.find(function (r) { return r.campus === campus && Number(r.year) === year && Number(r.quarter) === quarter; });
+  if (exact) return { doc: exact, source: 'saved' };
+  const earlier = rows.filter(function (r) { return r.campus === campus && structOrder_(r) < year * 10 + quarter; })
+    .sort(function (a, b) { return structOrder_(b) - structOrder_(a); })[0];
+  if (earlier) return { doc: earlier, source: 'copied' };
+  return { doc: null, source: 'none' };
+}
+function cleanStructNode_(n) {
+  if (!n || typeof n !== 'object') return null;
+  const id = str_(n.id, 80), title = str_(n.title, 80);
+  if (!id || !title) return null;
+  const kind = ['team', 'dept', 'ministry'].indexOf(n.kind) > -1 ? n.kind : 'team';
+  const ids = function (list) {
+    const out = [];
+    (Array.isArray(list) ? list : []).forEach(function (v) { const s = str_(v, 60); if (s && out.indexOf(s) === -1) out.push(s); });
+    return out.slice(0, 200);
+  };
+  return { id: id, title: title, kind: kind, parent: str_(n.parent, 80) || '', leads: ids(n.leads), members: ids(n.members) };
+}
+async function getStructure(username, pin, campus, year, quarter) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  campus = str_(campus, 40) || s.campus;
+  const y = finiteNum_(year, 2020, 2100) || currentYear_();
+  const q = finiteNum_(quarter, 1, 4) || currentQuarter_();
+  const found = structFind_(await getStructures_(), campus, y, q);
+  return { ok: true, campus: campus, year: y, quarter: q, doc: found.doc, source: found.source };
+}
+async function saveStructure(username, pin, doc) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  if (!doc || typeof doc !== 'object') return { ok: false, err: 'bad_doc' };
+  const campus = str_(doc.campus, 40);
+  const y = finiteNum_(doc.year, 2020, 2100), q = finiteNum_(doc.quarter, 1, 4);
+  if (!campus || y == null || q == null) return { ok: false, err: 'bad_doc' };
+  const seen = {};
+  const nodes = (Array.isArray(doc.nodes) ? doc.nodes : []).map(cleanStructNode_).filter(Boolean)
+    .filter(function (n) { if (seen[n.id]) return false; seen[n.id] = 1; return true; }).slice(0, STRUCT_MAX_NODES);
+  const rec = { campus: campus, year: y, quarter: q, nodes: nodes, updated: new Date().toISOString(), updatedBy: admin.id };
+  const rows = await getStructures_();
+  const idx = rows.findIndex(function (r) { return r.campus === campus && Number(r.year) === y && Number(r.quarter) === q; });
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('structure', rows);
+  return { ok: true, campus: campus, year: y, quarter: q, doc: rec, source: 'saved' };
 }
 
 /* ==================== dispatcher ==================== */
@@ -2470,6 +2539,8 @@ const HANDLERS = {
   renameCustomMetric: function (a) { return renameCustomMetric(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
   getMyPersonal: function (a) { return getMyPersonal(a[0], a[1]); },
   saveMyPersonalWeek: function (a) { return saveMyPersonalWeek(a[0], a[1], a[2], a[3]); },
+  getStructure: function (a) { return getStructure(a[0], a[1], a[2], a[3], a[4]); },
+  saveStructure: function (a) { return saveStructure(a[0], a[1], a[2]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };

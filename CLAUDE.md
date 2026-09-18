@@ -263,6 +263,33 @@ quarterly sections — just folded away until asked for.
 - `test-ministry-leader.mjs` (server) and `test-ministry-redesign.mjs` (browser) hold
   all of this; `test-ministry-kpis.mjs` and friends now press `#kpiInputBtn` first.
 
+## Team → Structure (the org chart)
+The Team tab has a Directory / Structure toggle (`S.teamMode`). Structure is the Canva
+role chart in the app: one document per **campus, year and quarter** in the `structure`
+blob, a flat list of nodes `{id, title, kind: team|dept|ministry, parent, leads[],
+members[]}` where leads and members are staff ids (`getStructure`/`saveStructure`;
+`getMyBoot` carries this quarter's as `structure`).
+
+- **Nothing saved → built from profiles** (`seedStructure_` in teams.html, client-side):
+  the fixed team skeleton in `ORG_TEAM_NODES` (GP Team, Director Team → Campus Leadership
+  Team → Staff Development / Human Resources / Director of Serve & Educate / Director of
+  Skill & Develop, Community Night), then every department as a `dept:` node under the
+  director in `ORG_DEPT_PARENT`, led by its overseer (leadership dept, ministry = that
+  dept), and every ministry as a `min:Dept|Min` node whose leads come from `staff.leads`
+  and members from people's profiles. GP Team is anyone, either campus, whose role
+  starts "GP". The server's `source` says which you're looking at: `saved`, `copied`
+  (nothing saved for that quarter — the latest earlier saved quarter is shown, so a new
+  quarter opens on the last one's structure), or `none` (client seeds).
+- **Only admins save**, and a save belongs to the quarter on screen even when what's
+  shown was copied from an earlier one. The editor is `S.structDraft`, a copy made on
+  first touch (`structDraft_`); ticking a person, the crown, renaming/removing a team
+  and Add a team all edit it. A ministry node's id contains `|`, so the `node|staff`
+  attributes are split at the **last** `|` (`structPair_`) — don't `split('|')`.
+- **Bare ministries fold.** A ministry with nobody in it and nothing under it renders as
+  a chip under its department when reading (`orgBareMinistry_`), and as a one-line
+  `compact` node while editing. Without this the chart is dozens of empty cards long.
+- `test-structure.mjs` (server) and `test-org-chart.mjs` (browser) cover it.
+
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
   checks — `server tests` (seconds, no install) and `browser tests` (Playwright +
