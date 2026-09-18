@@ -41,11 +41,11 @@ put(P, 'Leadership Development', 'DBS', 'Students Enrolled', { 12: 10 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Partner Churches Supported', { 1: 4, 12: 5 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Churches Being Led', { 12: 3 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Combined Congregation Attendance', { 12: 340 });
-put(P, 'Base Leadership', 'Campus Leadership', 'Total Staff', { 1: 12 });
-put(P, 'Base Leadership', 'Campus Leadership', 'Spoke at Churches', { 1: 2, 2: 1 });
-put(P, 'Base Leadership', 'Campus Leadership', 'One-on-Ones Held', { 2: 6 });
-put(P, 'Base Leadership', 'Campus Leadership', 'Base Vision (1-10)', { 2: 8 });
-put(P, 'Base Leadership', 'Community Service', 'Staff Debt ($)', { 2: 900 });
+put(P, 'Campus Leadership', 'Campus Director', 'Total Staff', { 1: 12 });
+put(P, 'Campus Leadership', 'Campus Director', 'Spoke at Churches', { 1: 2, 2: 1 });
+put(P, 'Campus Leadership', 'Campus Director', 'One-on-Ones Held', { 2: 6 });
+put(P, 'Campus Leadership', 'Campus Director', 'Base Vision (1-10)', { 2: 8 });
+put(P, 'Campus Leadership', 'Community Service', 'Staff Debt ($)', { 2: 900 });
 
 /* My own weekly health, as syncWeekSurvey_ would have derived it from my logs. */
 const NOWWK = (() => { const y=new Date().getFullYear(), j=new Date(y,0,1);
@@ -199,7 +199,7 @@ const strip = s => s.replace(/^[^\w]*/, '').replace(/Q\d /, '').toLowerCase();
    to the base summary.
 
    The other three are real renames, not drift: "Base health" is on Base too,
-   just as "Base Leadership" — the accordion added a second, unrelated "Base
+   just as "Campus Leadership" — the accordion added a second, unrelated "Base
    Health" row (everyone's own wellbeing check-in, not the department leaders'
    KPIs), so the old name was freed up to avoid two rows reading the same on
    screen. "Across every ministry" and "Department dashboards" are the same

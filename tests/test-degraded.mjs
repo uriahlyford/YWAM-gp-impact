@@ -26,7 +26,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(4399, r));
 
-const DATA = { leader: false, entries: { poipet: { 'Base Leadership|Campus Leadership|Total Staff': { 1: 12 } } }, okrs: [], survey: [] };
+const DATA = { leader: false, entries: { poipet: { 'Campus Leadership|Campus Director|Total Staff': { 1: 12 } } }, okrs: [], survey: [] };
 const browser = await chromium.launch({ executablePath: CHROMIUM });
 
 async function run(label, page_, blocked, seed) {

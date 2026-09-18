@@ -137,7 +137,7 @@ function gpRollup(D){
   }
 
   /* ---------- base-wide metric totals ----------
-     Base Leadership is skipped: it reports the same metric names about the
+     Campus Leadership is skipped: it reports the same metric names about the
      departments it oversees, so counting it would double every figure. */
   function metricWeekSum(ids, metric, w){
     var total=0, any=false;
@@ -201,7 +201,7 @@ function gpRollup(D){
     return out;
   }
 
-  /* A Base Leadership metric across that campus's departments. */
+  /* A Campus Leadership metric across that campus's departments. */
   function blAgg(campus, metric){
     var mode = modeOf(metric), vals=[];
     Object.keys(getDepartments(campus)[BL_DEPT]).forEach(function(min){
@@ -213,7 +213,7 @@ function gpRollup(D){
     var tt=0; vals.forEach(function(v){tt+=v;});
     return mode==='avg' ? tt/vals.length : tt;
   }
-  /* Base Leadership metric across several campuses — blAgg() is one campus only. */
+  /* Campus Leadership metric across several campuses — blAgg() is one campus only. */
   function blAggAll(ids, metric){
     return addKnown(ids.map(function(cid){ return blAgg(cid, metric); }));
   }

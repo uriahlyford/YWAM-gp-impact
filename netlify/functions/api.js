@@ -194,8 +194,41 @@ async function clearLoginThrottle_(username) {
   await writeJSON('loginThrottle', throttle);
 }
 
+/* ==================== the leadership department's names ====================
+   The department has been called 'Base Director', then 'Base Leadership', and
+   is 'Campus Leadership' now; its own ministry row — the campus director's
+   figures — was 'Campus Leadership' and is 'Campus Director', so the two no
+   longer share a name. Stored rows keep whatever name was current when they
+   were written, and nothing rewrites the store in bulk: every read of a store
+   that carries a department normalises the names on the way out, so the rest
+   of this file and the client (which only ever sees normalised names) have a
+   single name to compare against, and each ordinary write then persists the
+   current name. Incoming payloads are normalised too, for a client still
+   running the old taxonomy. */
+const LEADERSHIP_DEPT = 'Campus Leadership';
+const OLD_LEADERSHIP_DEPTS = ['Base Director', 'Base Leadership'];
+function normDept_(d) { return OLD_LEADERSHIP_DEPTS.indexOf(d) > -1 ? LEADERSHIP_DEPT : d; }
+function normMinistry_(dept, m) {
+  return (normDept_(dept) === LEADERSHIP_DEPT && m === 'Campus Leadership') ? 'Campus Director' : m;
+}
+function normKey_(key, parts) {
+  const p = String(key || '').split('|');
+  if (p.length !== parts) return key;
+  p[1] = normMinistry_(p[0], p[1]); p[0] = normDept_(p[0]);
+  return p.join('|');
+}
+function normRow_(r) {
+  if (!r || typeof r !== 'object') return r;
+  if (r.dept !== undefined) { const d = normDept_(r.dept); r.ministry = normMinistry_(r.dept, r.ministry); r.dept = d; }
+  // an OKR row is one key result: its metricKey is dept|ministry|metric
+  if (typeof r.metricKey === 'string' && r.metricKey) r.metricKey = normKey_(r.metricKey, 3);
+  if (Array.isArray(r.leads)) r.leads = r.leads.map(function (k) { return normKey_(k, 2); });
+  return r;
+}
+function normRows_(rows) { return Array.isArray(rows) ? rows.map(normRow_) : rows; }
+
 /* ==================== STAFF / TEAMS ==================== */
-async function getStaff_() { return readJSON('staff', []); }
+async function getStaff_() { return normRows_(await readJSON('staff', [])); }
 async function saveStaff_(rows) { return writeJSON('staff', rows); }
 
 function findStaff_(rows, username) {
@@ -216,7 +249,7 @@ async function verifyStaff_(username, pin) {
   // stopped an inactive account from authenticating, so "deactivating"
   // somebody was cosmetic. Gating the one shared verify function closes that
   // for every handler at once, and doubles as the admin-approval gate: a
-  // pending Base Leadership sign-up is created with active:false and simply
+  // pending Campus Leadership sign-up is created with active:false and simply
   // has no session until an admin flips it, the same switch as deactivating
   // someone later.
   if (s.active === false) return null;
@@ -306,7 +339,7 @@ function publicStaff_(s) {
    one ministry — a real situation on a staff this size. */
 function leadsOf_(s) { return Array.isArray(s && s.leads) ? s.leads : []; }
 function isLeaderOf_(s, dept, ministry) { return leadsOf_(s).indexOf(dept + '|' + ministry) > -1; }
-function isLeadership_(s) { return deptOf_(s) === 'Base Leadership'; }
+function isLeadership_(s) { return deptOf_(s) === 'Campus Leadership'; }
 const MAX_LEADS = 20;
 function cleanLeads_(list) {
   const out = [];
@@ -323,13 +356,13 @@ async function teamRoster() {
   return rows.filter(function (s) { return s.active; }).map(publicStaff_);
 }
 
-/* Admin access only ever goes to Base Leadership, so that is the one
+/* Admin access only ever goes to Campus Leadership, so that is the one
    department a sign-up cannot grant itself instantly — the account is
    created inactive and an admin has to switch it on, same as approving a
    pending request anywhere else in this app. Every other department keeps
    today's instant sign-up; this is deliberately narrow rather than gating
    every new account. */
-function needsApproval_(dept) { return String(dept || '') === 'Base Leadership'; }
+function needsApproval_(dept) { return normDept_(String(dept || '')) === LEADERSHIP_DEPT; }
 
 async function staffRegister(payload) {
   const u = normUser_(payload.username);
@@ -350,7 +383,7 @@ async function staffRegister(payload) {
   const pending = needsApproval_(payload.dept);
   const rec = {
     id: id, username: u, name: payload.name || u, email: email, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
-    campus: payload.campus || '', dept: payload.dept || '', ministry: payload.ministry || '',
+    campus: payload.campus || '', dept: normDept_(payload.dept || ''), ministry: normMinistry_(payload.dept || '', payload.ministry || ''),
     role: payload.role || '', photo: '',
     // Asked for at sign-up, changed from Profile & settings later.
     staffType: cleanStaffType_(payload.staffType), country: cleanCountry_(payload.country),
@@ -470,7 +503,7 @@ async function mutateStaff_(mutate) {
   const s = store();
   for (let attempt = 0; attempt < 10; attempt++) {
     if (attempt > 0) await new Promise(function (r) { setTimeout(r, Math.random() * 40); });
-    const rows = shaped_(await s.get('staff', { type: 'json' }), []);
+    const rows = normRows_(shaped_(await s.get('staff', { type: 'json' }), []));
     const result = mutate(rows);
     if (result && result.abort) { const out = Object.assign({}, result); delete out.abort; return out; }
     await s.setJSON('staff', rows);
@@ -489,7 +522,7 @@ async function grantAdmin(adminCode, targetUsername, makeAdmin) {
   return mutateStaff_(function (rows) {
     const idx = rows.findIndex(function (r) { return r.username === normUser_(targetUsername); });
     if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
-    // Admin only ever goes to Base Leadership — encoded here too, not just in
+    // Admin only ever goes to Campus Leadership — encoded here too, not just in
     // the sign-up gate, so a mistaken promotion can't hand it to someone else.
     if (makeAdmin && !needsApproval_(rows[idx].dept)) return { abort: true, ok: false, err: 'not_leadership' };
     rows[idx].isAdmin = !!makeAdmin;
@@ -505,7 +538,7 @@ async function adminListStaff(username, pin) {
 }
 
 /* One switch for both halves of account management: flipping a pending
-   Base Leadership sign-up on is the same operation as deactivating someone
+   Campus Leadership sign-up on is the same operation as deactivating someone
    later, since verifyStaff_ treats active:false as "no session" either way. */
 async function adminSetActive(username, pin, staffId, active) {
   const admin = await adminGate_(username, pin);
@@ -578,8 +611,8 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
     const rec = rows[idx];
     if (payload.name !== undefined) rec.name = payload.name;
     if (payload.campus !== undefined) rec.campus = payload.campus;
-    if (payload.dept !== undefined) rec.dept = payload.dept;
-    if (payload.ministry !== undefined) rec.ministry = payload.ministry;
+    if (payload.dept !== undefined) rec.dept = normDept_(payload.dept);
+    if (payload.ministry !== undefined) rec.ministry = normMinistry_(rec.dept, payload.ministry);
     if (payload.role !== undefined) rec.role = payload.role;
     if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
     if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
@@ -728,8 +761,8 @@ async function updateProfile(username, pin, payload) {
   const rec = rows[idx];
   if (payload.name !== undefined) rec.name = payload.name;
   if (payload.campus !== undefined) rec.campus = payload.campus;
-  if (payload.dept !== undefined) rec.dept = payload.dept;
-  if (payload.ministry !== undefined) rec.ministry = payload.ministry;
+  if (payload.dept !== undefined) rec.dept = normDept_(payload.dept);
+  if (payload.ministry !== undefined) rec.ministry = normMinistry_(rec.dept, payload.ministry);
   if (payload.role !== undefined) rec.role = payload.role;
   if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
   if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
@@ -1085,10 +1118,10 @@ async function respondToMentorRequest(username, pin, menteeId, approve) {
 }
 
 /* ==================== DASHBOARD: entries / OKRs / survey ==================== */
-async function getEntries_() { return readJSON('entries', []); }
-async function getOkrs_() { return readJSON('okrs', []); }
+async function getEntries_() { return normRows_(await readJSON('entries', [])); }
+async function getOkrs_() { return normRows_(await readJSON('okrs', [])); }
 async function getSurvey_() { return readJSON('survey', []); }
-async function getMetricOverrides_() { return readJSON('metricOverrides', []); }
+async function getMetricOverrides_() { return normRows_(await readJSON('metricOverrides', [])); }
 
 async function getData(code, year) {
   const leader = isLeader_(code);
@@ -1096,7 +1129,7 @@ async function getData(code, year) {
   const entryRows = (await getEntries_()).filter(inYear_(yr));
   const entries = {};
   entryRows.forEach(function (r) {
-    const dept = r.dept === 'Base Director' ? 'Base Leadership' : r.dept; // rename migration
+    const dept = normDept_(r.dept); // rows are normalised on read; belt and braces
     if (!leader && SENSITIVE.indexOf(r.metric) > -1) return;
     const val = Number(r.value);
     if (!r.campus || isNaN(val)) return;
@@ -1214,9 +1247,9 @@ async function saveEntries(campus, updates, code, username, pin) {
      - an existing objective is only writable if it already belongs to that
        campus and department, so an id cannot be used to hijack another team's.
 
-   'Base Director' is the old name for what is now the Base Leadership
+   'Base Director' is the old name for what is now the Campus Leadership
    department; profiles created before the rename still carry it. */
-function deptOf_(s) { return s.dept === 'Base Director' ? 'Base Leadership' : s.dept; }
+function deptOf_(s) { return normDept_(s.dept); }
 
 async function okrWriter_(code, username, pin) {
   if (isLeader_(code)) return { leader: true };
@@ -1628,9 +1661,9 @@ async function getMyMinistry(username, pin) {
   return ministryDataFor_(s);
 }
 
-/* A department's own "Base Leadership" ministry oversees every ministry
+/* A department's own "Campus Leadership" ministry oversees every ministry
    under that real department — the same relationship getDepartments()
-   encodes on the client (dept:'Base Leadership', ministry: e.g. 'Community
+   encodes on the client (dept:'Campus Leadership', ministry: e.g. 'Community
    Service'). That overseer can log on behalf of any ministry in their own
    department; nobody else gets to log outside their own ministry — except
    an admin, who can jump to and log any ministry on their own campus (the
@@ -1639,7 +1672,7 @@ function canLogFor_(s, campus, dept, ministry) {
   if (campus !== s.campus) return false;
   if (s.isAdmin) return true;
   if (dept === s.dept && ministry === s.ministry) return true;
-  return s.dept === 'Base Leadership' && s.ministry === dept;
+  return s.dept === 'Campus Leadership' && s.ministry === dept;
 }
 
 async function getMinistryFor(username, pin, dept, ministry) {
@@ -1804,12 +1837,13 @@ async function renameCustomMetric(username, pin, campus, dept, ministry, oldName
   const daily = await getKpiDaily_();
   daily.forEach(function (r) { if (same(r)) { r.metric = newName; movedDays++; } });
   if (movedDays) await writeJSON('kpiDaily', daily);
+  // The okrs blob is one row per key result (see saveObjective), so the
+  // metric key sits on the row itself.
   const oldKey = dept + '|' + ministry + '|' + oldName, newKey = dept + '|' + ministry + '|' + newName;
   let movedKrs = 0;
   const okrs = await getOkrs_();
   okrs.forEach(function (o) {
-    if (o.campus !== campus) return;
-    (o.krs || []).forEach(function (kr) { if (kr.metricKey === oldKey) { kr.metricKey = newKey; movedKrs++; } });
+    if (o.campus === campus && o.metricKey === oldKey) { o.metricKey = newKey; movedKrs++; }
   });
   if (movedKrs) await writeJSON('okrs', okrs);
   return { ok: true, metricOverrides: rows, moved: moved };
@@ -1880,7 +1914,7 @@ async function saveMyPersonalWeek(username, pin, week, updates) {
    misaggregates that ministry's own metric — it can't reach anything else. */
 const KPI_MODES = ['sum', 'latest', 'avg'];
 
-async function getKpiDaily_() { return readJSON('kpiDaily', []); }
+async function getKpiDaily_() { return normRows_(await readJSON('kpiDaily', [])); }
 
 function rollUpKpi_(dayRows, mode) {
   const vals = dayRows.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });

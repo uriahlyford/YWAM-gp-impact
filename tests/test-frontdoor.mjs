@@ -27,8 +27,8 @@ put(P, 'Community Service', 'Outreach Teams', 'Salvations', { 1: 3, 2: 5 });
 put(P, 'Community Service', 'Outreach Teams', 'People Served', { 1: 120, 2: 200 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Partner Churches Supported', { 1: 4, 3: 5 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Churches Being Led', { 1: 2, 3: 3 });
-put(P, 'Base Leadership', 'Campus Leadership', 'Total Staff', { 1: 12 });
-put(S, 'Base Leadership', 'Campus Leadership', 'Total Staff', { 1: 9 });
+put(P, 'Campus Leadership', 'Campus Director', 'Total Staff', { 1: 12 });
+put(S, 'Campus Leadership', 'Campus Director', 'Total Staff', { 1: 9 });
 put(S, 'Youth Education', 'YDC', 'Youth Enrolled', { 1: 60 });
 
 const ME = { id: 'st1', name: 'Sokha Chan', username: 'sokha', campus: S, dept: 'Community Service', ministry: 'Outreach Teams', photo: '' };

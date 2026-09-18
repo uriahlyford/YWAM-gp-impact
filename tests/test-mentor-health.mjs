@@ -15,7 +15,7 @@ await new Promise(r=>srv.listen(4405,r));
 const NOWWK=(()=>{const y=new Date().getFullYear(),j=new Date(y,0,1);
   const m=new Date(y,0,1-((j.getDay()+6)%7));
   return Math.max(1,Math.min(52,Math.floor((new Date()-m)/(7*86400000))+1)); })();
-const DARA={id:'st_dara',name:'Dara Pich',username:'dara',campus:'poipet',dept:'Base Leadership',ministry:'Campus Leadership',role:'Base director',photo:'',mentorId:''};
+const DARA={id:'st_dara',name:'Dara Pich',username:'dara',campus:'poipet',dept:'Campus Leadership',ministry:'Campus Director',role:'Base director',photo:'',mentorId:''};
 const SOKHA={id:'st_sokha',name:'Sokha Chan',username:'sokha',campus:'poipet',dept:'Community Service',ministry:'Outreach Teams',role:'Outreach coordinator',photo:'',mentorId:'st_dara'};
 const MENTEE_CHECKINS=[NOWWK,NOWWK-1].map((w,i)=>({week:w,days:7,source:'weekly',
   lonely:i?6:3, clarity:i?5:8, growth:i?5:7, porn:0, oneOnOne:1, exercise:i?0:1,

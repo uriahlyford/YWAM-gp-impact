@@ -14,7 +14,7 @@ var CAMPUSES = [
   { id:'siemreap', name:'YWAM Siem Reap', short:'Siem Reap' }
 ];
 
-var BL_DEPT = 'Base Leadership';
+var BL_DEPT = 'Campus Leadership';
 var SENSITIVE = ['Base Finances ($)','Base Cash Reserve ($)'];
 var PLATFORMS = ['Instagram','Facebook','YouTube','TikTok'];
 
@@ -114,12 +114,12 @@ function getBaselineDepartments(campusId){
         'Breakfasts Served','Lunches Served','Dinners Served','New Meals Tried',
         'Food Taste (1-10)','Food On Time (1-10)','Food On Budget (1-10)']
     },
-    'Base Leadership': {
+    'Campus Leadership': {
       'Community Service': BL_COMMON.concat(BL_DEPT_EXTRA),
       'Youth Education': BL_COMMON.concat(BL_DEPT_EXTRA),
       'Leadership Development': BL_COMMON.concat(BL_DEPT_EXTRA),
       'Skills Training': BL_COMMON.concat(BL_DEPT_EXTRA),
-      'Campus Leadership': BL_COMMON.concat(['Base Vision (1-10)','Communications (1-10)',
+      'Campus Director': BL_COMMON.concat(['Base Vision (1-10)','Communications (1-10)',
         'Partner Relationships (1-10)','Base Plants in Planning','Base Finances ($)'])
     }
   };
@@ -238,7 +238,7 @@ var MIN_EMOJI = {
   'BCS':'\ud83d\udcac', 'SOMD':'\ud83c\udf93', 'Evangelism':'\ud83d\udce2', 'Church Partnerships':'\u26ea',
   'Finances':'\ud83d\udcb0', 'Hospitality':'\ud83c\udf3a', 'Technical':'\ud83d\udd27', 'Culinary':'\ud83c\udf72',
   'Community Service':'\ud83e\udd1d', 'Youth Education':'\ud83c\udf1f', 'Leadership Development':'\ud83c\udf31',
-  'Skills Training':'\ud83d\udee0\ufe0f', 'Base Leadership':'\u2726', 'Campus Leadership':'\u2726'
+  'Skills Training':'\ud83d\udee0\ufe0f', 'Campus Leadership':'\u2726', 'Campus Director':'\u2726'
 };
 
 /*  What kind of staff a person is, and where they are from.

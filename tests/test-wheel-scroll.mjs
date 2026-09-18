@@ -20,7 +20,7 @@ const srv = http.createServer((q, r) => {
 });
 await new Promise(res => srv.listen(4407, res));
 
-const DARA = { id: 'st_dara', name: 'Dara Pich', username: 'dara', campus: 'poipet', dept: 'Base Leadership', ministry: 'Campus Leadership', role: 'Base director', photo: '', mentorId: '' };
+const DARA = { id: 'st_dara', name: 'Dara Pich', username: 'dara', campus: 'poipet', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Base director', photo: '', mentorId: '' };
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra) {

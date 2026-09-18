@@ -17,7 +17,7 @@ const Q=Math.min(4,Math.floor((new Date().getMonth())/3)+1);
 const ME={id:'st1',name:'Sokha Chan',username:'sokha',campus:'poipet',dept:'Community Service',ministry:'Outreach Teams',role:'Coordinator',photo:'',mentorId:''};
 const MATE={id:'st2',name:'Mealea Sok',username:'mealea',campus:'poipet',dept:'Youth Education',ministry:'YDC',role:'Teacher',photo:'',mentorId:'st1'};
 const DATA={leader:false,
-  entries:{poipet:{'Base Leadership|Campus Leadership|Total Staff':{1:12},
+  entries:{poipet:{'Campus Leadership|Campus Director|Total Staff':{1:12},
     'Community Service|Outreach Teams|Salvations':{[NOWWK]:4,[NOWWK-1]:2},
     'Community Service|Outreach Teams|Teams Hosted':{[NOWWK]:1}}},
   okrs:[{id:'o1',campus:'poipet',quarter:Q,dept:'Community Service',objective:'Obj',
@@ -87,7 +87,7 @@ await visit(p,'OKR quarter switch',async p=>{const s=await p.$('#okrQSel'); if(s
 await visit(p,'Log Numbers',async p=>{await p.click('[data-view="log"]');await p.waitForTimeout(800);});
 await visit(p,'log: switch dept',async p=>{await p.selectOption('#deptSel','Youth Education');await p.waitForTimeout(700);});
 await visit(p,'log: switch ministry',async p=>{await p.selectOption('#minSel','GP Media');await p.waitForTimeout(700);});
-await visit(p,'log: Base Leadership',async p=>{await p.selectOption('#deptSel','Base Leadership');await p.waitForTimeout(700);});
+await visit(p,'log: Campus Leadership',async p=>{await p.selectOption('#deptSel','Campus Leadership');await p.waitForTimeout(700);});
 await visit(p,'log: switch week',async p=>{await p.selectOption('#weekSel','5');await p.waitForTimeout(700);});
 await visit(p,'drill-down open/close',async p=>{await p.click('[data-view="dashboard"]');await p.waitForTimeout(700);
   await p.click('#main .heroSubRow');await p.waitForTimeout(500);await p.click('#ddClose');});

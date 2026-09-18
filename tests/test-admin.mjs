@@ -1,4 +1,4 @@
-/* Admin control: a Base Leadership sign-up needs approval before it can log
+/* Admin control: a Campus Leadership sign-up needs approval before it can log
    in at all (every other department stays instant), and once someone holds
    isAdmin they can approve/deactivate, reset a PIN, or fix a wrong
    campus/dept/ministry for someone else. GP_ADMIN_CODE — not the dashboard's
@@ -30,11 +30,11 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const ADMIN = {
-  id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Base Leadership',
-  ministry: 'Campus Leadership', role: 'Director', active: true, isAdmin: true,
+  id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Campus Leadership',
+  ministry: 'Campus Director', role: 'Director', active: true, isAdmin: true,
 };
 const LEADER_NOT_ADMIN = {
-  id: 'st_leader2', name: 'Sina', username: 'sina', campus: 'poipet', dept: 'Base Leadership',
+  id: 'st_leader2', name: 'Sina', username: 'sina', campus: 'poipet', dept: 'Campus Leadership',
   ministry: 'Community Service Oversight', role: 'Oversight', active: true, isAdmin: false,
 };
 const STAFF = {
@@ -58,7 +58,7 @@ function seed(extra) {
   });
 }
 
-/* ---------- 1. sign-up approval is scoped to Base Leadership only ---------- */
+/* ---------- 1. sign-up approval is scoped to Campus Leadership only ---------- */
 seed();
 let r = await call('staffRegister', [{ username: 'newstaff', pin: '5555', name: 'New Staff', email: 'newstaff@example.com', dept: 'Community Service', campus: 'poipet' }]);
 ok('a non-Base-Leadership sign-up is instant, as before',
@@ -67,8 +67,8 @@ r = await call('staffLogin', ['newstaff', '5555']);
 ok('and can log in right away', r.body && r.body.ok === true, JSON.stringify(r.body));
 
 seed();
-r = await call('staffRegister', [{ username: 'newleader', pin: '5555', name: 'New Leader', email: 'newleader@example.com', dept: 'Base Leadership', campus: 'poipet' }]);
-ok('a Base Leadership sign-up comes back pending, no session',
+r = await call('staffRegister', [{ username: 'newleader', pin: '5555', name: 'New Leader', email: 'newleader@example.com', dept: 'Campus Leadership', campus: 'poipet' }]);
+ok('a Campus Leadership sign-up comes back pending, no session',
   r.body && r.body.ok === true && r.body.pending === true && !r.body.staff, JSON.stringify(r.body));
 const created = (mem.staff || []).find(function (s) { return s.username === 'newleader'; });
 ok('and the record itself is inactive', !!created && created.active === false);
@@ -92,7 +92,7 @@ r = await call('staffLogin', ['dara', '1234']);
 ok('the same right PIN on a now-inactive account is refused',
   r.body && r.body.ok === false, JSON.stringify(r.body));
 
-/* ---------- 3. only GP_ADMIN_CODE can grant admin, and only to Base Leadership —
+/* ---------- 3. only GP_ADMIN_CODE can grant admin, and only to Campus Leadership —
    the dashboard's own leader code is a different door entirely ---------- */
 seed();
 r = await call('grantAdmin', ['wrongcode', 'dara', true]);
@@ -108,7 +108,7 @@ ok('the admin code still refuses a non-Base-Leadership target',
 ok('and nothing was written', !(mem.staff || []).find(function (s) { return s.username === 'dara'; }).isAdmin);
 
 r = await call('grantAdmin', ['admincode', 'sina', true]);
-ok('the admin code promotes a Base Leadership account',
+ok('the admin code promotes a Campus Leadership account',
   r.body && r.body.ok === true && r.body.staff.isAdmin === true, JSON.stringify(r.body));
 r = await call('staffLogin', ['sina', '1234']);
 ok('and their own login now reflects it', r.body && r.body.ok === true && r.body.staff.isAdmin === true, JSON.stringify(r.body));
@@ -121,8 +121,8 @@ seed();
 for (const fn of ['adminListStaff']) {
   r = await call(fn, ['dara', '1234']);
   ok('non-admin staff is refused: ' + fn, r.body && r.body.ok === false, JSON.stringify(r.body));
-  r = await call(fn, ['sina', '1234']); // Base Leadership, but not isAdmin
-  ok('Base Leadership without isAdmin is refused: ' + fn, r.body && r.body.ok === false, JSON.stringify(r.body));
+  r = await call(fn, ['sina', '1234']); // Campus Leadership, but not isAdmin
+  ok('Campus Leadership without isAdmin is refused: ' + fn, r.body && r.body.ok === false, JSON.stringify(r.body));
 }
 r = await call('adminSetActive', ['dara', '1234', 'st_staff', false]);
 ok('non-admin cannot deactivate anyone', r.body && r.body.ok === false, JSON.stringify(r.body));
@@ -133,7 +133,7 @@ ok('non-admin cannot edit someone else’s record', r.body && r.body.ok === fals
 
 /* ---------- 5. what an admin can actually do ---------- */
 const PENDING = { id: 'st_pending', name: 'Pending Person', username: 'pending1', campus: 'poipet',
-  dept: 'Base Leadership', ministry: '', role: '', active: false, isAdmin: false };
+  dept: 'Campus Leadership', ministry: '', role: '', active: false, isAdmin: false };
 seed([PENDING]);
 r = await call('adminListStaff', ['uriah', '1234']);
 ok('adminListStaff sees inactive accounts too, unlike the public roster',

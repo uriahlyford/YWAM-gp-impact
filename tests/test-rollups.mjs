@@ -36,12 +36,12 @@ put(P, 'Youth Education', 'YDC', 'Salvations', { 2: 4 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Partner Churches Supported', { 1: 4, 2: 4, 3: 5 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Churches Being Led', { 1: 2, 3: 3 });
 put(P, 'Leadership Development', 'Church Partnerships', 'Combined Congregation Attendance', { 1: 300, 3: 340 });
-put(P, 'Base Leadership', 'Campus Leadership', 'Spoke at Churches', { 1: 2, 2: 1 });
-put(P, 'Base Leadership', 'Campus Leadership', 'Total Staff', { 1: 12 });
+put(P, 'Campus Leadership', 'Campus Director', 'Spoke at Churches', { 1: 2, 2: 1 });
+put(P, 'Campus Leadership', 'Campus Director', 'Total Staff', { 1: 12 });
 put(S, 'Youth Education', 'YDC', 'Youth Enrolled', { 1: 60 });
 put(S, 'Community Service', 'LTN', 'Students Enrolled', { 1: 30, 2: 33 });
 put(S, 'Leadership Development', 'GPDTS', 'Students Enrolled', { 1: 15 });
-put(S, 'Base Leadership', 'Campus Leadership', 'Total Staff', { 1: 9 });
+put(S, 'Campus Leadership', 'Campus Director', 'Total Staff', { 1: 9 });
 
 ctx.__D = { entries: e, survey: [], roster: null, week: 52 };
 vm.runInContext('var R = gpRollup(__D);', ctx);
@@ -76,9 +76,9 @@ const checks = [
   // --- the drill-down reads the same entries the totals do ---
   ['salvations pooled base-wide', `R.headlineFor(${poipet},'Salvations')`, 12],
   ['drillRows finds both ministries behind it',
-    `R.drillRows(function(c,d,m,k){ return c==='poipet' && k==='Salvations' && d!=='Base Leadership'; }).length`, 2],
+    `R.drillRows(function(c,d,m,k){ return c==='poipet' && k==='Salvations' && d!=='Campus Leadership'; }).length`, 2],
   ['drill row totals sum to the headline',
-    `R.drillRows(function(c,d,m,k){ return c==='poipet' && k==='Salvations' && d!=='Base Leadership'; })
+    `R.drillRows(function(c,d,m,k){ return c==='poipet' && k==='Salvations' && d!=='Campus Leadership'; })
        .reduce(function(a,r){ return a+r.total; },0)`, 12],
   ['drill scoped to one ministry gives one row',
     `R.drillRows(function(c,d,m,k){ return c==='poipet' && k==='Salvations' && m==='Outreach Teams'; }).length`, 1],

@@ -1,5 +1,5 @@
 /* Not every ministry tracks the same things: a ministry's LEADER (or an
-   admin, or the Base Leadership overseer of its department) can hide a
+   admin, or the Campus Leadership overseer of its department) can hide a
    baseline metric or add one of their own — an ordinary member can log the
    numbers but not change the list. saveMetricOverrides is the one
    server function behind that — getDepartments() in taxonomy.js merges the
@@ -31,7 +31,7 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet',
-  dept: 'Base Leadership', ministry: 'Campus Leadership', role: '', active: true, isAdmin: true };
+  dept: 'Campus Leadership', ministry: 'Campus Director', role: '', active: true, isAdmin: true };
 // Sreilea LEADS the Cafe (admin-assigned `leads`); Pisey just works there.
 const CAFE = { id: 'st_cafe', name: 'Sreilea', username: 'sreilea', campus: 'poipet',
   dept: 'Community Service', ministry: 'Cafe', role: '', active: true, isAdmin: false, leads: ['Community Service|Cafe'] };
@@ -40,7 +40,7 @@ const CAFE_MEMBER = { id: 'st_barista', name: 'Pisey', username: 'pisey', campus
 const OUTREACH = { id: 'st_outreach', name: 'Dara', username: 'dara', campus: 'poipet',
   dept: 'Community Service', ministry: 'Outreach Teams', role: '', active: true, isAdmin: false };
 const CS_OVERSEER = { id: 'st_overseer', name: 'Sina', username: 'sina', campus: 'poipet',
-  dept: 'Base Leadership', ministry: 'Community Service', role: '', active: true, isAdmin: false };
+  dept: 'Campus Leadership', ministry: 'Community Service', role: '', active: true, isAdmin: false };
 
 function seed() {
   for (const k of Object.keys(mem)) delete mem[k];
@@ -74,7 +74,7 @@ check('custom metric stored', r.metricOverrides[0].custom.includes('Latte Art Sc
 r = await call('saveMetricOverrides', ['dara', '1234', 'poipet', 'Community Service', 'Cafe', [], ['Snooping (%)']]);
 check('a teammate in a different ministry is refused', r.ok === false && r.err === 'not_authorized', JSON.stringify(r));
 
-/* 4. the Base Leadership overseer of the department can */
+/* 4. the Campus Leadership overseer of the department can */
 r = await call('saveMetricOverrides', ['sina', '1234', 'poipet', 'Community Service', 'Cafe',
   ['Days Open'], ['Latte Art Score (1-10)', 'Oat Milk Stock (%)']]);
 check('the department overseer can also edit it', r.ok === true, JSON.stringify(r));

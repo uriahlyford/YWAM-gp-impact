@@ -1,4 +1,4 @@
-/* A department's "Base Leadership" ministry (e.g. dept:Base Leadership,
+/* A department's "Campus Leadership" ministry (e.g. dept:Campus Leadership,
    ministry:Community Service) oversees every real ministry under that
    department — so that person can log on behalf of, say, Outreach Teams,
    the same way Outreach Teams' own staff can. Nobody else gets to log
@@ -29,7 +29,7 @@ const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + St
 
 const OVERSEER = {
   id: 'st_lead', name: 'Andrew', username: 'andrew', campus: 'poipet',
-  dept: 'Base Leadership', ministry: 'Community Service', active: true,
+  dept: 'Campus Leadership', ministry: 'Community Service', active: true,
 };
 const MEMBER = {
   id: 'st_member', name: 'Sokha', username: 'sokha', campus: 'poipet',

@@ -17,7 +17,7 @@ const NOWWK=(()=>{const y=new Date().getFullYear(),j=new Date(y,0,1);
   const m=new Date(y,0,1-((j.getDay()+6)%7));
   return Math.max(1,Math.min(52,Math.floor((new Date()-m)/(7*86400000))+1)); })();
 const ME={id:'st1',name:'Sokha Chan',username:'sokha',campus:'poipet',dept:'Community Service',ministry:'Outreach Teams',role:'Coordinator',photo:'',mentorId:''};
-const DATA={leader:false,entries:{poipet:{'Base Leadership|Campus Leadership|Total Staff':{1:12},
+const DATA={leader:false,entries:{poipet:{'Campus Leadership|Campus Director|Total Staff':{1:12},
   'Community Service|Outreach Teams|Salvations':{[NOWWK]:4}}},okrs:[],
   survey:[{campus:'poipet',week:NOWWK,device:'d1',lonely:3,clarity:8,growth:7,porn:0,oneOnOne:1,exercise:1,quietTime:1,debt:0,langHours:2,minHours:5,sharedFaith:1,sabbath:1}]};
 

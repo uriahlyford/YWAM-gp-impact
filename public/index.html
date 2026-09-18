@@ -1242,7 +1242,7 @@ function dashboardHtml(title, ids, perCampus){
         h += '<div class="row"><span class="rowName">'+esc(t(fk[1]).replace(' ($)',''))+'</span><span class="rowVal">'+fmt(v,fk[1])+'</span></div>';
       });
       Object.keys(getDepartments(state.campus)[BL_DEPT]).forEach(function(min){
-        if(min==='Campus Leadership') return;
+        if(min==='Campus Director') return;
         var v = aggregate((state.data.entries[state.campus]||{})[BL_DEPT+'|'+min+'|Staff Debt ($)'],'latest');
         h += '<div class="row"><span class="rowName">'+esc(t('Staff debt by department'))+' · '+esc(t(min))+'</span><span class="rowVal">'+fmt(v,'Staff Debt ($)')+'</span></div>';
       });
@@ -1308,7 +1308,7 @@ function logHtml(){
   h += '<label class="pick"><span>'+esc(t('Week'))+'</span><select id="weekSel">'+weekOptions(state.week)+'</select></label>';
   h += '</div><div class="card" id="logCard">';
   var entries = state.data.entries[state.campus]||{};
-  if(state.dept===BL_DEPT && state.ministry==='Campus Leadership'){
+  if(state.dept===BL_DEPT && state.ministry==='Campus Director'){
     var hsNow = healthScore([state.campus]);
     h += '<div class="row"><div><div class="rowName">'+esc(t('Staff Health Score (from survey)'))+'</div>'+
       '<div class="rowSub">'+esc(t('auto from KPI'))+'</div></div><span class="rowVal">'+(hsNow===null?'—':hsNow.toFixed(1)+'/10')+'</span></div>';

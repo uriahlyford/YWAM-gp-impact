@@ -139,7 +139,7 @@ function ok(name, cond, extra) {
     { id: '7', campus: 'poipet', staffType: 'ministry', country: '' },      // said one
     { id: '8', campus: 'siemreap', staffType: 'ministry', country: 'Australia' },
   ];
-  ctx.__D = { entries: { poipet: { 'Base Leadership|Campus Leadership|Total Staff': { 1: 11 } } },
+  ctx.__D = { entries: { poipet: { 'Campus Leadership|Campus Director|Total Staff': { 1: 11 } } },
     survey: [], roster: roster, week: 52 };
   vm.runInContext('var R = gpRollup(__D); var B = R.staffBreakdown(["poipet"]);', ctx);
   const g = expr => vm.runInContext(expr, ctx);

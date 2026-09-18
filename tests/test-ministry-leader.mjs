@@ -38,8 +38,8 @@ const api = await import(TMP + '/api.js');
 const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
-const ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Base Leadership',
-  ministry: 'Campus Leadership', role: '', active: true, isAdmin: true };
+const ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Campus Leadership',
+  ministry: 'Campus Director', role: '', active: true, isAdmin: true };
 const LEAD = { id: 'st_lead', name: 'Sreilea', username: 'sreilea', campus: 'poipet', dept: 'Community Service',
   ministry: 'Cafe', role: '', active: true };
 const MEMBER = { id: 'st_member', name: 'Dara', username: 'dara', campus: 'poipet', dept: 'Community Service',
@@ -95,8 +95,9 @@ mem.entries = [
   { campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', metric: 'Latte Art Score (1-10)', week: 20, year: new Date().getUTCFullYear(), value: 3 },
 ];
 mem.kpiDaily = [{ campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', metric: 'Latte Art Score (1-10)', date: '2026-05-12', week: 20, value: 7 }];
+// the okrs blob is one row per key result, as saveObjective writes it
 mem.okrs = [{ id: 'o1', campus: 'poipet', quarter: 2, dept: 'Community Service', objective: 'Better coffee',
-  krs: [{ text: 'Latte art', metricKey: 'Community Service|Cafe|Latte Art Score (1-10)', target: 9, manual: 0 }] }];
+  kr: 'Latte art', metricKey: 'Community Service|Cafe|Latte Art Score (1-10)', target: 9, manualPct: 0 }];
 
 r = await call('renameCustomMetric', ['dara', '1234', ...cafe, 'Latte Art Score (1-10)', 'Latte Art (1-10)']);
 ok('a member cannot rename', r.body.ok === false && r.body.err === 'not_authorized');
@@ -113,7 +114,7 @@ const oldPoipet = mem.entries.find(e => e.campus === 'poipet' && e.metric === 'L
 ok('the weekly number moved to the new name', !!poipetRow && poipetRow.value === 7 && !oldPoipet);
 ok('Siem Reap’s same-named metric was left alone', mem.entries.some(e => e.campus === 'siemreap' && e.metric === 'Latte Art Score (1-10)'));
 ok('the day-by-day row moved too', mem.kpiDaily[0].metric === 'Latte Art (1-10)');
-ok('the key result now points at the new name', mem.okrs[0].krs[0].metricKey === 'Community Service|Cafe|Latte Art (1-10)');
+ok('the key result now points at the new name', mem.okrs[0].metricKey === 'Community Service|Cafe|Latte Art (1-10)', mem.okrs[0].metricKey);
 ok('the untouched metric is untouched', mem.entries.some(e => e.metric === 'Cups Sold' && e.value === 40));
 
 console.log('\n=== personal numbers ===');
