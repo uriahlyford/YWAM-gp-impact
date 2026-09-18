@@ -28,8 +28,8 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const ME = {
-  id: 'st_me', name: 'Andrew', username: 'andrew', campus: 'siemreap', dept: 'Base Leadership',
-  ministry: 'Campus Leadership', role: 'Oversight', active: true, surveyToken: 'tok_me',
+  id: 'st_me', name: 'Andrew', username: 'andrew', campus: 'siemreap', dept: 'Campus Leadership',
+  ministry: 'Campus Director', role: 'Oversight', active: true, surveyToken: 'tok_me',
 };
 const OTHER = {
   id: 'st_other', name: 'Sokha', username: 'sokha', campus: 'siemreap', dept: 'Community Service',

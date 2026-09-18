@@ -1,4 +1,4 @@
-/* A Base Leadership overseer's own page is entirely weekly — no daily
+/* A Campus Leadership overseer's own page is entirely weekly — no daily
    "Today" list at all, and no separate "Department Headcount" section
    either: everything (BL_COMMON personal figures, Total Staff/Staff Debt,
    Funds Raised) lands in the one "This week" box, merged with the
@@ -6,7 +6,7 @@
    an earlier design (daily Today for Funds Raised, a separate headcount
    section) that turned out to read as two confusing boxes instead of one.
    Every other ministry (Cups Sold, Days Open…) keeps its normal
-   daily/weekly split — this collapse is Base Leadership-only. */
+   daily/weekly split — this collapse is Campus Leadership-only. */
 import { PUBLIC, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
@@ -21,7 +21,7 @@ const srv = http.createServer((q, res) => {
 await new Promise(res => srv.listen(4418, res));
 
 const ME = { id: 'st_lead', name: 'Andrew', username: 'andrew', campus: 'poipet',
-  dept: 'Base Leadership', ministry: 'Community Service', role: '', photo: '', mentorId: '', isAdmin: false };
+  dept: 'Campus Leadership', ministry: 'Community Service', role: '', photo: '', mentorId: '', isAdmin: false };
 const WK = (function () {
   const d = new Date(), y = d.getFullYear();
   const jan1 = new Date(y, 0, 1);
@@ -73,7 +73,7 @@ function ok(name, cond, extra) {
   else { fail++; console.log('FAIL ' + name + (extra ? '  → ' + extra : '')); }
 }
 
-ok('there is no daily "Today" box at all for a Base Leadership overseer', !(await p.$('[data-acc="kpiDay"]')));
+ok('there is no daily "Today" box at all for a Campus Leadership overseer', !(await p.$('[data-acc="kpiDay"]')));
 ok('there is no separate Department Headcount section either', !(await p.$('[data-acc="kpiHeadcount"]')));
 
 // The week picker, the logged/not-logged strip and the one button that

@@ -67,7 +67,7 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   verbatim from `help.html`, which still carries the same paragraphs inline so it needs no
   script to render. **Two copies, so they can drift** — a test compares them and also
   asserts every ministry in the taxonomy has a focus written for it. Edit one, edit both.
-  Lookups take the department because Base Leadership's "ministries" are named after the
+  Lookups take the department because Campus Leadership's "ministries" are named after the
   departments they oversee.
 - `taxonomy.js` — campuses, departments, ministries, metric lists, `STAFF_TYPES`, `COUNTRIES`,
   `modeOf()`, `compositeOf()`
@@ -217,6 +217,19 @@ on My Database, and `gpKrTargetNote()` says the same thing in the OKR editor as 
 target is typed, against what that metric has already logged this quarter. Fix the
 target where it was set; the app is not guessing which of the two numbers is wrong.
 
+## The leadership department's name
+The department is **Campus Leadership** (it was 'Base Director', then 'Base Leadership'),
+and its own ministry row — the campus director's figures — is **Campus Director** (it was
+'Campus Leadership', which collided with the department's new name). `BL_DEPT` in
+taxonomy.js and `LEADERSHIP_DEPT` in api.js both hold the department name. **The store
+was never rewritten**: rows keep the name that was current when they were written, and
+`normRows_` in api.js normalises `dept`/`ministry` (plus OKR `metricKey`s and staff `leads`)
+on every read of `staff`, `entries`, `kpiDaily`, `okrs` and `metricOverrides`, and every
+incoming department/ministry in a payload — so the rest of the code, and the client, only
+ever see the current names, and ordinary writes persist them. `test-leadership-rename.mjs`
+seeds the store with the old names and checks every read and every department-keyed right.
+Do not add a fourth name without extending `OLD_LEADERSHIP_DEPTS`.
+
 ## My Ministry
 One page (`myMinistryHtml`), two tabs — **Numbers** and **OKRs** (`S.mmTab`); the old
 standalone OKR page is gone, `S.view==='okr'` just lands on the second tab. Numbers
@@ -269,9 +282,9 @@ quarterly sections — just folded away until asked for.
   not gated by the leader code above — Uriah asked for the two kept apart, since the
   dashboard is due for its own rework later and admin access shouldn't be tangled up in
   that. `grantAdmin` checks `process.env.GP_ADMIN_CODE` instead (`isAdminCode_` in
-  `api.js`), same fail-closed shape. A Base Leadership account spends it on itself once
+  `api.js`), same fail-closed shape. A Campus Leadership account spends it on itself once
   (Profile & settings → Admin access) or an existing admin spends it on someone else
-  (the Admin screen) — `grantAdmin` only ever promotes a Base Leadership account.
+  (the Admin screen) — `grantAdmin` only ever promotes a Campus Leadership account.
 - **OKR writes have two doors** (`okrWriter_`): the leader code writes any objective, and
   a signed-in staff member (username + PIN) writes **their own campus and department
   only**. Two things make that a real boundary rather than a hopeful one — the campus and
@@ -392,7 +405,7 @@ section is a roll-up over existing weekly entries, nothing new is stored:
    and outreach-scoped salvations / baptisms / church connections, plus Q1–Q4 chips.
 5. **Local church partnerships** — `Partner Churches Supported` + `Churches Being Led`
    as one "Local Churches Partnered" figure, then congregation attendance, people
-   connected to a local church, and `Spoke at Churches` from Base Leadership.
+   connected to a local church, and `Spoke at Churches` from Campus Leadership.
 6. **Across every ministry** — base-wide baptisms, gospel hearings, healings.
 
 The group constants live in `taxonomy.js` so the log form and the dashboard cannot

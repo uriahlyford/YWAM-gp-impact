@@ -8,7 +8,7 @@
     showing the objectives their department is working on — an objective means
     little without the job it belongs to.
 
-    Base Leadership's "ministries" are named after the departments they oversee
+    Campus Leadership's "ministries" are named after the departments they oversee
     ('Community Service' as a ministry is the department leader's row, not the
     department), which is why lookups take the department too.
 
@@ -62,20 +62,20 @@ var JOB_FOCUS = {
     focus: "You keep the base running and improving — complete and progress projects, maintain the facility, and train others in the trade." },
   "Culinary": { dept: "Skills Training",
     focus: "You feed the base well and train cooks — serve meals on time and on budget, and keep the food good." },
-  "Community Service": { dept: "Base Leadership",
+  "Community Service": { dept: "Campus Leadership",
     focus: "You disciple and support the leaders under Community Service — meet them one-on-one, connect partners, teach, and carry responsibility for staff care and funding." },
-  "Youth Education": { dept: "Base Leadership",
+  "Youth Education": { dept: "Campus Leadership",
     focus: "You disciple and support the leaders under Youth Education — meet them one-on-one, connect partners, teach, and carry responsibility for staff care and funding." },
-  "Leadership Development": { dept: "Base Leadership",
+  "Leadership Development": { dept: "Campus Leadership",
     focus: "You disciple and support the leaders under Leadership Development — meet them one-on-one, connect partners, teach, and carry responsibility for staff care and funding." },
-  "Skills Training": { dept: "Base Leadership",
+  "Skills Training": { dept: "Campus Leadership",
     focus: "You disciple and support the leaders under Skills Training — meet them one-on-one, connect partners, teach, and carry responsibility for staff care and funding." },
-  "Campus Leadership": { dept: "Base Leadership",
+  "Campus Director": { dept: "Campus Leadership",
     focus: "You carry the vision and health of the whole campus — communication, partner relationships, finances, and planting the next base." }
 };
 
 /* The focus for a ministry, or null when there is nothing written for it.
-   `dept` is optional and only used to disambiguate the Base Leadership rows. */
+   `dept` is optional and only used to disambiguate the Campus Leadership rows. */
 function jobFocus(dept, ministry){
   var e = JOB_FOCUS[ministry];
   if(!e) return null;

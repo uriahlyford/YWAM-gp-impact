@@ -1217,7 +1217,7 @@ function kpiViewWeek(){ return S.kpiWeek==null ? thisWeek() : S.kpiWeek; }
 /* Same idea as kpiViewWeek, but one week pointer per oversee-ministry — so
    backfilling Cafe's week 30 doesn't move what Outreach Teams' card is showing. */
 function ovWeekFor_(min){ return (S.ovWeek[min]==null) ? thisWeek() : S.ovWeek[min]; }
-/* A "Base Leadership" profile whose ministry is itself a real department name
+/* A "Campus Leadership" profile whose ministry is itself a real department name
    means that person oversees every ministry under it — see getDepartments()
    in taxonomy.js. Returns that department name, or null for everyone else. */
 function myOversightDept_(){ return oversightDeptOf_(S.me); }
@@ -1225,7 +1225,7 @@ function myOversightDept_(){ return oversightDeptOf_(S.me); }
    a teammate's own OKR view can also add the department they lead, not just
    S.me's. */
 function oversightDeptOf_(person){
-  if(!person || person.dept!=='Base Leadership') return null;
+  if(!person || person.dept!=='Campus Leadership') return null;
   var deps=getDepartments(person.campus);
   return deps[person.ministry] ? person.ministry : null;
 }
@@ -2061,7 +2061,7 @@ function baseHtml(){
      tracks. Summaries are computed either way — they're what a closed row
      shows — only each row's full body is built lazily, on open. */
   var bd=R.salvByDept(ids);
-  var myDept=S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
+  var myDept=S.me.dept==='Base Director' ? 'Campus Leadership' : S.me.dept;
   h+='<div class="accCard">';
 
   h+=accRowHtml('baseAcc', 'salv', '🙌 '+esc(t('Salvations by Department')),
@@ -2191,12 +2191,12 @@ function baseHtml(){
     });
 
   /* --- base leadership: the department leaders' own figures ---
-     These come from Base Leadership, where each department reports on how it is
+     These come from Campus Leadership, where each department reports on how it is
      being led rather than what it produced — distinct from the Base Health row
      below, which is everyone's own weekly wellbeing check-in. The two money
      metrics are stripped server-side for anyone without the leadership code, so
      they simply read as "no figure" here. */
-  h+=accRowHtml('baseAcc', 'baseKpi', '🏠 '+esc(t('Base Leadership')), t('Department leaders’ own figures'),
+  h+=accRowHtml('baseAcc', 'baseKpi', '🏠 '+esc(t('Campus Leadership')), t('Department leaders’ own figures'),
     function(){
       var b='<div class="grid">';
       ['Staff Debt ($)','One-on-Ones Held','Partner Connections','Spoke at YWAM Bases',
@@ -2533,8 +2533,8 @@ function okrFormHtml(editing){
    to you, and the editing controls: you may write your own department's
    objectives, never another department's, which the server enforces too.
 
-   A department overseer (dept: Base Leadership, ministry: e.g. Community
-   Service) sees their OWN department's objectives (Base Leadership's) plus
+   A department overseer (dept: Campus Leadership, ministry: e.g. Community
+   Service) sees their OWN department's objectives (Campus Leadership's) plus
    the objectives of the department they lead — two sets, same as the
    "Ministries You Oversee" section on My Ministry. When there's more than
    one objective to show, they're paged one at a time instead of stacked, so
@@ -2543,7 +2543,7 @@ function okrFormHtml(editing){
 function okrSectionHtml(who, mine, noHeading){
   var wk = thisWeek();
   var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
-  var dept = who.dept==='Base Director' ? 'Base Leadership' : who.dept;
+  var dept = who.dept==='Base Director' ? 'Campus Leadership' : who.dept;
   var depts = [dept];
   var oversees = oversightDeptOf_(who);
   if(oversees && depts.indexOf(oversees)===-1) depts.push(oversees);
@@ -2635,7 +2635,7 @@ function okrSave(btn){
     });
   }
 
-  var myDept = S.me.dept==='Base Director' ? 'Base Leadership' : S.me.dept;
+  var myDept = S.me.dept==='Base Director' ? 'Campus Leadership' : S.me.dept;
   var obj = {
     id: S.okrEditId || ('o'+Date.now()),
     campus: S.me.campus,
@@ -3540,7 +3540,7 @@ function metricOkrNote_(campus, dept, ministry, metric){
 
 /* One row of a weekly figure — latest (carries forward), avg (a score), or
    sum entered directly for the week rather than built up from daily taps
-   (a BL_COMMON personal figure, a headcount, or — for a Base Leadership
+   (a BL_COMMON personal figure, a headcount, or — for a Campus Leadership
    overseer — every metric on their own page, which is weekly-only start to
    finish). Used throughout kpiCardHtml's "This week" section. */
 function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft, campus, dept, ministry){
@@ -3623,14 +3623,14 @@ function kpiCardHtml(wk){
   var quarterlyCounts=metrics.filter(function(m){
     return modeOf(m)==='sum' && cadenceOf(S.me.campus, S.me.dept, S.me.ministry, m)==='quarter';
   });
-  /* A Base Leadership overseer's own page is entirely weekly — no daily
+  /* A Campus Leadership overseer's own page is entirely weekly — no daily
      "Today" list at all (their own figures were never really daily, and
      Total Staff/Staff Debt, the two that used to sit in their own separate
      Department Headcount section, are level metrics anyway) — one "This
      week" section holds everything that isn't monthly/quarterly. Every
      other ministry keeps the daily/weekly split its own count metrics
      (Cups Sold, Days Open…) actually need. */
-  var isBL = S.me.dept==='Base Leadership';
+  var isBL = S.me.dept==='Campus Leadership';
   var counts = isBL ? [] : metrics.filter(function(m){
     return modeOf(m)==='sum' && WEEKLY_ONLY_METRICS.indexOf(m)===-1 &&
       monthlyCounts.indexOf(m)===-1 && quarterlyCounts.indexOf(m)===-1;
@@ -3927,7 +3927,7 @@ function okrTabHtml_(){
 /* ---------- Admin ----------
    Account management, not the sensitive-dashboard-numbers gate — that stays
    the leader code, exactly as it works today. isAdmin only ever goes to a
-   Base Leadership account, and only the leader code can grant it
+   Campus Leadership account, and only the leader code can grant it
    (grantAdmin in api.js), so this screen never has to ask "says who" about
    its own visibility.
 
@@ -4080,13 +4080,13 @@ function adminAccountsHtml_(){
   return h;
 }
 
-/* Every real ministry on a campus as a checkbox — Base Leadership's
+/* Every real ministry on a campus as a checkbox — Campus Leadership's
    "ministries" are department names, not places anyone leads, so they're
    left out. */
 function leadsPickHtml_(campus, selected){
   var deps=getDepartments(campus||CAMPUSES[0].id), h='';
   Object.keys(deps).forEach(function(dept){
-    if(dept==='Base Leadership') return;
+    if(dept==='Campus Leadership') return;
     Object.keys(deps[dept]).forEach(function(min){
       var key=dept+'|'+min;
       h+='<label class="leadOpt"><input type="checkbox" data-admlead="'+esc(key)+'"'+(selected.indexOf(key)>-1?' checked':'')+'> '+
@@ -4158,7 +4158,7 @@ function adminRowBodyHtml_(s){
       '<button class="btn ghost" data-adminsetmentor="'+esc(s.id)+'">'+esc(t('Save mentor'))+'</button>';
   }
 
-  if(!mine && s.dept==='Base Leadership'){
+  if(!mine && s.dept==='Campus Leadership'){
     b+='<div class="mentorDivider"></div><div class="mentorLabel">👑 '+esc(t('Admin access'))+'</div>'+
       '<div class="numIn"><input type="password" id="adminCodeInput" value="'+esc(S.adminCode)+'" placeholder="'+esc(t('Admin code'))+'">'+
       '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" data-admingrant="'+esc(s.id)+'" data-adminmake="'+(s.isAdmin?'0':'1')+'">'+
@@ -4562,7 +4562,7 @@ function canEditMetricsClient_(campus, dept, ministry){
   if(!S.me) return false;
   if(S.me.isAdmin) return true;
   if(campus!==S.me.campus) return false;
-  if(S.me.dept==='Base Leadership') return true;
+  if(S.me.dept==='Campus Leadership') return true;
   return (S.me.leads||[]).indexOf(dept+'|'+ministry)>-1;
 }
 function ministryLeaders_(campus, dept, ministry){
@@ -4704,7 +4704,7 @@ function myMinistryHtml(){
   if(S.me.ministry){
     var minName=t(S.me.ministry);
     if(oversees){
-      /* A Base Leadership overseer's own "ministry" is really their own
+      /* A Campus Leadership overseer's own "ministry" is really their own
          leadership figures — one-on-ones held, hours sharing the gospel and
          the like — personal to them, not a rollup of the department they run.
          The department's real ministries sit in their own section below. */
@@ -4732,8 +4732,8 @@ function myMinistryHtml(){
       function(){ return metricEditorHtml_(S.me.campus, S.me.dept, S.me.ministry); })+'</div>';
   }
 
-  /* A "Base Leadership" ministry that's itself a real department name (e.g.
-     dept: Base Leadership, ministry: Community Service) means this person
+  /* A "Campus Leadership" ministry that's itself a real department name (e.g.
+     dept: Campus Leadership, ministry: Community Service) means this person
      oversees that whole department — so beyond their own leadership figures
      above, show every real ministry under it, one card each, with the same
      week-by-week logging their own ministry gets. Normally the ministry's
@@ -5830,7 +5830,7 @@ function profileHtml(){
   if(S.me.isAdmin){
     h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
       '<p class="hint" style="margin:0">'+esc(t('You have admin access — find it in the menu.'))+'</p></div>';
-  } else if(S.me.dept==='Base Leadership'){
+  } else if(S.me.dept==='Campus Leadership'){
     h+='<div class="card"><label class="f">'+esc(t('Admin access'))+'</label>'+
       '<p class="hint" style="margin:0 0 8px">'+esc(t('Enter the admin code to unlock the Admin screen for this account.'))+'</p>'+
       '<div class="numIn"><input type="password" id="p_admincode" placeholder="'+esc(t('Admin code'))+'">'+
@@ -7075,7 +7075,7 @@ function bind(){
     rb.disabled=true; rb.textContent='…';
     run('staffRegister',[payload],function(d){
       if(d.ok && d.pending){
-        // Base Leadership only — every other department signs in right away.
+        // Campus Leadership only — every other department signs in right away.
         // There is no session to start: a base leader has to approve first.
         rb.disabled=false; rb.textContent='Create profile'; S.regMode=false;
         showMsg('Submitted — a base leader needs to approve a leadership account before you can log in.');

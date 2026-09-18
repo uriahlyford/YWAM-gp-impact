@@ -30,7 +30,7 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const SOKHA  = { id: 'st_sokha', name: 'Sokha', username: 'sokha', campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams', role: '', active: true, photo: '', mentorId: 'st_dara', mentorStatus: 'approved', debt: false };
-const DARA   = { id: 'st_dara', name: 'Dara', username: 'dara', campus: 'poipet', dept: 'Base Leadership', ministry: 'Campus Leadership', role: '', active: true, photo: '', mentorId: '', mentorStatus: '', debt: false };
+const DARA   = { id: 'st_dara', name: 'Dara', username: 'dara', campus: 'poipet', dept: 'Campus Leadership', ministry: 'Campus Director', role: '', active: true, photo: '', mentorId: '', mentorStatus: '', debt: false };
 const NOSY   = { id: 'st_nosy', name: 'Nosy', username: 'nosy', campus: 'poipet', dept: 'Youth Education', ministry: 'YDC', role: '', active: true, photo: '', mentorId: '', mentorStatus: '', debt: false };
 const PEND   = { id: 'st_pend', name: 'Pending', username: 'pend', campus: 'poipet', dept: 'Youth Education', ministry: 'YDC', role: '', active: true, photo: '', mentorId: 'st_dara', mentorStatus: 'pending', debt: false };
 

@@ -29,8 +29,8 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const MENTOR = {
-  id: 'st_mentor', name: 'Andrew', username: 'andrew', campus: 'siemreap', dept: 'Base Leadership',
-  ministry: 'Campus Leadership', role: 'Oversight', active: true,
+  id: 'st_mentor', name: 'Andrew', username: 'andrew', campus: 'siemreap', dept: 'Campus Leadership',
+  ministry: 'Campus Director', role: 'Oversight', active: true,
 };
 const MENTEE = {
   id: 'st_mentee', name: 'Sokha', username: 'sokha', campus: 'siemreap', dept: 'Community Service',

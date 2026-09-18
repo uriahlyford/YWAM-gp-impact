@@ -31,7 +31,7 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet',
-  dept: 'Base Leadership', ministry: 'Campus Leadership', role: '', active: true, isAdmin: true, email: 'uriah@example.com' };
+  dept: 'Campus Leadership', ministry: 'Campus Director', role: '', active: true, isAdmin: true, email: 'uriah@example.com' };
 
 async function call(fn, args) {
   const res = await api.default({ method: 'POST', json: async () => ({ fn, args }), headers: new Map() }, {});

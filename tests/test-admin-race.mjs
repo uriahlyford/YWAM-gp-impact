@@ -47,8 +47,8 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const ADMIN = {
-  id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Base Leadership',
-  ministry: 'Campus Leadership', role: 'Director', active: true, isAdmin: true,
+  id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Campus Leadership',
+  ministry: 'Campus Director', role: 'Director', active: true, isAdmin: true,
 };
 const SPICY = {
   id: 'st_spicy', name: 'Spicy', username: 'spicy', campus: 'poipet', dept: 'Community Service',
@@ -92,13 +92,13 @@ ok('both changes survived together: new username AND new pin log her in', loginB
 mem.staff = [ADMIN, SPICY].map((s) => ({ ...s, pinSalt: s.id, pinHash: mkHash('1234', s.id) }));
 const [roleRes, deptRes] = await Promise.all([
   call('adminUpdateStaff', ['uriah', '1234', 'st_spicy', { role: 'Team Lead' }]),
-  call('adminUpdateStaff', ['uriah', '1234', 'st_spicy', { dept: 'Base Leadership' }]),
+  call('adminUpdateStaff', ['uriah', '1234', 'st_spicy', { dept: 'Campus Leadership' }]),
 ]);
 ok('the role update reported success', roleRes.body && roleRes.body.ok === true, JSON.stringify(roleRes.body));
 ok('the department update reported success', deptRes.body && deptRes.body.ok === true, JSON.stringify(deptRes.body));
 const final = mem.staff.find((s) => s.id === 'st_spicy');
 ok('the role change survived the concurrent department change', final.role === 'Team Lead', final.role);
-ok('the department change survived the concurrent role change', final.dept === 'Base Leadership', final.dept);
+ok('the department change survived the concurrent role change', final.dept === 'Campus Leadership', final.dept);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

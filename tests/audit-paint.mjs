@@ -11,7 +11,7 @@ const srv=http.createServer((q,r)=>{let p=q.url.split('?')[0]; if(p==='/')p='/in
   const f=path.join(ROOT,p); if(!fs.existsSync(f)){r.writeHead(404);r.end();return;}
   r.writeHead(200,{'Content-Type':T[path.extname(f)]||'application/octet-stream'}); r.end(fs.readFileSync(f));});
 await new Promise(r=>srv.listen(4411,r));
-const DATA={leader:false,entries:{poipet:{'Base Leadership|Campus Leadership|Total Staff':{1:12}}},okrs:[],survey:[]};
+const DATA={leader:false,entries:{poipet:{'Campus Leadership|Campus Director|Total Staff':{1:12}}},okrs:[],survey:[]};
 const b=await chromium.launch({executablePath: CHROMIUM});
 
 async function run(label, fontMode){

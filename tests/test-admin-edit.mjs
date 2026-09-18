@@ -26,8 +26,8 @@ function ok(name, cond, extra) {
   else { fail++; console.log('FAIL ' + name + (extra !== undefined ? '  → ' + extra : '')); }
 }
 
-const ME = { id: 'st1', name: 'Uriah Lyford', username: 'uriah', campus: 'poipet', dept: 'Base Leadership',
-  ministry: 'Campus Leadership', role: 'Director', photo: '', mentorId: '', staffType: 'campus',
+const ME = { id: 'st1', name: 'Uriah Lyford', username: 'uriah', campus: 'poipet', dept: 'Campus Leadership',
+  ministry: 'Campus Director', role: 'Director', photo: '', mentorId: '', staffType: 'campus',
   country: 'United States', isAdmin: true, active: true };
 const MATE = { id: 'st2', name: 'Mealea Sok', username: 'mealea', campus: 'poipet', dept: 'Youth Education',
   ministry: 'YDC', role: 'YDC teacher', photo: '', mentorId: '', staffType: 'ministry', country: 'Cambodia',

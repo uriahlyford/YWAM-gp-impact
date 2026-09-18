@@ -25,9 +25,10 @@ const SERVER = [
   'test-goals.mjs',      // weekly goals are percentages, and old ticked rows still read
   'test-smart-goals.mjs', // Annual Goals (SMART): year+category isolation, ownership
   'test-one-on-one.mjs', // 1-on-1 requests: mentor/mentee pairing, recipient-only response
-  'test-admin.mjs',      // Base Leadership sign-ups need approval; isAdmin gates account management
+  'test-admin.mjs',      // Campus Leadership sign-ups need approval; isAdmin gates account management
   'test-admin-race.mjs', // two admin writes to the same staff record at once don't let one silently undo the other
   'test-ministry-leader.mjs', // ministry leaders (admin-assigned) own the metric list; personal numbers; renaming a custom metric moves its history
+  'test-leadership-rename.mjs', // Base Leadership → Campus Leadership (and its director row → Campus Director): old-name rows read back new, old-name accounts keep every right
   'test-ministry-oversight.mjs', // department overseers can log for ministries they oversee, nobody else can
   'test-ministry-metrics.mjs', // a ministry's own staff (or its overseer, or an admin) can edit what it tracks
   'test-rollups.mjs',    // the roll-up maths
@@ -62,7 +63,7 @@ const BROWSER = [
   'test-notif-bell-actions.mjs', // an action button drawn in the bell drawer actually works, not just the inline card
   'test-okr-admin-view.mjs', // admin sees every department's OKRs, collapsed, read-only; non-admin sees none of it
   'test-ministry-browse.mjs', // My Ministry's "jump to any ministry" picker: admin authorization, and Save Week uses the browsed ministry's own dept
-  'test-personal-metrics-cadence.mjs', // Base Leadership personal figures move to the weekly card; Total Staff/Staff Debt get their own Department Headcount section
+  'test-personal-metrics-cadence.mjs', // Campus Leadership personal figures move to the weekly card; Total Staff/Staff Debt get their own Department Headcount section
   'test-metric-cadence.mjs', // admin-only monthly/quarterly cadence per metric; the monthly/quarterly section writes to its own anchor week
   'test-metric-okr-feeds.mjs', // a metric's own row shows which OKR(s) it feeds, scoped to its own campus
   'test-pull-jitter.mjs', // a scroll-down swipe's initial settling jitter must not get mistaken for a pull-to-refresh and cancel native scrolling
