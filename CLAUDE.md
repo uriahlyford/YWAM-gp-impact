@@ -335,6 +335,15 @@ show up here too), men/women reached, notes.
 - `test-team-trips.mjs` (server) and `test-outreach-teams.mjs` (browser) cover it.
 
 ## Admin → All accounts
+**Every staff record carries its own id, or gets one** (`ensureStaffIds_`, applied in
+`getStaff_` and inside `mutateStaff_`): accounts from before the Netlify backend had none,
+and with an empty id they all fell together — the admin's list opened the wrong row
+(an empty key is the same empty key), every such account read as "(you)", and
+`adminResetPin` couldn't find the person. A missing id is minted on read, a duplicate is
+re-minted for the LATER row (the first keeps it and whatever history points at it), and
+the repaired list is written straight back. The admin list also keys a row on
+`s.id || 'row'+i` so two rows can never share a key. `test-staff-ids.mjs` covers it.
+
 The search (`#adminSearch`) lives in `S.adminSearch`: tapping a row rebuilds the page
 (that's how the row opens), and the box used to come back empty with everyone showing
 again — "selecting a staff bugs". The filter is re-applied in `bind()` and the opened
