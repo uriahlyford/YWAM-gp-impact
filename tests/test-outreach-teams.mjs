@@ -78,6 +78,9 @@ async function open(who, opts) {
   await page.waitForTimeout(500);
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(600);
+  if (opts.pickTeams) { await page.click('[data-mmpick="Community Service|Outreach Teams"]'); await page.waitForTimeout(400); }
+  // Outreach Teams is entered on its own Teams Database page, one tap off My Ministry
+  if (!opts.stayOnMinistry && await page.$('#goTeamsDb')) { await page.click('#goTeamsDb'); await page.waitForTimeout(600); }
   return { ctx, page, errors, sent };
 }
 const tileOf = (page, name) => page.evaluate(n => { const el = [].find.call(document.querySelectorAll('.mmTile'), x => x.querySelector('.mmTileName').textContent.trim() === n); return el ? el.querySelector('.mmTileNum').textContent.trim() : null; }, name);
@@ -92,11 +95,16 @@ const state = (page) => page.evaluate(() => ({
 
 console.log('=== Outreach Teams staff open on the teams page ===');
 {
-  const { ctx, page, errors, sent } = await open(SOK);
+  const { ctx, page, errors, sent } = await open(SOK, { stayOnMinistry: true });
   let s = await state(page);
-  ok('My Ministry shows the teams page, not a week strip or a metric form', s.teamsPage && !s.strip && !s.form, JSON.stringify([s.teamsPage, s.strip, s.form]));
+  ok('My Ministry for Outreach Teams shows no week strip or metric form — a door to the Teams Database instead', !s.strip && !s.form && !s.teamsPage && await page.$('#goTeamsDb') !== null, JSON.stringify([s.strip, s.form, s.teamsPage]));
+  ok('the banner still says which ministry this is', await page.evaluate(() => /Outreach Teams/.test(document.querySelector('#mmBanner').textContent)));
+  await page.click('#goTeamsDb');
+  await page.waitForTimeout(600);
+  s = await state(page);
+  ok('the Teams Database page shows the teams', s.teamsPage && await page.evaluate(() => /Teams Database/.test(document.querySelector('h2').textContent)));
   ok('the teams came with boot — no second request', !sent.some(x => x.fn === 'getTeamTrips'));
-  ok('the personal numbers are folded at the very bottom', s.personalFold && s.personalOpen === 0);
+  ok('the personal numbers are off the page', !s.personalFold && s.personalOpen === 0);
   // the quarter view defaults to this quarter; pick the year view to see everything finished this year
   await page.click('[data-teamperiod="year"]');
   await page.waitForTimeout(400);
@@ -190,11 +198,8 @@ console.log('\n=== a Cafe member: period toggle, folded personal card, teams rea
   await page.click('[data-mmperiod="month"]');
   await page.waitForTimeout(300);
   ok('Month reads “this month”', await page.evaluate(() => /this month/.test(document.querySelector('.mmTileSub').textContent)));
-  ok('the personal numbers are folded, at the bottom, after everything else', s.personalFold && s.personalOpen === 0 &&
-    await page.evaluate(() => { const all = [].slice.call(document.querySelectorAll('.card, .accCard')); return all[all.length - 1].contains(document.querySelector('[data-acc="personal"]')); }));
-  await page.click('[data-acc="personal"]');
-  await page.waitForTimeout(300);
-  ok('opening the fold shows the four boxes', (await state(page)).personalOpen === 4);
+  ok('the personal numbers are off the page for now', !s.personalFold && s.personalOpen === 0);
+  ok('a single-ministry member gets no picker — just the banner', await page.evaluate(() => !document.querySelector('[data-mmpick]') && !document.querySelector('#mmBrowseMinSel') && !!document.querySelector('#mmBanner')));
 
   ok('no page errors', errors.length === 0, errors.join(' | '));
   await ctx.close();
@@ -203,12 +208,24 @@ console.log('\n=== a Cafe member: period toggle, folded personal card, teams rea
 console.log('\n=== the department’s overseer: the teams page among the ministries they oversee, as the server allows ===');
 {
   // the server answers canEdit — here it says no, so the page must be read-only whatever the role
-  const { ctx, page, errors, sent } = await open(OVERSEER);
+  const { ctx, page, errors, sent } = await open(OVERSEER, { stayOnMinistry: true });
   await page.waitForTimeout(800);
-  const s = await state(page);
-  ok('Outreach Teams among the overseen ministries renders the teams page, loaded on demand', sent.some(x => x.fn === 'getTeamTrips' && x.args[2] === 'siemreap') && s.teamsPage);
-  ok('and the weekly cards for the other ministries stay as they were', await page.evaluate(() => document.querySelectorAll('.ovCard, [data-ovsave]').length > 0 || document.body.innerText.includes('Cafe')));
+  let s = await state(page);
+  const chips = await page.evaluate(() => [].map.call(document.querySelectorAll('[data-mmpick]'), b => b.getAttribute('data-mmpick')));
+  ok('the overseer picks among the department’s ministries', chips.includes('Community Service|Cafe') && chips.includes('Community Service|Outreach Teams'), chips.join(' , '));
+  ok('and lands on a weekly one, not Outreach Teams — with its week strip', s.strip && s.form && !s.teamsPage && await page.evaluate(() => document.querySelector('[data-mmpick].on').getAttribute('data-mmpick') !== 'Community Service|Outreach Teams'));
+  ok('their own leadership figures are not the default, they sit last in the picker', chips[chips.length - 1] === 'Campus Leadership|Community Service');
+  ok('no “Individual — your own numbers” paragraph any more', !(await page.evaluate(() => document.body.innerText.includes('Individual'))));
+  await page.click('[data-mmpick="Community Service|Outreach Teams"]');
+  await page.waitForTimeout(400);
+  await page.click('#goTeamsDb');
+  await page.waitForTimeout(700);
+  s = await state(page);
+  ok('picking Outreach Teams leads to the Teams Database, loaded on demand', sent.some(x => x.fn === 'getTeamTrips' && x.args[2] === 'siemreap') && s.teamsPage);
   ok('canEdit false from the server means no Add and no Edit', !s.add && s.edits === 0, JSON.stringify([s.add, s.edits]));
+  await page.click('#teamsDbBack');
+  await page.waitForTimeout(400);
+  ok('Back returns to My Ministry on Outreach Teams', await page.$('#goTeamsDb') !== null);
   ok('no page errors', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

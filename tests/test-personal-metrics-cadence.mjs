@@ -63,6 +63,9 @@ await p.click('nav.bottom [data-tab="week"]');
 await p.waitForTimeout(600);
 await p.click('#goMinistryFromMe');
 await p.waitForTimeout(700);
+// the overseer's own leadership figures are the LAST pick, never the default — pick them
+await p.click('[data-mmpick="Campus Leadership|Community Service"]');
+await p.waitForTimeout(500);
 // the metric form is folded behind one button; opening it unfolds every section
 await p.click('#kpiInputBtn');
 await p.waitForTimeout(400);
