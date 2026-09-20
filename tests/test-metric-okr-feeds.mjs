@@ -17,18 +17,18 @@ const srv = http.createServer((q, res) => {
 });
 await new Promise(res => srv.listen(4420, res));
 
-const ME = { id: 'st1', name: 'Sokha', username: 'sokha', campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams', role: '', photo: '', mentorId: '', isAdmin: false };
+const ME = { id: 'st1', name: 'Sokha', username: 'sokha', campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', role: '', photo: '', mentorId: '', isAdmin: false };
 const OKRS = [
   // Two objectives on the same metric, so the "feeds N objectives" plural path is exercised too.
   { id: 'o1', campus: 'poipet', quarter: 1, dept: 'Community Service', objective: 'Grow our outreach footprint',
-    krs: [{ text: 'Host more teams', metricKey: 'Community Service|Outreach Teams|Teams Hosted', target: 10, manual: 0 }] },
+    krs: [{ text: 'Sell more coffee', metricKey: 'Community Service|Cafe|Cups Sold', target: 10, manual: 0 }] },
   { id: 'o2', campus: 'poipet', quarter: 1, dept: 'Community Service', objective: 'Deepen local partnerships',
-    krs: [{ text: 'Teams as a proxy for reach', metricKey: 'Community Service|Outreach Teams|Teams Hosted', target: 5, manual: 0 }] },
+    krs: [{ text: 'Coffee as a proxy for reach', metricKey: 'Community Service|Cafe|Cups Sold', target: 5, manual: 0 }] },
   // Different campus, same dept/ministry/metric — must NOT count.
   { id: 'o3', campus: 'siemreap', quarter: 1, dept: 'Community Service', objective: 'Siem Reap outreach growth',
-    krs: [{ text: 'Their own teams KR', metricKey: 'Community Service|Outreach Teams|Teams Hosted', target: 5, manual: 0 }] }
+    krs: [{ text: 'Their own coffee KR', metricKey: 'Community Service|Cafe|Cups Sold', target: 5, manual: 0 }] }
 ];
-const MINISTRY = { ok: true, campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams', entries: {}, prev: {}, daily: {}, pins: [] };
+const MINISTRY = { ok: true, campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', entries: {}, prev: {}, daily: {}, pins: [] };
 const BOOT = {
   ok: true, staff: ME, profile: { email: 'x@example.com' }, roster: [ME], logs: [], habits: null,
   mentees: [], mentorRequests: [], goals: [], checkins: [], ministry: MINISTRY,
@@ -77,8 +77,8 @@ const rows = await p.evaluate(() => {
   return out;
 });
 
-ok('Teams Hosted shows it feeds 2 objectives (same-campus KRs only)',
-  /feeds/.test(rows['Teams Hosted'] || '') && /2/.test(rows['Teams Hosted'] || ''), rows['Teams Hosted']);
+ok('Cups Sold shows it feeds 2 objectives (same-campus KRs only)',
+  /feeds/.test(rows['Cups Sold'] || '') && /2/.test(rows['Cups Sold'] || ''), rows['Cups Sold']);
 ok('an unlinked metric (Salvations) shows no "feeds" note',
   rows['Salvations'] !== undefined && !/feeds/.test(rows['Salvations']), rows['Salvations']);
 

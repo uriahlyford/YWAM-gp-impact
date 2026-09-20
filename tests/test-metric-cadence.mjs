@@ -1,4 +1,4 @@
-/* A count metric like Teams Hosted is easier to read monthly or quarterly
+/* A count metric like Cups Sold is easier to read monthly or quarterly
    than every week — an admin can set that per metric from "Edit what we
    track" (metricEditorHtml_'s new cadence picker). Setting cadence is
    admin-only even for someone who can otherwise edit that ministry's
@@ -34,6 +34,7 @@ fs.writeFileSync(TMP + '/node_modules/@netlify/blobs/package.json',
   JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.js' }));
 fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
+fs.copyFileSync(REPO + '/netlify/functions/team-seed.js', TMP + '/team-seed.js'); // api.js imports it
 process.env.GP_LEADER_CODE = 'leadercode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
 const api = await import(TMP + '/api.js');
@@ -41,11 +42,11 @@ const mem = blobs.__mem;
 const mkHash = (pin, salt) => crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 
 const ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet',
-  dept: 'Community Service', ministry: 'Outreach Teams', isAdmin: true, active: true };
+  dept: 'Community Service', ministry: 'Cafe', isAdmin: true, active: true };
 const STAFF = { id: 'st_staff', name: 'Dara', username: 'dara', campus: 'poipet',
-  dept: 'Community Service', ministry: 'Outreach Teams', active: true };
+  dept: 'Community Service', ministry: 'Cafe', active: true };
 const LEADER = { id: 'st_leader', name: 'Sokha', username: 'sokha', campus: 'poipet',
-  dept: 'Community Service', ministry: 'Outreach Teams', active: true, leads: ['Community Service|Outreach Teams'] };
+  dept: 'Community Service', ministry: 'Cafe', active: true, leads: ['Community Service|Cafe'] };
 
 async function call(fn, args) {
   const res = await api.default({ method: 'POST', json: async () => ({ fn, args }), headers: new Map() }, {});
@@ -57,30 +58,30 @@ function seed() {
 }
 
 seed();
-let r = await call('saveMetricOverrides', ['dara', '1234', 'poipet', 'Community Service', 'Outreach Teams', [], [], { 'Teams Hosted': 'month' }]);
+let r = await call('saveMetricOverrides', ['dara', '1234', 'poipet', 'Community Service', 'Cafe', [], [], { 'Cups Sold': 'month' }]);
 ok('a non-admin cannot set cadence, even for their own ministry', r.body && r.body.ok === false && r.body.err === 'not_authorized', JSON.stringify(r.body));
 
-r = await call('saveMetricOverrides', ['uriah', '1234', 'poipet', 'Community Service', 'Outreach Teams', [], [], { 'Teams Hosted': 'month' }]);
+r = await call('saveMetricOverrides', ['uriah', '1234', 'poipet', 'Community Service', 'Cafe', [], [], { 'Cups Sold': 'month' }]);
 ok('an admin can set cadence', r.body && r.body.ok === true &&
-  r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').cadence['Teams Hosted'] === 'month',
+  r.body.metricOverrides.find(o => o.ministry === 'Cafe').cadence['Cups Sold'] === 'month',
   JSON.stringify(r.body));
 
 /* Changing the list is a leader's right now, not every member's — see
-   canEditMetrics_. Sokha leads Outreach Teams; Dara just works there. */
-r = await call('saveMetricOverrides', ['dara', '1234', 'poipet', 'Community Service', 'Outreach Teams', ['Healings'], []]);
+   canEditMetrics_. Sokha leads Cafe; Dara just works there. */
+r = await call('saveMetricOverrides', ['dara', '1234', 'poipet', 'Community Service', 'Cafe', ['Healings'], []]);
 ok('an ordinary member cannot hide/add metrics either', r.body && r.body.ok === false && r.body.err === 'not_authorized', JSON.stringify(r.body));
-r = await call('saveMetricOverrides', ['sokha', '1234', 'poipet', 'Community Service', 'Outreach Teams', ['Healings'], []]);
+r = await call('saveMetricOverrides', ['sokha', '1234', 'poipet', 'Community Service', 'Cafe', ['Healings'], []]);
 ok('the ministry’s leader can hide/add metrics without touching cadence',
-  r.body && r.body.ok === true && r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').hidden.includes('Healings') &&
-  r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').cadence['Teams Hosted'] === 'month',
+  r.body && r.body.ok === true && r.body.metricOverrides.find(o => o.ministry === 'Cafe').hidden.includes('Healings') &&
+  r.body.metricOverrides.find(o => o.ministry === 'Cafe').cadence['Cups Sold'] === 'month',
   JSON.stringify(r.body));
-r = await call('saveMetricOverrides', ['sokha', '1234', 'poipet', 'Community Service', 'Outreach Teams', ['Healings'], [], { 'Teams Hosted': 'quarter' }]);
+r = await call('saveMetricOverrides', ['sokha', '1234', 'poipet', 'Community Service', 'Cafe', ['Healings'], [], { 'Cups Sold': 'quarter' }]);
 ok('and the leader can move a count to quarterly too', r.body && r.body.ok === true &&
-  r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').cadence['Teams Hosted'] === 'quarter', JSON.stringify(r.body));
+  r.body.metricOverrides.find(o => o.ministry === 'Cafe').cadence['Cups Sold'] === 'quarter', JSON.stringify(r.body));
 
-r = await call('saveMetricOverrides', ['uriah', '1234', 'poipet', 'Community Service', 'Outreach Teams', [], [], { 'Teams Hosted': 'bogus' }]);
+r = await call('saveMetricOverrides', ['uriah', '1234', 'poipet', 'Community Service', 'Cafe', [], [], { 'Cups Sold': 'bogus' }]);
 ok('an unknown cadence value is dropped, not stored', r.body && r.body.ok === true &&
-  !('Teams Hosted' in r.body.metricOverrides.find(o => o.ministry === 'Outreach Teams').cadence),
+  !('Cups Sold' in r.body.metricOverrides.find(o => o.ministry === 'Cafe').cadence),
   JSON.stringify(r.body));
 
 console.log('');
@@ -105,9 +106,9 @@ function isoWeekOf(d) {
 const now = new Date();
 const MONTH_WK = isoWeekOf(new Date(now.getFullYear(), now.getMonth(), 1));
 
-const BOOT_ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams', role: '', photo: '', mentorId: '', isAdmin: true };
-let overrides = [{ campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams', hidden: [], custom: [], cadence: { 'Teams Hosted': 'month' } }];
-const MINISTRY = { ok: true, campus: 'poipet', dept: 'Community Service', ministry: 'Outreach Teams', entries: {}, prev: {}, daily: {}, pins: [] };
+const BOOT_ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', role: '', photo: '', mentorId: '', isAdmin: true };
+let overrides = [{ campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', hidden: [], custom: [], cadence: { 'Cups Sold': 'month' } }];
+const MINISTRY = { ok: true, campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', entries: {}, prev: {}, daily: {}, pins: [] };
 const savedMinistry = [];
 
 const b = await chromium.launch({ executablePath: CHROMIUM });
@@ -149,16 +150,16 @@ await p.waitForTimeout(400);
 
 const dayAcc = await p.$('[data-acc="kpiDay"]');
 const dayMetrics = await p.$$eval('[data-kpi]', els => els.map(e => e.getAttribute('data-kpi'))).catch(() => []);
-ok('Teams Hosted (cadence: month) is not in the daily Today list', !dayMetrics.includes('Teams Hosted'), dayMetrics.join(', '));
+ok('Cups Sold (cadence: month) is not in the daily Today list', !dayMetrics.includes('Cups Sold'), dayMetrics.join(', '));
 
 const monthAcc = await p.$('[data-acc="kpiMonth"]');
 ok('there is a "This month" section', !!monthAcc);
 const monthMetrics = await p.$$eval('[data-kpimonth]', els => els.map(e => e.getAttribute('data-kpimonth'))).catch(() => []);
-ok('Teams Hosted is in the monthly section', monthMetrics.includes('Teams Hosted'), monthMetrics.join(', '));
+ok('Cups Sold is in the monthly section', monthMetrics.includes('Cups Sold'), monthMetrics.join(', '));
 
 await p.click('[data-acc="kpiMetrics"]');
 await p.waitForTimeout(300);
-const cadenceSel = await p.$('[data-metriccadence="Teams Hosted"]');
+const cadenceSel = await p.$('[data-metriccadence="Cups Sold"]');
 ok('the metric editor shows a cadence picker for an admin', !!cadenceSel);
 if (cadenceSel) {
   const val = await cadenceSel.inputValue();
@@ -166,7 +167,7 @@ if (cadenceSel) {
 }
 
 // Enter a value and save — should post to the month's own anchor week.
-await p.fill('[data-kpimonth="Teams Hosted"]', '6');
+await p.fill('[data-kpimonth="Cups Sold"]', '6');
 await p.click('#saveKpiMonthBtn');
 await p.waitForTimeout(500);
 ok('Save Month posted exactly one saveMyMinistry call', savedMinistry.length === 1, JSON.stringify(savedMinistry));
@@ -174,7 +175,7 @@ if (savedMinistry.length) {
   const [, , wk, updates] = savedMinistry[0];
   ok('it wrote to the month’s own anchor week, not whatever week was last viewed',
     wk === MONTH_WK, 'wrote week ' + wk + ', expected ' + MONTH_WK);
-  ok('and the right metric/value', updates.some(u => u.metric === 'Teams Hosted' && u.value === 6), JSON.stringify(updates));
+  ok('and the right metric/value', updates.some(u => u.metric === 'Cups Sold' && u.value === 6), JSON.stringify(updates));
 }
 
 ok('no console/page errors', errs.length === 0, errs.slice(0, 3).join(' | '));

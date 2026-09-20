@@ -613,6 +613,18 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .mmTileName { font-size:11.5px; color:var(--muted); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mmTileNum { font-family:'Koulen',sans-serif; font-size:24px; line-height:1.1; color:var(--ink); margin-top:2px; }
 .mmTileSub { font-size:11px; color:var(--faint); margin-top:2px; line-height:1.35; overflow-wrap:anywhere; }
+.periodSeg { max-width:none; margin-bottom:10px; }
+.periodSeg .campusBtn { padding-left:8px; padding-right:8px; font-size:12.5px; }
+.teamPickRow { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.teamPickRow .pick { max-width:160px; flex:1; }
+.teamCard.cancelled { opacity:.6; }
+.teamHead { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.teamStats { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.teamStat { font-size:12px; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:3px 9px; }
+.teamStat b { color:var(--ink); }
+.teamGrid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
+.teamGrid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 10px; }
+.teamDelete { color:var(--bad); }
 .wkStrip { display:flex; gap:6px; margin:12px 0 6px; flex-wrap:wrap; }
 .wkDot { width:34px; height:34px; border-radius:50%; border:1px solid var(--border); background:var(--surface2); color:var(--muted);
   font:inherit; font-size:12px; font-weight:700; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -1155,7 +1167,8 @@ var S = {
   metricEditTarget:null, metricNewName:'', metricNewType:'sum', metricRename:null, metricRenameText:'',
   /* My Ministry: which of its two tabs is showing, whether the metric form
      is unfolded for the week on screen, and the person's own four numbers. */
-  mmTab:'ministry', kpiInputOpen:false, mmDashAll:false, personal:null, personalDraft:{},
+  mmTab:'ministry', kpiInputOpen:false, mmDashAll:false, personal:null, personalDraft:{}, mmPeriod:'quarter',
+  teamTrips:{}, teamLoading:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
   /* Team tab: the directory or the org chart; the chart is cached per
      campus|year|quarter, and an admin's unsaved edits live in structDraft. */
   teamMode:'dir', structCache:{}, structLoading:{}, structYear:null, structQ:null,
@@ -1600,6 +1613,7 @@ function applyBoot(d){
   S.tripRequests = d.tripRequests || [];
   if(d.ministry) S.ministry = d.ministry;
   S.personal = d.personal || null;
+  if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
   if(d.structure && d.structure.ok){
     S.structCache[structKey_(d.structure.campus, d.structure.year, d.structure.quarter)] = { doc:d.structure.doc, source:d.structure.source };
   }
@@ -1632,6 +1646,7 @@ function logout(){
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.personal=null; S.personalDraft={}; S.mmTab='ministry'; S.kpiInputOpen=false; S.mmDashAll=false; S.metricRename=null;
+  S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamForm=null;
   S.teamMode='dir'; S.structCache={}; S.structLoading={}; S.structDraft=null; S.structEdit=false; S.structEditNode=null; S.structYear=null; S.structQ=null;
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
@@ -4642,20 +4657,41 @@ function ministryWeekLogged_(data, wk){
    latest figure, a score is the quarter's average, each with last week
    beside this week. Every ministry's dashboard is therefore different, since
    the tiles are its own metric list. Six show by default; the rest fold. */
+/* Which weeks a dashboard period covers. The ministry payload only carries
+   this year's weeks, so "year" is the whole of this year so far and "year
+   to date" reads the same until weeks get backfilled ahead of today — both
+   are offered because that is how the team talks about the numbers. A week
+   belongs to a month if its Monday or its Sunday falls in it. */
+function weekInPeriod_(w, period){
+  var now=thisWeek();
+  if(period==='quarter') return qOf(w)===qOf(now);
+  if(period==='month'){ var b=weekBounds_(w), m=todayStr().slice(0,7); return b.from.slice(0,7)===m || b.to.slice(0,7)===m; }
+  if(period==='ytd') return w<=now;
+  return true;
+}
+function periodWeeks_(wks, period){ var o={}; for(var w in wks){ if(weekInPeriod_(Number(w), period)) o[w]=wks[w]; } return o; }
+var DASH_PERIODS=[['month','Month'],['quarter','Quarter'],['year','Year'],['ytd','Year to date']];
+function periodChipsHtml_(attr, cur){
+  return '<div class="campusSeg periodSeg">'+DASH_PERIODS.map(function(o){
+    return '<button class="campusBtn'+(cur===o[0]?' on':'')+'" '+attr+'="'+o[0]+'">'+esc(t(o[1]))+'</button>'; }).join('')+'</div>';
+}
 function ministryDashboardHtml_(campus, dept, ministry, data){
   var metrics=metricsFor(campus, dept, ministry);
   if(!metrics.length) return '';
   var entries=(data&&data.entries)||{};
   // aggregate() takes rollup.js's 0-based quarter (qOf); people read Q1–Q4.
-  var wk=thisWeek(), q0=qOf(wk);
+  var wk=thisWeek(), q0=qOf(wk), p=S.mmPeriod||'quarter', yr=new Date().getFullYear();
   var list = S.mmDashAll ? metrics : metrics.slice(0,6);
-  var h='<h3>📈 '+esc(gpT('Q{q} at a glance',{q:q0+1}))+'</h3><div class="mmGrid">';
+  var title = p==='month' ? t('This month at a glance') : p==='quarter' ? gpT('Q{q} at a glance',{q:q0+1})
+    : p==='year' ? gpT('{year} at a glance',{year:yr}) : t('Year to date at a glance');
+  var span = p==='month' ? t('this month') : p==='quarter' ? t('this quarter') : p==='year' ? t('this year') : t('year to date');
+  var h='<h3>📈 '+esc(title)+'</h3>'+periodChipsHtml_('data-mmperiod', p)+'<div class="mmGrid">';
   list.forEach(function(m){
     var wks=entries[m]||{}, mode=modeOf(m), has=Object.keys(wks).length>0;
     var big, sub;
-    if(mode==='sum'){ big=fmt(aggregate(wks,'sum',q0), m); sub=t('this quarter'); }
+    if(mode==='sum'){ big=fmt(aggregate(periodWeeks_(wks,p),'sum'), m); sub=span; }
     else if(mode==='latest'){ big=fmt(aggregate(wks,'latest'), m); sub=t('now'); }
-    else { big=fmt(aggregate(wks,'avg',q0), m); sub=t('avg this quarter'); }
+    else { big=fmt(aggregate(periodWeeks_(wks,p),'avg'), m); sub=t('avg')+' '+span; }
     var cur=wks[String(wk)];
     h+='<div class="mmTile'+(has?'':' empty')+'"><div class="mmTileName">'+esc(t(m))+'</div>'+
       '<div class="mmTileNum">'+(has?big:'—')+'</div>'+
@@ -4699,9 +4735,17 @@ function ministryWeekStatusHtml_(data, wk){
   return h+'</div>';
 }
 
+/* The person's own four figures sit folded at the very bottom of the page:
+   the ministry's numbers are what this page is for right now, and the
+   personal ones are parked until they get their own design. Opening the
+   fold is the only way to see them, so the inputs only exist while open. */
 function personalCardHtml_(wk){
+  return '<div class="accCard" style="margin-top:14px">'+accRowHtml('dbAcc', 'personal', '🙋 '+esc(t('My personal numbers')),
+    esc(t('Your own four weekly figures — parked here for later')), function(){ return personalBodyHtml_(wk); })+'</div>';
+}
+function personalBodyHtml_(wk){
   var entries=(S.personal&&S.personal.entries)||{};
-  var h='<h3>🙋 '+esc(t('My personal numbers'))+'</h3><div class="card">';
+  var h='<div>';
   h+='<p class="sub" style="margin:0 0 8px">'+esc(gpT('Your own week {wk} — yours alone, not the ministry’s.',{wk:wk}))+'</p>';
   PERSONAL_METRICS.forEach(function(m){
     var wks=entries[m]||{};
@@ -4713,6 +4757,172 @@ function personalCardHtml_(wk){
   });
   h+='<button class="btn" id="savePersonalBtn">'+esc(t('Save my numbers'))+'</button></div>';
   return h;
+}
+
+/* ---------- Outreach Teams ----------
+   The one ministry that isn't logged week by week. A team comes for a
+   stretch, and its numbers are gathered once, when it leaves — so this page
+   is a list of teams, one card each, plus a dashboard that adds them up by
+   month, quarter or year (a team counts in the period it LEAVES). Adding or
+   editing a team is a single form: who came, when, how many, and every
+   Outreach Teams metric as a total for the visit. The server turns the
+   teams into weekly rows for the Base dashboard, so nothing else changes.
+   Who may add or edit is who may log for the ministry (canLogFor_ on the
+   server, echoed back as canEdit): its own staff, its overseer, an admin. */
+var TEAM_DEPT='Community Service', TEAM_MIN='Outreach Teams';
+var MONTH_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function isTeamsMinistry_(dept, min){ return dept===TEAM_DEPT && min===TEAM_MIN; }
+function teamMetrics_(campus){ return metricsFor(campus, TEAM_DEPT, TEAM_MIN).filter(function(m){ return m!=='Teams Hosted'; }); }
+function teamYear_(){ return S.teamYear || new Date().getFullYear(); }
+function teamQ_(){ return S.teamQ || (Math.floor(new Date().getMonth()/3)+1); }
+function teamMonth_(){ return S.teamMonth || (new Date().getMonth()+1); }
+function teamDate_(iso){ if(!iso) return ''; var m=Number(iso.slice(5,7)), d=Number(iso.slice(8,10)); return t(MONTH_SHORT[m-1]||'')+' '+d+', '+iso.slice(0,4); }
+function tripFinished_(tr){ return tr && tr.status!=='cancelled' && !!tr.to && tr.to<=todayStr(); }
+function tripInPeriod_(tr, year, period, n){
+  if(!tripFinished_(tr)) return false;
+  var y=Number(tr.to.slice(0,4)), mo=Number(tr.to.slice(5,7));
+  if(y!==year) return false;
+  if(period==='month') return mo===n;
+  if(period==='quarter') return Math.ceil(mo/3)===n;
+  return true;
+}
+function teamPeriodLabel_(){
+  var p=S.teamPeriod||'quarter', y=teamYear_();
+  if(p==='month') return t(MONTH_SHORT[teamMonth_()-1])+' '+y;
+  if(p==='quarter') return 'Q'+teamQ_()+' '+y;
+  return String(y);
+}
+function tripsShown_(trips){
+  var p=S.teamPeriod||'quarter', n = p==='month' ? teamMonth_() : teamQ_();
+  return trips.filter(function(tr){ return tripInPeriod_(tr, teamYear_(), p, n); });
+}
+function teamPeriodBarHtml_(){
+  var p=S.teamPeriod||'quarter', yNow=new Date().getFullYear(), y=teamYear_();
+  var h='<div class="campusSeg periodSeg">'+[['month','Month'],['quarter','Quarter'],['year','Year']].map(function(o){
+    return '<button class="campusBtn'+(p===o[0]?' on':'')+'" data-teamperiod="'+o[0]+'">'+esc(t(o[1]))+'</button>'; }).join('')+'</div>';
+  h+='<div class="pickerRow teamPickRow"><label class="pick"><span>'+esc(t('Year'))+'</span><select id="teamYearSel">'+
+    [yNow-2,yNow-1,yNow].map(function(yy){ return '<option value="'+yy+'"'+(yy===y?' selected':'')+'>'+yy+'</option>'; }).join('')+'</select></label>';
+  if(p==='month') h+='<label class="pick"><span>'+esc(t('Month'))+'</span><select id="teamMonthSel">'+
+    MONTH_SHORT.map(function(m,i){ return '<option value="'+(i+1)+'"'+(i+1===teamMonth_()?' selected':'')+'>'+esc(t(m))+'</option>'; }).join('')+'</select></label>';
+  h+='</div>';
+  if(p==='quarter') h+='<div class="deptChips">'+[1,2,3,4].map(function(n){
+    return '<button class="deptChip'+(n===teamQ_()?' on':'')+'" data-teamq="'+n+'">Q'+n+'</button>'; }).join('')+'</div>';
+  return h;
+}
+/* One tile per figure: how many teams, how many people came, then every
+   Outreach Teams metric summed over the teams that finished in the period,
+   and the men/women split of who was reached. */
+function teamsDashboardHtml_(campus, trips){
+  var shown=tripsShown_(trips), metrics=teamMetrics_(campus);
+  var sum=function(fn){ var s=0, any=false; shown.forEach(function(tr){ var v=fn(tr); if(v!==null && v!==undefined && v!=='' && !isNaN(Number(v))){ s+=Number(v); any=true; } }); return any?s:null; };
+  var tiles=[{ name:t('Teams Hosted'), text:fmt(shown.length,''), has:shown.length>0 }];
+  var members=sum(function(tr){ return tr.size; });
+  tiles.push({ name:t('Team Members'), text:fmt(members,''), has:members!==null });
+  metrics.forEach(function(m){ var v=sum(function(tr){ return tr.metrics&&tr.metrics[m]; }); tiles.push({ name:t(m), text:fmt(v,m), has:v!==null }); });
+  var rm=sum(function(tr){ return tr.reached&&tr.reached.male; }), rf=sum(function(tr){ return tr.reached&&tr.reached.female; });
+  tiles.push({ name:t('Men / Women Reached'), text:fmt(rm,'')+' / '+fmt(rf,''), has:rm!==null||rf!==null });
+  // figures with numbers in first, so the six on show aren't dashes
+  tiles=tiles.slice(0,2).concat(tiles.slice(2).filter(function(x){ return x.has; }), tiles.slice(2).filter(function(x){ return !x.has; }));
+  var list=S.mmDashAll?tiles:tiles.slice(0,6);
+  var h='<h3>📈 '+esc(gpT('{period} at a glance',{period:teamPeriodLabel_()}))+'</h3><div class="mmGrid">';
+  list.forEach(function(tl){
+    h+='<div class="mmTile'+(tl.has?'':' empty')+'"><div class="mmTileName">'+esc(tl.name)+'</div>'+
+      '<div class="mmTileNum">'+(tl.has?tl.text:'—')+'</div>'+
+      '<div class="mmTileSub">'+esc(gpT('{n} teams',{n:shown.length}))+'</div></div>';
+  });
+  h+='</div>';
+  if(tiles.length>6) h+='<button class="linkbtn" id="mmDashAll" style="margin:-6px 0 8px">'+
+    esc(S.mmDashAll ? t('Show fewer') : gpT('Show all {n} metrics',{n:tiles.length}))+'</button>';
+  return h;
+}
+function teamCardHtml_(tr, canEdit, campus){
+  var metrics=teamMetrics_(campus), bits=[];
+  if(tr.org && tr.org!==tr.name) bits.push(tr.org);
+  if(tr.country) bits.push(tr.country);
+  var h='<div class="card slim teamCard'+(tr.status==='cancelled'?' cancelled':'')+'" data-teamcard="'+esc(tr.id)+'">';
+  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(tr.name)+'</b>'+
+      (tr.status==='cancelled'?' <span class="teamStat">'+esc(t('Cancelled'))+'</span>':'')+'</div>'+
+      (bits.length?'<div class="rowSub">'+esc(bits.join(' · '))+'</div>':'')+
+      '<div class="rowSub">📅 '+esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+'</div></div>'+
+    (canEdit?'<button class="linkbtn inline" data-teamedit="'+esc(tr.id)+'">'+esc(t('Edit'))+'</button>':'')+'</div>';
+  var comp=[];
+  if(tr.size!=null) comp.push(gpT('{n} people',{n:tr.size}));
+  if(tr.males!=null) comp.push(tr.males+' '+t('men'));
+  if(tr.females!=null) comp.push(tr.females+' '+t('women'));
+  if(tr.couples!=null) comp.push(tr.couples+' '+t('couples'));
+  if(tr.families!=null) comp.push(tr.families+' '+t('families'));
+  if(comp.length) h+='<div class="rowSub" style="margin-top:4px">👥 '+esc(comp.join(' · '))+'</div>';
+  if(tr.staff) h+='<div class="rowSub">🤝 '+esc(t('Hosted by'))+' '+esc(tr.staff)+'</div>';
+  if(tr.focus) h+='<div class="rowSub">🎯 '+esc(tr.focus)+'</div>';
+  var chips='';
+  metrics.forEach(function(m){ var v=tr.metrics&&tr.metrics[m]; if(v!=null) chips+='<span class="teamStat"><b>'+fmt(Number(v),m)+'</b> '+esc(t(m))+'</span>'; });
+  var r=tr.reached||{};
+  if(r.male!=null||r.female!=null) chips+='<span class="teamStat"><b>'+fmt(r.male==null?null:Number(r.male),'')+' / '+fmt(r.female==null?null:Number(r.female),'')+'</b> '+esc(t('men / women reached'))+'</span>';
+  h+= chips ? '<div class="teamStats">'+chips+'</div>'
+    : (tr.status==='cancelled' ? '' : '<div class="rowSub" style="margin-top:6px">⚠️ '+esc(t('No numbers entered for this team yet'))+'</div>');
+  if(tr.notes) h+='<div class="rowSub" style="margin-top:6px">'+esc(tr.notes)+'</div>';
+  return h+'</div>';
+}
+function teamBlank_(campus){
+  return { id:'', campus:campus, name:'', org:'', country:'', from:'', to:'', size:'', males:'', females:'', couples:'', families:'',
+    staff:'', focus:'', status:'active', notes:'', metrics:{}, reached:{ male:'', female:'' } };
+}
+function teamFormHtml_(campus){
+  var f=S.teamForm, metrics=teamMetrics_(campus), isNew=!f.id;
+  var inp=function(key, label, type, extra){
+    var v=f[key]; if(v==null) v='';
+    return '<div><label class="f">'+esc(label)+'</label><input type="'+type+'"'+(type==='number'?' inputmode="numeric" min="0"':'')+
+      ' data-tf="'+key+'" value="'+esc(String(v))+'"'+(extra||'')+'></div>';
+  };
+  var h='<div class="card" id="teamFormCard"><h3 style="margin-top:0">'+esc(isNew?t('Add a team'):t('Edit team'))+'</h3>';
+  h+=inp('name', t('Team name'), 'text', ' maxlength="120" placeholder="'+esc(t('e.g. Endeavor DTS'))+'"');
+  h+='<div class="teamGrid2">'+inp('org', t('Sending base / church'), 'text', ' maxlength="120"')+inp('country', t('Country'), 'text', ' maxlength="60"')+'</div>';
+  h+='<div class="teamGrid2">'+inp('from', t('Arrived'), 'date')+inp('to', t('Left'), 'date')+'</div>';
+  h+='<div class="teamGrid2">'+inp('size', t('People in the team'), 'number')+inp('couples', t('Couples'), 'number')+'</div>';
+  h+='<div class="teamGrid3">'+inp('males', t('Men'), 'number')+inp('females', t('Women'), 'number')+inp('families', t('Families'), 'number')+'</div>';
+  h+=inp('staff', t('Hosted by (our staff)'), 'text', ' maxlength="120"');
+  h+=inp('focus', t('Outreach focus'), 'text', ' maxlength="200" placeholder="'+esc(t('e.g. Teaching, Evangelism'))+'"');
+  h+='<label class="f">'+esc(t('Status'))+'</label><select data-tf="status">'+
+    '<option value="active"'+(f.status!=='cancelled'?' selected':'')+'>'+esc(t('Came as planned'))+'</option>'+
+    '<option value="cancelled"'+(f.status==='cancelled'?' selected':'')+'>'+esc(t('Cancelled'))+'</option></select>';
+  h+='<h4 style="margin:16px 0 4px">'+esc(t('The team’s numbers — totals for the whole visit'))+'</h4>';
+  h+='<p class="hint" style="margin:0 0 6px">'+esc(t('Gathered at the end of their trip. Leave a box empty if you don’t have it.'))+'</p>';
+  metrics.forEach(function(m){
+    var v=f.metrics[m]; if(v==null) v='';
+    h+='<div class="row"><div class="rowName">'+esc(t(m))+'</div><input type="number" inputmode="numeric" class="kpiIn" data-tfm="'+esc(m)+'" value="'+esc(String(v))+'"></div>';
+  });
+  var rm=f.reached.male==null?'':f.reached.male, rf=f.reached.female==null?'':f.reached.female;
+  h+='<div class="row"><div class="rowName">'+esc(t('Men reached'))+'</div><input type="number" inputmode="numeric" class="kpiIn" data-tfr="male" value="'+esc(String(rm))+'"></div>';
+  h+='<div class="row"><div class="rowName">'+esc(t('Women reached'))+'</div><input type="number" inputmode="numeric" class="kpiIn" data-tfr="female" value="'+esc(String(rf))+'"></div>';
+  h+='<label class="f">'+esc(t('Notes'))+'</label><textarea data-tf="notes" rows="2" maxlength="1000">'+esc(f.notes||'')+'</textarea>';
+  h+='<button class="btn" id="teamSaveBtn">'+esc(isNew?t('Add this team'):t('Save team'))+'</button>';
+  h+='<button class="btn ghost" id="teamCancelBtn">'+esc(t('Cancel'))+'</button>';
+  if(!isNew) h+='<button class="linkbtn teamDelete" id="teamDeleteBtn">'+esc(t('Delete this team'))+'</button>';
+  return h+'</div>';
+}
+function teamsMinistryHtml_(campus){
+  var c=S.teamTrips[campus];
+  var h='<div id="teamsPage" data-campus="'+esc(campus)+'">';
+  h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Teams are entered one at a time, once their visit is over — not week by week. Each team counts in the week it leaves, and the Base dashboard picks it up from there.'))+'</p>';
+  if(!c) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  h+=teamPeriodBarHtml_();
+  h+=teamsDashboardHtml_(campus, c.trips);
+  if(c.canEdit){
+    if(S.teamForm && S.teamForm.campus===campus) h+=teamFormHtml_(campus);
+    else h+='<button class="btn" id="teamAddBtn" style="margin-top:0">＋ '+esc(t('Add a team'))+'</button>';
+  }
+  var shown=tripsShown_(c.trips);
+  h+='<h3>'+esc(gpT('Teams · {period}',{period:teamPeriodLabel_()}))+' <small>· '+shown.length+'</small></h3>';
+  if(!shown.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No teams finished in this period.'))+'</p></div>';
+  shown.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
+  var now=todayStr(), coming=c.trips.filter(function(tr){ return tr.status!=='cancelled' && tr.to>=now; })
+    .sort(function(a,b){ return a.from<b.from?-1:1; });
+  if(coming.length){
+    h+='<h3>'+esc(t('Here now or coming'))+' <small>· '+coming.length+'</small></h3>';
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Enter their numbers once they leave — they join the dashboard then.'))+'</p>';
+    coming.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
+  }
+  return h+'</div>';
 }
 
 /* ---------- My Ministry ----------
@@ -4746,15 +4956,17 @@ function myMinistryHtml(){
       var leaders=ministryLeaders_(S.me.campus, S.me.dept, S.me.ministry);
       if(leaders.length) h+='<p class="pmeta" style="margin:0 0 6px">👑 '+esc(t('Led by'))+' '+leaders.map(function(p){ return esc(p.name); }).join(', ')+'</p>';
     }
-    h+=ministryDashboardHtml_(S.me.campus, S.me.dept, S.me.ministry, S.ministry);
-    h+=ministryWeekStatusHtml_(S.ministry, wk);
-    if(S.kpiInputOpen) h+=kpiCardHtml(wk);
+    if(isTeamsMinistry_(S.me.dept, S.me.ministry)){
+      h+=teamsMinistryHtml_(S.me.campus);
+    } else {
+      h+=ministryDashboardHtml_(S.me.campus, S.me.dept, S.me.ministry, S.ministry);
+      h+=ministryWeekStatusHtml_(S.ministry, wk);
+      if(S.kpiInputOpen) h+=kpiCardHtml(wk);
+    }
   } else {
     h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
     h+=kpiCardHtml(wk);
   }
-
-  h+=personalCardHtml_(wk);
 
   if(S.me.ministry && canEditMetricsClient_(S.me.campus, S.me.dept, S.me.ministry)){
     S.metricEditTarget = { campus:S.me.campus, dept:S.me.dept, ministry:S.me.ministry };
@@ -4778,11 +4990,13 @@ function myMinistryHtml(){
     Object.keys(deps[oversees]||{}).forEach(function(min){
       h+='<h4 style="margin:14px 0 4px;font-size:13px;color:var(--muted)">'+
         (MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</h4>';
-      if(S.oversee[min]) h+=oversightKpiCardHtml_(oversees, min, S.oversee[min]);
+      if(isTeamsMinistry_(oversees, min)) h+=teamsMinistryHtml_(S.me.campus);
+      else if(S.oversee[min]) h+=oversightKpiCardHtml_(oversees, min, S.oversee[min]);
       else h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
     });
   }
   h+=myMinistryBrowseHtml_(oversees);
+  h+=personalCardHtml_(wk);
   return h;
 }
 
@@ -4825,7 +5039,8 @@ function myMinistryBrowseHtml_(oversees){
   else if(isOverseen) h+='<p class="sub" style="margin:8px 0 0">'+esc(t('You oversee this — see “Ministries You Oversee” above.'))+'</p>';
   h+='</div>';
   if(!isMine && !isOverseen){
-    if(S.oversee[min]) h+=oversightKpiCardHtml_(dept, min, S.oversee[min]);
+    if(isTeamsMinistry_(dept, min)) h+=teamsMinistryHtml_(S.me.campus);
+    else if(S.oversee[min]) h+=oversightKpiCardHtml_(dept, min, S.oversee[min]);
     else h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
   }
   return h;
@@ -6327,6 +6542,91 @@ function bindAway(){
   });
   var mda=document.getElementById('mmDashAll');
   if(mda) mda.onclick=function(){ S.mmDashAll=!S.mmDashAll; render(); };
+  document.querySelectorAll('[data-mmperiod]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.mmPeriod=b.getAttribute('data-mmperiod'); render(); };
+  });
+
+  // --- Outreach Teams: one record per team, not a weekly form ---
+  var tp=document.getElementById('teamsPage');
+  if(tp){
+    var tCampus=tp.getAttribute('data-campus');
+    if(!S.teamTrips[tCampus] && !S.teamLoading[tCampus]){
+      S.teamLoading[tCampus]=true;
+      run('getTeamTrips',[S.auth.user,S.auth.pin,tCampus],function(d){
+        S.teamLoading[tCampus]=false;
+        S.teamTrips[tCampus] = (d && d.ok) ? { trips:d.trips||[], canEdit:!!d.canEdit } : { trips:[], canEdit:false };
+        render();
+      });
+    }
+    var putTrips=function(d){ S.teamTrips[d.campus]={ trips:d.trips||[], canEdit:!!d.canEdit }; };
+    var toForm=function(){ var el=document.getElementById('teamFormCard'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
+    document.querySelectorAll('[data-teamperiod]').forEach(function(b){
+      b.onclick=function(){ gpTap(); S.teamPeriod=b.getAttribute('data-teamperiod'); render(); };
+    });
+    var tys=document.getElementById('teamYearSel');
+    if(tys) tys.onchange=function(){ S.teamYear=Number(tys.value); render(); };
+    var tms=document.getElementById('teamMonthSel');
+    if(tms) tms.onchange=function(){ S.teamMonth=Number(tms.value); render(); };
+    document.querySelectorAll('[data-teamq]').forEach(function(b){
+      b.onclick=function(){ gpTap(); S.teamQ=Number(b.getAttribute('data-teamq')); render(); };
+    });
+    var tab_=document.getElementById('teamAddBtn');
+    if(tab_) tab_.onclick=function(){ gpTap(); S.teamForm=teamBlank_(tCampus); render(); toForm(); };
+    document.querySelectorAll('[data-teamedit]').forEach(function(b){
+      b.onclick=function(){
+        var id=b.getAttribute('data-teamedit'), c=S.teamTrips[tCampus];
+        var tr=c && c.trips.filter(function(x){ return x.id===id; })[0];
+        if(!tr) return;
+        S.teamForm=JSON.parse(JSON.stringify(tr));
+        S.teamForm.metrics=S.teamForm.metrics||{}; S.teamForm.reached=S.teamForm.reached||{ male:'', female:'' };
+        render(); toForm();
+      };
+    });
+    document.querySelectorAll('[data-tf]').forEach(function(inp){
+      var f=function(){ if(S.teamForm) S.teamForm[inp.getAttribute('data-tf')]=inp.value; };
+      inp.oninput=f; inp.onchange=f;
+    });
+    document.querySelectorAll('[data-tfm]').forEach(function(inp){
+      inp.oninput=function(){ if(S.teamForm) S.teamForm.metrics[inp.getAttribute('data-tfm')]=inp.value; };
+    });
+    document.querySelectorAll('[data-tfr]').forEach(function(inp){
+      inp.oninput=function(){ if(S.teamForm) S.teamForm.reached[inp.getAttribute('data-tfr')]=inp.value; };
+    });
+    var tcb=document.getElementById('teamCancelBtn');
+    if(tcb) tcb.onclick=function(){ S.teamForm=null; render(); };
+    var tsb=document.getElementById('teamSaveBtn');
+    if(tsb) tsb.onclick=function(){
+      if(S.busy || !S.teamForm) return;
+      var f=S.teamForm;
+      if(!(f.name||'').trim()){ showMsg(t('Give the team a name first.')); return; }
+      if(!f.from || !f.to){ showMsg(t('Enter the dates they arrived and left.')); return; }
+      if(f.to<f.from){ showMsg(t('The leaving date is before the arrival date.')); return; }
+      var num=function(v){ return (v==='' || v==null) ? null : Number(v); };
+      var doc={ id:f.id||'', campus:tCampus, name:f.name.trim(), org:f.org, country:f.country, from:f.from, to:f.to,
+        size:num(f.size), males:num(f.males), females:num(f.females), couples:num(f.couples), families:num(f.families),
+        staff:f.staff, focus:f.focus, status:f.status, notes:f.notes, metrics:{}, reached:{ male:num(f.reached.male), female:num(f.reached.female) } };
+      Object.keys(f.metrics).forEach(function(m){ var v=num(f.metrics[m]); if(v!==null) doc.metrics[m]=v; });
+      S.busy=true; tsb.disabled=true; tsb.textContent=t('Saving…');
+      run('saveTeamTrip',[S.auth.user,S.auth.pin,doc],function(d){
+        S.busy=false;
+        if(d && d.ok){ putTrips(d); S.teamForm=null; showMsg(t('Team saved')); }
+        else showMsg(d && d.err==='not_authorized' ? t('Only Outreach Teams staff or leadership can do that.') : t('Could not save'));
+        render();
+      });
+    };
+    var tdb=document.getElementById('teamDeleteBtn');
+    if(tdb) tdb.onclick=function(){
+      if(S.busy || !S.teamForm || !S.teamForm.id) return;
+      if(!confirm(gpT('Delete “{team}”? Its numbers come out of the dashboards too.',{team:S.teamForm.name}))) return;
+      S.busy=true;
+      run('deleteTeamTrip',[S.auth.user,S.auth.pin,S.teamForm.id],function(d){
+        S.busy=false;
+        if(d && d.ok){ putTrips(d); S.teamForm=null; showMsg(t('Team deleted')); }
+        else showMsg(t('Could not save'));
+        render();
+      });
+    };
+  }
 
   // --- my own four numbers: drafted in state like every other box here ---
   document.querySelectorAll('[data-personal]').forEach(function(inp){

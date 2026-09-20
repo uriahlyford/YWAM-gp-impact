@@ -22,6 +22,7 @@
 import { getStore } from '@netlify/blobs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
+import TEAM_SEED from './team-seed.js';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
 
@@ -1126,7 +1127,7 @@ async function getMetricOverrides_() { return normRows_(await readJSON('metricOv
 async function getData(code, year) {
   const leader = isLeader_(code);
   const yr = askedYear_(year);
-  const entryRows = (await getEntries_()).filter(inYear_(yr));
+  const entryRows = (await withTeamRows_(await getEntries_())).filter(inYear_(yr));
   const entries = {};
   entryRows.forEach(function (r) {
     const dept = normDept_(r.dept); // rows are normalised on read; belt and braces
@@ -1627,7 +1628,8 @@ async function ministryDataFor2_(campus, dept, ministry) {
   const yr = currentYear_();
   let prev = {};
   if (ministry) {
-    const rows = await getEntries_();
+    let rows = await getEntries_();
+    if (dept === TEAM_DEPT && ministry === TEAM_MIN) rows = await withTeamRows_(rows);
     prev = prevLevels_(rows, campus, dept, ministry, yr, isoWeek_(new Date().toISOString().slice(0, 10)));
     rows.forEach(function (r) {
       if (r.campus !== campus || r.dept !== dept || r.ministry !== ministry) return;
@@ -2369,7 +2371,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal, structure] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal, structure, teamTrips] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -2387,7 +2389,9 @@ async function getMyBoot(username, pin) {
       part(function () { return getMyPersonal(username, pin); }),
       // this quarter's org chart for the person's own campus — the Team tab
       // opens on it without a second call
-      part(function () { return getStructure(username, pin, s.campus, currentYear_(), currentQuarter_()); })
+      part(function () { return getStructure(username, pin, s.campus, currentYear_(), currentQuarter_()); }),
+      // Outreach Teams staff open on their teams page — bring the teams along
+      part(function () { return (s.dept === TEAM_DEPT && s.ministry === TEAM_MIN) ? getTeamTrips(username, pin, s.campus) : null; })
     ]);
 
   return {
@@ -2412,6 +2416,7 @@ async function getMyBoot(username, pin) {
     broadcasts: (broadcasts && broadcasts.broadcasts) || [],
     personal: personal || null,
     structure: structure || null,
+    teamTrips: teamTrips || null,
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -2482,6 +2487,116 @@ async function saveStructure(username, pin, doc) {
   return { ok: true, campus: campus, year: y, quarter: q, doc: rec, source: 'saved' };
 }
 
+/* ==================== outreach teams ====================
+   Outreach Teams is the one ministry that doesn't log week by week: a team
+   comes for a stretch of weeks and its numbers are gathered once, when it
+   leaves. So instead of weekly entries it keeps one record per team — who
+   came, when, how many, and every Outreach Teams metric as a total for the
+   visit — in the 'teamTrips' blob, laid over TEAM_SEED (the records imported
+   from the old Lovable hub). Editing a seeded team writes a full row under
+   its id; deleting one writes a tombstone; the seed file itself is never
+   rewritten.
+
+   Everything else in the app still reads Outreach Teams as weekly rows, so
+   the trips are turned into them on the way out (teamEntryRows_): a team
+   counts in the week it LEAVES — 'Teams Hosted' +1 and each metric's total
+   — and a derived row replaces any hand-logged row for the same campus,
+   metric, year and week (withTeamRows_), so nothing is counted twice. The
+   Base dashboard, the GP roll-up and the ministry's own payload all get
+   these without knowing where they came from. */
+const TEAM_DEPT = 'Community Service', TEAM_MIN = 'Outreach Teams';
+const TEAM_COUNTS = ['size', 'males', 'females', 'couples', 'families'];
+async function getTeamTripsRaw_() { return readJSON('teamTrips', []); }
+async function getTeamTrips_() {
+  const byId = {};
+  TEAM_SEED.forEach(function (t) { byId[t.id] = t; });
+  (await getTeamTripsRaw_()).forEach(function (t) { if (t && t.id) byId[t.id] = t; });
+  return Object.keys(byId).map(function (k) { return byId[k]; }).filter(function (t) { return !t.deleted; });
+}
+function isoDate_(v) { const s = str_(v, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
+function cleanTrip_(t, campus) {
+  const name = str_(t.name, 120);
+  const from = isoDate_(t.from), to = isoDate_(t.to);
+  if (!name || !from || !to || to < from) return null;
+  const rec = {
+    id: str_(t.id, 60) || ('tt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)),
+    campus: campus, name: name, org: str_(t.org, 120), country: str_(t.country, 60), from: from, to: to,
+    staff: str_(t.staff, 120), focus: str_(t.focus, 200), status: t.status === 'cancelled' ? 'cancelled' : 'active',
+    notes: str_(t.notes, 1000), metrics: {}, reached: { male: null, female: null }
+  };
+  TEAM_COUNTS.forEach(function (k) { const n = finiteNum_(t[k], 0, 100000); rec[k] = n == null ? null : Math.round(n); });
+  const m = (t.metrics && typeof t.metrics === 'object') ? t.metrics : {};
+  Object.keys(m).forEach(function (k) {
+    const key = str_(k, 80);
+    if (!key || key === 'Teams Hosted' || SENSITIVE.indexOf(key) > -1) return;
+    const n = finiteNum_(m[k], -1e9, 1e9);
+    if (n != null) rec.metrics[key] = n;
+  });
+  const r = (t.reached && typeof t.reached === 'object') ? t.reached : {};
+  rec.reached = { male: finiteNum_(r.male, 0, 1e9), female: finiteNum_(r.female, 0, 1e9) };
+  return rec;
+}
+function teamEntryRows_(trips) {
+  const acc = {};
+  trips.forEach(function (t) {
+    if (!t || t.status === 'cancelled' || !isoDate_(t.to)) return;
+    const yr = Number(t.to.slice(0, 4)), wk = isoWeek_(t.to);
+    const add = function (metric, v) {
+      const k = t.campus + '|' + yr + '|' + wk + '|' + metric;
+      if (!acc[k]) acc[k] = { campus: t.campus, dept: TEAM_DEPT, ministry: TEAM_MIN, metric: metric, week: wk, year: yr, value: 0, derived: true };
+      acc[k].value += Number(v) || 0;
+    };
+    add('Teams Hosted', 1);
+    Object.keys(t.metrics || {}).forEach(function (m) { add(m, t.metrics[m]); });
+  });
+  return Object.keys(acc).map(function (k) { return acc[k]; });
+}
+async function withTeamRows_(rows) {
+  const derived = teamEntryRows_(await getTeamTrips_());
+  if (!derived.length) return rows;
+  const keyOf = function (r) { return r.campus + '|' + yearOf_(r) + '|' + Number(r.week) + '|' + r.metric; };
+  const dk = {};
+  derived.forEach(function (r) { dk[keyOf(r)] = 1; });
+  return rows.filter(function (r) { return !(r.dept === TEAM_DEPT && r.ministry === TEAM_MIN && dk[keyOf(r)]); }).concat(derived);
+}
+async function getTeamTrips(username, pin, campus) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  campus = str_(campus, 40) || s.campus;
+  const trips = (await getTeamTrips_()).filter(function (t) { return t.campus === campus; })
+    .sort(function (a, b) { return a.from < b.from ? 1 : a.from > b.from ? -1 : 0; });
+  return { ok: true, campus: campus, trips: trips, canEdit: canLogFor_(s, campus, TEAM_DEPT, TEAM_MIN) };
+}
+async function saveTeamTrip(username, pin, trip) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!trip || typeof trip !== 'object') return { ok: false, err: 'bad_trip' };
+  const campus = str_(trip.campus, 40) || s.campus;
+  if (!canLogFor_(s, campus, TEAM_DEPT, TEAM_MIN)) return { ok: false, err: 'not_authorized' };
+  const rec = cleanTrip_(trip, campus);
+  if (!rec) return { ok: false, err: 'bad_trip' };
+  rec.updated = new Date().toISOString(); rec.updatedBy = s.id;
+  const rows = await getTeamTripsRaw_();
+  const idx = rows.findIndex(function (r) { return r && r.id === rec.id; });
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('teamTrips', rows);
+  return getTeamTrips(username, pin, campus);
+}
+async function deleteTeamTrip(username, pin, id) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  id = str_(id, 60);
+  const cur = (await getTeamTrips_()).find(function (t) { return t.id === id; });
+  if (!cur) return { ok: false, err: 'not_found' };
+  if (!canLogFor_(s, cur.campus, TEAM_DEPT, TEAM_MIN)) return { ok: false, err: 'not_authorized' };
+  const rows = await getTeamTripsRaw_();
+  const idx = rows.findIndex(function (r) { return r && r.id === id; });
+  const tomb = { id: id, campus: cur.campus, deleted: true, updated: new Date().toISOString(), updatedBy: s.id };
+  if (idx > -1) rows[idx] = tomb; else rows.push(tomb);
+  await writeJSON('teamTrips', rows);
+  return getTeamTrips(username, pin, cur.campus);
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
@@ -2541,6 +2656,9 @@ const HANDLERS = {
   saveMyPersonalWeek: function (a) { return saveMyPersonalWeek(a[0], a[1], a[2], a[3]); },
   getStructure: function (a) { return getStructure(a[0], a[1], a[2], a[3], a[4]); },
   saveStructure: function (a) { return saveStructure(a[0], a[1], a[2]); },
+  getTeamTrips: function (a) { return getTeamTrips(a[0], a[1], a[2]); },
+  saveTeamTrip: function (a) { return saveTeamTrip(a[0], a[1], a[2]); },
+  deleteTeamTrip: function (a) { return deleteTeamTrip(a[0], a[1], a[2]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };
