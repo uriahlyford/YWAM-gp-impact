@@ -230,38 +230,45 @@ ever see the current names, and ordinary writes persist them. `test-leadership-r
 seeds the store with the old names and checks every read and every department-keyed right.
 Do not add a fourth name without extending `OLD_LEADERSHIP_DEPTS`.
 
-## My Ministry
-One page (`myMinistryHtml`), two tabs — **Numbers** and **OKRs** (`S.mmTab`); the old
-standalone OKR page is gone, `S.view==='okr'` just lands on the second tab. Numbers
-opens on a dashboard of the ministry's own metrics (`ministryDashboardHtml_` — a count
-is the quarter's total, a level its latest, a score the quarter's average, read with
-`aggregate()` exactly as the GP Dashboard reads them), then a status card: the week
-picker, an eight-week strip that shows which weeks have **nothing logged**
-(`ministryWeekLogged_` — any weekly figure or any day in the week counts), and **one
-button** (`#kpiInputBtn`) that unfolds the whole metric form with every section open.
-The form itself is still `kpiCardHtml` — daily counts, weekly levels, monthly and
-quarterly sections — just folded away until asked for.
+## My Ministry — one ministry at a time
+One page (`myMinistryHtml`), two tabs — **Numbers** and **OKRs** (`S.mmTab`). Numbers is
+built around ONE ministry, picked at the top and named in a banner (`#mmBanner`) so there
+is never a doubt whose boxes these are:
 
+- **Who can pick what** (`mmOptions_`): your own ministry; if you are a Campus Leadership
+  overseer (dept Campus Leadership, ministry = a department name) every ministry in that
+  department; if admin, every ministry on the campus. ≤ 8 options are chips
+  (`[data-mmpick="Dept|Min"]`, split at the LAST `|`), more are two selects
+  (`#mmBrowseDeptSel` / `#mmBrowseMinSel`). Selection lives in `S.mmBrowseDept` /
+  `S.mmBrowseMinistry` (`mmSelected_`; a department picked with no ministry → its first
+  weekly ministry). A Campus Leadership person's own row — Total Staff, one-on-ones, the
+  leadership figures — sits **last** as "Campus Leadership figures" and is never the
+  default; the old "Individual — your own numbers…" block at the top is gone.
+- **For the picked ministry**: `ministryDashboardHtml_` with a Month · Quarter · Year ·
+  Year to date toggle (`S.mmPeriod`, `weekInPeriod_`), then the status card
+  `ministryWeekStatusHtml_(data, wk, ovMin)` — week picker, the eight-week strip of
+  logged / not-logged weeks, and the one `#kpiInputBtn` that unfolds the form. Your own
+  ministry gets the full daily/weekly `kpiCardHtml` (ids `kpiPrevWeek`, `data-kpigoto`,
+  `S.kpiInputOpen`); any other ministry gets the weekly rows `ovWeekRowsHtml_`
+  (attributes `data-ovprev/ovnext/ovjump/ovgoto/ovinput="Min"`, `S.ovWeek[min]`,
+  `S.ovInputOpen[min]`, data in `S.oversee[min]` loaded lazily via `getMinistryFor`).
+  Outreach Teams shows a door to the **Teams Database** instead (`#goTeamsDb` →
+  `S.view='teamsdb'`, `teamsDbHtml`).
 - **Ministry leaders own the metric list.** `leads` on the staff record is a list of
   `"Dept|Ministry"` keys, set only by an admin (Admin → Accounts → Edit profile →
-  "Ministry leader of"; `adminUpdateStaff`). `canEditMetrics_` in `api.js` is now: admin,
-  or the campus leadership department, or that ministry's leader — **not** every
-  member, which it used to be. Logging numbers (`canLogFor_`) is unchanged: anyone on
-  the ministry. Cadence (weekly → monthly/quarterly) takes the same right; it was
-  admin-only. The client mirrors it in `canEditMetricsClient_` to decide whether to
-  draw "Edit what we track" at all. `publicStaff_` carries `leads`, so the page can
-  say who leads a ministry.
-- **Renaming a custom metric moves its numbers** (`renameCustomMetric`): the weekly
-  `entries`, the `kpiDaily` rows behind them and any key result's `metricKey` all
-  follow the name, scoped to that campus/dept/ministry. The name is the join key (see
-  taxonomy.js), so a rename that only edited the list would orphan the ministry's own
-  history. Baseline metrics can't be renamed here — they are the shared taxonomy.
-- **Personal numbers** (`personalKpi` blob; `saveMyPersonalWeek`/`getMyPersonal`,
-  folded into `getMyBoot` as `personal`): four fixed weekly figures per person
-  (`PERSONAL_METRICS` in teams.html), keyed by staff id. They never reach `getData`
-  or anyone else's page.
-- `test-ministry-leader.mjs` (server) and `test-ministry-redesign.mjs` (browser) hold
-  all of this; `test-ministry-kpis.mjs` and friends now press `#kpiInputBtn` first.
+  "Ministry leader of"; `adminUpdateStaff`). `canEditMetrics_` in `api.js` is: admin, or
+  the campus leadership department, or that ministry's leader. Logging numbers
+  (`canLogFor_`) is unchanged: anyone on the ministry, its overseer, an admin on that
+  campus. The client mirrors it in `canEditMetricsClient_` to draw "Edit what we track".
+- **Renaming a custom metric moves its numbers** (`renameCustomMetric`): weekly
+  `entries`, `kpiDaily` rows and any key result's `metricKey` follow the name, scoped to
+  that campus/dept/ministry. Baseline metrics can't be renamed — they are the taxonomy.
+- **Personal numbers are off the page for now.** `personalKpi` blob, `saveMyPersonalWeek`
+  / `getMyPersonal`, `personalCardHtml_` and `PERSONAL_METRICS` all still exist (and the
+  server tests cover them), but nothing renders them until the ministry numbers are
+  rolling. Don't put them back at the top.
+- `test-ministry-leader.mjs` (server) and `test-ministry-redesign.mjs`,
+  `test-ministry-browse.mjs`, `test-personal-metrics-cadence.mjs` (browser) cover it.
 
 ## Team → Structure (the org chart)
 The Team tab has a Directory / Structure toggle (`S.teamMode`). Structure is the Canva
@@ -292,10 +299,10 @@ members[]}` where leads and members are staff ids (`getStructure`/`saveStructure
 
 ## Outreach Teams — one record per team, not a weekly form
 Outreach Teams (Community Service) doesn't log week by week: a team comes for a stretch
-and its numbers are gathered once, when it leaves. So My Ministry for that ministry (and
-for its overseer, and anyone who browses to it) renders `teamsMinistryHtml_` instead of
-the dashboard / week strip / metric form: a Month · Quarter · Year toggle with a year
-picker, a dashboard that adds up the teams that **finished** in that period (a team
+and its numbers are gathered once, when it leaves. So picking it on My Ministry shows a
+door to the **Teams Database** page (`S.view='teamsdb'`, `teamsDbHtml` →
+`teamsMinistryHtml_`) instead of the week strip / metric form: a Month · Quarter · Year
+toggle with a year picker, a dashboard that adds up the teams that **finished** in that period (a team
 counts in the period it leaves; a team still here or coming sits in its own list
 below), and one card per team with **Edit**. "Add a team" is one form
 (`teamFormHtml_`): name, sending base, country, arrived/left, people / men / women /
@@ -327,14 +334,12 @@ show up here too), men/women reached, notes.
   new server test needs that line too.
 - `test-team-trips.mjs` (server) and `test-outreach-teams.mjs` (browser) cover it.
 
-## The ministry dashboard's period, and the personal numbers
-`ministryDashboardHtml_` has a Month · Quarter · Year · Year to date toggle
-(`S.mmPeriod`, `weekInPeriod_`): a count is the period's total, a score the period's
-average, a level always its latest. The payload only carries this year's weeks, so
-Year and Year to date read the same until weeks are backfilled ahead of today. The
-person's own four figures (`personalCardHtml_`) are **folded at the very bottom** of My
-Ministry, collapsed by default (`dbAcc.personal`) — parked until they get their own
-design; tests that fill them click `[data-acc="personal"]` first.
+## Admin → All accounts
+The search (`#adminSearch`) lives in `S.adminSearch`: tapping a row rebuilds the page
+(that's how the row opens), and the box used to come back empty with everyone showing
+again — "selecting a staff bugs". The filter is re-applied in `bind()` and the opened
+row (`S.adminScrollTo`) is scrolled into view if it landed off-screen. One row open at a
+time (`adminAcc` bucket). `test-admin-select.mjs` drives the real tap.
 
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two

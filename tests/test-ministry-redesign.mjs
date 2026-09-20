@@ -72,9 +72,6 @@ console.log('=== the leader’s page ===');
   const { ctx, page, errors, sent } = await open(LEADER);
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(600);
-  // the personal numbers are folded at the bottom now — open them so they can be counted and filled
-  await page.click('[data-acc="personal"]');
-  await page.waitForTimeout(300);
   const s = await page.evaluate(() => ({
     tabs: [].map.call(document.querySelectorAll('[data-mmtab]'), b => b.getAttribute('data-mmtab')),
     tiles: document.querySelectorAll('.mmTile').length,
@@ -103,7 +100,7 @@ console.log('=== the leader’s page ===');
   ok('the form is folded away until asked for', !s.formShowing && /Edit this week/.test(s.btn), s.btn);
   ok('the leader is named', s.ledBy);
   ok('the leader sees “Edit what we track”', s.editor);
-  ok('the four personal numbers are there', s.personal === 4, s.personal);
+  ok('the personal numbers are off the page for now — the ministry is the focus', s.personal === 0, s.personal);
   ok('nothing scrolls sideways', !s.overflow);
 
   // an unlogged week reads as such, and the button changes with it
@@ -120,12 +117,7 @@ console.log('=== the leader’s page ===');
   ok('one tap unfolds both the daily and the weekly sections', s3.day && s3.week, JSON.stringify(s3));
   ok('no duplicate element ids (the week picker moved, it was not copied)', s3.dup.length === 0, s3.dup.join(','));
 
-  await page.fill('[data-personal="One-on-Ones Held"]', '3');
-  await page.click('#savePersonalBtn');
-  await page.waitForTimeout(500);
-  const ps = sent.find(x => x.fn === 'saveMyPersonalWeek');
-  ok('saving personal numbers posts the week on screen, per metric', !!ps && ps.args[2] === WK - 4 && ps.args[3].some(u => u.metric === 'One-on-Ones Held' && u.value === 3),
-    ps && JSON.stringify(ps.args.slice(2)));
+  ok('the banner names the ministry whose numbers these are', await page.evaluate(() => /Cafe/.test((document.querySelector('#mmBanner') || {}).textContent || '') && /entering its numbers/.test(document.querySelector('#mmBanner').textContent)));
 
   await page.click('[data-acc="kpiMetrics"]');
   await page.waitForTimeout(400);
@@ -154,12 +146,10 @@ console.log('\n=== an ordinary member ===');
   const { ctx, page, errors } = await open(MEMBER);
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(600);
-  await page.click('[data-acc="personal"]');
-  await page.waitForTimeout(300);
   const s = await page.evaluate(() => ({ editor: !!document.querySelector('[data-acc="kpiMetrics"]'), btn: !!document.querySelector('#kpiInputBtn'), personal: document.querySelectorAll('[data-personal]').length }));
   ok('a member gets no “Edit what we track” at all', !s.editor);
   ok('but can still open the form and log', s.btn);
-  ok('and has their own personal numbers', s.personal === 4);
+  ok('and sees no personal numbers either', s.personal === 0);
   // the OKR entry card on My Home lands on the OKR tab of the same page
   await page.click('#ministryBack');
   await page.waitForTimeout(400);

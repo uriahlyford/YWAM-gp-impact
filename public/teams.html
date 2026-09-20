@@ -614,6 +614,11 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .mmTileNum { font-family:'Koulen',sans-serif; font-size:24px; line-height:1.1; color:var(--ink); margin-top:2px; }
 .mmTileSub { font-size:11px; color:var(--faint); margin-top:2px; line-height:1.35; overflow-wrap:anywhere; }
 .periodSeg { max-width:none; margin-bottom:10px; }
+.mmPick { margin:2px 0 10px; }
+.mmBanner { display:flex; gap:12px; align-items:center; border-left:4px solid var(--accent); }
+.mmBannerEmoji { font-size:30px; line-height:1; flex:0 0 auto; }
+.mmBannerName { font-family:'Koulen',sans-serif; font-size:24px; line-height:1.1; color:var(--ink); }
+.mmBannerNote { font-size:12px; color:var(--accent); font-weight:700; margin-top:4px; }
 .periodSeg .campusBtn { padding-left:8px; padding-right:8px; font-size:12.5px; }
 .teamPickRow { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
 .teamPickRow .pick { max-width:160px; flex:1; }
@@ -1192,9 +1197,9 @@ var S = {
   notifClearedAt: lsGet('gp-notif-cleared') || '',
   /* Ministries a department overseer logs on behalf of, keyed by ministry name
      so more than one can sit on the same page without their state colliding. */
-  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovDeptOf:{},
+  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovDeptOf:{}, ovInputOpen:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
-  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, broadcastDraft:'',
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminSearch:'', adminScrollTo:null, broadcastDraft:'',
   adminOkrAcc:{},
   /* The "jump to any ministry" picker on My Ministry — admin can pick any
      department/ministry on their campus; everyone else's options resolve to
@@ -1650,7 +1655,7 @@ function logout(){
   S.teamMode='dir'; S.structCache={}; S.structLoading={}; S.structDraft=null; S.structEdit=false; S.structEditNode=null; S.structYear=null; S.structQ=null;
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
-  S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.okrIdx=0;
+  S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovInputOpen={}; S.okrIdx=0;
   S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminEditDraft=null; S.adminPinDraft={}; S.adminCode=''; S.adminCampusTab=null; S.adminSub=null;
   render();
 }
@@ -1734,6 +1739,7 @@ function render(){
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else if(S.view==='leave') m.innerHTML=leaveHtml();
   else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
+  else if(S.view==='teamsdb') m.innerHTML=teamsDbHtml();
   /* OKRs live on My Ministry's second tab now — anything still pointing at
      the old view lands there rather than on a page that no longer exists. */
   else if(S.view==='okr'){ S.view='ministry'; S.mmTab='okr'; m.innerHTML=myMinistryHtml(); }
@@ -3830,13 +3836,13 @@ function kpiCardHtml(wk){
    enforces everywhere else (own ministry, or a department you lead). No
    pin-picking here: hiding a count saves nobody's time when you are not the
    one filling it in most days. */
-function oversightKpiCardHtml_(dept, ministry, data){
-  // Which dept a ministry's Save Week button belongs to — the department
-  // overseer's loop and the "jump to any ministry" picker can each land here
-  // with a different dept, so the save handler reads this back rather than
-  // assuming myOversightDept_().
+/* The weekly boxes for a ministry that isn't your own — the overseer's, the
+   admin's jump-to-any-ministry — one row per metric and a Save Week button,
+   keyed by ministry name so the save handler knows which one. Weekly only:
+   day by day belongs to the ministry's own team. The week itself is picked
+   in the status card above this (ministryWeekStatusHtml_ with ovMin). */
+function ovWeekRowsHtml_(dept, ministry, data, wk){
   S.ovDeptOf[ministry] = dept;
-  var wk = ovWeekFor_(ministry);
   var metrics = metricsFor(S.me.campus, dept, ministry);
   if(!metrics.length){
     return '<div class="card"><p class="sub" style="margin:4px 0">'+
@@ -3844,26 +3850,10 @@ function oversightKpiCardHtml_(dept, ministry, data){
   }
   var entries=(data&&data.entries)||{};
   var prevMap=(data&&data.prev)||{};
-  var isCurWk=Number(wk)===Number(thisWeek());
   var weekDraft = S.ovWeekDraft[ministry] || (S.ovWeekDraft[ministry]={});
-
-  var h='<div class="accCard">';
-  h += '<div class="weekNavBlock">'+
-    '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
-    '<div class="weekNavRow">'+
-      '<button class="weekArrow" data-ovprev="'+esc(ministry)+'" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
-      '<div class="weekPill">'+esc(weekRangeLabel_(wk))+
-        '<span class="currentTag'+(isCurWk?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
-      '<button class="weekArrow" data-ovnext="'+esc(ministry)+'" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
-    '</div>'+
-    (isCurWk?'':'<button class="linkbtn" style="padding:6px 0 0" data-ovjump="'+esc(ministry)+'">'+esc(t('Jump back to this week'))+'</button>')+
-  '</div>';
-
-  var weekSummary = gpT('{n} for {range}', {n: metrics.length, range: weekRangeShort_(wk)});
-  h += accRowHtml('ovAcc', ministry+'|week', esc(t('This week')), weekSummary, function(){
-    var b = '<div>';
-    b += '<p class="sub" style="margin:4px 0 10px">'+
-      esc(t('Logged weekly only — day by day belongs to the ministry’s own team on their My Ministry page. The ones that rarely change are already filled in from last time.'))+'</p>';
+  var b='<div class="card" id="ovWeekCard">';
+  b += '<p class="sub" style="margin:0 0 6px">'+
+    esc(t('Logged weekly only — day by day belongs to the ministry’s own team on their My Ministry page. The ones that rarely change are already filled in from last time.'))+'</p>';
     metrics.forEach(function(metric){
       var mode=modeOf(metric);
       var wks=entries[metric]||{};
@@ -3897,12 +3887,8 @@ function oversightKpiCardHtml_(dept, ministry, data){
         '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
         ' data-ovweek="'+esc(ministry)+'" data-ovmetric="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
     });
-    b+='<button class="btn" data-ovsaveweek="'+esc(ministry)+'">'+esc(t('Save Week'))+' '+wk+'</button>';
-    return b+'</div>';
-  });
-
-  h += '</div>';
-  return h;
+  b+='<button class="btn" data-ovsaveweek="'+esc(ministry)+'">'+esc(t('Save Week'))+' '+wk+'</button>';
+  return b+'</div>';
 }
 
 /* Entry point on My Home — a tappable card like Leave Request's, so the
@@ -4098,7 +4084,7 @@ function adminAccountsHtml_(){
   /* Filters by hiding/showing the wrapper divs directly, no render() involved
      — a page with real staff numbers on it shouldn't rebuild the whole
      Admin screen on every keystroke just to narrow a list. */
-  h+='<div class="field" style="margin:10px 0 8px"><input type="text" id="adminSearch" placeholder="'+
+  h+='<div class="field" style="margin:10px 0 8px"><input type="text" id="adminSearch" value="'+esc(S.adminSearch||'')+'" placeholder="'+
     esc(t('Search by name or username…'))+'"></div>'+
     '<p class="emptyLine" id="adminSearchEmpty" style="display:none">'+esc(t('No one matches that search.'))+'</p>';
   var shown = activeTab==='__other' ? other : list.filter(function(s){ return s.campus===activeTab; });
@@ -4260,9 +4246,15 @@ function bindAdmin(){
     b.onclick=function(){ gpTap(); S.adminCampusTab=b.getAttribute('data-admincampustab'); render(); };
   });
 
+  /* The search survives a re-render. Tapping a row rebuilds the Admin page
+     (that's how the row opens), and the box used to come back empty with
+     every account showing again — the person you'd just searched for
+     dropped back into the full list, which read as "selecting a staff
+     bugs". The query lives in S.adminSearch, the box is refilled from it,
+     and the filter is applied once here as well as on every keystroke. */
   var asr=document.getElementById('adminSearch');
-  if(asr) asr.oninput=function(){
-    var q=asr.value.trim().toLowerCase();
+  var adminFilter_=function(){
+    var q=(S.adminSearch||'').trim().toLowerCase();
     var anyVisible=false;
     document.querySelectorAll('[data-adminrow]').forEach(function(row){
       var hay=row.getAttribute('data-adminrow')||'';
@@ -4273,6 +4265,20 @@ function bindAdmin(){
     var empty=document.getElementById('adminSearchEmpty');
     if(empty) empty.style.display = (q && !anyVisible) ? '' : 'none';
   };
+  if(asr){
+    asr.oninput=function(){ S.adminSearch=asr.value; adminFilter_(); };
+    adminFilter_();
+  }
+  // the row just opened is scrolled into view, so a tap low on a long list
+  // doesn't leave the open row off-screen after the page rebuilds
+  if(S.adminScrollTo){
+    var openRow=document.querySelector('[data-acc="'+S.adminScrollTo+'"][data-accbucket="adminAcc"]');
+    S.adminScrollTo=null;
+    if(openRow && openRow.scrollIntoView){
+      var r=openRow.getBoundingClientRect();
+      if(r.top<0 || r.bottom>window.innerHeight) openRow.scrollIntoView({ block:'start', behavior:'smooth' });
+    }
+  }
 
   var amc=document.getElementById('adminMetricCampusSel');
   if(amc) amc.onchange=function(){ S.adminMetricCampus=amc.value; S.adminMetricMinistry=''; render(); };
@@ -4708,30 +4714,35 @@ function ministryDashboardHtml_(campus, dept, ministry, data){
 /* Which week, whether it's been logged, and the one button that unfolds the
    form. The strip is the last eight weeks: filled means something was logged,
    hollow means nothing was — tap one to open it. */
-function ministryWeekStatusHtml_(data, wk){
+function ministryWeekStatusHtml_(data, wk, ovMin){
   var isCur=Number(wk)===Number(thisWeek());
   var logged=ministryWeekLogged_(data, wk);
-  var h='<div class="card">';
+  var open = ovMin ? !!S.ovInputOpen[ovMin] : S.kpiInputOpen;
+  // your own ministry's buttons carry ids; another ministry's carry its name
+  var prevA = ovMin ? ' data-ovprev="'+esc(ovMin)+'"' : ' id="kpiPrevWeek"';
+  var nextA = ovMin ? ' data-ovnext="'+esc(ovMin)+'"' : ' id="kpiNextWeek"';
+  var h='<div class="card" id="mmWeekCard">';
   h+='<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
     '<div class="weekNavRow">'+
-      '<button class="weekArrow" id="kpiPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
+      '<button class="weekArrow"'+prevA+' aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
       '<div class="weekPill">'+esc(weekRangeLabel_(wk))+
         '<span class="currentTag'+(isCur?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
-      '<button class="weekArrow" id="kpiNextWeek" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
+      '<button class="weekArrow"'+nextA+' aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
     '</div>';
   var strip='';
   for(var w=Math.max(1,thisWeek()-7); w<=thisWeek(); w++){
     var l=ministryWeekLogged_(data,w);
-    strip+='<button class="wkDot'+(l?' on':'')+(w===Number(wk)?' cur':'')+'" data-kpigoto="'+w+'" aria-label="'+esc(gpT('Week {wk}',{wk:w}))+'">'+w+'</button>';
+    var goA = ovMin ? ' data-ovgoto="'+esc(ovMin)+'|'+w+'"' : ' data-kpigoto="'+w+'"';
+    strip+='<button class="wkDot'+(l?' on':'')+(w===Number(wk)?' cur':'')+'"'+goA+' aria-label="'+esc(gpT('Week {wk}',{wk:w}))+'">'+w+'</button>';
   }
   h+='<div class="wkStrip">'+strip+'</div>';
   h+='<p class="hint" style="margin:0 0 8px">'+esc(t('Filled weeks have numbers in; hollow ones don’t yet. Tap a week to open it.'))+'</p>';
   h+='<div class="mmStatus">'+(logged
     ? '✅ '+esc(gpT('Week {wk} is logged',{wk:wk}))
     : '⚠️ '+esc(gpT('Nothing logged for week {wk} yet',{wk:wk})))+'</div>';
-  h+='<button class="btn" id="kpiInputBtn" style="margin-top:0">'+
-    esc(S.kpiInputOpen ? t('Hide the metric form') : (logged ? t('Edit this week’s metrics') : t('Input this week’s metrics')))+'</button>';
-  if(!isCur) h+='<button class="linkbtn" id="kpiJumpCurrent">'+esc(t('Jump back to this week'))+'</button>';
+  h+='<button class="btn" id="kpiInputBtn"'+(ovMin?' data-ovinput="'+esc(ovMin)+'"':'')+' style="margin-top:0">'+
+    esc(open ? t('Hide the metric form') : (logged ? t('Edit this week’s metrics') : t('Input this week’s metrics')))+'</button>';
+  if(!isCur) h+='<button class="linkbtn"'+(ovMin?' data-ovjump="'+esc(ovMin)+'"':' id="kpiJumpCurrent"')+'>'+esc(t('Jump back to this week'))+'</button>';
   return h+'</div>';
 }
 
@@ -4926,13 +4937,78 @@ function teamsMinistryHtml_(campus){
 }
 
 /* ---------- My Ministry ----------
-   One page, two tabs. The Ministry tab opens on a dashboard of the
-   ministry's own numbers and the week's status, with the metric form folded
-   behind one button; the OKR tab is what used to be the separate OKR page.
-   Separate tabs rather than one long page on purpose — not everyone needs
-   to think about OKRs, and the old page was overwhelming to look at. */
+   One page, two tabs, ONE ministry at a time. The page is built around the
+   ministry you are entering numbers for — picked at the top (your own, one
+   you oversee, or for an admin any on the campus), named in a banner so
+   there is never a doubt whose boxes these are — then that ministry's
+   dashboard, its week strip (which weeks have numbers in), and the one
+   button that unfolds its form. Your own ministry gets the full daily /
+   weekly form (kpiCardHtml); any other gets the weekly rows (ovWeekRowsHtml_).
+   Outreach Teams is entered on its own Teams Database page instead.
+
+   A Campus Leadership person's own row — Total Staff, one-on-ones and the
+   rest of the leadership figures — is deliberately NOT the default here: it
+   sits last in the picker as "Campus Leadership figures", so the page opens
+   on a real ministry. The person's own four personal numbers are off the
+   page altogether for now (personalCardHtml_ is kept for when they return). */
+function mmOptions_(){
+  var deps=getDepartments(S.me.campus), out=[];
+  var oversees=myOversightDept_(), isBL = S.me.dept===BL_DEPT;
+  var push=function(d,m){ if(!out.some(function(o){ return o.dept===d && o.min===m; })) out.push({ dept:d, min:m }); };
+  if(S.me.ministry && !isBL) push(S.me.dept, S.me.ministry);
+  if(oversees) Object.keys(deps[oversees]||{}).forEach(function(m){ push(oversees, m); });
+  if(S.me.isAdmin) Object.keys(deps).forEach(function(d){ if(d===BL_DEPT) return; Object.keys(deps[d]).forEach(function(m){ push(d, m); }); });
+  if(S.me.ministry && isBL) push(S.me.dept, S.me.ministry);   // last, never the default
+  return out;
+}
+function mmSelected_(opts){
+  if(!opts.length) return null;
+  var pick=opts.filter(function(o){ return o.dept===S.mmBrowseDept && o.min===S.mmBrowseMinistry; })[0];
+  if(pick) return pick;
+  // a department picked with no ministry yet (the admin's Department select) → its first weekly ministry
+  var inDept=opts.filter(function(o){ return o.dept===S.mmBrowseDept; });
+  if(inDept.length) return inDept.filter(function(o){ return !isTeamsMinistry_(o.dept, o.min); })[0] || inDept[0];
+  var own = S.me.dept!==BL_DEPT && opts.filter(function(o){ return o.dept===S.me.dept && o.min===S.me.ministry; })[0];
+  // otherwise the first weekly ministry — Outreach Teams is its own page
+  return own || opts.filter(function(o){ return !isTeamsMinistry_(o.dept, o.min); })[0] || opts[0];
+}
+function mmOptionLabel_(o){
+  if(o.dept===BL_DEPT) return '🧭 '+t('Campus Leadership figures');
+  return (MIN_EMOJI[o.min]?MIN_EMOJI[o.min]+' ':'')+t(o.min);
+}
+function mmPickerHtml_(opts, sel){
+  if(opts.length<2) return '';
+  var depts=[]; opts.forEach(function(o){ if(depts.indexOf(o.dept)===-1) depts.push(o.dept); });
+  var h='<div class="mmPick"><div class="weekNavLabel">'+esc(t('Which ministry'))+'</div>';
+  if(opts.length<=8){
+    h+='<div class="deptChips">'+opts.map(function(o){
+      var on=o.dept===sel.dept && o.min===sel.min;
+      return '<button class="deptChip'+(on?' on':'')+'" data-mmpick="'+esc(o.dept)+'|'+esc(o.min)+'">'+esc(mmOptionLabel_(o))+'</button>'; }).join('')+'</div>';
+    return h+'</div>';
+  }
+  var mins=opts.filter(function(o){ return o.dept===sel.dept; });
+  h+='<div class="pickerRow" style="margin-top:4px">'+
+    '<label class="pick"><span>'+esc(t('Department'))+'</span><select id="mmBrowseDeptSel"'+(depts.length<2?' disabled':'')+'>'+
+      depts.map(function(d){ return '<option value="'+esc(d)+'"'+(sel.dept===d?' selected':'')+'>'+esc(t(d))+'</option>'; }).join('')+
+    '</select></label>'+
+    '<label class="pick"><span>'+esc(t('Ministry'))+'</span><select id="mmBrowseMinSel"'+(mins.length<2?' disabled':'')+'>'+
+      mins.map(function(o){ return '<option value="'+esc(o.min)+'"'+(sel.min===o.min?' selected':'')+'>'+esc(mmOptionLabel_(o))+'</option>'; }).join('')+
+    '</select></label></div>';
+  return h+'</div>';
+}
+function mmBannerHtml_(sel, mine){
+  var isBL = sel.dept===BL_DEPT;
+  var name = isBL ? t('Campus Leadership figures') : t(sel.min);
+  var emoji = isBL ? '🧭' : (MIN_EMOJI[sel.min]||'📊');
+  var h='<div class="card mmBanner" id="mmBanner"><div class="mmBannerEmoji">'+emoji+'</div><div style="min-width:0">'+
+    '<div class="mmBannerName">'+esc(name)+'</div>'+
+    '<div class="rowSub">'+esc(isBL ? gpT('Your own figures as {dept}',{dept:t(sel.min)}) : t(sel.dept))+' · '+esc(campusName(S.me.campus))+'</div>';
+  var leaders = isBL ? [] : ministryLeaders_(S.me.campus, sel.dept, sel.min);
+  if(leaders.length) h+='<div class="rowSub">👑 '+esc(t('Led by'))+' '+leaders.map(function(p){ return esc(p.name); }).join(', ')+'</div>';
+  h+='<div class="mmBannerNote">'+esc(mine ? t('Your ministry — you are entering its numbers.') : t('You are entering numbers for this ministry.'))+'</div>';
+  return h+'</div></div>';
+}
 function myMinistryHtml(){
-  var oversees = myOversightDept_();
   var h='<button class="linkbtn" id="ministryBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
   h+='<h2>'+esc(t('My Ministry'))+'</h2>';
   var tab = S.mmTab==='okr' ? 'okr' : 'ministry';
@@ -4941,109 +5017,55 @@ function myMinistryHtml(){
     '<button class="campusBtn'+(tab==='okr'?' on':'')+'" data-mmtab="okr">🎯 '+esc(t('OKRs'))+'</button></div>';
   if(tab==='okr') return h+okrTabHtml_();
 
-  var wk=kpiViewWeek();
-  if(S.me.ministry){
-    var minName=t(S.me.ministry);
-    if(oversees){
-      /* A Campus Leadership overseer's own "ministry" is really their own
-         leadership figures — one-on-ones held, hours sharing the gospel and
-         the like — personal to them, not a rollup of the department they run.
-         The department's real ministries sit in their own section below. */
-      h+='<p class="sub" style="margin:0 0 2px"><b>'+esc(t('Individual'))+'</b> — '+
-        esc(gpT('Your own numbers as {dept} — logged by you, separate from the ministries you oversee below.',{dept:minName}))+'</p>';
-    } else {
-      h+='<p class="sub" style="margin:0 0 2px"><b>'+esc(minName)+'</b> · '+esc(t(S.me.dept))+'</p>';
-      var leaders=ministryLeaders_(S.me.campus, S.me.dept, S.me.ministry);
-      if(leaders.length) h+='<p class="pmeta" style="margin:0 0 6px">👑 '+esc(t('Led by'))+' '+leaders.map(function(p){ return esc(p.name); }).join(', ')+'</p>';
-    }
-    if(isTeamsMinistry_(S.me.dept, S.me.ministry)){
-      h+=teamsMinistryHtml_(S.me.campus);
-    } else {
-      h+=ministryDashboardHtml_(S.me.campus, S.me.dept, S.me.ministry, S.ministry);
-      h+=ministryWeekStatusHtml_(S.ministry, wk);
-      if(S.kpiInputOpen) h+=kpiCardHtml(wk);
-    }
+  var opts=mmOptions_(), sel=mmSelected_(opts);
+  if(!sel){
+    return h+'<div class="card"><p class="sub" style="margin:4px 0 10px">'+
+      esc(t('Set your ministry on the Profile tab and your team’s KPIs will show up here, ready to log.'))+'</p>'+
+      '<button class="btn ghost" id="goProfile">'+esc(t('Choose my ministry'))+'</button></div>';
+  }
+  S.mmBrowseDept=sel.dept; S.mmBrowseMinistry=sel.min;
+  var mine = sel.dept===S.me.dept && sel.min===S.me.ministry;
+  h+=mmPickerHtml_(opts, sel);
+  h+=mmBannerHtml_(sel, mine);
+
+  if(isTeamsMinistry_(sel.dept, sel.min)){
+    h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+
+      esc(t('Teams are entered one at a time, once their visit is over — not week by week. Each team counts in the week it leaves, and the Base dashboard picks it up from there.'))+'</p>'+
+      '<button class="btn" id="goTeamsDb" style="margin-top:0">🗂️ '+esc(t('Open the Teams Database'))+'</button></div>';
+  } else if(mine){
+    var wk=kpiViewWeek();
+    h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, S.ministry);
+    h+=ministryWeekStatusHtml_(S.ministry, wk, null);
+    if(S.kpiInputOpen) h+=kpiCardHtml(wk);
   } else {
-    h+='<p class="sub">'+esc(t('Baked into My GP — nothing to fill out on another site.'))+'</p>';
-    h+=kpiCardHtml(wk);
+    var data=S.oversee[sel.min];
+    if(!data) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+    else {
+      var owk=ovWeekFor_(sel.min);
+      h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, data);
+      h+=ministryWeekStatusHtml_(data, owk, sel.min);
+      if(S.ovInputOpen[sel.min]) h+=ovWeekRowsHtml_(sel.dept, sel.min, data, owk);
+    }
   }
 
-  if(S.me.ministry && canEditMetricsClient_(S.me.campus, S.me.dept, S.me.ministry)){
-    S.metricEditTarget = { campus:S.me.campus, dept:S.me.dept, ministry:S.me.ministry };
+  if(canEditMetricsClient_(S.me.campus, sel.dept, sel.min)){
+    S.metricEditTarget = { campus:S.me.campus, dept:sel.dept, ministry:sel.min };
     h+='<div class="accCard">'+accRowHtml('dbAcc', 'kpiMetrics', '⚙️ '+esc(t('Edit what we track')),
       esc(t('Add, rename or remove metrics; move a count to monthly or quarterly')),
-      function(){ return metricEditorHtml_(S.me.campus, S.me.dept, S.me.ministry); })+'</div>';
+      function(){ return metricEditorHtml_(S.me.campus, sel.dept, sel.min); })+'</div>';
   }
-
-  /* A "Campus Leadership" ministry that's itself a real department name (e.g.
-     dept: Campus Leadership, ministry: Community Service) means this person
-     oversees that whole department — so beyond their own leadership figures
-     above, show every real ministry under it, one card each, with the same
-     week-by-week logging their own ministry gets. Normally the ministry's
-     own staff log these; the overseer logging here is a backup path, not a
-     replacement for that. */
-  if(oversees){
-    h+='<h3>'+esc(gpT('Ministries You Oversee · {dept}',{dept:t(oversees)}))+'</h3>';
-    h+='<p class="sub" style="margin:0 0 8px">'+
-      esc(t('Ministry numbers — normally logged by the teams in them. You can log for any of these too, as their overseer.'))+'</p>';
-    var deps=getDepartments(S.me.campus);
-    Object.keys(deps[oversees]||{}).forEach(function(min){
-      h+='<h4 style="margin:14px 0 4px;font-size:13px;color:var(--muted)">'+
-        (MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</h4>';
-      if(isTeamsMinistry_(oversees, min)) h+=teamsMinistryHtml_(S.me.campus);
-      else if(S.oversee[min]) h+=oversightKpiCardHtml_(oversees, min, S.oversee[min]);
-      else h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
-    });
-  }
-  h+=myMinistryBrowseHtml_(oversees);
-  h+=personalCardHtml_(wk);
   return h;
 }
 
-/* A department/ministry picker so any ministry on the campus is a couple of
-   taps away, not just your own and (if you oversee one) your department's.
-   An admin can jump to anything on the campus; everyone else's picker just
-   resolves to the one ministry they already work in — present for
-   consistency, but there is nothing else in it to pick. Landing on a
-   ministry already shown elsewhere on this page (your own, or one your
-   department oversees) points back up rather than rendering it twice. */
-function myMinistryBrowseHtml_(oversees){
-  var deps=getDepartments(S.me.campus);
-  var deptNames=Object.keys(deps);
-  if(!deptNames.length) return '';
-  var isAdmin=!!S.me.isAdmin;
-  var allowedDepts = isAdmin ? deptNames : (S.me.dept && deps[S.me.dept] ? [S.me.dept] : []);
-  if(!allowedDepts.length) return '';
-  var dept = allowedDepts.indexOf(S.mmBrowseDept)>-1 ? S.mmBrowseDept : allowedDepts[0];
-  var minsForDept = Object.keys(deps[dept]||{});
-  var allowedMins = isAdmin ? minsForDept
-    : (S.me.ministry && minsForDept.indexOf(S.me.ministry)>-1 ? [S.me.ministry] : []);
-  if(!allowedMins.length) return '';
-  var min = allowedMins.indexOf(S.mmBrowseMinistry)>-1 ? S.mmBrowseMinistry : allowedMins[0];
-  S.mmBrowseDept=dept; S.mmBrowseMinistry=min;
-
-  var h='<h3>🏢 '+esc(gpT('YWAM {campus} Ministries',{campus:campusShort(S.me.campus)}))+'</h3><div class="card">';
-  h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Jump to any ministry’s numbers.'))+'</p>';
-  h+='<div class="pickerRow">'+
-    '<label class="pick"><span>'+esc(t('Department'))+'</span><select id="mmBrowseDeptSel"'+(allowedDepts.length<2?' disabled':'')+'>'+
-      allowedDepts.map(function(d){ return '<option value="'+esc(d)+'"'+(dept===d?' selected':'')+'>'+esc(t(d))+'</option>'; }).join('')+
-    '</select></label>'+
-    '<label class="pick"><span>'+esc(t('Ministry'))+'</span><select id="mmBrowseMinSel"'+(allowedMins.length<2?' disabled':'')+'>'+
-      allowedMins.map(function(m){ return '<option value="'+esc(m)+'"'+(min===m?' selected':'')+'>'+(MIN_EMOJI[m]?MIN_EMOJI[m]+' ':'')+esc(t(m))+'</option>'; }).join('')+
-    '</select></label>'+
-  '</div>';
-
-  var isMine = dept===S.me.dept && min===S.me.ministry;
-  var isOverseen = !!oversees && dept===oversees;
-  if(isMine) h+='<p class="sub" style="margin:8px 0 0">'+esc(t('That’s your own ministry — see above.'))+'</p>';
-  else if(isOverseen) h+='<p class="sub" style="margin:8px 0 0">'+esc(t('You oversee this — see “Ministries You Oversee” above.'))+'</p>';
-  h+='</div>';
-  if(!isMine && !isOverseen){
-    if(isTeamsMinistry_(dept, min)) h+=teamsMinistryHtml_(S.me.campus);
-    else if(S.oversee[min]) h+=oversightKpiCardHtml_(dept, min, S.oversee[min]);
-    else h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
-  }
-  return h;
+/* ---------- Teams Database ----------
+   Where Outreach Teams are entered, one record per team — its own page, off
+   My Ministry, so the team list and its month / quarter / year dashboard
+   have room and never sit among another ministry's weekly boxes. */
+function teamsDbHtml(){
+  var h='<button class="linkbtn" id="teamsDbBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Ministry'))+'</button>';
+  h+='<h2>🗂️ '+esc(t('Teams Database'))+'</h2>';
+  h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Outreach Teams'))+' · '+esc(t(TEAM_DEPT))+' · '+esc(campusName(S.me.campus))+'</p>';
+  return h+teamsMinistryHtml_(S.me.campus);
 }
 
 /* A 1-10 score and a percentage have edges; a phone keypad should know about
@@ -6527,7 +6549,7 @@ function bindAway(){
      the boxes. Unfolding opens every section at once: two taps to reach a
      number was the "confusing" part. */
   var kib=document.getElementById('kpiInputBtn');
-  if(kib) kib.onclick=function(){
+  if(kib && !kib.hasAttribute('data-ovinput')) kib.onclick=function(){
     gpTap();
     S.kpiInputOpen=!S.kpiInputOpen;
     if(S.kpiInputOpen){ S.dbAcc.kpiDay=true; S.dbAcc.kpiWeek=true; S.dbAcc.kpiMonth=true; S.dbAcc.kpiQuarter=true; }
@@ -6680,39 +6702,39 @@ function bindAway(){
   // Ministries an overseer logs for load lazily, one request each, the first
   // time this page is open — cached in S.oversee after that until logout.
   if(S.view==='ministry'){
-    var oDept=myOversightDept_();
-    if(oDept){
-      var oDeps=getDepartments(S.me.campus);
-      Object.keys(oDeps[oDept]||{}).forEach(function(min){
-        if(S.oversee[min] || S.ovLoading[min]) return;
-        S.ovLoading[min]=true;
-        run('getMinistryFor',[S.auth.user,S.auth.pin,oDept,min],function(d){
-          S.ovLoading[min]=false;
-          if(d && d.ok) S.oversee[min]=d;
-          render();
-        });
-      });
-    }
-
-    var mbd=document.getElementById('mmBrowseDeptSel');
-    if(mbd) mbd.onchange=function(){ S.mmBrowseDept=mbd.value; S.mmBrowseMinistry=''; render(); };
-    var mbm=document.getElementById('mmBrowseMinSel');
-    if(mbm) mbm.onchange=function(){ S.mmBrowseMinistry=mbm.value; render(); };
-
-    // The "jump to any ministry" picker's current selection loads lazily too,
-    // one ministry at a time as you pick it — same cache as the oversight
-    // loop above, so re-picking one already open costs nothing.
+    // The picked ministry, if it isn't your own, loads lazily the first time
+    // it's picked — cached in S.oversee by ministry name until logout.
     var bDept=S.mmBrowseDept, bMin=S.mmBrowseMinistry;
-    if(bDept && bMin && !(bDept===S.me.dept && bMin===S.me.ministry) && bDept!==oDept &&
+    if(bDept && bMin && !(bDept===S.me.dept && bMin===S.me.ministry) && !isTeamsMinistry_(bDept,bMin) &&
        !S.oversee[bMin] && !S.ovLoading[bMin]){
       S.ovLoading[bMin]=true;
       run('getMinistryFor',[S.auth.user,S.auth.pin,bDept,bMin],function(d){
         S.ovLoading[bMin]=false;
-        if(d && d.ok) S.oversee[bMin]=d;
+        S.oversee[bMin] = (d && d.ok) ? d : { ok:false, entries:{}, daily:{}, prev:{} };
         render();
       });
     }
+    document.querySelectorAll('[data-mmpick]').forEach(function(b){
+      b.onclick=function(){ var v=b.getAttribute('data-mmpick'), i=v.lastIndexOf('|'); gpTap(); S.mmBrowseDept=v.slice(0,i); S.mmBrowseMinistry=v.slice(i+1); render(); };
+    });
+    var mbd=document.getElementById('mmBrowseDeptSel');
+    if(mbd) mbd.onchange=function(){ S.mmBrowseDept=mbd.value; S.mmBrowseMinistry=''; render(); };
+    var mbm=document.getElementById('mmBrowseMinSel');
+    if(mbm) mbm.onchange=function(){ S.mmBrowseMinistry=mbm.value; render(); };
+    // another ministry's week strip and input button (your own use ids above)
+    document.querySelectorAll('[data-ovgoto]').forEach(function(b){
+      b.onclick=function(){
+        var v=b.getAttribute('data-ovgoto'), i=v.lastIndexOf('|'), min=v.slice(0,i), w=Number(v.slice(i+1));
+        gpTap(); S.ovWeek[min] = (w===thisWeek()) ? null : w; S.ovWeekDraft[min]={}; render();
+      };
+    });
+    var ovi=document.querySelector('[data-ovinput]');
+    if(ovi) ovi.onclick=function(){ var min=ovi.getAttribute('data-ovinput'); gpTap(); S.ovInputOpen[min]=!S.ovInputOpen[min]; render(); };
+    var gtd=document.getElementById('goTeamsDb');
+    if(gtd) gtd.onclick=function(){ gpTap(); S.view='teamsdb'; render(); };
   }
+  var tdbk=document.getElementById('teamsDbBack');
+  if(tdbk) tdbk.onclick=function(){ S.view='ministry'; render(); };
 
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
   ['lv_from','lv_to'].forEach(function(id){
@@ -7301,6 +7323,7 @@ function bind(){
       // leaving three people's edit forms stacked on screen at once.
       if(bucketName==='adminAcc' && opening){
         Object.keys(bucket).forEach(function(k){ bucket[k]=false; });
+        S.adminScrollTo=id;
       }
       bucket[id]=!bucket[id]; render();
     };

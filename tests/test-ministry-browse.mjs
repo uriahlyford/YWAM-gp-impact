@@ -133,7 +133,10 @@ await p.selectOption('#mmBrowseDeptSel', 'Community Service');
 await p.waitForTimeout(400);
 await p.selectOption('#mmBrowseMinSel', 'Cafe').catch(() => {});
 await p.waitForTimeout(600);
-await p.click('[data-acc="Cafe|week"][data-accbucket="ovAcc"]').catch(() => {});
+// the browsed ministry gets the same status card as your own: its strip, and one button that unfolds its weekly rows
+const browsedStrip = await p.$('#mmWeekCard .wkStrip');
+ok('the browsed ministry has a week strip too', !!browsedStrip);
+await p.click('#kpiInputBtn[data-ovinput="Cafe"]');
 await p.waitForTimeout(400);
 
 const showsCafe = await p.evaluate(() => document.querySelector('#main').innerText.includes('Days Open'));
