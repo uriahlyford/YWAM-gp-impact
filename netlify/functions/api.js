@@ -229,7 +229,35 @@ function normRow_(r) {
 function normRows_(rows) { return Array.isArray(rows) ? rows.map(normRow_) : rows; }
 
 /* ==================== STAFF / TEAMS ==================== */
-async function getStaff_() { return normRows_(await readJSON('staff', [])); }
+/* Every staff record must carry its own id — everything else is keyed on it:
+   the admin's account rows, reset PIN, edit profile, mentor links, daily
+   logs, goals. Accounts from before the Netlify backend (and one or two
+   made by hand) have none, and a few may share one. With no id they all
+   fall together: the admin's list opens the wrong row (an empty key is the
+   same empty key), every one of them reads as "(you)", and adminResetPin
+   can't find the person at all. So a missing id is minted here on the way
+   in, a duplicate is re-minted for the LATER row (the first keeps it, along
+   with whatever history points at it), and the repaired list is written
+   straight back so the id is the same on the next request. */
+function newStaffId_() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function ensureStaffIds_(rows) {
+  if (!Array.isArray(rows)) return { rows: rows, changed: false };
+  const seen = {};
+  let changed = false;
+  rows.forEach(function (r) {
+    if (!r || typeof r !== 'object') return;
+    let id = (typeof r.id === 'string' || typeof r.id === 'number') ? String(r.id) : '';
+    if (!id || seen[id]) { id = newStaffId_(); while (seen[id]) id = newStaffId_(); r.id = id; changed = true; }
+    else if (r.id !== id) { r.id = id; changed = true; }
+    seen[id] = 1;
+  });
+  return { rows: rows, changed: changed };
+}
+async function getStaff_() {
+  const fixed = ensureStaffIds_(normRows_(await readJSON('staff', [])));
+  if (fixed.changed) await writeJSON('staff', fixed.rows);
+  return fixed.rows;
+}
 async function saveStaff_(rows) { return writeJSON('staff', rows); }
 
 function findStaff_(rows, username) {
@@ -504,7 +532,7 @@ async function mutateStaff_(mutate) {
   const s = store();
   for (let attempt = 0; attempt < 10; attempt++) {
     if (attempt > 0) await new Promise(function (r) { setTimeout(r, Math.random() * 40); });
-    const rows = normRows_(shaped_(await s.get('staff', { type: 'json' }), []));
+    const rows = ensureStaffIds_(normRows_(shaped_(await s.get('staff', { type: 'json' }), []))).rows;
     const result = mutate(rows);
     if (result && result.abort) { const out = Object.assign({}, result); delete out.abort; return out; }
     await s.setJSON('staff', rows);

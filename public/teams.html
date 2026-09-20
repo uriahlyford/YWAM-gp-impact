@@ -4098,14 +4098,17 @@ function adminAccountsHtml_(){
   // open (accRowHtml's own .open highlight, and closing any other open row
   // on tap, handle that half).
   h+='<div class="accCard">';
-  shown.forEach(function(s){
+  shown.forEach(function(s, i){
+    // the row key is the id; an account that somehow has none gets its own
+    // per-row key rather than sharing an empty one with every other such row
+    var key = s.id || ('row'+i);
     var status = !s.active ? t('Pending approval') : (s.isAdmin ? t('Admin') : t('Active'));
     var leadsN = (s.leads||[]).length;
     var summary = esc('@'+s.username+' · '+t(s.dept)+(s.ministry?' · '+t(s.ministry):'')+' · '+status+
       (leadsN ? ' · 👑 '+s.leads.map(function(k){ return t(k.split('|')[1]||k); }).join(', ') : ''));
-    var title = esc(s.name)+(s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
+    var title = esc(s.name)+(s.id && s.id===S.me.id?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'');
     h+='<div data-adminrow="'+esc((s.name+' '+s.username).toLowerCase())+'">'+
-      accRowHtml('adminAcc', s.id, title, summary, function(){ return adminRowBodyHtml_(s); })+
+      accRowHtml('adminAcc', key, title, summary, function(){ return adminRowBodyHtml_(s); })+
     '</div>';
   });
   h+='</div>';
@@ -4129,7 +4132,7 @@ function leadsPickHtml_(campus, selected){
 }
 
 function adminRowBodyHtml_(s){
-  var mine = s.id===S.me.id;
+  var mine = !!s.id && s.id===S.me.id;
   /* Grouped under a small-caps label + divider (the same pattern the Health
      tab's monthly questions and Siem Reap's chart already use), so a row with
      five unrelated controls in it — reset PIN, fix info, mentor, admin
