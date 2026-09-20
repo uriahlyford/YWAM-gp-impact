@@ -72,6 +72,9 @@ console.log('=== the leader’s page ===');
   const { ctx, page, errors, sent } = await open(LEADER);
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(600);
+  // the personal numbers are folded at the bottom now — open them so they can be counted and filled
+  await page.click('[data-acc="personal"]');
+  await page.waitForTimeout(300);
   const s = await page.evaluate(() => ({
     tabs: [].map.call(document.querySelectorAll('[data-mmtab]'), b => b.getAttribute('data-mmtab')),
     tiles: document.querySelectorAll('.mmTile').length,
@@ -151,6 +154,8 @@ console.log('\n=== an ordinary member ===');
   const { ctx, page, errors } = await open(MEMBER);
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(600);
+  await page.click('[data-acc="personal"]');
+  await page.waitForTimeout(300);
   const s = await page.evaluate(() => ({ editor: !!document.querySelector('[data-acc="kpiMetrics"]'), btn: !!document.querySelector('#kpiInputBtn'), personal: document.querySelectorAll('[data-personal]').length }));
   ok('a member gets no “Edit what we track” at all', !s.editor);
   ok('but can still open the form and log', s.btn);

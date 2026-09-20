@@ -35,6 +35,7 @@ fs.writeFileSync(TMP + '/node_modules/@netlify/blobs/package.json',
   JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.js' }));
 fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
+fs.copyFileSync(REPO + '/netlify/functions/team-seed.js', TMP + '/team-seed.js'); // api.js imports it
 process.env.GP_LEADER_CODE = 'leadercode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
 const api = await import(TMP + '/api.js');

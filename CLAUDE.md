@@ -290,6 +290,52 @@ members[]}` where leads and members are staff ids (`getStructure`/`saveStructure
   `compact` node while editing. Without this the chart is dozens of empty cards long.
 - `test-structure.mjs` (server) and `test-org-chart.mjs` (browser) cover it.
 
+## Outreach Teams — one record per team, not a weekly form
+Outreach Teams (Community Service) doesn't log week by week: a team comes for a stretch
+and its numbers are gathered once, when it leaves. So My Ministry for that ministry (and
+for its overseer, and anyone who browses to it) renders `teamsMinistryHtml_` instead of
+the dashboard / week strip / metric form: a Month · Quarter · Year toggle with a year
+picker, a dashboard that adds up the teams that **finished** in that period (a team
+counts in the period it leaves; a team still here or coming sits in its own list
+below), and one card per team with **Edit**. "Add a team" is one form
+(`teamFormHtml_`): name, sending base, country, arrived/left, people / men / women /
+couples / families, hosted-by, focus, status, every Outreach Teams metric as a total for
+the visit (`teamMetrics_` = `metricsFor(...)` minus `Teams Hosted`, so custom metrics
+show up here too), men/women reached, notes.
+
+- **Store**: the `teamTrips` blob, one row per team `{id, campus, name, org, country,
+  from, to, size, males, females, couples, families, staff, focus, status, notes,
+  metrics:{}, reached:{male,female}}`, laid over `netlify/functions/team-seed.js` — the
+  30 Siem Reap teams imported from the old Lovable "Outreach Metrics Hub" (`src:
+  'lovable'`). `getTeamTrips_` merges seed and stored rows **by id**; editing a seeded
+  team writes a full row under its id, deleting one writes a tombstone `{id, deleted}`.
+  The seed file is data — never rewrite it. Several 2024–25 seeded teams share
+  identical totals; that is how the hub held them.
+- **Rights** are `canLogFor_` for Community Service / Outreach Teams — its own staff, its
+  overseer, an admin **on that campus** — echoed back as `canEdit`, which the client
+  obeys (no Add/Edit when false). `saveTeamTrip` cleans the record (`cleanTrip_`: name
+  required, ISO dates with `to ≥ from`, `Teams Hosted` and SENSITIVE metrics dropped).
+- **Everything else still reads weekly rows.** `teamEntryRows_` turns the trips into
+  entries — `Teams Hosted` +1 and each metric's total — in the ISO week the team LEFT,
+  and `withTeamRows_` lays them over `getEntries_()` in `getData` and in the ministry's
+  own payload, **replacing** a hand-logged row for the same campus / metric / year /
+  week so nothing double-counts. A cancelled team produces no rows. The Base dashboard
+  and the GP roll-up know nothing about trips.
+- `getMyBoot` carries `teamTrips` only for Outreach Teams staff; everyone else loads them
+  on demand (`#teamsPage[data-campus]` in `bind()`).
+- **Every server test copies `team-seed.js` next to `api.js`** (api.js imports it) — a
+  new server test needs that line too.
+- `test-team-trips.mjs` (server) and `test-outreach-teams.mjs` (browser) cover it.
+
+## The ministry dashboard's period, and the personal numbers
+`ministryDashboardHtml_` has a Month · Quarter · Year · Year to date toggle
+(`S.mmPeriod`, `weekInPeriod_`): a count is the period's total, a score the period's
+average, a level always its latest. The payload only carries this year's weeks, so
+Year and Year to date read the same until weeks are backfilled ahead of today. The
+person's own four figures (`personalCardHtml_`) are **folded at the very bottom** of My
+Ministry, collapsed by default (`dbAcc.personal`) — parked until they get their own
+design; tests that fill them click `[data-acc="personal"]` first.
+
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
   checks — `server tests` (seconds, no install) and `browser tests` (Playwright +

@@ -23,6 +23,7 @@ fs.writeFileSync(TMP + '/node_modules/@netlify/blobs/package.json',
   JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.js' }));
 fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
+fs.copyFileSync(REPO + '/netlify/functions/team-seed.js', TMP + '/team-seed.js'); // api.js imports it
 process.env.GP_LEADER_CODE = 'leadercode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
 const api = await import(TMP + '/api.js');
@@ -66,7 +67,9 @@ mem.staff = null;
 r = await call('getData', ['']);
 ok('junk blobs: getData still returns 200', r.status === 200, 'status ' + r.status);
 ok('junk blobs: a bad blob reads as empty, not as a crash',
-  r.body && r.body.entries && Object.keys(r.body.entries).length === 0 &&
+  // (Outreach Teams rows are derived from the seeded team records, so the
+  //  entries blob being junk means: nothing but those may be in here)
+  r.body && r.body.entries && Object.keys(r.body.entries).every(c => Object.keys(r.body.entries[c]).every(k => k.startsWith('Community Service|Outreach Teams|'))) &&
   Array.isArray(r.body.survey) && r.body.survey.length === 0 &&
   Array.isArray(r.body.roster) && r.body.roster.length === 0,
   r.body ? JSON.stringify(r.body).slice(0, 120) : 'no body');
