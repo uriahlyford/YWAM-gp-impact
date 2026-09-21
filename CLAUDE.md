@@ -334,21 +334,33 @@ show up here too), men/women reached, notes.
   new server test needs that line too.
 - `test-team-trips.mjs` (server) and `test-outreach-teams.mjs` (browser) cover it.
 
-## Admin → All accounts
+## Admin — a home menu, one page per tool, one page per person
+`adminHtml` routes on `S.adminSub`: `home` (a card per tool, `ADMIN_SUBS`, with counts on
+Accounts and Approvals), `accounts`, `approvals`, `kpis`, `broadcast`, `merge`, and
+`person` (`S.adminPersonId`). Every page has one back link, `#adminBack[data-adminback]`
+— `week` (My Home), `home`, or `accounts`. **Accounts** is a campus chip row (opens on the
+admin's own campus), the search (`#adminSearch`, kept in `S.adminSearch` so it survives a
+rebuild, filter re-applied in `bind()`), and a list of tappable rows
+`[data-adminperson="id"]`; tapping one opens the **person page**: who they are at the top,
+then `adminRowBodyHtml_` (reset PIN, edit profile, mentor, admin access, danger zone) with
+every id and data- attribute unchanged, so `bindAdmin()`'s handlers carry over. The old
+layout — every tool behind a chip row, every account an accordion in one long list — is
+gone; don't bring the accordions back (`adminAcc` in state is unused).
+
 **Every staff record carries its own id, or gets one** (`ensureStaffIds_`, applied in
 `getStaff_` and inside `mutateStaff_`): accounts from before the Netlify backend had none,
-and with an empty id they all fell together — the admin's list opened the wrong row
-(an empty key is the same empty key), every such account read as "(you)", and
-`adminResetPin` couldn't find the person. A missing id is minted on read, a duplicate is
-re-minted for the LATER row (the first keeps it and whatever history points at it), and
-the repaired list is written straight back. The admin list also keys a row on
-`s.id || 'row'+i` so two rows can never share a key. `test-staff-ids.mjs` covers it.
+and with an empty id they all fell together — the list opened the wrong person, every
+such account read as "(you)", and `adminResetPin` couldn't find them. A missing id is
+minted on read, a duplicate re-minted for the LATER row, and the repaired list written
+straight back. `test-staff-ids.mjs` covers it.
 
-The search (`#adminSearch`) lives in `S.adminSearch`: tapping a row rebuilds the page
-(that's how the row opens), and the box used to come back empty with everyone showing
-again — "selecting a staff bugs". The filter is re-applied in `bind()` and the opened
-row (`S.adminScrollTo`) is scrolled into view if it landed off-screen. One row open at a
-time (`adminAcc` bucket). `test-admin-select.mjs` drives the real tap.
+**The blob store is opened with `consistency: 'strong'`** (`store()`). Netlify Blobs
+default to eventual reads, and `mutateStaff_` verifies a write by reading it back — under
+eventual reads a good save compared unequal and came back `busy`, which the client shows
+as "Could not save" (the leads / profile save in Admin). Don't drop the option.
+
+`test-admin-select.mjs` drives the home → Accounts → person → back flow;
+`test-admin-edit.mjs` the edit form and campus tabs; `test-admin.mjs` the server side.
 
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two

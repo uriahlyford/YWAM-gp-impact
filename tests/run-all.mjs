@@ -61,7 +61,7 @@ const BROWSER = [
   'test-ministry-redesign.mjs', // My Ministry: Numbers/OKRs tabs, dashboard tiles, the logged-weeks strip, one button unfolds the form, personal numbers, leader-only editor
   'test-org-chart.mjs', // Team → Structure: the chart built from profiles (directors, GP roles, overseers, ministry leaders), quarter chips fetch, admin edits people/teams and saves the quarter
   'test-outreach-teams.mjs', // Teams Database: month/quarter/year dashboard over finished teams, one form to add/edit/delete a team; My Ministry picker + banner, period toggle, personal numbers off the page
-  'test-admin-select.mjs', // Admin → All accounts: tapping a row opens it (one at a time), the search survives the rebuild and the list stays narrowed, the open row is on screen
+  'test-admin-select.mjs', // Admin: home menu → Accounts (campus chips, search) → a row opens that person's page → Back keeps the search and the narrowed list
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
