@@ -57,7 +57,7 @@ await page.waitForTimeout(500);
 await page.evaluate(() => { S.view = 'admin'; render(); });
 await page.waitForTimeout(700);
 const home = await page.evaluate(() => ({ card: !!document.querySelector('[data-adminsub="mentors"]'), badge: (document.querySelector('[data-adminsub="mentors"] .adminBadge') || {}).textContent }));
-ok('the Admin home has a Mentors card counting who has nobody yet (active people only)', home.card && home.badge === '3', JSON.stringify(home));
+ok('the Admin home has a Mentors card counting who has nobody yet (active people only, both campuses)', home.card && home.badge === '3', JSON.stringify(home));
 await page.click('[data-adminsub="mentors"]');
 await page.waitForTimeout(400);
 const s = await page.evaluate(() => ({
@@ -66,11 +66,18 @@ const s = await page.evaluate(() => ({
   mentors: [].map.call(document.querySelectorAll('.adminMentor'), m => ({ name: m.querySelector('.adminMentorHead .rowName').textContent.trim(), n: m.querySelector('.adminBadge').textContent.trim(),
     kids: [].map.call(m.querySelectorAll('[data-adminperson]'), b => b.querySelector('.rowName').textContent.trim() + (b.querySelector('.hrChip') ? ' (' + b.querySelector('.hrChip').textContent.trim() + ')' : '')).slice(1) })),
   none: document.body.innerText.includes('No mentor yet'),
+  chips: [].map.call(document.querySelectorAll('[data-adminmentorcampus]'), b => b.textContent.trim() + (b.classList.contains('on') ? '*' : '')),
 }));
+ok('one campus at a time, opening on the admin’s own', JSON.stringify(s.chips) === JSON.stringify(['Poipet · 1', 'Siem Reap · 5*']), s.chips.join(' | '));
 ok('the page is titled Mentors', /Mentors/.test(s.h2), s.h2);
-ok('tiles: mentors, with a mentor, waiting to accept, no mentor yet', JSON.stringify(s.tiles) === JSON.stringify(['Mentors=2', 'With a mentor=3 / 6', 'Waiting to accept=1', 'No mentor yet=3']), s.tiles.join(' | '));
+ok('tiles for this campus: mentors, with a mentor, waiting to accept, no mentor yet', JSON.stringify(s.tiles) === JSON.stringify(['Mentors=2', 'With a mentor=3 / 5', 'Waiting to accept=1', 'No mentor yet=2']), s.tiles.join(' | '));
 ok('one card per mentor, alphabetical, with their people — a pending one marked Waiting', JSON.stringify(s.mentors) === JSON.stringify([{ name: 'Sina Sok', n: '2', kids: ['Dara Pen', 'Sreilea Chan (Waiting)'] }, { name: 'Uriah Lyford', n: '1', kids: ['Tinh Vong'] }]), JSON.stringify(s.mentors));
-ok('everyone with no mentor is listed below, the archived person not among them', s.none && await page.evaluate(() => { const t = document.body.innerText; return /Bopha Kim/.test(t) && !/Gone Person/.test(t); }));
+ok('everyone on this campus with no mentor is listed below — not the other campus, not the archived person', s.none && await page.evaluate(() => { const t = document.body.innerText; return /Sina Sok/.test(t) && !/Bopha Kim/.test(t) && !/Gone Person/.test(t); }));
+await page.click('[data-adminmentorcampus="poipet"]');
+await page.waitForTimeout(300);
+ok('the other campus’s chip shows its own people', await page.evaluate(() => /Bopha Kim/.test(document.body.innerText) && !/Dara Pen/.test(document.body.innerText)));
+await page.click('[data-adminmentorcampus="siemreap"]');
+await page.waitForTimeout(300);
 await page.click('.adminMentor [data-adminperson="st_spicy"]');
 await page.waitForTimeout(400);
 const person = await page.evaluate(() => ({ name: document.querySelector('.adminPersonHead .pname').textContent.trim(), chips: [].map.call(document.querySelectorAll('.teamStats .teamStat'), c => c.textContent.trim()) }));

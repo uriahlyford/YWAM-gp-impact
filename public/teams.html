@@ -1237,7 +1237,7 @@ var S = {
      so more than one can sit on the same page without their state colliding. */
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovError:{}, ovDeptOf:{}, ovInputOpen:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
-  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', broadcastDraft:'',
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', adminMentorCampus:null, broadcastDraft:'',
   hrStaff:null, hrLoading:false, hrError:'', hrSub:'home', hrPersonId:null, hrSearch:'', hrCampusTab:null, hrShowArchived:false, hrContractForm:null, hrArchiveDraft:null, hrDue:null, hrFollowUps:null, hrTab:'staff',
   cands:null, candsLoading:false, candsError:'', candStage:'', candType:'', candSearch:'', candShowArchived:false, candForm:null, candPersonId:null, candNoteDraft:'',
   adminOkrAcc:{},
@@ -4130,7 +4130,15 @@ function adminMergeHtml_(){
    name opens their account page, where the mentor is set. */
 function adminMentorsHtml_(){
   if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
-  var people=S.adminStaff.filter(function(x){ return x.active && !x.archived; });
+  // one campus at a time, opening on the admin's own — the two bases' pairs mixed together read as one confusing list
+  var everyone=S.adminStaff.filter(function(x){ return x.active && !x.archived; });
+  var tabs=CAMPUSES.map(function(c){ return { id:c.id, label:c.short, n:everyone.filter(function(x){ return x.campus===c.id; }).length }; });
+  var activeTab = tabs.some(function(tb){ return tb.id===S.adminMentorCampus; }) ? S.adminMentorCampus
+    : (tabs.some(function(tb){ return tb.id===S.me.campus; }) ? S.me.campus : tabs[0].id);
+  S.adminMentorCampus=activeTab;
+  var h='<div class="deptChips">'+tabs.map(function(tb){
+    return '<button class="deptChip'+(activeTab===tb.id?' on':'')+'" data-adminmentorcampus="'+esc(tb.id)+'">'+esc(tb.label)+' · '+tb.n+'</button>'; }).join('')+'</div>';
+  var people=everyone.filter(function(x){ return x.campus===activeTab; });
   var byId={}; S.adminStaff.forEach(function(x){ byId[x.id]=x; });
   var groups={}, none=[];
   people.forEach(function(x){
@@ -4139,20 +4147,20 @@ function adminMentorsHtml_(){
   });
   var mentorIds=Object.keys(groups).sort(function(a,b){ return byId[a].name<byId[b].name?-1:1; });
   var withN=people.length-none.length, pendingN=people.filter(function(x){ return x.mentorId && x.mentorStatus!=='approved'; }).length;
-  var h='<div class="mmGrid">'+[
+  h+='<div class="mmGrid">'+[
       [t('Mentors'), mentorIds.length, false], [t('With a mentor'), withN+' / '+people.length, false],
       [t('Waiting to accept'), pendingN, pendingN>0], [t('No mentor yet'), none.length, none.length>0]
     ].map(function(x){ return '<div class="mmTile'+(x[2]?' hot':'')+'"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
   var row=function(x, extra){
     return '<div data-adminrow="'+esc((x.name+' '+x.username).toLowerCase())+'"><button class="adminRow" data-adminperson="'+esc(x.id)+'">'+avatarHtml(x,'sm')+
-      '<span class="adminRowText"><span class="rowName">'+esc(x.name)+'</span><span class="rowSub">'+esc(campusShort(x.campus))+' · '+esc(t(x.dept))+(x.ministry?' · '+esc(t(x.ministry)):'')+'</span></span>'+
+      '<span class="adminRowText"><span class="rowName">'+esc(x.name)+'</span><span class="rowSub">'+esc(t(x.dept))+(x.ministry?' · '+esc(t(x.ministry)):'')+'</span></span>'+
       (extra||'')+'<span class="accChevron" style="transform:rotate(-90deg)">'+ACC_CHEVRON+'</span></button></div>';
   };
   if(!mentorIds.length && !none.length) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('No accounts yet.'))+'</p></div>';
   mentorIds.forEach(function(id){
     var m=byId[id], kids=groups[id].slice().sort(function(a,b){ return a.name<b.name?-1:1; });
     h+='<div class="adminMentor" data-adminmentor="'+esc(id)+'"><button class="adminMentorHead" data-adminperson="'+esc(id)+'">'+avatarHtml(m,'sm')+
-      '<span class="adminRowText"><span class="rowName"><b>'+esc(m.name)+'</b></span><span class="rowSub">'+esc(campusShort(m.campus))+' · '+esc(t(m.dept))+(m.active&&!m.archived?'':' · '+esc(t('Archived')))+'</span></span>'+
+      '<span class="adminRowText"><span class="rowName"><b>'+esc(m.name)+'</b></span><span class="rowSub">'+(m.campus!==activeTab?'📍 '+esc(campusShort(m.campus))+' · ':'')+esc(t(m.dept))+(m.active&&!m.archived?'':' · '+esc(t('Archived')))+'</span></span>'+
       '<span class="adminBadge">'+kids.length+'</span></button>'+
       '<div class="accCard adminList" style="margin:0 0 0 18px">'+kids.map(function(k){
         return row(k, k.mentorStatus==='approved' ? '' : '<span class="hrChip due">'+esc(t('Waiting'))+'</span>'); }).join('')+'</div></div>';
@@ -4685,6 +4693,9 @@ function bindAdmin(){
 
   document.querySelectorAll('[data-admincampustab]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.adminCampusTab=b.getAttribute('data-admincampustab'); render(); };
+  });
+  document.querySelectorAll('[data-adminmentorcampus]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.adminMentorCampus=b.getAttribute('data-adminmentorcampus'); render(); };
   });
 
   /* The search survives a re-render. Tapping a row rebuilds the Admin page
