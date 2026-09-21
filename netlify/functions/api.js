@@ -2410,7 +2410,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal, structure, teamTrips] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal, structure, teamTrips, candRows] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -2430,7 +2430,8 @@ async function getMyBoot(username, pin) {
       // opens on it without a second call
       part(function () { return getStructure(username, pin, s.campus, currentYear_(), currentQuarter_()); }),
       // Outreach Teams staff open on their teams page — bring the teams along
-      part(function () { return (s.dept === TEAM_DEPT && s.ministry === TEAM_MIN) ? getTeamTrips(username, pin, s.campus) : null; })
+      part(function () { return (s.dept === TEAM_DEPT && s.ministry === TEAM_MIN) ? getTeamTrips(username, pin, s.campus) : null; }),
+      part(function () { return canHR_(s) ? getCandidates_() : null; })
     ]);
 
   return {
@@ -2458,6 +2459,7 @@ async function getMyBoot(username, pin) {
     teamTrips: teamTrips || null,
     // for the HR menu item's badge: contracts run out or running out within 90 days
     hrDue: canHR_(s) ? hrDueCount_(staffRows) : null,
+    hrFollowUps: canHR_(s) ? candFollowUpsCount_(candRows || []) : null,
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -2827,6 +2829,91 @@ async function hrUnarchive(username, pin, staffId) {
   });
 }
 
+/* ==================== candidates — potential staff & volunteers ====================
+   The CRM side of HR: people who might join — staff, volunteers, students —
+   from first contact to arrival. One record per person in the 'candidates'
+   blob, with a stage (new → contacted → applied → interview → accepted →
+   arrived), a next step with a date (the follow-up reminders hang on it),
+   a running log of notes and stage moves, and an archive box (declined,
+   withdrew, no answer). Once someone arrives and has an account, the
+   record can point at it (staffId). Same gate as the rest of HR. */
+const CAND_TYPES = ['staff', 'volunteer', 'student'];
+const CAND_STAGES = ['new', 'contacted', 'applied', 'interview', 'accepted', 'arrived'];
+const CAND_FOLLOWUP_DAYS = 7, CAND_MAX = 2000, CAND_LOG_MAX = 300;
+async function getCandidates_() { return readJSON('candidates', []); }
+function cleanCandidate_(c, prev, me) {
+  if (!c || typeof c !== 'object') return null;
+  const name = str_(c.name, 120);
+  if (!name) return null;
+  const type = CAND_TYPES.indexOf(c.type) > -1 ? c.type : (prev ? prev.type : 'staff');
+  const stage = CAND_STAGES.indexOf(c.stage) > -1 ? c.stage : (prev ? prev.stage : 'new');
+  const now = new Date().toISOString();
+  return {
+    id: prev ? prev.id : hrId_('cd'), campus: str_(c.campus, 40) || (prev ? prev.campus : me.campus),
+    name: name, type: type, stage: stage, subtype: str_(c.subtype, 60), school: str_(c.school, 80),
+    email: str_(c.email, 120), phone: str_(c.phone, 60), country: str_(c.country, 60), source: str_(c.source, 120),
+    assignedTo: str_(c.assignedTo, 60), nextStep: str_(c.nextStep, 200), nextDate: isoDate_(c.nextDate), expected: isoMonth_(c.expected),
+    notes: str_(c.notes, 1000), staffId: str_(c.staffId, 60),
+    log: prev ? (Array.isArray(prev.log) ? prev.log : []) : [], archived: prev ? (prev.archived || null) : null,
+    created: prev ? prev.created : now, createdBy: prev ? prev.createdBy : me.id, updated: now, updatedBy: me.id
+  };
+}
+function candFollowUpsCount_(rows) {
+  const limit = new Date(); limit.setHours(0, 0, 0, 0); limit.setDate(limit.getDate() + CAND_FOLLOWUP_DAYS);
+  const cut = limit.toISOString().slice(0, 10);
+  return (rows || []).filter(function (c) { return c && !c.archived && c.nextDate && c.nextDate <= cut; }).length;
+}
+async function hrGate_(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { s: null, out: { ok: false } };
+  if (!canHR_(s)) return { s: null, out: { ok: false, err: 'not_authorized' } };
+  return { s: s, out: null };
+}
+async function hrCandidates(username, pin) {
+  const g = await hrGate_(username, pin); if (g.out) return g.out;
+  return { ok: true, candidates: await getCandidates_() };
+}
+async function hrSaveCandidate(username, pin, cand) {
+  const g = await hrGate_(username, pin); if (g.out) return g.out;
+  const rows = await getCandidates_();
+  const id = str_(cand && cand.id, 60);
+  const idx = id ? rows.findIndex(function (r) { return r && r.id === id; }) : -1;
+  if (id && idx === -1) return { ok: false, err: 'not_found' };
+  const prev = idx > -1 ? rows[idx] : null;
+  const rec = cleanCandidate_(cand, prev, g.s);
+  if (!rec) return { ok: false, err: 'bad_candidate' };
+  if (!prev && rows.length >= CAND_MAX) return { ok: false, err: 'too_many' };
+  if (prev && prev.stage !== rec.stage) rec.log = rec.log.concat([{ at: rec.updated, by: g.s.id, kind: 'stage', text: rec.stage }]).slice(-CAND_LOG_MAX);
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('candidates', rows);
+  return { ok: true, candidate: rec };
+}
+async function hrCandidateNote(username, pin, id, text) {
+  const g = await hrGate_(username, pin); if (g.out) return g.out;
+  text = str_(text, 1000);
+  if (!text) return { ok: false, err: 'empty' };
+  const rows = await getCandidates_();
+  const idx = rows.findIndex(function (r) { return r && r.id === str_(id, 60); });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  const now = new Date().toISOString();
+  rows[idx].log = (Array.isArray(rows[idx].log) ? rows[idx].log : []).concat([{ at: now, by: g.s.id, kind: 'note', text: text }]).slice(-CAND_LOG_MAX);
+  rows[idx].updated = now; rows[idx].updatedBy = g.s.id;
+  await writeJSON('candidates', rows);
+  return { ok: true, candidate: rows[idx] };
+}
+async function hrArchiveCandidate(username, pin, id, info) {
+  const g = await hrGate_(username, pin); if (g.out) return g.out;
+  const rows = await getCandidates_();
+  const idx = rows.findIndex(function (r) { return r && r.id === str_(id, 60); });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  const now = new Date().toISOString();
+  if (info === null) rows[idx].archived = null;
+  else rows[idx].archived = { at: now.slice(0, 10), reason: str_(info && info.reason, 300), by: g.s.id };
+  rows[idx].updated = now; rows[idx].updatedBy = g.s.id;
+  await writeJSON('candidates', rows);
+  return { ok: true, candidate: rows[idx] };
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
@@ -2897,6 +2984,10 @@ const HANDLERS = {
   hrDeleteFile: function (a) { return hrDeleteFile(a[0], a[1], a[2], a[3], a[4]); },
   hrArchive: function (a) { return hrArchive(a[0], a[1], a[2], a[3]); },
   hrUnarchive: function (a) { return hrUnarchive(a[0], a[1], a[2]); },
+  hrCandidates: function (a) { return hrCandidates(a[0], a[1]); },
+  hrSaveCandidate: function (a) { return hrSaveCandidate(a[0], a[1], a[2]); },
+  hrCandidateNote: function (a) { return hrCandidateNote(a[0], a[1], a[2], a[3]); },
+  hrArchiveCandidate: function (a) { return hrArchiveCandidate(a[0], a[1], a[2], a[3]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };
