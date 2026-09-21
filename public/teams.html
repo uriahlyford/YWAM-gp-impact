@@ -643,6 +643,23 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .adminRowText { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
 .adminRowText .rowSub { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .adminPersonHead { display:flex; gap:12px; align-items:center; }
+.mmTile.hot { border-color:var(--accent); }
+.mmTile.hot .mmTileNum { color:var(--accent); }
+.hrChip { flex:0 0 auto; font-size:11.5px; font-weight:700; border-radius:999px; padding:3px 9px; border:1px solid var(--border); background:var(--surface2); color:var(--muted); max-width:42%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hrChip.active { color:var(--good); border-color:var(--good); }
+.hrChip.due { color:var(--amber); border-color:var(--amber); }
+.hrChip.expired { color:var(--bad); border-color:var(--bad); }
+.hrChip.archived { opacity:.7; }
+.hrBanner { margin-top:12px; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); font-size:14px; }
+.hrBanner.active { border-color:var(--good); }
+.hrBanner.due { border-color:var(--amber); }
+.hrBanner.expired { border-color:var(--bad); }
+.hrToggle { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin:0 0 8px; }
+.hrFiles { margin-top:8px; }
+.hrFile { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13px; }
+.hrFileName { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hrAttach { display:block; text-align:center; margin-top:8px; cursor:pointer; }
+.hrSuggest { background:var(--accentSoft); border:1px solid var(--accentSoftBorder); border-radius:10px; padding:8px 10px; font-size:13px; margin-bottom:8px; }
 .wkStrip { display:flex; gap:6px; margin:12px 0 6px; flex-wrap:wrap; }
 .wkDot { width:34px; height:34px; border-radius:50%; border:1px solid var(--border); background:var(--surface2); color:var(--muted);
   font:inherit; font-size:12px; font-weight:700; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -896,7 +913,7 @@ input[type=color]::-webkit-color-swatch { border:none; border-radius:50%; }
 .field { margin-bottom:14px; }
 .fieldLabel { display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:6px; }
 .dateRow { display:flex; gap:10px; }
-input[type=date], textarea { width:100%; font:inherit; font-size:14.5px; padding:11px; border-radius:10px; border:1.5px solid var(--border2); background:var(--bg); color:var(--ink); }
+input[type=date], input[type=month], textarea { width:100%; font:inherit; font-size:14.5px; padding:11px; border-radius:10px; border:1.5px solid var(--border2); background:var(--bg); color:var(--ink); }
 textarea { resize:vertical; min-height:64px; }
 .typeChips { display:flex; flex-direction:column; gap:8px; }
 .typeChip { display:flex; align-items:center; gap:10px; border:1.5px solid var(--border2); border-radius:12px; padding:11px 13px; cursor:pointer; text-align:left; background:var(--bg); font-family:inherit; width:100%; }
@@ -1213,6 +1230,7 @@ var S = {
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovError:{}, ovDeptOf:{}, ovInputOpen:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
   adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', broadcastDraft:'',
+  hrStaff:null, hrLoading:false, hrError:'', hrSub:'home', hrPersonId:null, hrSearch:'', hrCampusTab:null, hrShowArchived:false, hrContractForm:null, hrArchiveDraft:null, hrDue:null,
   adminOkrAcc:{},
   /* The "jump to any ministry" picker on My Ministry — admin can pick any
      department/ministry on their campus; everyone else's options resolve to
@@ -1640,6 +1658,7 @@ function applyBoot(d){
   S.tripRequests = d.tripRequests || [];
   if(d.ministry) S.ministry = d.ministry;
   S.personal = d.personal || null;
+  S.hrDue = (d.hrDue===undefined) ? null : d.hrDue;
   if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
   if(d.structure && d.structure.ok){
     S.structCache[structKey_(d.structure.campus, d.structure.year, d.structure.quarter)] = { doc:d.structure.doc, source:d.structure.source };
@@ -1674,6 +1693,7 @@ function logout(){
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.personal=null; S.personalDraft={}; S.mmTab='ministry'; S.kpiInputOpen=false; S.mmDashAll=false; S.metricRename=null;
   S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamError={}; S.teamForm=null;
+  S.hrStaff=null; S.hrLoading=false; S.hrError=''; S.hrSub='home'; S.hrPersonId=null; S.hrSearch=''; S.hrContractForm=null; S.hrArchiveDraft=null; S.hrDue=null;
   S.teamMode='dir'; S.structCache={}; S.structLoading={}; S.structDraft=null; S.structEdit=false; S.structEditNode=null; S.structYear=null; S.structQ=null;
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
@@ -1762,6 +1782,7 @@ function render(){
   else if(S.view==='leave') m.innerHTML=leaveHtml();
   else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
   else if(S.view==='teamsdb') m.innerHTML=teamsDbHtml();
+  else if(S.view==='hr') m.innerHTML=hrHtml();
   /* OKRs live on My Ministry's second tab now — anything still pointing at
      the old view lands there rather than on a page that no longer exists. */
   else if(S.view==='okr'){ S.view='ministry'; S.mmTab='okr'; m.innerHTML=myMinistryHtml(); }
@@ -1937,6 +1958,10 @@ function renderMenu(){
   // Only whoever actually holds isAdmin sees this — a menu item that goes
   // nowhere is worse than no menu item, which is why it wasn't here before
   // there was an account-approval system behind it.
+  // HR — staff contracts, archiving. An admin, or anyone an admin gave `hr`.
+  if(S.me.isAdmin || S.me.hr) items.push({ id:'hr',
+    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18"/><path d="M8 2.5V6M16 2.5V6"/><path d="M8 14h4M8 17.5h8"/></svg>',
+    label:t('HR')+(S.hrDue ? ' · '+S.hrDue : ''), badge: S.hrDue||0 });
   if(S.me.isAdmin) items.push({ id:'admin',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
     label:t('Admin') });
@@ -1961,6 +1986,7 @@ function renderMenu(){
       else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='checkin'){ S.view='health'; render(); }
       else if(id==='admin'){ S.view='admin'; render(); }
+      else if(id==='hr'){ S.view='hr'; S.hrSub='home'; render(); }
       else renderMenu();
     };
   });
@@ -4032,7 +4058,7 @@ function adminHtml(){
 }
 function adminHomeHtml_(){
   var list=S.adminStaff, loading=list===null;
-  var pendingN = loading ? null : list.filter(function(x){ return !x.active; }).length;
+  var pendingN = loading ? null : list.filter(function(x){ return !x.active && !x.archived; }).length;   // archived ≠ waiting
   var activeN = loading ? null : list.filter(function(x){ return x.active; }).length;
   var h=adminBackHtml_('week', t('My Home'));
   h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
@@ -4048,7 +4074,7 @@ function adminHomeHtml_(){
 }
 function adminApprovalsHtml_(){
   if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
-  var pending=S.adminStaff.filter(function(x){ return !x.active; });
+  var pending=S.adminStaff.filter(function(x){ return !x.active && !x.archived; });   // an archived person is not a sign-up
   if(!pending.length) return '<div class="card"><p class="sub" style="margin:0">'+esc(t('Nobody is waiting — every account is active.'))+'</p></div>';
   var h='<div class="card">';
   pending.forEach(function(x){
@@ -4086,8 +4112,10 @@ function adminPersonHtml_(){
   var x=S.adminStaff.filter(function(p){ return p.id===S.adminPersonId; })[0];
   var mine = !!x.id && x.id===S.me.id;
   var chips='';
-  if(!x.active) chips+='<span class="teamStat">⏳ '+esc(t('Pending approval'))+'</span>';
+  if(x.archived) chips+='<span class="teamStat">📦 '+esc(t('Archived'))+(x.archived.at?' · '+esc(x.archived.at):'')+'</span>';
+  else if(!x.active) chips+='<span class="teamStat">⏳ '+esc(t('Pending approval'))+'</span>';
   if(x.isAdmin) chips+='<span class="teamStat">🛡️ '+esc(t('Admin'))+'</span>';
+  if(x.hr) chips+='<span class="teamStat">🗂️ '+esc(t('HR'))+'</span>';
   (x.leads||[]).forEach(function(k){ chips+='<span class="teamStat">👑 '+esc(t(k.split('|')[1]||k))+'</span>'; });
   h+='<div class="card"><div class="adminPersonHead">'+avatarHtml(x,'lg')+'<div style="min-width:0">'+
     '<div class="pname">'+esc(x.name)+(mine?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'')+'</div>'+
@@ -4169,7 +4197,7 @@ function adminAccountsHtml_(){
   shown.forEach(function(x, i){
     // the row key is the id; an account that somehow has none gets its own per-row key
     var key = x.id || ('row'+i);
-    var status = !x.active ? '⏳ '+t('Pending approval') : (x.isAdmin ? '🛡️ '+t('Admin') : '');
+    var status = x.archived ? '📦 '+t('Archived') : !x.active ? '⏳ '+t('Pending approval') : (x.isAdmin ? '🛡️ '+t('Admin') : '');
     var leadsN = (x.leads||[]).length;
     var summary = '@'+x.username+' · '+t(x.dept)+(x.ministry?' · '+t(x.ministry):'')+(status?' · '+status:'')+
       (leadsN ? ' · 👑 '+x.leads.map(function(k){ return t(k.split('|')[1]||k); }).join(', ') : '');
@@ -4248,6 +4276,8 @@ function adminRowBodyHtml_(s){
       '<label class="f">👑 '+esc(t('Ministry leader of'))+'</label>'+
       '<p class="hint" style="margin:0 0 6px">'+esc(t('A leader can add, rename, remove and re-time the metrics their ministry tracks. Anyone can still log the numbers.'))+'</p>'+
       '<div class="leadsPick" id="adm_leads">'+leadsPickHtml_(dCampus, d.leads!==undefined?d.leads:(s.leads||[]))+'</div>'+
+      '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:12px">'+
+        '<input type="checkbox" id="adm_hr"'+((d.hr!==undefined?d.hr:!!s.hr)?' checked':'')+'> 🗂️ '+esc(t('HR access — staff contracts and archiving'))+'</label>'+
       '<button class="btn" data-adminsave="'+esc(s.id)+'">'+esc(t('Save'))+'</button>'+
       '<button class="linkbtn" data-admincanceledit="'+esc(s.id)+'">'+esc(t('Cancel'))+'</button>';
   }
@@ -4304,6 +4334,165 @@ function adminRefreshQuiet_(){
     if(d && d.ok) S.adminStaff=d.staff;
     render();
   });
+}
+
+/* ---------- HR bindings ---------- */
+function hrPut_(d){
+  if(!(d && d.ok && d.staff)) return;
+  if(!S.hrStaff) return;
+  var found=false;
+  S.hrStaff=S.hrStaff.map(function(x){ if(x.id===d.staff.id){ found=true; return d.staff; } return x; });
+  if(!found) S.hrStaff.push(d.staff);
+  S.adminStaff=null;   // the admin's list reads the same people; let it reload
+}
+function hrFail_(d){ return d && d.err==='not_authorized' ? t('Only HR or an admin can do that.') : d && d.err==='too_large' ? t('That file is too big — keep it under 4 MB.') : d && d.err==='bad_type' ? t('Only a PDF or a photo can be attached.') : d && d.err==='bad_contract' ? t('Pick the month signed and how many years.') : t('Could not save'); }
+function bindHr(){
+  if(S.view!=='hr') return;
+  if(!S.hrStaff && !S.hrLoading && !S.hrError){
+    S.hrLoading=true;
+    run('hrList',[S.auth.user,S.auth.pin],function(d){
+      S.hrLoading=false;
+      if(d && d.ok) S.hrStaff=d.staff;
+      else S.hrError = d && d.err==='not_authorized' ? t('Only HR or an admin can open this.') : (d && d.err) || t('The server answered without the staff list.');
+      render();
+    }, function(e){ S.hrLoading=false; S.hrError=(e && e.message) || t('Connection problem — try again.'); render(); });
+  }
+  var rt=document.getElementById('hrRetry');
+  if(rt) rt.onclick=function(){ S.hrError=''; render(); };
+  var back=document.getElementById('hrBack');
+  if(back) back.onclick=function(){
+    var to=back.getAttribute('data-hrback')||'week'; gpTap();
+    if(to==='week') S.view='week'; else { S.hrSub='home'; S.hrContractForm=null; }
+    render();
+  };
+  document.querySelectorAll('[data-hrperson]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.hrPersonId=b.getAttribute('data-hrperson'); S.hrSub='person'; S.hrContractForm=null; S.hrArchiveDraft=null; render(); };
+  });
+  document.querySelectorAll('[data-hrcampustab]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.hrCampusTab=b.getAttribute('data-hrcampustab'); render(); };
+  });
+  var sa=document.getElementById('hrShowArchived');
+  if(sa) sa.onchange=function(){ S.hrShowArchived=sa.checked; render(); };
+  var hs=document.getElementById('hrSearch');
+  var hrFilter_=function(){
+    var q=(S.hrSearch||'').trim().toLowerCase(), any=false;
+    document.querySelectorAll('#hrList [data-hrrow]').forEach(function(row){
+      var show=!q || (row.getAttribute('data-hrrow')||'').indexOf(q)>-1;
+      row.style.display=show?'':'none'; if(show) any=true;
+    });
+    var empty=document.getElementById('hrSearchEmpty');
+    if(empty) empty.style.display=(q && !any)?'':'none';
+  };
+  if(hs){ hs.oninput=function(){ S.hrSearch=hs.value; hrFilter_(); }; hrFilter_(); }
+
+  // --- one person ---
+  var pid=S.hrPersonId;
+  var person=(S.hrStaff||[]).filter(function(x){ return x.id===pid; })[0];
+  if(S.hrSub!=='person' || !person) return;
+  var ac=document.getElementById('hrAddContract');
+  if(ac) ac.onclick=function(){ gpTap(); S.hrContractForm={ staffId:pid, id:'', signed:'', years:'', notes:'' }; render(); var el=document.getElementById('hrContractForm'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
+  document.querySelectorAll('[data-hredit]').forEach(function(b){
+    b.onclick=function(){
+      var c=(person.contracts||[]).filter(function(x){ return x.id===b.getAttribute('data-hredit'); })[0]; if(!c) return;
+      S.hrContractForm={ staffId:pid, id:c.id, signed:c.signed, years:c.years, notes:c.notes||'' }; render();
+    };
+  });
+  var us=document.getElementById('hrUseSuggest');
+  if(us) us.onclick=function(){ if(!S.hrContractForm) return; S.hrContractForm.signed=us.getAttribute('data-signed'); S.hrContractForm.years=Number(us.getAttribute('data-years')); render(); };
+  ['hr_signed','hr_years','hr_notes'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.oninput=el.onchange=function(){ if(!S.hrContractForm) return; S.hrContractForm[id==='hr_signed'?'signed':id==='hr_years'?'years':'notes']=el.value; };
+  });
+  var cc=document.getElementById('hrContractCancel');
+  if(cc) cc.onclick=function(){ S.hrContractForm=null; render(); };
+  var cs=document.getElementById('hrContractSave');
+  if(cs) cs.onclick=function(){
+    if(S.busy || !S.hrContractForm) return;
+    var f=S.hrContractForm;
+    if(!/^\d{4}-\d{2}$/.test(f.signed||'')){ showMsg(t('Pick the month the contract was signed.')); return; }
+    var yrs=Number(f.years); if(!(yrs>0)){ showMsg(t('How many years did they commit to?')); return; }
+    S.busy=true; cs.disabled=true; cs.textContent=t('Saving…');
+    run('hrSaveContract',[S.auth.user,S.auth.pin,pid,{ id:f.id||'', signed:f.signed, years:yrs, notes:f.notes||'' }],function(d){
+      S.busy=false;
+      if(d && d.ok){ hrPut_(d); S.hrContractForm=null; showMsg(t('Contract saved')); } else showMsg(hrFail_(d));
+      render();
+    });
+  };
+  var cd=document.getElementById('hrContractDelete');
+  if(cd) cd.onclick=function(){
+    if(S.busy || !S.hrContractForm || !S.hrContractForm.id) return;
+    if(!confirm(t('Delete this contract and anything attached to it?'))) return;
+    S.busy=true;
+    run('hrDeleteContract',[S.auth.user,S.auth.pin,pid,S.hrContractForm.id],function(d){
+      S.busy=false; if(d && d.ok){ hrPut_(d); S.hrContractForm=null; showMsg(t('Contract deleted')); } else showMsg(hrFail_(d)); render();
+    });
+  };
+  document.querySelectorAll('[data-hrattach]').forEach(function(inp){
+    inp.onchange=function(){
+      var file=inp.files && inp.files[0]; if(!file) return;
+      var cid=inp.getAttribute('data-hrattach');
+      if(file.size>4*1024*1024){ showMsg(t('That file is too big — keep it under 4 MB.')); inp.value=''; return; }
+      var mime=file.type || (/\.pdf$/i.test(file.name)?'application/pdf':'');
+      var reader=new FileReader();
+      reader.onload=function(){
+        var b64=String(reader.result||'').split(',')[1]||'';
+        S.busy=true; showMsg(t('Uploading…'));
+        run('hrUploadFile',[S.auth.user,S.auth.pin,pid,cid,file.name,mime,b64],function(d){
+          S.busy=false; if(d && d.ok){ hrPut_(d); showMsg(t('Attached')); } else showMsg(hrFail_(d)); render();
+        }, function(e){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+      };
+      reader.readAsDataURL(file);
+    };
+  });
+  document.querySelectorAll('[data-hrfileopen]').forEach(function(b){
+    b.onclick=function(){
+      var fid=b.getAttribute('data-hrfileopen'); b.disabled=true; b.textContent=t('Opening…');
+      run('hrGetFile',[S.auth.user,S.auth.pin,fid],function(d){
+        b.disabled=false; b.textContent=t('Open');
+        if(!(d && d.ok)){ showMsg(hrFail_(d)); return; }
+        hrOpenDataUrl_(d.dataUrl, d.name);
+      }, function(e){ b.disabled=false; b.textContent=t('Open'); showMsg(t('Connection problem — try again.')); });
+    };
+  });
+  document.querySelectorAll('[data-hrfiledel]').forEach(function(b){
+    b.onclick=function(){
+      var v=b.getAttribute('data-hrfiledel'), i=v.indexOf('|'), cid=v.slice(0,i), fid=v.slice(i+1);
+      if(!confirm(t('Remove this attachment?'))) return;
+      S.busy=true;
+      run('hrDeleteFile',[S.auth.user,S.auth.pin,pid,cid,fid],function(d){ S.busy=false; if(d && d.ok){ hrPut_(d); showMsg(t('Removed')); } else showMsg(hrFail_(d)); render(); });
+    };
+  });
+  ['hr_left','hr_reason'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.oninput=el.onchange=function(){ S.hrArchiveDraft=S.hrArchiveDraft && S.hrArchiveDraft.staffId===pid ? S.hrArchiveDraft : { staffId:pid, at:(document.getElementById('hr_left')||{}).value||todayStr(), reason:'' }; S.hrArchiveDraft[id==='hr_left'?'at':'reason']=el.value; };
+  });
+  var ar=document.getElementById('hrArchive');
+  if(ar) ar.onclick=function(){
+    if(S.busy) return;
+    var at=(document.getElementById('hr_left')||{}).value||todayStr(), reason=(document.getElementById('hr_reason')||{}).value||'';
+    if(!confirm(gpT('Archive {name}? They come off the roster and the staff count, and can no longer sign in. You can bring them back later.',{name:person.name}))) return;
+    S.busy=true;
+    run('hrArchive',[S.auth.user,S.auth.pin,pid,{ at:at, reason:reason }],function(d){ S.busy=false; if(d && d.ok){ hrPut_(d); S.hrArchiveDraft=null; showMsg(gpT('{name} archived',{name:person.name})); } else showMsg(d && d.err==='self_archive' ? t('You can’t archive yourself.') : hrFail_(d)); render(); });
+  };
+  var un=document.getElementById('hrUnarchive');
+  if(un) un.onclick=function(){
+    if(S.busy) return; S.busy=true;
+    run('hrUnarchive',[S.auth.user,S.auth.pin,pid],function(d){ S.busy=false; if(d && d.ok){ hrPut_(d); showMsg(gpT('{name} is back on the roster',{name:person.name})); } else showMsg(hrFail_(d)); render(); });
+  };
+}
+/* A data: URL can't be opened as a top-level page in most browsers, so the
+   bytes go into a Blob and the Blob's URL opens in a new tab. */
+function hrOpenDataUrl_(dataUrl, name){
+  try {
+    var m=/^data:([^;]+);base64,(.*)$/.exec(dataUrl); if(!m) throw new Error('bad');
+    var bin=atob(m[2]), arr=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([arr],{type:m[1]}));
+    var a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener';
+    if(!/^(application\/pdf|image\/)/.test(m[1])) a.download=name||'file';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  } catch(e){ showMsg(t('Could not open the file')); }
 }
 
 function bindAdmin(){
@@ -4518,7 +4707,8 @@ function bindAdmin(){
         role:document.getElementById('adm_role').value.trim(),
         staffType:document.getElementById('adm_type').value,
         country:countryValue('adm_country'),
-        leads:[].map.call(document.querySelectorAll('[data-admlead]:checked'), function(c){ return c.getAttribute('data-admlead'); })
+        leads:[].map.call(document.querySelectorAll('[data-admlead]:checked'), function(c){ return c.getAttribute('data-admlead'); }),
+        hr:!!(document.getElementById('adm_hr')||{}).checked
       };
       b.disabled=true; b.textContent=t('Saving…');
       run('adminUpdateStaff',[S.auth.user,S.auth.pin,id,payload],function(d){
@@ -5133,6 +5323,171 @@ function myMinistryHtml(){
     h+='<div class="accCard">'+accRowHtml('dbAcc', 'kpiMetrics', '⚙️ '+esc(t('Edit what we track')),
       esc(t('Add, rename or remove metrics; move a count to monthly or quarterly')),
       function(){ return metricEditorHtml_(S.me.campus, sel.dept, sel.min); })+'</div>';
+  }
+  return h;
+}
+
+/* ---------- Human Resources ----------
+   Staff contracts, on the page an admin or anyone with `hr` reaches from
+   the menu. One row per person; a person's page holds their contracts (a
+   renewal is another row), the papers attached to each, how long they have
+   served, when the current contract runs out, and the archive box for
+   someone who leaves. The paper contract stays in the drawer — this is the
+   record of it. Later this page grows into processing potential staff and
+   volunteers; for now it is contracts. */
+var HR_DUE_DAYS=90;
+function hrMonthLabel_(ym){ if(!ym) return ''; return t(MONTH_SHORT[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4); }
+function hrContractEnd_(c){ var y=Number(c.signed.slice(0,4)), m=Number(c.signed.slice(5,7))-1; return new Date(y, m+Math.round(Number(c.years)*12), 1); }
+function hrEndYm_(c){ var d=hrContractEnd_(c); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
+function hrDaysLeft_(c){ var now=new Date(); now.setHours(0,0,0,0); return Math.round((hrContractEnd_(c)-now)/86400000); }
+function hrCurrent_(p){ var l=p.contracts||[]; return l.length ? l[l.length-1] : null; }
+function hrStatus_(p){
+  // label is the full sentence (banner, list line); short fits a chip
+  if(p.archived) return { key:'archived', label:t('Archived'), short:t('Archived') };
+  var c=hrCurrent_(p); if(!c) return { key:'none', label:t('No contract on file'), short:t('No contract') };
+  var d=hrDaysLeft_(c);
+  if(d<0) return { key:'expired', label:gpT('Expired {n} days ago',{n:-d}), short:t('Expired'), days:d };
+  if(d<=HR_DUE_DAYS) return { key:'due', label:gpT('Renew in {n} days',{n:d}), short:t('Renew soon'), days:d };
+  return { key:'active', label:gpT('Until {month}',{month:hrMonthLabel_(hrEndYm_(c))}), short:gpT('Until {month}',{month:hrMonthLabel_(hrEndYm_(c))}), days:d };
+}
+function hrSince_(p){ var l=p.contracts||[]; if(l.length) return l[0].signed+'-01'; if(/^\d{4}$/.test(p.joined||'')) return p.joined+'-01-01'; return ''; }
+function hrServing_(p){
+  var since=hrSince_(p); if(!since) return '';
+  var a=new Date(since+'T00:00:00'), b=new Date();
+  var months=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()); if(b.getDate()<a.getDate()) months--; if(months<0) months=0;
+  var y=Math.floor(months/12), m=months%12, parts=[];
+  if(y) parts.push(gpT('{n} yr',{n:y})); if(m||!y) parts.push(gpT('{n} mo',{n:m}));
+  return parts.join(' ');
+}
+function hrYearsLabel_(n){ return Number(n)===1 ? t('1 year') : gpT('{n} years',{n:n}); }
+function hrStatusChip_(st){ return '<span class="hrChip '+st.key+'">'+esc(st.short)+'</span>'; }
+function hrRowHtml_(p){
+  var st=hrStatus_(p), serving=hrServing_(p);
+  return '<div data-hrrow="'+esc((p.name+' '+p.username).toLowerCase())+'"><button class="adminRow" data-hrperson="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
+    '<span class="adminRowText"><span class="rowName">'+esc(p.name)+'</span>'+
+    '<span class="rowSub">'+esc(t(p.dept))+(p.ministry?' · '+esc(t(p.ministry)):'')+(serving?' · '+esc(serving):'')+
+      ((st.key==='due'||st.key==='expired')?' · '+esc(st.label):'')+'</span></span>'+
+    hrStatusChip_(st)+'</button></div>';
+}
+function hrBackHtml_(to, label){
+  return '<button class="linkbtn" id="hrBack" data-hrback="'+to+'" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(label)+'</button>';
+}
+function hrHtml(){
+  if(S.hrSub==='person' && S.hrStaff){
+    var who=S.hrStaff.filter(function(x){ return x.id===S.hrPersonId; })[0];
+    if(who) return hrPersonHtml_(who);
+    S.hrSub='home';
+  }
+  var h=hrBackHtml_('week', t('My Home'));
+  h+='<h2>🗂️ '+esc(t('Human Resources'))+'</h2><p class="sub">'+esc(t('Staff contracts — who signed when, for how long, and whose is coming up for renewal.'))+'</p>';
+  if(S.hrError) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load the staff list.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.hrError)+'</p><button class="btn ghost" id="hrRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
+  if(!S.hrStaff) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  var all=S.hrStaff;
+  var active=all.filter(function(x){ return x.active && !x.archived; });
+  var archived=all.filter(function(x){ return x.archived; });
+  var withC=active.filter(function(x){ return (x.contracts||[]).length; });
+  var due=active.filter(function(x){ var st=hrStatus_(x); return st.key==='due'||st.key==='expired'; })
+    .sort(function(a,b){ return hrStatus_(a).days-hrStatus_(b).days; });
+  S.hrDue=due.length;
+  h+='<div class="mmGrid">'+[
+      [t('Active staff'), active.length, false],
+      [t('Contracts on file'), withC.length+' / '+active.length, false],
+      [t('Renewals due'), due.length, due.length>0],
+      [t('Archived'), archived.length, false]
+    ].map(function(x){ return '<div class="mmTile'+(x[2]?' hot':'')+'"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
+  if(due.length){
+    h+='<h3>⏰ '+esc(t('Renewals due'))+'</h3><p class="sub" style="margin:0 0 6px">'+esc(gpT('Contracts that have run out or run out within {n} days.',{n:HR_DUE_DAYS}))+'</p>';
+    h+='<div class="accCard adminList" id="hrDueList">'+due.map(hrRowHtml_).join('')+'</div>';
+  }
+  h+='<h3>👥 '+esc(t('Everyone'))+'</h3>';
+  var known_=CAMPUSES.map(function(c){ return c.id; });
+  var pool = S.hrShowArchived ? all : all.filter(function(x){ return !x.archived; });
+  var tabs=CAMPUSES.map(function(c){ return { id:c.id, label:c.short, n:pool.filter(function(x){ return x.campus===c.id; }).length }; });
+  var other=pool.filter(function(x){ return known_.indexOf(x.campus)===-1; });
+  if(other.length) tabs.push({ id:'__other', label:t('Other'), n:other.length });
+  var activeTab = tabs.some(function(tb){ return tb.id===S.hrCampusTab; }) ? S.hrCampusTab
+    : (tabs.some(function(tb){ return tb.id===S.me.campus; }) ? S.me.campus : tabs[0].id);
+  S.hrCampusTab=activeTab;
+  h+='<div class="deptChips">'+tabs.map(function(tb){
+    return '<button class="deptChip'+(activeTab===tb.id?' on':'')+'" data-hrcampustab="'+esc(tb.id)+'">'+esc(tb.label)+' · '+tb.n+'</button>'; }).join('')+'</div>';
+  h+='<div class="field" style="margin:10px 0 6px"><input type="text" id="hrSearch" value="'+esc(S.hrSearch||'')+'" placeholder="'+esc(t('Search by name or username…'))+'"></div>';
+  h+='<label class="hrToggle"><input type="checkbox" id="hrShowArchived"'+(S.hrShowArchived?' checked':'')+'> '+esc(gpT('Show archived ({n})',{n:archived.length}))+'</label>';
+  h+='<p class="emptyLine" id="hrSearchEmpty" style="display:none">'+esc(t('No one matches that search.'))+'</p>';
+  var shown = activeTab==='__other' ? other : pool.filter(function(x){ return x.campus===activeTab; });
+  shown.sort(function(a,b){ return a.name<b.name?-1:1; });
+  if(!shown.length) return h+'<p class="sub">'+esc(t('No accounts yet.'))+'</p>';
+  h+='<div class="accCard adminList" id="hrList">'+shown.map(hrRowHtml_).join('')+'</div>';
+  return h;
+}
+function hrFileSize_(n){ n=Number(n)||0; return n>1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
+function hrContractCardHtml_(p, c, isCurrent){
+  var h='<div class="card slim hrContract" data-hrcontract="'+esc(c.id)+'">';
+  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+'</div>'+
+    '<div class="rowSub">'+esc(gpT('Ends {month}',{month:hrMonthLabel_(hrEndYm_(c))}))+(isCurrent && !p.archived ? ' · '+esc(hrStatus_(p).label) : '')+'</div>'+
+    (c.notes?'<div class="rowSub" style="margin-top:2px">'+esc(c.notes)+'</div>':'')+'</div>'+
+    '<button class="linkbtn inline" data-hredit="'+esc(c.id)+'">'+esc(t('Edit'))+'</button></div>';
+  var files=c.files||[];
+  if(files.length){
+    h+='<div class="hrFiles">'+files.map(function(f){
+      return '<div class="hrFile"><span class="hrFileName">📄 '+esc(f.name)+' <span class="hint" style="display:inline">'+esc(hrFileSize_(f.size))+'</span></span>'+
+        '<button class="linkbtn inline" data-hrfileopen="'+esc(f.id)+'">'+esc(t('Open'))+'</button>'+
+        '<button class="linkbtn inline" data-hrfiledel="'+esc(c.id)+'|'+esc(f.id)+'">'+esc(t('Remove'))+'</button></div>'; }).join('')+'</div>';
+  } else {
+    h+='<div class="rowSub" style="margin-top:6px">⚠️ '+esc(t('No paper attached yet'))+'</div>';
+  }
+  h+='<label class="btn ghost hrAttach">'+esc(t('Attach the signed contract'))+' (PDF / photo)'+
+    '<input type="file" accept="application/pdf,image/*" data-hrattach="'+esc(c.id)+'" style="display:none"></label>';
+  return h+'</div>';
+}
+function hrContractFormHtml_(p){
+  var f=S.hrContractForm, isNew=!f.id;
+  var h='<div class="card" id="hrContractForm"><h3 style="margin-top:0">'+esc(isNew ? ((p.contracts||[]).length ? t('Add a renewal') : t('Add a contract')) : t('Edit contract'))+'</h3>';
+  if(isNew && p.suggest && p.suggest.start){
+    var sug=p.suggest, yrs='';
+    if(sug.end){ var a=new Date(sug.start+'T00:00:00'), b=new Date(sug.end+'T00:00:00'); yrs=Math.round(((b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()))/12*4)/4; }
+    h+='<div class="hrSuggest"><b>'+esc(t('Found in the old CRM'))+':</b> '+esc(gpT('started {start}',{start:hrMonthLabel_(sug.start.slice(0,7))}))+
+      (sug.end?', '+esc(gpT('ends {end}',{end:hrMonthLabel_(sug.end.slice(0,7))})):'')+(sug.type?' · '+esc(sug.type):'')+
+      (yrs?' <button class="linkbtn inline" id="hrUseSuggest" data-signed="'+esc(sug.start.slice(0,7))+'" data-years="'+esc(String(yrs))+'">'+esc(t('Use these'))+'</button>':'')+'</div>';
+  }
+  h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Month signed'))+'</label><input type="month" id="hr_signed" value="'+esc(f.signed||'')+'"></div>'+
+    '<div><label class="f">'+esc(t('Years committed'))+'</label><input type="number" id="hr_years" inputmode="decimal" min="0.25" max="30" step="0.25" value="'+esc(f.years==null?'':String(f.years))+'" placeholder="2"></div></div>';
+  h+='<label class="f">'+esc(t('Notes'))+'</label><input type="text" id="hr_notes" maxlength="500" value="'+esc(f.notes||'')+'" placeholder="'+esc(t('e.g. second term, part-time'))+'">';
+  h+='<button class="btn" id="hrContractSave">'+esc(isNew?t('Save contract'):t('Save changes'))+'</button>';
+  h+='<button class="btn ghost" id="hrContractCancel">'+esc(t('Cancel'))+'</button>';
+  if(!isNew) h+='<button class="linkbtn teamDelete" id="hrContractDelete">'+esc(t('Delete this contract'))+'</button>';
+  return h+'</div>';
+}
+function hrPersonHtml_(p){
+  var st=hrStatus_(p), cur=hrCurrent_(p), serving=hrServing_(p), since=hrSince_(p);
+  var h=hrBackHtml_('home', t('Human Resources'));
+  h+='<div class="card"><div class="adminPersonHead">'+avatarHtml(p,'lg')+'<div style="min-width:0">'+
+    '<div class="pname">'+esc(p.name)+'</div>'+
+    '<div class="pmeta">@'+esc(p.username)+(p.email?' · '+esc(p.email):'')+'</div>'+
+    '<div class="pmeta">'+esc(campusName(p.campus))+' · '+esc(t(p.dept))+(p.ministry?' · '+esc(t(p.ministry)):'')+(p.role?' · '+esc(p.role):'')+'</div>'+
+    (serving?'<div class="pmeta">⏳ '+esc(gpT('Serving {time}',{time:serving}))+' · '+esc(gpT('since {month}',{month:hrMonthLabel_(since.slice(0,7))}))+'</div>':'')+
+    '</div></div>';
+  h+='<div class="hrBanner '+st.key+'">'+(st.key==='archived'?'📦':st.key==='none'?'📝':st.key==='expired'?'🔴':st.key==='due'?'🟠':'🟢')+' <b>'+esc(st.label)+'</b>'+
+    (cur && !p.archived ? '<span class="rowSub"> · '+esc(gpT('Signed {month}',{month:hrMonthLabel_(cur.signed)}))+' · '+esc(hrYearsLabel_(cur.years))+'</span>' : '')+'</div>';
+  if(p.archived){
+    h+='<p class="sub" style="margin:8px 0 0">'+esc(gpT('Left on {date}',{date:p.archived.at||'—'}))+(p.archived.reason?' — '+esc(p.archived.reason):'')+'</p>'+
+      '<button class="btn ghost" id="hrUnarchive">'+esc(t('Bring back (unarchive)'))+'</button>';
+  }
+  h+='</div>';
+
+  h+='<h3>📄 '+esc(t('Contracts'))+'</h3>';
+  var list=(p.contracts||[]).slice().reverse();
+  if(!list.length && !S.hrContractForm) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No contract on file yet. Add the one from the paper folder.'))+'</p></div>';
+  list.forEach(function(c){ h+=hrContractCardHtml_(p, c, cur && c.id===cur.id); });
+  if(S.hrContractForm && S.hrContractForm.staffId===p.id) h+=hrContractFormHtml_(p);
+  else h+='<button class="btn" id="hrAddContract" style="margin-top:0">＋ '+esc(list.length ? t('Add a renewal') : t('Add a contract'))+'</button>';
+
+  if(!p.archived){
+    var d=S.hrArchiveDraft && S.hrArchiveDraft.staffId===p.id ? S.hrArchiveDraft : { at:todayStr(), reason:'' };
+    h+='<h3>📦 '+esc(t('Leaving?'))+'</h3><div class="card">'+
+      '<p class="sub" style="margin:0 0 8px">'+esc(t('Archiving takes them off the roster and the staff count, and closes their sign-in. Their history stays. You can bring them back later.'))+'</p>'+
+      '<div class="teamGrid2"><div><label class="f">'+esc(t('Date they left'))+'</label><input type="date" id="hr_left" value="'+esc(d.at)+'"></div>'+
+      '<div><label class="f">'+esc(t('Reason'))+'</label><input type="text" id="hr_reason" maxlength="300" value="'+esc(d.reason)+'" placeholder="'+esc(t('e.g. moved home, finished term'))+'"></div></div>'+
+      '<button class="danger" id="hrArchive">'+esc(gpT('Archive {name}',{name:p.name}))+'</button></div>';
   }
   return h;
 }
@@ -6824,6 +7179,7 @@ function bindAway(){
   }
   var tdbk=document.getElementById('teamsDbBack');
   if(tdbk) tdbk.onclick=function(){ S.view='ministry'; render(); };
+  bindHr();
 
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
   ['lv_from','lv_to'].forEach(function(id){

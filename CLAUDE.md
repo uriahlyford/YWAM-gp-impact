@@ -369,6 +369,38 @@ as "Could not save" (the leads / profile save in Admin). Don't drop the option.
 `test-admin-select.mjs` drives the home → Accounts → person → back flow;
 `test-admin-edit.mjs` the edit form and campus tabs; `test-admin.mjs` the server side.
 
+## Human Resources (the HR page)
+In the hamburger menu for an admin or anyone an admin has ticked **HR access** (`hr` on the
+staff record, set via `adminUpdateStaff`, carried on boot as `staff.hr`; the item shows the
+renewals-due count from boot's `hrDue`). `S.view==='hr'`, `hrHtml` / `hrPersonHtml_`,
+bindings in `bindHr()`; the list loads on demand (`hrList`) with the same error card +
+Try again as My Ministry.
+
+- **Contracts live on the staff record**: `contracts: [{id, signed:'YYYY-MM', years,
+  notes, files:[{id,name,mime,size,added}], added, addedBy}]`, sorted oldest first; the
+  **current** contract is the last one, a renewal is another row (`hrSaveContract`; same
+  id = edit in place). A contract **ends on the first day of the month `years` after the
+  month signed** (`hrContractEnd_`, both sides); status = archived / no contract / expired
+  / renew soon (≤ `HR_DUE_DAYS` = 90) / active. Years served count from the earliest
+  contract's month, else the profile's `joined` year.
+- **Attachments are their own blobs** (`hrfile:<id>` = {name, mime, data:base64}); the
+  staff record holds only the meta. PDF or image, ≤ ~4 MB (`HR_FILE_MAX_B64`). Deleting
+  a file or its contract drops the blob (`hrDropFile_`). The client opens one by turning
+  the data URL into a Blob URL (`hrOpenDataUrl_`) — a data: URL can't be a top-level page.
+- **Archiving IS deactivating**: `hrArchive` sets `active:false` plus `archived:{at,
+  reason, by}`, so the roster, the staff count, sign-in and the mentor pickers all follow
+  with no extra work; `hrUnarchive` reverses it. The admin's Approvals page and its home
+  badge count `!active && !archived` — an archived person is not a sign-up. Nobody
+  archives themselves.
+- **Old-CRM pre-fill**: `netlify/functions/hr-seed.js` holds the start/end dates from the
+  Lovable "YWAM SR Admin" staff table; `hrSuggest_` matches by name (word order and
+  punctuation ignored) and `hrList` offers it as `suggest` until a contract exists. Data
+  only — never written into a record without HR pressing "Use these" and Save.
+- **Every server test copies `hr-seed.js` (and `team-seed.js`) next to `api.js`.**
+- Later this page grows into processing potential staff and volunteers (the CRM side);
+  keep the person page as the unit.
+- `test-hr.mjs` (server) and `test-hr-page.mjs` (browser) cover it.
+
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
   checks — `server tests` (seconds, no install) and `browser tests` (Playwright +
