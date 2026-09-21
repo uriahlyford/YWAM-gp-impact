@@ -660,6 +660,12 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .hrFileName { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hrAttach { display:block; text-align:center; margin-top:8px; cursor:pointer; }
 .hrSuggest { background:var(--accentSoft); border:1px solid var(--accentSoftBorder); border-radius:10px; padding:8px 10px; font-size:13px; margin-bottom:8px; }
+.candSteps { display:flex; flex-wrap:wrap; gap:6px; }
+.candStep { border:1.5px solid var(--border2); background:var(--bg); border-radius:999px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--muted); font-family:inherit; }
+.candStep.done { border-color:var(--good); color:var(--good); }
+.candStep.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
+.candStep:disabled { opacity:.5; cursor:default; }
+.candLog { padding:8px 0; border-top:1px solid var(--line); font-size:13.5px; }
 .wkStrip { display:flex; gap:6px; margin:12px 0 6px; flex-wrap:wrap; }
 .wkDot { width:34px; height:34px; border-radius:50%; border:1px solid var(--border); background:var(--surface2); color:var(--muted);
   font:inherit; font-size:12px; font-weight:700; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -1230,7 +1236,8 @@ var S = {
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovError:{}, ovDeptOf:{}, ovInputOpen:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
   adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', broadcastDraft:'',
-  hrStaff:null, hrLoading:false, hrError:'', hrSub:'home', hrPersonId:null, hrSearch:'', hrCampusTab:null, hrShowArchived:false, hrContractForm:null, hrArchiveDraft:null, hrDue:null,
+  hrStaff:null, hrLoading:false, hrError:'', hrSub:'home', hrPersonId:null, hrSearch:'', hrCampusTab:null, hrShowArchived:false, hrContractForm:null, hrArchiveDraft:null, hrDue:null, hrFollowUps:null, hrTab:'staff',
+  cands:null, candsLoading:false, candsError:'', candStage:'', candType:'', candSearch:'', candShowArchived:false, candForm:null, candPersonId:null, candNoteDraft:'',
   adminOkrAcc:{},
   /* The "jump to any ministry" picker on My Ministry — admin can pick any
      department/ministry on their campus; everyone else's options resolve to
@@ -1659,6 +1666,7 @@ function applyBoot(d){
   if(d.ministry) S.ministry = d.ministry;
   S.personal = d.personal || null;
   S.hrDue = (d.hrDue===undefined) ? null : d.hrDue;
+  S.hrFollowUps = (d.hrFollowUps===undefined) ? null : d.hrFollowUps;
   if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
   if(d.structure && d.structure.ok){
     S.structCache[structKey_(d.structure.campus, d.structure.year, d.structure.quarter)] = { doc:d.structure.doc, source:d.structure.source };
@@ -1693,7 +1701,8 @@ function logout(){
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.personal=null; S.personalDraft={}; S.mmTab='ministry'; S.kpiInputOpen=false; S.mmDashAll=false; S.metricRename=null;
   S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamError={}; S.teamForm=null;
-  S.hrStaff=null; S.hrLoading=false; S.hrError=''; S.hrSub='home'; S.hrPersonId=null; S.hrSearch=''; S.hrContractForm=null; S.hrArchiveDraft=null; S.hrDue=null;
+  S.hrStaff=null; S.hrLoading=false; S.hrError=''; S.hrSub='home'; S.hrPersonId=null; S.hrSearch=''; S.hrContractForm=null; S.hrArchiveDraft=null; S.hrDue=null; S.hrFollowUps=null; S.hrTab='staff';
+  S.cands=null; S.candsLoading=false; S.candsError=''; S.candForm=null; S.candPersonId=null; S.candNoteDraft='';
   S.teamMode='dir'; S.structCache={}; S.structLoading={}; S.structDraft=null; S.structEdit=false; S.structEditNode=null; S.structYear=null; S.structQ=null;
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
@@ -1911,6 +1920,9 @@ function renderNotifPanel(){
   document.querySelectorAll('#notifRoot [data-goprofile]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='profile'; render(); };
   });
+  document.querySelectorAll('#notifRoot [data-gohr]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='hr'; S.hrSub='home'; render(); };
+  });
   document.querySelectorAll('#notifRoot [data-121accept]').forEach(function(b){
     b.onclick=function(){
       var id=b.getAttribute('data-121accept');
@@ -1961,7 +1973,7 @@ function renderMenu(){
   // HR — staff contracts, archiving. An admin, or anyone an admin gave `hr`.
   if(S.me.isAdmin || S.me.hr) items.push({ id:'hr',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18"/><path d="M8 2.5V6M16 2.5V6"/><path d="M8 14h4M8 17.5h8"/></svg>',
-    label:t('HR')+(S.hrDue ? ' · '+S.hrDue : ''), badge: S.hrDue||0 });
+    label:t('HR')+(((S.hrDue||0)+(S.hrFollowUps||0)) ? ' · '+((S.hrDue||0)+(S.hrFollowUps||0)) : '') });
   if(S.me.isAdmin) items.push({ id:'admin',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
     label:t('Admin') });
@@ -3118,6 +3130,14 @@ function notifItems_(){
      bellOnly: this is true for nearly every existing account at once, so an
      inline card on My Home would be permanent, above-the-fold clutter
      for almost everybody — the bell (and its dot) is visible enough. */
+  /* HR reminders — for an admin or anyone with HR. Dated today (not now),
+     so Clear hides them until tomorrow and they come back while the work
+     is still waiting: a contract to renew, a candidate to follow up. */
+  if(S.me && (S.me.isAdmin || S.me.hr)){
+    var hrBtn='<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-gohr="1">'+esc(t('Open HR'))+'</button>';
+    if(S.hrDue) items.push({ when:todayStr()+'T23:59:59.000Z', text: S.hrDue===1 ? t('1 staff contract is due for renewal') : gpT('{n} staff contracts are due for renewal',{n:S.hrDue}), actions:hrBtn });
+    if(S.hrFollowUps) items.push({ when:todayStr()+'T23:59:58.000Z', text: S.hrFollowUps===1 ? t('1 candidate follow-up is due') : gpT('{n} candidate follow-ups are due',{n:S.hrFollowUps}), actions:hrBtn });
+  }
   if(S.me && !(S.profile && S.profile.email)){
     items.push({ when:new Date().toISOString(), text:t('Add your email to your profile'),
       actions:'<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-goprofile="1">'+esc(t('Add it'))+'</button>',
@@ -4362,9 +4382,16 @@ function bindHr(){
   var back=document.getElementById('hrBack');
   if(back) back.onclick=function(){
     var to=back.getAttribute('data-hrback')||'week'; gpTap();
-    if(to==='week') S.view='week'; else { S.hrSub='home'; S.hrContractForm=null; }
+    if(to==='week') S.view='week';
+    else if(to==='cands'){ S.hrTab='cands'; S.hrSub='home'; S.candForm=null; }
+    else if(to==='cand'){ S.hrTab='cands'; S.hrSub='cand'; S.candForm=null; }
+    else { S.hrSub='home'; S.hrContractForm=null; }
     render();
   };
+  document.querySelectorAll('[data-hrtab]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.hrTab=b.getAttribute('data-hrtab'); S.hrSub='home'; render(); };
+  });
+  bindCands_();
   document.querySelectorAll('[data-hrperson]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.hrPersonId=b.getAttribute('data-hrperson'); S.hrSub='person'; S.hrContractForm=null; S.hrArchiveDraft=null; render(); };
   });
@@ -4480,6 +4507,108 @@ function bindHr(){
     run('hrUnarchive',[S.auth.user,S.auth.pin,pid],function(d){ S.busy=false; if(d && d.ok){ hrPut_(d); showMsg(gpT('{name} is back on the roster',{name:person.name})); } else showMsg(hrFail_(d)); render(); });
   };
 }
+/* ---------- Candidates bindings ---------- */
+function candPut_(d){
+  if(!(d && d.ok && d.candidate) || !S.cands) return;
+  var found=false;
+  S.cands=S.cands.map(function(x){ if(x.id===d.candidate.id){ found=true; return d.candidate; } return x; });
+  if(!found) S.cands.push(d.candidate);
+}
+function candFail_(d){ return d && d.err==='not_authorized' ? t('Only HR or an admin can do that.') : d && d.err==='bad_candidate' ? t('Give them a name first.') : t('Could not save'); }
+function bindCands_(){
+  if(S.view!=='hr' || S.hrTab!=='cands') return;
+  if(!S.cands && !S.candsLoading && !S.candsError){
+    S.candsLoading=true;
+    run('hrCandidates',[S.auth.user,S.auth.pin],function(d){
+      S.candsLoading=false;
+      if(d && d.ok) S.cands=d.candidates||[];
+      else S.candsError = d && d.err==='not_authorized' ? t('Only HR or an admin can open this.') : (d && d.err) || t('The server answered without the candidates.');
+      render();
+    }, function(e){ S.candsLoading=false; S.candsError=(e && e.message) || t('Connection problem — try again.'); render(); });
+  }
+  var rt=document.getElementById('candsRetry');
+  if(rt) rt.onclick=function(){ S.candsError=''; render(); };
+  var add=document.getElementById('candAdd');
+  if(add) add.onclick=function(){ gpTap(); S.candForm=candBlank_(); S.hrSub='candform'; render(); };
+  document.querySelectorAll('[data-candperson]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.candPersonId=b.getAttribute('data-candperson'); S.hrSub='cand'; S.candNoteDraft=''; render(); };
+  });
+  document.querySelectorAll('[data-candtype]').forEach(function(b){ b.onclick=function(){ gpTap(); S.candType=b.getAttribute('data-candtype'); render(); }; });
+  document.querySelectorAll('[data-candstage]').forEach(function(b){ b.onclick=function(){ gpTap(); S.candStage=b.getAttribute('data-candstage'); render(); }; });
+  var sa=document.getElementById('candShowArchived');
+  if(sa) sa.onchange=function(){ S.candShowArchived=sa.checked; render(); };
+  var cs=document.getElementById('candSearch');
+  var filter_=function(){
+    var q=(S.candSearch||'').trim().toLowerCase(), any=false;
+    document.querySelectorAll('#candList [data-candrow]').forEach(function(row){ var show=!q || (row.getAttribute('data-candrow')||'').indexOf(q)>-1; row.style.display=show?'':'none'; if(show) any=true; });
+    var empty=document.getElementById('candSearchEmpty'); if(empty) empty.style.display=(q && !any)?'':'none';
+  };
+  if(cs){ cs.oninput=function(){ S.candSearch=cs.value; filter_(); }; filter_(); }
+
+  // --- the form (add / edit details) ---
+  document.querySelectorAll('[data-cf]').forEach(function(el){
+    var f=function(){ if(S.candForm) S.candForm[el.getAttribute('data-cf')]=el.value; };
+    el.oninput=f; el.onchange=f;
+  });
+  var cc=document.getElementById('candCancel');
+  if(cc) cc.onclick=function(){ var wasEdit=!!(S.candForm&&S.candForm.id); S.candForm=null; S.hrSub=wasEdit?'cand':'home'; render(); };
+  var sv=document.getElementById('candSave');
+  if(sv) sv.onclick=function(){
+    if(S.busy || !S.candForm) return;
+    var f=S.candForm;
+    if(!(f.name||'').trim()){ showMsg(t('Give them a name first.')); return; }
+    S.busy=true; sv.disabled=true; sv.textContent=t('Saving…');
+    run('hrSaveCandidate',[S.auth.user,S.auth.pin,f],function(d){
+      S.busy=false;
+      if(d && d.ok){ candPut_(d); S.candForm=null; S.candPersonId=d.candidate.id; S.hrSub='cand'; showMsg(t('Saved')); }
+      else showMsg(candFail_(d));
+      render();
+    });
+  };
+
+  // --- one candidate ---
+  var c=(S.cands||[]).filter(function(x){ return x.id===S.candPersonId; })[0];
+  if(S.hrSub!=='cand' || !c) return;
+  var save=function(patch, msg){
+    if(S.busy) return; S.busy=true;
+    var doc={}; for(var k in c) if(k!=='log' && k!=='archived') doc[k]=c[k];
+    for(var k2 in patch) doc[k2]=patch[k2];
+    run('hrSaveCandidate',[S.auth.user,S.auth.pin,doc],function(d){ S.busy=false; if(d && d.ok){ candPut_(d); if(msg) showMsg(msg); } else showMsg(candFail_(d)); render(); });
+  };
+  var ed=document.getElementById('candEdit');
+  if(ed) ed.onclick=function(){ S.candForm={}; for(var k in c) if(k!=='log' && k!=='archived') S.candForm[k]=c[k]; S.hrSub='candform'; render(); };
+  document.querySelectorAll('[data-candmove]').forEach(function(b){
+    b.onclick=function(){ var st=b.getAttribute('data-candmove'); if(st===c.stage) return; gpTap(); save({ stage:st }, gpT('Moved to {stage}',{stage:candStageLabel_(st)})); };
+  });
+  var lk=document.getElementById('candLink');
+  if(lk) lk.onchange=function(){ save({ staffId:lk.value }, lk.value ? t('Linked to their account') : t('Link removed')); };
+  var os=document.getElementById('candOpenStaff');
+  if(os) os.onclick=function(){ S.hrTab='staff'; S.hrSub='person'; S.hrPersonId=os.getAttribute('data-staff'); render(); };
+  var ns=document.getElementById('candNextSave');
+  if(ns) ns.onclick=function(){ save({ nextStep:(document.getElementById('cand_next')||{}).value||'', nextDate:(document.getElementById('cand_nextdate')||{}).value||'' }, t('Next step saved')); };
+  var nt=document.getElementById('candNote');
+  if(nt) nt.oninput=function(){ S.candNoteDraft=nt.value; };
+  var na=document.getElementById('candNoteAdd');
+  if(na) na.onclick=function(){
+    var text=(nt?nt.value:'').trim(); if(!text){ showMsg(t('Write the note first.')); return; }
+    if(S.busy) return; S.busy=true;
+    run('hrCandidateNote',[S.auth.user,S.auth.pin,c.id,text],function(d){ S.busy=false; if(d && d.ok){ candPut_(d); S.candNoteDraft=''; } else showMsg(candFail_(d)); render(); });
+  };
+  var ar=document.getElementById('candArchive');
+  if(ar) ar.onclick=function(){
+    if(S.busy) return;
+    var why=(document.getElementById('cand_why')||{}).value||'', note=(document.getElementById('cand_whynote')||{}).value||'';
+    if(!confirm(gpT('Archive {name}? They stay in the list, marked archived, and can be brought back.',{name:c.name}))) return;
+    S.busy=true;
+    run('hrArchiveCandidate',[S.auth.user,S.auth.pin,c.id,{ reason: why+(note?' — '+note:'') }],function(d){ S.busy=false; if(d && d.ok){ candPut_(d); showMsg(gpT('{name} archived',{name:c.name})); } else showMsg(candFail_(d)); render(); });
+  };
+  var un=document.getElementById('candUnarchive');
+  if(un) un.onclick=function(){
+    if(S.busy) return; S.busy=true;
+    run('hrArchiveCandidate',[S.auth.user,S.auth.pin,c.id,null],function(d){ S.busy=false; if(d && d.ok){ candPut_(d); showMsg(t('Back in the pipeline')); } else showMsg(candFail_(d)); render(); });
+  };
+}
+
 /* A data: URL can't be opened as a top-level page in most browsers, so the
    bytes go into a Blob and the Blob's URL opens in a new tab. */
 function hrOpenDataUrl_(dataUrl, name){
@@ -5378,8 +5507,10 @@ function hrHtml(){
     if(who) return hrPersonHtml_(who);
     S.hrSub='home';
   }
+  if(S.hrTab==='cands') return candsHtml_();
   var h=hrBackHtml_('week', t('My Home'));
-  h+='<h2>🗂️ '+esc(t('Human Resources'))+'</h2><p class="sub">'+esc(t('Staff contracts — who signed when, for how long, and whose is coming up for renewal.'))+'</p>';
+  h+='<h2>🗂️ '+esc(t('Human Resources'))+'</h2>'+hrTabsHtml_();
+  h+='<p class="sub">'+esc(t('Staff contracts — who signed when, for how long, and whose is coming up for renewal.'))+'</p>';
   if(S.hrError) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load the staff list.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.hrError)+'</p><button class="btn ghost" id="hrRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
   if(!S.hrStaff) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
   var all=S.hrStaff;
@@ -5419,6 +5550,162 @@ function hrHtml(){
   h+='<div class="accCard adminList" id="hrList">'+shown.map(hrRowHtml_).join('')+'</div>';
   return h;
 }
+function hrTabsHtml_(){
+  var tab=S.hrTab==='cands'?'cands':'staff';
+  return '<div class="campusSeg" style="max-width:none">'+
+    '<button class="campusBtn'+(tab==='staff'?' on':'')+'" data-hrtab="staff">📄 '+esc(t('Staff contracts'))+'</button>'+
+    '<button class="campusBtn'+(tab==='cands'?' on':'')+'" data-hrtab="cands">🌱 '+esc(t('Candidates'))+((S.hrFollowUps)?' · '+S.hrFollowUps:'')+'</button></div>';
+}
+
+/* ---------- Candidates — potential staff, volunteers, students ----------
+   The CRM side of HR: a pipeline from first contact to arrival. One row per
+   person with a stage, a next step and its date (the follow-up reminders
+   hang on that), a running log of notes and stage moves, and an archive box
+   for a no. Kept deliberately plain — a list you can search and filter,
+   one page per person — rather than columns to drag between. */
+var CAND_STAGES=[['new','New inquiry'],['contacted','Contacted'],['applied','Applied'],['interview','Interview'],['accepted','Accepted'],['arrived','Arrived']];
+var CAND_TYPES=[['staff','Staff'],['volunteer','Volunteer'],['student','Student']];
+var CAND_FOLLOWUP_DAYS=7;
+function candStageLabel_(k){ for(var i=0;i<CAND_STAGES.length;i++) if(CAND_STAGES[i][0]===k) return t(CAND_STAGES[i][1]); return k; }
+function candTypeLabel_(k){ for(var i=0;i<CAND_TYPES.length;i++) if(CAND_TYPES[i][0]===k) return t(CAND_TYPES[i][1]); return k; }
+function candDaysUntil_(iso){ if(!iso) return null; var a=new Date(iso+'T00:00:00'), b=new Date(); b.setHours(0,0,0,0); return Math.round((a-b)/86400000); }
+function candDue_(c){ if(c.archived || !c.nextDate) return ''; var d=candDaysUntil_(c.nextDate); return d<0 ? 'overdue' : d<=CAND_FOLLOWUP_DAYS ? 'soon' : ''; }
+function candDueLabel_(c){ var d=candDaysUntil_(c.nextDate); if(d===null) return ''; return d<0 ? gpT('{n} days overdue',{n:-d}) : d===0 ? t('today') : d===1 ? t('tomorrow') : gpT('in {n} days',{n:d}); }
+function candWhen_(iso){ return iso ? teamDate_(iso.slice(0,10)) : ''; }
+function candRowHtml_(c){
+  var due=candDue_(c);
+  var sub=candTypeLabel_(c.type)+(c.subtype?' · '+c.subtype:'')+(c.school?' · '+c.school:'')+
+    (c.nextStep ? ' · '+c.nextStep+(c.nextDate?' ('+candDueLabel_(c)+')':'') : '');
+  return '<div data-candrow="'+esc((c.name+' '+(c.email||'')+' '+(c.country||'')).toLowerCase())+'"><button class="adminRow" data-candperson="'+esc(c.id)+'">'+avatarHtml({name:c.name,photo:''},'sm')+
+    '<span class="adminRowText"><span class="rowName">'+esc(c.name)+'</span><span class="rowSub">'+esc(sub)+'</span></span>'+
+    '<span class="hrChip '+(c.archived?'archived':due==='overdue'?'expired':due==='soon'?'due':c.stage==='arrived'||c.stage==='accepted'?'active':'')+'">'+esc(c.archived?t('Archived'):candStageLabel_(c.stage))+'</span></button></div>';
+}
+function candsHtml_(){
+  var h='';
+  if(S.hrSub==='cand' && S.cands){
+    var who=S.cands.filter(function(x){ return x.id===S.candPersonId; })[0];
+    if(who) return candPersonHtml_(who);
+    S.hrSub='home';
+  }
+  if(S.hrSub==='candform') return candFormHtml_();
+  h+=hrBackHtml_('week', t('My Home'));
+  h+='<h2>🗂️ '+esc(t('Human Resources'))+'</h2>'+hrTabsHtml_();
+  h+='<p class="sub">'+esc(t('Potential staff, volunteers and students — from first contact to arrival.'))+'</p>';
+  if(S.candsError) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load the candidates.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.candsError)+'</p><button class="btn ghost" id="candsRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
+  if(!S.cands) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  var all=S.cands, live=all.filter(function(c){ return !c.archived; }), archived=all.filter(function(c){ return c.archived; });
+  var due=live.filter(function(c){ return candDue_(c); }).sort(function(a,b){ return a.nextDate<b.nextDate?-1:1; });
+  var won=live.filter(function(c){ return c.stage==='accepted'||c.stage==='arrived'; });
+  S.hrFollowUps=due.length;
+  h+='<div class="mmGrid">'+[
+      [t('In the pipeline'), live.length, false], [t('Follow-ups due'), due.length, due.length>0],
+      [t('Accepted or arrived'), won.length, false], [t('Archived'), archived.length, false]
+    ].map(function(x){ return '<div class="mmTile'+(x[2]?' hot':'')+'"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
+  h+='<button class="btn" id="candAdd" style="margin-top:0">＋ '+esc(t('Add a candidate'))+'</button>';
+  if(due.length){
+    h+='<h3>⏰ '+esc(t('Follow-ups due'))+'</h3><p class="sub" style="margin:0 0 6px">'+esc(gpT('Next steps that are overdue or due within {n} days.',{n:CAND_FOLLOWUP_DAYS}))+'</p>';
+    h+='<div class="accCard adminList" id="candDueList">'+due.map(candRowHtml_).join('')+'</div>';
+  }
+  h+='<h3>🌱 '+esc(t('Pipeline'))+'</h3>';
+  var pool = S.candShowArchived ? all : live;
+  h+='<div class="deptChips">'+[['',t('All types')]].concat(CAND_TYPES.map(function(x){ return [x[0], t(x[1])]; })).map(function(x){
+    var n = x[0] ? pool.filter(function(c){ return c.type===x[0]; }).length : pool.length;
+    return '<button class="deptChip'+((S.candType||'')===x[0]?' on':'')+'" data-candtype="'+esc(x[0])+'">'+esc(x[1])+' · '+n+'</button>'; }).join('')+'</div>';
+  var typed = S.candType ? pool.filter(function(c){ return c.type===S.candType; }) : pool;
+  h+='<div class="deptChips">'+[['',t('All stages')]].concat(CAND_STAGES.map(function(x){ return [x[0], t(x[1])]; })).map(function(x){
+    var n = x[0] ? typed.filter(function(c){ return c.stage===x[0]; }).length : typed.length;
+    return '<button class="deptChip'+((S.candStage||'')===x[0]?' on':'')+'" data-candstage="'+esc(x[0])+'">'+esc(x[1])+' · '+n+'</button>'; }).join('')+'</div>';
+  h+='<div class="field" style="margin:10px 0 6px"><input type="text" id="candSearch" value="'+esc(S.candSearch||'')+'" placeholder="'+esc(t('Search by name, email or country…'))+'"></div>';
+  h+='<label class="hrToggle"><input type="checkbox" id="candShowArchived"'+(S.candShowArchived?' checked':'')+'> '+esc(gpT('Show archived ({n})',{n:archived.length}))+'</label>';
+  h+='<p class="emptyLine" id="candSearchEmpty" style="display:none">'+esc(t('No one matches that search.'))+'</p>';
+  var shown = (S.candStage ? typed.filter(function(c){ return c.stage===S.candStage; }) : typed).slice()
+    .sort(function(a,b){ return (a.nextDate||'9999')<(b.nextDate||'9999') ? -1 : (a.nextDate||'9999')>(b.nextDate||'9999') ? 1 : (a.name<b.name?-1:1); });
+  if(!shown.length) return h+'<div class="card slim"><p class="sub" style="margin:0">'+esc(all.length ? t('Nobody at this stage.') : t('Nobody in the pipeline yet — add the first candidate.'))+'</p></div>';
+  h+='<div class="accCard adminList" id="candList">'+shown.map(candRowHtml_).join('')+'</div>';
+  return h;
+}
+function candBlank_(){ return { id:'', name:'', type:'staff', stage:'new', subtype:'', school:'', email:'', phone:'', country:'', source:'', assignedTo:'', expected:'', nextStep:'', nextDate:'', notes:'' }; }
+function candFormHtml_(){
+  var f=S.candForm||candBlank_(), isNew=!f.id;
+  var h=hrBackHtml_(isNew?'cands':'cand', isNew?t('Candidates'):f.name);
+  h+='<h2>'+esc(isNew?t('Add a candidate'):t('Edit details'))+'</h2><div class="card">';
+  var inp=function(key,label,type,extra){ var v=f[key]; if(v==null) v=''; return '<div><label class="f">'+esc(label)+'</label><input type="'+type+'" data-cf="'+key+'" value="'+esc(String(v))+'"'+(extra||'')+'></div>'; };
+  h+=inp('name', t('Name'), 'text', ' maxlength="120"');
+  h+='<label class="f">'+esc(t('Type'))+'</label><select data-cf="type">'+CAND_TYPES.map(function(x){ return '<option value="'+x[0]+'"'+(f.type===x[0]?' selected':'')+'>'+esc(t(x[1]))+'</option>'; }).join('')+'</select>';
+  h+='<div class="teamGrid2">'+inp('subtype', t('Khmer / International'), 'text', ' maxlength="60" placeholder="'+esc(t('e.g. International'))+'"')+inp('school', t('School (students)'), 'text', ' maxlength="80" placeholder="DTS, DBS…"')+'</div>';
+  h+='<div class="teamGrid2">'+inp('email', t('Email'), 'email', ' maxlength="120"')+inp('phone', t('Phone / WhatsApp'), 'tel', ' maxlength="60"')+'</div>';
+  h+='<div class="teamGrid2">'+inp('country', t('Country'), 'text', ' maxlength="60"')+inp('source', t('How they found us'), 'text', ' maxlength="120" placeholder="'+esc(t('e.g. DTS outreach, website, a friend'))+'"')+'</div>';
+  h+='<label class="f">'+esc(t('Who is walking with them'))+'</label><select data-cf="assignedTo"><option value="">'+esc(t('— nobody yet —'))+'</option>'+
+    S.roster.slice().sort(function(a,b){ return a.name<b.name?-1:1; }).map(function(p){ return '<option value="'+esc(p.id)+'"'+(f.assignedTo===p.id?' selected':'')+'>'+esc(p.name)+'</option>'; }).join('')+'</select>';
+  h+='<div class="teamGrid2">'+inp('expected', t('Expected arrival'), 'month')+'<div></div></div>';
+  h+='<h4 style="margin:14px 0 4px">'+esc(t('Next step'))+'</h4>';
+  h+='<div class="teamGrid2">'+inp('nextStep', t('What'), 'text', ' maxlength="200" placeholder="'+esc(t('e.g. video call, send the application'))+'"')+inp('nextDate', t('By when'), 'date')+'</div>';
+  h+='<label class="f">'+esc(t('Notes'))+'</label><textarea data-cf="notes" rows="3" maxlength="1000">'+esc(f.notes||'')+'</textarea>';
+  h+='<button class="btn" id="candSave">'+esc(isNew?t('Add this candidate'):t('Save changes'))+'</button>';
+  h+='<button class="btn ghost" id="candCancel">'+esc(t('Cancel'))+'</button></div>';
+  return h;
+}
+function candPersonHtml_(c){
+  var h=hrBackHtml_('cands', t('Candidates'));
+  var who=c.assignedTo ? personOf(c.assignedTo) : null, due=candDue_(c);
+  h+='<div class="card"><div class="adminPersonHead">'+avatarHtml({name:c.name,photo:''},'lg')+'<div style="min-width:0">'+
+    '<div class="pname">'+esc(c.name)+'</div>'+
+    '<div class="pmeta">'+esc(candTypeLabel_(c.type))+(c.subtype?' · '+esc(c.subtype):'')+(c.school?' · '+esc(c.school):'')+(c.country?' · '+esc(c.country):'')+'</div>'+
+    (c.email?'<div class="pmeta"><a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a></div>':'')+
+    (c.phone?'<div class="pmeta"><a href="tel:'+esc(c.phone.replace(/\s+/g,''))+'">'+esc(c.phone)+'</a></div>':'')+
+    (c.source?'<div class="pmeta">🔎 '+esc(c.source)+'</div>':'')+
+    (who?'<div class="pmeta">🤝 '+esc(gpT('Walking with {name}',{name:who.name}))+'</div>':'')+
+    (c.expected?'<div class="pmeta">📅 '+esc(gpT('Expected {month}',{month:hrMonthLabel_(c.expected)}))+'</div>':'')+
+    '</div></div>';
+  if(c.archived){
+    h+='<div class="hrBanner archived">📦 <b>'+esc(t('Archived'))+'</b> · '+esc(candWhen_(c.archived.at))+(c.archived.reason?' — '+esc(c.archived.reason):'')+'</div>'+
+      '<button class="btn ghost" id="candUnarchive">'+esc(t('Bring back (unarchive)'))+'</button>';
+  }
+  h+='<button class="linkbtn" id="candEdit" style="margin-top:6px">✏️ '+esc(t('Edit details'))+'</button></div>';
+
+  // the stage, as a row of steps — tap one to move them
+  h+='<h3>🪜 '+esc(t('Stage'))+'</h3><div class="card slim"><div class="candSteps">'+CAND_STAGES.map(function(x,i){
+    var cur=CAND_STAGES.map(function(y){ return y[0]; }).indexOf(c.stage);
+    return '<button class="candStep'+(x[0]===c.stage?' on':i<cur?' done':'')+'" data-candmove="'+x[0]+'"'+(c.archived?' disabled':'')+'>'+(i<cur?'✓ ':'')+esc(t(x[1]))+'</button>'; }).join('')+'</div>';
+  if(c.stage==='arrived'){
+    var linked=c.staffId ? personOf(c.staffId) : null;
+    h+='<div class="rowSub" style="margin-top:8px">'+esc(t('Arrived — link them to their staff account so HR can carry on with their contract there.'))+'</div>'+
+      '<select id="candLink" style="margin-top:6px"><option value="">'+esc(t('— no account linked —'))+'</option>'+
+      S.roster.slice().sort(function(a,b){ return a.name<b.name?-1:1; }).map(function(p){ return '<option value="'+esc(p.id)+'"'+(c.staffId===p.id?' selected':'')+'>'+esc(p.name)+' · @'+esc(p.username)+'</option>'; }).join('')+'</select>'+
+      (linked?'<button class="linkbtn" id="candOpenStaff" data-staff="'+esc(linked.id)+'">'+esc(gpT('Open {name}’s HR page',{name:linked.name}))+'</button>':'');
+  }
+  h+='</div>';
+
+  // next step
+  h+='<h3>⏰ '+esc(t('Next step'))+'</h3><div class="card'+(due?' hrBanner '+(due==='overdue'?'expired':'due'):'')+'" style="margin-top:0">';
+  h+='<div class="teamGrid2"><div><label class="f">'+esc(t('What'))+'</label><input type="text" id="cand_next" maxlength="200" value="'+esc(c.nextStep||'')+'" placeholder="'+esc(t('e.g. video call, send the application'))+'"></div>'+
+    '<div><label class="f">'+esc(t('By when'))+'</label><input type="date" id="cand_nextdate" value="'+esc(c.nextDate||'')+'"></div></div>'+
+    (c.nextDate?'<p class="hint" style="margin:0 0 6px">'+esc(candDueLabel_(c))+'</p>':'')+
+    '<button class="btn ghost" id="candNextSave" style="margin-top:4px">'+esc(t('Save next step'))+'</button></div>';
+
+  // notes & activity
+  h+='<h3>📝 '+esc(t('Notes & activity'))+'</h3><div class="card">';
+  h+='<div class="pickerRow" style="display:flex;gap:8px;margin:0 0 8px"><input type="text" id="candNote" maxlength="1000" value="'+esc(S.candNoteDraft||'')+'" placeholder="'+esc(t('Called, emailed, met… what happened?'))+'" style="flex:1">'+
+    '<button class="btn ghost" id="candNoteAdd" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Add'))+'</button></div>';
+  if(c.notes) h+='<p class="sub" style="margin:0 0 8px">'+esc(c.notes)+'</p>';
+  var log=(c.log||[]).slice().reverse();
+  if(!log.length) h+='<p class="hint" style="margin:0">'+esc(t('Nothing logged yet.'))+'</p>';
+  log.forEach(function(e){
+    var by=personOf(e.by); var when=candWhen_(e.at);
+    h+='<div class="candLog">'+(e.kind==='stage' ? '🪜 '+esc(gpT('Moved to {stage}',{stage:candStageLabel_(e.text)})) : esc(e.text))+
+      '<div class="hint" style="margin-top:2px">'+esc(when)+(by?' · '+esc(by.name):'')+'</div></div>';
+  });
+  h+='</div>';
+
+  if(!c.archived){
+    h+='<h3>📦 '+esc(t('Not going ahead?'))+'</h3><div class="card">'+
+      '<label class="f">'+esc(t('Why'))+'</label><select id="cand_why"><option>'+esc(t('Declined'))+'</option><option>'+esc(t('Withdrew'))+'</option><option>'+esc(t('No response'))+'</option><option>'+esc(t('Not a fit'))+'</option><option>'+esc(t('Other'))+'</option></select>'+
+      '<label class="f">'+esc(t('Notes'))+'</label><input type="text" id="cand_whynote" maxlength="200">'+
+      '<button class="danger" id="candArchive">'+esc(gpT('Archive {name}',{name:c.name}))+'</button></div>';
+  }
+  return h;
+}
+
 function hrFileSize_(n){ n=Number(n)||0; return n>1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
 function hrContractCardHtml_(p, c, isCurrent){
   var h='<div class="card slim hrContract" data-hrcontract="'+esc(c.id)+'">';
@@ -7179,6 +7466,9 @@ function bindAway(){
   }
   var tdbk=document.getElementById('teamsDbBack');
   if(tdbk) tdbk.onclick=function(){ S.view='ministry'; render(); };
+  document.querySelectorAll('#main [data-gohr]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.view='hr'; S.hrSub='home'; render(); };
+  });
   bindHr();
 
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};

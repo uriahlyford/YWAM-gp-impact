@@ -399,7 +399,24 @@ Try again as My Ministry.
 - **Every server test copies `hr-seed.js` (and `team-seed.js`) next to `api.js`.**
 - Later this page grows into processing potential staff and volunteers (the CRM side);
   keep the person page as the unit.
-- `test-hr.mjs` (server) and `test-hr-page.mjs` (browser) cover it.
+- **Candidates** (the CRM side, second tab `S.hrTab==='cands'`): potential staff /
+  volunteers / students in the `candidates` blob — `{id, campus, name, type, stage, subtype,
+  school, email, phone, country, source, assignedTo, nextStep, nextDate, expected, notes,
+  staffId, log:[{at,by,kind:'stage'|'note',text}], archived}`. Stages `new → contacted →
+  applied → interview → accepted → arrived` (`CAND_STAGES`, both sides); a stage change is
+  logged by the server (`hrSaveCandidate`), notes append (`hrCandidateNote`), archive is a
+  flag with a reason (`hrArchiveCandidate`, `null` to unarchive) — nothing is deleted. A
+  next step with a date within `CAND_FOLLOWUP_DAYS` (7) counts as a follow-up due: boot's
+  `hrFollowUps`, the Candidates tab, the menu badge (contracts due + follow-ups due).
+  On `arrived`, the record can point at a staff account (`staffId`) and jump to their
+  contracts page. Candidate contact details are personal data — never seed them from a
+  file in this public repo.
+- **Bell reminders** (`notifItems_`): for an admin or anyone with HR, "N staff contracts
+  are due for renewal" and "N candidate follow-ups are due", each with an **Open HR**
+  button (`data-gohr`, bound in `renderNotifPanel` and in `bind()`). They are dated *today*,
+  not *now*, so Clear hides them until tomorrow and they come back while the work waits.
+- `test-hr.mjs` / `test-hr-candidates.mjs` (server) and `test-hr-page.mjs` /
+  `test-hr-candidates-page.mjs` (browser) cover it.
 
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
