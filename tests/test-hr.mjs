@@ -3,8 +3,7 @@
    Against the real api.js: only an admin or someone given `hr` may read or
    write anything here; a contract is a signed month plus years committed
    (renewals are further rows); an attachment is its own blob, never in the
-   staff list, and goes when its contract goes; a name from the old CRM is
-   offered as a pre-fill until a contract exists; archiving deactivates —
+   staff list, and goes when its contract goes; archiving deactivates —
    the roster, sign-in and the admin's Approvals all read it right — and
    unarchiving brings the person back. */
 import { REPO, tmpDir } from './env.mjs';
@@ -27,7 +26,6 @@ fs.writeFileSync(TMP + '/node_modules/@netlify/blobs/package.json',
 fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
 fs.copyFileSync(REPO + '/netlify/functions/team-seed.js', TMP + '/team-seed.js'); // api.js imports it
-fs.copyFileSync(REPO + '/netlify/functions/hr-seed.js', TMP + '/hr-seed.js');
 process.env.GP_LEADER_CODE = 'leadercode';
 process.env.GP_ADMIN_CODE = 'admincode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
@@ -69,10 +67,6 @@ r = await call('getMyBoot', ['dara', '1234']);
 ok('everyone else’s says no', r.body.staff.hr === false);
 r = await call('hrList', ['sina', '1234']);
 ok('HR reads the whole staff list', r.body.ok === true && r.body.staff.length === 5);
-const andrew0 = r.body.staff.find(x => x.id === 'st_andrew');
-ok('a person with no contract yet is offered the old CRM’s dates as a pre-fill', andrew0.contracts.length === 0 && andrew0.suggest && andrew0.suggest.start === '2021-10-01' && andrew0.suggest.end === '2026-10-01', JSON.stringify(andrew0.suggest));
-ok('the match survives a different word order and punctuation ("Tout, Yi" ↔ "Yi Tout")', r.body.staff.find(x => x.id === 'st_yi').suggest && r.body.staff.find(x => x.id === 'st_yi').suggest.name === 'Tout, Yi');
-ok('someone the CRM never had gets no suggestion', r.body.staff.find(x => x.id === 'st_dara').suggest === null);
 ok('the list never carries a PIN hash', !JSON.stringify(r.body).includes('pinHash'));
 
 console.log('\n=== contracts ===');
@@ -88,7 +82,6 @@ r = await call('hrSaveContract', ['sina', '1234', 'st_andrew', { signed: '2021-1
 ok('HR adds a contract: month signed, years committed, a note', r.body.ok === true && r.body.staff.contracts.length === 1 && r.body.staff.contracts[0].signed === '2021-10' && r.body.staff.contracts[0].years === 5 && r.body.staff.contracts[0].notes === 'first term', JSON.stringify(r.body.staff.contracts));
 const c1 = r.body.staff.contracts[0];
 ok('it records who added it and when', c1.addedBy === 'st_hr' && /^\d{4}-/.test(c1.added));
-ok('the pre-fill offer goes away once a contract exists', r.body.staff.suggest === null);
 r = await call('hrSaveContract', ['sina', '1234', 'st_andrew', { id: c1.id, signed: '2021-10', years: 4.5, notes: 'first term, shortened' }]);
 ok('saving with the same id edits it in place (years in quarter steps)', r.body.ok === true && r.body.staff.contracts.length === 1 && r.body.staff.contracts[0].years === 4.5 && r.body.staff.contracts[0].addedBy === 'st_hr');
 r = await call('hrSaveContract', ['uriah', '1234', 'st_andrew', { signed: '2026-10', years: 3 }]);

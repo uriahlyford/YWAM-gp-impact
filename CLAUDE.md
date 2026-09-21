@@ -278,31 +278,18 @@ is never a doubt whose boxes these are:
   `test-ministry-browse.mjs`, `test-personal-metrics-cadence.mjs` (browser) cover it.
 
 ## Team → Structure (the org chart)
-The Team tab has a Directory / Structure toggle (`S.teamMode`). Structure is the Canva
-role chart in the app: one document per **campus, year and quarter** in the `structure`
-blob, a flat list of nodes `{id, title, kind: team|dept|ministry, parent, leads[],
-members[]}` where leads and members are staff ids (`getStructure`/`saveStructure`;
-`getMyBoot` carries this quarter's as `structure`).
-
-- **Nothing saved → built from profiles** (`seedStructure_` in teams.html, client-side):
-  the fixed team skeleton in `ORG_TEAM_NODES` (GP Team, Director Team → Campus Leadership
-  Team → Staff Development / Human Resources / Director of Serve & Educate / Director of
-  Skill & Develop, Community Night), then every department as a `dept:` node under the
-  director in `ORG_DEPT_PARENT`, led by its overseer (leadership dept, ministry = that
-  dept), and every ministry as a `min:Dept|Min` node whose leads come from `staff.leads`
-  and members from people's profiles. GP Team is anyone, either campus, whose role
-  starts "GP". The server's `source` says which you're looking at: `saved`, `copied`
-  (nothing saved for that quarter — the latest earlier saved quarter is shown, so a new
-  quarter opens on the last one's structure), or `none` (client seeds).
-- **Only admins save**, and a save belongs to the quarter on screen even when what's
-  shown was copied from an earlier one. The editor is `S.structDraft`, a copy made on
-  first touch (`structDraft_`); ticking a person, the crown, renaming/removing a team
-  and Add a team all edit it. A ministry node's id contains `|`, so the `node|staff`
-  attributes are split at the **last** `|` (`structPair_`) — don't `split('|')`.
-- **Bare ministries fold.** A ministry with nobody in it and nothing under it renders as
-  a chip under its department when reading (`orgBareMinistry_`), and as a one-line
-  `compact` node while editing. Without this the chart is dozens of empty cards long.
-- `test-structure.mjs` (server) and `test-org-chart.mjs` (browser) cover it.
+The Team tab has a Directory / Structure toggle (`S.teamMode`). Structure (`orgChartHtml_`)
+is the campus as **levels**, the way the Canva chart reads: **Campus Leadership** on top
+(the directors — dept Campus Leadership, ministry Campus Director — crowned, then the
+department overseers), a connector, then **one box per department** with its overseer and
+its ministries, each ministry naming its leader (crown, from `staff.leads`) and its people.
+**Departments and ministries only, from profiles**: the boxes are the taxonomy's
+(`getDepartments`), the people come from their department / ministry / leads, so moving
+someone is editing their profile in Admin — nothing to hand-draw, nothing fetched, no
+quarter chips. A person whose profile points nowhere on the chart lands in a dashed
+"Not placed yet" box rather than vanishing. Tap anyone → `data-person` → their page.
+An earlier version had hand-editable team boxes saved per quarter; it read as messy and
+confusing and was removed — don't bring the editor back. `test-org-chart.mjs` covers it.
 
 ## Outreach Teams — one record per team, not a weekly form
 Outreach Teams (Community Service) doesn't log week by week: a team comes for a stretch
@@ -392,11 +379,7 @@ Try again as My Ministry.
   with no extra work; `hrUnarchive` reverses it. The admin's Approvals page and its home
   badge count `!active && !archived` — an archived person is not a sign-up. Nobody
   archives themselves.
-- **Old-CRM pre-fill**: `netlify/functions/hr-seed.js` holds the start/end dates from the
-  Lovable "YWAM SR Admin" staff table; `hrSuggest_` matches by name (word order and
-  punctuation ignored) and `hrList` offers it as `suggest` until a contract exists. Data
-  only — never written into a record without HR pressing "Use these" and Save.
-- **Every server test copies `hr-seed.js` (and `team-seed.js`) next to `api.js`.**
+- **Every server test copies `team-seed.js` next to `api.js`** (api.js imports it).
 - Later this page grows into processing potential staff and volunteers (the CRM side);
   keep the person page as the unit.
 - **Candidates** (the CRM side, second tab `S.hrTab==='cands'`): potential staff /
@@ -409,8 +392,8 @@ Try again as My Ministry.
   next step with a date within `CAND_FOLLOWUP_DAYS` (7) counts as a follow-up due: boot's
   `hrFollowUps`, the Candidates tab, the menu badge (contracts due + follow-ups due).
   On `arrived`, the record can point at a staff account (`staffId`) and jump to their
-  contracts page. Candidate contact details are personal data — never seed them from a
-  file in this public repo.
+  contracts page. Contact details and contract dates are personal data — never seed them
+  from a file in this public repo (the old-CRM pre-fill was removed for that reason).
 - **Bell reminders** (`notifItems_`): for an admin or anyone with HR, "N staff contracts
   are due for renewal" and "N candidate follow-ups are due", each with an **Open HR**
   button (`data-gohr`, bound in `renderNotifPanel` and in `bind()`). They are dated *today*,

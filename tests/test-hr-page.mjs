@@ -2,9 +2,9 @@
 
    Drives the real page as an admin: the HR item in the menu with its
    renewals badge; the home page's tiles, the renewals-due list and the
-   status chips; a person's page with their contracts, the old-CRM pre-fill,
-   adding a renewal, attaching a file, and archiving; a staff member without
-   HR never sees the menu item. */
+   status chips; a person's page with their contracts, adding a renewal,
+   attaching a file, and archiving; a staff member without HR never sees
+   the menu item. */
 import { PUBLIC, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http';
@@ -28,14 +28,14 @@ function ok(name, cond, extra) {
 }
 const Y = new Date().getFullYear(), M = new Date().getMonth() + 1;
 const ym = (y, m) => { while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return y + '-' + ('0' + m).slice(-2); };
-const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [], active: true, archived: null, contracts: [], suggest: null, joined: '', hr: false };
+const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [], active: true, archived: null, contracts: [], joined: '', hr: false };
 const ADMIN = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Director', isAdmin: true };
 const DARA = { ...base, id: 'st_dara', name: 'Dara Pen', username: 'dara', dept: 'Community Service', ministry: 'Cafe', role: 'Barista' };
 let staff = [ADMIN,
   { ...base, id: 'st_1', name: 'Andrew Lee', username: 'andrew', dept: 'Community Service', ministry: 'Cafe', role: 'Base Leader', contracts: [{ id: 'c1', signed: ym(Y - 5, M + 1), years: 5, notes: 'first term', files: [{ id: 'f1', name: 'contract 2021.pdf', mime: 'application/pdf', size: 245000 }] }] },
   { ...base, id: 'st_2', name: 'Sreilea Chan', username: 'spicy', dept: 'Community Service', ministry: 'Cafe', contracts: [{ id: 'c2', signed: ym(Y - 3, M - 1), years: 2, files: [] }] },   // ran out about 13 months ago
   DARA,
-  { ...base, id: 'st_4', name: 'Tinh Vong', username: 'tinh', dept: 'Youth Education', ministry: 'GP Media', suggest: { name: 'Tinh Thean', start: '2022-01-01', end: '2027-12-01', type: 'Khmer' }, joined: '2022' },
+  { ...base, id: 'st_4', name: 'Tinh Vong', username: 'tinh', dept: 'Youth Education', ministry: 'GP Media', joined: '2022' },
   { ...base, id: 'st_5', name: 'Sokna Non', username: 'sokna', dept: 'Community Service', ministry: 'Cafe', active: false, archived: { at: '2026-07-16', reason: 'Finished term', by: 'st_admin' } },
 ];
 
@@ -54,7 +54,7 @@ async function open(who) {
       trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [], base: { leader: false, entries: {}, okrs: [], survey: [], metricOverrides: [] }, hrDue: who.isAdmin ? 2 : null };
     else if (b.fn === 'getData') out = { entries: {}, okrs: [], survey: [] };
     else if (b.fn === 'hrList') out = { ok: true, staff };
-    else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); p.suggest = null; out = { ok: true, staff: p }; }
+    else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); out = { ok: true, staff: p }; }
     else if (b.fn === 'hrUploadFile') { const p = find(b.args[2]); const c = p.contracts.find(x => x.id === b.args[3]); const meta = { id: 'f_new', name: b.args[4], mime: b.args[5], size: Math.floor(b.args[6].length * 3 / 4) }; c.files = c.files.concat([meta]); out = { ok: true, staff: p, file: meta }; }
     else if (b.fn === 'hrGetFile') out = { ok: true, id: b.args[2], name: 'contract 2021.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQ=' };
     else if (b.fn === 'hrArchive') { const p = find(b.args[2]); p.active = false; p.archived = { at: b.args[3].at, reason: b.args[3].reason, by: 'st_admin' }; out = { ok: true, staff: p }; }
@@ -148,7 +148,6 @@ console.log('=== the menu ===');
   ok('picking a file uploads it against that contract as base64', up && up.args[2] === 'st_1' && up.args[3] === 'c_new' && up.args[4] === 'renewal.pdf' && up.args[5] === 'application/pdf' && Buffer.from(up.args[6], 'base64').toString() === '%PDF-1.4 renewal', up && JSON.stringify(up.args.slice(2, 6)));
   ok('and it appears under the contract', (await page.evaluate(() => document.querySelectorAll('.hrFile').length)) === 2);
 
-  console.log('\n=== the old CRM pre-fill ===');
   await page.click('#hrBack');
   await page.waitForTimeout(400);
   ok('Back keeps the search in the box', (await page.evaluate(() => document.querySelector('#hrSearch').value)) === 'andrew');
@@ -158,12 +157,7 @@ console.log('=== the menu ===');
   await page.waitForTimeout(300);
   await page.click('#hrAddContract');
   await page.waitForTimeout(300);
-  const sug = await page.evaluate(() => (document.querySelector('.hrSuggest') || {}).textContent || '');
-  ok('someone with no contract is offered the old CRM’s dates', /Found in the old CRM/.test(sug) && /Jan 2022/.test(sug) && /Dec 2027/.test(sug), sug);
-  await page.click('#hrUseSuggest');
-  await page.waitForTimeout(300);
-  const filled = await page.evaluate(() => ({ signed: document.querySelector('#hr_signed').value, years: document.querySelector('#hr_years').value }));
-  ok('Use these fills the month and the years (Jan 2022 → Dec 2027 ≈ 6 years)', filled.signed === '2022-01' && Number(filled.years) === 6, JSON.stringify(filled));
+  ok('a person with no contract gets an empty form — nothing pre-filled from anywhere', await page.evaluate(() => document.querySelector('#hr_signed').value === '' && !document.querySelector('.hrSuggest')));
 
   console.log('\n=== archiving ===');
   await page.click('#hrContractCancel');
