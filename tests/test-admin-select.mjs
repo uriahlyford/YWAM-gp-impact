@@ -1,10 +1,11 @@
-/* Admin → All accounts: tapping a staff row.
+/* Admin → Accounts: tapping a staff row opens that person's own page.
 
-   The row opens by rebuilding the Admin page, and that rebuild used to
-   come back with the search box empty and every account showing again —
-   the person you had just searched for dropped back into the full list,
-   which read as "when I select a staff it bugs". The search now survives
-   the rebuild, the filter is re-applied, and the opened row is on screen. */
+   The Admin page is a home menu (one card per tool), Accounts is a campus
+   chip row + search + a list of tappable rows, and a row opens one PERSON's
+   page with every control for their account. Back returns to the list with
+   the search still in the box and the list still narrowed — the old
+   accordion list lost the search on every tap, which read as "when I select
+   a staff it bugs". */
 import { PUBLIC, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http';
@@ -52,36 +53,38 @@ await page.waitForSelector('.hero', { timeout: 15000 });
 await page.waitForTimeout(600);
 await page.evaluate(() => { S.view = 'admin'; render(); });
 await page.waitForTimeout(700);
+await page.click('[data-adminsub="accounts"]');
+await page.waitForTimeout(400);
 await page.click('[data-admincampustab="siemreap"]');
 await page.waitForTimeout(500);
 
-const visible = () => page.evaluate(() => [].filter.call(document.querySelectorAll('[data-adminrow]'), r => r.style.display !== 'none').map(r => r.querySelector('[data-acc]').getAttribute('data-acc')));
+const visible = () => page.evaluate(() => [].filter.call(document.querySelectorAll('[data-adminrow]'), r => r.style.display !== 'none').map(r => r.querySelector('[data-adminperson]').getAttribute('data-adminperson')));
 ok('every Siem Reap account is listed', (await visible()).length === 15, (await visible()).length);
 await page.fill('#adminSearch', 'person 1');
 await page.waitForTimeout(200);
 const narrowed = await visible();
 ok('typing narrows the list without a rebuild', narrowed.length === 5 && narrowed.includes('st_1') && narrowed.includes('st_12'), narrowed.join(','));
 
-await page.click('[data-acc="st_12"][data-accbucket="adminAcc"]');
-await page.waitForTimeout(600);
-const after = await page.evaluate(() => ({
-  search: document.querySelector('#adminSearch').value,
-  open: [].map.call(document.querySelectorAll('.accRow.open [data-acc]'), b => b.getAttribute('data-acc')),
-  body: !!document.querySelector('[data-adminedit="st_12"]'),
-  onScreen: (function () { const r = document.querySelector('[data-acc="st_12"]').getBoundingClientRect(); return r.top >= 0 && r.top < window.innerHeight; })(),
-}));
-ok('tapping a row opens it, and only it', after.open.length === 1 && after.open[0] === 'st_12' && after.body, after.open.join(','));
-ok('the search survives the rebuild', after.search === 'person 1', JSON.stringify(after.search));
-ok('and the list stays narrowed to the search', (await visible()).length === 5, (await visible()).length);
-ok('the opened row is on screen', after.onScreen);
-
-await page.click('[data-acc="st_10"][data-accbucket="adminAcc"]');
-await page.waitForTimeout(600);
-const second = await page.evaluate(() => [].map.call(document.querySelectorAll('.accRow.open [data-acc]'), b => b.getAttribute('data-acc')));
-ok('tapping another row closes the first — one open at a time', second.length === 1 && second[0] === 'st_10', second.join(','));
-await page.click('[data-acc="st_10"][data-accbucket="adminAcc"]');
+await page.click('[data-adminperson="st_12"]');
 await page.waitForTimeout(500);
-ok('tapping the open row again closes it', (await page.evaluate(() => document.querySelectorAll('.accRow.open').length)) === 0);
+const person = await page.evaluate(() => ({
+  back: (document.querySelector('#adminBack') || {}).getAttribute ? document.querySelector('#adminBack').getAttribute('data-adminback') : null,
+  name: (document.querySelector('.adminPersonHead .pname') || {}).textContent || '',
+  body: !!document.querySelector('[data-adminedit="st_12"]'), others: document.querySelectorAll('[data-adminedit]').length,
+  list: !!document.querySelector('#adminSearch'),
+}));
+ok('tapping a row opens that person’s own page — theirs, nobody else’s', /Person 12/.test(person.name) && person.body && person.others === 1, JSON.stringify(person));
+ok('the list is gone from that page; Back leads to Accounts', !person.list && person.back === 'accounts');
+await page.click('#adminBack');
+await page.waitForTimeout(500);
+const back = await page.evaluate(() => ({ search: document.querySelector('#adminSearch').value }));
+ok('Back returns to Accounts with the search still in the box', back.search === 'person 1', JSON.stringify(back.search));
+ok('and the list still narrowed to it', (await visible()).length === 5, (await visible()).length);
+await page.click('[data-adminperson="st_10"]');
+await page.waitForTimeout(400);
+ok('a different row opens a different person', await page.evaluate(() => /Person 10/.test(document.querySelector('.adminPersonHead .pname').textContent)));
+await page.click('#adminBack');
+await page.waitForTimeout(400);
 await page.fill('#adminSearch', '');
 await page.waitForTimeout(200);
 ok('clearing the search shows everyone again', (await visible()).length === 15);
@@ -90,6 +93,11 @@ await page.waitForTimeout(400);
 await page.click('[data-admincampustab="siemreap"]');
 await page.waitForTimeout(400);
 ok('switching campus tabs keeps working', (await visible()).length === 15);
+await page.click('#adminBack');
+await page.waitForTimeout(400);
+const home = await page.evaluate(() => ({ cards: [].map.call(document.querySelectorAll('[data-adminsub]'), b => b.getAttribute('data-adminsub')), badge: (document.querySelector('[data-adminsub="accounts"] .adminBadge') || {}).textContent }));
+ok('Back from Accounts is the Admin home — one card per tool', JSON.stringify(home.cards) === JSON.stringify(['accounts', 'approvals', 'kpis', 'broadcast', 'merge']), home.cards.join(','));
+ok('the Accounts card counts the active accounts', home.badge === '15', home.badge);
 ok('no page errors', errors.length === 0, errors.join(' | '));
 
 await browser.close();

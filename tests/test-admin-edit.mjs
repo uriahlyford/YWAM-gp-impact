@@ -75,7 +75,7 @@ await page.goto('http://localhost:4402/teams.html', { waitUntil: 'load' });
 await page.waitForSelector('.hero', { timeout: 15000 });
 await page.waitForTimeout(1000);
 
-await page.evaluate(() => { S.view = 'admin'; render(); });
+await page.evaluate(() => { S.view = 'admin'; S.adminSub = 'accounts'; render(); });
 await page.waitForTimeout(800);
 console.log('=== ADMIN: EDIT STAFF ===');
 ok('admin page loaded (isAdmin gate passed)', await page.evaluate(() => !!document.querySelector('h2')));
@@ -83,10 +83,10 @@ ok('admin page loaded (isAdmin gate passed)', await page.evaluate(() => !!docume
 // before opening anything — Mealea's row is still collapsed here, so this is
 // exactly what its one-line summary shows in the ordinary "All accounts" list
 ok('username shows in the collapsed row summary',
-  await page.evaluate((id) => document.querySelector('[data-acc="' + id + '"] .accSummary').textContent.includes('@mealea'), MATE.id));
+  await page.evaluate((id) => document.querySelector('[data-adminperson="' + id + '"] .rowSub').textContent.includes('@mealea'), MATE.id));
 
-// open Mealea's row, then her edit form
-await page.evaluate((id) => { S.adminAcc[id] = true; render(); }, MATE.id);
+// open Mealea's page (one page per person now), then her edit form
+await page.evaluate((id) => { S.adminSub = 'person'; S.adminPersonId = id; render(); }, MATE.id);
 await page.waitForTimeout(400);
 await page.click('[data-adminedit="' + MATE.id + '"]');
 await page.waitForTimeout(400);
@@ -104,9 +104,9 @@ await page.selectOption('#adm_campus', 'siemreap');
 await page.waitForTimeout(300);
 ok('campus change did not get reverted by anything else', await page.$eval('#adm_campus', el => el.value) === 'siemreap');
 
-// cause an UNRELATED re-render — expand a different staff member's row —
-// while Mealea's edit form is still open with unsaved changes in it
-await page.evaluate((id) => { S.adminAcc[id] = true; render(); }, OTHER.id);
+// cause an UNRELATED re-render of the same page while Mealea's edit form
+// is still open with unsaved changes in it
+await page.evaluate(() => { render(); });
 await page.waitForTimeout(400);
 
 ok('typed name survives an unrelated re-render elsewhere on the page',
@@ -129,13 +129,18 @@ ok('edit form closed after a successful save', await page.evaluate(() => !docume
 // campus tabs — Mealea just moved to Siem Reap, so she should have followed
 // her account there and Poipet's tab should now show just Uriah and Dara
 console.log('\n=== ADMIN: CAMPUS TABS ===');
+// back to the Accounts list (the save left us on Mealea's own page)
+await page.evaluate(() => { S.adminSub = 'accounts'; render(); });
+await page.waitForTimeout(300);
 ok('Poipet tab active by default, shows the 2 who stayed',
   await page.$$eval('[data-adminrow]', els => els.filter(e => getComputedStyle(e).display !== 'none').length) === 2);
 // only the row headers' own names — a row's expanded body can legitimately
 // mention someone else entirely (the mentor picker lists every active
 // staffer regardless of campus), so checking the whole row's text would
 // also match names that only appear inside another person's dropdown.
-const rowsText = () => page.$$eval('[data-adminrow] .accTitle', els => els.map(e => e.textContent).join(' | '));
+const rowsText = () => page.$$eval('[data-adminrow] .rowName', els => els.map(e => e.textContent).join(' | '));
+await page.evaluate(() => { S.adminSub = 'accounts'; render(); });
+await page.waitForTimeout(300);
 await page.click('[data-admincampustab="siemreap"]');
 await page.waitForTimeout(400);
 ok('Siem Reap tab shows the one who moved there',
@@ -177,7 +182,7 @@ ok('clearing the search shows everyone in this tab again', visibleCleared === 2,
 // on it. OTHER starts as ministry/Cambodia; change both and confirm a
 // single save is enough — no click Save, still wrong, click Save again.
 console.log('\n=== ADMIN: NO DOUBLE-SAVE NEEDED FOR TYPE/COUNTRY ===');
-await page.evaluate((id) => { S.adminAcc[id] = true; render(); }, OTHER.id);
+await page.evaluate((id) => { S.adminSub = 'person'; S.adminPersonId = id; render(); }, OTHER.id);
 await page.waitForTimeout(400);
 await page.click('[data-adminedit="' + OTHER.id + '"]');
 await page.waitForTimeout(400);

@@ -92,7 +92,14 @@ function inYear_(year) {
   return function (row) { return yearOf_(row) === year; };
 }
 
-function store() { return getStore('gp-data'); }
+/* Strong consistency, on purpose. Netlify Blobs default to eventual reads:
+   a get() right after a setJSON() may still answer with the old value for a
+   while. mutateStaff_ writes and then reads back to check the write took,
+   so under eventual reads a perfectly good save could compare unequal ten
+   times over and come back as 'busy' — "Could not save", though it had
+   saved. Every read here goes through this one store, so the whole app
+   reads its own writes. */
+function store() { return getStore({ name: 'gp-data', consistency: 'strong' }); }
 /* Every blob in this store is either a JSON array of rows or, for loginThrottle,
    a plain object. If one ever comes back as something else — a half-finished
    write, a hand-edit in the Netlify UI, a future schema change — the old code
