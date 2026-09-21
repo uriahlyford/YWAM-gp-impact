@@ -23,6 +23,7 @@ import { getStore } from '@netlify/blobs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import TEAM_SEED from './team-seed.js';
+import HR_SEED from './hr-seed.js';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
 
@@ -484,10 +485,11 @@ function isAdminCode_(code) {
 function adminStaffOut_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
-    ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin,
+    ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin, hr: !!s.hr,
     staffType: s.staffType || '', country: s.country || '', email: s.email || '',
     mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
     leads: leadsOf_(s),
+    archived: archivedOf_(s),
     created: s.created || ''
   };
 }
@@ -674,6 +676,8 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
     }
     // Which ministries this person leads — admin-assigned only; see leadsOf_.
     if (payload.leads !== undefined) rec.leads = cleanLeads_(payload.leads);
+    // HR access — the Human Resources page (staff contracts, archiving). Admin-assigned.
+    if (payload.hr !== undefined) rec.hr = !!payload.hr;
     rec.updated = new Date().toISOString();
     rows[idx] = rec;
     return { ok: true, staff: adminStaffOut_(rec) };
@@ -2431,7 +2435,7 @@ async function getMyBoot(username, pin) {
 
   return {
     ok: true,
-    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin }),
+    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || ''
@@ -2452,6 +2456,8 @@ async function getMyBoot(username, pin) {
     personal: personal || null,
     structure: structure || null,
     teamTrips: teamTrips || null,
+    // for the HR menu item's badge: contracts run out or running out within 90 days
+    hrDue: canHR_(s) ? hrDueCount_(staffRows) : null,
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };
@@ -2632,6 +2638,195 @@ async function deleteTeamTrip(username, pin, id) {
   return getTeamTrips(username, pin, cur.campus);
 }
 
+/* ==================== human resources ====================
+   The HR page: each staff member's contract(s), the papers attached to
+   them, how long they have served, when the current contract runs out, and
+   archiving someone who leaves. Everything lives on the staff record —
+   `contracts` (one row per signing, renewals included), `archived`, `hr`
+   (who may open the page) — except the attached files, which are their
+   own blobs (hrfile:<id>) so the staff list never carries megabytes of PDF.
+
+   Who may use it: an admin, or anyone an admin has given `hr`. Nobody else
+   can read a contract, an attachment, or the archive reason.
+
+   Archiving IS deactivating: `active:false` is what every read already
+   uses to drop someone from the roster, the staff count, the mentor
+   pickers and sign-in, so "it will update the number of staff and
+   everything connected" costs nothing more than the flag. `archived`
+   holds when and why, and tells the admin's Approvals page this is not a
+   sign-up waiting for a yes. */
+const HR_FILE_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+const HR_FILE_MAX_B64 = 5.6 * 1024 * 1024;   // ~4 MB of file, once base64'd
+const HR_MAX_CONTRACTS = 30, HR_MAX_FILES = 10;
+function canHR_(s) { return !!(s && (s.isAdmin || s.hr)); }
+function hrId_(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function archivedOf_(s) {
+  const a = s && s.archived;
+  if (!a || typeof a !== 'object') return null;
+  return { at: isoDate_(a.at) || '', reason: str_(a.reason, 300), by: str_(a.by, 60) };
+}
+function isoMonth_(v) { const m = str_(v, 7); return /^\d{4}-(0[1-9]|1[0-2])$/.test(m) ? m : ''; }
+function cleanFileMeta_(f) {
+  if (!f || typeof f !== 'object') return null;
+  const id = str_(f.id, 60); if (!id) return null;
+  return { id: id, name: str_(f.name, 160) || 'file', mime: str_(f.mime, 80), size: finiteNum_(f.size, 0, 1e9) || 0, added: str_(f.added, 40) };
+}
+function cleanContract_(c, keepFiles) {
+  if (!c || typeof c !== 'object') return null;
+  const signed = isoMonth_(c.signed), years = finiteNum_(c.years, 0.25, 30);
+  if (!signed || years == null) return null;
+  return { id: str_(c.id, 60) || hrId_('ct'), signed: signed, years: Math.round(years * 4) / 4, notes: str_(c.notes, 500),
+    files: (Array.isArray(keepFiles) ? keepFiles : []).map(cleanFileMeta_).filter(Boolean).slice(0, HR_MAX_FILES),
+    added: str_(c.added, 40), addedBy: str_(c.addedBy, 60) };
+}
+function contractsOf_(s) {
+  return (Array.isArray(s && s.contracts) ? s.contracts : []).map(function (c) { return cleanContract_(c, c && c.files); })
+    .filter(Boolean).sort(function (a, b) { return a.signed < b.signed ? -1 : a.signed > b.signed ? 1 : 0; });
+}
+/* A name from the old CRM matched to an account: the same letters once
+   punctuation, order and case are ignored ("Tout, Yi" is "Yi Tout"), or
+   every word of the shorter name inside the longer one. */
+function nameKey_(n) { return String(n || '').toLowerCase().replace(/[^a-zក-៿0-9\s]/g, ' ').split(/\s+/).filter(Boolean).sort(); }
+function hrSuggest_(s) {
+  const mine = nameKey_(s.name); if (mine.length < 2) return null;
+  for (let i = 0; i < HR_SEED.length; i++) {
+    const theirs = nameKey_(HR_SEED[i].name); if (theirs.length < 2) continue;
+    const shorter = mine.length <= theirs.length ? mine : theirs, longer = shorter === mine ? theirs : mine;
+    if (shorter.every(function (w) { return longer.indexOf(w) > -1; })) {
+      const r = HR_SEED[i];
+      return { name: r.name, start: r.start, end: r.end || '', type: r.type || '', family: r.family || '' };
+    }
+  }
+  return null;
+}
+/* How many active people's current contract has run out or runs out within
+   90 days — the number on the HR menu item. A contract ends on the first
+   day of the month `years` after the month it was signed. */
+const HR_DUE_DAYS = 90;
+function hrContractEnd_(c) {
+  const y = Number(c.signed.slice(0, 4)), m = Number(c.signed.slice(5, 7)) - 1;
+  return new Date(y, m + Math.round(Number(c.years) * 12), 1);
+}
+function hrDueCount_(rows) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let n = 0;
+  (rows || []).forEach(function (r) {
+    if (!r || r.active === false || r.archived) return;
+    const list = contractsOf_(r); if (!list.length) return;
+    const days = Math.round((hrContractEnd_(list[list.length - 1]) - today) / 86400000);
+    if (days <= HR_DUE_DAYS) n++;
+  });
+  return n;
+}
+function hrStaffOut_(s) {
+  const out = adminStaffOut_(s);
+  out.joined = s.joined || ''; out.photo = s.photo || ''; out.contracts = contractsOf_(s);
+  out.suggest = out.contracts.length ? null : hrSuggest_(s);
+  return out;
+}
+async function hrList(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  const rows = await getStaff_();
+  return { ok: true, staff: rows.map(hrStaffOut_) };
+}
+async function hrMutate_(username, pin, staffId, fn) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === staffId; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const res = fn(rows[idx], s, rows);
+    if (res && res.abort) return res;
+    rows[idx].updated = new Date().toISOString();
+    return Object.assign({ ok: true, staff: hrStaffOut_(rows[idx]) }, res || {});
+  });
+}
+async function hrSaveContract(username, pin, staffId, contract) {
+  return hrMutate_(username, pin, staffId, function (rec, me) {
+    const list = contractsOf_(rec);
+    const existing = contract && list.filter(function (c) { return c.id === str_(contract.id, 60); })[0];
+    const clean = cleanContract_(contract, existing ? existing.files : []);
+    if (!clean) return { abort: true, ok: false, err: 'bad_contract' };
+    if (!existing) { clean.added = new Date().toISOString(); clean.addedBy = me.id; if (list.length >= HR_MAX_CONTRACTS) return { abort: true, ok: false, err: 'too_many' }; }
+    else { clean.added = existing.added; clean.addedBy = existing.addedBy; }
+    rec.contracts = list.filter(function (c) { return c.id !== clean.id; }).concat([clean]);
+  });
+}
+async function hrDeleteContract(username, pin, staffId, contractId) {
+  const st = store();
+  let gone = [];
+  const out = await hrMutate_(username, pin, staffId, function (rec) {
+    const list = contractsOf_(rec), hit = list.filter(function (c) { return c.id === contractId; })[0];
+    if (!hit) return { abort: true, ok: false, err: 'not_found' };
+    gone = hit.files.map(function (f) { return f.id; });
+    rec.contracts = list.filter(function (c) { return c.id !== contractId; });
+  });
+  if (out.ok) for (let i = 0; i < gone.length; i++) { try { await hrDropFile_(st, gone[i]); } catch (e) { /* the record is already clean */ } }
+  return out;
+}
+async function hrDropFile_(st, fileId) {
+  if (typeof st.delete === 'function') await st.delete('hrfile:' + fileId);
+  else await st.setJSON('hrfile:' + fileId, null);
+}
+async function hrUploadFile(username, pin, staffId, contractId, name, mime, base64) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  mime = str_(mime, 80);
+  if (HR_FILE_MIME.indexOf(mime) === -1) return { ok: false, err: 'bad_type' };
+  if (typeof base64 !== 'string' || !base64) return { ok: false, err: 'bad_file' };
+  if (base64.length > HR_FILE_MAX_B64) return { ok: false, err: 'too_large' };
+  const meta = { id: hrId_('hf'), name: str_(name, 160) || 'file', mime: mime, size: Math.floor(base64.length * 3 / 4), added: new Date().toISOString() };
+  // the record first: if this person or contract isn't there, no blob is written
+  const out = await hrMutate_(username, pin, staffId, function (rec) {
+    const list = contractsOf_(rec), hit = list.filter(function (c) { return c.id === contractId; })[0];
+    if (!hit) return { abort: true, ok: false, err: 'not_found' };
+    if (hit.files.length >= HR_MAX_FILES) return { abort: true, ok: false, err: 'too_many' };
+    hit.files = hit.files.concat([meta]);
+    rec.contracts = list;
+  });
+  if (!out.ok) return out;
+  await writeJSON('hrfile:' + meta.id, { id: meta.id, staffId: staffId, contractId: contractId, name: meta.name, mime: mime, data: base64, added: meta.added, by: s.id });
+  out.file = meta;
+  return out;
+}
+async function hrGetFile(username, pin, fileId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  const f = await readJSON('hrfile:' + str_(fileId, 60), null);
+  if (!f || !f.data) return { ok: false, err: 'not_found' };
+  return { ok: true, id: f.id, name: f.name, mime: f.mime, dataUrl: 'data:' + f.mime + ';base64,' + f.data };
+}
+async function hrDeleteFile(username, pin, staffId, contractId, fileId) {
+  const out = await hrMutate_(username, pin, staffId, function (rec) {
+    const list = contractsOf_(rec), hit = list.filter(function (c) { return c.id === contractId; })[0];
+    if (!hit || !hit.files.some(function (f) { return f.id === fileId; })) return { abort: true, ok: false, err: 'not_found' };
+    hit.files = hit.files.filter(function (f) { return f.id !== fileId; });
+    rec.contracts = list;
+  });
+  if (out.ok) { try { await hrDropFile_(store(), fileId); } catch (e) { /* the record is already clean */ } }
+  return out;
+}
+async function hrArchive(username, pin, staffId, info) {
+  return hrMutate_(username, pin, staffId, function (rec, me) {
+    if (rec.id === me.id) return { abort: true, ok: false, err: 'self_archive' };
+    const at = isoDate_(info && info.at) || new Date().toISOString().slice(0, 10);
+    rec.archived = { at: at, reason: str_(info && info.reason, 300), by: me.id };
+    rec.active = false;
+  });
+}
+async function hrUnarchive(username, pin, staffId) {
+  return hrMutate_(username, pin, staffId, function (rec) {
+    if (!rec.archived) return { abort: true, ok: false, err: 'not_archived' };
+    rec.archived = null;
+    rec.active = true;
+  });
+}
+
 /* ==================== dispatcher ==================== */
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
@@ -2694,6 +2889,14 @@ const HANDLERS = {
   getTeamTrips: function (a) { return getTeamTrips(a[0], a[1], a[2]); },
   saveTeamTrip: function (a) { return saveTeamTrip(a[0], a[1], a[2]); },
   deleteTeamTrip: function (a) { return deleteTeamTrip(a[0], a[1], a[2]); },
+  hrList: function (a) { return hrList(a[0], a[1]); },
+  hrSaveContract: function (a) { return hrSaveContract(a[0], a[1], a[2], a[3]); },
+  hrDeleteContract: function (a) { return hrDeleteContract(a[0], a[1], a[2], a[3]); },
+  hrUploadFile: function (a) { return hrUploadFile(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
+  hrGetFile: function (a) { return hrGetFile(a[0], a[1], a[2]); },
+  hrDeleteFile: function (a) { return hrDeleteFile(a[0], a[1], a[2], a[3], a[4]); },
+  hrArchive: function (a) { return hrArchive(a[0], a[1], a[2], a[3]); },
+  hrUnarchive: function (a) { return hrUnarchive(a[0], a[1], a[2]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
 };
