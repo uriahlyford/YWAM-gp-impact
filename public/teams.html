@@ -832,6 +832,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
    children hang off a rule on the left, the way the Canva chart draws it. */
 .teamModeSeg { margin-bottom:8px; }
 .orgChart { margin-top:4px; }
+.orgQuarterBar { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin:4px 0 6px; }
 .orgLevelLabel { font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:0 0 6px; text-align:center; }
 .orgBox { border:1.5px solid var(--border); border-radius:14px; background:var(--surface); padding:12px; min-width:0; }
 .orgBox.top { border-color:var(--accent); box-shadow:0 1px 0 var(--border); }
@@ -1213,7 +1214,7 @@ var S = {
   teamTrips:{}, teamLoading:{}, teamError:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
   /* Team tab: the directory or the org chart; the chart is cached per
      campus|year|quarter, and an admin's unsaved edits live in structDraft. */
-  teamMode:'dir',
+  teamMode:'dir', structYear:null, structQ:null, structCache:{}, structLoading:{}, structError:{},
   structEdit:false, structEditNode:null, structDraft:null, structAddTitle:'', structAddParent:'',
   adminMetricCampus:'', adminMetricDept:'', adminMetricMinistry:'',
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[], broadcasts:[],
@@ -1701,7 +1702,7 @@ function logout(){
   S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamError={}; S.teamForm=null;
   S.hrStaff=null; S.hrLoading=false; S.hrError=''; S.hrSub='home'; S.hrPersonId=null; S.hrSearch=''; S.hrContractForm=null; S.hrArchiveDraft=null; S.hrDue=null; S.hrFollowUps=null; S.hrTab='staff';
   S.cands=null; S.candsLoading=false; S.candsError=''; S.candForm=null; S.candPersonId=null; S.candNoteDraft='';
-  S.teamMode='dir';
+  S.teamMode='dir'; S.structYear=null; S.structQ=null; S.structCache={}; S.structLoading={}; S.structError={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovError={}; S.ovInputOpen={}; S.okrIdx=0;
@@ -6495,8 +6496,43 @@ function orgPersonChip_(p, lead){
 function orgPeople_(list, leads){
   return '<div class="orgPeople">'+list.map(function(p){ return orgPersonChip_(p, leads.indexOf(p)>-1); }).join('')+'</div>';
 }
-function orgChartHtml_(campus){
-  var here=S.roster.filter(function(p){ return p.campus===campus; });
+/* Which quarter is on screen, and what the chart is drawn from: the live
+   roster for the current quarter, a saved snapshot for any other (or the
+   latest earlier one, marked copied; or nothing). An admin saves the
+   current quarter's snapshot from here. */
+function structKey_(campus, year, q){ return campus+'|'+year+'|'+q; }
+function currentQuarter_(){ return Math.floor(new Date().getMonth()/3)+1; }
+function structYear_(){ return S.structYear || new Date().getFullYear(); }
+function structQ_(){ return S.structQ || currentQuarter_(); }
+function structIsCurrent_(){ return structYear_()===new Date().getFullYear() && structQ_()===currentQuarter_(); }
+function orgQuarterBarHtml_(campus){
+  var yNow=new Date().getFullYear(), year=structYear_(), q=structQ_();
+  var h='<div class="orgQuarterBar"><label class="pick" style="max-width:130px"><span>'+esc(t('Year'))+'</span><select id="structYearSel">'+
+    [yNow-2,yNow-1,yNow].map(function(y){ return '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></label>';
+  h+='<div class="deptChips" style="margin:0">'+[1,2,3,4].map(function(n){
+    return '<button class="deptChip'+(n===q?' on':'')+'" data-structq="'+n+'">Q'+n+'</button>'; }).join('')+'</div></div>';
+  return h;
+}
+function orgStructureHtml_(campus){
+  var year=structYear_(), q=structQ_(), key=structKey_(campus,year,q), c=S.structCache[key];
+  var h=orgQuarterBarHtml_(campus);
+  h+='<h3 style="margin:8px 0 2px">'+esc(gpT('{campus} · Q{q} {year}',{campus:campusShort(campus), q:q, year:year}))+'</h3>';
+  if(structIsCurrent_()){
+    var savedNote = c && c.doc && c.source==='saved' ? gpT('Snapshot saved {date}',{date:teamDate_((c.doc.savedAt||'').slice(0,10))}) : t('No snapshot saved for this quarter yet');
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Live from everyone’s profile.'))+' '+esc(savedNote)+'.</p>';
+    if(S.me.isAdmin) h+='<button class="btn ghost" id="structSaveBtn" style="margin:0 0 10px;width:auto;padding:9px 14px">📸 '+esc(c && c.doc && c.source==='saved' ? t('Update this quarter’s snapshot') : t('Save this quarter’s snapshot'))+'</button>';
+    return h+orgChartHtml_(campus, S.roster);
+  }
+  if(S.structError[key]) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load this quarter.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.structError[key])+'</p><button class="btn ghost" id="structRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
+  if(!c) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  if(!c.doc) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Nothing saved for this quarter, and nothing earlier to show.'))+'</p></div>';
+  var note = c.source==='saved' ? gpT('Snapshot saved {date}',{date:teamDate_((c.doc.savedAt||'').slice(0,10))})
+    : gpT('Nothing saved for this quarter — showing the Q{q} {year} snapshot.',{q:c.doc.quarter, year:c.doc.year});
+  h+='<p class="sub" style="margin:0 0 8px">📸 '+esc(note)+'</p>';
+  return h+orgChartHtml_(campus, (c.doc.people||[]).map(function(p){ return Object.assign({ campus:campus }, p); }));
+}
+function orgChartHtml_(campus, roster){
+  var here=(roster||S.roster).filter(function(p){ return p.campus===campus; });
   var deps=getDepartments(campus);
   var depts=Object.keys(deps).filter(function(d){ return d!==BL_DEPT; });
   var directors=here.filter(function(p){ return p.dept===BL_DEPT && p.ministry==='Campus Director'; });
@@ -6574,7 +6610,7 @@ function teamHtml(){
     return '<button class="campusBtn'+(campus===c.id?' on':'')+'" data-teamcampus="'+esc(c.id)+'">'+esc(t(c.name))+'</button>';
   }).join('')+'</div>';
 
-  if(mode==='org') return h+orgChartHtml_(campus);
+  if(mode==='org') return h+orgStructureHtml_(campus);
 
   h+='<h3>'+esc(t(cInfo?cInfo.name:campus))+' <small>· '+here.length+'</small></h3>';
 
@@ -8311,6 +8347,44 @@ function bind(){
   document.querySelectorAll('[data-teammode]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.teamMode=b.getAttribute('data-teammode'); render(); };
   });
+  if(S.view==='team' && S.teamMode==='org' && !S.person && S.me){
+    var sCampus=S.teamCampus || S.me.campus || CAMPUSES[0].id, sYear=structYear_(), sQ=structQ_(), sKey=structKey_(sCampus,sYear,sQ);
+    // a quarter other than the current one is read from its snapshot, once
+    if(!structIsCurrent_() && !S.structCache[sKey] && !S.structLoading[sKey] && !S.structError[sKey]){
+      S.structLoading[sKey]=true;
+      run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
+        S.structLoading[sKey]=false;
+        if(d && d.ok) S.structCache[sKey]={ doc:d.doc, source:d.source }; else S.structError[sKey]=(d && d.err) || t('The server answered without the snapshot.');
+        render();
+      }, function(e){ S.structLoading[sKey]=false; S.structError[sKey]=(e && e.message) || t('Connection problem — try again.'); render(); });
+    }
+    // the current quarter's own snapshot (for the "saved on" note), once
+    if(structIsCurrent_() && !S.structCache[sKey] && !S.structLoading[sKey] && !S.structError[sKey]){
+      S.structLoading[sKey]=true;
+      run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
+        S.structLoading[sKey]=false;
+        S.structCache[sKey] = (d && d.ok) ? { doc:d.doc, source:d.source } : { doc:null, source:'none' };
+        render();
+      }, function(e){ S.structLoading[sKey]=false; S.structCache[sKey]={ doc:null, source:'none' }; render(); });
+    }
+    var sys=document.getElementById('structYearSel');
+    if(sys) sys.onchange=function(){ S.structYear=Number(sys.value); render(); };
+    document.querySelectorAll('[data-structq]').forEach(function(b){
+      b.onclick=function(){ gpTap(); S.structQ=Number(b.getAttribute('data-structq')); render(); };
+    });
+    var srt=document.getElementById('structRetry');
+    if(srt) srt.onclick=function(){ S.structError[sKey]=''; render(); };
+    var ssb=document.getElementById('structSaveBtn');
+    if(ssb) ssb.onclick=function(){
+      if(S.busy) return; S.busy=true; ssb.disabled=true; ssb.textContent=t('Saving…');
+      run('saveStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
+        S.busy=false;
+        if(d && d.ok){ S.structCache[sKey]={ doc:d.doc, source:'saved' }; showMsg(gpT('Saved — Q{q} {year} snapshot',{q:sQ, year:sYear})); }
+        else showMsg(t('Could not save'));
+        render();
+      });
+    };
+  }
 
   document.querySelectorAll('[data-mentee]').forEach(function(c){
     c.onclick=function(){

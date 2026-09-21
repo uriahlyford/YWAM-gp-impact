@@ -288,8 +288,17 @@ its ministries, each ministry naming its leader (crown, from `staff.leads`) and 
 someone is editing their profile in Admin — nothing to hand-draw, nothing fetched, no
 quarter chips. A person whose profile points nowhere on the chart lands in a dashed
 "Not placed yet" box rather than vanishing. Tap anyone → `data-person` → their page.
-An earlier version had hand-editable team boxes saved per quarter; it read as messy and
-confusing and was removed — don't bring the editor back. `test-org-chart.mjs` covers it.
+**Quarters** (`orgStructureHtml_`): a year picker and Q1–Q4 chips (`S.structYear` /
+`S.structQ`). The **current quarter is live** from profiles; an admin's "Save this quarter's
+snapshot" (`saveStructure`) has the SERVER build a snapshot — `{campus, year, quarter,
+people:[{id,name,dept,ministry,role,leads}], savedAt, savedBy}` from the campus's active,
+non-archived staff, no photos — into the `structure` blob, replacing the same quarter. Any
+other quarter is drawn from its snapshot (`getStructure`: exact → `saved`, else the latest
+earlier one → `copied`, else `none`), cached in `S.structCache` by campus|year|quarter, so
+the base can look back as people move. Snapshots carry names, so they render after
+someone leaves. An earlier version had hand-editable team boxes; it read as messy and was
+removed — don't bring the editor back. `test-org-chart.mjs` (browser) and
+`test-structure.mjs` (server) cover it.
 
 ## Outreach Teams — one record per team, not a weekly form
 Outreach Teams (Community Service) doesn't log week by week: a team comes for a stretch
