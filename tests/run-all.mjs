@@ -30,6 +30,7 @@ const SERVER = [
   'test-ministry-leader.mjs', // ministry leaders (admin-assigned) own the metric list; personal numbers; renaming a custom metric moves its history
   'test-leadership-rename.mjs', // Base Leadership → Campus Leadership (and its director row → Campus Director): old-name rows read back new, old-name accounts keep every right
   'test-team-trips.mjs', // Outreach Teams: one record per team (seeded from the Lovable hub), campus-bound add/edit/delete, teams become weekly rows in the week they leave and replace hand-logged ones
+  'test-structure.mjs', // quarterly org-structure snapshots: admin-only save built on the server from active staff, read exact / latest-earlier (copied) / none, per campus, replace on re-save
   'test-staff-ids.mjs', // every staff record gets its own id on read: a missing one is minted, a duplicate re-minted for the later row, the repaired list written back once; repaired accounts work by their new id
   'test-hr.mjs', // Human Resources: only admin/hr may read or write; contracts (signed month + years, renewals as rows), attachments as their own blobs, old-CRM pre-fill, archive = deactivate, unarchive
   'test-hr-candidates.mjs', // HR → Candidates: the gate, a candidate is a name + type + stage, stage moves are logged, notes append, follow-ups due within a week count on boot, archive/unarchive

@@ -2460,6 +2460,53 @@ async function getMyBoot(username, pin) {
   };
 }
 
+/* ==================== org structure snapshots ====================
+   The Team tab's Structure view is live from profiles. Each quarter an
+   admin saves a snapshot of it — who was in which department and ministry,
+   who led what — so the base can look back quarter by quarter as people
+   move. A snapshot is built HERE from the staff list, never taken from the
+   client, and it carries names, so it still renders after someone leaves.
+   One row per campus / year / quarter in the 'structure' blob; saving the
+   same quarter again replaces it. Reading a quarter nobody saved answers
+   with the latest earlier snapshot, marked 'copied', or nothing. */
+const STRUCT_MAX = 400;
+function currentQuarter_() { return Math.floor(new Date().getUTCMonth() / 3) + 1; }
+async function getStructures_() { return readJSON('structure', []); }
+function structOrder_(d) { return Number(d.year) * 10 + Number(d.quarter); }
+function structFind_(rows, campus, year, quarter) {
+  const exact = rows.find(function (r) { return r.campus === campus && Number(r.year) === year && Number(r.quarter) === quarter; });
+  if (exact) return { doc: exact, source: 'saved' };
+  const earlier = rows.filter(function (r) { return r.campus === campus && structOrder_(r) < year * 10 + quarter; })
+    .sort(function (a, b) { return structOrder_(b) - structOrder_(a); })[0];
+  if (earlier) return { doc: earlier, source: 'copied' };
+  return { doc: null, source: 'none' };
+}
+async function getStructure(username, pin, campus, year, quarter) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  campus = str_(campus, 40) || s.campus;
+  const y = finiteNum_(year, 2020, 2100) || currentYear_();
+  const q = finiteNum_(quarter, 1, 4) || currentQuarter_();
+  const found = structFind_(await getStructures_(), campus, y, q);
+  return { ok: true, campus: campus, year: y, quarter: q, doc: found.doc, source: found.source };
+}
+async function saveStructure(username, pin, campus, year, quarter) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  campus = str_(campus, 40) || admin.campus;
+  const y = finiteNum_(year, 2020, 2100), q = finiteNum_(quarter, 1, 4);
+  if (y == null || q == null) return { ok: false, err: 'bad_quarter' };
+  const people = (await getStaff_()).filter(function (r) { return r.active && !r.archived && r.campus === campus; })
+    .map(function (r) { return { id: r.id, name: r.name, dept: r.dept, ministry: r.ministry || '', role: r.role || '', leads: leadsOf_(r), photo: '' }; })
+    .slice(0, STRUCT_MAX);
+  const rec = { campus: campus, year: y, quarter: q, people: people, savedAt: new Date().toISOString(), savedBy: admin.id };
+  const rows = await getStructures_();
+  const idx = rows.findIndex(function (r) { return r.campus === campus && Number(r.year) === y && Number(r.quarter) === q; });
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('structure', rows);
+  return { ok: true, campus: campus, year: y, quarter: q, doc: rec, source: 'saved' };
+}
+
 /* ==================== outreach teams ====================
    Outreach Teams is the one ministry that doesn't log week by week: a team
    comes for a stretch of weeks and its numbers are gathered once, when it
@@ -2895,6 +2942,8 @@ const HANDLERS = {
   hrDeleteFile: function (a) { return hrDeleteFile(a[0], a[1], a[2], a[3], a[4]); },
   hrArchive: function (a) { return hrArchive(a[0], a[1], a[2], a[3]); },
   hrUnarchive: function (a) { return hrUnarchive(a[0], a[1], a[2]); },
+  getStructure: function (a) { return getStructure(a[0], a[1], a[2], a[3], a[4]); },
+  saveStructure: function (a) { return saveStructure(a[0], a[1], a[2], a[3], a[4]); },
   hrCandidates: function (a) { return hrCandidates(a[0], a[1]); },
   hrSaveCandidate: function (a) { return hrSaveCandidate(a[0], a[1], a[2]); },
   hrCandidateNote: function (a) { return hrCandidateNote(a[0], a[1], a[2], a[3]); },
