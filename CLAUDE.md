@@ -330,7 +330,9 @@ show up here too), men/women reached, notes.
 
 ## Admin — a home menu, one page per tool, one page per person
 `adminHtml` routes on `S.adminSub`: `home` (a card per tool, `ADMIN_SUBS`, with counts on
-Accounts and Approvals), `accounts`, `approvals`, `kpis`, `broadcast`, `merge`, and
+Accounts, Approvals and Mentors), `accounts`, `approvals`, `mentors` (`adminMentorsHtml_`:
+one card per mentor with their people, `Waiting` until accepted, then everyone with no
+mentor — read-only, the mentor is set on the person page), `kpis`, `broadcast`, `merge`, and
 `person` (`S.adminPersonId`). Every page has one back link, `#adminBack[data-adminback]`
 — `week` (My Home), `home`, or `accounts`. **Accounts** is a campus chip row (opens on the
 admin's own campus), the search (`#adminSearch`, kept in `S.adminSearch` so it survives a

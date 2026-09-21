@@ -643,6 +643,8 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .adminRowText { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
 .adminRowText .rowSub { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .adminPersonHead { display:flex; gap:12px; align-items:center; }
+.adminMentor { margin-bottom:12px; }
+.adminMentorHead { display:flex; align-items:center; gap:10px; width:100%; background:none; border:0; padding:6px 0 8px; font:inherit; text-align:left; color:var(--ink); cursor:pointer; }
 .mmTile.hot { border-color:var(--accent); }
 .mmTile.hot .mmTileNum { color:var(--accent); }
 .hrChip { flex:0 0 auto; font-size:11.5px; font-weight:700; border-radius:999px; padding:3px 9px; border:1px solid var(--border); background:var(--surface2); color:var(--muted); max-width:42%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -4047,6 +4049,7 @@ function okrTabHtml_(){
 var ADMIN_SUBS = [
   { id:'accounts', label:'Accounts', emoji:'👤', blurb:'Find someone — edit their profile, reset a PIN, set their mentor or make them a ministry leader' },
   { id:'approvals', label:'Approvals', emoji:'✅', blurb:'New leadership sign-ups waiting for a yes' },
+  { id:'mentors', label:'Mentors', emoji:'🤝', blurb:'Who is walking with whom — every mentor and their people, and who has nobody yet' },
   { id:'kpis', label:'Ministry KPIs', emoji:'🗂️', blurb:'What each ministry tracks — add, rename, remove, re-time' },
   { id:'broadcast', label:'Announcements', emoji:'📣', blurb:'A message to everyone’s notification bell' },
   { id:'merge', label:'Merge duplicates', emoji:'🔀', blurb:'Two profiles that are really one person' }
@@ -4069,6 +4072,7 @@ function adminHtml(){
   if(sub==='broadcast') return h+adminBroadcastHtml_();
   if(sub==='kpis') return h+adminKpisHtml_();
   if(sub==='approvals') return h+adminApprovalsHtml_();
+  if(sub==='mentors') return h+adminMentorsHtml_();
   if(sub==='merge') return h+adminMergeHtml_();
   return h+adminAccountsHtml_();
 }
@@ -4079,8 +4083,9 @@ function adminHomeHtml_(){
   var h=adminBackHtml_('week', t('My Home'));
   h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
   h+='<div class="adminMenu">'+ADMIN_SUBS.map(function(x){
-    var badge = x.id==='approvals' ? pendingN : x.id==='accounts' ? activeN : null;
-    var badgeHtml = badge===null ? (loading && (x.id==='approvals'||x.id==='accounts') ? '<span class="adminBadge">…</span>' : '')
+    var noMentorN = loading ? null : list.filter(function(x2){ return x2.active && !x2.archived && !x2.mentorId; }).length;
+    var badge = x.id==='approvals' ? pendingN : x.id==='accounts' ? activeN : x.id==='mentors' ? noMentorN : null;
+    var badgeHtml = badge===null ? (loading && (x.id==='approvals'||x.id==='accounts'||x.id==='mentors') ? '<span class="adminBadge">…</span>' : '')
       : '<span class="adminBadge'+(x.id==='approvals'&&badge?' hot':'')+'">'+badge+'</span>';
     return '<button class="card adminMenuCard" data-adminsub="'+x.id+'"><span class="adminMenuEmoji">'+x.emoji+'</span>'+
       '<span class="adminMenuText"><b>'+esc(t(x.label))+'</b><span class="rowSub">'+esc(t(x.blurb))+'</span></span>'+badgeHtml+
@@ -4119,6 +4124,46 @@ function adminMergeHtml_(){
   '<button class="danger" id="mergeStaffBtn">'+esc(t('Merge accounts'))+'</button></div>';
   return h;
 }
+/* Who is walking with whom: one card per mentor with their people (and
+   whether each has accepted yet), then everyone with no mentor. Tapping a
+   name opens their account page, where the mentor is set. */
+function adminMentorsHtml_(){
+  if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
+  var people=S.adminStaff.filter(function(x){ return x.active && !x.archived; });
+  var byId={}; S.adminStaff.forEach(function(x){ byId[x.id]=x; });
+  var groups={}, none=[];
+  people.forEach(function(x){
+    if(x.mentorId && byId[x.mentorId]){ (groups[x.mentorId]=groups[x.mentorId]||[]).push(x); }
+    else none.push(x);
+  });
+  var mentorIds=Object.keys(groups).sort(function(a,b){ return byId[a].name<byId[b].name?-1:1; });
+  var withN=people.length-none.length, pendingN=people.filter(function(x){ return x.mentorId && x.mentorStatus!=='approved'; }).length;
+  var h='<div class="mmGrid">'+[
+      [t('Mentors'), mentorIds.length, false], [t('With a mentor'), withN+' / '+people.length, false],
+      [t('Waiting to accept'), pendingN, pendingN>0], [t('No mentor yet'), none.length, none.length>0]
+    ].map(function(x){ return '<div class="mmTile'+(x[2]?' hot':'')+'"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
+  var row=function(x, extra){
+    return '<div data-adminrow="'+esc((x.name+' '+x.username).toLowerCase())+'"><button class="adminRow" data-adminperson="'+esc(x.id)+'">'+avatarHtml(x,'sm')+
+      '<span class="adminRowText"><span class="rowName">'+esc(x.name)+'</span><span class="rowSub">'+esc(campusShort(x.campus))+' · '+esc(t(x.dept))+(x.ministry?' · '+esc(t(x.ministry)):'')+'</span></span>'+
+      (extra||'')+'<span class="accChevron" style="transform:rotate(-90deg)">'+ACC_CHEVRON+'</span></button></div>';
+  };
+  if(!mentorIds.length && !none.length) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('No accounts yet.'))+'</p></div>';
+  mentorIds.forEach(function(id){
+    var m=byId[id], kids=groups[id].slice().sort(function(a,b){ return a.name<b.name?-1:1; });
+    h+='<div class="adminMentor" data-adminmentor="'+esc(id)+'"><button class="adminMentorHead" data-adminperson="'+esc(id)+'">'+avatarHtml(m,'sm')+
+      '<span class="adminRowText"><span class="rowName"><b>'+esc(m.name)+'</b></span><span class="rowSub">'+esc(campusShort(m.campus))+' · '+esc(t(m.dept))+(m.active&&!m.archived?'':' · '+esc(t('Archived')))+'</span></span>'+
+      '<span class="adminBadge">'+kids.length+'</span></button>'+
+      '<div class="accCard adminList" style="margin:0 0 0 18px">'+kids.map(function(k){
+        return row(k, k.mentorStatus==='approved' ? '' : '<span class="hrChip due">'+esc(t('Waiting'))+'</span>'); }).join('')+'</div></div>';
+  });
+  if(none.length){
+    h+='<h3>🙋 '+esc(t('No mentor yet'))+' <small>· '+none.length+'</small></h3>';
+    h+='<p class="sub" style="margin:0 0 6px">'+esc(t('Open someone to set their mentor.'))+'</p>';
+    h+='<div class="accCard adminList">'+none.sort(function(a,b){ return a.name<b.name?-1:1; }).map(function(x){ return row(x,''); }).join('')+'</div>';
+  }
+  return h;
+}
+
 /* One person's account, on its own page: who they are at the top, then the
    same sections the accordion used to hold (adminRowBodyHtml_ — reset PIN,
    profile, mentor, admin access, danger zone), unchanged. */
@@ -4132,6 +4177,8 @@ function adminPersonHtml_(){
   else if(!x.active) chips+='<span class="teamStat">⏳ '+esc(t('Pending approval'))+'</span>';
   if(x.isAdmin) chips+='<span class="teamStat">🛡️ '+esc(t('Admin'))+'</span>';
   if(x.hr) chips+='<span class="teamStat">🗂️ '+esc(t('HR'))+'</span>';
+  var mentor=x.mentorId ? S.adminStaff.filter(function(p){ return p.id===x.mentorId; })[0] : null;
+  if(mentor) chips+='<span class="teamStat">🤝 '+esc(gpT('Mentor: {name}',{name:mentor.name}))+(x.mentorStatus==='approved'?'':' · '+esc(t('waiting')))+'</span>';
   (x.leads||[]).forEach(function(k){ chips+='<span class="teamStat">👑 '+esc(t(k.split('|')[1]||k))+'</span>'; });
   h+='<div class="card"><div class="adminPersonHead">'+avatarHtml(x,'lg')+'<div style="min-width:0">'+
     '<div class="pname">'+esc(x.name)+(mine?' <span class="hint" style="display:inline">('+esc(t('you'))+')</span>':'')+'</div>'+
