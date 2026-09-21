@@ -6529,17 +6529,18 @@ function orgStructureHtml_(campus){
   var h=orgQuarterBarHtml_(campus);
   h+='<h3 style="margin:8px 0 2px">'+esc(gpT('{campus} · Q{q} {year}',{campus:campusShort(campus), q:q, year:year}))+'</h3>';
   if(structIsCurrent_()){
-    var savedNote = c && c.doc && c.source==='saved' ? gpT('Snapshot saved {date}',{date:teamDate_((c.doc.savedAt||'').slice(0,10))}) : t('No snapshot saved for this quarter yet');
+    var isSaved = c && c.doc && c.source==='saved';
+    var savedNote = isSaved ? gpT('Q{q} {year} structure saved on {date}',{q:q, year:year, date:teamDate_((c.doc.savedAt||'').slice(0,10))}) : gpT('Q{q} {year} structure not saved yet',{q:q, year:year});
     h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Live from everyone’s profile.'))+' '+esc(savedNote)+'.</p>';
-    if(S.me.isAdmin) h+='<button class="btn ghost" id="structSaveBtn" style="margin:0 0 10px;width:auto;padding:9px 14px">📸 '+esc(c && c.doc && c.source==='saved' ? t('Update this quarter’s snapshot') : t('Save this quarter’s snapshot'))+'</button>';
+    if(S.me.isAdmin) h+='<button class="btn ghost" id="structSaveBtn" style="margin:0 0 10px;width:auto;padding:9px 14px">💾 '+esc(isSaved ? gpT('Update Q{q} {year} structure',{q:q, year:year}) : gpT('Save Q{q} {year} structure',{q:q, year:year}))+'</button>';
     return h+orgChartHtml_(campus, S.roster);
   }
   if(S.structError[key]) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load this quarter.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.structError[key])+'</p><button class="btn ghost" id="structRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
   if(!c) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
   if(!c.doc) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Nothing saved for this quarter, and nothing earlier to show.'))+'</p></div>';
-  var note = c.source==='saved' ? gpT('Snapshot saved {date}',{date:teamDate_((c.doc.savedAt||'').slice(0,10))})
-    : gpT('Nothing saved for this quarter — showing the Q{q} {year} snapshot.',{q:c.doc.quarter, year:c.doc.year});
-  h+='<p class="sub" style="margin:0 0 8px">📸 '+esc(note)+'</p>';
+  var note = c.source==='saved' ? gpT('Q{q} {year} structure saved on {date}',{q:q, year:year, date:teamDate_((c.doc.savedAt||'').slice(0,10))})
+    : gpT('Nothing saved for Q{q} {year} — showing the Q{q2} {year2} structure.',{q:q, year:year, q2:c.doc.quarter, year2:c.doc.year});
+  h+='<p class="sub" style="margin:0 0 8px">💾 '+esc(note)+'</p>';
   return h+orgChartHtml_(campus, (c.doc.people||[]).map(function(p){ return Object.assign({ campus:campus }, p); }));
 }
 function orgChartHtml_(campus, roster){
@@ -8365,7 +8366,7 @@ function bind(){
       S.structLoading[sKey]=true;
       run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
         S.structLoading[sKey]=false;
-        if(d && d.ok) S.structCache[sKey]={ doc:d.doc, source:d.source }; else S.structError[sKey]=(d && d.err) || t('The server answered without the snapshot.');
+        if(d && d.ok) S.structCache[sKey]={ doc:d.doc, source:d.source }; else S.structError[sKey]=(d && d.err) || t('The server answered without the saved structure.');
         render();
       }, function(e){ S.structLoading[sKey]=false; S.structError[sKey]=(e && e.message) || t('Connection problem — try again.'); render(); });
     }
@@ -8390,7 +8391,7 @@ function bind(){
       if(S.busy) return; S.busy=true; ssb.disabled=true; ssb.textContent=t('Saving…');
       run('saveStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
         S.busy=false;
-        if(d && d.ok){ S.structCache[sKey]={ doc:d.doc, source:'saved' }; showMsg(gpT('Saved — Q{q} {year} snapshot',{q:sQ, year:sYear})); }
+        if(d && d.ok){ S.structCache[sKey]={ doc:d.doc, source:'saved' }; showMsg(gpT('Saved — Q{q} {year} structure',{q:sQ, year:sYear})); }
         else showMsg(t('Could not save'));
         render();
       });
