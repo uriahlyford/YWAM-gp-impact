@@ -254,6 +254,13 @@ is never a doubt whose boxes these are:
   `S.ovInputOpen[min]`, data in `S.oversee[min]` loaded lazily via `getMinistryFor`).
   Outreach Teams shows a door to the **Teams Database** instead (`#goTeamsDb` →
   `S.view='teamsdb'`, `teamsDbHtml`).
+- **A failed on-demand load is never "Loading…" for ever.** `getMinistryFor` and
+  `getTeamTrips` are fetched with an `onErr`: the error text lands in `S.ovError[min]` /
+  `S.teamError[campus]`, the page shows a card with the server's own words and **Try
+  again** (`#ovRetry` / `#teamRetry`), and the loader condition checks the error flag so
+  it doesn't re-fire on every render (that was a request storm). `run()` now carries the
+  function's `{error}` text on a non-2xx into the thrown message, so a 500 says what
+  crashed. `test-ministry-load-error.mjs` covers both pages.
 - **Ministry leaders own the metric list.** `leads` on the staff record is a list of
   `"Dept|Ministry"` keys, set only by an admin (Admin → Accounts → Edit profile →
   "Ministry leader of"; `adminUpdateStaff`). `canEditMetrics_` in `api.js` is: admin, or

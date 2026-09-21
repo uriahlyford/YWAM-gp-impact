@@ -62,6 +62,7 @@ const BROWSER = [
   'test-org-chart.mjs', // Team → Structure: the chart built from profiles (directors, GP roles, overseers, ministry leaders), quarter chips fetch, admin edits people/teams and saves the quarter
   'test-outreach-teams.mjs', // Teams Database: month/quarter/year dashboard over finished teams, one form to add/edit/delete a team; My Ministry picker + banner, period toggle, personal numbers off the page
   'test-admin-select.mjs', // Admin: home menu → Accounts (campus chips, search) → a row opens that person's page → Back keeps the search and the narrowed list
+  'test-ministry-load-error.mjs', // My Ministry / Teams Database when the on-demand load crashes: the error card with the server's words and Try again, one request not a storm
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward

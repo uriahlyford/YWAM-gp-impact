@@ -1186,7 +1186,7 @@ var S = {
   /* My Ministry: which of its two tabs is showing, whether the metric form
      is unfolded for the week on screen, and the person's own four numbers. */
   mmTab:'ministry', kpiInputOpen:false, mmDashAll:false, personal:null, personalDraft:{}, mmPeriod:'quarter',
-  teamTrips:{}, teamLoading:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
+  teamTrips:{}, teamLoading:{}, teamError:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
   /* Team tab: the directory or the org chart; the chart is cached per
      campus|year|quarter, and an admin's unsaved edits live in structDraft. */
   teamMode:'dir', structCache:{}, structLoading:{}, structYear:null, structQ:null,
@@ -1210,7 +1210,7 @@ var S = {
   notifClearedAt: lsGet('gp-notif-cleared') || '',
   /* Ministries a department overseer logs on behalf of, keyed by ministry name
      so more than one can sit on the same page without their state colliding. */
-  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovDeptOf:{}, ovInputOpen:{},
+  oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovError:{}, ovDeptOf:{}, ovInputOpen:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
   adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', broadcastDraft:'',
   adminOkrAcc:{},
@@ -1397,13 +1397,22 @@ function run(fn, args, onOk, onErr){
     body: JSON.stringify({ fn: fn, args: args }),
     signal: ctl ? ctl.signal : undefined
   }).then(function(res){
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    if(!res.ok){
+      /* The function answers a crash with {ok:false, error:"…"} and a 500.
+         Carry that text along: "Connection problem" on its own hides what
+         actually went wrong, and the message is what lets it be fixed. */
+      return res.text().then(function(txt){
+        var msg='HTTP '+res.status;
+        try { var j=JSON.parse(txt); if(j && j.error) msg+=' — '+j.error; } catch(e2){}
+        throw new Error(msg);
+      });
+    }
     return res.json();
   }).then(function(d){ done(); return onOk ? onOk(d) : d; })
     .catch(function(e){
       done();
       if(onErr){ onErr(e); return; }
-      showMsg("Connection problem — try again."); S.busy=false; render();
+      showMsg(t('Connection problem — try again.')+(e && e.message && /HTTP/.test(e.message) ? ' ('+e.message+')' : '')); S.busy=false; render();
     });
 }
 
@@ -1664,11 +1673,11 @@ function logout(){
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
   S.personal=null; S.personalDraft={}; S.mmTab='ministry'; S.kpiInputOpen=false; S.mmDashAll=false; S.metricRename=null;
-  S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamForm=null;
+  S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamError={}; S.teamForm=null;
   S.teamMode='dir'; S.structCache={}; S.structLoading={}; S.structDraft=null; S.structEdit=false; S.structEditNode=null; S.structYear=null; S.structQ=null;
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
-  S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovInputOpen={}; S.okrIdx=0;
+  S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovError={}; S.ovInputOpen={}; S.okrIdx=0;
   S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminEditDraft=null; S.adminPinDraft={}; S.adminCode=''; S.adminCampusTab=null; S.adminSub=null;
   render();
 }
@@ -4978,6 +4987,9 @@ function teamsMinistryHtml_(campus){
   var c=S.teamTrips[campus];
   var h='<div id="teamsPage" data-campus="'+esc(campus)+'">';
   h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Teams are entered one at a time, once their visit is over — not week by week. Each team counts in the week it leaves, and the Base dashboard picks it up from there.'))+'</p>';
+  if(!c && S.teamError[campus]) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load the teams.'))+'</p>'+
+    '<p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.teamError[campus])+'</p>'+
+    '<button class="btn ghost" id="teamRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div></div>';
   if(!c) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
   h+=teamPeriodBarHtml_();
   h+=teamsDashboardHtml_(campus, c.trips);
@@ -5102,7 +5114,12 @@ function myMinistryHtml(){
     if(S.kpiInputOpen) h+=kpiCardHtml(wk);
   } else {
     var data=S.oversee[sel.min];
-    if(!data) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+    if(!data && S.ovError[sel.min]){
+      h+='<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(gpT('Couldn’t load {ministry}’s numbers.',{ministry:t(sel.min)}))+'</p>'+
+        '<p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.ovError[sel.min])+'</p>'+
+        '<button class="btn ghost" id="ovRetry" data-ministry="'+esc(sel.min)+'" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
+    }
+    else if(!data) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
     else {
       var owk=ovWeekFor_(sel.min);
       h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, data);
@@ -6635,14 +6652,17 @@ function bindAway(){
   var tp=document.getElementById('teamsPage');
   if(tp){
     var tCampus=tp.getAttribute('data-campus');
-    if(!S.teamTrips[tCampus] && !S.teamLoading[tCampus]){
+    if(!S.teamTrips[tCampus] && !S.teamLoading[tCampus] && !S.teamError[tCampus]){
       S.teamLoading[tCampus]=true;
       run('getTeamTrips',[S.auth.user,S.auth.pin,tCampus],function(d){
         S.teamLoading[tCampus]=false;
-        S.teamTrips[tCampus] = (d && d.ok) ? { trips:d.trips||[], canEdit:!!d.canEdit } : { trips:[], canEdit:false };
+        if(d && d.ok) S.teamTrips[tCampus] = { trips:d.trips||[], canEdit:!!d.canEdit };
+        else S.teamError[tCampus] = (d && d.err) || t('The server answered without the teams.');
         render();
-      });
+      }, function(e){ S.teamLoading[tCampus]=false; S.teamError[tCampus]=(e && e.message) || t('Connection problem — try again.'); render(); });
     }
+    var tre=document.getElementById('teamRetry');
+    if(tre) tre.onclick=function(){ S.teamError[tCampus]=''; render(); };
     var putTrips=function(d){ S.teamTrips[d.campus]={ trips:d.trips||[], canEdit:!!d.canEdit }; };
     var toForm=function(){ var el=document.getElementById('teamFormCard'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
     document.querySelectorAll('[data-teamperiod]').forEach(function(b){
@@ -6769,14 +6789,20 @@ function bindAway(){
     // it's picked — cached in S.oversee by ministry name until logout.
     var bDept=S.mmBrowseDept, bMin=S.mmBrowseMinistry;
     if(bDept && bMin && !(bDept===S.me.dept && bMin===S.me.ministry) && !isTeamsMinistry_(bDept,bMin) &&
-       !S.oversee[bMin] && !S.ovLoading[bMin]){
-      S.ovLoading[bMin]=true;
+       !S.oversee[bMin] && !S.ovLoading[bMin] && !S.ovError[bMin]){
+      S.ovLoading[bMin]=true; S.ovError[bMin]='';
       run('getMinistryFor',[S.auth.user,S.auth.pin,bDept,bMin],function(d){
         S.ovLoading[bMin]=false;
-        S.oversee[bMin] = (d && d.ok) ? d : { ok:false, entries:{}, daily:{}, prev:{} };
+        if(d && d.ok) S.oversee[bMin]=d;
+        else S.ovError[bMin] = d && d.err==='not_authorized' ? t('You can’t log for this ministry.') : (d && d.err) || t('The server answered without the numbers.');
         render();
+      }, function(e){
+        // a crash or a timeout is not "Loading…" for ever: say so, offer Retry
+        S.ovLoading[bMin]=false; S.ovError[bMin]=(e && e.message) || t('Connection problem — try again.'); render();
       });
     }
+    var ovr=document.getElementById('ovRetry');
+    if(ovr) ovr.onclick=function(){ var m=ovr.getAttribute('data-ministry'); S.ovError[m]=''; S.ovLoading[m]=false; render(); };
     document.querySelectorAll('[data-mmpick]').forEach(function(b){
       b.onclick=function(){ var v=b.getAttribute('data-mmpick'), i=v.lastIndexOf('|'); gpTap(); S.mmBrowseDept=v.slice(0,i); S.mmBrowseMinistry=v.slice(i+1); render(); };
     });
