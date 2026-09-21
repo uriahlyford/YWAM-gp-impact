@@ -27,7 +27,6 @@ fs.writeFileSync(TMP + '/node_modules/@netlify/blobs/package.json',
 fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
 fs.copyFileSync(REPO + '/netlify/functions/team-seed.js', TMP + '/team-seed.js'); // api.js imports it
-fs.copyFileSync(REPO + '/netlify/functions/hr-seed.js', TMP + '/hr-seed.js');
 process.env.GP_LEADER_CODE = 'leadercode';
 process.env.GP_LEGACY_YEAR = '2024';     // so "inferred" is distinguishable from "now"
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');

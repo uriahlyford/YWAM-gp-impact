@@ -29,7 +29,6 @@ const SERVER = [
   'test-admin-race.mjs', // two admin writes to the same staff record at once don't let one silently undo the other
   'test-ministry-leader.mjs', // ministry leaders (admin-assigned) own the metric list; personal numbers; renaming a custom metric moves its history
   'test-leadership-rename.mjs', // Base Leadership → Campus Leadership (and its director row → Campus Director): old-name rows read back new, old-name accounts keep every right
-  'test-structure.mjs', // Team → Structure: one saved org chart per campus/year/quarter, admin-only save that cleans the nodes, an unsaved quarter copies the last saved one forward, boot carries this quarter's
   'test-team-trips.mjs', // Outreach Teams: one record per team (seeded from the Lovable hub), campus-bound add/edit/delete, teams become weekly rows in the week they leave and replace hand-logged ones
   'test-staff-ids.mjs', // every staff record gets its own id on read: a missing one is minted, a duplicate re-minted for the later row, the repaired list written back once; repaired accounts work by their new id
   'test-hr.mjs', // Human Resources: only admin/hr may read or write; contracts (signed month + years, renewals as rows), attachments as their own blobs, old-CRM pre-fill, archive = deactivate, unarchive
@@ -61,7 +60,7 @@ const BROWSER = [
   'test-goals-edit.mjs',    // a weekly goal's wording can be edited in place, without losing its progress or KPI link
   'test-offline-queue.mjs', // a bad connection queues Weekly Goals/health check-in saves instead of losing them, and replays them once back online
   'test-ministry-redesign.mjs', // My Ministry: Numbers/OKRs tabs, dashboard tiles, the logged-weeks strip, one button unfolds the form, personal numbers, leader-only editor
-  'test-org-chart.mjs', // Team → Structure: the chart built from profiles (directors, GP roles, overseers, ministry leaders), quarter chips fetch, admin edits people/teams and saves the quarter
+  'test-org-chart.mjs', // Team → Structure: the campus as levels — Campus Leadership, a connector, one box per department with its ministries — built from profiles, nothing to edit or fetch
   'test-outreach-teams.mjs', // Teams Database: month/quarter/year dashboard over finished teams, one form to add/edit/delete a team; My Ministry picker + banner, period toggle, personal numbers off the page
   'test-admin-select.mjs', // Admin: home menu → Accounts (campus chips, search) → a row opens that person's page → Back keeps the search and the narrowed list
   'test-ministry-load-error.mjs', // My Ministry / Teams Database when the on-demand load crashes: the error card with the server's words and Try again, one request not a storm

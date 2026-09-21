@@ -659,7 +659,6 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .hrFile { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13px; }
 .hrFileName { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hrAttach { display:block; text-align:center; margin-top:8px; cursor:pointer; }
-.hrSuggest { background:var(--accentSoft); border:1px solid var(--accentSoftBorder); border-radius:10px; padding:8px 10px; font-size:13px; margin-bottom:8px; }
 .candSteps { display:flex; flex-wrap:wrap; gap:6px; }
 .candStep { border:1.5px solid var(--border2); background:var(--bg); border-radius:999px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--muted); font-family:inherit; }
 .candStep.done { border-color:var(--good); color:var(--good); }
@@ -830,26 +829,26 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 /* Team → Structure: the org chart as nested cards. Leads wear the crown;
    children hang off a rule on the left, the way the Canva chart draws it. */
 .teamModeSeg { margin-bottom:8px; }
-.orgNode { border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:10px 12px; margin-bottom:10px; min-width:0; }
-.orgNode.kind-team { border-color:var(--accent); }
-.orgHead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.orgTitle { font-weight:700; font-size:14.5px; }
-.orgKind { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--faint); font-weight:700; margin-left:auto; }
+.orgChart { margin-top:4px; }
+.orgLevelLabel { font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:0 0 6px; text-align:center; }
+.orgBox { border:1.5px solid var(--border); border-radius:14px; background:var(--surface); padding:12px; min-width:0; }
+.orgBox.top { border-color:var(--accent); box-shadow:0 1px 0 var(--border); }
+.orgBox.loose { border-style:dashed; margin-top:14px; }
+.orgBoxTitle { font-weight:700; font-size:15px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.orgBoxMeta { font-size:11.5px; color:var(--faint); font-weight:600; margin-left:auto; }
+.orgSub { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--faint); font-weight:700; margin-top:10px; }
+.orgConnector { width:2px; height:22px; background:var(--border2); margin:0 auto; }
+.orgGrid { display:grid; grid-template-columns:1fr; gap:10px; }
+@media (min-width:640px){ .orgGrid { grid-template-columns:1fr 1fr; } }
+.orgMins { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+.orgMin { border:1px solid var(--border); border-radius:10px; padding:8px 10px; background:var(--bg); }
+.orgMin.bare { opacity:.6; padding:6px 10px; }
+.orgMinHead { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:600; font-size:13.5px; }
+.orgMinN { font-size:11.5px; color:var(--faint); font-weight:700; background:var(--surface2); border-radius:999px; padding:1px 8px; }
 .orgPeople { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; }
 .orgPerson { display:inline-flex; align-items:center; gap:6px; background:none; border:0; padding:2px 0; font:inherit; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; }
 .orgPerson.lead span { font-weight:700; }
 .orgEmpty { font-size:12px; color:var(--faint); margin-top:6px; }
-.orgNode.compact { padding:7px 10px; margin-bottom:6px; }
-.orgNode.compact .orgTitle { font-size:13.5px; }
-.orgChildren { margin:10px 0 0 2px; padding-left:8px; border-left:2px solid var(--border); }
-.orgChildren .orgNode:last-child { margin-bottom:0; }
-.orgMore { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:4px; }
-.orgMoreLabel { font-size:11px; color:var(--faint); flex-basis:100%; }
-.orgChip { font-size:12px; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:3px 9px; }
-.orgPicker { margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
-.orgRename { flex:1; min-width:120px; }
-.crownBtn { margin-left:auto; background:none; border:1px solid var(--border); border-radius:8px; padding:2px 6px; cursor:pointer; opacity:.45; font-size:13px; line-height:1; }
-.crownBtn.on { opacity:1; border-color:var(--amber); background:var(--surface2); }
 
 /* Weekly Goals — week nav card, Last week / This week cards, from the mockup */
 .card.muted { background:var(--surface2); border-color:var(--surface2); }
@@ -1212,7 +1211,7 @@ var S = {
   teamTrips:{}, teamLoading:{}, teamError:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
   /* Team tab: the directory or the org chart; the chart is cached per
      campus|year|quarter, and an admin's unsaved edits live in structDraft. */
-  teamMode:'dir', structCache:{}, structLoading:{}, structYear:null, structQ:null,
+  teamMode:'dir',
   structEdit:false, structEditNode:null, structDraft:null, structAddTitle:'', structAddParent:'',
   adminMetricCampus:'', adminMetricDept:'', adminMetricMinistry:'',
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[], broadcasts:[],
@@ -1668,9 +1667,6 @@ function applyBoot(d){
   S.hrDue = (d.hrDue===undefined) ? null : d.hrDue;
   S.hrFollowUps = (d.hrFollowUps===undefined) ? null : d.hrFollowUps;
   if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
-  if(d.structure && d.structure.ok){
-    S.structCache[structKey_(d.structure.campus, d.structure.year, d.structure.quarter)] = { doc:d.structure.doc, source:d.structure.source };
-  }
   S.smartGoals = d.smartGoals || [];
   S.oneOnOnes = d.oneOnOnes || [];
   S.broadcasts = d.broadcasts || [];
@@ -1703,7 +1699,7 @@ function logout(){
   S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamError={}; S.teamForm=null;
   S.hrStaff=null; S.hrLoading=false; S.hrError=''; S.hrSub='home'; S.hrPersonId=null; S.hrSearch=''; S.hrContractForm=null; S.hrArchiveDraft=null; S.hrDue=null; S.hrFollowUps=null; S.hrTab='staff';
   S.cands=null; S.candsLoading=false; S.candsError=''; S.candForm=null; S.candPersonId=null; S.candNoteDraft='';
-  S.teamMode='dir'; S.structCache={}; S.structLoading={}; S.structDraft=null; S.structEdit=false; S.structEditNode=null; S.structYear=null; S.structQ=null;
+  S.teamMode='dir';
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovError={}; S.ovInputOpen={}; S.okrIdx=0;
@@ -4424,8 +4420,6 @@ function bindHr(){
       S.hrContractForm={ staffId:pid, id:c.id, signed:c.signed, years:c.years, notes:c.notes||'' }; render();
     };
   });
-  var us=document.getElementById('hrUseSuggest');
-  if(us) us.onclick=function(){ if(!S.hrContractForm) return; S.hrContractForm.signed=us.getAttribute('data-signed'); S.hrContractForm.years=Number(us.getAttribute('data-years')); render(); };
   ['hr_signed','hr_years','hr_notes'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.oninput=el.onchange=function(){ if(!S.hrContractForm) return; S.hrContractForm[id==='hr_signed'?'signed':id==='hr_years'?'years':'notes']=el.value; };
@@ -5729,13 +5723,6 @@ function hrContractCardHtml_(p, c, isCurrent){
 function hrContractFormHtml_(p){
   var f=S.hrContractForm, isNew=!f.id;
   var h='<div class="card" id="hrContractForm"><h3 style="margin-top:0">'+esc(isNew ? ((p.contracts||[]).length ? t('Add a renewal') : t('Add a contract')) : t('Edit contract'))+'</h3>';
-  if(isNew && p.suggest && p.suggest.start){
-    var sug=p.suggest, yrs='';
-    if(sug.end){ var a=new Date(sug.start+'T00:00:00'), b=new Date(sug.end+'T00:00:00'); yrs=Math.round(((b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()))/12*4)/4; }
-    h+='<div class="hrSuggest"><b>'+esc(t('Found in the old CRM'))+':</b> '+esc(gpT('started {start}',{start:hrMonthLabel_(sug.start.slice(0,7))}))+
-      (sug.end?', '+esc(gpT('ends {end}',{end:hrMonthLabel_(sug.end.slice(0,7))})):'')+(sug.type?' · '+esc(sug.type):'')+
-      (yrs?' <button class="linkbtn inline" id="hrUseSuggest" data-signed="'+esc(sug.start.slice(0,7))+'" data-years="'+esc(String(yrs))+'">'+esc(t('Use these'))+'</button>':'')+'</div>';
-  }
   h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Month signed'))+'</label><input type="month" id="hr_signed" value="'+esc(f.signed||'')+'"></div>'+
     '<div><label class="f">'+esc(t('Years committed'))+'</label><input type="number" id="hr_years" inputmode="decimal" min="0.25" max="30" step="0.25" value="'+esc(f.years==null?'':String(f.years))+'" placeholder="2"></div></div>';
   h+='<label class="f">'+esc(t('Notes'))+'</label><input type="text" id="hr_notes" maxlength="500" value="'+esc(f.notes||'')+'" placeholder="'+esc(t('e.g. second term, part-time'))+'">';
@@ -6446,166 +6433,74 @@ function leaveHtml(){
 }
 
 /* ---------- team structure (the org chart) ----------
-   Who is on which team and who leads what, per campus and per quarter —
-   the Canva chart, in the app, so it can be kept current as roles move
-   around each quarter and looked back on. The default chart is built from
-   everyone's profile (department, ministry, ministry leads); an admin moves
-   people around and saves it for the quarter. A quarter nothing has been
-   saved for shows the last saved one (the server marks it 'copied'), so a
-   new quarter opens on the previous structure rather than blank. */
-var ORG_TEAM_NODES = [
-  { id:'gp', title:'GP Team', parent:'' },
-  { id:'directors', title:'Director Team', parent:'' },
-  { id:'cl', title:'Campus Leadership Team', parent:'directors' },
-  { id:'staffdev', title:'Staff Development Team', parent:'cl' },
-  { id:'hr', title:'Human Resources', parent:'cl' },
-  { id:'dir-serve', title:'Director of Serve & Educate', parent:'cl' },
-  { id:'dir-skill', title:'Director of Skill & Develop', parent:'cl' },
-  { id:'community-night', title:'Community Night', parent:'' }
-];
-var ORG_DEPT_PARENT = { 'Community Service':'dir-serve', 'Youth Education':'dir-serve',
-  'Leadership Development':'dir-skill', 'Skills Training':'dir-skill' };
-function structKey_(campus, year, q){ return campus+'|'+year+'|'+q; }
-function currentQuarter_(){ return Math.min(4, Math.floor((thisWeek()-1)/13)+1); }
-function structYear_(){ return S.structYear || new Date().getFullYear(); }
-function structQ_(){ return S.structQ || currentQuarter_(); }
-function seedStructure_(campus, year, q){
-  var here = S.roster.filter(function(p){ return p.campus===campus; });
-  var ids = function(list){ return list.map(function(p){ return p.id; }); };
-  var nodes = ORG_TEAM_NODES.map(function(n){ return { id:n.id, title:n.title, kind:'team', parent:n.parent, leads:[], members:[] }; });
-  var byId = {}; nodes.forEach(function(n){ byId[n.id]=n; });
-  // GP Team spans both campuses — anyone whose role reads "GP …"
-  byId.gp.members = ids(S.roster.filter(function(p){ return /^gp\s/i.test(p.role||''); }));
-  byId.directors.members = ids(here.filter(function(p){ return p.dept===BL_DEPT && p.ministry==='Campus Director'; }));
-  byId.cl.members = ids(here.filter(function(p){ return p.dept===BL_DEPT && p.ministry!=='Campus Director'; }));
-  var deps = getDepartments(campus);
-  Object.keys(deps).forEach(function(dept){
-    if(dept===BL_DEPT) return;
-    var dn = { id:'dept:'+dept, title:dept, kind:'dept', parent: ORG_DEPT_PARENT[dept]||'cl',
-      leads: ids(here.filter(function(p){ return p.dept===BL_DEPT && p.ministry===dept; })), members:[] };
-    nodes.push(dn);
-    Object.keys(deps[dept]).forEach(function(min){
-      var key=dept+'|'+min;
-      var leads = here.filter(function(p){ return (p.leads||[]).indexOf(key)>-1; });
-      var members = here.filter(function(p){ return p.dept===dept && p.ministry===min && leads.indexOf(p)===-1; });
-      nodes.push({ id:'min:'+key, title:min, kind:'ministry', parent:dn.id, leads:ids(leads), members:ids(members) });
-    });
-  });
-  return { campus:campus, year:year, quarter:q, nodes:nodes };
-}
-/* The chart on screen for the campus/year/quarter picked: the admin's
-   unsaved draft if there is one, else what the server holds (saved, or the
-   previous quarter's copy), else one built from profiles. */
-function structShown_(campus){
-  var year=structYear_(), q=structQ_(), c=S.structCache[structKey_(campus,year,q)];
-  if(!c) return null;
-  var d=S.structDraft;
-  if(d && d.campus===campus && d.year===year && d.quarter===q) return { doc:d, source:'draft' };
-  if(c.doc) return { doc:c.doc, source:c.source };
-  return { doc:seedStructure_(campus, year, q), source:'seeded' };
-}
-function structDraft_(campus){
-  var shown=structShown_(campus);
-  if(!shown) return null;
-  if(shown.source!=='draft'){
-    var copy=JSON.parse(JSON.stringify(shown.doc));
-    copy.campus=campus; copy.year=structYear_(); copy.quarter=structQ_();
-    S.structDraft=copy;
-  }
-  return S.structDraft;
-}
-function orgPersonHtml_(id, lead){
-  var p=personOf(id);
-  if(!p) return '';
+   The campus as levels, the way the Canva chart reads: Campus Leadership
+   at the top (the directors, then the department overseers), a connector,
+   then one box per department with its overseer and its ministries — each
+   ministry naming its leader (crown) and its people. Departments and
+   ministries only: the boxes are the taxonomy's, the people come from
+   their profiles (department, ministry, ministry leads), so moving someone
+   is editing their profile in Admin — one source of truth, nothing to
+   hand-draw and nothing to fall out of date. Tap anyone to open them. */
+function orgPersonChip_(p, lead){
   return '<button class="orgPerson'+(lead?' lead':'')+'" data-person="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
     '<span>'+(lead?'👑 ':'')+esc(p.name)+'</span></button>';
 }
-function orgPeoplePickerHtml_(n, doc){
-  // A team can draw from both campuses (GP Team does); a department or
-  // ministry is this campus's own.
-  var pool=S.roster.filter(function(p){ return n.kind==='team' || p.campus===doc.campus; })
-    .slice().sort(function(a,b){ return a.name<b.name?-1:1; });
-  var h='<div class="orgPicker">';
-  if(n.kind==='team'){
-    h+='<div class="pickerRow" style="margin-bottom:6px"><input type="text" class="orgRename" maxlength="80" data-structrename="'+esc(n.id)+'" value="'+esc(n.title)+'" aria-label="'+esc(t('Team name'))+'">'+
-      '<button class="linkbtn inline" data-structremove="'+esc(n.id)+'">'+esc(t('Remove team'))+'</button></div>';
-  }
-  h+='<p class="hint" style="margin:0 0 6px">'+esc(t('Tick who is here; the crown marks who leads it.'))+'</p>';
-  pool.forEach(function(p){
-    var isLead=n.leads.indexOf(p.id)>-1, isMem=isLead||n.members.indexOf(p.id)>-1;
-    h+='<label class="leadOpt"><input type="checkbox" data-structmember="'+esc(n.id)+'|'+esc(p.id)+'"'+(isMem?' checked':'')+'> '+esc(p.name)+
-      '<button type="button" class="crownBtn'+(isLead?' on':'')+'" data-structlead="'+esc(n.id)+'|'+esc(p.id)+'" aria-label="'+esc(t('Leads this'))+'">👑</button></label>';
-  });
-  return h+'</div>';
-}
-/* A ministry with nobody in it (and nothing under it) is a leaf that only
-   takes up room — most of a campus's ministries, on a chart built from
-   profiles. Reading the chart, those fold into one line of chips under
-   their department; editing it, each is a one-line node with its People
-   button, so the admin can still put someone there. */
-function orgBareMinistry_(n, doc){
-  return n.kind==='ministry' && !n.leads.length && !n.members.length && !doc.nodes.some(function(x){ return x.parent===n.id; });
-}
-function orgNodeHtml_(n, doc){
-  var kids=doc.nodes.filter(function(x){ return x.parent===n.id; });
-  var bare = orgBareMinistry_(n, doc);
-  var emoji = n.kind==='team' ? '' : (MIN_EMOJI[n.title]||'');
-  var h='<div class="orgNode kind-'+n.kind+(bare?' compact':'')+'">';
-  h+='<div class="orgHead"><span class="orgTitle">'+(emoji?emoji+' ':'')+esc(t(n.title))+'</span>'+
-    '<span class="orgKind">'+esc(n.kind==='team'?t('Team'):n.kind==='dept'?t('Department'):t('Ministry'))+'</span>'+
-    (S.structEdit ? '<button class="linkbtn inline" data-structpeople="'+esc(n.id)+'">'+esc(t(S.structEditNode===n.id?'Done':'People'))+'</button>' : '')+
-    '</div>';
-  var people = n.leads.map(function(id){ return orgPersonHtml_(id,true); }).join('')+
-    n.members.map(function(id){ return orgPersonHtml_(id,false); }).join('');
-  if(people) h+='<div class="orgPeople">'+people+'</div>';
-  else if(!kids.length && !bare) h+='<div class="orgEmpty">'+esc(t('Nobody here yet'))+'</div>';
-  if(S.structEdit && S.structEditNode===n.id) h+=orgPeoplePickerHtml_(n, doc);
-  if(kids.length){
-    var full = S.structEdit ? kids : kids.filter(function(k){ return !orgBareMinistry_(k, doc); });
-    var folded = S.structEdit ? [] : kids.filter(function(k){ return orgBareMinistry_(k, doc); });
-    if(full.length || folded.length) h+='<div class="orgChildren">';
-    full.forEach(function(k){ h+=orgNodeHtml_(k, doc); });
-    if(folded.length){
-      h+='<div class="orgMore"><span class="orgMoreLabel">'+esc(t('Nobody assigned yet'))+'</span>'+
-        folded.map(function(k){ var e=MIN_EMOJI[k.title]||''; return '<span class="orgChip">'+(e?e+' ':'')+esc(t(k.title))+'</span>'; }).join('')+'</div>';
-    }
-    if(full.length || folded.length) h+='</div>';
-  }
-  return h+'</div>';
+function orgPeople_(list, leads){
+  return '<div class="orgPeople">'+list.map(function(p){ return orgPersonChip_(p, leads.indexOf(p)>-1); }).join('')+'</div>';
 }
 function orgChartHtml_(campus){
-  var year=structYear_(), q=structQ_(), yNow=new Date().getFullYear();
-  var h='<div class="pickerRow"><label class="pick"><span>'+esc(t('Year'))+'</span><select id="structYearSel">'+
-    [yNow-2,yNow-1,yNow].map(function(y){ return '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'</option>'; }).join('')+
-    '</select></label></div>';
-  h+='<div class="deptChips">'+[1,2,3,4].map(function(n){
-    return '<button class="deptChip'+(n===q?' on':'')+'" data-structq="'+n+'">Q'+n+'</button>'; }).join('')+'</div>';
-  var shown=structShown_(campus);
-  if(!shown) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
-  var doc=shown.doc, source=shown.source;
-  h+='<h3 style="margin-bottom:2px">'+esc(gpT('{campus} structure · Q{q} {year}',{campus:campusShort(campus), q:q, year:year}))+'</h3>';
-  var note = source==='saved' ? t('Saved for this quarter.')
-    : source==='copied' ? gpT('Showing Q{q} {year}’s structure — nothing saved for this quarter yet.',{q:doc.quarter, year:doc.year})
-    : source==='draft' ? t('Unsaved changes.')
-    : t('Built from everyone’s profile — nothing saved for this quarter yet.');
-  h+='<p class="sub" style="margin:0 0 10px">'+esc(note)+'</p>';
-  if(S.me.isAdmin){
-    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
-      '<button class="btn ghost" id="structEditBtn" style="margin:0;width:auto;padding:9px 14px">'+esc(S.structEdit?t('Done editing'):t('Edit structure'))+'</button>'+
-      (source!=='saved' ? '<button class="btn" id="structSaveBtn" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Save for this quarter'))+'</button>' : '')+
-      (S.structEdit ? '<button class="linkbtn" id="structResetBtn" style="width:auto;margin:0">'+esc(t('Rebuild from profiles'))+'</button>' : '')+
-    '</div>';
-    if(S.structEdit){
-      h+='<div class="card slim"><label class="f">'+esc(t('Add a team'))+'</label>'+
-        '<div class="pickerRow"><input type="text" id="structAddTitle" maxlength="80" placeholder="'+esc(t('Team name'))+'" value="'+esc(S.structAddTitle||'')+'" style="flex:1;min-width:140px">'+
-        '<select id="structAddParent"><option value="">'+esc(t('Top level'))+'</option>'+
-          doc.nodes.map(function(n){ return '<option value="'+esc(n.id)+'"'+(S.structAddParent===n.id?' selected':'')+'>'+esc(t(n.title))+'</option>'; }).join('')+
-        '</select><button class="btn ghost" id="structAddBtn" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Add'))+'</button></div></div>';
-    }
+  var here=S.roster.filter(function(p){ return p.campus===campus; });
+  var deps=getDepartments(campus);
+  var depts=Object.keys(deps).filter(function(d){ return d!==BL_DEPT; });
+  var directors=here.filter(function(p){ return p.dept===BL_DEPT && p.ministry==='Campus Director'; });
+  var overseers=here.filter(function(p){ return p.dept===BL_DEPT && p.ministry!=='Campus Director'; });
+  var placed={};
+  var h='<div class="orgChart">';
+
+  // level 1 — campus leadership
+  h+='<div class="orgLevelLabel">'+esc(t('Campus Leadership'))+'</div>';
+  h+='<div class="orgBox top" data-orgbox="leadership"><div class="orgBoxTitle">🧭 '+esc(t('Campus Director'))+'</div>';
+  if(directors.length) h+=orgPeople_(directors, directors); else h+='<div class="orgEmpty">'+esc(t('Nobody here yet'))+'</div>';
+  directors.forEach(function(p){ placed[p.id]=1; });
+  if(overseers.length){
+    h+='<div class="orgSub">'+esc(t('Department overseers'))+'</div>'+orgPeople_(overseers, []);
+    overseers.forEach(function(p){ placed[p.id]=1; });
   }
-  var roots=doc.nodes.filter(function(n){ return !n.parent || !doc.nodes.some(function(x){ return x.id===n.parent; }); });
-  roots.forEach(function(n){ h+=orgNodeHtml_(n, doc); });
-  return h;
+  h+='</div>';
+  h+='<div class="orgConnector"></div>';
+
+  // level 2 — departments, each with its ministries
+  h+='<div class="orgLevelLabel">'+esc(t('Departments'))+' · '+depts.length+'</div><div class="orgGrid">';
+  depts.forEach(function(dept){
+    var ov=here.filter(function(p){ return p.dept===BL_DEPT && p.ministry===dept; });
+    var staffN=here.filter(function(p){ return p.dept===dept; }).length;
+    var mins=Object.keys(deps[dept]||{});
+    h+='<div class="orgBox dept" data-orgbox="'+esc(dept)+'"><div class="orgBoxTitle">'+(MIN_EMOJI[dept]?MIN_EMOJI[dept]+' ':'')+esc(t(dept))+
+      '<span class="orgBoxMeta">'+esc(gpT('{n} staff',{n:staffN}))+'</span></div>';
+    if(ov.length) h+='<div class="orgSub">'+esc(t('Overseen by'))+'</div>'+orgPeople_(ov, ov);
+    h+='<div class="orgMins">';
+    mins.forEach(function(min){
+      var key=dept+'|'+min;
+      var leads=here.filter(function(p){ return (p.leads||[]).indexOf(key)>-1; });
+      var members=here.filter(function(p){ return p.dept===dept && p.ministry===min && leads.indexOf(p)===-1; });
+      var all=leads.concat(members);
+      all.forEach(function(p){ placed[p.id]=1; });
+      h+='<div class="orgMin'+(all.length?'':' bare')+'" data-orgmin="'+esc(key)+'"><div class="orgMinHead"><span>'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span>'+
+        '<span class="orgMinN">'+(all.length||'—')+'</span></div>'+
+        (all.length ? orgPeople_(all, leads) : '')+'</div>';
+    });
+    h+='</div></div>';
+  });
+  h+='</div>';
+
+  // anyone on this campus whose profile points nowhere on the chart
+  var unplaced=here.filter(function(p){ return !placed[p.id]; });
+  if(unplaced.length){
+    h+='<div class="orgLevelLabel">'+esc(t('Not placed yet'))+' · '+unplaced.length+'</div>'+
+      '<div class="orgBox loose"><p class="hint" style="margin:0 0 6px">'+esc(t('Their profile names a department or ministry that isn’t on this campus’s chart.'))+'</p>'+orgPeople_(unplaced, [])+'</div>';
+  }
+  h+='<p class="hint" style="margin:12px 0 0;text-align:center">'+esc(t('To move someone, edit their profile in Admin.'))+'</p>';
+  return h+'</div>';
 }
 
 /* ---------- team directory ---------- */
@@ -6626,7 +6521,7 @@ function teamHtml(){
   h+='<div class="campusSeg teamModeSeg">'+
     '<button class="campusBtn'+(mode==='dir'?' on':'')+'" data-teammode="dir">👥 '+esc(t('Directory'))+'</button>'+
     '<button class="campusBtn'+(mode==='org'?' on':'')+'" data-teammode="org">🧭 '+esc(t('Structure'))+'</button></div>';
-  h+='<p class="sub">'+esc(mode==='org' ? t('Who is on which team this quarter, and who leads what.') : t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
+  h+='<p class="sub">'+esc(mode==='org' ? t('Departments and ministries, and who is in each — from everyone’s profile.') : t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
 
   h+='<div class="campusSeg">'+CAMPUSES.map(function(c){
     return '<button class="campusBtn'+(campus===c.id?' on':'')+'" data-teamcampus="'+esc(c.id)+'">'+esc(t(c.name))+'</button>';
@@ -8365,90 +8260,10 @@ function bind(){
   var pb=document.getElementById('personBack');
   if(pb) pb.onclick=function(){ S.person=null; render(); };
 
-  // --- the org chart ---
+  // --- the org chart: the Directory / Structure toggle (people open via data-person above) ---
   document.querySelectorAll('[data-teammode]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.teamMode=b.getAttribute('data-teammode'); render(); };
   });
-  if(S.view==='team' && S.teamMode==='org' && !S.person && S.me){
-    var sCampus=S.teamCampus || S.me.campus || CAMPUSES[0].id, sYear=structYear_(), sQ=structQ_(), sKey=structKey_(sCampus,sYear,sQ);
-    if(!S.structCache[sKey] && !S.structLoading[sKey]){
-      S.structLoading[sKey]=true;
-      run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
-        S.structLoading[sKey]=false;
-        S.structCache[sKey] = (d && d.ok) ? { doc:d.doc, source:d.source } : { doc:null, source:'none' };
-        render();
-      });
-    }
-    var sys=document.getElementById('structYearSel');
-    if(sys) sys.onchange=function(){ S.structYear=Number(sys.value); S.structDraft=null; S.structEdit=false; S.structEditNode=null; render(); };
-    document.querySelectorAll('[data-structq]').forEach(function(b){
-      b.onclick=function(){ gpTap(); S.structQ=Number(b.getAttribute('data-structq')); S.structDraft=null; S.structEdit=false; S.structEditNode=null; render(); };
-    });
-    var seb=document.getElementById('structEditBtn');
-    if(seb) seb.onclick=function(){ S.structEdit=!S.structEdit; S.structEditNode=null; if(S.structEdit) structDraft_(sCampus); render(); };
-    var srb=document.getElementById('structResetBtn');
-    if(srb) srb.onclick=function(){ S.structDraft=seedStructure_(sCampus, sYear, sQ); S.structEditNode=null; render(); };
-    var ssb=document.getElementById('structSaveBtn');
-    if(ssb) ssb.onclick=function(){
-      if(S.busy) return;
-      var shown=structShown_(sCampus); if(!shown) return;
-      var doc=JSON.parse(JSON.stringify(shown.doc)); doc.campus=sCampus; doc.year=sYear; doc.quarter=sQ;
-      S.busy=true; ssb.disabled=true; ssb.textContent=t('Saving…');
-      run('saveStructure',[S.auth.user,S.auth.pin,doc],function(d){
-        S.busy=false;
-        if(d && d.ok){ S.structCache[sKey]={ doc:d.doc, source:'saved' }; S.structDraft=null; S.structEdit=false; S.structEditNode=null; showMsg(gpT('Saved — Q{q} {year} structure',{q:sQ, year:sYear})); }
-        else showMsg(t('Could not save'));
-        render();
-      });
-    };
-    document.querySelectorAll('[data-structpeople]').forEach(function(b){
-      b.onclick=function(){ var id=b.getAttribute('data-structpeople'); structDraft_(sCampus); S.structEditNode = (S.structEditNode===id) ? null : id; render(); };
-    });
-    var nodeOf=function(id){ var d=structDraft_(sCampus); return d ? d.nodes.filter(function(n){ return n.id===id; })[0] : null; };
-    // "nodeId|staffId" — a ministry node's own id has a '|' in it, so split at the LAST one
-    var structPair_=function(v){ var i=v.lastIndexOf('|'); return [v.slice(0,i), v.slice(i+1)]; };
-    document.querySelectorAll('[data-structmember]').forEach(function(c){
-      c.onchange=function(){
-        var p=structPair_(c.getAttribute('data-structmember')), n=nodeOf(p[0]); if(!n) return;
-        n.members=n.members.filter(function(x){ return x!==p[1]; }); n.leads=n.leads.filter(function(x){ return x!==p[1]; });
-        if(c.checked) n.members.push(p[1]);
-        render();
-      };
-    });
-    document.querySelectorAll('[data-structlead]').forEach(function(b){
-      b.onclick=function(){
-        var p=structPair_(b.getAttribute('data-structlead')), n=nodeOf(p[0]); if(!n) return;
-        var was=n.leads.indexOf(p[1])>-1;
-        n.leads=n.leads.filter(function(x){ return x!==p[1]; }); n.members=n.members.filter(function(x){ return x!==p[1]; });
-        if(was) n.members.push(p[1]); else n.leads.push(p[1]);
-        render();
-      };
-    });
-    document.querySelectorAll('[data-structrename]').forEach(function(inp){
-      inp.oninput=function(){ var n=nodeOf(inp.getAttribute('data-structrename')); if(n) n.title=inp.value; };
-    });
-    document.querySelectorAll('[data-structremove]').forEach(function(b){
-      b.onclick=function(){
-        var id=b.getAttribute('data-structremove'), d=structDraft_(sCampus), n=nodeOf(id); if(!d || !n) return;
-        if(!confirm(gpT('Remove “{team}”? Anything under it moves up a level.',{team:n.title}))) return;
-        d.nodes.forEach(function(x){ if(x.parent===id) x.parent=n.parent; });
-        d.nodes=d.nodes.filter(function(x){ return x.id!==id; });
-        S.structEditNode=null; render();
-      };
-    });
-    var sat=document.getElementById('structAddTitle');
-    if(sat) sat.oninput=function(){ S.structAddTitle=sat.value; };
-    var sap=document.getElementById('structAddParent');
-    if(sap) sap.onchange=function(){ S.structAddParent=sap.value; };
-    var sab=document.getElementById('structAddBtn');
-    if(sab) sab.onclick=function(){
-      var title=(S.structAddTitle||'').trim(); if(!title){ showMsg(t('Give it a name first.')); return; }
-      var d=structDraft_(sCampus); if(!d) return;
-      var id='team:'+Date.now().toString(36);
-      d.nodes.push({ id:id, title:title, kind:'team', parent:S.structAddParent||'', leads:[], members:[] });
-      S.structAddTitle=''; S.structEditNode=id; render();
-    };
-  }
 
   document.querySelectorAll('[data-mentee]').forEach(function(c){
     c.onclick=function(){
