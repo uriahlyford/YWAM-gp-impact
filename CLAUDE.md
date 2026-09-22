@@ -187,6 +187,16 @@ Three rules hold it together:
   the slide on screen. Siem Reap's yes/no percentages come from `srCheckinForScope_` so
   they agree with its bars. Nothing on a slide names a person; "people answered" counts
   distinct survey tokens. Test: `tests/test-health-export.mjs`.
+- **Quarter by quarter** is a View on both Base health pickers (`scope==='quarters'`,
+  `hqHtml_`): this year's quarters side by side — the Staff Health Score as one column
+  per quarter (`hqColumnsHtml_`, SVG: thin, rounded at the data end, latest quarter in
+  the accent, earlier ones a lighter step) with `pctChange` on the quarter before under
+  each, then every question as its own small column chart with the same ▲/▼. Quarters
+  are the roll-up's 13-week blocks (`qOf`), only up to the current one. `hqModel_` is
+  the one model; `hqSlides_` turns it into the deck's "By quarter" slides (kinds
+  `qchart` / `qmulti`, drawn on the canvas by `hqCanvasColumns_`), which every export
+  carries. Siem Reap's percentages come from `srCheckinForScope_` per quarter, so an
+  imported quarter with no live rows still draws. Test: `tests/test-health-quarters.mjs`.
 - **Ministry KPIs** are typed per day into the `kpiDaily` blob; `saveMyKpiDay` then
   recomputes that week's figure into `entries` (the array the dashboard reads) using
   the metric's own sum/latest/avg rule. Correcting Tuesday only changes Tuesday.

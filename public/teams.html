@@ -864,6 +864,43 @@ body.hxOn { overflow:hidden; }
   .hxFrame { display:block !important; max-width:none; width:100vw; height:100vh; aspect-ratio:auto; page-break-after:always; break-after:page; }
   .hxSlide { border-radius:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
+/* ---- Base health, quarter by quarter ---- */
+.hqCols { width:100%; height:auto; display:block; overflow:visible; }
+.hqBase { stroke:var(--border); stroke-width:1; }
+.hqBar { fill:var(--accent); opacity:.45; }
+.hqBar.on { opacity:1; }
+.hqVal { font-family:'Koulen',sans-serif; font-size:12px; fill:var(--ink); }
+.hqCols.big .hqVal { font-size:15px; }
+.hqVal.muted { fill:var(--faint); }
+.hqQ { font-size:9.5px; fill:var(--muted); }
+.hqCols.big .hqQ { font-size:11px; }
+.hqDelta { font-size:10px; font-weight:700; }
+.hqDelta.good { fill:var(--good); } .hqDelta.bad { fill:var(--bad); } .hqDelta.flat { fill:var(--faint); }
+.hqVs { display:flex; align-items:center; gap:6px; margin:-4px 0 8px; font-size:13px; }
+.hqVs .trend { font-size:13px; }
+.hqGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.hqMini { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 10px 6px; min-width:0; }
+.hqMiniHead { display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px; }
+.hqMiniHead .rowName { font-size:12px; line-height:1.25; }
+.hqMiniHead .rowVal { font-family:'Koulen',sans-serif; font-size:16px; white-space:nowrap; display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+.hqMiniHead .rowVal .trend { font-size:10.5px; }
+/* the same charts on a slide */
+.hxChart { flex:1; display:flex; align-items:center; padding:1.5cqw 2cqw 0; }
+.hxChart .hqCols { max-height:100%; }
+.hxChart .hqVal { font-size:13px; } .hxChart .hqQ { font-size:9px; } .hxChart .hqDelta { font-size:8.5px; }
+.hxWhen.good { color:var(--good); font-weight:700; } .hxWhen.bad { color:var(--bad); font-weight:700; }
+.hxMinis { gap:1.6cqw 3cqw; }
+.hxMinis .hxItem { display:flex; flex-direction:column; min-height:0; }
+.hxMiniTop { display:flex; justify-content:space-between; align-items:baseline; gap:1cqw; margin-bottom:.4cqw; }
+.hxMiniTop .hxLbl { margin:0; font-size:1.9cqw; }
+.hxMiniVal { font-family:'Koulen',sans-serif; font-size:2.8cqw; white-space:nowrap; }
+.hxTrend.inline { font-size:1.6cqw; margin:0; }
+.hxMinis .hqCols { width:100%; }
+.hxMinis .hqVal { font-size:11px; } .hxMinis .hqQ { font-size:9px; }
+@media (max-width:699px) and (orientation:portrait) {
+  .hxMinis.n4, .hxMinis.n3 { grid-template-columns:1fr 1fr; }
+  .hxMiniTop .hxLbl { font-size:3cqw; } .hxMiniVal { font-size:4.4cqw; } .hxTrend.inline { font-size:2.6cqw; }
+}
 
 /* Q1-Q4 chips under a section heading, matching the dashboard */
 .qRow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0 2px; font-size:12.5px; color:var(--muted); }
@@ -2585,7 +2622,7 @@ function srCheckinHistoryHtml(){
     '</div>'+
     '<div class="pickerRow">'+
       '<label class="pick"><span>'+esc(t('View'))+'</span><select id="srScopeSel">'+
-        [['month','Month'],['quarter','Quarter'],['year','Year']].map(function(sc){
+        [['month','Month'],['quarter','Quarter'],['quarters','Quarter by quarter'],['year','Year']].map(function(sc){
           return '<option value="'+sc[0]+'"'+(scope===sc[0]?' selected':'')+'>'+esc(t(sc[1]))+'</option>';
         }).join('')+'</select></label>'+
       (scope==='month' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Month'))+'</span><select id="srMSel">'+
@@ -2595,7 +2632,10 @@ function srCheckinHistoryHtml(){
         [1,2,3,4].map(function(i){ return '<option value="'+i+'"'+(q===i?' selected':'')+'>Q'+i+'</option>'; }).join('')+
         '</select></label>' : '')+
     '</div>'+
-    '<div class="mentorLabel" style="margin-top:12px">'+esc(t('Overall trend (higher is better)'))+'</div>'+
+    '</div>';
+  if(scope==='quarters') return h + hqHtml_();
+  h+='<div class="card">'+
+    '<div class="mentorLabel">'+esc(t('Overall trend (higher is better)'))+'</div>'+
     srLineChartHtml_(data.line, scopeNoun)+
     '<div class="mentorDivider"></div>'+
     '<div class="mentorLabel">'+esc(gpT('This {scope}, by question',{scope:scopeNoun||t('quarter')}))+'</div>'+
@@ -6394,7 +6434,7 @@ function healthHtml(){
   h += hxBtnHtml_('health');
   h += '<div class="pickerRow">'+
     '<label class="pick"><span>'+esc(t('View'))+'</span><select id="healthScopeSel">'+
-      [['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year']].map(function(sc){
+      [['week','Week'],['month','Month'],['quarter','Quarter'],['quarters','Quarter by quarter'],['year','Year']].map(function(sc){
         return '<option value="'+sc[0]+'"'+(scope===sc[0]?' selected':'')+'>'+esc(t(sc[1]))+'</option>';
       }).join('')+'</select></label>'+
     (scope==='month' ? '<label class="pick" style="max-width:120px"><span>'+esc(t('Month'))+'</span><select id="healthMSel">'+
@@ -6408,6 +6448,9 @@ function healthHtml(){
       '</select></label>' : '')+
     '</div>';
 
+  if(scope==='quarters'){
+    return h + hqHtml_() + '<p class="hint">🔒 '+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
+  }
   var R = (scope==='year') ? baseRFor(hYear) : baseR();
   if(!R){
     h += '<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>'+
@@ -6534,11 +6577,14 @@ function hxSpec_(source){
   }
   if(campus==='siemreap' && hxSrData_()){
     var sc = S.srScope || 'quarter';
+    if(sc==='quarters') sc='year';
     return { campus:campus, scope:sc, sr:true, year:yr,
       month:(S.srMonth!=null ? Number(S.srMonth) : now.getMonth()+1)-1,
       quarter:Number(S.srQuarter || Math.ceil((now.getMonth()+1)/3)) };
   }
-  return { campus:campus, scope:S.healthScope||'week', wk:Number(S.healthWeek||cur),
+  var hs = S.healthScope||'week';
+  if(hs==='quarters') hs='year';
+  return { campus:campus, scope:hs, wk:Number(S.healthWeek||cur),
     month:Number(S.healthMonth!=null ? S.healthMonth : now.getMonth()),
     quarter:Number(S.healthQuarter || (qOf(cur)+1)), year:Number(S.healthYear||yr) };
 }
@@ -6649,6 +6695,7 @@ function hxSlides_(m){
   slides.push({ kind:'stats', kicker:kicker, title:t('Habits'), sub:m.periodLabel+' · 1/2', items:m.yes.slice(0,4).map(hxPctItem_) });
   slides.push({ kind:'stats', kicker:kicker, title:t('Habits'), sub:m.periodLabel+' · 2/2', items:m.yes.slice(4).map(hxPctItem_) });
   if(m.monthly.length) slides.push({ kind:'stats', kicker:kicker, title:t('Monthly Check-In'), sub:m.periodLabel, items:m.monthly.map(hxPctItem_) });
+  hqSlides_(m.campus, kicker).forEach(function(sl){ slides.push(sl); });
   slides.push({ kind:'end', kicker:kicker, title:t('Totals only — no names.'), sub:t('Nobody sees an individual answer.'),
     foot:gpT('GP Impact · {date}',{date:todayStr()}) });
   return slides;
@@ -6666,6 +6713,7 @@ function hxItemHtml_(it, cls){
     '<div class="hxLbl">'+esc(it.label)+'</div>'+(it.sub ? '<div class="hxSub">'+esc(it.sub)+'</div>' : '')+'</div>';
 }
 function hxSlideHtml_(sl){
+  if(sl.kind==='qchart' || sl.kind==='qmulti') return hqSlideHtml_(sl);
   var logo = (typeof GP_LOGO==='string') ? '<img class="hxLogo" src="'+GP_LOGO+'" alt="">' : '';
   if(sl.kind==='cover'){
     return '<div class="hxSlide hxCover">'+logo+'<div class="hxKicker">'+esc(sl.kicker)+'</div>'+
@@ -6805,6 +6853,27 @@ function hxCanvas_(sl, cb){
       wrap(sl.title, W-180).forEach(function(l,k){ g.fillText(l, 90, 400+k*110); });
       g.fillStyle=v('--muted'); g.font=KP(40); g.fillText(sl.sub, 90, 560);
       g.fillStyle=v('--faint'); g.font=KP(28); g.fillText(sl.foot, 90, 820);
+    } else if(sl.kind==='qchart'){
+      kicker(110);
+      g.fillStyle=v('--ink'); g.font=KO(84); g.fillText(sl.title, 90, 200);
+      g.fillStyle=sl.good===true ? v('--good') : sl.good===false ? v('--bad') : v('--muted'); g.font=KP(34, sl.good===null?400:700); g.fillText(sl.sub, 90, 250);
+      hqCanvasColumns_(g, v, sl.series, 160, 290, W-320, H-330, true);
+    } else if(sl.kind==='qmulti'){
+      kicker(110);
+      g.fillStyle=v('--ink'); g.font=KO(84); g.fillText(sl.title, 90, 200);
+      g.fillStyle=v('--muted'); g.font=KP(34); g.fillText(sl.sub, 90, 250);
+      g.fillStyle=v('--border'); g.fillRect(90, 290, W-180, 2);
+      var qn=sl.items.length, qcols=qn<=3?qn:2, qrows=Math.ceil(qn/qcols), qcw=(W-180)/qcols, qch=(H-330)/qrows;
+      sl.items.forEach(function(ser,k){
+        var qx=90+(k%qcols)*qcw, qy=320+Math.floor(k/qcols)*qch;
+        g.fillStyle=v('--ink'); g.font=KP(26,500); g.fillText(t(ser.label), qx, qy+26);
+        var val=ser.latest ? hqFmt_(ser.latest.value, ser.unit) : '—';
+        g.font=KO(40); var vw=g.measureText(val).width; g.textAlign='right'; g.fillText(val, qx+qcw-40, qy+30);
+        if(ser.delta!==null){ var gd=((ser.delta>0)===ser.higherBetter)||ser.delta===0; g.fillStyle=v(gd?'--good':'--bad'); g.font=KP(22,700);
+          g.fillText((ser.delta>0?'▲':ser.delta<0?'▼':'—')+' '+Math.abs(ser.delta)+'%', qx+qcw-40-vw-14, qy+30); }
+        g.textAlign='left';
+        hqCanvasColumns_(g, v, ser, qx, qy+30, qcw-40, qch-50, false);
+      });
     } else {
       kicker(110);
       g.fillStyle=v('--ink'); g.font=KO(84); g.fillText(sl.title, 90, 200);
@@ -6857,6 +6926,193 @@ function hxBind_(){
 }
 function hxBtnHtml_(source){
   return '<button class="hxOpenBtn" data-healthexport="'+source+'">📽️ '+esc(t('Export as slides'))+'</button>';
+}
+
+/* ---------- Base health, quarter by quarter ----------
+   "Quarter by quarter" on the Health tab's View picker (and Siem Reap's)
+   lays this year's quarters side by side: the Staff Health Score as a
+   column per quarter with the rise or fall on the quarter before, then
+   every question as its own small column chart with the same ▲/▼ — so
+   "did we get better since Q2" is one glance, not two picker changes and
+   some mental arithmetic. The same model feeds the export deck (hxSlides_
+   adds a set of "By quarter" slides), so the slides say what the page says.
+
+   Quarters are the roll-up's own 13-week blocks (qOf), the same ones the
+   Quarter picker uses; only quarters up to the current one are shown.
+   Siem Reap's yes/no percentages come from srCheckinForScope_ so they
+   agree with its bars. Everything is pooled and anonymous. */
+function hqSeries_(qs, id, label, unit, higherBetter, hours){
+  var pts = qs.map(function(e){ return { label:e.label, value: id==='score' ? e.score : (e.vals[id]===undefined ? null : e.vals[id]) }; });
+  var withData = pts.filter(function(p){ return p.value!==null; });
+  var last = withData.length ? withData[withData.length-1] : null;
+  var prev = withData.length>1 ? withData[withData.length-2] : null;
+  pts.forEach(function(p, i){
+    var before = null;
+    for(var k=i-1; k>=0; k--){ if(pts[k].value!==null){ before = pts[k]; break; } }
+    p.delta = (p.value!==null && before) ? pctChange(before.value, p.value) : null;
+  });
+  return { id:id, label:label, unit:unit, hours:!!hours, higherBetter:higherBetter!==false, points:pts,
+    latest:last, prevLabel:prev ? prev.label : '', delta:(last && prev) ? pctChange(prev.value, last.value) : null };
+}
+function hqModel_(campus){
+  var R = baseR();
+  if(!R || !S.base) return null;
+  var ids = [campus], curQ = qOf(thisWeek());
+  var sr = campus==='siemreap' && hxSrData_();
+  var byLive = {};
+  if(sr) SR_CHECKIN_QUESTIONS.forEach(function(q){ if(q.liveId) byLive[q.id]=q.liveId; });
+  var qs = [];
+  for(var q=0; q<=curQ; q++){
+    var rows = R.surveyRows(ids, undefined, q);
+    var e = { q:q+1, label:'Q'+(q+1), rows:rows.length, score: rows.length ? hxScore_(rows) : null, vals:{} };
+    HX_SCALES.forEach(function(s){ e.vals[s.id] = rows.length ? R.avg(rows, s.id) : null; });
+    HX_YESNO.concat(HX_MONTHLY).forEach(function(y){ e.vals[y.id] = rows.length ? R.pct(rows, y.id) : null; });
+    if(sr){
+      srCheckinForScope_('quarter', 0, q+1).bars.forEach(function(b){ if(byLive[b.id]) e.vals[byLive[b.id]] = b.pct; });
+      if(!e.rows && Object.keys(e.vals).some(function(k){ return e.vals[k]!==null && e.vals[k]!==undefined; })) e.rows = -1; // imported history only
+    }
+    qs.push(e);
+  }
+  var withData = qs.filter(function(e){ return e.rows!==0; });
+  return { campus:campus, year:new Date().getFullYear(), quarters:qs,
+    hasData:withData.length>0, compared:withData.length>=2,
+    score: hqSeries_(qs, 'score', 'Staff Health Score', '/10', true),
+    scales: HX_SCALES.map(function(s){ return hqSeries_(qs, s.id, s.label, s.hours ? 'hrs' : '/10', s.higherBetter!==false, s.hours); }),
+    yes: HX_YESNO.map(function(y){ return hqSeries_(qs, y.id, y.label, '%', y.higherBetter); }),
+    monthly: HX_MONTHLY.map(function(y){ return hqSeries_(qs, y.id, y.label, '%', y.higherBetter); })
+      .filter(function(s){ return s.points.some(function(p){ return p.value!==null; }); }) };
+}
+function hqFmt_(v, unit){
+  if(v===null || v===undefined) return '—';
+  if(unit==='%') return Math.round(v)+'%';
+  if(unit==='hrs') return (Math.round(v*10)/10)+' '+t('hrs');
+  return v.toFixed(1);
+}
+function hqMax_(ser){
+  if(ser.unit==='%') return 100;
+  if(ser.unit==='/10') return 10;
+  var m = 0; ser.points.forEach(function(p){ if(p.value!==null && p.value>m) m=p.value; });
+  return m>0 ? m*1.15 : 1;
+}
+/* One column per quarter. Thin columns off a single baseline, rounded at
+   the data end only, the latest quarter in the accent and the ones before
+   it a lighter step of the same hue — emphasis, not a rainbow. Every value
+   sits on its cap (there are at most four, and no axis to carry them), the
+   quarter under the column, and — on the large chart — the change on the
+   quarter before under that. Text stays in text colours; the mark carries
+   the colour. */
+function hqColumnsHtml_(ser, big){
+  var W = big ? 320 : 150, H = big ? 150 : 74;
+  var padX = big ? 6 : 4, top = big ? 22 : 16, labelH = big ? 34 : 14;
+  var n = ser.points.length, slot = (W-padX*2)/n, bw = Math.min(big ? 26 : 16, slot*0.5);
+  var plotH = H-top-labelH, base = top+plotH, max = hqMax_(ser);
+  var lastIdx = -1; ser.points.forEach(function(p,i){ if(p.value!==null) lastIdx=i; });
+  var h = '<svg viewBox="0 0 '+W+' '+H+'" class="hqCols'+(big?' big':'')+'" role="img" aria-label="'+esc(ser.label)+'">';
+  h += '<line x1="'+padX+'" x2="'+(W-padX)+'" y1="'+base+'" y2="'+base+'" class="hqBase"/>';
+  ser.points.forEach(function(p,i){
+    var cx = padX+slot*i+slot/2;
+    if(p.value===null){
+      h += '<text x="'+cx+'" y="'+(base-6)+'" class="hqVal muted" text-anchor="middle">—</text>';
+    } else {
+      var bh = Math.max(3, plotH*(p.value/max)), y = base-bh, r = Math.min(4, bw/2, bh);
+      var x0 = cx-bw/2, x1 = cx+bw/2;
+      var d = 'M'+x0+','+base+' V'+(y+r)+' Q'+x0+','+y+' '+(x0+r)+','+y+' H'+(x1-r)+' Q'+x1+','+y+' '+x1+','+(y+r)+' V'+base+' Z';
+      h += '<path d="'+d+'" class="hqBar'+(i===lastIdx?' on':'')+'"><title>'+esc(p.label)+': '+esc(hqFmt_(p.value, ser.unit))+'</title></path>';
+      h += '<text x="'+cx+'" y="'+(y-5)+'" class="hqVal" text-anchor="middle">'+esc(hqFmt_(p.value, ser.unit))+'</text>';
+    }
+    h += '<text x="'+cx+'" y="'+(base+(big?14:11))+'" class="hqQ" text-anchor="middle">'+esc(p.label)+'</text>';
+    if(big && p.delta!==null){
+      var good = p.delta===0 ? null : ((p.delta>0) === ser.higherBetter);
+      h += '<text x="'+cx+'" y="'+(base+28)+'" class="hqDelta '+(good===null?'flat':good?'good':'bad')+'" text-anchor="middle">'+
+        (p.delta>0?'▲':p.delta<0?'▼':'—')+' '+Math.abs(p.delta)+'%</text>';
+    }
+  });
+  return h+'</svg>';
+}
+function hqDeltaHtml_(ser){
+  if(ser.delta===null) return '';
+  return trendBadge(ser.delta, ser.higherBetter)+' <span class="pmeta">'+esc(gpT('vs {q}',{q:ser.prevLabel}))+'</span>';
+}
+function hqMiniHtml_(ser){
+  return '<div class="hqMini"><div class="hqMiniHead"><span class="rowName">'+esc(t(ser.label))+'</span>'+
+    '<span class="rowVal">'+(ser.latest ? esc(hqFmt_(ser.latest.value, ser.unit)) : '—')+(ser.delta!==null ? trendBadge(ser.delta, ser.higherBetter) : '')+'</span></div>'+
+    hqColumnsHtml_(ser, false)+'</div>';
+}
+function hqHtml_(){
+  var m = hqModel_(S.me.campus);
+  if(!m) return '<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  if(!m.hasData) return '<div class="card"><p class="emptyLine">'+esc(t('No check-ins this year yet — the quarters fill in as people answer.'))+'</p></div>';
+  var h = '<div class="card">'+
+    '<div class="row" style="border:0;padding-top:0"><span class="rowName"><strong>'+esc(t('Staff Health Score'))+'</strong>'+
+      '<div class="pmeta">'+esc(m.score.latest ? gpT('{q} so far',{q:m.score.latest.label}) : '')+'</div></span>'+
+      '<span class="pctBig">'+(m.score.latest ? m.score.latest.value.toFixed(1) : '—')+'</span></div>'+
+    (m.compared ? '<div class="hqVs">'+hqDeltaHtml_(m.score)+'</div>'
+      : '<p class="pmeta" style="margin:0 0 6px">'+esc(t('The change appears once two quarters have check-ins.'))+'</p>')+
+    hqColumnsHtml_(m.score, true)+
+    '<div class="pmeta" style="margin-top:6px">'+esc(t('Average of every check-in in the quarter. ▲/▼ is against the quarter before.'))+'</div>'+
+  '</div>';
+  h += '<div class="mentorLabel" style="margin-top:14px">'+esc(t('How we’re doing'))+'</div><div class="hqGrid">'+m.scales.map(hqMiniHtml_).join('')+'</div>';
+  h += '<div class="mentorLabel" style="margin-top:14px">'+esc(t('Habits'))+' · '+esc(t('said yes'))+'</div><div class="hqGrid">'+m.yes.map(hqMiniHtml_).join('')+'</div>';
+  if(m.monthly.length) h += '<div class="mentorLabel" style="margin-top:14px">'+esc(t('Monthly Check-In'))+'</div><div class="hqGrid">'+m.monthly.map(hqMiniHtml_).join('')+'</div>';
+  return h;
+}
+/* The deck's "By quarter" slides, from the same model. */
+function hqSlides_(campus, kicker){
+  var m = hqModel_(campus);
+  if(!m || !m.hasData) return [];
+  var out = [];
+  var sub = m.compared && m.score.delta!==null
+    ? (m.score.delta>0?'▲ ':m.score.delta<0?'▼ ':'')+Math.abs(m.score.delta)+'% '+gpT('vs {q}',{q:m.score.prevLabel})
+    : String(m.year);
+  out.push({ kind:'qchart', kicker:kicker, title:t('Staff Health Score by quarter'), sub:sub, series:m.score,
+    good: m.score.delta===null ? null : (m.score.delta>=0) });
+  out.push({ kind:'qmulti', kicker:kicker, title:t('By quarter')+' · '+t('How we’re doing'), sub:String(m.year), items:m.scales });
+  out.push({ kind:'qmulti', kicker:kicker, title:t('By quarter')+' · '+t('Habits'), sub:m.year+' · 1/2', items:m.yes.slice(0,4) });
+  out.push({ kind:'qmulti', kicker:kicker, title:t('By quarter')+' · '+t('Habits'), sub:m.year+' · 2/2', items:m.yes.slice(4) });
+  if(m.monthly.length) out.push({ kind:'qmulti', kicker:kicker, title:t('By quarter')+' · '+t('Monthly Check-In'), sub:String(m.year), items:m.monthly });
+  return out;
+}
+function hqSlideHtml_(sl){
+  var head = '<div class="hxHead"><div class="hxKicker">'+esc(sl.kicker)+'</div><div class="hxTitle">'+esc(sl.title)+'</div>'+
+    '<div class="hxWhen'+(sl.good===true?' good':sl.good===false?' bad':'')+'">'+esc(sl.sub)+'</div></div>';
+  if(sl.kind==='qchart'){
+    return '<div class="hxSlide hxQ">'+head+'<div class="hxChart">'+hqColumnsHtml_(sl.series, true)+'</div></div>';
+  }
+  return '<div class="hxSlide hxQ">'+head+'<div class="hxGrid hxMinis n'+sl.items.length+'">'+sl.items.map(function(ser){
+    return '<div class="hxItem"><div class="hxMiniTop"><span class="hxLbl">'+esc(t(ser.label))+'</span>'+
+      '<span class="hxMiniVal">'+(ser.latest ? esc(hqFmt_(ser.latest.value, ser.unit)) : '—')+
+      (ser.delta!==null ? ' <span class="hxTrend inline '+(((ser.delta>0)===ser.higherBetter)||ser.delta===0?'good':'bad')+'">'+(ser.delta>0?'▲':ser.delta<0?'▼':'—')+' '+Math.abs(ser.delta)+'%</span>' : '')+
+      '</span></div>'+hqColumnsHtml_(ser, false)+'</div>';
+  }).join('')+'</div></div>';
+}
+/* The same columns on the PNG canvas. */
+function hqCanvasColumns_(g, v, ser, x, y, w, h, big, T){
+  var n = ser.points.length, slot = w/n, bw = Math.min(big ? 110 : 56, slot*0.5);
+  var labelH = big ? 90 : 44, top = big ? 60 : 58;
+  var plotH = h-top-labelH, base = y+top+plotH, max = hqMax_(ser);
+  var lastIdx = -1; ser.points.forEach(function(p,i){ if(p.value!==null) lastIdx=i; });
+  g.fillStyle = v('--border'); g.fillRect(x, base, w, 2);
+  ser.points.forEach(function(p,i){
+    var cx = x+slot*i+slot/2;
+    g.textAlign = 'center';
+    if(p.value===null){
+      g.fillStyle = v('--muted'); g.font = (big?34:22)+'px Koulen, "Kantumruy Pro", sans-serif'; g.fillText('—', cx, base-10);
+    } else {
+      var bh = Math.max(4, plotH*(p.value/max)), ty = base-bh, r = Math.min(big?8:5, bw/2, bh);
+      g.globalAlpha = i===lastIdx ? 1 : 0.45; g.fillStyle = v('--accent');
+      g.beginPath(); g.moveTo(cx-bw/2, base); g.lineTo(cx-bw/2, ty+r); g.quadraticCurveTo(cx-bw/2, ty, cx-bw/2+r, ty);
+      g.lineTo(cx+bw/2-r, ty); g.quadraticCurveTo(cx+bw/2, ty, cx+bw/2, ty+r); g.lineTo(cx+bw/2, base); g.closePath(); g.fill();
+      g.globalAlpha = 1;
+      g.fillStyle = v('--ink'); g.font = (big?44:26)+'px Koulen, "Kantumruy Pro", sans-serif'; g.fillText(hqFmt_(p.value, ser.unit), cx, ty-12);
+    }
+    g.fillStyle = v('--muted'); g.font = (big?'500 28px':'500 20px')+' "Kantumruy Pro", system-ui, sans-serif'; g.fillText(p.label, cx, base+(big?36:26));
+    if(big && p.delta!==null){
+      var good = p.delta===0 ? null : ((p.delta>0) === ser.higherBetter);
+      g.fillStyle = good===null ? v('--muted') : v(good?'--good':'--bad'); g.font = '700 26px "Kantumruy Pro", system-ui, sans-serif';
+      g.fillText((p.delta>0?'▲':p.delta<0?'▼':'—')+' '+Math.abs(p.delta)+'%', cx, base+72);
+    }
+  });
+  g.textAlign = 'left';
 }
 
 /* Sending the week. Every 1-10 question has to be answered — a composite built

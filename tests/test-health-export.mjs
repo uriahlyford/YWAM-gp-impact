@@ -74,7 +74,7 @@ async function open(campus) {
   await btn.click();
   await page.waitForSelector('#hxRoot .hxOverlay');
   const n = await page.$$eval('#hxRoot .hxFrame', f => f.length);
-  ok('the deck has cover, who, scales, two habit slides and a closing slide', n === 6, n);
+  ok('the deck has cover, who, scales, two habit slides, four quarter slides and a closing slide', n === 10, n);
   ok('one slide shows at a time', (await page.$$eval('#hxRoot .hxFrame.on', f => f.length)) === 1);
   ok('the page underneath stops scrolling', await page.$eval('body', b => b.classList.contains('hxOn')));
 
@@ -92,7 +92,7 @@ async function open(campus) {
   await page.click('#hxNext');
   const who = await page.$eval('#hxRoot .hxFrame.on', e => e.textContent);
   ok('slide 2 counts check-ins, people and the response rate', /4[\s\S]*check-ins logged/.test(who) && /4[\s\S]*of 5 staff answered/.test(who) && /80%[\s\S]*response rate/.test(who), who.replace(/\s+/g, ' ').slice(0, 120));
-  ok('the counter moved', (await page.$eval('#hxRoot .hxCount', e => e.textContent)) === 'Slide 2 of 6');
+  ok('the counter moved', (await page.$eval('#hxRoot .hxCount', e => e.textContent)) === 'Slide 2 of 10');
 
   // Scales: the averages the page lists.
   await page.keyboard.press('ArrowRight');
@@ -115,11 +115,11 @@ async function open(campus) {
   ok('no name anywhere in the deck', !(await page.$eval('#hxRoot', e => /Sokha|Mealea|dev0/.test(e.textContent))));
 
   // Closing slide, then Save image.
-  await page.click('#hxNext');
+  await page.click('[data-hxgo="' + (n - 1) + '"]');
   ok('last slide is the privacy line', /Totals only — no names/.test(await page.$eval('#hxRoot .hxFrame.on', e => e.textContent)));
   ok('Next is disabled on the last slide', await page.$eval('#hxNext', b => b.disabled));
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#hxPng')]);
-  ok('Save image downloads a PNG named for the campus, period and slide', /^gp-health-poipet-.*-6\.png$/.test(dl.suggestedFilename()), dl.suggestedFilename());
+  ok('Save image downloads a PNG named for the campus, period and slide', /^gp-health-poipet-.*-10\.png$/.test(dl.suggestedFilename()), dl.suggestedFilename());
   const file = await dl.path();
   const head = fs.readFileSync(file).slice(0, 8).toString('hex');
   ok('and the file really is a PNG', head === '89504e470d0a1a0a', head);

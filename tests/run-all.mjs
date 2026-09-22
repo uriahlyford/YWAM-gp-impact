@@ -68,6 +68,7 @@ const BROWSER = [
   'test-admin-mentors.mjs', // Admin → Mentors: one card per mentor with their people (Waiting when not yet accepted), everyone with no mentor, the home card's count, a person's header names their mentor
   'test-admin-leave-page.mjs', // Admin → Leave page: campus chips + year, tiles, waiting with Approve/Decline, away/coming up, days used vs cap, earlier folded, names open the person
   'test-health-export.mjs',  // Base health → Export as slides: the deck, its figures against the page, PNG, close
+  'test-health-quarters.mjs', // Base health → Quarter by quarter: columns per quarter with ▲/▼, per-question minis, Siem Reap parity, the deck's By-quarter slides
   'test-ministry-load-error.mjs', // My Ministry / Teams Database when the on-demand load crashes: the error card with the server's words and Try again, one request not a storm
   'test-hr-page.mjs', // the HR page: menu item + badge, home tiles and renewals due, status chips, a person's contracts, add a renewal, attach a file, old-CRM pre-fill, archive
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
