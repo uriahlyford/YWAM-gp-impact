@@ -176,6 +176,17 @@ Three rules hold it together:
   `surveyToken` — one per person per week, so they cannot double-count — and **a week
   answered by hand wins**: the sync leaves `source:'weekly'` alone. See "Health lives
   on the staff page" for who is allowed to read it.
+- **Base health exports as slides, not as a file of rows.** "Export as slides" (on the
+  Health tab's Base health section, both campuses, and on Base's Base Health row —
+  `[data-healthexport]`, `hxOpen_`) opens a full-screen deck of the same pooled figures
+  the page prints for the period the pickers are on: cover with the Staff Health Score,
+  who checked in, the four 1-10/hours averages, the yes/no habits over two slides, the
+  monthly add-on when any was asked, and a totals-only closing slide. One model
+  (`hxModel_` → `hxSlides_`) feeds two renderers — HTML on screen and for print (PDF,
+  one landscape page per slide) and a 1600×900 canvas for the PNGs — so a saved image is
+  the slide on screen. Siem Reap's yes/no percentages come from `srCheckinForScope_` so
+  they agree with its bars. Nothing on a slide names a person; "people answered" counts
+  distinct survey tokens. Test: `tests/test-health-export.mjs`.
 - **Ministry KPIs** are typed per day into the `kpiDaily` blob; `saveMyKpiDay` then
   recomputes that week's figure into `entries` (the array the dashboard reads) using
   the metric's own sum/latest/avg rule. Correcting Tuesday only changes Tuesday.

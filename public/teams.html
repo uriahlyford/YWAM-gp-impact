@@ -787,6 +787,84 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .ddRowVal { font-family:'Koulen',sans-serif; color:var(--accent); white-space:nowrap; }
 .ddWeeks { font-size:12px; color:var(--muted); margin-top:4px; line-height:1.5; }
 
+/* ---- Base health → Export as slides ----
+   A full-screen deck of the base's health figures: the app's own type
+   (Koulen numbers, Kantumruy labels) and colours, one figure family per
+   slide, 16:9 so a saved PNG or printed page is the same picture as the
+   screen. .hxOn on <body> stops the page behind it scrolling. */
+.hxOpenBtn { display:inline-flex; align-items:center; gap:6px; margin:0 0 10px; padding:8px 14px; border-radius:999px;
+  border:1.5px solid var(--accent); background:transparent; color:var(--accent); font-family:'Koulen',sans-serif;
+  font-size:14px; letter-spacing:.8px; cursor:pointer; }
+.hxOpenBtn:active { opacity:.7; }
+body.hxOn { overflow:hidden; }
+.hxOverlay { position:fixed; inset:0; z-index:60; background:var(--ink); display:flex; flex-direction:column; color:var(--bg); }
+.hxBar { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 14px; font-size:12.5px; opacity:.9; }
+.hxCount { font-family:'Koulen',sans-serif; letter-spacing:1px; font-size:14px; }
+.hxTools { display:flex; gap:6px; align-items:center; }
+.hxTool { border:1px solid rgba(255,255,255,.35); background:transparent; color:inherit; border-radius:999px; padding:6px 11px; font-size:12px; font-family:inherit; cursor:pointer; }
+.hxClose { background:transparent; border:none; color:inherit; font-size:20px; padding:4px 6px 4px 10px; cursor:pointer; line-height:1; }
+.hxStage { flex:1; display:flex; align-items:center; justify-content:center; padding:0 10px; min-height:0; }
+.hxFrame { display:none; width:100%; max-width:min(100%, calc((100vh - 130px) * 16 / 9)); aspect-ratio:16/9; }
+.hxFrame.on { display:block; }
+.hxSlide { position:relative; width:100%; height:100%; box-sizing:border-box; background:var(--bg); color:var(--ink); border-radius:14px; overflow:hidden;
+  padding:5.5% 5.6% 4.5%; display:flex; flex-direction:column; container-type:inline-size; }
+.hxSlide::before { content:''; position:absolute; left:0; right:0; top:0; height:1.4cqw; background:var(--accent); }
+.hxSlide::after { content:''; position:absolute; left:0; right:0; top:1.4cqw; height:.35cqw; background:var(--amber); }
+.hxLogo { position:absolute; right:5.6%; top:8%; width:9cqw; height:9cqw; border-radius:50%; background:var(--ink); padding:.6cqw; box-sizing:border-box; }
+.hxKicker { font-size:1.6cqw; letter-spacing:.25em; text-transform:uppercase; color:var(--faint); font-weight:700; }
+.hxTitle { font-family:'Koulen',sans-serif; font-size:5.4cqw; line-height:1.05; letter-spacing:.02em; margin-top:.6cqw; }
+.hxTitle.big { font-size:9.5cqw; }
+.hxWhen { font-size:2.2cqw; color:var(--muted); margin-top:.5cqw; }
+.hxHead { border-bottom:2px solid var(--border); padding-bottom:1.6cqw; }
+.hxGrid { flex:1; display:grid; gap:2cqw 3cqw; align-content:center; padding-top:1.5cqw; }
+.hxGrid.n1 { grid-template-columns:1fr; }
+.hxGrid.n2 { grid-template-columns:1fr 1fr; }
+.hxGrid.n3 { grid-template-columns:repeat(3,1fr); }
+.hxGrid.n4 { grid-template-columns:1fr 1fr; }
+.hxItem { min-width:0; }
+.hxNum { font-family:'Koulen',sans-serif; font-size:9.5cqw; line-height:.95; color:var(--accent); white-space:nowrap; }
+.hxGrid.n3 .hxNum { font-size:11cqw; }
+.hxUnit { font-size:.42em; margin-left:.12em; }
+.hxLbl { font-size:2.1cqw; font-weight:500; margin-top:.9cqw; line-height:1.25; }
+.hxSub { font-size:1.6cqw; color:var(--muted); margin-top:.3cqw; }
+.hxCover .hxItem.hxHero { margin-top:auto; }
+.hxCover .hxHero .hxNum { font-size:19cqw; }
+.hxCover .hxHero .hxLbl { font-size:2.6cqw; }
+.hxTrend { font-size:2.4cqw; font-weight:700; margin-top:1cqw; }
+.hxTrend.good { color:var(--good); } .hxTrend.bad { color:var(--bad); }
+.hxEnd .hxTitle { margin-top:auto; font-size:6cqw; }
+.hxFoot { margin-top:auto; font-size:1.7cqw; color:var(--faint); }
+.hxNav { display:flex; align-items:center; justify-content:center; gap:14px; padding:10px 14px 16px; }
+.hxArrow { width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:transparent; color:inherit; font-size:24px; cursor:pointer; line-height:1; }
+.hxArrow:disabled { opacity:.3; }
+.hxDots { display:flex; gap:7px; }
+.hxDot { width:8px; height:8px; border-radius:50%; border:none; padding:0; background:rgba(255,255,255,.35); cursor:pointer; }
+.hxDot.on { background:var(--amber); }
+/* A phone held upright: 16:9 would leave the deck a thin strip in a sea of
+   dark, so the slide stands taller and every size steps up — the PNG and
+   the print still come out 16:9 from the same figures. */
+@media (max-width:699px) and (orientation:portrait) {
+  .hxFrame { aspect-ratio:3/4; max-width:min(100%, calc((100vh - 130px) * 3 / 4)); }
+  .hxGrid.n3 { grid-template-columns:1fr; }
+  .hxGrid { gap:3.5cqw 4cqw; }
+  .hxNum, .hxGrid.n3 .hxNum { font-size:15cqw; }
+  .hxLbl { font-size:3.6cqw; margin-top:1.2cqw; } .hxSub { font-size:2.9cqw; }
+  .hxKicker { font-size:2.5cqw; } .hxTitle { font-size:8cqw; } .hxTitle.big { font-size:13cqw; } .hxWhen { font-size:3.4cqw; }
+  .hxLogo { width:14cqw; height:14cqw; }
+  .hxCover .hxHero .hxNum { font-size:28cqw; } .hxCover .hxHero .hxLbl { font-size:4.2cqw; } .hxTrend { font-size:3.8cqw; }
+  .hxEnd .hxTitle { font-size:8.5cqw; } .hxFoot { font-size:3cqw; }
+}
+@media print {
+  @page { size:landscape; margin:0; }
+  body.hxOn > *:not(#hxRoot) { display:none !important; }
+  body.hxOn { overflow:visible; }
+  .hxOverlay { position:static; display:block; background:transparent; }
+  .hxBar, .hxNav { display:none !important; }
+  .hxStage { display:block; padding:0; }
+  .hxFrame { display:block !important; max-width:none; width:100vw; height:100vh; aspect-ratio:auto; page-break-after:always; break-after:page; }
+  .hxSlide { border-radius:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+
 /* Q1-Q4 chips under a section heading, matching the dashboard */
 .qRow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0 2px; font-size:12.5px; color:var(--muted); }
 .qRow > span { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:4px 9px; }
@@ -1225,6 +1303,7 @@ var S = {
   healthScope:'week', healthQuarter:null, healthYear:null, healthMonth:null, baseByYear:{}, srScope:'quarter', srQuarter:null, srMonth:null, srOpenQ:null,
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
   baseHealthPeriod:'week',
+  hx:null,
   dbAcc:{kpiDay:false, kpiWeek:false},
   smartGoals:[], smartYear:null, smartCategory:'Faith', smartDraft:null,
   dbCustomize:false,
@@ -2056,6 +2135,7 @@ function baseHealthAccHtml(){
     var b = '<div class="deptChips">'+BASE_HEALTH_PERIODS.map(function(id){
       return '<button class="deptChip'+(period===id?' on':'')+'" data-baseHealthPeriod="'+id+'">'+esc(baseHealthPeriodLabel(id))+'</button>';
     }).join('')+'</div>';
+    b += hxBtnHtml_('base');
     [['lonely','Loneliness (avg, lower is better)', false],
      ['clarity','Clarity (avg)', true],
      ['growth','Personal growth (avg)', true],
@@ -2498,6 +2578,7 @@ function srCheckinHistoryHtml(){
   var data = srCheckinForScope_(scope, m, q);
   var scopeNoun = srScopeNoun_(scope);
   var h='<h3 style="margin-top:16px">🏠 '+esc(t('Base health'))+' · '+esc(t(campusName(S.me.campus)))+'</h3>';
+  h+=hxBtnHtml_('health');
   h+='<div class="card">'+
     '<div class="pmeta" style="margin-bottom:8px">'+
     esc(t('Starts with a Jan–Jul 2026 import from a separate check-in tool, then continues from the weekly check-in below. Team-wide and anonymous — not linked to any individual profile.'))+
@@ -6310,6 +6391,7 @@ function healthHtml(){
   var hM = Number(S.healthMonth!=null ? S.healthMonth : new Date().getMonth()); // 0-11
 
   h += '<h3>🏠 '+esc(t('Base health'))+' · '+esc(t(campusName(S.me.campus)))+'</h3>';
+  h += hxBtnHtml_('health');
   h += '<div class="pickerRow">'+
     '<label class="pick"><span>'+esc(t('View'))+'</span><select id="healthScopeSel">'+
       [['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year']].map(function(sc){
@@ -6394,6 +6476,387 @@ function healthHtml(){
   h += '<p class="hint">🔒 '+esc(t('Base figures are totals only — no names, and nobody sees an individual answer.'))+'</p>';
 
   return h;
+}
+
+/* ---------- Health export: the base's figures as slides ----------
+   "Export" on Base health opens the same numbers the page shows — the
+   period the pickers are set to, for the reader's own campus — as a
+   full-screen deck: one figure family per slide, in the app's own type and
+   colours, big enough to read from the back of a room or drop straight
+   into a staff meeting. Three ways out of it: save the slide on screen as
+   a PNG, save every slide, or print the deck to a PDF (each slide lands on
+   its own landscape page — see the @media print rules).
+
+   Everything here is pooled and anonymous, same as the page: the model
+   only ever sees survey rows by device token and counts distinct tokens
+   for "people answered". Nothing about any one person is on a slide.
+
+   Two renderers share one model (hxSlides_): HTML for the on-screen deck
+   and print, and a canvas for the PNGs — so a saved image is the slide you
+   were looking at, not an approximation of it. */
+var HX_SCALES = [
+  { id:'lonely',    label:'Loneliness',      higherBetter:false, sub:'lower is better' },
+  { id:'clarity',   label:'Clarity',         higherBetter:true },
+  { id:'growth',    label:'Personal growth', higherBetter:true },
+  { id:'langHours', label:'Language study',  hours:true, sub:'avg hours a week' }
+];
+var HX_YESNO = [
+  { id:'sharedFaith', label:'Shared their faith', higherBetter:true },
+  { id:'sabbath',     label:'Took a sabbath',     higherBetter:true },
+  { id:'oneOnOne',    label:'Had a one-on-one',   higherBetter:true },
+  { id:'exercise',    label:'Exercised 3+ days',  higherBetter:true },
+  { id:'quietTime',   label:'Regular quiet time', higherBetter:true },
+  { id:'porn',        label:'Looked at porn',     higherBetter:false },
+  { id:'debt',        label:'Have staff debt',    higherBetter:false }
+];
+var HX_MONTHLY = [
+  { id:'familyCall',     label:'Called family',          higherBetter:true },
+  { id:'lonelyMonth',    label:'Often felt lonely',      higherBetter:false },
+  { id:'ministryUpdate', label:'Sent a ministry update', higherBetter:true },
+  { id:'twoOneOnOnes',   label:'Had 2+ one-on-ones',     higherBetter:true }
+];
+
+function hxSrData_(){
+  return typeof SR_CHECKIN_QUESTIONS!=='undefined' && typeof SR_CHECKIN_WEEKS!=='undefined';
+}
+/* Which period to export — read off whichever pickers the reader is
+   looking at, so the deck matches the screen: the Health tab's View
+   picker, Siem Reap's own Month / Quarter / Year picker, or the Base tab's
+   period chips. month is 0-11, quarter 1-4, wk an ISO week. */
+function hxSpec_(source){
+  var campus = S.me.campus, cur = thisWeek(), now = new Date(), yr = now.getFullYear();
+  if(source==='base'){
+    var p = S.baseHealthPeriod || 'week';
+    var by = (S.base && Number(S.base.year)) || yr;
+    if(p==='week') return { campus:campus, scope:'week', wk:cur, year:by };
+    if(p==='year') return { campus:campus, scope:'year', year:by };
+    return { campus:campus, scope:'quarter', quarter:Number(p.slice(1)), year:by };
+  }
+  if(campus==='siemreap' && hxSrData_()){
+    var sc = S.srScope || 'quarter';
+    return { campus:campus, scope:sc, sr:true, year:yr,
+      month:(S.srMonth!=null ? Number(S.srMonth) : now.getMonth()+1)-1,
+      quarter:Number(S.srQuarter || Math.ceil((now.getMonth()+1)/3)) };
+  }
+  return { campus:campus, scope:S.healthScope||'week', wk:Number(S.healthWeek||cur),
+    month:Number(S.healthMonth!=null ? S.healthMonth : now.getMonth()),
+    quarter:Number(S.healthQuarter || (qOf(cur)+1)), year:Number(S.healthYear||yr) };
+}
+function hxRowsFor_(R, spec, ids){
+  if(spec.scope==='month') return R.surveyRows(ids).filter(function(r){ return new Date(weekBounds_(r.week).to).getMonth()===spec.month; });
+  if(spec.scope==='quarter') return R.surveyRows(ids, undefined, spec.quarter-1);
+  if(spec.scope==='year') return R.surveyRows(ids);
+  return R.surveyRows(ids, spec.wk);
+}
+/* The period before, for the ▲/▼ on the cover — none for a year, or for
+   the first week / month / quarter, same as the page. */
+function hxPrevSpec_(spec){
+  if(spec.scope==='week' && spec.wk>1) return Object.assign({}, spec, { wk:spec.wk-1 });
+  if(spec.scope==='month' && spec.month>0) return Object.assign({}, spec, { month:spec.month-1 });
+  if(spec.scope==='quarter' && spec.quarter>1) return Object.assign({}, spec, { quarter:spec.quarter-1 });
+  return null;
+}
+function hxPeriodLabel_(spec){
+  if(spec.scope==='week') return weekRangeLabel_(spec.wk);
+  if(spec.scope==='month') return MONTH_ABBR[spec.month]+' '+spec.year;
+  if(spec.scope==='quarter') return 'Q'+spec.quarter+' '+spec.year;
+  return String(spec.year);
+}
+function hxPrevWord_(spec){
+  if(spec.scope==='week') return t('vs last week');
+  if(spec.scope==='month') return t('vs last month');
+  return t('vs last quarter');
+}
+function hxScore_(rows){
+  if(!rows.length) return null;
+  var s=0; rows.forEach(function(r){ s+=compositeOf(r); });
+  return s/rows.length;
+}
+/* Everything a slide could show, computed once. Siem Reap's yes/no
+   percentages come from the same import-plus-live series its Base health
+   card plots (srCheckinForScope_), so the deck agrees with the bars on
+   screen; every other figure — and every figure on Poipet — is the plain
+   pooled roll-up the generic Base health section prints. */
+function hxModel_(spec){
+  /* S.base is always the current year's data; a payload without a year
+     field (getData never sets one) still means "this year", so an unmatched
+     current-year request falls back to it rather than to nothing. */
+  var R = spec.scope==='year' ? (baseRFor(spec.year) || (spec.year===new Date().getFullYear() ? baseR() : null)) : baseR();
+  if(!R) return null;
+  var ids = [spec.campus];
+  var rows = hxRowsFor_(R, spec, ids);
+  var prevSpec = hxPrevSpec_(spec);
+  var prevRows = prevSpec ? hxRowsFor_(R, prevSpec, ids) : [];
+  var people = {}, weeks = {};
+  rows.forEach(function(r){ people[r.device||'?']=1; weeks[r.week]=1; });
+  var scales = HX_SCALES.map(function(q){
+    return { id:q.id, label:q.label, sub:q.sub||'', hours:!!q.hours, higherBetter:q.higherBetter,
+      value: rows.length ? R.avg(rows, q.id) : null };
+  });
+  var pctOf = function(id){ return rows.length ? R.pct(rows, id) : null; };
+  var yes = HX_YESNO.map(function(q){ return { id:q.id, label:q.label, higherBetter:q.higherBetter, value:pctOf(q.id) }; });
+  var monthly = HX_MONTHLY.map(function(q){ return { id:q.id, label:q.label, higherBetter:q.higherBetter, value:pctOf(q.id) }; });
+  if(spec.sr && spec.scope!=='week'){
+    var byLive = {};
+    SR_CHECKIN_QUESTIONS.forEach(function(q){ if(q.liveId) byLive[q.liveId]=q.id; });
+    var bars = srCheckinForScope_(spec.scope, spec.month+1, spec.quarter).bars, byId = {};
+    bars.forEach(function(b){ byId[b.id]=b.pct; });
+    yes.concat(monthly).forEach(function(it){
+      var sid = byLive[it.id];
+      if(sid && byId[sid]!==undefined) it.value = byId[sid];
+    });
+  }
+  monthly = monthly.filter(function(it){ return it.value!==null; });
+  var total = R.checkinRate(ids, spec.wk||thisWeek()).total;
+  return { campus:spec.campus, spec:spec, periodLabel:hxPeriodLabel_(spec), prevWord:hxPrevWord_(spec),
+    rows:rows.length, people:Object.keys(people).length, weeks:Object.keys(weeks).length, total:total,
+    score:hxScore_(rows), prevScore:prevSpec ? hxScore_(prevRows) : null,
+    scales:scales, yes:yes, monthly:monthly };
+}
+/* One figure on a slide: the number, its unit, a label and the colour the
+   rest of the app would give that result — good when it is good, warm when
+   it is not — via gpPctColor on a "how good is this" percentage. */
+function hxPctItem_(it){
+  var v = it.value;
+  var good = v===null ? null : (it.higherBetter ? v : 100-v);
+  return { n: v===null ? '—' : String(v), unit: v===null ? '' : '%', label:t(it.label),
+    color: good===null ? 'var(--faint)' : gpPctColor(good) };
+}
+function hxScaleItem_(it){
+  var v = it.value;
+  if(it.hours) return { n: v===null ? '—' : (Math.round(v*10)/10).toString(), unit: v===null ? '' : ' '+t('hrs'), label:t(it.label), sub:it.sub?t(it.sub):'', color:'var(--accent)' };
+  var good = v===null ? null : Math.round((it.higherBetter ? v : 10-v)*10);
+  return { n: v===null ? '—' : v.toFixed(1), unit: v===null ? '' : '/10', label:t(it.label), sub:it.sub?t(it.sub):'',
+    color: good===null ? 'var(--faint)' : gpPctColor(good) };
+}
+function hxSlides_(m){
+  var kicker = t('Base Health')+' · '+t(campusName(m.campus));
+  var slides = [];
+  var trend = null;
+  if(m.score!==null && m.prevScore!==null){
+    var pc = pctChange(m.prevScore, m.score);
+    trend = { pct:pc, text:(pc>0?'▲ ':pc<0?'▼ ':'') + Math.abs(pc) + '% ' + m.prevWord, good: pc>=0 };
+  }
+  slides.push({ kind:'cover', kicker:t('Base Health'), title:t(campusName(m.campus)), sub:m.periodLabel,
+    item:{ n: m.score===null ? '—' : m.score.toFixed(1), unit: m.score===null ? '' : '/10', label:t('Staff Health Score'),
+      color: m.score===null ? 'var(--faint)' : gpPctColor(Math.round(m.score*10)) }, trend:trend });
+  var who = [{ n:String(m.rows), unit:'', label:t('check-ins logged'), color:'var(--accent)' },
+    { n:String(m.people), unit:'', label: m.total ? gpT('of {n} staff answered',{n:m.total}) : t('people answered'), color:'var(--accent)' }];
+  if(m.spec.scope==='week' && m.total) who.push({ n:String(gpCheckinPct(m.people, m.total)), unit:'%', label:t('response rate'), color:gpPctColor(gpCheckinPct(m.people, m.total)) });
+  else who.push({ n:String(m.weeks), unit:'', label:t('weeks covered'), color:'var(--accent)' });
+  slides.push({ kind:'stats', kicker:kicker, title:t('Who checked in'), sub:m.periodLabel, items:who });
+  slides.push({ kind:'stats', kicker:kicker, title:t('How we’re doing'), sub:m.periodLabel, items:m.scales.map(hxScaleItem_) });
+  slides.push({ kind:'stats', kicker:kicker, title:t('Habits'), sub:m.periodLabel+' · 1/2', items:m.yes.slice(0,4).map(hxPctItem_) });
+  slides.push({ kind:'stats', kicker:kicker, title:t('Habits'), sub:m.periodLabel+' · 2/2', items:m.yes.slice(4).map(hxPctItem_) });
+  if(m.monthly.length) slides.push({ kind:'stats', kicker:kicker, title:t('Monthly Check-In'), sub:m.periodLabel, items:m.monthly.map(hxPctItem_) });
+  slides.push({ kind:'end', kicker:kicker, title:t('Totals only — no names.'), sub:t('Nobody sees an individual answer.'),
+    foot:gpT('GP Impact · {date}',{date:todayStr()}) });
+  return slides;
+}
+
+/* ---- on screen ---- */
+function hxRoot_(){
+  var r = document.getElementById('hxRoot');
+  if(!r){ r = document.createElement('div'); r.id='hxRoot'; document.body.appendChild(r); }
+  return r;
+}
+function hxItemHtml_(it, cls){
+  return '<div class="hxItem'+(cls?' '+cls:'')+'"><div class="hxNum" style="color:'+it.color+'">'+esc(it.n)+
+    (it.unit ? '<span class="hxUnit">'+esc(it.unit)+'</span>' : '')+'</div>'+
+    '<div class="hxLbl">'+esc(it.label)+'</div>'+(it.sub ? '<div class="hxSub">'+esc(it.sub)+'</div>' : '')+'</div>';
+}
+function hxSlideHtml_(sl){
+  var logo = (typeof GP_LOGO==='string') ? '<img class="hxLogo" src="'+GP_LOGO+'" alt="">' : '';
+  if(sl.kind==='cover'){
+    return '<div class="hxSlide hxCover">'+logo+'<div class="hxKicker">'+esc(sl.kicker)+'</div>'+
+      '<div class="hxTitle big">'+esc(sl.title)+'</div><div class="hxWhen">'+esc(sl.sub)+'</div>'+
+      hxItemHtml_(sl.item, 'hxHero')+
+      (sl.trend ? '<div class="hxTrend '+(sl.trend.good?'good':'bad')+'">'+esc(sl.trend.text)+'</div>' : '')+'</div>';
+  }
+  if(sl.kind==='end'){
+    return '<div class="hxSlide hxEnd">'+logo+'<div class="hxKicker">'+esc(sl.kicker)+'</div>'+
+      '<div class="hxTitle">🔒 '+esc(sl.title)+'</div><div class="hxWhen">'+esc(sl.sub)+'</div>'+
+      '<div class="hxFoot">'+esc(sl.foot)+'</div></div>';
+  }
+  return '<div class="hxSlide"><div class="hxHead"><div class="hxKicker">'+esc(sl.kicker)+'</div>'+
+    '<div class="hxTitle">'+esc(sl.title)+'</div><div class="hxWhen">'+esc(sl.sub)+'</div></div>'+
+    '<div class="hxGrid n'+sl.items.length+'">'+sl.items.map(function(it){ return hxItemHtml_(it); }).join('')+'</div></div>';
+}
+function hxOpen_(source){
+  var m = hxModel_(hxSpec_(source));
+  if(!m){ showMsg(t('Loading…')); return; }
+  S.hx = { slides:hxSlides_(m), i:0, slug:(m.campus+'-'+m.periodLabel).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') };
+  gpTap();
+  hxRender_();
+}
+function hxClose_(){
+  S.hx = null;
+  hxRoot_().innerHTML = '';
+  document.body.classList.remove('hxOn');
+  if(hxKeyFn_){ document.removeEventListener('keydown', hxKeyFn_); hxKeyFn_ = null; }
+}
+var hxKeyFn_ = null;
+function hxGo_(k){
+  if(!S.hx) return;
+  var n = S.hx.slides.length;
+  if(k<0 || k>=n) return;
+  S.hx.i = k; hxRender_();
+}
+function hxRender_(){
+  var root = hxRoot_();
+  if(!S.hx){ root.innerHTML=''; return; }
+  var slides = S.hx.slides, i = S.hx.i, n = slides.length;
+  document.body.classList.add('hxOn');
+  root.innerHTML = '<div class="hxOverlay" id="hxOverlay" role="dialog" aria-modal="true" aria-label="'+esc(t('Health slides'))+'">'+
+    '<div class="hxBar">'+
+      '<span class="hxCount">'+esc(gpT('Slide {i} of {n}',{i:i+1,n:n}))+'</span>'+
+      '<span class="hxTools">'+
+        '<button class="hxTool" id="hxPng">'+esc(t('Save image'))+'</button>'+
+        '<button class="hxTool" id="hxAll">'+esc(t('Save all'))+'</button>'+
+        '<button class="hxTool" id="hxPdf">'+esc(t('PDF'))+'</button>'+
+        '<button class="hxClose" id="hxClose" aria-label="'+esc(t('Close'))+'">✕</button>'+
+      '</span></div>'+
+    '<div class="hxStage" id="hxStage">'+slides.map(function(sl,k){
+      return '<div class="hxFrame'+(k===i?' on':'')+'" data-hxk="'+k+'">'+hxSlideHtml_(sl)+'</div>';
+    }).join('')+'</div>'+
+    '<div class="hxNav">'+
+      '<button class="hxArrow" id="hxPrev" aria-label="'+esc(t('Previous slide'))+'"'+(i===0?' disabled':'')+'>‹</button>'+
+      '<div class="hxDots">'+slides.map(function(sl,k){ return '<button class="hxDot'+(k===i?' on':'')+'" data-hxgo="'+k+'" aria-label="'+esc(gpT('Slide {i} of {n}',{i:k+1,n:n}))+'"></button>'; }).join('')+'</div>'+
+      '<button class="hxArrow" id="hxNext" aria-label="'+esc(t('Next slide'))+'"'+(i===n-1?' disabled':'')+'>›</button>'+
+    '</div></div>';
+  document.getElementById('hxClose').onclick = function(){ gpTap(); hxClose_(); };
+  document.getElementById('hxPrev').onclick = function(){ gpTap(); hxGo_(i-1); };
+  document.getElementById('hxNext').onclick = function(){ gpTap(); hxGo_(i+1); };
+  root.querySelectorAll('[data-hxgo]').forEach(function(b){ b.onclick=function(){ hxGo_(Number(b.getAttribute('data-hxgo'))); }; });
+  document.getElementById('hxPng').onclick = function(){ hxSavePng_(i); };
+  document.getElementById('hxAll').onclick = function(){ hxSaveAll_(); };
+  document.getElementById('hxPdf').onclick = function(){ window.print(); };
+  var stage = document.getElementById('hxStage'), x0 = null;
+  stage.ontouchstart = function(e){ x0 = e.touches[0].clientX; };
+  stage.ontouchend = function(e){
+    if(x0===null) return;
+    var dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if(dx < -40) hxGo_(i+1); else if(dx > 40) hxGo_(i-1);
+  };
+  stage.onclick = function(e){
+    if(e.target.closest('button')) return;
+    var r = stage.getBoundingClientRect();
+    if(e.clientX - r.left > r.width/2) hxGo_(i+1); else hxGo_(i-1);
+  };
+  if(!hxKeyFn_){
+    hxKeyFn_ = function(e){
+      if(!S.hx) return;
+      if(e.key==='ArrowRight' || e.key===' ') { e.preventDefault(); hxGo_(S.hx.i+1); }
+      else if(e.key==='ArrowLeft') { e.preventDefault(); hxGo_(S.hx.i-1); }
+      else if(e.key==='Escape') hxClose_();
+    };
+    document.addEventListener('keydown', hxKeyFn_);
+  }
+}
+
+/* ---- as an image ----
+   The slide drawn again on a 1600×900 canvas, from the same model, in the
+   theme the reader is looking at (the CSS variables are read off the page,
+   so dark mode saves dark slides). Fonts are awaited first where the
+   browser lets us, otherwise the system fallback draws. */
+function hxCanvas_(sl, cb){
+  var W=1600, H=900;
+  var c=document.createElement('canvas'); c.width=W; c.height=H;
+  var g=c.getContext('2d');
+  var cs=getComputedStyle(document.documentElement);
+  var v=function(name){ return cs.getPropertyValue(name).trim() || '#1F44FF'; };
+  var col=function(x){ var mm=/^var\((--[a-z0-9-]+)\)$/i.exec(x||''); return mm ? v(mm[1]) : (x||v('--accent')); };
+  var KO=function(px){ return px+'px Koulen, "Kantumruy Pro", sans-serif'; };
+  var KP=function(px, w){ return (w||400)+' '+px+'px "Kantumruy Pro", system-ui, sans-serif'; };
+  var wrap=function(text, maxW){
+    var words=String(text).split(' '), lines=[], line='';
+    words.forEach(function(w){
+      var tryLine = line ? line+' '+w : w;
+      if(g.measureText(tryLine).width > maxW && line){ lines.push(line); line=w; } else line=tryLine;
+    });
+    if(line) lines.push(line);
+    return lines;
+  };
+  var draw=function(){
+    g.fillStyle=v('--bg'); g.fillRect(0,0,W,H);
+    g.fillStyle=v('--accent'); g.fillRect(0,0,W,12);
+    g.fillStyle=v('--amber'); g.fillRect(0,12,W,3);
+    g.textBaseline='alphabetic';
+    var kicker=function(y){ g.fillStyle=v('--faint'); g.font=KP(26,700); g.fillText(String(sl.kicker).toUpperCase(), 90, y); };
+    var item=function(it, x, y, w, numPx){
+      g.fillStyle=col(it.color); g.font=KO(numPx);
+      g.fillText(it.n, x, y);
+      var nw=g.measureText(it.n).width;
+      if(it.unit){ g.font=KO(Math.round(numPx*0.42)); g.fillText(it.unit, x+nw+8, y); }
+      g.fillStyle=v('--ink'); g.font=KP(Math.round(numPx*0.22), 500);
+      var ly=y+Math.round(numPx*0.36);
+      wrap(it.label, w-20).forEach(function(l, k){ g.fillText(l, x, ly+k*Math.round(numPx*0.27)); });
+      if(it.sub){ g.fillStyle=v('--muted'); g.font=KP(Math.round(numPx*0.17)); g.fillText(it.sub, x, ly+Math.round(numPx*0.27)*wrap(it.label, w-20).length+4); }
+    };
+    if(sl.kind==='cover'){
+      kicker(120);
+      g.fillStyle=v('--ink'); g.font=KO(150); g.fillText(sl.title, 90, 270);
+      g.fillStyle=v('--muted'); g.font=KP(40); g.fillText(sl.sub, 90, 335);
+      item(sl.item, 90, 640, 900, 300);
+      if(sl.trend){ g.fillStyle=v(sl.trend.good?'--good':'--bad'); g.font=KP(40,700); g.fillText(sl.trend.text, 90, 830); }
+    } else if(sl.kind==='end'){
+      kicker(120);
+      g.fillStyle=v('--ink'); g.font=KO(96);
+      wrap(sl.title, W-180).forEach(function(l,k){ g.fillText(l, 90, 400+k*110); });
+      g.fillStyle=v('--muted'); g.font=KP(40); g.fillText(sl.sub, 90, 560);
+      g.fillStyle=v('--faint'); g.font=KP(28); g.fillText(sl.foot, 90, 820);
+    } else {
+      kicker(110);
+      g.fillStyle=v('--ink'); g.font=KO(84); g.fillText(sl.title, 90, 200);
+      g.fillStyle=v('--muted'); g.font=KP(34); g.fillText(sl.sub, 90, 250);
+      g.fillStyle=v('--border'); g.fillRect(90, 290, W-180, 2);
+      var n=sl.items.length, cols=n<=3?n:2, rows=Math.ceil(n/cols);
+      var cw=(W-180)/cols, ch=(H-340)/rows;
+      var numPx = rows===1 ? 190 : 150;
+      sl.items.forEach(function(it,k){
+        var cx=90+(k%cols)*cw, cy=340+Math.floor(k/cols)*ch+Math.round(numPx*0.95);
+        item(it, cx, cy, cw, numPx);
+      });
+    }
+  };
+  var ready = (document.fonts && document.fonts.load)
+    ? Promise.all([document.fonts.load('100px Koulen'), document.fonts.load('700 30px "Kantumruy Pro"'), document.fonts.load('30px "Kantumruy Pro"')])
+    : Promise.resolve();
+  ready.then(draw, draw).then(function(){ cb(c); }, function(){ cb(c); });
+}
+function hxDownload_(canvas, name, done){
+  var finish=function(url){
+    var a=document.createElement('a'); a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ if(/^blob:/.test(url)) URL.revokeObjectURL(url); }, 60000);
+    if(done) done();
+  };
+  try {
+    if(canvas.toBlob) canvas.toBlob(function(b){ if(b) finish(URL.createObjectURL(b)); else finish(canvas.toDataURL('image/png')); }, 'image/png');
+    else finish(canvas.toDataURL('image/png'));
+  } catch(e){ showMsg(t('Could not save the image')); if(done) done(); }
+}
+function hxSavePng_(k, done){
+  if(!S.hx) return;
+  var sl=S.hx.slides[k], name='gp-health-'+S.hx.slug+'-'+(k+1)+'.png';
+  hxCanvas_(sl, function(c){ hxDownload_(c, name, done); });
+}
+/* One after another with a breath between, so browsers that ask before a
+   page saves several files get one question, not seven at once. */
+function hxSaveAll_(){
+  if(!S.hx) return;
+  var n=S.hx.slides.length, k=0;
+  showMsg(gpT('Saving {n} images…',{n:n}));
+  var next=function(){ if(!S.hx || k>=n) return; var me=k++; hxSavePng_(me, function(){ setTimeout(next, 450); }); };
+  next();
+}
+function hxBind_(){
+  document.querySelectorAll('[data-healthexport]').forEach(function(b){
+    b.onclick=function(){ hxOpen_(b.getAttribute('data-healthexport')); };
+  });
+}
+function hxBtnHtml_(source){
+  return '<button class="hxOpenBtn" data-healthexport="'+source+'">📽️ '+esc(t('Export as slides'))+'</button>';
 }
 
 /* Sending the week. Every 1-10 question has to be answered — a composite built
@@ -8204,6 +8667,7 @@ function bind(){
   });
   gpAnimateBars();
   gpAnimateLine();
+  hxBind_();
 
   /* --- the weekly check-in form --- */
   document.querySelectorAll('[data-wslide]').forEach(function(sl){
