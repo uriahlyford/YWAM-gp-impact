@@ -342,7 +342,11 @@ show up here too), men/women reached, notes.
 Accounts, Approvals and Mentors), `accounts`, `approvals`, `mentors` (`adminMentorsHtml_`:
 one campus at a time via `data-adminmentorcampus` chips opening on the admin's own, one card
 per mentor with their people, `Waiting` until accepted, then everyone with no mentor —
-read-only, the mentor is set on the person page), `kpis`, `broadcast`, `merge`, and
+read-only, the mentor is set on the person page), `leave` (`adminLeaveHtml_`: everyone's
+leave from `adminListTrips`, one campus at a time + a year picker — waiting with Approve /
+Decline via `adminDecideTrip` (admins may decide pending or `noted` requests, never one
+already decided), away or coming up, days used per person against `PTO_ANNUAL_CAP`, earlier
+requests folded), `kpis`, `broadcast`, `merge`, and
 `person` (`S.adminPersonId`). Every page has one back link, `#adminBack[data-adminback]`
 — `week` (My Home), `home`, or `accounts`. **Accounts** is a campus chip row (opens on the
 admin's own campus), the search (`#adminSearch`, kept in `S.adminSearch` so it survives a
