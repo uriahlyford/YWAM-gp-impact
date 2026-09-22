@@ -2182,6 +2182,48 @@ async function respondToTrip(username, pin, tripId, approve) {
   return getTripRequests(username, pin);
 }
 
+/* Admin side: everyone's leave, both campuses, every year on file — each
+   request with who asked, their campus and department and who their mentor
+   is, plus each person's year-by-year totals. An admin may also decide a
+   request that is still waiting (pending on a mentor, or 'noted' because
+   the person has no mentor to ask) — the same fields a mentor's decision
+   sets, so the person's own page reads it the same way. */
+async function adminListTrips(username, pin) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const staff = await getStaff_();
+  const byId = {}; staff.forEach(function (x) { byId[x.id] = x; });
+  const trips = (await getTrips_()).slice().sort(function (a, b) { return a.from < b.from ? 1 : -1; });
+  const totals = {};
+  staff.forEach(function (x) { totals[x.id] = awayTotals_(trips.filter(function (r) { return r.staffId === x.id; })); });
+  return {
+    ok: true, ptoCap: PTO_ANNUAL_CAP,
+    trips: trips.map(function (r) {
+      const who = byId[r.staffId], mentor = r.mentorId ? byId[r.mentorId] : null;
+      return Object.assign(tripOut_(r), {
+        staffId: r.staffId, name: who ? who.name : '—', campus: who ? who.campus : (r.campus || ''), dept: who ? who.dept : '', ministry: who ? (who.ministry || '') : '',
+        active: who ? (who.active !== false && !who.archived) : false,
+        mentorName: mentor ? mentor.name : '', decidedBy: r.decidedBy ? ((byId[r.decidedBy] || {}).name || '') : ''
+      });
+    }),
+    totals: totals
+  };
+}
+async function adminDecideTrip(username, pin, tripId, approve) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  const rows = await getTrips_();
+  const idx = rows.findIndex(function (r) { return r.id === tripId; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  if (rows[idx].status !== 'pending' && rows[idx].status !== 'noted') return { ok: false, err: 'already_decided' };
+  rows[idx].status = approve ? 'approved' : 'declined';
+  rows[idx].decidedBy = admin.id;
+  rows[idx].decidedAt = new Date().toISOString();
+  rows[idx].updated = rows[idx].decidedAt;
+  await writeJSON('trips', rows);
+  return adminListTrips(username, pin);
+}
+
 /* ==================== 1-on-1 requests ====================
    Either side of an approved mentor/mentee relationship can ask the other
    for a 1-on-1 — a mentor asking a mentee, or a mentee asking their mentor.
@@ -2943,6 +2985,8 @@ const HANDLERS = {
   hrArchive: function (a) { return hrArchive(a[0], a[1], a[2], a[3]); },
   hrUnarchive: function (a) { return hrUnarchive(a[0], a[1], a[2]); },
   getStructure: function (a) { return getStructure(a[0], a[1], a[2], a[3], a[4]); },
+  adminListTrips: function (a) { return adminListTrips(a[0], a[1]); },
+  adminDecideTrip: function (a) { return adminDecideTrip(a[0], a[1], a[2], a[3]); },
   saveStructure: function (a) { return saveStructure(a[0], a[1], a[2], a[3], a[4]); },
   hrCandidates: function (a) { return hrCandidates(a[0], a[1]); },
   hrSaveCandidate: function (a) { return hrSaveCandidate(a[0], a[1], a[2]); },

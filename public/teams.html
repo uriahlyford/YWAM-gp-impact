@@ -644,6 +644,8 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .adminRowText .rowSub { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .adminPersonHead { display:flex; gap:12px; align-items:center; }
 .adminMentor { margin-bottom:12px; }
+.leaveActions { display:flex; gap:8px; margin-top:8px; }
+.leaveActions .btn { margin:0; flex:1; padding:9px 10px; }
 .adminMentorHead { display:flex; align-items:center; gap:10px; width:100%; background:none; border:0; padding:6px 0 8px; font:inherit; text-align:left; color:var(--ink); cursor:pointer; }
 .mmTile.hot { border-color:var(--accent); }
 .mmTile.hot .mmTileNum { color:var(--accent); }
@@ -1237,7 +1239,7 @@ var S = {
      so more than one can sit on the same page without their state colliding. */
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovError:{}, ovDeptOf:{}, ovInputOpen:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
-  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', adminMentorCampus:null, broadcastDraft:'',
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', adminMentorCampus:null, adminLeave:null, adminLeaveLoading:false, adminLeaveError:'', adminLeaveCampus:null, adminLeaveYear:null, adminLeavePast:false, broadcastDraft:'',
   hrStaff:null, hrLoading:false, hrError:'', hrSub:'home', hrPersonId:null, hrSearch:'', hrCampusTab:null, hrShowArchived:false, hrContractForm:null, hrArchiveDraft:null, hrDue:null, hrFollowUps:null, hrTab:'staff',
   cands:null, candsLoading:false, candsError:'', candStage:'', candType:'', candSearch:'', candShowArchived:false, candForm:null, candPersonId:null, candNoteDraft:'',
   adminOkrAcc:{},
@@ -4051,6 +4053,7 @@ var ADMIN_SUBS = [
   { id:'accounts', label:'Accounts', emoji:'👤', blurb:'Find someone — edit their profile, reset a PIN, set their mentor or make them a ministry leader' },
   { id:'approvals', label:'Approvals', emoji:'✅', blurb:'New leadership sign-ups waiting for a yes' },
   { id:'mentors', label:'Mentors', emoji:'🤝', blurb:'Who is walking with whom — every mentor and their people, and who has nobody yet' },
+  { id:'leave', label:'Leave', emoji:'🗓️', blurb:'Everyone’s leave requests, by campus — waiting, coming up, and days used this year' },
   { id:'kpis', label:'Ministry KPIs', emoji:'🗂️', blurb:'What each ministry tracks — add, rename, remove, re-time' },
   { id:'broadcast', label:'Announcements', emoji:'📣', blurb:'A message to everyone’s notification bell' },
   { id:'merge', label:'Merge duplicates', emoji:'🔀', blurb:'Two profiles that are really one person' }
@@ -4074,6 +4077,7 @@ function adminHtml(){
   if(sub==='kpis') return h+adminKpisHtml_();
   if(sub==='approvals') return h+adminApprovalsHtml_();
   if(sub==='mentors') return h+adminMentorsHtml_();
+  if(sub==='leave') return h+adminLeaveHtml_();
   if(sub==='merge') return h+adminMergeHtml_();
   return h+adminAccountsHtml_();
 }
@@ -4085,7 +4089,8 @@ function adminHomeHtml_(){
   h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
   h+='<div class="adminMenu">'+ADMIN_SUBS.map(function(x){
     var noMentorN = loading ? null : list.filter(function(x2){ return x2.active && !x2.archived && !x2.mentorId; }).length;
-    var badge = x.id==='approvals' ? pendingN : x.id==='accounts' ? activeN : x.id==='mentors' ? noMentorN : null;
+    var waitingN = S.adminLeave ? S.adminLeave.trips.filter(function(tr){ return (tr.status==='pending'||tr.status==='noted') && tr.active; }).length : null;
+    var badge = x.id==='approvals' ? pendingN : x.id==='accounts' ? activeN : x.id==='mentors' ? noMentorN : x.id==='leave' ? waitingN : null;
     var badgeHtml = badge===null ? (loading && (x.id==='approvals'||x.id==='accounts'||x.id==='mentors') ? '<span class="adminBadge">…</span>' : '')
       : '<span class="adminBadge'+(x.id==='approvals'&&badge?' hot':'')+'">'+badge+'</span>';
     return '<button class="card adminMenuCard" data-adminsub="'+x.id+'"><span class="adminMenuEmoji">'+x.emoji+'</span>'+
@@ -4170,6 +4175,75 @@ function adminMentorsHtml_(){
     h+='<p class="sub" style="margin:0 0 6px">'+esc(t('Open someone to set their mentor.'))+'</p>';
     h+='<div class="accCard adminList">'+none.sort(function(a,b){ return a.name<b.name?-1:1; }).map(function(x){ return row(x,''); }).join('')+'</div>';
   }
+  return h;
+}
+
+/* Everyone's leave, one campus at a time: what is waiting for a yes (an
+   admin may decide it — a mentor normally does, but a request from someone
+   with no mentor has nobody else), what is coming up, this year's history,
+   and each person's days used against the cap. Read from adminListTrips
+   on first open. */
+function adminLeaveHtml_(){
+  if(S.adminLeaveError) return '<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load the leave requests.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.adminLeaveError)+'</p><button class="btn ghost" id="adminLeaveRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
+  var L=S.adminLeave;
+  if(!L) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
+  var yNow=new Date().getFullYear(), year=S.adminLeaveYear||yNow, today=todayStr();
+  var tabs=CAMPUSES.map(function(c){ return { id:c.id, label:c.short, n:L.trips.filter(function(tr){ return tr.campus===c.id && String(tr.from).slice(0,4)===String(year); }).length }; });
+  var activeTab = tabs.some(function(tb){ return tb.id===S.adminLeaveCampus; }) ? S.adminLeaveCampus
+    : (tabs.some(function(tb){ return tb.id===S.me.campus; }) ? S.me.campus : tabs[0].id);
+  S.adminLeaveCampus=activeTab;
+  var years=[]; L.trips.forEach(function(tr){ var y=String(tr.from).slice(0,4); if(years.indexOf(y)===-1) years.push(y); }); if(years.indexOf(String(yNow))===-1) years.push(String(yNow)); years.sort().reverse();
+  var h='<div class="deptChips">'+tabs.map(function(tb){
+    return '<button class="deptChip'+(activeTab===tb.id?' on':'')+'" data-adminleavecampus="'+esc(tb.id)+'">'+esc(tb.label)+' · '+tb.n+'</button>'; }).join('')+'</div>';
+  h+='<div class="pickerRow"><label class="pick" style="max-width:130px"><span>'+esc(t('Year'))+'</span><select id="adminLeaveYear">'+years.map(function(y){ return '<option value="'+y+'"'+(String(year)===y?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></label></div>';
+  var mine=L.trips.filter(function(tr){ return tr.campus===activeTab; });
+  var inYear=mine.filter(function(tr){ return String(tr.from).slice(0,4)===String(year); });
+  var waiting=mine.filter(function(tr){ return (tr.status==='pending'||tr.status==='noted') && tr.active; }).sort(function(a,b){ return a.from<b.from?-1:1; });
+  var upcoming=inYear.filter(function(tr){ return tr.status==='approved' && tr.to>=today; }).sort(function(a,b){ return a.from<b.from?-1:1; });
+  var away=upcoming.filter(function(tr){ return tr.from<=today; });
+  var past=inYear.filter(function(tr){ return !(tr.status==='approved' && tr.to>=today) && !((tr.status==='pending'||tr.status==='noted') && tr.active); }).sort(function(a,b){ return a.from<b.from?1:-1; });
+  h+='<div class="mmGrid">'+[
+      [t('Waiting for a yes'), waiting.length, waiting.length>0], [t('Away right now'), away.length, false],
+      [t('Coming up'), upcoming.length-away.length, false], [gpT('Requests in {year}',{year:year}), inYear.length, false]
+    ].map(function(x){ return '<div class="mmTile'+(x[2]?' hot':'')+'"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
+  var statusChip=function(tr){
+    var k=tr.status==='approved'?'active':tr.status==='declined'?'expired':(tr.status==='pending'||tr.status==='noted')?'due':'';
+    var label=tr.status==='approved'?t('Approved'):tr.status==='declined'?t('Declined'):tr.status==='noted'?t('Noted — no mentor'):t('Waiting');
+    return '<span class="hrChip '+k+'">'+esc(label)+'</span>';
+  };
+  var row=function(tr, actions){
+    var range=teamDate_(tr.from)+(tr.to!==tr.from?' → '+teamDate_(tr.to):'');
+    return '<div class="card slim leaveRow" data-adminleave="'+esc(tr.id)+'"><div class="teamHead"><div style="min-width:0">'+
+      '<div class="rowName"><button class="linkbtn inline" style="font-size:inherit;font-weight:700;text-decoration:none;color:var(--ink)" data-adminperson="'+esc(tr.staffId)+'">'+esc(tr.name)+'</button> <span class="rowSub">· '+esc(t(tr.dept))+'</span></div>'+
+      '<div class="rowSub">📅 '+esc(range)+' · '+esc(gpT('{n} work days',{n:tr.workDays}))+' · '+esc(t(leaveTypeLabel_(tr.type)))+'</div>'+
+      (tr.reason?'<div class="rowSub">'+esc(tr.reason)+'</div>':'')+
+      (tr.coverage?'<div class="rowSub">🤝 '+esc(t('Cover'))+': '+esc(tr.coverage)+'</div>':'')+
+      (tr.status==='pending' && tr.mentorName ? '<div class="hint">'+esc(gpT('Waiting on {name}',{name:tr.mentorName}))+'</div>' : tr.decidedBy ? '<div class="hint">'+esc(gpT('Decided by {name}',{name:tr.decidedBy}))+'</div>' : '')+
+      '</div>'+statusChip(tr)+'</div>'+(actions||'')+'</div>';
+  };
+  var decide=function(tr){ return '<div class="leaveActions"><button class="btn ghost" data-adminleaveok="'+esc(tr.id)+'">'+esc(t('Approve'))+'</button><button class="btn ghost" data-adminleaveno="'+esc(tr.id)+'">'+esc(t('Decline'))+'</button></div>'; };
+  h+='<h3>⏳ '+esc(t('Waiting for a yes'))+' <small>· '+waiting.length+'</small></h3>';
+  if(!waiting.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('Nothing waiting.'))+'</p></div>';
+  waiting.forEach(function(tr){ h+=row(tr, decide(tr)); });
+  h+='<h3>✈️ '+esc(t('Away now or coming up'))+' <small>· '+upcoming.length+'</small></h3>';
+  if(!upcoming.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('Nobody is away or booked to be.'))+'</p></div>';
+  upcoming.forEach(function(tr){ h+=row(tr); });
+  // days used this year, per person on this campus
+  var people={}; inYear.forEach(function(tr){ if(tr.status!=='declined') people[tr.staffId]=tr.name; });
+  var ids=Object.keys(people).sort(function(a,b){ return people[a]<people[b]?-1:1; });
+  if(ids.length){
+    h+='<h3>📊 '+esc(gpT('Days used in {year}',{year:year}))+'</h3><div class="card slim">'+
+      '<p class="hint" style="margin:0 0 6px">'+esc(gpT('Work days. Personal time off is capped at {n} a year; working outside and special condition are tracked separately.',{n:L.ptoCap}))+'</p>';
+    ids.forEach(function(id){
+      var tot=(L.totals[id]||{})[year]||{ outside:0, special:0, personal:0 };
+      var over=tot.personal>L.ptoCap;
+      h+='<div class="row"><div><div class="rowName"><button class="linkbtn inline" style="text-decoration:none;color:var(--ink);font-size:inherit" data-adminperson="'+esc(id)+'">'+esc(people[id])+'</button></div>'+
+        '<div class="rowSub">'+esc(t('Personal'))+' <b'+(over?' style="color:var(--bad)"':'')+'>'+tot.personal+'</b>/'+L.ptoCap+' · '+esc(t('Outside'))+' '+tot.outside+' · '+esc(t('Special'))+' '+tot.special+'</div></div></div>';
+    });
+    h+='</div>';
+  }
+  h+='<div class="accCard" style="margin-top:12px">'+accRowHtml('adminAcc', 'leavePast', '🗂️ '+esc(gpT('Earlier in {year}',{year:year}))+' · '+past.length, esc(t('Approved, declined and noted requests that are over')), function(){
+    return past.length ? past.map(function(tr){ return row(tr); }).join('') : '<p class="sub" style="margin:0">'+esc(t('Nothing earlier this year.'))+'</p>'; })+'</div>';
   return h;
 }
 
@@ -4697,6 +4771,32 @@ function bindAdmin(){
   document.querySelectorAll('[data-adminmentorcampus]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.adminMentorCampus=b.getAttribute('data-adminmentorcampus'); render(); };
   });
+  // --- leave, everyone's ---
+  if(S.adminSub==='leave' && !S.adminLeave && !S.adminLeaveLoading && !S.adminLeaveError){
+    S.adminLeaveLoading=true;
+    run('adminListTrips',[S.auth.user,S.auth.pin],function(d){
+      S.adminLeaveLoading=false;
+      if(d && d.ok) S.adminLeave=d; else S.adminLeaveError=(d && d.err) || t('The server answered without the leave requests.');
+      render();
+    }, function(e){ S.adminLeaveLoading=false; S.adminLeaveError=(e && e.message) || t('Connection problem — try again.'); render(); });
+  }
+  var alr=document.getElementById('adminLeaveRetry');
+  if(alr) alr.onclick=function(){ S.adminLeaveError=''; render(); };
+  document.querySelectorAll('[data-adminleavecampus]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.adminLeaveCampus=b.getAttribute('data-adminleavecampus'); render(); };
+  });
+  var aly=document.getElementById('adminLeaveYear');
+  if(aly) aly.onchange=function(){ S.adminLeaveYear=Number(aly.value); render(); };
+  var decideLeave=function(id, approve){
+    if(S.busy) return; S.busy=true;
+    run('adminDecideTrip',[S.auth.user,S.auth.pin,id,approve],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.adminLeave=d; showMsg(approve ? t('Approved') : t('Declined')); } else showMsg(d && d.err==='already_decided' ? t('Someone already decided this one.') : t('Could not save'));
+      render();
+    });
+  };
+  document.querySelectorAll('[data-adminleaveok]').forEach(function(b){ b.onclick=function(){ decideLeave(b.getAttribute('data-adminleaveok'), true); }; });
+  document.querySelectorAll('[data-adminleaveno]').forEach(function(b){ b.onclick=function(){ if(confirm(t('Decline this leave request?'))) decideLeave(b.getAttribute('data-adminleaveno'), false); }; });
 
   /* The search survives a re-render. Tapping a row rebuilds the Admin page
      (that's how the row opens), and the box used to come back empty with

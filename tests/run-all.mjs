@@ -31,6 +31,7 @@ const SERVER = [
   'test-leadership-rename.mjs', // Base Leadership → Campus Leadership (and its director row → Campus Director): old-name rows read back new, old-name accounts keep every right
   'test-team-trips.mjs', // Outreach Teams: one record per team (seeded from the Lovable hub), campus-bound add/edit/delete, teams become weekly rows in the week they leave and replace hand-logged ones
   'test-structure.mjs', // quarterly org-structure snapshots: admin-only save built on the server from active staff, read exact / latest-earlier (copied) / none, per campus, replace on re-save
+  'test-admin-leave.mjs', // Admin → Leave: only an admin reads everyone's requests (who, campus, dept, mentor, reason) and year totals; admin decides waiting/noted ones, not decided ones
   'test-staff-ids.mjs', // every staff record gets its own id on read: a missing one is minted, a duplicate re-minted for the later row, the repaired list written back once; repaired accounts work by their new id
   'test-hr.mjs', // Human Resources: only admin/hr may read or write; contracts (signed month + years, renewals as rows), attachments as their own blobs, old-CRM pre-fill, archive = deactivate, unarchive
   'test-hr-candidates.mjs', // HR → Candidates: the gate, a candidate is a name + type + stage, stage moves are logged, notes append, follow-ups due within a week count on boot, archive/unarchive
@@ -65,6 +66,7 @@ const BROWSER = [
   'test-outreach-teams.mjs', // Teams Database: month/quarter/year dashboard over finished teams, one form to add/edit/delete a team; My Ministry picker + banner, period toggle, personal numbers off the page
   'test-admin-select.mjs', // Admin: home menu → Accounts (campus chips, search) → a row opens that person's page → Back keeps the search and the narrowed list
   'test-admin-mentors.mjs', // Admin → Mentors: one card per mentor with their people (Waiting when not yet accepted), everyone with no mentor, the home card's count, a person's header names their mentor
+  'test-admin-leave-page.mjs', // Admin → Leave page: campus chips + year, tiles, waiting with Approve/Decline, away/coming up, days used vs cap, earlier folded, names open the person
   'test-ministry-load-error.mjs', // My Ministry / Teams Database when the on-demand load crashes: the error card with the server's words and Try again, one request not a storm
   'test-hr-page.mjs', // the HR page: menu item + badge, home tiles and renewals due, status chips, a person's contracts, add a renewal, attach a file, old-CRM pre-fill, archive
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive

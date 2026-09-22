@@ -96,7 +96,7 @@ ok('switching campus tabs keeps working', (await visible()).length === 15);
 await page.click('#adminBack');
 await page.waitForTimeout(400);
 const home = await page.evaluate(() => ({ cards: [].map.call(document.querySelectorAll('[data-adminsub]'), b => b.getAttribute('data-adminsub')), badge: (document.querySelector('[data-adminsub="accounts"] .adminBadge') || {}).textContent }));
-ok('Back from Accounts is the Admin home — one card per tool', JSON.stringify(home.cards) === JSON.stringify(['accounts', 'approvals', 'mentors', 'kpis', 'broadcast', 'merge']), home.cards.join(','));
+ok('Back from Accounts is the Admin home — one card per tool', JSON.stringify(home.cards) === JSON.stringify(['accounts', 'approvals', 'mentors', 'leave', 'kpis', 'broadcast', 'merge']), home.cards.join(','));
 ok('the Accounts card counts the active accounts', home.badge === '15', home.badge);
 ok('no page errors', errors.length === 0, errors.join(' | '));
 
