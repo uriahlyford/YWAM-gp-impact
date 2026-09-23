@@ -39,6 +39,7 @@ mem.staff = [
   withPin({ id: 'st_pstaff', name: 'Dara Pen', username: 'dara', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', active: true, portalStaff: true, email: 'd@x.org' }),
   withPin({ id: 'st_plain', name: 'Bopha Kim', username: 'bopha', campus: 'siemreap', dept: 'Youth Education', ministry: 'YDC', active: true, email: 'b@x.org' }),
   withPin({ id: 'st_hr', name: 'Mealea Sok', username: 'mealea', campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', active: true, hr: true, email: 'm@x.org' }),
+  withPin({ id: 'st_teams', name: 'Rithy Team', username: 'rithy', campus: 'siemreap', dept: 'Community Service', ministry: 'Outreach Teams', active: true, portalStaff: true, email: 'r@x.org' }),
 ];
 async function call(fn, args) {
   const res = await api.default({ method: 'POST', json: async () => ({ fn, args }), headers: new Map() }, {});
@@ -112,13 +113,13 @@ ok('nor reach admin', r.body.ok === false);
 r = await call('staffProfile', ['uriah', '1234', anna.id]);
 ok('a staff member cannot open an applicant as a teammate', r.body.ok === false);
 r = await call('teamRoster', []);
-ok('the roster leaves applicants out', r.body.every(p => p.username !== 'anna.b' && p.username !== 'tom.v') && r.body.length === 5);
+ok('the roster leaves applicants out', r.body.every(p => p.username !== 'anna.b' && p.username !== 'tom.v') && r.body.length === 6);
 r = await call('getMyBoot', ['uriah', '1234']);
-ok('boot’s roster and base roster leave them out too', r.body.roster.every(p => p.username !== 'anna.b') && r.body.roster.length === 5);
+ok('boot’s roster and base roster leave them out too', r.body.roster.every(p => p.username !== 'anna.b') && r.body.roster.length === 6);
 r = await call('getMyBoot', ['dara', '1234']);
 ok('boot tells the staff app who has portal access, for the menu item', r.body.staff.portalStaff === true && r.body.staff.portalAdmin === false);
 r = await call('adminListStaff', ['uriah', '1234']);
-ok('Admin’s account list is staff only', r.body.staff.every(p => p.username !== 'anna.b') && r.body.staff.length === 5);
+ok('Admin’s account list is staff only', r.body.staff.every(p => p.username !== 'anna.b') && r.body.staff.length === 6);
 r = await call('hrList', ['mealea', '1234']);
 ok('and so is HR’s', r.body.ok === true && r.body.staff.every(p => p.username !== 'anna.b'));
 
@@ -135,13 +136,39 @@ ok('HR access alone is not portal access', r.body.ok === false && r.body.err ===
 r = await call('portalBoot', ['dara', '1234']);
 ok('portal staff sees every applicant', r.body.ok === true && r.body.role === 'portal-staff' && r.body.applicants.length === 2);
 ok('with each one’s contact and messenger for the one-tap chat', r.body.applicants.every(a => a.phone && a.messenger && a.hasAccount));
-ok('and the list of portal staff to assign as owner', r.body.staff.map(x => x.username).sort().join(',') === 'dara,sina,uriah');
+ok('and the list of portal staff to assign as owner', r.body.staff.map(x => x.username).sort().join(',') === 'dara,rithy,sina,uriah');
+ok('an ordinary portal staff member’s scope is everything', r.body.scope === null);
 ok('and which campus runs which school', JSON.stringify(r.body.campuses) === JSON.stringify({ poipet: ['dts', 'dbs'], siemreap: ['dts', 'dbs', 'bcs', 'sms'] }));
 ok('no PIN material in the staff view either', !JSON.stringify(r.body).includes('pinHash') && !JSON.stringify(r.body).includes(anna.pinHash));
 r = await call('portalBoot', ['sina', '1234']);
 ok('a portal admin is "portal-admin"', r.body.ok === true && r.body.role === 'portal-admin');
 r = await call('portalBoot', ['uriah', '1234']);
 ok('an app admin is a portal admin without any flag', r.body.ok === true && r.body.role === 'portal-admin');
+
+console.log('\n=== Outreach Teams sees teams only ===');
+r = await call('hrSaveCandidate', ['sina', '1234', { name: 'Grace Church Team', type: 'team', stage: 'new', campus: 'siemreap' }]);
+const teamCand = r.body.candidate;
+ok('a team application exists (added by a portal admin)', r.body.ok === true && teamCand.type === 'team');
+r = await call('portalBoot', ['rithy', '1234']);
+ok('someone on Outreach Teams opens the portal on team applications only', r.body.ok === true && r.body.applicants.length === 1 && r.body.applicants[0].type === 'team' && JSON.stringify(r.body.scope) === '["team"]');
+ok('and none of the students or volunteers reach them', !JSON.stringify(r.body).includes('anna@example.org') && !JSON.stringify(r.body).includes('tom@example.org'));
+r = await call('hrSaveCandidate', ['rithy', '1234', { ...cand, stage: 'contacted' }]);
+ok('they cannot move a student’s stage', r.body.ok === false && r.body.err === 'not_authorized' && mem.candidates.find(c => c.id === cand.id).stage === 'new');
+r = await call('hrCandidateNote', ['rithy', '1234', cand.id, 'peeking']);
+ok('nor note on one', r.body.ok === false && r.body.err === 'not_authorized');
+r = await call('hrArchiveCandidate', ['rithy', '1234', cand.id, { reason: 'x' }]);
+ok('nor close one', r.body.ok === false && r.body.err === 'not_authorized' && !mem.candidates.find(c => c.id === cand.id).archived);
+r = await call('hrSaveCandidate', ['rithy', '1234', { name: 'Sneaky Student', type: 'student', school: 'dts', stage: 'new', campus: 'siemreap' }]);
+ok('nor add an application of a kind they cannot see', r.body.ok === false && r.body.err === 'not_authorized');
+r = await call('hrSaveCandidate', ['rithy', '1234', { ...teamCand, stage: 'contacted', nextStep: 'Send the hosting info' }]);
+ok('but they work team applications freely', r.body.ok === true && r.body.candidate.stage === 'contacted');
+r = await call('hrCandidateNote', ['rithy', '1234', teamCand.id, 'Team of 12, coming in March']);
+ok('notes on a team too', r.body.ok === true);
+r = await call('portalBoot', ['dara', '1234']);
+ok('everyone else with access still sees teams alongside the rest', r.body.applicants.some(a => a.type === 'team') && r.body.applicants.some(a => a.type === 'student'));
+r = await call('hrCandidates', ['mealea', '1234']);
+ok('HR keeps its full reach', r.body.ok === true && r.body.candidates.some(c => c.type === 'team') && r.body.candidates.some(c => c.type === 'student'));
+mem.candidates = mem.candidates.filter(c => c.id !== teamCand.id);
 
 console.log('\n=== granting access ===');
 r = await call('portalSetAccess', ['bopha', '1234', 'st_plain', { portalStaff: true }]);
@@ -199,6 +226,25 @@ r = await call('hrArchiveCandidate', ['dara', '1234', cand.id, { reason: 'Test c
 r = await call('portalBoot', ['anna.b', '2468']);
 ok('an archived application reads closed to the applicant', r.body.application.status === 'closed' && r.body.application.archived);
 r = await call('hrArchiveCandidate', ['dara', '1234', cand.id, null]);
+
+console.log('\n=== deleting an applicant ===');
+r = await call('portalRegister', [{ ...APP, username: 'dup.e', email: 'dup@example.org' }]);
+const dup = mem.staff.find(s => s.username === 'dup.e'), dupCand = mem.candidates.find(c => c.staffId === dup.id);
+r = await call('portalDeleteApplicant', ['dara', '1234', dupCand.id]);
+ok('portal staff cannot delete an applicant', r.body.ok === false && r.body.err === 'not_authorized' && mem.staff.some(s => s.id === dup.id));
+r = await call('portalDeleteApplicant', ['anna.b', '2468', dupCand.id]);
+ok('nor can an applicant', r.body.ok === false && mem.staff.some(s => s.id === dup.id));
+r = await call('portalDeleteApplicant', ['sina', '1234', 'nope']);
+ok('an unknown record is not found', r.body.ok === false && r.body.err === 'not_found');
+r = await call('portalDeleteApplicant', ['sina', '1234', dupCand.id]);
+ok('a portal admin deletes the application and the account behind it', r.body.ok === true && r.body.deleted === dupCand.id && r.body.accountRemoved === true && !mem.candidates.some(c => c.id === dupCand.id) && !mem.staff.some(s => s.id === dup.id));
+ok('and gets the refreshed list back', r.body.role === 'portal-admin' && Array.isArray(r.body.applicants) && !r.body.applicants.some(x => x.id === dupCand.id));
+r = await call('portalBoot', ['dup.e', '2468']);
+ok('the deleted applicant can no longer sign in', r.body.ok === false && r.body.err === 'auth');
+r = await call('hrSaveCandidate', ['sina', '1234', { name: 'Arrived Person', type: 'staff', stage: 'arrived', staffId: 'st_plain', campus: 'siemreap' }]);
+const arrivedCand = r.body.candidate;
+r = await call('portalDeleteApplicant', ['uriah', '1234', arrivedCand.id]);
+ok('a record pointing at a real staff account loses only the record — the staff account stays', r.body.ok === true && r.body.accountRemoved === false && mem.staff.some(s => s.id === 'st_plain') && !mem.candidates.some(c => c.id === arrivedCand.id));
 
 console.log('\n=== the applicant’s own contact details ===');
 r = await call('portalUpdateContact', ['anna.b', '2468', { phone: '+855 12 345 678', messenger: 'telegram' }]);

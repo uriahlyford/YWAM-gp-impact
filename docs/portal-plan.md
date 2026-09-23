@@ -79,6 +79,14 @@ so, and the forms (milestone 2) ask about it. The account and the candidate reco
 the campus; the staff view opens on the staff member's own campus with an All-campuses
 chip. A third campus is one more row in `PORTAL_CAMPUSES` and `CAMPUS_LIST`.
 
+The staff list has a tab row — All · DTS · DBS · BCS · SMS · Staff · Volunteer · Teams —
+with counts. **Scope by ministry** (`portalTypes_` in api.js, enforced on every CRM write,
+not just hidden): someone on Community Service → Outreach Teams sees and works team
+applications only, and gets just the Teams tab; everyone else with portal access sees
+every kind. Admins, portal admins and HR see everything. Portal admins can also **delete**
+an application and the account behind it from the record panel (`portalDeleteApplicant`,
+name typed back to confirm) — applicant accounts live nowhere else.
+
 ## Data
 
 - **Candidate record** (extended): `{id, campus, name, type∈student|staff|volunteer|team,

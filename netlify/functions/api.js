@@ -2904,8 +2904,10 @@ async function hrSaveCandidate(username, pin, cand) {
   const idx = id ? rows.findIndex(function (r) { return r && r.id === id; }) : -1;
   if (id && idx === -1) return { ok: false, err: 'not_found' };
   const prev = idx > -1 ? rows[idx] : null;
+  if (prev && !canHR_(g.s) && !portalMaySee_(g.s, prev)) return { ok: false, err: 'not_authorized' };
   const rec = cleanCandidate_(cand, prev, g.s);
   if (!rec) return { ok: false, err: 'bad_candidate' };
+  if (!canHR_(g.s) && !portalMaySee_(g.s, rec)) return { ok: false, err: 'not_authorized' };
   if (!prev && rows.length >= CAND_MAX) return { ok: false, err: 'too_many' };
   if (prev && prev.stage !== rec.stage) rec.log = rec.log.concat([{ at: rec.updated, by: g.s.id, kind: 'stage', text: rec.stage }]).slice(-CAND_LOG_MAX);
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
@@ -2919,6 +2921,7 @@ async function hrCandidateNote(username, pin, id, text) {
   const rows = await getCandidates_();
   const idx = rows.findIndex(function (r) { return r && r.id === str_(id, 60); });
   if (idx === -1) return { ok: false, err: 'not_found' };
+  if (!canHR_(g.s) && !portalMaySee_(g.s, rows[idx])) return { ok: false, err: 'not_authorized' };
   const now = new Date().toISOString();
   rows[idx].log = (Array.isArray(rows[idx].log) ? rows[idx].log : []).concat([{ at: now, by: g.s.id, kind: 'note', text: text }]).slice(-CAND_LOG_MAX);
   rows[idx].updated = now; rows[idx].updatedBy = g.s.id;
@@ -2930,6 +2933,7 @@ async function hrArchiveCandidate(username, pin, id, info) {
   const rows = await getCandidates_();
   const idx = rows.findIndex(function (r) { return r && r.id === str_(id, 60); });
   if (idx === -1) return { ok: false, err: 'not_found' };
+  if (!canHR_(g.s) && !portalMaySee_(g.s, rows[idx])) return { ok: false, err: 'not_authorized' };
   const now = new Date().toISOString();
   if (info === null) rows[idx].archived = null;
   else rows[idx].archived = { at: now.slice(0, 10), reason: str_(info && info.reason, 300), by: g.s.id };
@@ -2976,6 +2980,16 @@ const PORTAL_STAGE_ORDER = ['new', 'applied', 'contacted', 'interview', 'accepte
 function isApplicant_(s) { return !!(s && s.kind === 'applicant'); }
 function canPortal_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || s.portalAdmin || s.portalStaff)); }
 function isPortalAdmin_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || s.portalAdmin)); }
+/* Which kinds of application a portal staff member works. Outreach Teams
+   hosts the short-term teams, so someone on that ministry sees team
+   applications and nothing else; everyone else with access sees them all.
+   null means "all". Admins and portal admins always see all. */
+function portalTypes_(s) {
+  if (!s || isPortalAdmin_(s)) return null;
+  if (deptOf_(s) === TEAM_DEPT && s.ministry === TEAM_MIN) return ['team'];
+  return null;
+}
+function portalMaySee_(s, c) { const ty = portalTypes_(s); return !ty || !c || ty.indexOf(c.type) > -1; }
 function portalRole_(s) {
   if (isApplicant_(s)) return 'applicant';
   if (isPortalAdmin_(s)) return 'portal-admin';
@@ -3131,7 +3145,8 @@ async function portalBoot(username, pin) {
   const byId = {}; rows.forEach(function (r) { byId[r.id] = r; });
   return {
     ok: true, role: portalRole_(s), me: portalStaffOut_(s),
-    applicants: cands.map(function (c) { return portalCandOut_(c, byId); }),
+    applicants: cands.filter(function (c) { return portalMaySee_(s, c); }).map(function (c) { return portalCandOut_(c, byId); }),
+    scope: portalTypes_(s),
     staff: rows.filter(function (r) { return canPortal_(r); }).map(portalStaffOut_),
     stages: CAND_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS, campuses: PORTAL_CAMPUSES
   };
@@ -3160,6 +3175,37 @@ async function portalSetAccess(username, pin, staffId, flags) {
 /* The staff side's writes go through the CRM's own handlers (hrSaveCandidate,
    hrCandidateNote, hrArchiveCandidate — hrGate_ admits portal staff). This
    one is the applicant's: their contact details, which they own. */
+/* Delete an application and the applicant account behind it — a duplicate
+   sign-up, a test account, someone who asked to be forgotten. Portal admins
+   (and app admins) only; permanent. Applicant accounts are not in Admin →
+   Accounts, so this is the one place they can be removed. A candidate whose
+   staffId points at a real staff account (someone who arrived and got an
+   account) loses only the CRM record — a staff account is never deleted here. */
+async function portalDeleteApplicant(username, pin, candidateId) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  const rows = await getCandidates_();
+  const idx = rows.findIndex(function (r) { return r && r.id === str_(candidateId, 60); });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  const cand = rows[idx];
+  const docs = (cand.portal && Array.isArray(cand.portal.docs)) ? cand.portal.docs : [];
+  for (const d of docs) { if (d && d.id) { try { await store().delete('hrfile:' + d.id); } catch (e) { /* already gone */ } } }
+  rows.splice(idx, 1);
+  await writeJSON('candidates', rows);
+  let accountRemoved = false;
+  if (cand.staffId) {
+    const out = await mutateStaff_(function (all) {
+      const i = all.findIndex(function (r) { return r.id === cand.staffId; });
+      if (i === -1 || !isApplicant_(all[i])) return { abort: true, ok: true, removed: false };
+      all.splice(i, 1);
+      return { ok: true, removed: true };
+    });
+    accountRemoved = !!(out && out.removed);
+  }
+  const boot = await portalBoot(username, pin);
+  return Object.assign({}, boot, { deleted: cand.id, accountRemoved: accountRemoved });
+}
 async function portalUpdateContact(username, pin, payload) {
   const s = await verifyStaff_(username, pin, true);
   if (!s || !isApplicant_(s)) return { ok: false, err: 'auth' };
@@ -3267,7 +3313,8 @@ const HANDLERS = {
   portalRegister: function (a) { return portalRegister(a[0]); },
   portalBoot: function (a) { return portalBoot(a[0], a[1]); },
   portalSetAccess: function (a) { return portalSetAccess(a[0], a[1], a[2], a[3]); },
-  portalUpdateContact: function (a) { return portalUpdateContact(a[0], a[1], a[2]); }
+  portalUpdateContact: function (a) { return portalUpdateContact(a[0], a[1], a[2]); },
+  portalDeleteApplicant: function (a) { return portalDeleteApplicant(a[0], a[1], a[2]); }
 };
 
 export default async (req) => {

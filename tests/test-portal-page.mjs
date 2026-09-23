@@ -39,6 +39,7 @@ let CANDS = [
   { id: 'cd_anna', campus: 'siemreap', name: 'Anna Example', type: 'student', school: 'dts', stage: 'applied', status: 'pending', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', source: 'portal', assignedTo: '', nextStep: '', nextDate: '', staffId: 'st_anna', hasAccount: true, updated: '2026-09-20T10:00:00Z', log: [{ at: '2026-09-19T09:00:00Z', by: 'st_anna', kind: 'stage', text: 'new' }], archived: null, portal: { createdAt: '2026-09-19' } },
   { id: 'cd_tom', campus: 'siemreap', name: 'Tom Volunteer', type: 'volunteer', school: '', stage: 'contacted', status: 'in_review', email: 'tom@example.org', phone: '+1 555 000 1111', messenger: 'telegram', country: 'United States', source: 'portal', assignedTo: 'st_dara', nextStep: 'Video call', nextDate: '2026-09-30', staffId: 'st_tom', hasAccount: true, updated: '2026-09-21T10:00:00Z', log: [], archived: null },
   { id: 'cd_pp', campus: 'poipet', name: 'Poipet Person', type: 'student', school: 'dbs', stage: 'new', status: 'draft', email: '', phone: '+855 11 222 333', messenger: 'telegram', country: 'Cambodia', source: 'portal', assignedTo: '', staffId: 'st_pp', hasAccount: true, updated: '2026-09-18T10:00:00Z', log: [], archived: null },
+  { id: 'cd_team', campus: 'siemreap', name: 'Grace Church Team', type: 'team', school: '', stage: 'new', status: 'draft', email: 'team@example.org', phone: '+61 400 000 000', messenger: 'whatsapp', country: 'Australia', source: 'portal', assignedTo: '', staffId: 'st_team', hasAccount: true, updated: '2026-09-17T10:00:00Z', log: [], archived: null },
   { id: 'cd_old', campus: 'siemreap', name: 'Closed Case', type: 'staff', school: '', stage: 'new', status: 'closed', email: '', phone: '', messenger: '', country: '', source: 'hr', assignedTo: '', staffId: '', hasAccount: false, updated: '2026-08-01T10:00:00Z', log: [], archived: { at: '2026-08-02', reason: 'Withdrew' } }
 ];
 const browser = await chromium.launch({ executablePath: CHROMIUM });
@@ -57,6 +58,8 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'portalBoot') {
       if (u === 'anna.b' && pin === '2468') out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA };
       else if (u === 'dara' && pin === '1234') out = { ok: true, role: 'portal-staff', me: STAFF[0], applicants: CANDS, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
+      else if (u === 'rithy' && pin === '1234') out = { ok: true, role: 'portal-staff', me: { id: 'st_teams', name: 'Rithy Team', username: 'rithy', campus: 'siemreap', role: 'portal-staff' }, applicants: CANDS.filter(c => c.type === 'team'), scope: ['team'], staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
+      else if (u === 'sina' && pin === '1234') out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
       else if (u === 'bopha' && pin === '1234') out = { ok: false, err: 'not_authorized' };
       else out = { ok: false, err: 'auth' };
     } else if (b.fn === 'portalUpdateContact') {
@@ -65,6 +68,9 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'hrSaveCandidate') {
       const c = b.args[2]; CANDS = CANDS.map(x => x.id === c.id ? { ...x, ...c, log: x.log.concat(x.stage !== c.stage ? [{ at: new Date().toISOString(), by: u === 'dara' ? 'st_dara' : 'x', kind: 'stage', text: c.stage }] : []) } : x);
       out = { ok: true, candidate: CANDS.find(x => x.id === c.id) };
+    } else if (b.fn === 'portalDeleteApplicant') {
+      CANDS = CANDS.filter(x => x.id !== b.args[2]);
+      out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: [], schools: [], deleted: b.args[2], accountRemoved: true };
     } else if (b.fn === 'hrCandidateNote') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, log: x.log.concat([{ at: new Date().toISOString(), by: 'st_dara', kind: 'note', text: b.args[3] }]) } : x);
       out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
@@ -172,6 +178,15 @@ async function open(viewport, query, seed) {
   await ctx.close();
 }
 
+/* ---------- Outreach Teams: teams only ---------- */
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'rithy', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  ok('someone on Outreach Teams sees only team applications', (await page.$$eval('.trow', r => r.length)) === 1 && /Grace Church Team/.test(await page.$eval('.tbl', e => e.textContent)) && !/Anna Example|Tom Volunteer/.test(await page.$eval('#main', e => e.textContent)));
+  ok('and only the Teams tab — no All, no schools', (await page.$$eval('.whatTab', b => b.map(x => x.getAttribute('data-whatfilter')).join(','))) === 'team' && await page.$eval('[data-whatfilter="team"]', b => b.classList.contains('on')));
+  await ctx.close();
+}
+
 /* ---------- the staff side ---------- */
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '');
@@ -185,10 +200,19 @@ async function open(viewport, query, seed) {
   ok('a wrong PIN stays on sign-in with a message', /Wrong username or PIN/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#loginBtn')));
   await page.fill('#l_pin', '1234'); await page.fill('#l_user', 'dara'); await page.click('#loginBtn');
   await page.waitForSelector('.trow');
-  ok('portal staff land on Applications with every open applicant of their campus', /Applications/.test(await page.$eval('#main h1', e => e.textContent)) && (await page.$$eval('.trow', r => r.length)) === 2 && !/Poipet Person/.test(await page.$eval('.tbl', e => e.textContent)));
+  ok('portal staff land on Applications with every open applicant of their campus', /Applications/.test(await page.$eval('#main h1', e => e.textContent)) && (await page.$$eval('.trow', r => r.length)) === 3 && !/Poipet Person/.test(await page.$eval('.tbl', e => e.textContent)));
+  ok('a tab row toggles through All, DTS, DBS, BCS, SMS, Staff, Volunteer, Teams — with counts', (await page.$$eval('.whatTab', b => b.map(x => x.getAttribute('data-whatfilter')).join(','))) === ',dts,dbs,bcs,sms,staff,volunteer,team' && /Teams\s*1/.test(await page.$eval('[data-whatfilter="team"]', e => e.textContent)) && /DTS\s*1/.test(await page.$eval('[data-whatfilter="dts"]', e => e.textContent)));
+  await page.click('[data-whatfilter="dts"]');
+  await page.waitForTimeout(150);
+  ok('DTS shows only the DTS applicants', (await page.$$eval('.trow', r => r.length)) === 1 && /Anna Example/.test(await page.$eval('.tbl', e => e.textContent)));
+  await page.click('[data-whatfilter="team"]');
+  await page.waitForTimeout(150);
+  ok('Teams shows only the teams', (await page.$$eval('.trow', r => r.length)) === 1 && /Grace Church Team/.test(await page.$eval('.tbl', e => e.textContent)));
+  await page.click('[data-whatfilter=""]');
+  await page.waitForTimeout(150);
   await page.click('[data-campusfilter=""]');
   await page.waitForTimeout(150);
-  ok('All campuses adds Poipet’s applicant, marked with its campus', (await page.$$eval('.trow', r => r.length)) === 3 && /Poipet Person/.test(await page.$eval('.tbl', e => e.textContent)));
+  ok('All campuses adds Poipet’s applicant, marked with its campus', (await page.$$eval('.trow', r => r.length)) === 4 && /Poipet Person/.test(await page.$eval('.tbl', e => e.textContent)));
   await page.click('[data-campusfilter="siemreap"]');
   await page.waitForTimeout(150);
   ok('the list opens on the staff member’s own campus, with an All-campuses chip', (await page.$eval('[data-campusfilter].on', c => c.getAttribute('data-campusfilter'))) === 'siemreap' && !!(await page.$('[data-campusfilter=""]')));
@@ -224,6 +248,27 @@ async function open(viewport, query, seed) {
   const note = sent.filter(b => b.fn === 'hrCandidateNote').pop();
   ok('a note goes through hrCandidateNote and shows in the log', note && note.args[3] === 'Spoke today, very keen' && /Spoke today, very keen/.test(await page.$eval('#panel .log', e => e.textContent)));
   ok('no PIN or hash anywhere on the page', !/2468|1234|pinHash/.test(await page.$eval('#main', e => e.textContent)));
+  ok('portal staff are offered no delete', !(await page.$('#deleteCand')));
+  await ctx.close();
+}
+
+/* ---------- a portal admin can delete an account ---------- */
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  await page.click('[data-open="cd_team"]');
+  await page.waitForSelector('#panel');
+  ok('a portal admin sees "Delete this account and application"', /Delete this account and application/.test(await page.$eval('#deleteCand', e => e.textContent)));
+  page.once('dialog', d => d.accept('wrong name'));
+  await page.click('#deleteCand');
+  await page.waitForTimeout(300);
+  ok('typing the wrong name deletes nothing', !sent.some(b => b.fn === 'portalDeleteApplicant') && /did not match/.test(await page.$eval('#msg', e => e.textContent)));
+  page.once('dialog', d => d.accept('Grace Church Team'));
+  await page.click('#deleteCand');
+  await page.waitForTimeout(400);
+  const del = sent.find(b => b.fn === 'portalDeleteApplicant');
+  ok('typing the name deletes through portalDeleteApplicant', del && del.args[2] === 'cd_team');
+  ok('and the row is gone from the list', !/Grace Church Team/.test(await page.$eval('.tbl', e => e.textContent)) && !(await page.$('#panel')));
   await ctx.close();
 }
 {
