@@ -271,7 +271,7 @@ function signOut_(){ lsDel('gp-portal'); P.auth=null; P.boot=null; P.sel=null; P
    public/ (white on transparent, for the black page) and name it here, e.g.
    'ywam-logo.png'. Left empty, the GP mark from logo.js stands in, and no
    request is made for a file that is not there. */
-var PORTAL_LOGO = '';
+var PORTAL_LOGO = 'ywam-logo.png';
 (function(){
   var img=document.getElementById('brandLogo'); if(!img) return;
   img.onerror=function(){ img.onerror=null; if(typeof GP_LOGO==='string') img.src=GP_LOGO; else img.style.display='none'; };
