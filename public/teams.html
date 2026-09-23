@@ -792,6 +792,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
    (Koulen numbers, Kantumruy labels) and colours, one figure family per
    slide, 16:9 so a saved PNG or printed page is the same picture as the
    screen. .hxOn on <body> stops the page behind it scrolling. */
+.portalRow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.portalWho { display:flex; align-items:center; gap:10px; flex:1 1 200px; min-width:0; background:none; border:0; padding:0; text-align:left; font-family:inherit; color:var(--ink); cursor:pointer; }
+.portalTick { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); white-space:nowrap; }
+.portalTick input { width:18px; height:18px; accent-color:var(--accent); }
 .hxOpenBtn { display:inline-flex; align-items:center; gap:6px; margin:0 0 10px; padding:8px 14px; border-radius:999px;
   border:1.5px solid var(--accent); background:transparent; color:var(--accent); font-family:'Koulen',sans-serif;
   font-size:14px; letter-spacing:.8px; cursor:pointer; }
@@ -1355,7 +1359,7 @@ var S = {
      so more than one can sit on the same page without their state colliding. */
   oversee:{}, ovWeek:{}, ovWeekDraft:{}, ovAcc:{}, ovLoading:{}, ovError:{}, ovDeptOf:{}, ovInputOpen:{},
   // Admin screen — S.me.isAdmin only. adminStaff loads lazily on first visit.
-  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', adminMentorCampus:null, adminLeave:null, adminLeaveLoading:false, adminLeaveError:'', adminLeaveCampus:null, adminLeaveYear:null, adminLeavePast:false, broadcastDraft:'',
+  adminStaff:null, adminLoading:false, adminAcc:{}, adminEditId:null, adminEditDraft:null, adminPinDraft:{}, adminCode:'', adminCampusTab:null, adminSub:null, adminPersonId:null, adminSearch:'', adminMentorCampus:null, adminPortalCampus:null, adminLeave:null, adminLeaveLoading:false, adminLeaveError:'', adminLeaveCampus:null, adminLeaveYear:null, adminLeavePast:false, broadcastDraft:'',
   hrStaff:null, hrLoading:false, hrError:'', hrSub:'home', hrPersonId:null, hrSearch:'', hrCampusTab:null, hrShowArchived:false, hrContractForm:null, hrArchiveDraft:null, hrDue:null, hrFollowUps:null, hrTab:'staff',
   cands:null, candsLoading:false, candsError:'', candStage:'', candType:'', candSearch:'', candShowArchived:false, candForm:null, candPersonId:null, candNoteDraft:'',
   adminOkrAcc:{},
@@ -2091,6 +2095,12 @@ function renderMenu(){
   if(S.me.isAdmin || S.me.hr) items.push({ id:'hr',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18"/><path d="M8 2.5V6M16 2.5V6"/><path d="M8 14h4M8 17.5h8"/></svg>',
     label:t('HR')+(((S.hrDue||0)+(S.hrFollowUps||0)) ? ' · '+((S.hrDue||0)+(S.hrFollowUps||0)) : '') });
+  // The YWAM GP Portal — applications. Only people with portal access (an
+  // admin, or anyone an admin ticked on Admin → Portal access); opens in its
+  // own tab so the staff app stays where it was.
+  if(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin) items.push({ id:'portal',
+    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><path d="M8 13h8M8 17h5"/></svg>',
+    label:t('YWAM GP Portal') });
   if(S.me.isAdmin) items.push({ id:'admin',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
     label:t('Admin') });
@@ -2116,6 +2126,7 @@ function renderMenu(){
       else if(id==='checkin'){ S.view='health'; render(); }
       else if(id==='admin'){ S.view='admin'; render(); }
       else if(id==='hr'){ S.view='hr'; S.hrSub='home'; render(); }
+      else if(id==='portal'){ renderMenu(); window.open('portal.html', '_blank', 'noopener'); }
       else renderMenu();
     };
   });
@@ -4175,6 +4186,7 @@ var ADMIN_SUBS = [
   { id:'approvals', label:'Approvals', emoji:'✅', blurb:'New leadership sign-ups waiting for a yes' },
   { id:'mentors', label:'Mentors', emoji:'🤝', blurb:'Who is walking with whom — every mentor and their people, and who has nobody yet' },
   { id:'leave', label:'Leave', emoji:'🗓️', blurb:'Everyone’s leave requests, by campus — waiting, coming up, and days used this year' },
+  { id:'portal', label:'Portal access', emoji:'🛂', blurb:'Who works in applications — grant or remove access to the YWAM GP Portal' },
   { id:'kpis', label:'Ministry KPIs', emoji:'🗂️', blurb:'What each ministry tracks — add, rename, remove, re-time' },
   { id:'broadcast', label:'Announcements', emoji:'📣', blurb:'A message to everyone’s notification bell' },
   { id:'merge', label:'Merge duplicates', emoji:'🔀', blurb:'Two profiles that are really one person' }
@@ -4199,6 +4211,7 @@ function adminHtml(){
   if(sub==='approvals') return h+adminApprovalsHtml_();
   if(sub==='mentors') return h+adminMentorsHtml_();
   if(sub==='leave') return h+adminLeaveHtml_();
+  if(sub==='portal') return h+adminPortalHtml_();
   if(sub==='merge') return h+adminMergeHtml_();
   return h+adminAccountsHtml_();
 }
@@ -4231,6 +4244,43 @@ function adminApprovalsHtml_(){
       '<button class="btn" style="width:auto;margin:0;padding:9px 14px" data-adminapprove="'+esc(x.id)+'">'+esc(t('Approve'))+'</button></div>';
   });
   return h+'</div>';
+}
+/* Admin → Portal access. Who may work applications on the YWAM GP Portal
+   (portal.html) — nobody gets it by being staff; an admin ticks it here. Two
+   levels: portal staff (see every applicant, move stages, notes, owner) and
+   portal admin (that, plus granting portal staff from inside the portal).
+   One campus at a time, same chips as Mentors. Applicant accounts are not
+   in this list at all — adminListStaff leaves them out. */
+function adminPortalHtml_(){
+  if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
+  var everyone=S.adminStaff.filter(function(x){ return x.active && !x.archived; });
+  var tabs=CAMPUSES.map(function(c){ return { id:c.id, label:c.short, n:everyone.filter(function(x){ return x.campus===c.id && (x.portalStaff||x.portalAdmin); }).length }; });
+  var activeTab = tabs.some(function(tb){ return tb.id===S.adminPortalCampus; }) ? S.adminPortalCampus
+    : (tabs.some(function(tb){ return tb.id===S.me.campus; }) ? S.me.campus : tabs[0].id);
+  S.adminPortalCampus=activeTab;
+  var h='<div class="banner">🛂 '+esc(t('The portal is where students, staff, volunteers and teams apply. Only the people ticked here can see applications.'))+
+    ' <a class="linkbtn inline" href="portal.html" target="_blank" rel="noopener" style="width:auto;padding:0">'+esc(t('Open the portal'))+' ↗</a></div>';
+  h+='<div class="deptChips">'+tabs.map(function(tb){
+    return '<button class="deptChip'+(activeTab===tb.id?' on':'')+'" data-adminportalcampus="'+esc(tb.id)+'">'+esc(tb.label)+' · '+tb.n+'</button>'; }).join('')+'</div>';
+  var people=everyone.filter(function(x){ return x.campus===activeTab; }).sort(function(a,b){
+    var ra=(a.isAdmin?4:0)+(a.portalAdmin?2:0)+(a.portalStaff?1:0), rb=(b.isAdmin?4:0)+(b.portalAdmin?2:0)+(b.portalStaff?1:0);
+    return rb-ra || (a.name<b.name?-1:1); });
+  var withN=people.filter(function(x){ return x.portalStaff||x.portalAdmin||x.isAdmin; }).length;
+  h+='<div class="mmGrid">'+[[t('Can see applications'), withN, false],[t('Portal admins'), people.filter(function(x){ return x.portalAdmin||x.isAdmin; }).length, false]]
+    .map(function(x){ return '<div class="mmTile"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
+  if(!people.length) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('No accounts yet.'))+'</p></div>';
+  h+='<p class="sub" style="margin:0 0 6px">'+esc(t('Portal staff see every applicant and move them along. A portal admin can also grant portal staff. App admins always have both.'))+'</p>';
+  h+='<div class="accCard adminList">'+people.map(function(x){
+    var isAdm=!!x.isAdmin;
+    return '<div class="adminRow portalRow" data-adminrow="'+esc((x.name+' '+x.username).toLowerCase())+'">'+
+      '<button class="portalWho" data-adminperson="'+esc(x.id)+'">'+avatarHtml(x,'sm')+
+        '<span class="adminRowText"><span class="rowName">'+esc(x.name)+(isAdm?' <span class="hrChip active">'+esc(t('Admin'))+'</span>':'')+'</span>'+
+        '<span class="rowSub">'+esc(t(x.dept))+(x.ministry?' · '+esc(t(x.ministry)):'')+'</span></span></button>'+
+      '<label class="portalTick"><input type="checkbox" data-portalstaff="'+esc(x.id)+'"'+((x.portalStaff||isAdm)?' checked':'')+(isAdm?' disabled':'')+'> '+esc(t('Portal staff'))+'</label>'+
+      '<label class="portalTick"><input type="checkbox" data-portaladmin="'+esc(x.id)+'"'+((x.portalAdmin||isAdm)?' checked':'')+(isAdm?' disabled':'')+'> '+esc(t('Portal admin'))+'</label>'+
+    '</div>';
+  }).join('')+'</div>';
+  return h;
 }
 function adminMergeHtml_(){
   if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
@@ -4545,6 +4595,10 @@ function adminRowBodyHtml_(s){
       '<div class="leadsPick" id="adm_leads">'+leadsPickHtml_(dCampus, d.leads!==undefined?d.leads:(s.leads||[]))+'</div>'+
       '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:12px">'+
         '<input type="checkbox" id="adm_hr"'+((d.hr!==undefined?d.hr:!!s.hr)?' checked':'')+'> 🗂️ '+esc(t('HR access — staff contracts and archiving'))+'</label>'+
+      '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:8px">'+
+        '<input type="checkbox" id="adm_portalstaff"'+((d.portalStaff!==undefined?d.portalStaff:!!s.portalStaff)?' checked':'')+'> 🛂 '+esc(t('Portal staff — sees and works every application'))+'</label>'+
+      '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:8px">'+
+        '<input type="checkbox" id="adm_portaladmin"'+((d.portalAdmin!==undefined?d.portalAdmin:!!s.portalAdmin)?' checked':'')+'> 🛂 '+esc(t('Portal admin — can also grant portal staff'))+'</label>'+
       '<button class="btn" data-adminsave="'+esc(s.id)+'">'+esc(t('Save'))+'</button>'+
       '<button class="linkbtn" data-admincanceledit="'+esc(s.id)+'">'+esc(t('Cancel'))+'</button>';
   }
@@ -4892,6 +4946,24 @@ function bindAdmin(){
   document.querySelectorAll('[data-adminmentorcampus]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.adminMentorCampus=b.getAttribute('data-adminmentorcampus'); render(); };
   });
+  // --- portal access ---
+  document.querySelectorAll('[data-adminportalcampus]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.adminPortalCampus=b.getAttribute('data-adminportalcampus'); render(); };
+  });
+  var portalFlag=function(attr, key){
+    document.querySelectorAll('['+attr+']').forEach(function(cb){
+      cb.onchange=function(){
+        var id=cb.getAttribute(attr), payload={}; payload[key]=cb.checked;
+        cb.disabled=true;
+        run('adminUpdateStaff',[S.auth.user,S.auth.pin,id,payload],function(d){
+          if(d && d.ok){ if(S.adminStaff && d.staff) S.adminStaff=S.adminStaff.map(function(x){ return x.id===id ? d.staff : x; }); showMsg(cb.checked ? t('Access granted') : t('Access removed')); }
+          else showMsg(t('Could not save'));
+          render();
+        });
+      };
+    });
+  };
+  portalFlag('data-portalstaff','portalStaff'); portalFlag('data-portaladmin','portalAdmin');
   // --- leave, everyone's ---
   if(S.adminSub==='leave' && !S.adminLeave && !S.adminLeaveLoading && !S.adminLeaveError){
     S.adminLeaveLoading=true;
@@ -5111,7 +5183,9 @@ function bindAdmin(){
         staffType:document.getElementById('adm_type').value,
         country:countryValue('adm_country'),
         leads:[].map.call(document.querySelectorAll('[data-admlead]:checked'), function(c){ return c.getAttribute('data-admlead'); }),
-        hr:!!(document.getElementById('adm_hr')||{}).checked
+        hr:!!(document.getElementById('adm_hr')||{}).checked,
+        portalStaff:!!(document.getElementById('adm_portalstaff')||{}).checked,
+        portalAdmin:!!(document.getElementById('adm_portaladmin')||{}).checked
       };
       b.disabled=true; b.textContent=t('Saving…');
       run('adminUpdateStaff',[S.auth.user,S.auth.pin,id,payload],function(d){
@@ -5837,8 +5911,8 @@ function hrTabsHtml_(){
    hang on that), a running log of notes and stage moves, and an archive box
    for a no. Kept deliberately plain — a list you can search and filter,
    one page per person — rather than columns to drag between. */
-var CAND_STAGES=[['new','New inquiry'],['contacted','Contacted'],['applied','Applied'],['interview','Interview'],['accepted','Accepted'],['arrived','Arrived']];
-var CAND_TYPES=[['staff','Staff'],['volunteer','Volunteer'],['student','Student']];
+var CAND_STAGES=[['new','New inquiry'],['contacted','Contacted'],['applied','Applied'],['interview','Interview'],['accepted','Accepted'],['practical','Getting ready'],['arrived','Arrived']];
+var CAND_TYPES=[['staff','Staff'],['volunteer','Volunteer'],['student','Student'],['team','Team']];
 var CAND_FOLLOWUP_DAYS=7;
 function candStageLabel_(k){ for(var i=0;i<CAND_STAGES.length;i++) if(CAND_STAGES[i][0]===k) return t(CAND_STAGES[i][1]); return k; }
 function candTypeLabel_(k){ for(var i=0;i<CAND_TYPES.length;i++) if(CAND_TYPES[i][0]===k) return t(CAND_TYPES[i][1]); return k; }
@@ -9110,6 +9184,7 @@ function bind(){
       if(d.ok){ S.auth={user:u,pin:pin}; S.me=d.staff; S.profile=d.profile; afterLogin(); }
       else {
         lb.disabled=false; lb.textContent='Log in';
+        if(d.err==='applicant'){ showMsg(t('That is a portal account — opening the YWAM GP Portal.')); setTimeout(function(){ location.href='portal.html'; }, 900); return; }
         showMsg(d.err==='pending' ? 'Your account is waiting on approval from a base leader.' : 'Wrong username or PIN');
       }
     });

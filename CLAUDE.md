@@ -96,7 +96,7 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   placeholders** (cobalt circle + "GP" wordmark) — swap in real ones when available.
 
 ### netlify/functions/api.js
-Handlers: getMyBoot, getData, saveEntries, saveObjective, deleteObjective, teamRoster,
+Handlers (see the sections below for the newer ones — HR, candidates, portal, structure, teams): getMyBoot, getData, saveEntries, saveObjective, deleteObjective, teamRoster,
 staffRegister, staffLogin, updateProfile, changePin, uploadPhoto, saveDaily, getMyLogs,
 getMyMentees, getMenteeLogs, getMyMentorRequests, respondToMentorRequest,
 getMyWeekly, saveMyWeek, deleteMyWeek, saveGoals, saveMyHabits, getMyMinistry,
@@ -437,6 +437,63 @@ Try again as My Ministry.
   not *now*, so Clear hides them until tomorrow and they come back while the work waits.
 - `test-hr.mjs` / `test-hr-candidates.mjs` (server) and `test-hr-page.mjs` /
   `test-hr-candidates-page.mjs` (browser) cover it.
+
+## YWAM GP Portal (public/portal.html)
+The application portal for YWAM Siem Reap — students (DTS, DBS, BCS, SMS), potential
+staff, volunteers and short-term teams apply and follow their application; the
+applications department works the same records as a CRM. Plan, milestones, URL and
+deep links: **`docs/portal-plan.md`**. Milestone 1 is built (accounts, roles, the
+access screen, the applicant dashboard shell with the timeline, a first staff view);
+forms, documents and references follow.
+
+- **An applicant is a staff row with `kind:'applicant'`** (`portalRegister`: username +
+  PIN, name, email, phone and messenger ∈ whatsapp|telegram required, type ∈
+  `PORTAL_TYPES`, campus ∈ `PORTAL_CAMPUSES` — Poipet runs DTS + DBS, Siem Reap all four — and
+  for students a school that campus runs, else `school_not_at_campus`) plus
+  `applicant:{type, school, candidateId}`. Their application IS a candidate record in the
+  `candidates` blob (`source:'portal'`, `staffId` → the account, `messenger`,
+  `portal:{createdAt, submittedAt, form, docs, references}`). `cleanCandidate_` carries
+  `messenger` and `portal` through a CRM edit untouched.
+- **Fail closed, in one place**: `verifyStaff_(u, pin, allowApplicant)` answers null for
+  an applicant unless the handler passes `true` (`portalBoot`, `portalUpdateContact`).
+  So every staff handler — boot, logs, goals, HR, admin — is closed to applicants without
+  a check of its own; `staffLogin` answers `err:'applicant'` and teams.html sends them to
+  the portal. Applicants are filtered out of `teamRoster`, both boot rosters, `getData`'s
+  roster, `adminListStaff`, `hrList` and `staffProfile` (`isApplicant_`).
+- **Portal access is a flag, never automatic**: `portalStaff` (see and work every
+  applicant) and `portalAdmin` (that, plus granting portalStaff). `canPortal_` /
+  `isPortalAdmin_`; an app admin has both. Set on **Admin → Portal access**
+  (`adminPortalHtml_`, `data-portalstaff` / `data-portaladmin` ticks → `adminUpdateStaff`)
+  or the person page's edit form; from inside the portal via `portalSetAccess` (a portal
+  admin may set portalStaff, only an app admin portalAdmin; never on an applicant).
+  `hrGate_` admits portal staff, so the CRM handlers (`hrSaveCandidate`,
+  `hrCandidateNote`, `hrArchiveCandidate`) are the staff side's writes. Boot carries
+  `staff.portalStaff` / `portalAdmin`, and the hamburger menu shows **YWAM GP Portal**
+  (opens portal.html in a new tab) to anyone with access.
+- **The timeline is derived on the server** (`portalAppOut_` → `portalSteps_` /
+  `portalStatus_`): account → form → received → contact → documents & reference →
+  interview → accepted → practical → arrived, walked from the CRM stage in
+  `PORTAL_STAGE_ORDER`; status ∈ draft | pending | in_review | interview | accepted |
+  practical | arrived | closed. The applicant never sees the owner or the next step.
+  `CAND_STAGES` gained `practical` (fees, packing, visa, travel) and `CAND_TYPES` gained
+  `team` — both sides.
+- **portal.html has its own look, on purpose — it is NOT in the GP theme.** Black page,
+  white type, Inter + Kantumruy Pro, one centred card at a time (the way an application
+  portal reads: logo and "YWAM GP Portal" on top, then sign in, with "Start an
+  application" leading to the seven choices). Its `:root` tokens live in the page;
+  `test-theme.mjs` keeps checking only index / teams / help. `body.gate` is every screen
+  before sign-in (centred hero header); signed in, the header is a slim bar. `PORTAL_LOGO`
+  at the top of the script names the YWAM mark file once it is dropped into `public/`;
+  until then the GP mark stands in and no missing file is requested. Fonts out of the
+  render path, `logo.js` + `km.js` + `taxonomy.js`, session under `gp-portal` (not
+  `gp-staff`), one `portalBoot` per open. Deep links
+  `?apply=dts|dbs|bcs|sms|staff|volunteer|team`, `?lang=km|en`, `?ref=` (milestone 3).
+  Responsive for real: one column on a phone, `.two` two columns and the CRM list + side
+  panel from 900px. All strings through `t()`; `test-khmer.mjs` scans portal.html too.
+- Tests: `test-portal.mjs` (server: sign-up rules, every closed door, own record only,
+  the access matrix, timeline follows the stage), `test-portal-page.mjs` (browser: front
+  door + deep link, sign-up, dashboard, Khmer, desktop layout, staff side),
+  `test-admin-portal-access.mjs` (the Admin screen).
 
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two

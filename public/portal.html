@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YWAM GP Portal</title>
+<meta name="description" content="Apply to YWAM Siem Reap — schools, staff, volunteers and teams — and follow your application.">
+<meta name="apple-mobile-web-app-title" content="GP Portal">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='47' fill='%231F44FF'/%3E%3Ctext x='50' y='64' font-family='Arial' font-weight='bold' font-size='40' fill='%23FAF6F0' text-anchor='middle'%3EGP%3C/text%3E%3Cpath d='M76 12 L78.6 19.4 L86 22 L78.6 24.6 L76 32 L73.4 24.6 L66 22 L73.4 19.4 Z' fill='%23FFB323'/%3E%3C/svg%3E">
+<!-- Fonts out of the render path, same as the other pages (see teams.html). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap"></noscript>
+<style>
+/* ==================== YWAM GP PORTAL — its own look ====================
+   Deliberately NOT the GP app's theme (that block lives in index / teams /
+   help and test-theme keeps those three identical — this page is outside
+   it). Black, white type, one card in the middle of the screen, the way an
+   application portal reads: the logo and the portal's name on top, then
+   exactly one thing to do. Status colours are the only colour on the page. */
+:root {
+  --bg:#000000; --surface:#111111; --surface2:#1A1A1A; --border:#2A2A2A; --border2:#3A3A3A;
+  --ink:#FFFFFF; --muted:#A3A3A3; --faint:#737373; --onDark:#FFFFFF; --onDarkFaint:#A3A3A3;
+  --accent:#FFFFFF; --accentInk:#000000; --link:#FFFFFF;
+  --good:#4ADE80; --warn:#FBBF24; --bad:#F87171; --info:#60A5FA;
+  --r:14px; --rSm:10px;
+  color-scheme:dark;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; padding:0; overflow-x:hidden; }
+body { background:var(--bg); color:var(--ink); font-family:'Inter','Kantumruy Pro',system-ui,-apple-system,sans-serif; font-size:15px; line-height:1.5;
+  min-height:100vh; padding-bottom:env(safe-area-inset-bottom); -webkit-text-size-adjust:100%; -webkit-font-smoothing:antialiased; }
+button, select, input, textarea { font-family:inherit; font-size:inherit; color:inherit; }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+a { color:var(--link); }
+/* ---- header: a slim bar when signed in, a centred hero on the gate ---- */
+header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:calc(14px + env(safe-area-inset-top)) 20px 14px; border-bottom:1px solid var(--border); }
+.brandRow { display:flex; align-items:center; gap:12px; min-width:0; }
+.logoImg { height:34px; width:auto; display:block; }
+.brandTitle { font-weight:600; font-size:16px; letter-spacing:.2px; white-space:nowrap; }
+.brandSub { display:none; }
+.hbtns { display:flex; gap:8px; align-items:center; }
+.hbtn { border:1px solid var(--border2); background:transparent; color:var(--ink); border-radius:999px; padding:7px 14px; font-size:13px; cursor:pointer; }
+.hbtn:hover { border-color:var(--ink); }
+body.gate header { flex-direction:column; justify-content:center; gap:14px; border-bottom:0; padding:calc(48px + env(safe-area-inset-top)) 20px 8px; text-align:center; }
+body.gate .brandRow { flex-direction:column; gap:14px; }
+body.gate .logoImg { height:72px; }
+body.gate .brandTitle { font-size:30px; font-weight:700; letter-spacing:-.3px; line-height:1.1; }
+body.gate .brandSub { display:block; font-size:13px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:6px; }
+body.gate .hbtns { position:absolute; top:calc(14px + env(safe-area-inset-top)); right:16px; }
+body.gate main { padding-top:12px; }
+/* ---- type & layout ---- */
+main { padding:20px 16px 48px; max-width:1100px; margin:0 auto; }
+h1 { font-size:28px; font-weight:700; letter-spacing:-.3px; margin:0 0 4px; line-height:1.15; }
+h2 { font-size:20px; font-weight:600; margin:0 0 4px; }
+h3 { font-size:13px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); margin:18px 0 10px; }
+.sub { font-size:14px; color:var(--muted); margin:0 0 14px; line-height:1.5; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px; margin-bottom:14px; }
+.card.hero { background:transparent; border-color:var(--border2); }
+.center { max-width:440px; margin:0 auto; }
+.wide { max-width:680px; margin:0 auto; }
+.gateTitle { text-align:center; margin:0 0 18px; }
+.gateTitle h2 { font-size:22px; }
+.eyebrow { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:6px; }
+.btn { width:100%; margin-top:14px; padding:13px 16px; font-weight:600; font-size:15px; background:var(--accent); color:var(--accentInk); border:none; border-radius:var(--rSm); cursor:pointer; transition:opacity .12s, transform .08s; }
+.btn:hover { opacity:.9; } .btn:active { transform:scale(.99); } .btn:disabled { opacity:.5; cursor:default; }
+.btn.ghost { background:transparent; color:var(--ink); border:1px solid var(--border2); }
+.btn.ghost:hover { border-color:var(--ink); opacity:1; }
+.btn.small { width:auto; margin:0; padding:9px 14px; font-size:14px; }
+.linkbtn { background:none; border:none; color:var(--link); font-size:14px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; padding:10px; width:100%; margin-top:6px; }
+.linkbtn.inline { width:auto; padding:0; margin:0; }
+label.f { display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin:14px 0 6px; }
+input[type=text], input[type=tel], input[type=email], input[type=number], input[type=password], input[type=date], select, textarea {
+  width:100%; padding:12px 14px; border:1px solid var(--border2); border-radius:var(--rSm); background:var(--bg); color:var(--ink); font-size:16px; }
+input::placeholder, textarea::placeholder { color:var(--faint); }
+input:focus, select:focus, textarea:focus { border-color:var(--ink); outline:none; }
+select { appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size:6px 6px; background-repeat:no-repeat; padding-right:38px; }
+textarea { min-height:80px; resize:vertical; }
+.hint { font-size:12.5px; color:var(--faint); margin-top:6px; line-height:1.45; }
+.seg { display:flex; gap:8px; }
+.seg button { flex:1; padding:11px; border-radius:var(--rSm); border:1px solid var(--border2); background:var(--bg); font-size:15px; cursor:pointer; }
+.seg button.on { background:var(--ink); border-color:var(--ink); color:var(--accentInk); font-weight:600; }
+.row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+.row:last-child { border-bottom:0; }
+.rowName { font-size:14.5px; } .rowSub { display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
+.banner { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--rSm); padding:11px 13px; font-size:13.5px; line-height:1.45; margin-bottom:14px; }
+.msg { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:var(--accentInk);
+  padding:10px 16px; border-radius:999px; font-size:13.5px; font-weight:500; opacity:0; transition:opacity .2s; pointer-events:none; z-index:80; max-width:92vw; text-align:center; }
+.msg.show { opacity:1; }
+.chips { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+.chip { border:1px solid var(--border2); background:transparent; border-radius:999px; padding:7px 13px; font-size:13px; cursor:pointer; color:var(--muted); }
+.chip:hover { border-color:var(--ink); color:var(--ink); }
+.chip.on { background:var(--ink); border-color:var(--ink); color:var(--accentInk); font-weight:600; }
+.pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 12px; font-size:12.5px; font-weight:600; border:1px solid var(--border2); background:var(--surface2); color:var(--muted); white-space:nowrap; }
+.pill.pending, .pill.in_review, .pill.interview { color:var(--warn); border-color:var(--warn); background:transparent; }
+.pill.accepted, .pill.practical, .pill.arrived { color:var(--good); border-color:var(--good); background:transparent; }
+.pill.closed { color:var(--bad); border-color:var(--bad); background:transparent; }
+.pill.big { font-size:15px; padding:9px 16px; }
+/* the choices */
+.choices { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+.choice { text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; cursor:pointer; min-height:96px; display:flex; flex-direction:column; gap:4px; color:var(--ink); transition:border-color .12s; }
+.choice:hover, .choice:focus-visible { border-color:var(--ink); }
+.choiceKey { font-size:20px; font-weight:700; letter-spacing:-.2px; }
+.choiceSub { font-size:12.5px; color:var(--muted); line-height:1.35; }
+.prereq { display:inline-block; margin-top:6px; font-size:11.5px; color:var(--warn); }
+.campusSeg button { font-size:14px; }
+/* the applicant's dashboard */
+.two { display:grid; grid-template-columns:1fr; gap:0; }
+.timeline { list-style:none; margin:6px 0 0; padding:0; }
+.step { display:grid; grid-template-columns:28px 1fr; gap:12px; align-items:start; position:relative; padding-bottom:16px; }
+.step:not(:last-child)::before { content:''; position:absolute; left:13px; top:26px; bottom:0; width:2px; background:var(--border2); }
+.step.done:not(:last-child)::before { background:var(--good); }
+.dot { width:28px; height:28px; border-radius:50%; border:2px solid var(--border2); background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:12.5px; color:var(--muted); font-weight:600; }
+.step.done .dot { background:var(--good); border-color:var(--good); color:var(--accentInk); }
+.step.current .dot { background:var(--ink); border-color:var(--ink); color:var(--accentInk); box-shadow:0 0 0 5px rgba(255,255,255,.14); }
+.stepName { font-size:15px; font-weight:600; padding-top:3px; } .step.todo .stepName { color:var(--muted); font-weight:400; }
+.stepNote { font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
+.subItems { margin:6px 0 0; padding:0; list-style:none; font-size:13px; }
+.subItems li { display:flex; gap:8px; align-items:center; padding:3px 0; color:var(--muted); }
+.subItems li.done { color:var(--good); }
+.kv { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.kv:last-child { border-bottom:0; } .kv b { font-weight:600; } .kv span { color:var(--muted); text-align:right; }
+.chatBtn { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:8px 14px; border:1px solid var(--border2); color:var(--ink); text-decoration:none; font-weight:600; font-size:13.5px; white-space:nowrap; background:transparent; }
+.chatBtn:hover { border-color:var(--ink); }
+/* the staff side */
+.tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-bottom:16px; }
+.tile { background:var(--surface); border:1px solid var(--border); border-radius:var(--rSm); padding:12px 14px; }
+.tileNum { font-size:26px; font-weight:700; letter-spacing:-.5px; line-height:1.1; }
+.tileLbl { font-size:12px; color:var(--muted); margin-top:2px; }
+.crm { display:grid; grid-template-columns:1fr; gap:16px; align-items:start; }
+.tools { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+.tools input[type=text] { flex:1 1 200px; width:auto; padding:10px 14px; border-radius:999px; font-size:14px; }
+.tbl { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; }
+.thead { display:none; }
+.trow { display:grid; grid-template-columns:1fr auto; gap:6px 12px; padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; text-align:left; width:100%; background:none; border-left:0; border-right:0; border-top:0; color:inherit; }
+.trow:last-child { border-bottom:0; } .trow:hover, .trow.on { background:var(--surface2); }
+.trow .who { font-weight:600; font-size:15px; } .trow .meta { font-size:12.5px; color:var(--muted); }
+.trow .stage { grid-column:2; grid-row:1 / span 2; align-self:center; }
+.panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px; }
+.panelHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.log { list-style:none; padding:0; margin:8px 0 0; font-size:13.5px; }
+.log li { padding:8px 0; border-bottom:1px solid var(--border); } .log li:last-child { border-bottom:0; }
+.log .when { color:var(--faint); font-size:11.5px; display:block; }
+.empty { font-size:13.5px; color:var(--muted); padding:16px; text-align:center; }
+.langRow { text-align:center; margin-top:22px; font-size:13px; color:var(--faint); }
+.langRow button { background:none; border:0; color:var(--muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-size:13px; padding:4px 6px; }
+@media (min-width:900px) {
+  main { padding:28px 24px 64px; }
+  .choices { grid-template-columns:repeat(4,1fr); }
+  .two { grid-template-columns:400px 1fr; gap:20px; }
+  .crm.open { grid-template-columns:1fr 420px; }
+  .thead { display:grid; grid-template-columns:2fr 1.2fr 1fr 1fr auto; gap:12px; padding:10px 16px; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); font-weight:600; border-bottom:1px solid var(--border); }
+  .trow { grid-template-columns:2fr 1.2fr 1fr 1fr auto; align-items:center; }
+  .trow .stage { grid-column:auto; grid-row:auto; }
+  .trow .meta.sm { display:none; }
+  .panel { position:sticky; top:16px; }
+}
+@media (max-width:899px) { .trow .desk { display:none; } }
+</style>
+</head>
+<body class="gate">
+<header>
+  <div class="brandRow">
+    <img id="brandLogo" alt="YWAM" class="logoImg">
+    <div><div class="brandTitle">YWAM GP Portal</div><div class="brandSub">Poipet · Siem Reap</div></div>
+  </div>
+  <div class="hbtns" id="hbtns"></div>
+</header>
+<main id="main"></main>
+<div class="msg" id="msg"></div>
+<script src="logo.js"></script>
+<script src="km.js"></script>
+<script src="taxonomy.js"></script>
+<script>
+/* ==================== YWAM GP Portal ====================
+   Two sides of one page. An applicant signs up (or arrives from the public
+   website with ?apply=dts), sees their application's status and timeline,
+   and keeps their contact details current. Portal staff — only people an
+   admin has ticked on Admin → Portal access — see every applicant, move
+   them along, assign an owner and keep notes, on the same CRM records HR's
+   Candidates page uses. Everything is one portalBoot call per open, same as
+   the staff app; the session is kept under its own key ('gp-portal') so a
+   staff member can be signed into both.
+   See docs/portal-plan.md for the milestones; this is milestone 1. */
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+function lsDel(k){ try { localStorage.removeItem(k); } catch(e){} }
+var LANG = (function(){ return lsGet('gp-lang') || 'en'; })();
+var KM = (typeof BUILTIN_KM==='object' && BUILTIN_KM) ? BUILTIN_KM : {};
+function t(s){ return LANG==='km' ? (KM[s] || s) : s; }
+function gpT(s, vars){ var out=t(s); Object.keys(vars||{}).forEach(function(k){ out=out.split('{'+k+'}').join(String(vars[k])); }); return out; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function showMsg(txt){ var m=document.getElementById('msg'); m.textContent=txt; m.classList.add('show'); clearTimeout(m._t); m._t=setTimeout(function(){ m.classList.remove('show'); }, 2600); }
+var REQUEST_TIMEOUT_MS = 20000;
+function run(fn, args, onOk, onErr){
+  var ctl = (typeof AbortController === 'function') ? new AbortController() : null, settled=false;
+  var timer = setTimeout(function(){ if(!settled && ctl) ctl.abort(); }, REQUEST_TIMEOUT_MS);
+  fetch('/.netlify/functions/api', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ fn:fn, args:args }), signal: ctl ? ctl.signal : undefined })
+    .then(function(res){
+      if(!res.ok) return res.text().then(function(txt){ var msg='HTTP '+res.status; try { var j=JSON.parse(txt); if(j && j.error) msg+=' — '+j.error; } catch(e2){} throw new Error(msg); });
+      return res.json();
+    })
+    .then(function(d){ settled=true; clearTimeout(timer); onOk(d); })
+    .catch(function(e){ settled=true; clearTimeout(timer); if(onErr) onErr(e); else { P.busy=false; showMsg(t('Connection problem — try again.')); render(); } });
+}
+
+/* ---- what you can apply for ---- */
+/* Where: each campus runs its own schools (mirrors PORTAL_CAMPUSES in api.js,
+   which is what actually decides). DBS, BCS and SMS are secondary schools —
+   a completed DTS is the prerequisite — so their cards say so. */
+var CAMPUS_SCHOOLS = { poipet:['dts','dbs'], siemreap:['dts','dbs','bcs','sms'] };
+var CAMPUS_LIST = [['siemreap','YWAM Siem Reap','Siem Reap'],['poipet','YWAM Poipet','Poipet']];
+var DEFAULT_CAMPUS = 'siemreap';
+function campusName_(id){ for(var i=0;i<CAMPUS_LIST.length;i++) if(CAMPUS_LIST[i][0]===id) return t(CAMPUS_LIST[i][1]); return id||''; }
+function campusShort_(id){ for(var i=0;i<CAMPUS_LIST.length;i++) if(CAMPUS_LIST[i][0]===id) return t(CAMPUS_LIST[i][2]); return id||''; }
+var APPLY = [
+  { key:'dts', type:'student', school:'dts', label:'DTS', blurb:'Discipleship Training School' },
+  { key:'dbs', type:'student', school:'dbs', label:'DBS', blurb:'Discipleship Bible School', secondary:true },
+  { key:'bcs', type:'student', school:'bcs', label:'BCS', blurb:'Biblical Counseling School', secondary:true },
+  { key:'sms', type:'student', school:'sms', label:'SMS', blurb:'Social Media School', secondary:true },
+  { key:'staff', type:'staff', school:'', label:'Staff', blurb:'Join the staff team' },
+  { key:'volunteer', type:'volunteer', school:'', label:'Volunteer', blurb:'Serve with us for a season' },
+  { key:'team', type:'team', school:'', label:'Team', blurb:'Bring a short-term team' }
+];
+function applyByKey_(k){ for(var i=0;i<APPLY.length;i++) if(APPLY[i].key===k) return APPLY[i]; return null; }
+function offeredAt_(a, campus){ return !a.school || (CAMPUS_SCHOOLS[campus]||[]).indexOf(a.school)>-1; }
+function applyLabel_(type, school){
+  if(type==='student'){ var a=applyByKey_(school); return a ? a.label+' · '+t(a.blurb) : t('Student'); }
+  if(type==='staff') return t('Staff'); if(type==='volunteer') return t('Volunteer'); if(type==='team') return t('Short-term team');
+  return type||'—';
+}
+var STATUS_LABEL = { draft:'Not submitted yet', pending:'Application pending', in_review:'In review — we’ll be in touch', interview:'Interview stage', accepted:'Accepted!', practical:'Getting ready', arrived:'Arrived', closed:'Closed' };
+var STATUS_NOTE = {
+  draft:'Fill out your application when you are ready — it saves as you go.',
+  pending:'We have your application. One of our team will message you on {app} soon.',
+  in_review:'Our team has reached out. Keep an eye on {app} and send anything we ask for.',
+  interview:'We will arrange a video call with you — watch for a message on {app}.',
+  accepted:'Welcome! Next comes the practical part: fees, packing list, visa and travel.',
+  practical:'Fees, packing list, visa and travel — we will walk you through each one.',
+  arrived:'You are here. Welcome to {campus}!',
+  closed:'This application is closed. Message us if you think that is a mistake.'
+};
+var STEP_LABEL = { account:'Create your account', form:'Fill out the application', received:'Application received', contact:'We get in touch', docs:'Documents & reference', interview:'Video interview', accepted:'Accepted', practical:'Getting ready — fees, packing, visa, travel', arrived:'Arrival at the base' };
+var STEP_NOTE = { form:'Your answers save as a draft — come back any time.', contact:'On WhatsApp or Telegram, whichever you chose.', docs:'What to send depends on what you are applying for.', interview:'A video call with someone from the school or the team.' };
+var SUBITEM_LABEL = { documents:'Documents', reference:'Leader reference' };
+var STAGE_LABEL = { 'new':'New', contacted:'Contacted', applied:'Applied', interview:'Interview', accepted:'Accepted', practical:'Getting ready', arrived:'Arrived' };
+var MESSENGER_LABEL = { whatsapp:'WhatsApp', telegram:'Telegram' };
+function chatHref_(messenger, phone){
+  var digits=String(phone||'').replace(/\D/g,''); if(!digits) return '';
+  return messenger==='telegram' ? 'https://t.me/+'+digits : 'https://wa.me/'+digits;
+}
+function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
+
+/* ---- state ---- */
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, q:'', editContact:false, note:'' };
+(function(){
+  var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
+  if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
+  if(qs.campus && CAMPUS_SCHOOLS[qs.campus]) P.campus=qs.campus;
+  if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
+  if(qs.ref){ P.view='refsoon'; }
+  var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
+  if(saved && saved.user && saved.pin){ P.auth=saved; P.view='booting'; boot_(); }
+})();
+function boot_(){
+  run('portalBoot', [P.auth.user, P.auth.pin], function(d){
+    if(d && d.ok){ P.boot=d; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
+    if(d && d.err==='auth'){ lsDel('gp-portal'); P.auth=null; P.view='login'; showMsg(t('Your PIN didn’t work — please sign in again.')); render(); return; }
+    if(d && d.err==='not_authorized'){ P.view='noaccess'; render(); return; }
+    if(d && d.err==='no_application'){ P.view='noaccess'; P.err='no_application'; render(); return; }
+    P.view='login'; P.err='boot'; render();
+  }, function(e){ P.view='login'; P.err='boot'; render(); showMsg(t('Connection problem — try again.')); });
+}
+function signOut_(){ lsDel('gp-portal'); P.auth=null; P.boot=null; P.sel=null; P.view='login'; render(); }
+
+/* ---- the logo ----
+   PORTAL_LOGO is the YWAM mark for the top of the page — drop the file into
+   public/ (white on transparent, for the black page) and name it here, e.g.
+   'ywam-logo.png'. Left empty, the GP mark from logo.js stands in, and no
+   request is made for a file that is not there. */
+var PORTAL_LOGO = 'ywam-logo.png';
+(function(){
+  var img=document.getElementById('brandLogo'); if(!img) return;
+  img.onerror=function(){ img.onerror=null; if(typeof GP_LOGO==='string') img.src=GP_LOGO; else img.style.display='none'; };
+  if(PORTAL_LOGO) img.src=PORTAL_LOGO; else if(typeof GP_LOGO==='string') img.src=GP_LOGO; else img.style.display='none';
+})();
+/* ---- render ---- */
+function render(){
+  var hb=document.getElementById('hbtns');
+  hb.innerHTML='<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+
+    (P.auth && P.boot ? '<button class="hbtn" id="outBtn">'+esc(t('Sign out'))+'</button>' : '');
+  var m=document.getElementById('main');
+  var v=P.view;
+  /* The gate — everything before you are signed in — is the portal's name
+     and logo on top and one card underneath; signed in, the bar goes slim. */
+  document.body.classList.toggle('gate', v!=='me' && v!=='crm');
+  m.innerHTML = v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
+    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_()
+    : v==='noaccess' ? noAccessHtml_() : v==='refsoon' ? refSoonHtml_() : loginHtml_();
+  bind_();
+}
+function langRowHtml_(){
+  return '<div class="langRow"><button id="langBtn2">'+(LANG==='km' ? 'English' : 'ភាសាខ្មែរ')+'</button></div>';
+}
+function campusSegHtml_(attr, current){
+  return '<div class="seg campusSeg">'+CAMPUS_LIST.map(function(c){ return '<button '+attr+'="'+c[0]+'" class="'+(current===c[0]?'on':'')+'">'+esc(t(c[1]))+'</button>'; }).join('')+'</div>';
+}
+function chooseHtml_(){
+  var here=P.campus||DEFAULT_CAMPUS;
+  return '<div class="wide"><div class="gateTitle"><h2>'+esc(t('I want to apply'))+'</h2><p class="sub">'+esc(t('Pick where, then what you are applying for. You will create a small account so you can come back to it on your phone.'))+'</p></div>'+
+    '<div class="center" style="margin-bottom:14px"><label class="f" style="text-align:center">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here)+'</div>'+
+    '<div class="choices">'+APPLY.filter(function(a){ return offeredAt_(a, here); }).map(function(a){ return '<button class="choice" data-apply="'+a.key+'"><span class="choiceKey">'+esc(a.label)+'</span><span class="choiceSub">'+esc(t(a.blurb))+(a.secondary?'<br><span class="prereq">'+esc(t('Requires a completed DTS'))+'</span>':'')+'</span></button>'; }).join('')+'</div>'+
+    '<button class="linkbtn" id="toLogin">'+esc(t('I already have an account'))+'</button>'+langRowHtml_()+'</div>';
+}
+function refSoonHtml_(){
+  return '<div class="center"><div class="card"><h2>'+esc(t('Leader reference'))+'</h2><p class="sub">'+esc(t('The reference form is not open yet. The applicant will send you a new link when it is.'))+'</p>'+
+    '<button class="linkbtn" id="toLanding">'+esc(t('Back to the portal'))+'</button></div></div>';
+}
+function noAccessHtml_(){
+  var noApp = P.err==='no_application';
+  return '<div class="center"><div class="card"><h2>'+esc(noApp ? t('No application found') : t('No portal access'))+'</h2>'+
+    '<p class="sub">'+esc(noApp ? t('This account has no application attached. Message our team and we will sort it out.') : t('Your account is a staff account without portal access. Ask an admin to grant it on Admin → Portal access.'))+'</p>'+
+    '<button class="btn ghost" id="outBtn2">'+esc(t('Sign out'))+'</button></div></div>';
+}
+function loginHtml_(){
+  return '<div class="center"><div class="card"><h2>'+esc(t('Sign in'))+'</h2><p class="sub">'+esc(t('The username and PIN you made when you applied — or your My GP details if you are staff.'))+'</p>'+
+    '<label class="f">'+esc(t('Username'))+'</label><input type="text" id="l_user" autocomplete="username" autocapitalize="none" value="'+esc(P.reg.username||'')+'">'+
+    '<label class="f">'+esc(t('PIN'))+'</label><input type="password" id="l_pin" inputmode="numeric" maxlength="4" autocomplete="current-password">'+
+    '<button class="btn" id="loginBtn"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Signing in…'):t('Sign in'))+'</button></div>'+
+    '<div class="card" style="text-align:center"><div class="sub" style="margin-bottom:10px">'+esc(t('New here?'))+'</div>'+
+    '<button class="btn ghost" id="toChoose" style="margin-top:0">'+esc(t('Start an application'))+'</button></div>'+
+    '<p class="hint" style="text-align:center">'+esc(t('YWAM staff who work in applications sign in with their My GP username and PIN.'))+'</p>'+langRowHtml_()+'</div>';
+}
+function registerHtml_(){
+  var a=applyByKey_(P.apply), r=P.reg;
+  var h='<div class="center"><div class="gateTitle"><h2>'+esc(t('Create your account'))+'</h2>';
+  h+='<p class="sub">'+esc(t('A few details so we can reach you, then your application. Nothing here is shared outside our applications team.'))+'</p></div>';
+  var here=P.campus||DEFAULT_CAMPUS;
+  h+='<div class="card"><label class="f" style="margin-top:0">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here)+
+    '<label class="f">'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(a&&a.key===x.key?' on':'')+'" data-pick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>'+
+    (a ? '<p class="hint">'+esc(t(a.blurb))+(a.secondary?' · '+esc(t('Requires a completed DTS')):'')+'</p>' : '<p class="hint">'+esc(t('Pick one to continue.'))+'</p>')+'</div>';
+  h+='<div class="card">'+
+    '<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="r_name" autocomplete="name" value="'+esc(r.name||'')+'">'+
+    '<label class="f">'+esc(t('Email'))+'</label><input type="email" id="r_email" autocomplete="email" value="'+esc(r.email||'')+'">'+
+    '<label class="f">'+esc(t('Phone number (with country code)'))+'</label><input type="tel" id="r_phone" autocomplete="tel" placeholder="+855 …" value="'+esc(r.phone||'')+'">'+
+    '<label class="f">'+esc(t('Where can we message you?'))+'</label><div class="seg">'+
+      '<button data-msgr="whatsapp" class="'+(r.messenger==='whatsapp'?'on':'')+'">WhatsApp</button><button data-msgr="telegram" class="'+(r.messenger==='telegram'?'on':'')+'">Telegram</button></div>'+
+    '<p class="hint">'+esc(t('One of our team will message you there after you apply.'))+'</p>'+
+    '<label class="f">'+esc(t('Country'))+'</label><select id="r_country"><option value="">'+esc(t('— choose —'))+'</option>'+
+      (typeof COUNTRIES!=='undefined' ? COUNTRIES : ['Cambodia']).map(function(c){ return '<option value="'+esc(c)+'"'+(r.country===c?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+'</select>'+
+  '</div>';
+  h+='<div class="card">'+
+    '<label class="f">'+esc(t('Choose a username'))+'</label><input type="text" id="r_user" autocapitalize="none" autocomplete="username" value="'+esc(r.username||'')+'"><p class="hint">'+esc(t('Lowercase letters, numbers, dots or dashes — 2 to 20 characters.'))+'</p>'+
+    '<label class="f">'+esc(t('Choose a 4-digit PIN'))+'</label><input type="password" id="r_pin" inputmode="numeric" maxlength="4" autocomplete="new-password">'+
+    '<label class="f">'+esc(t('Repeat the PIN'))+'</label><input type="password" id="r_pin2" inputmode="numeric" maxlength="4" autocomplete="new-password">'+
+    '<button class="btn" id="regBtn"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Creating…'):t('Create my account'))+'</button>'+
+    '<button class="linkbtn" id="toLogin">'+esc(t('I already have an account'))+'</button></div>'+langRowHtml_()+'</div>';
+  return h;
+}
+/* ---- the applicant's dashboard ---- */
+function meHtml_(){
+  var d=P.boot, me=d.me, app=d.application;
+  var appName = MESSENGER_LABEL[me.messenger] || t('WhatsApp or Telegram');
+  var h='<div class="two"><div>';
+  h+='<div class="card hero"><div class="eyebrow">'+esc(t('Your application'))+'</div>'+
+    '<h1 style="font-size:26px">'+esc(me.name)+'</h1><p class="sub" style="margin:2px 0 12px">'+esc(t('Applying for'))+': <b style="color:var(--ink)">'+esc(applyLabel_(app.type, app.school))+'</b>'+(app.campus?' · '+esc(campusName_(app.campus)):'')+'</p>'+
+    '<span class="pill big '+esc(app.status)+'" id="statusPill">'+esc(t(STATUS_LABEL[app.status]||app.status))+'</span>'+
+    '<p class="sub" style="margin:12px 0 0">'+esc(gpT(STATUS_NOTE[app.status]||'', {app:appName, campus:campusName_(app.campus||DEFAULT_CAMPUS)}))+'</p></div>';
+  h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Where you are'))+'</h3><ol class="timeline" id="timeline">'+app.steps.map(function(st, i){
+    return '<li class="step '+st.state+'" data-step="'+st.id+'"><span class="dot">'+(st.state==='done'?'✓':(i+1))+'</span><div>'+
+      '<div class="stepName">'+esc(t(STEP_LABEL[st.id]||st.id))+'</div>'+
+      (STEP_NOTE[st.id] && st.state!=='done' ? '<div class="stepNote">'+esc(t(STEP_NOTE[st.id]))+'</div>' : '')+
+      (st.items ? '<ul class="subItems">'+st.items.map(function(it){ return '<li class="'+(it.done?'done':'')+'">'+(it.done?'✓':'○')+' '+esc(t(SUBITEM_LABEL[it.id]||it.id))+(it.done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; }).join('')+'</ul>' : '')+
+      '</div></li>';
+  }).join('')+'</ol></div>';
+  h+='</div><div>';
+  var formStep = app.steps.filter(function(s){ return s.id==='form'; })[0];
+  h+='<div class="card"><h3 style="margin-top:0">📝 '+esc(t('Application form'))+'</h3>'+
+    (formStep && (formStep.done || formStep.state==='done') ? '<p class="sub" style="margin:0">'+esc(t('Submitted'))+(app.submittedAt?' · '+esc(fmtDate_(app.submittedAt)):'')+'</p>'
+      : '<p class="sub" style="margin:0 0 8px">'+esc(t('Your application form opens here soon. We will message you the moment it is ready — nothing to do until then.'))+'</p>'+
+        '<button class="btn small ghost" disabled>'+esc(t('Opens soon'))+'</button>')+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3><p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+'</p></div>';
+  h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📱 '+esc(t('How we reach you'))+'</h3>'+(P.editContact?'':'<button class="linkbtn inline" id="editContact">'+esc(t('Edit'))+'</button>')+'</div>';
+  if(P.editContact){
+    var c=P.contact||{ phone:me.phone, messenger:me.messenger, country:me.country };
+    h+='<label class="f">'+esc(t('Phone number (with country code)'))+'</label><input type="tel" id="c_phone" value="'+esc(c.phone||'')+'">'+
+      '<label class="f">'+esc(t('Where can we message you?'))+'</label><div class="seg"><button data-cmsgr="whatsapp" class="'+(c.messenger==='whatsapp'?'on':'')+'">WhatsApp</button><button data-cmsgr="telegram" class="'+(c.messenger==='telegram'?'on':'')+'">Telegram</button></div>'+
+      '<label class="f">'+esc(t('Country'))+'</label><select id="c_country"><option value="">'+esc(t('— choose —'))+'</option>'+(typeof COUNTRIES!=='undefined' ? COUNTRIES : ['Cambodia']).map(function(x){ return '<option value="'+esc(x)+'"'+(c.country===x?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select>'+
+      '<button class="btn" id="saveContact"'+(P.busy?' disabled':'')+'>'+esc(t('Save'))+'</button><button class="linkbtn" id="cancelContact">'+esc(t('Cancel'))+'</button>';
+  } else {
+    h+='<div class="kv"><b>'+esc(t('Phone'))+'</b><span>'+esc(me.phone||'—')+'</span></div>'+
+      '<div class="kv"><b>'+esc(t('Messaging app'))+'</b><span>'+esc(MESSENGER_LABEL[me.messenger]||'—')+'</span></div>'+
+      '<div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(me.email||'—')+'</span></div>'+
+      '<div class="kv"><b>'+esc(t('Country'))+'</b><span>'+esc(me.country||'—')+'</span></div>';
+  }
+  h+='</div>';
+  h+='<p class="hint">🔒 '+esc(t('Only the YWAM Siem Reap applications team can see your application.'))+'</p>';
+  h+='</div></div>';
+  return h;
+}
+/* ---- the staff side ---- */
+function crmHtml_(){
+  var d=P.boot, all=d.applicants.slice();
+  var byId={}; d.staff.forEach(function(s){ byId[s.id]=s; });
+  if(P.campusFilter===null) P.campusFilter = CAMPUS_SCHOOLS[d.me.campus] ? d.me.campus : '';
+  var list=all.filter(function(c){ return !P.campusFilter || c.campus===P.campusFilter; });
+  var live=list.filter(function(c){ return !c.archived; });
+  var counts={}; live.forEach(function(c){ counts[c.stage]=(counts[c.stage]||0)+1; });
+  var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Applications'))+'</h1><p class="sub">'+esc(gpT('{n} open · signed in as {name} ({role})',{n:live.length, name:d.me.name, role:(d.role==='portal-admin' ? t('portal admin') : t('portal staff'))}))+'</p></div></div>';
+  h+='<div class="chips" style="margin-bottom:12px">'+[['',t('All campuses')]].concat(CAMPUS_LIST.map(function(c){ return [c[0], t(c[1])]; })).map(function(x){
+    var n=all.filter(function(c){ return !c.archived && (!x[0] || c.campus===x[0]); }).length;
+    return '<button class="chip'+(P.campusFilter===x[0]?' on':'')+'" data-campusfilter="'+x[0]+'">'+esc(x[1])+' · '+n+'</button>'; }).join('')+'</div>';
+  h+='<div class="tiles">'+[['new',t('New')],['applied',t('Applied')],['contacted',t('Contacted')],['interview',t('Interview')],['accepted',t('Accepted')],['practical',t('Getting ready')]].map(function(x){
+    return '<div class="tile"><div class="tileNum">'+(counts[x[0]]||0)+'</div><div class="tileLbl">'+esc(x[1])+'</div></div>'; }).join('')+'</div>';
+  h+='<div class="crm'+(P.sel?' open':'')+'"><div>';
+  h+='<div class="tools"><input type="text" id="q" placeholder="'+esc(t('Search by name, email or phone'))+'" value="'+esc(P.q)+'"></div>';
+  h+='<div class="chips">'+[['',t('All')]].concat(d.stages.map(function(s){ return [s, t(STAGE_LABEL[s]||s)]; })).concat([['archived',t('Archived')]]).map(function(x){
+    return '<button class="chip'+(P.filter===x[0]?' on':'')+'" data-filter="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('')+'</div>';
+  var q=P.q.trim().toLowerCase();
+  var rows=list.filter(function(c){
+    if(P.filter==='archived' ? !c.archived : (c.archived || (P.filter && c.stage!==P.filter))) return false;
+    if(q && (c.name+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase().indexOf(q)===-1) return false;
+    return true;
+  }).sort(function(a,b){ return (b.updated||'') < (a.updated||'') ? -1 : 1; });
+  h+='<div class="tbl"><div class="thead"><span>'+esc(t('Name'))+'</span><span>'+esc(t('Applying for'))+'</span><span>'+esc(t('Stage'))+'</span><span>'+esc(t('Owner'))+'</span><span></span></div>';
+  if(!rows.length) h+='<div class="empty">'+esc(t('Nobody here yet.'))+'</div>';
+  rows.forEach(function(c){
+    var owner=c.assignedTo && byId[c.assignedTo] ? byId[c.assignedTo].name : '—';
+    var chat=chatHref_(c.messenger, c.phone);
+    h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
+      '<span><span class="who">'+esc(c.name)+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span></span>'+
+      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(P.campusFilter?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
+      '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
+      '<span class="meta desk">'+esc(owner)+'</span>'+
+      '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
+    '</button>';
+  });
+  h+='</div></div>';
+  if(P.sel){ var c=list.filter(function(x){ return x.id===P.sel; })[0]; h+='<div>'+(c ? panelHtml_(c, byId) : '')+'</div>'; }
+  h+='</div>';
+  return h;
+}
+function panelHtml_(c, byId){
+  var chat=chatHref_(c.messenger, c.phone);
+  var h='<div class="panel" id="panel"><div class="panelHead"><div><h2 style="margin:0">'+esc(c.name)+'</h2><p class="sub" style="margin:2px 0 0">'+esc(applyLabel_(c.type, c.school))+' · '+esc(campusName_(c.campus))+(c.country?' · '+esc(c.country):'')+'</p></div>'+
+    '<button class="hbtn" id="closePanel">✕</button></div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(gpT('Open {app} chat',{app:MESSENGER_LABEL[c.messenger]||t('chat')}))+'</a>':'')+
+    (c.email?'<a class="chatBtn" href="mailto:'+esc(c.email)+'">✉️ '+esc(t('Email'))+'</a>':'')+'</div>';
+  h+='<div class="kv"><b>'+esc(t('Phone'))+'</b><span>'+esc(c.phone||'—')+'</span></div><div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(c.email||'—')+'</span></div>'+
+    '<div class="kv"><b>'+esc(t('Status shown to them'))+'</b><span>'+esc(t(STATUS_LABEL[c.status]||c.status))+'</span></div>';
+  h+='<label class="f">'+esc(t('Stage'))+'</label><select id="p_stage">'+P.boot.stages.map(function(s){ return '<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+esc(t(STAGE_LABEL[s]||s))+'</option>'; }).join('')+'</select>';
+  h+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
+  h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
+  h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
+  h+='<h3>'+esc(t('Notes'))+'</h3><textarea id="p_note" placeholder="'+esc(t('Add a note…'))+'">'+esc(P.note)+'</textarea><button class="btn small ghost" id="addNote" style="margin-top:8px">'+esc(t('Add note'))+'</button>';
+  var log=(c.log||[]).slice().reverse();
+  h+='<ul class="log">'+(log.length ? log.map(function(l){ var who=byId[l.by] ? byId[l.by].name : (l.by===c.staffId ? c.name : '—');
+    return '<li><span class="when">'+esc(fmtDate_(l.at))+' · '+esc(who)+'</span>'+(l.kind==='stage' ? '→ '+esc(t(STAGE_LABEL[l.text]||l.text)) : esc(l.text))+'</li>'; }).join('') : '<li class="empty">'+esc(t('No notes yet.'))+'</li>')+'</ul>';
+  h+='<button class="linkbtn" id="archiveCand">'+esc(c.archived ? t('Reopen this application') : t('Close this application'))+'</button>';
+  h+='</div>';
+  return h;
+}
+/* ---- bindings ---- */
+function on_(id, fn){ var el=document.getElementById(id); if(el) el.onclick=fn; }
+function bind_(){
+  var flip=function(){ LANG = LANG==='km' ? 'en' : 'km'; lsSet('gp-lang', LANG); render(); };
+  on_('langBtn', flip); on_('langBtn2', flip);
+  on_('toChoose', function(){ P.view='choose'; render(); });
+  on_('outBtn', signOut_); on_('outBtn2', signOut_);
+  on_('toLanding', function(){ P.view='login'; render(); });
+  on_('toLogin', function(){ P.view='login'; P.err=''; render(); });
+  document.querySelectorAll('[data-apply]').forEach(function(b){ b.onclick=function(){ P.apply=b.getAttribute('data-apply'); P.view='register'; render(); }; });
+  document.querySelectorAll('[data-campus]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.campus=b.getAttribute('data-campus'); var a=applyByKey_(P.apply); if(a && !offeredAt_(a, P.campus)) P.apply=null; render(); }; });
+  document.querySelectorAll('[data-campusfilter]').forEach(function(b){ b.onclick=function(){ P.campusFilter=b.getAttribute('data-campusfilter'); P.sel=null; render(); }; });
+  document.querySelectorAll('[data-pick]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.apply=b.getAttribute('data-pick'); render(); }; });
+  document.querySelectorAll('[data-msgr]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.reg.messenger=b.getAttribute('data-msgr'); render(); }; });
+  on_('regBtn', register_);
+  on_('loginBtn', login_);
+  var lp=document.getElementById('l_pin'); if(lp) lp.onkeydown=function(e){ if(e.key==='Enter') login_(); };
+  // applicant
+  on_('editContact', function(){ P.editContact=true; P.contact={ phone:P.boot.me.phone, messenger:P.boot.me.messenger, country:P.boot.me.country }; render(); });
+  on_('cancelContact', function(){ P.editContact=false; P.contact=null; render(); });
+  document.querySelectorAll('[data-cmsgr]').forEach(function(b){ b.onclick=function(){ keepContact_(); P.contact.messenger=b.getAttribute('data-cmsgr'); render(); }; });
+  on_('saveContact', saveContact_);
+  // staff
+  var q=document.getElementById('q'); if(q){ q.oninput=function(){ P.q=q.value; renderList_(); }; }
+  document.querySelectorAll('[data-filter]').forEach(function(b){ b.onclick=function(){ P.filter=b.getAttribute('data-filter'); render(); }; });
+  document.querySelectorAll('[data-open]').forEach(function(b){ b.onclick=function(e){ if(e.target.closest('[data-chat]')) return; P.sel=b.getAttribute('data-open'); P.note=''; render(); var p=document.getElementById('panel'); if(p && window.innerWidth<900) p.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
+  on_('closePanel', function(){ P.sel=null; render(); });
+  on_('saveCand', saveCand_);
+  on_('addNote', addNote_);
+  on_('archiveCand', archiveCand_);
+}
+/* Typing in the search box re-draws only the list, so the box keeps focus. */
+function renderList_(){
+  var wrap=document.querySelector('.crm'); if(!wrap) return;
+  var tmp=document.createElement('div'); tmp.innerHTML=crmHtml_();
+  var fresh=tmp.querySelector('.tbl'), cur=document.querySelector('.crm .tbl');
+  if(fresh && cur){ cur.replaceWith(fresh); document.querySelectorAll('[data-open]').forEach(function(b){ b.onclick=function(e){ if(e.target.closest('[data-chat]')) return; P.sel=b.getAttribute('data-open'); P.note=''; render(); }; }); }
+}
+function keepContact_(){
+  P.contact=P.contact||{};
+  var ph=document.getElementById('c_phone'), co=document.getElementById('c_country');
+  if(ph) P.contact.phone=ph.value; if(co) P.contact.country=co.value;
+}
+function saveContact_(){
+  keepContact_();
+  var c=P.contact||{};
+  if(String(c.phone||'').replace(/\D/g,'').length<6){ showMsg(t('Add a phone number with the country code.')); return; }
+  if(!c.messenger){ showMsg(t('Choose WhatsApp or Telegram.')); return; }
+  P.busy=true; render();
+  run('portalUpdateContact', [P.auth.user, P.auth.pin, { phone:c.phone, messenger:c.messenger, country:c.country }], function(d){
+    P.busy=false;
+    if(d && d.ok){ P.boot=d; P.editContact=false; P.contact=null; showMsg(t('Saved')); }
+    else showMsg(d && d.err==='phone_required' ? t('Add a phone number with the country code.') : t('Could not save'));
+    render();
+  });
+}
+function selected_(){ return (P.boot.applicants||[]).filter(function(x){ return x.id===P.sel; })[0] || null; }
+function putCand_(d){
+  if(!(d && d.ok && d.candidate)){ showMsg(d && d.err==='not_authorized' ? t('No portal access') : t('Could not save')); return false; }
+  var found=false;
+  P.boot.applicants=P.boot.applicants.map(function(x){ if(x.id===d.candidate.id){ found=true; return Object.assign({}, x, d.candidate, { status:x.status }); } return x; });
+  if(!found) P.boot.applicants.push(d.candidate);
+  return true;
+}
+/* The CRM rebuilds the record from what is sent, so send the whole record
+   with the changed fields — the server keeps the portal's own fields and
+   the log regardless. After a save the status the applicant sees may have
+   moved, so the list is refreshed from the server. */
+function saveCand_(){
+  var c=selected_(); if(!c) return;
+  var rec=Object.assign({}, c, { stage:document.getElementById('p_stage').value, assignedTo:document.getElementById('p_owner').value,
+    nextStep:document.getElementById('p_next').value.trim(), nextDate:document.getElementById('p_date').value });
+  P.busy=true; render();
+  run('hrSaveCandidate', [P.auth.user, P.auth.pin, rec], function(d){
+    P.busy=false;
+    if(putCand_(d)){ showMsg(t('Saved')); boot_(); return; }
+    render();
+  });
+}
+function addNote_(){
+  var c=selected_(); if(!c) return;
+  var txt=String((document.getElementById('p_note')||{}).value||'').trim();
+  if(!txt){ showMsg(t('Write the note first.')); return; }
+  P.busy=true; render();
+  run('hrCandidateNote', [P.auth.user, P.auth.pin, c.id, txt], function(d){
+    P.busy=false; P.note='';
+    if(putCand_(d)) showMsg(t('Note added'));
+    render();
+  });
+}
+function archiveCand_(){
+  var c=selected_(); if(!c) return;
+  var info = c.archived ? null : { reason: prompt(t('Why is this application closing? (optional)')) || '' };
+  if(!c.archived && info.reason===null) return;
+  run('hrArchiveCandidate', [P.auth.user, P.auth.pin, c.id, info], function(d){
+    if(putCand_(d)){ showMsg(c.archived ? t('Reopened') : t('Closed')); boot_(); return; }
+    render();
+  });
+}
+render();
+function keepReg_(){
+  var g=function(id){ var el=document.getElementById(id); return el ? el.value : undefined; };
+  ['name','email','phone','username','country'].forEach(function(k){ var v=g('r_'+(k==='username'?'user':k)); if(v!==undefined) P.reg[k]=v; });
+}
+function register_(){
+  keepReg_();
+  var a=applyByKey_(P.apply);
+  var pin=(document.getElementById('r_pin')||{}).value||'', pin2=(document.getElementById('r_pin2')||{}).value||'';
+  var r=P.reg;
+  if(!a){ showMsg(t('Pick what you are applying for.')); return; }
+  if(!offeredAt_(a, P.campus||DEFAULT_CAMPUS)){ showMsg(t('That school is not run at this campus — pick another.')); return; }
+  if(!String(r.name||'').trim()){ showMsg(t('Add your full name.')); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r.email||'').trim())){ showMsg(t('Add a real email address.')); return; }
+  if(String(r.phone||'').replace(/\D/g,'').length<6){ showMsg(t('Add a phone number with the country code.')); return; }
+  if(!r.messenger){ showMsg(t('Choose WhatsApp or Telegram.')); return; }
+  if(!/^[a-z0-9._-]{2,20}$/.test(String(r.username||'').trim().toLowerCase())){ showMsg(t('Username: lowercase letters, numbers, dots or dashes — 2 to 20 characters.')); return; }
+  if(!/^\d{4}$/.test(pin)){ showMsg(t('The PIN is 4 digits.')); return; }
+  if(pin!==pin2){ showMsg(t('The two PINs don’t match.')); return; }
+  P.busy=true; render();
+  var payload={ username:String(r.username).trim().toLowerCase(), pin:pin, name:String(r.name).trim(), email:String(r.email).trim(), phone:String(r.phone).trim(), messenger:r.messenger, country:r.country||'', type:a.type, school:a.school, campus:P.campus||DEFAULT_CAMPUS };
+  run('portalRegister', [payload], function(d){
+    P.busy=false;
+    if(d && d.ok){ P.auth={ user:payload.username, pin:pin }; lsSet('gp-portal', JSON.stringify(P.auth)); P.boot=d; P.view='me'; P.reg={}; showMsg(t('Welcome — your account is ready.')); render(); return; }
+    var e=d && d.err;
+    showMsg(e==='taken' ? t('That username is taken — try another.') : e==='email_taken' ? t('There is already an account with that email. Sign in instead.')
+      : e==='bad_email' ? t('Add a real email address.') : e==='phone_required' ? t('Add a phone number with the country code.') : t('Check your details and try again.'));
+    render();
+  });
+}
+function login_(){
+  var u=String((document.getElementById('l_user')||{}).value||'').trim().toLowerCase(), pin=String((document.getElementById('l_pin')||{}).value||'');
+  if(!u || !/^\d{4}$/.test(pin)){ showMsg(t('Enter your username and 4-digit PIN.')); return; }
+  P.busy=true; P.reg.username=u; render();
+  P.auth={ user:u, pin:pin };
+  run('portalBoot', [u, pin], function(d){
+    P.busy=false;
+    if(d && d.ok){ P.boot=d; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
+    if(d && d.err==='not_authorized'){ P.view='noaccess'; render(); return; }
+    if(d && d.err==='no_application'){ P.view='noaccess'; P.err='no_application'; render(); return; }
+    P.auth=null; showMsg(t('Wrong username or PIN.')); render();
+  });
+}
+
+
+</script>
+</body>
+</html>
