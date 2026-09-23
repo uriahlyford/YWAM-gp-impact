@@ -107,6 +107,8 @@ textarea { min-height:80px; resize:vertical; }
 .choice:hover, .choice:focus-visible { border-color:var(--ink); }
 .choiceKey { font-size:20px; font-weight:700; letter-spacing:-.2px; }
 .choiceSub { font-size:12.5px; color:var(--muted); line-height:1.35; }
+.prereq { display:inline-block; margin-top:6px; font-size:11.5px; color:var(--warn); }
+.campusSeg button { font-size:14px; }
 /* the applicant's dashboard */
 .two { display:grid; grid-template-columns:1fr; gap:0; }
 .timeline { list-style:none; margin:6px 0 0; padding:0; }
@@ -165,7 +167,7 @@ textarea { min-height:80px; resize:vertical; }
 <header>
   <div class="brandRow">
     <img id="brandLogo" alt="YWAM" class="logoImg">
-    <div><div class="brandTitle">YWAM GP Portal</div><div class="brandSub">YWAM Siem Reap</div></div>
+    <div><div class="brandTitle">YWAM GP Portal</div><div class="brandSub">Poipet · Siem Reap</div></div>
   </div>
   <div class="hbtns" id="hbtns"></div>
 </header>
@@ -208,16 +210,25 @@ function run(fn, args, onOk, onErr){
 }
 
 /* ---- what you can apply for ---- */
+/* Where: each campus runs its own schools (mirrors PORTAL_CAMPUSES in api.js,
+   which is what actually decides). DBS, BCS and SMS are secondary schools —
+   a completed DTS is the prerequisite — so their cards say so. */
+var CAMPUS_SCHOOLS = { poipet:['dts','dbs'], siemreap:['dts','dbs','bcs','sms'] };
+var CAMPUS_LIST = [['siemreap','YWAM Siem Reap','Siem Reap'],['poipet','YWAM Poipet','Poipet']];
+var DEFAULT_CAMPUS = 'siemreap';
+function campusName_(id){ for(var i=0;i<CAMPUS_LIST.length;i++) if(CAMPUS_LIST[i][0]===id) return t(CAMPUS_LIST[i][1]); return id||''; }
+function campusShort_(id){ for(var i=0;i<CAMPUS_LIST.length;i++) if(CAMPUS_LIST[i][0]===id) return t(CAMPUS_LIST[i][2]); return id||''; }
 var APPLY = [
   { key:'dts', type:'student', school:'dts', label:'DTS', blurb:'Discipleship Training School' },
-  { key:'dbs', type:'student', school:'dbs', label:'DBS', blurb:'Discipleship Bible School' },
-  { key:'bcs', type:'student', school:'bcs', label:'BCS', blurb:'YWAM Siem Reap school' },
-  { key:'sms', type:'student', school:'sms', label:'SMS', blurb:'YWAM Siem Reap school' },
-  { key:'staff', type:'staff', school:'', label:'Staff', blurb:'Join the YWAM Siem Reap staff' },
+  { key:'dbs', type:'student', school:'dbs', label:'DBS', blurb:'Discipleship Bible School', secondary:true },
+  { key:'bcs', type:'student', school:'bcs', label:'BCS', blurb:'Biblical Counseling School', secondary:true },
+  { key:'sms', type:'student', school:'sms', label:'SMS', blurb:'Social Media School', secondary:true },
+  { key:'staff', type:'staff', school:'', label:'Staff', blurb:'Join the staff team' },
   { key:'volunteer', type:'volunteer', school:'', label:'Volunteer', blurb:'Serve with us for a season' },
   { key:'team', type:'team', school:'', label:'Team', blurb:'Bring a short-term team' }
 ];
 function applyByKey_(k){ for(var i=0;i<APPLY.length;i++) if(APPLY[i].key===k) return APPLY[i]; return null; }
+function offeredAt_(a, campus){ return !a.school || (CAMPUS_SCHOOLS[campus]||[]).indexOf(a.school)>-1; }
 function applyLabel_(type, school){
   if(type==='student'){ var a=applyByKey_(school); return a ? a.label+' · '+t(a.blurb) : t('Student'); }
   if(type==='staff') return t('Staff'); if(type==='volunteer') return t('Volunteer'); if(type==='team') return t('Short-term team');
@@ -231,10 +242,10 @@ var STATUS_NOTE = {
   interview:'We will arrange a video call with you — watch for a message on {app}.',
   accepted:'Welcome! Next comes the practical part: fees, packing list, visa and travel.',
   practical:'Fees, packing list, visa and travel — we will walk you through each one.',
-  arrived:'You are here. Welcome to YWAM Siem Reap!',
+  arrived:'You are here. Welcome to {campus}!',
   closed:'This application is closed. Message us if you think that is a mistake.'
 };
-var STEP_LABEL = { account:'Create your account', form:'Fill out the application', received:'Application received', contact:'We get in touch', docs:'Documents & reference', interview:'Video interview', accepted:'Accepted', practical:'Getting ready — fees, packing, visa, travel', arrived:'Arrival in Siem Reap' };
+var STEP_LABEL = { account:'Create your account', form:'Fill out the application', received:'Application received', contact:'We get in touch', docs:'Documents & reference', interview:'Video interview', accepted:'Accepted', practical:'Getting ready — fees, packing, visa, travel', arrived:'Arrival at the base' };
 var STEP_NOTE = { form:'Your answers save as a draft — come back any time.', contact:'On WhatsApp or Telegram, whichever you chose.', docs:'What to send depends on what you are applying for.', interview:'A video call with someone from the school or the team.' };
 var SUBITEM_LABEL = { documents:'Documents', reference:'Leader reference' };
 var STAGE_LABEL = { 'new':'New', contacted:'Contacted', applied:'Applied', interview:'Interview', accepted:'Accepted', practical:'Getting ready', arrived:'Arrived' };
@@ -246,11 +257,12 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { auth:null, boot:null, view:'landing', apply:null, reg:{}, busy:false, err:'', sel:null, filter:'', q:'', editContact:false, note:'' };
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, q:'', editContact:false, note:'' };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
-  if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; }
+  if(qs.campus && CAMPUS_SCHOOLS[qs.campus]) P.campus=qs.campus;
+  if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
   if(qs.ref){ P.view='refsoon'; }
   var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
   if(saved && saved.user && saved.pin){ P.auth=saved; P.view='booting'; boot_(); }
@@ -295,9 +307,14 @@ function render(){
 function langRowHtml_(){
   return '<div class="langRow"><button id="langBtn2">'+(LANG==='km' ? 'English' : 'ភាសាខ្មែរ')+'</button></div>';
 }
+function campusSegHtml_(attr, current){
+  return '<div class="seg campusSeg">'+CAMPUS_LIST.map(function(c){ return '<button '+attr+'="'+c[0]+'" class="'+(current===c[0]?'on':'')+'">'+esc(t(c[1]))+'</button>'; }).join('')+'</div>';
+}
 function chooseHtml_(){
-  return '<div class="wide"><div class="gateTitle"><h2>'+esc(t('I want to apply'))+'</h2><p class="sub">'+esc(t('Pick what you are applying for. You will create a small account so you can come back to it on your phone.'))+'</p></div>'+
-    '<div class="choices">'+APPLY.map(function(a){ return '<button class="choice" data-apply="'+a.key+'"><span class="choiceKey">'+esc(a.label)+'</span><span class="choiceSub">'+esc(t(a.blurb))+'</span></button>'; }).join('')+'</div>'+
+  var here=P.campus||DEFAULT_CAMPUS;
+  return '<div class="wide"><div class="gateTitle"><h2>'+esc(t('I want to apply'))+'</h2><p class="sub">'+esc(t('Pick where, then what you are applying for. You will create a small account so you can come back to it on your phone.'))+'</p></div>'+
+    '<div class="center" style="margin-bottom:14px"><label class="f" style="text-align:center">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here)+'</div>'+
+    '<div class="choices">'+APPLY.filter(function(a){ return offeredAt_(a, here); }).map(function(a){ return '<button class="choice" data-apply="'+a.key+'"><span class="choiceKey">'+esc(a.label)+'</span><span class="choiceSub">'+esc(t(a.blurb))+(a.secondary?'<br><span class="prereq">'+esc(t('Requires a completed DTS'))+'</span>':'')+'</span></button>'; }).join('')+'</div>'+
     '<button class="linkbtn" id="toLogin">'+esc(t('I already have an account'))+'</button>'+langRowHtml_()+'</div>';
 }
 function refSoonHtml_(){
@@ -317,14 +334,16 @@ function loginHtml_(){
     '<button class="btn" id="loginBtn"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Signing in…'):t('Sign in'))+'</button></div>'+
     '<div class="card" style="text-align:center"><div class="sub" style="margin-bottom:10px">'+esc(t('New here?'))+'</div>'+
     '<button class="btn ghost" id="toChoose" style="margin-top:0">'+esc(t('Start an application'))+'</button></div>'+
-    '<p class="hint" style="text-align:center">'+esc(t('YWAM Siem Reap staff who work in applications sign in with their My GP username and PIN.'))+'</p>'+langRowHtml_()+'</div>';
+    '<p class="hint" style="text-align:center">'+esc(t('YWAM staff who work in applications sign in with their My GP username and PIN.'))+'</p>'+langRowHtml_()+'</div>';
 }
 function registerHtml_(){
   var a=applyByKey_(P.apply), r=P.reg;
   var h='<div class="center"><div class="gateTitle"><h2>'+esc(t('Create your account'))+'</h2>';
   h+='<p class="sub">'+esc(t('A few details so we can reach you, then your application. Nothing here is shared outside our applications team.'))+'</p></div>';
-  h+='<div class="card"><label class="f">'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.map(function(x){ return '<button class="chip'+(a&&a.key===x.key?' on':'')+'" data-pick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>'+
-    (a ? '<p class="hint">'+esc(t(a.blurb))+'</p>' : '<p class="hint">'+esc(t('Pick one to continue.'))+'</p>')+'</div>';
+  var here=P.campus||DEFAULT_CAMPUS;
+  h+='<div class="card"><label class="f" style="margin-top:0">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here)+
+    '<label class="f">'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(a&&a.key===x.key?' on':'')+'" data-pick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>'+
+    (a ? '<p class="hint">'+esc(t(a.blurb))+(a.secondary?' · '+esc(t('Requires a completed DTS')):'')+'</p>' : '<p class="hint">'+esc(t('Pick one to continue.'))+'</p>')+'</div>';
   h+='<div class="card">'+
     '<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="r_name" autocomplete="name" value="'+esc(r.name||'')+'">'+
     '<label class="f">'+esc(t('Email'))+'</label><input type="email" id="r_email" autocomplete="email" value="'+esc(r.email||'')+'">'+
@@ -349,9 +368,9 @@ function meHtml_(){
   var appName = MESSENGER_LABEL[me.messenger] || t('WhatsApp or Telegram');
   var h='<div class="two"><div>';
   h+='<div class="card hero"><div class="eyebrow">'+esc(t('Your application'))+'</div>'+
-    '<h1 style="font-size:26px">'+esc(me.name)+'</h1><p class="sub" style="margin:2px 0 12px">'+esc(t('Applying for'))+': <b style="color:var(--ink)">'+esc(applyLabel_(app.type, app.school))+'</b></p>'+
+    '<h1 style="font-size:26px">'+esc(me.name)+'</h1><p class="sub" style="margin:2px 0 12px">'+esc(t('Applying for'))+': <b style="color:var(--ink)">'+esc(applyLabel_(app.type, app.school))+'</b>'+(app.campus?' · '+esc(campusName_(app.campus)):'')+'</p>'+
     '<span class="pill big '+esc(app.status)+'" id="statusPill">'+esc(t(STATUS_LABEL[app.status]||app.status))+'</span>'+
-    '<p class="sub" style="margin:12px 0 0">'+esc(gpT(STATUS_NOTE[app.status]||'', {app:appName}))+'</p></div>';
+    '<p class="sub" style="margin:12px 0 0">'+esc(gpT(STATUS_NOTE[app.status]||'', {app:appName, campus:campusName_(app.campus||DEFAULT_CAMPUS)}))+'</p></div>';
   h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Where you are'))+'</h3><ol class="timeline" id="timeline">'+app.steps.map(function(st, i){
     return '<li class="step '+st.state+'" data-step="'+st.id+'"><span class="dot">'+(st.state==='done'?'✓':(i+1))+'</span><div>'+
       '<div class="stepName">'+esc(t(STEP_LABEL[st.id]||st.id))+'</div>'+
@@ -386,11 +405,16 @@ function meHtml_(){
 }
 /* ---- the staff side ---- */
 function crmHtml_(){
-  var d=P.boot, list=d.applicants.slice();
+  var d=P.boot, all=d.applicants.slice();
   var byId={}; d.staff.forEach(function(s){ byId[s.id]=s; });
+  if(P.campusFilter===null) P.campusFilter = CAMPUS_SCHOOLS[d.me.campus] ? d.me.campus : '';
+  var list=all.filter(function(c){ return !P.campusFilter || c.campus===P.campusFilter; });
   var live=list.filter(function(c){ return !c.archived; });
   var counts={}; live.forEach(function(c){ counts[c.stage]=(counts[c.stage]||0)+1; });
   var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Applications'))+'</h1><p class="sub">'+esc(gpT('{n} open · signed in as {name} ({role})',{n:live.length, name:d.me.name, role:(d.role==='portal-admin' ? t('portal admin') : t('portal staff'))}))+'</p></div></div>';
+  h+='<div class="chips" style="margin-bottom:12px">'+[['',t('All campuses')]].concat(CAMPUS_LIST.map(function(c){ return [c[0], t(c[1])]; })).map(function(x){
+    var n=all.filter(function(c){ return !c.archived && (!x[0] || c.campus===x[0]); }).length;
+    return '<button class="chip'+(P.campusFilter===x[0]?' on':'')+'" data-campusfilter="'+x[0]+'">'+esc(x[1])+' · '+n+'</button>'; }).join('')+'</div>';
   h+='<div class="tiles">'+[['new',t('New')],['applied',t('Applied')],['contacted',t('Contacted')],['interview',t('Interview')],['accepted',t('Accepted')],['practical',t('Getting ready')]].map(function(x){
     return '<div class="tile"><div class="tileNum">'+(counts[x[0]]||0)+'</div><div class="tileLbl">'+esc(x[1])+'</div></div>'; }).join('')+'</div>';
   h+='<div class="crm'+(P.sel?' open':'')+'"><div>';
@@ -410,7 +434,7 @@ function crmHtml_(){
     var chat=chatHref_(c.messenger, c.phone);
     h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
       '<span><span class="who">'+esc(c.name)+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span></span>'+
-      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+'</span>'+
+      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(P.campusFilter?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
       '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
       '<span class="meta desk">'+esc(owner)+'</span>'+
       '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
@@ -423,7 +447,7 @@ function crmHtml_(){
 }
 function panelHtml_(c, byId){
   var chat=chatHref_(c.messenger, c.phone);
-  var h='<div class="panel" id="panel"><div class="panelHead"><div><h2 style="margin:0">'+esc(c.name)+'</h2><p class="sub" style="margin:2px 0 0">'+esc(applyLabel_(c.type, c.school))+(c.country?' · '+esc(c.country):'')+'</p></div>'+
+  var h='<div class="panel" id="panel"><div class="panelHead"><div><h2 style="margin:0">'+esc(c.name)+'</h2><p class="sub" style="margin:2px 0 0">'+esc(applyLabel_(c.type, c.school))+' · '+esc(campusName_(c.campus))+(c.country?' · '+esc(c.country):'')+'</p></div>'+
     '<button class="hbtn" id="closePanel">✕</button></div>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(gpT('Open {app} chat',{app:MESSENGER_LABEL[c.messenger]||t('chat')}))+'</a>':'')+
     (c.email?'<a class="chatBtn" href="mailto:'+esc(c.email)+'">✉️ '+esc(t('Email'))+'</a>':'')+'</div>';
@@ -451,6 +475,8 @@ function bind_(){
   on_('toLanding', function(){ P.view='login'; render(); });
   on_('toLogin', function(){ P.view='login'; P.err=''; render(); });
   document.querySelectorAll('[data-apply]').forEach(function(b){ b.onclick=function(){ P.apply=b.getAttribute('data-apply'); P.view='register'; render(); }; });
+  document.querySelectorAll('[data-campus]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.campus=b.getAttribute('data-campus'); var a=applyByKey_(P.apply); if(a && !offeredAt_(a, P.campus)) P.apply=null; render(); }; });
+  document.querySelectorAll('[data-campusfilter]').forEach(function(b){ b.onclick=function(){ P.campusFilter=b.getAttribute('data-campusfilter'); P.sel=null; render(); }; });
   document.querySelectorAll('[data-pick]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.apply=b.getAttribute('data-pick'); render(); }; });
   document.querySelectorAll('[data-msgr]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.reg.messenger=b.getAttribute('data-msgr'); render(); }; });
   on_('regBtn', register_);
@@ -549,6 +575,7 @@ function register_(){
   var pin=(document.getElementById('r_pin')||{}).value||'', pin2=(document.getElementById('r_pin2')||{}).value||'';
   var r=P.reg;
   if(!a){ showMsg(t('Pick what you are applying for.')); return; }
+  if(!offeredAt_(a, P.campus||DEFAULT_CAMPUS)){ showMsg(t('That school is not run at this campus — pick another.')); return; }
   if(!String(r.name||'').trim()){ showMsg(t('Add your full name.')); return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r.email||'').trim())){ showMsg(t('Add a real email address.')); return; }
   if(String(r.phone||'').replace(/\D/g,'').length<6){ showMsg(t('Add a phone number with the country code.')); return; }
@@ -557,7 +584,7 @@ function register_(){
   if(!/^\d{4}$/.test(pin)){ showMsg(t('The PIN is 4 digits.')); return; }
   if(pin!==pin2){ showMsg(t('The two PINs don’t match.')); return; }
   P.busy=true; render();
-  var payload={ username:String(r.username).trim().toLowerCase(), pin:pin, name:String(r.name).trim(), email:String(r.email).trim(), phone:String(r.phone).trim(), messenger:r.messenger, country:r.country||'', type:a.type, school:a.school };
+  var payload={ username:String(r.username).trim().toLowerCase(), pin:pin, name:String(r.name).trim(), email:String(r.email).trim(), phone:String(r.phone).trim(), messenger:r.messenger, country:r.country||'', type:a.type, school:a.school, campus:P.campus||DEFAULT_CAMPUS };
   run('portalRegister', [payload], function(d){
     P.busy=false;
     if(d && d.ok){ P.auth={ user:payload.username, pin:pin }; lsSet('gp-portal', JSON.stringify(P.auth)); P.boot=d; P.view='me'; P.reg={}; showMsg(t('Welcome — your account is ready.')); render(); return; }

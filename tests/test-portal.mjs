@@ -49,7 +49,7 @@ function ok(name, cond, extra) {
   if (cond) { pass++; console.log('ok   ' + name + (extra !== undefined ? '  → ' + extra : '')); }
   else { fail++; console.log('FAIL ' + name + (extra !== undefined ? '  → ' + extra : '')); }
 }
-const APP = { username: 'anna.b', pin: '2468', name: 'Anna Example', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', type: 'student', school: 'dts', country: 'Sweden' };
+const APP = { username: 'anna.b', pin: '2468', name: 'Anna Example', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', type: 'student', school: 'dts', country: 'Sweden', campus: 'siemreap' };
 
 console.log('=== signing up ===');
 let r = await call('portalRegister', [{ ...APP, username: 'A B' }]);
@@ -68,6 +68,10 @@ r = await call('portalRegister', [{ ...APP, type: 'intern' }]);
 ok('what you apply for must be a student, staff, volunteer or team', r.body.ok === false && r.body.err === 'type_required');
 r = await call('portalRegister', [{ ...APP, school: 'mba' }]);
 ok('a student names one of the four schools', r.body.ok === false && r.body.err === 'school_required');
+r = await call('portalRegister', [{ ...APP, campus: 'phnompenh' }]);
+ok('a campus is required — Poipet or Siem Reap', r.body.ok === false && r.body.err === 'campus_required');
+r = await call('portalRegister', [{ ...APP, campus: 'poipet', school: 'bcs' }]);
+ok('a school not run at that campus is refused (no BCS in Poipet)', r.body.ok === false && r.body.err === 'school_not_at_campus');
 r = await call('portalRegister', [{ ...APP, username: 'uriah' }]);
 ok('a username someone already has is refused', r.body.ok === false && r.body.err === 'taken');
 r = await call('portalRegister', [{ ...APP, email: 'u@x.org' }]);
@@ -78,11 +82,16 @@ ok('the application starts as a draft on the "fill out" step', r.body.applicatio
 ok('the account step is already done', r.body.application.steps[0].id === 'account' && r.body.application.steps[0].state === 'done');
 const anna = mem.staff.find(s => s.username === 'anna.b');
 ok('the account is kind:applicant, on Siem Reap, linked to its candidate', anna && anna.kind === 'applicant' && anna.campus === 'siemreap' && anna.applicant.candidateId && anna.applicant.type === 'student');
+ok('the dashboard says which campus', r.body.application.campus === 'siemreap' && r.body.me.campus === 'siemreap');
 const cand = mem.candidates.find(c => c.staffId === anna.id);
 ok('the candidate record exists in the CRM, source portal, stage new, pointing back at the account', cand && cand.source === 'portal' && cand.stage === 'new' && cand.type === 'student' && cand.school === 'dts' && cand.messenger === 'whatsapp' && cand.id === anna.applicant.candidateId);
 ok('no PIN or hash leaks in the sign-up answer', !JSON.stringify(r.body).includes(anna.pinHash) && !JSON.stringify(r.body).includes('2468'));
-r = await call('portalRegister', [{ ...APP, username: 'tom.v', email: 'tom@example.org', type: 'volunteer', school: '', messenger: 'telegram' }]);
-ok('a volunteer signs up with no school', r.body.ok === true && r.body.application.type === 'volunteer' && r.body.application.school === '');
+r = await call('portalRegister', [{ ...APP, username: 'tom.v', email: 'tom@example.org', type: 'volunteer', school: '', messenger: 'telegram', campus: 'poipet' }]);
+ok('a volunteer signs up with no school, at Poipet', r.body.ok === true && r.body.application.type === 'volunteer' && r.body.application.school === '' && r.body.application.campus === 'poipet');
+ok('and the account and candidate carry that campus', mem.staff.find(s => s.username === 'tom.v').campus === 'poipet' && mem.candidates.find(c => c.name === 'Anna Example').campus === 'siemreap' && mem.candidates.find(c => c.staffId === mem.staff.find(s => s.username === 'tom.v').id).campus === 'poipet');
+r = await call('portalRegister', [{ ...APP, username: 'dbs.pp', email: 'dbs@example.org', school: 'dbs', campus: 'poipet' }]);
+ok('Poipet runs DBS, so a DBS student may pick it', r.body.ok === true && r.body.application.school === 'dbs' && r.body.application.campus === 'poipet');
+mem.staff = mem.staff.filter(s => s.username !== 'dbs.pp'); mem.candidates = mem.candidates.filter(c => c.name !== 'Anna Example' || c.school !== 'dbs');
 const tom = mem.staff.find(s => s.username === 'tom.v');
 
 console.log('\n=== an applicant is not staff ===');
@@ -106,6 +115,8 @@ r = await call('teamRoster', []);
 ok('the roster leaves applicants out', r.body.every(p => p.username !== 'anna.b' && p.username !== 'tom.v') && r.body.length === 5);
 r = await call('getMyBoot', ['uriah', '1234']);
 ok('boot’s roster and base roster leave them out too', r.body.roster.every(p => p.username !== 'anna.b') && r.body.roster.length === 5);
+r = await call('getMyBoot', ['dara', '1234']);
+ok('boot tells the staff app who has portal access, for the menu item', r.body.staff.portalStaff === true && r.body.staff.portalAdmin === false);
 r = await call('adminListStaff', ['uriah', '1234']);
 ok('Admin’s account list is staff only', r.body.staff.every(p => p.username !== 'anna.b') && r.body.staff.length === 5);
 r = await call('hrList', ['mealea', '1234']);
@@ -125,6 +136,7 @@ r = await call('portalBoot', ['dara', '1234']);
 ok('portal staff sees every applicant', r.body.ok === true && r.body.role === 'portal-staff' && r.body.applicants.length === 2);
 ok('with each one’s contact and messenger for the one-tap chat', r.body.applicants.every(a => a.phone && a.messenger && a.hasAccount));
 ok('and the list of portal staff to assign as owner', r.body.staff.map(x => x.username).sort().join(',') === 'dara,sina,uriah');
+ok('and which campus runs which school', JSON.stringify(r.body.campuses) === JSON.stringify({ poipet: ['dts', 'dbs'], siemreap: ['dts', 'dbs', 'bcs', 'sms'] }));
 ok('no PIN material in the staff view either', !JSON.stringify(r.body).includes('pinHash') && !JSON.stringify(r.body).includes(anna.pinHash));
 r = await call('portalBoot', ['sina', '1234']);
 ok('a portal admin is "portal-admin"', r.body.ok === true && r.body.role === 'portal-admin');

@@ -38,6 +38,7 @@ const STAFF = [{ id: 'st_dara', name: 'Dara Pen', username: 'dara', campus: 'sie
 let CANDS = [
   { id: 'cd_anna', campus: 'siemreap', name: 'Anna Example', type: 'student', school: 'dts', stage: 'applied', status: 'pending', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', source: 'portal', assignedTo: '', nextStep: '', nextDate: '', staffId: 'st_anna', hasAccount: true, updated: '2026-09-20T10:00:00Z', log: [{ at: '2026-09-19T09:00:00Z', by: 'st_anna', kind: 'stage', text: 'new' }], archived: null, portal: { createdAt: '2026-09-19' } },
   { id: 'cd_tom', campus: 'siemreap', name: 'Tom Volunteer', type: 'volunteer', school: '', stage: 'contacted', status: 'in_review', email: 'tom@example.org', phone: '+1 555 000 1111', messenger: 'telegram', country: 'United States', source: 'portal', assignedTo: 'st_dara', nextStep: 'Video call', nextDate: '2026-09-30', staffId: 'st_tom', hasAccount: true, updated: '2026-09-21T10:00:00Z', log: [], archived: null },
+  { id: 'cd_pp', campus: 'poipet', name: 'Poipet Person', type: 'student', school: 'dbs', stage: 'new', status: 'draft', email: '', phone: '+855 11 222 333', messenger: 'telegram', country: 'Cambodia', source: 'portal', assignedTo: '', staffId: 'st_pp', hasAccount: true, updated: '2026-09-18T10:00:00Z', log: [], archived: null },
   { id: 'cd_old', campus: 'siemreap', name: 'Closed Case', type: 'staff', school: '', stage: 'new', status: 'closed', email: '', phone: '', messenger: '', country: '', source: 'hr', assignedTo: '', staffId: '', hasAccount: false, updated: '2026-08-01T10:00:00Z', log: [], archived: { at: '2026-08-02', reason: 'Withdrew' } }
 ];
 const browser = await chromium.launch({ executablePath: CHROMIUM });
@@ -90,11 +91,23 @@ async function open(viewport, query, seed) {
   ok('nothing on the gate wears the GP app’s cobalt or paper', await page.evaluate(() => ![...document.querySelectorAll('#main *, header *')].some(el => { const s = getComputedStyle(el); return /rgb\(31, 68, 255\)|rgb\(250, 246, 240\)/.test(s.backgroundColor + s.color + s.borderColor); })));
   await page.click('#toChoose');
   await page.waitForTimeout(150);
-  ok('Start an application shows the seven choices — the four schools, staff, volunteer and team', (await page.$$eval('[data-apply]', b => b.map(x => x.getAttribute('data-apply')).join(','))) === 'dts,dbs,bcs,sms,staff,volunteer,team');
-  ok('no horizontal scroll on a phone', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-  await page.click('[data-apply="volunteer"]');
+  ok('Start an application asks where first, opening on Siem Reap', (await page.$$eval('[data-campus]', b => b.map(x => x.getAttribute('data-campus') + (x.classList.contains('on') ? '*' : '')).join(','))) === 'siemreap*,poipet');
+  ok('Siem Reap shows the seven choices — the four schools, staff, volunteer and team', (await page.$$eval('[data-apply]', b => b.map(x => x.getAttribute('data-apply')).join(','))) === 'dts,dbs,bcs,sms,staff,volunteer,team');
+  ok('the secondary schools say they need a completed DTS, DTS does not', (await page.$$eval('[data-apply]', b => b.filter(x => /Requires a completed DTS/.test(x.textContent)).map(x => x.getAttribute('data-apply')).join(','))) === 'dbs,bcs,sms');
+  ok('the schools carry their full names', /Biblical Counseling School/.test(await page.$eval('[data-apply="bcs"]', e => e.textContent)) && /Social Media School/.test(await page.$eval('[data-apply="sms"]', e => e.textContent)));
+  await page.click('[data-campus="poipet"]');
   await page.waitForTimeout(150);
-  ok('tapping a choice opens sign-up with it picked', /Create your account/.test(await page.$eval('#main', e => e.textContent)) && (await page.$eval('[data-pick="volunteer"]', b => b.classList.contains('on'))));
+  ok('Poipet runs DTS and DBS only, plus staff, volunteer and team', (await page.$$eval('[data-apply]', b => b.map(x => x.getAttribute('data-apply')).join(','))) === 'dts,dbs,staff,volunteer,team');
+  await page.click('[data-apply="dbs"]');
+  await page.waitForTimeout(150);
+  ok('picking DBS at Poipet opens sign-up with Poipet and DBS set', await page.$eval('[data-campus="poipet"]', b => b.classList.contains('on')) && await page.$eval('[data-pick="dbs"]', b => b.classList.contains('on')) && !(await page.$('[data-pick="bcs"]')));
+  await page.click('[data-campus="siemreap"]');
+  await page.waitForTimeout(150);
+  ok('switching campus on sign-up keeps a school both run', await page.$eval('[data-pick="dbs"]', b => b.classList.contains('on')) && !!(await page.$('[data-pick="bcs"]')));
+  ok('no horizontal scroll on a phone', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await page.click('[data-pick="volunteer"]');
+  await page.waitForTimeout(150);
+  ok('the sign-up form is where you landed, and the pick can still change there', /Create your account/.test(await page.$eval('#main', e => e.textContent)) && (await page.$eval('[data-pick="volunteer"]', b => b.classList.contains('on'))));
   await ctx.close();
 }
 {
@@ -114,7 +127,7 @@ async function open(viewport, query, seed) {
   await page.click('#regBtn');
   await page.waitForSelector('#statusPill', { timeout: 10000 });
   const reg = sent.find(b => b.fn === 'portalRegister');
-  ok('sign-up sends what the server needs — type, school, phone, messenger', reg && reg.args[0].type === 'student' && reg.args[0].school === 'dts' && reg.args[0].messenger === 'whatsapp' && reg.args[0].phone === '+46 70 000 0000' && reg.args[0].username === 'anna.b');
+  ok('sign-up sends what the server needs — campus, type, school, phone, messenger', reg && reg.args[0].campus === 'siemreap' && reg.args[0].type === 'student' && reg.args[0].school === 'dts' && reg.args[0].messenger === 'whatsapp' && reg.args[0].phone === '+46 70 000 0000' && reg.args[0].username === 'anna.b');
   ok('and lands on the dashboard: draft, applying for DTS', /Not submitted yet/.test(await page.$eval('#statusPill', e => e.textContent)) && /DTS/.test(await page.$eval('#main', e => e.textContent)));
   ok('the session is remembered under the portal’s own key, not the staff app’s', await page.evaluate(() => !!localStorage.getItem('gp-portal') && !localStorage.getItem('gp-staff')));
   const steps = await page.$$eval('#timeline .step', s => s.map(x => x.getAttribute('data-step') + ':' + (x.classList.contains('done') ? 'done' : x.classList.contains('current') ? 'current' : 'todo')));
@@ -172,7 +185,13 @@ async function open(viewport, query, seed) {
   ok('a wrong PIN stays on sign-in with a message', /Wrong username or PIN/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#loginBtn')));
   await page.fill('#l_pin', '1234'); await page.fill('#l_user', 'dara'); await page.click('#loginBtn');
   await page.waitForSelector('.trow');
-  ok('portal staff land on Applications with every open applicant', /Applications/.test(await page.$eval('#main h1', e => e.textContent)) && (await page.$$eval('.trow', r => r.length)) === 2);
+  ok('portal staff land on Applications with every open applicant of their campus', /Applications/.test(await page.$eval('#main h1', e => e.textContent)) && (await page.$$eval('.trow', r => r.length)) === 2 && !/Poipet Person/.test(await page.$eval('.tbl', e => e.textContent)));
+  await page.click('[data-campusfilter=""]');
+  await page.waitForTimeout(150);
+  ok('All campuses adds Poipet’s applicant, marked with its campus', (await page.$$eval('.trow', r => r.length)) === 3 && /Poipet Person/.test(await page.$eval('.tbl', e => e.textContent)));
+  await page.click('[data-campusfilter="siemreap"]');
+  await page.waitForTimeout(150);
+  ok('the list opens on the staff member’s own campus, with an All-campuses chip', (await page.$eval('[data-campusfilter].on', c => c.getAttribute('data-campusfilter'))) === 'siemreap' && !!(await page.$('[data-campusfilter=""]')));
   ok('closed applications are behind the Archived filter', !/Closed Case/.test(await page.$eval('.tbl', e => e.textContent)));
   await page.click('[data-filter="archived"]');
   await page.waitForTimeout(150);

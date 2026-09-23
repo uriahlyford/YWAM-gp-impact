@@ -16,11 +16,12 @@ Deep links for the public website (ywamsiemreap.org):
 
 | Link | Opens |
 |---|---|
-| `portal.html?apply=dts` | Create an account, applying to DTS |
+| `portal.html?apply=dts` | Create an account, applying to DTS (Siem Reap unless `&campus=poipet`) |
 | `portal.html?apply=dbs` / `?apply=bcs` / `?apply=sms` | the other schools |
 | `portal.html?apply=staff` | applying as staff |
 | `portal.html?apply=volunteer` | applying as a volunteer |
 | `portal.html?apply=team` | a short-term team |
+| `portal.html?campus=poipet` (combinable, e.g. `?apply=dbs&campus=poipet`) | opens on Poipet |
 | `portal.html?lang=km` (combinable, e.g. `?apply=dts&lang=km`) | opens in Khmer |
 | `portal.html` | the front door: pick what you are applying for, or sign in |
 | `portal.html?ref=<token>` | the leader reference form (milestone 3, no account needed) |
@@ -67,6 +68,16 @@ from the staff app's `gp-staff`, so a staff member can be signed into both.
 - Documents are personal data: their own blobs, readable only by portal staff /
   admins and the applicant they belong to; never in the repo, never in a test
   fixture as real data.
+
+## Campuses and schools
+
+Applicants pick **where** first: Poipet runs DTS and DBS; Siem Reap runs DTS, DBS, BCS
+and SMS (`PORTAL_CAMPUSES` in api.js is the rule; the page mirrors it). DBS
+(Discipleship Bible School), BCS (Biblical Counseling School) and SMS (Social Media
+School) are secondary schools with a completed DTS as the prerequisite — the cards say
+so, and the forms (milestone 2) ask about it. The account and the candidate record carry
+the campus; the staff view opens on the staff member's own campus with an All-campuses
+chip. A third campus is one more row in `PORTAL_CAMPUSES` and `CAMPUS_LIST`.
 
 ## Data
 

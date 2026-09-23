@@ -2490,7 +2490,7 @@ async function getMyBoot(username, pin) {
 
   return {
     ok: true,
-    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr }),
+    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || ''
@@ -2958,9 +2958,15 @@ async function hrArchiveCandidate(username, pin, id, info) {
    (see every applicant, move stages, notes, owner) and portalAdmin (that,
    plus grant / revoke portalStaff). An app admin has both and is the only
    one who can make a portal admin. Nobody gets it by being staff. */
-const PORTAL_CAMPUS = 'siemreap';
+/* Where you apply to. Each campus runs its own schools: Poipet DTS and DBS,
+   Siem Reap all four. DBS, BCS and SMS are secondary schools — a completed
+   DTS is the prerequisite — which the forms ask about; here it only decides
+   what can be picked where. A third campus is one more row. */
+const PORTAL_CAMPUSES = { poipet: ['dts', 'dbs'], siemreap: ['dts', 'dbs', 'bcs', 'sms'] };
+const PORTAL_DEFAULT_CAMPUS = 'siemreap';
 const PORTAL_TYPES = ['student', 'staff', 'volunteer', 'team'];
 const PORTAL_SCHOOLS = ['dts', 'dbs', 'bcs', 'sms'];
+const PORTAL_SECONDARY = ['dbs', 'bcs', 'sms'];
 const PORTAL_MESSENGERS = ['whatsapp', 'telegram'];
 /* The applicant's own view of the CRM stages, in the order the journey runs
    (the CRM's own list keeps 'contacted' before 'applied' because a lead is
@@ -3020,7 +3026,7 @@ function portalSteps_(c) {
 }
 function portalAppOut_(c) {
   return {
-    id: c.id, type: c.type, school: c.school || '', stage: c.stage, status: portalStatus_(c),
+    id: c.id, campus: c.campus || '', type: c.type, school: c.school || '', stage: c.stage, status: portalStatus_(c),
     submittedAt: (c.portal && c.portal.submittedAt) || null, updated: c.updated || '',
     archived: c.archived ? { at: c.archived.at } : null,
     steps: portalSteps_(c)
@@ -3059,8 +3065,11 @@ async function portalRegister(payload) {
   if (!messenger) return { ok: false, err: 'messenger_required' };
   const type = PORTAL_TYPES.indexOf(payload.type) > -1 ? payload.type : '';
   if (!type) return { ok: false, err: 'type_required' };
+  const campus = Object.prototype.hasOwnProperty.call(PORTAL_CAMPUSES, payload.campus) ? payload.campus : '';
+  if (!campus) return { ok: false, err: 'campus_required' };
   const school = type === 'student' ? (PORTAL_SCHOOLS.indexOf(payload.school) > -1 ? payload.school : '') : '';
   if (type === 'student' && !school) return { ok: false, err: 'school_required' };
+  if (school && PORTAL_CAMPUSES[campus].indexOf(school) === -1) return { ok: false, err: 'school_not_at_campus' };
   const country = cleanCountry_(payload.country);
   const rows = await getStaff_();
   if (findStaff_(rows, u)) return { ok: false, err: 'taken' };
@@ -3071,13 +3080,13 @@ async function portalRegister(payload) {
   const id = newStaffId_(), candId = hrId_('cd');
   const rec = {
     id: id, username: u, name: name, email: email, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
-    kind: 'applicant', campus: PORTAL_CAMPUS, dept: '', ministry: '', role: '', photo: '',
+    kind: 'applicant', campus: campus, dept: '', ministry: '', role: '', photo: '',
     phone: phone, messenger: messenger, country: country,
     applicant: { type: type, school: school, candidateId: candId },
     active: true, isAdmin: false, created: now, updated: now
   };
   const cand = {
-    id: candId, campus: PORTAL_CAMPUS, name: name, type: type, stage: 'new',
+    id: candId, campus: campus, name: name, type: type, stage: 'new',
     subtype: school ? school.toUpperCase() : '', school: school,
     email: email, phone: phone, messenger: messenger, country: country, source: 'portal',
     assignedTo: '', nextStep: '', nextDate: '', expected: '', notes: '', staffId: id,
@@ -3102,7 +3111,7 @@ async function portalRegister(payload) {
 }
 function portalMeOut_(s) {
   return { id: s.id, name: s.name, username: s.username, email: s.email || '', phone: s.phone || '', messenger: s.messenger || '', country: s.country || '',
-    type: s.applicant ? s.applicant.type : '', school: s.applicant ? s.applicant.school : '' };
+    campus: s.campus || '', type: s.applicant ? s.applicant.type : '', school: s.applicant ? s.applicant.school : '' };
 }
 /* One call per page open, same as getMyBoot: who you are, and either your own
    application or — for portal staff — everyone's. A bad PIN is 'auth' so the
@@ -3124,7 +3133,7 @@ async function portalBoot(username, pin) {
     ok: true, role: portalRole_(s), me: portalStaffOut_(s),
     applicants: cands.map(function (c) { return portalCandOut_(c, byId); }),
     staff: rows.filter(function (r) { return canPortal_(r); }).map(portalStaffOut_),
-    stages: CAND_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS
+    stages: CAND_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS, campuses: PORTAL_CAMPUSES
   };
 }
 /* Grant or revoke portal access. A portal admin may hand out portalStaff;

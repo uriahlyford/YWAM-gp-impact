@@ -448,7 +448,8 @@ forms, documents and references follow.
 
 - **An applicant is a staff row with `kind:'applicant'`** (`portalRegister`: username +
   PIN, name, email, phone and messenger ∈ whatsapp|telegram required, type ∈
-  `PORTAL_TYPES`, school ∈ `PORTAL_SCHOOLS` for students; campus fixed to Siem Reap) plus
+  `PORTAL_TYPES`, campus ∈ `PORTAL_CAMPUSES` — Poipet runs DTS + DBS, Siem Reap all four — and
+  for students a school that campus runs, else `school_not_at_campus`) plus
   `applicant:{type, school, candidateId}`. Their application IS a candidate record in the
   `candidates` blob (`source:'portal'`, `staffId` → the account, `messenger`,
   `portal:{createdAt, submittedAt, form, docs, references}`). `cleanCandidate_` carries
@@ -466,7 +467,9 @@ forms, documents and references follow.
   or the person page's edit form; from inside the portal via `portalSetAccess` (a portal
   admin may set portalStaff, only an app admin portalAdmin; never on an applicant).
   `hrGate_` admits portal staff, so the CRM handlers (`hrSaveCandidate`,
-  `hrCandidateNote`, `hrArchiveCandidate`) are the staff side's writes.
+  `hrCandidateNote`, `hrArchiveCandidate`) are the staff side's writes. Boot carries
+  `staff.portalStaff` / `portalAdmin`, and the hamburger menu shows **YWAM GP Portal**
+  (opens portal.html in a new tab) to anyone with access.
 - **The timeline is derived on the server** (`portalAppOut_` → `portalSteps_` /
   `portalStatus_`): account → form → received → contact → documents & reference →
   interview → accepted → practical → arrived, walked from the CRM stage in
