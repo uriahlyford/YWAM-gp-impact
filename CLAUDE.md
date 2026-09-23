@@ -470,6 +470,17 @@ forms, documents and references follow.
   `hrCandidateNote`, `hrArchiveCandidate`) are the staff side's writes. Boot carries
   `staff.portalStaff` / `portalAdmin`, and the hamburger menu shows **YWAM GP Portal**
   (opens portal.html in a new tab) to anyone with access.
+- **Scope by ministry** (`portalTypes_` / `portalMaySee_`): an Outreach Teams portal staff
+  member sees team applications only — `portalBoot` filters and returns `scope:['team']`,
+  and `hrSaveCandidate` / `hrCandidateNote` / `hrArchiveCandidate` refuse anything outside
+  the scope for a non-HR caller (creating one included). Everyone else with access sees
+  all kinds. The staff list's tab row (`.whatTab[data-whatfilter]`, All · DTS · DBS · BCS ·
+  SMS · Staff · Volunteer · Teams with counts) shows only the tabs in scope.
+- **Deleting an applicant** (`portalDeleteApplicant`, portal admins / app admins only): removes
+  the CRM record, any document blobs it lists, and the applicant account behind it — never a
+  staff account (a record whose `staffId` is real staff loses only the record). The panel's
+  "Delete this account and application" asks for the name to be typed back. Applicant
+  accounts are not in Admin → Accounts, so this is their one delete.
 - **The timeline is derived on the server** (`portalAppOut_` → `portalSteps_` /
   `portalStatus_`): account → form → received → contact → documents & reference →
   interview → accepted → practical → arrived, walked from the CRM stage in

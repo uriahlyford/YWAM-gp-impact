@@ -73,6 +73,7 @@ h3 { font-size:13px; font-weight:600; letter-spacing:1.4px; text-transform:upper
 .btn.small { width:auto; margin:0; padding:9px 14px; font-size:14px; }
 .linkbtn { background:none; border:none; color:var(--link); font-size:14px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; padding:10px; width:100%; margin-top:6px; }
 .linkbtn.inline { width:auto; padding:0; margin:0; }
+.linkbtn.danger { color:var(--bad); }
 label.f { display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin:14px 0 6px; }
 input[type=text], input[type=tel], input[type=email], input[type=number], input[type=password], input[type=date], select, textarea {
   width:100%; padding:12px 14px; border:1px solid var(--border2); border-radius:var(--rSm); background:var(--bg); color:var(--ink); font-size:16px; }
@@ -128,6 +129,11 @@ textarea { min-height:80px; resize:vertical; }
 .chatBtn { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:8px 14px; border:1px solid var(--border2); color:var(--ink); text-decoration:none; font-weight:600; font-size:13.5px; white-space:nowrap; background:transparent; }
 .chatBtn:hover { border-color:var(--ink); }
 /* the staff side */
+.whatTabs { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 16px; padding:6px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); }
+.whatTab { flex:1 1 auto; min-width:0; padding:10px 14px; border-radius:var(--rSm); border:1px solid transparent; background:transparent; color:var(--muted); font-weight:600; font-size:14px; cursor:pointer; white-space:nowrap; display:flex; align-items:center; justify-content:center; gap:6px; }
+.whatTab:hover { color:var(--ink); }
+.whatTab.on { background:var(--ink); color:var(--accentInk); }
+.whatTab .n { font-size:11.5px; font-weight:600; opacity:.7; }
 .tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-bottom:16px; }
 .tile { background:var(--surface); border:1px solid var(--border); border-radius:var(--rSm); padding:12px 14px; }
 .tileNum { font-size:26px; font-weight:700; letter-spacing:-.5px; line-height:1.1; }
@@ -257,7 +263,7 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, q:'', editContact:false, note:'' };
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', editContact:false, note:'' };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
@@ -408,13 +414,24 @@ function crmHtml_(){
   var d=P.boot, all=d.applicants.slice();
   var byId={}; d.staff.forEach(function(s){ byId[s.id]=s; });
   if(P.campusFilter===null) P.campusFilter = CAMPUS_SCHOOLS[d.me.campus] ? d.me.campus : '';
-  var list=all.filter(function(c){ return !P.campusFilter || c.campus===P.campusFilter; });
+  /* What am I looking at: one kind of application at a time — the four
+     schools, staff, volunteers, teams — as a tab row. A scoped staff member
+     (Outreach Teams: teams only) gets just their tabs, opened on the first. */
+  var scope=Array.isArray(d.scope) ? d.scope : null;
+  var whatKeys=APPLY.filter(function(a){ return !scope || scope.indexOf(a.type)>-1; }).map(function(a){ return a.key; });
+  if(P.what===null || (P.what && whatKeys.indexOf(P.what)===-1)) P.what = (scope && whatKeys.length===1) ? whatKeys[0] : '';
+  var whatOf=function(c){ return c.type==='student' ? (c.school||'') : c.type; };
+  var list=all.filter(function(c){ return (!P.campusFilter || c.campus===P.campusFilter) && (!P.what || whatOf(c)===P.what); });
   var live=list.filter(function(c){ return !c.archived; });
   var counts={}; live.forEach(function(c){ counts[c.stage]=(counts[c.stage]||0)+1; });
   var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Applications'))+'</h1><p class="sub">'+esc(gpT('{n} open · signed in as {name} ({role})',{n:live.length, name:d.me.name, role:(d.role==='portal-admin' ? t('portal admin') : t('portal staff'))}))+'</p></div></div>';
   h+='<div class="chips" style="margin-bottom:12px">'+[['',t('All campuses')]].concat(CAMPUS_LIST.map(function(c){ return [c[0], t(c[1])]; })).map(function(x){
     var n=all.filter(function(c){ return !c.archived && (!x[0] || c.campus===x[0]); }).length;
     return '<button class="chip'+(P.campusFilter===x[0]?' on':'')+'" data-campusfilter="'+x[0]+'">'+esc(x[1])+' · '+n+'</button>'; }).join('')+'</div>';
+  var byCampus=all.filter(function(c){ return !c.archived && (!P.campusFilter || c.campus===P.campusFilter); });
+  h+='<div class="whatTabs" role="tablist">'+(scope && whatKeys.length===1 ? '' : '<button class="whatTab'+(P.what===''?' on':'')+'" data-whatfilter="" role="tab">'+esc(t('All'))+' <span class="n">'+byCampus.length+'</span></button>')+
+    whatKeys.map(function(k){ var a=applyByKey_(k); var n=byCampus.filter(function(c){ return whatOf(c)===k; }).length;
+      return '<button class="whatTab'+(P.what===k?' on':'')+'" data-whatfilter="'+k+'" role="tab">'+esc(k==='team' ? t('Teams') : a.label)+' <span class="n">'+n+'</span></button>'; }).join('')+'</div>';
   h+='<div class="tiles">'+[['new',t('New')],['applied',t('Applied')],['contacted',t('Contacted')],['interview',t('Interview')],['accepted',t('Accepted')],['practical',t('Getting ready')]].map(function(x){
     return '<div class="tile"><div class="tileNum">'+(counts[x[0]]||0)+'</div><div class="tileLbl">'+esc(x[1])+'</div></div>'; }).join('')+'</div>';
   h+='<div class="crm'+(P.sel?' open':'')+'"><div>';
@@ -462,6 +479,7 @@ function panelHtml_(c, byId){
   h+='<ul class="log">'+(log.length ? log.map(function(l){ var who=byId[l.by] ? byId[l.by].name : (l.by===c.staffId ? c.name : '—');
     return '<li><span class="when">'+esc(fmtDate_(l.at))+' · '+esc(who)+'</span>'+(l.kind==='stage' ? '→ '+esc(t(STAGE_LABEL[l.text]||l.text)) : esc(l.text))+'</li>'; }).join('') : '<li class="empty">'+esc(t('No notes yet.'))+'</li>')+'</ul>';
   h+='<button class="linkbtn" id="archiveCand">'+esc(c.archived ? t('Reopen this application') : t('Close this application'))+'</button>';
+  if(P.boot.role==='portal-admin') h+='<button class="linkbtn danger" id="deleteCand">'+esc(c.hasAccount ? t('Delete this account and application') : t('Delete this application'))+'</button>';
   h+='</div>';
   return h;
 }
@@ -477,6 +495,7 @@ function bind_(){
   document.querySelectorAll('[data-apply]').forEach(function(b){ b.onclick=function(){ P.apply=b.getAttribute('data-apply'); P.view='register'; render(); }; });
   document.querySelectorAll('[data-campus]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.campus=b.getAttribute('data-campus'); var a=applyByKey_(P.apply); if(a && !offeredAt_(a, P.campus)) P.apply=null; render(); }; });
   document.querySelectorAll('[data-campusfilter]').forEach(function(b){ b.onclick=function(){ P.campusFilter=b.getAttribute('data-campusfilter'); P.sel=null; render(); }; });
+  document.querySelectorAll('[data-whatfilter]').forEach(function(b){ b.onclick=function(){ P.what=b.getAttribute('data-whatfilter'); P.sel=null; render(); }; });
   document.querySelectorAll('[data-pick]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.apply=b.getAttribute('data-pick'); render(); }; });
   document.querySelectorAll('[data-msgr]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.reg.messenger=b.getAttribute('data-msgr'); render(); }; });
   on_('regBtn', register_);
@@ -495,6 +514,7 @@ function bind_(){
   on_('saveCand', saveCand_);
   on_('addNote', addNote_);
   on_('archiveCand', archiveCand_);
+  on_('deleteCand', deleteCand_);
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){
@@ -552,6 +572,22 @@ function addNote_(){
   run('hrCandidateNote', [P.auth.user, P.auth.pin, c.id, txt], function(d){
     P.busy=false; P.note='';
     if(putCand_(d)) showMsg(t('Note added'));
+    render();
+  });
+}
+/* Permanent, admins only: the application and, when there is one, the
+   applicant's account. Asks twice in one breath — the name has to be typed
+   back — because there is no undo. */
+function deleteCand_(){
+  var c=selected_(); if(!c) return;
+  var typed=prompt(gpT('This deletes {name}’s application{account} for good. Type their name to confirm.', {name:c.name, account: c.hasAccount ? t(' and their account') : ''}));
+  if(typed===null) return;
+  if(String(typed).trim().toLowerCase()!==String(c.name).trim().toLowerCase()){ showMsg(t('The name did not match — nothing was deleted.')); return; }
+  P.busy=true; render();
+  run('portalDeleteApplicant', [P.auth.user, P.auth.pin, c.id], function(d){
+    P.busy=false;
+    if(d && d.ok){ P.boot=d; P.sel=null; showMsg(t('Deleted')); render(); return; }
+    showMsg(d && d.err==='not_authorized' ? t('Only a portal admin can delete') : t('Could not delete'));
     render();
   });
 }
