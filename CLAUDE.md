@@ -474,9 +474,16 @@ forms, documents and references follow.
   practical | arrived | closed. The applicant never sees the owner or the next step.
   `CAND_STAGES` gained `practical` (fees, packing, visa, travel) and `CAND_TYPES` gained
   `team` — both sides.
-- **portal.html** is its own page: the theme block verbatim (test-theme checks four
-  pages now), fonts out of the render path, `logo.js` + `km.js` + `taxonomy.js`, session
-  under `gp-portal` (not `gp-staff`), one `portalBoot` per open. Deep links
+- **portal.html has its own look, on purpose — it is NOT in the GP theme.** Black page,
+  white type, Inter + Kantumruy Pro, one centred card at a time (the way an application
+  portal reads: logo and "YWAM GP Portal" on top, then sign in, with "Start an
+  application" leading to the seven choices). Its `:root` tokens live in the page;
+  `test-theme.mjs` keeps checking only index / teams / help. `body.gate` is every screen
+  before sign-in (centred hero header); signed in, the header is a slim bar. `PORTAL_LOGO`
+  at the top of the script names the YWAM mark file once it is dropped into `public/`;
+  until then the GP mark stands in and no missing file is requested. Fonts out of the
+  render path, `logo.js` + `km.js` + `taxonomy.js`, session under `gp-portal` (not
+  `gp-staff`), one `portalBoot` per open. Deep links
   `?apply=dts|dbs|bcs|sms|staff|volunteer|team`, `?lang=km|en`, `?ref=` (milestone 3).
   Responsive for real: one column on a phone, `.two` two columns and the CRM list + side
   panel from 900px. All strings through `t()`; `test-khmer.mjs` scans portal.html too.

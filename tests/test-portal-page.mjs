@@ -80,8 +80,17 @@ async function open(viewport, query, seed) {
 /* ---------- the front door and the deep link, on a phone ---------- */
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '');
-  ok('the front door names the portal and offers what to apply for', /YWAM GP Portal/.test(await page.$eval('#main', e => e.textContent)) && (await page.$$eval('[data-apply]', b => b.length)) === 7);
-  ok('the seven choices are the four schools, staff, volunteer and team', (await page.$$eval('[data-apply]', b => b.map(x => x.getAttribute('data-apply')).join(','))) === 'dts,dbs,bcs,sms,staff,volunteer,team');
+  ok('the front door is black with white type, the portal’s name and a logo on top', await page.evaluate(() => {
+    const bg = getComputedStyle(document.body).backgroundColor, ink = getComputedStyle(document.body).color;
+    const title = document.querySelector('header .brandTitle'), logo = document.querySelector('#brandLogo');
+    return bg === 'rgb(0, 0, 0)' && ink === 'rgb(255, 255, 255)' && title && /YWAM GP Portal/.test(title.textContent) && logo && logo.getBoundingClientRect().height >= 60 && document.body.classList.contains('gate');
+  }));
+  ok('it opens on one thing to do — sign in — with a way to start an application', !!(await page.$('#loginBtn')) && !!(await page.$('#toChoose')) && !(await page.$('[data-apply]')));
+  ok('the sign-in card is centred and narrow, not a stretched phone screen', await page.$eval('.center', e => { const r = e.getBoundingClientRect(); return r.width <= 440 && Math.abs((r.left + r.width / 2) - window.innerWidth / 2) < 4; }));
+  ok('nothing on the gate wears the GP app’s cobalt or paper', await page.evaluate(() => ![...document.querySelectorAll('#main *, header *')].some(el => { const s = getComputedStyle(el); return /rgb\(31, 68, 255\)|rgb\(250, 246, 240\)/.test(s.backgroundColor + s.color + s.borderColor); })));
+  await page.click('#toChoose');
+  await page.waitForTimeout(150);
+  ok('Start an application shows the seven choices — the four schools, staff, volunteer and team', (await page.$$eval('[data-apply]', b => b.map(x => x.getAttribute('data-apply')).join(','))) === 'dts,dbs,bcs,sms,staff,volunteer,team');
   ok('no horizontal scroll on a phone', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await page.click('[data-apply="volunteer"]');
   await page.waitForTimeout(150);
@@ -129,6 +138,7 @@ async function open(viewport, query, seed) {
   await page.waitForTimeout(200);
   const km = await page.$eval('#main', e => e.textContent);
   ok('the language toggle turns the dashboard Khmer', /[ក-៿]/.test(km) && !/Not submitted yet/.test(km), km.slice(0, 60));
+  ok('signed in, the header is a slim bar and the page is still black', !(await page.evaluate(() => document.body.classList.contains('gate'))) && await page.$eval('header', h => h.getBoundingClientRect().height < 80) && await page.evaluate(() => getComputedStyle(document.body).backgroundColor === 'rgb(0, 0, 0)'));
   ok('the timeline step names are Khmer too', await page.$$eval('#timeline .stepName', s => s.every(x => /[ក-៿]/.test(x.textContent))));
   await page.click('#langBtn');
   await ctx.close();
@@ -152,13 +162,11 @@ async function open(viewport, query, seed) {
 /* ---------- the staff side ---------- */
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '');
-  await page.click('#toLogin');
   await page.fill('#l_user', 'bopha'); await page.fill('#l_pin', '1234'); await page.click('#loginBtn');
   await page.waitForTimeout(400);
   ok('a staff member without portal access is told so and sees no applicants', /No portal access/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('.trow')));
   await page.click('#outBtn2');
   await page.waitForTimeout(150);
-  await page.click('#toLogin');
   await page.fill('#l_user', 'anna.b'); await page.fill('#l_pin', '0000'); await page.click('#loginBtn');
   await page.waitForTimeout(400);
   ok('a wrong PIN stays on sign-in with a message', /Wrong username or PIN/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#loginBtn')));
