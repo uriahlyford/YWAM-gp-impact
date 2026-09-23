@@ -111,7 +111,7 @@ const KH = /[ក-៿]/;
   new Function('g', src + '\ng.B=BUILTIN_KM;')(sandbox);
   const have = sandbox.B;
   const missing = [];
-  for (const f of ['index.html', 'teams.html', 'rollup.js']) {
+  for (const f of ['index.html', 'teams.html', 'portal.html', 'rollup.js']) {
     const code = fs.readFileSync(path.join(ROOT, f), 'utf8');
     /* Every literal inside a t(...) call, not just one starting it — the first
        version of this missed t(cond ? 'a' : 'b') entirely and reported clean while

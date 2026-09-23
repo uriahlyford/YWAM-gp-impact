@@ -322,15 +322,15 @@ for (const file of ['index.html', 'teams.html', 'help.html']) {
     const m = src.match(/\/\* ==================== THEME TOKENS ====================[\s\S]*?--ease:linear; \} \}/);
     return m ? m[0] : null;
   };
-  const a = grab('index.html'), b = grab('teams.html'), c = grab('help.html');
-  ok('all three pages carry the theme block', !!a && !!b && !!c);
-  ok('and the three copies are byte-identical', a === b && b === c,
-    a === b && b === c ? '' : [a, b, c].map(function (x) { return (x || '').length; }).join(' / '));
+  const a = grab('index.html'), b = grab('teams.html'), c = grab('help.html'), d = grab('portal.html');
+  ok('all four pages carry the theme block', !!a && !!b && !!c && !!d);
+  ok('and the four copies are byte-identical', a === b && b === c && c === d,
+    a === b && b === c && c === d ? '' : [a, b, c, d].map(function (x) { return (x || '').length; }).join(' / '));
 }
 
 /* ---------- 4. the theme is applied before anything paints ---------- */
 {
-  for (const f of ['index.html', 'teams.html', 'help.html']) {
+  for (const f of ['index.html', 'teams.html', 'help.html', 'portal.html']) {
     const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
     const boot = src.indexOf("localStorage.getItem('gp-theme')");
     const style = src.search(/^<style>\n\*\s*\{\s*box-sizing/m);
@@ -346,7 +346,7 @@ for (const file of ['index.html', 'teams.html', 'help.html']) {
 
 /* ---------- 5. no raw palette hex left in a themed property ---------- */
 {
-  for (const f of ['index.html', 'teams.html', 'help.html']) {
+  for (const f of ['index.html', 'teams.html', 'help.html', 'portal.html']) {
     const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
     /* #000 is exempt: it appears in mask gradients and rgba() shadows, where it is
        a stencil or an opacity rather than a colour anybody sees. */

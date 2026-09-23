@@ -272,7 +272,7 @@ function findStaff_(rows, username) {
   return rows.find(function (s) { return s.username === u; }) || null;
 }
 
-async function verifyStaff_(username, pin) {
+async function verifyStaff_(username, pin, allowApplicant) {
   if (await isLoginLocked_(username)) return null;
   const rows = await getStaff_();
   const s = findStaff_(rows, username);
@@ -289,6 +289,10 @@ async function verifyStaff_(username, pin) {
   // has no session until an admin flips it, the same switch as deactivating
   // someone later.
   if (s.active === false) return null;
+  // An applicant (the portal) holds a real PIN but is not staff: every staff
+  // handler is closed to them unless it asks for them by name — see the
+  // YWAM GP Portal block. Failing here closes them all at once.
+  if (isApplicant_(s) && !allowApplicant) return null;
   return s;
 }
 
@@ -389,7 +393,7 @@ function cleanLeads_(list) {
 
 async function teamRoster() {
   const rows = await getStaff_();
-  return rows.filter(function (s) { return s.active; }).map(publicStaff_);
+  return rows.filter(function (s) { return s.active && !isApplicant_(s); }).map(publicStaff_);
 }
 
 /* Admin access only ever goes to Campus Leadership, so that is the one
@@ -460,6 +464,10 @@ async function staffLogin(username, pin) {
     if (raw && raw.active === false && hashPin_(pin, raw.pinSalt) === raw.pinHash) {
       return { ok: false, err: 'pending' };
     }
+    // A portal applicant signing in on the staff app: right PIN, wrong door.
+    if (raw && isApplicant_(raw) && hashPin_(pin, raw.pinSalt) === raw.pinHash) {
+      return { ok: false, err: 'applicant' };
+    }
   }
   return { ok: false };
 }
@@ -485,6 +493,7 @@ function adminStaffOut_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
     ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin, hr: !!s.hr,
+    kind: s.kind || 'staff', portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin,
     staffType: s.staffType || '', country: s.country || '', email: s.email || '',
     mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
     leads: leadsOf_(s),
@@ -571,7 +580,8 @@ async function adminListStaff(username, pin) {
   const admin = await adminGate_(username, pin);
   if (!admin) return { ok: false };
   const rows = await getStaff_();
-  return { ok: true, staff: rows.map(adminStaffOut_) };
+  // Applicants are portal accounts, not staff — they have their own screen.
+  return { ok: true, staff: rows.filter(function (r) { return !isApplicant_(r); }).map(adminStaffOut_) };
 }
 
 /* One switch for both halves of account management: flipping a pending
@@ -677,6 +687,12 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
     if (payload.leads !== undefined) rec.leads = cleanLeads_(payload.leads);
     // HR access — the Human Resources page (staff contracts, archiving). Admin-assigned.
     if (payload.hr !== undefined) rec.hr = !!payload.hr;
+    // Portal access — who works applications. Admin-assigned; never to an applicant account.
+    if (payload.portalStaff !== undefined || payload.portalAdmin !== undefined) {
+      if (isApplicant_(rec)) return { abort: true, ok: false, err: 'is_applicant' };
+      if (payload.portalStaff !== undefined) rec.portalStaff = !!payload.portalStaff;
+      if (payload.portalAdmin !== undefined) rec.portalAdmin = !!payload.portalAdmin;
+    }
     rec.updated = new Date().toISOString();
     rows[idx] = rec;
     return { ok: true, staff: adminStaffOut_(rec) };
@@ -1206,7 +1222,7 @@ async function getData(code, year) {
   /* The roster rides along: the dashboard needs it for the staff headcount and was
      fetching it as a second request, and teamRoster is already unauthenticated, so
      this exposes nothing new — it just costs one invocation instead of two. */
-  const roster = (await getStaff_()).filter(function (s) { return s.active; }).map(publicStaff_);
+  const roster = (await getStaff_()).filter(function (s) { return s.active && !isApplicant_(s); }).map(publicStaff_);
 
   /* `year` goes back so a page can tell which year it is looking at without
      recomputing it — the two pages disagree slightly about week numbering, and
@@ -2391,7 +2407,7 @@ async function staffProfile(username, pin, staffId) {
   const me = await verifyStaff_(username, pin);
   if (!me) return { ok: false };
   const rows = await getStaff_();
-  const p = rows.find(function (r) { return r.id === staffId && r.active; });
+  const p = rows.find(function (r) { return r.id === staffId && r.active && !isApplicant_(r); });
   if (!p) return { ok: false, err: 'not_found' };
 
   const goals = goalsFor_(await getGoals_(), p.id).slice(0, PUBLIC_GOAL_WEEKS);
@@ -2479,7 +2495,7 @@ async function getMyBoot(username, pin) {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || ''
     },
-    roster: (staffRows || []).filter(function (r) { return r.active; }).map(publicStaff_),
+    roster: (staffRows || []).filter(function (r) { return r.active && !isApplicant_(r); }).map(publicStaff_),
     logs: (logs && logs.logs) || [],
     habits: (logs && logs.habits) || null,
     mentees: (mentees && mentees.mentees) || [],
@@ -2733,7 +2749,7 @@ async function hrList(username, pin) {
   if (!s) return { ok: false };
   if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
   const rows = await getStaff_();
-  return { ok: true, staff: rows.map(hrStaffOut_) };
+  return { ok: true, staff: rows.filter(function (r) { return !isApplicant_(r); }).map(hrStaffOut_) };
 }
 async function hrMutate_(username, pin, staffId, fn) {
   const s = await verifyStaff_(username, pin);
@@ -2839,8 +2855,8 @@ async function hrUnarchive(username, pin, staffId) {
    a running log of notes and stage moves, and an archive box (declined,
    withdrew, no answer). Once someone arrives and has an account, the
    record can point at it (staffId). Same gate as the rest of HR. */
-const CAND_TYPES = ['staff', 'volunteer', 'student'];
-const CAND_STAGES = ['new', 'contacted', 'applied', 'interview', 'accepted', 'arrived'];
+const CAND_TYPES = ['staff', 'volunteer', 'student', 'team'];
+const CAND_STAGES = ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'];
 const CAND_FOLLOWUP_DAYS = 7, CAND_MAX = 2000, CAND_LOG_MAX = 300;
 async function getCandidates_() { return readJSON('candidates', []); }
 function cleanCandidate_(c, prev, me) {
@@ -2855,7 +2871,12 @@ function cleanCandidate_(c, prev, me) {
     name: name, type: type, stage: stage, subtype: str_(c.subtype, 60), school: str_(c.school, 80),
     email: str_(c.email, 120), phone: str_(c.phone, 60), country: str_(c.country, 60), source: str_(c.source, 120),
     assignedTo: str_(c.assignedTo, 60), nextStep: str_(c.nextStep, 200), nextDate: isoDate_(c.nextDate), expected: isoMonth_(c.expected),
-    notes: str_(c.notes, 1000), staffId: str_(c.staffId, 60),
+    notes: str_(c.notes, 1000), staffId: str_(c.staffId, 60) || (prev ? (prev.staffId || '') : ''),
+    // The portal's own fields ride along untouched by a CRM edit: the
+    // messenger the applicant chose, and the application itself (answers,
+    // documents, references), which only the portal handlers write.
+    messenger: PORTAL_MESSENGERS.indexOf(c.messenger) > -1 ? c.messenger : (prev ? (prev.messenger || '') : ''),
+    portal: prev ? (prev.portal || null) : null,
     log: prev ? (Array.isArray(prev.log) ? prev.log : []) : [], archived: prev ? (prev.archived || null) : null,
     created: prev ? prev.created : now, createdBy: prev ? prev.createdBy : me.id, updated: now, updatedBy: me.id
   };
@@ -2868,7 +2889,8 @@ function candFollowUpsCount_(rows) {
 async function hrGate_(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { s: null, out: { ok: false } };
-  if (!canHR_(s)) return { s: null, out: { ok: false, err: 'not_authorized' } };
+  // HR and the portal's staff work the same records.
+  if (!canHR_(s) && !canPortal_(s)) return { s: null, out: { ok: false, err: 'not_authorized' } };
   return { s: s, out: null };
 }
 async function hrCandidates(username, pin) {
@@ -2914,6 +2936,245 @@ async function hrArchiveCandidate(username, pin, id, info) {
   rows[idx].updated = now; rows[idx].updatedBy = g.s.id;
   await writeJSON('candidates', rows);
   return { ok: true, candidate: rows[idx] };
+}
+
+/* ==================== YWAM GP Portal ====================
+   The application portal (public/portal.html): students, potential staff,
+   volunteers and short-term teams apply from their phones and follow their
+   application; the applications department works the same records as a
+   CRM. See docs/portal-plan.md for the whole shape and the milestones.
+
+   Accounts are ordinary staff rows with kind:'applicant' — same username +
+   PIN, same throttle, same mutateStaff_ — and every ordinary handler is
+   CLOSED to them: verifyStaff_ answers null for an applicant unless the
+   handler opts in (the third argument), so an applicant cannot log a day,
+   read a roster, or reach HR by holding a valid PIN. They are also left out
+   of every roster and count. The record carries applicant:{type, school,
+   candidateId}; the application itself is the candidate record in the
+   'candidates' blob (the existing HR CRM), pointing back with staffId and
+   source:'portal'.
+
+   Who may work the portal is a flag an admin sets by hand — portalStaff
+   (see every applicant, move stages, notes, owner) and portalAdmin (that,
+   plus grant / revoke portalStaff). An app admin has both and is the only
+   one who can make a portal admin. Nobody gets it by being staff. */
+const PORTAL_CAMPUS = 'siemreap';
+const PORTAL_TYPES = ['student', 'staff', 'volunteer', 'team'];
+const PORTAL_SCHOOLS = ['dts', 'dbs', 'bcs', 'sms'];
+const PORTAL_MESSENGERS = ['whatsapp', 'telegram'];
+/* The applicant's own view of the CRM stages, in the order the journey runs
+   (the CRM's own list keeps 'contacted' before 'applied' because a lead is
+   usually contacted before they apply — on the portal it is the other way
+   round, and a stage move by staff can land anywhere on this line). */
+const PORTAL_STAGE_ORDER = ['new', 'applied', 'contacted', 'interview', 'accepted', 'practical', 'arrived'];
+function isApplicant_(s) { return !!(s && s.kind === 'applicant'); }
+function canPortal_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || s.portalAdmin || s.portalStaff)); }
+function isPortalAdmin_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || s.portalAdmin)); }
+function portalRole_(s) {
+  if (isApplicant_(s)) return 'applicant';
+  if (isPortalAdmin_(s)) return 'portal-admin';
+  if (canPortal_(s)) return 'portal-staff';
+  return null;
+}
+function cleanPhone_(v) {
+  const s = String(str_(v, 40) || '').replace(/[^\d+ ()-]/g, '').trim();
+  return /\d{6,}/.test(s.replace(/\D/g, '')) ? s : '';
+}
+function portalStaffOut_(s) {
+  return { id: s.id, name: s.name, username: s.username, campus: s.campus, isAdmin: !!s.isAdmin, portalAdmin: !!s.portalAdmin, portalStaff: !!s.portalStaff, role: portalRole_(s) };
+}
+function portalStageIdx_(stage) { const i = PORTAL_STAGE_ORDER.indexOf(stage); return i === -1 ? 0 : i; }
+/* What the applicant is told, derived on the server from the record so the
+   dashboard and the staff view can never disagree about where someone is. */
+function portalStatus_(c) {
+  if (c.archived) return 'closed';
+  const submitted = !!(c.portal && c.portal.submittedAt);
+  if (c.stage === 'new') return submitted ? 'pending' : 'draft';
+  if (c.stage === 'applied') return 'pending';
+  if (c.stage === 'contacted') return 'in_review';
+  return c.stage;   // interview | accepted | practical | arrived
+}
+function portalSteps_(c) {
+  const idx = portalStageIdx_(c.stage);
+  const submitted = !!(c.portal && c.portal.submittedAt) || idx >= portalStageIdx_('applied');
+  const docsDone = !!(c.portal && c.portal.docsDone);
+  const refDone = !!(c.portal && c.portal.referenceDone) || !!(c.portal && c.portal.referenceNotNeeded);
+  const at = function (stage) { return idx >= portalStageIdx_(stage); };
+  const steps = [
+    { id: 'account', done: true },
+    { id: 'form', done: submitted },
+    { id: 'received', done: submitted },
+    { id: 'contact', done: at('contacted') },
+    { id: 'docs', done: at('interview') || (docsDone && refDone), items: [{ id: 'documents', done: docsDone || at('interview') }, { id: 'reference', done: refDone || at('interview') }] },
+    { id: 'interview', done: at('accepted') },
+    { id: 'accepted', done: at('practical') },
+    { id: 'practical', done: at('arrived') },
+    { id: 'arrived', done: at('arrived') }
+  ];
+  let current = -1;
+  steps.forEach(function (st, i) { if (current === -1 && !st.done) current = i; });
+  if (current === -1) current = steps.length - 1;
+  steps.forEach(function (st, i) { st.state = st.done ? 'done' : (i === current ? 'current' : 'todo'); });
+  if (c.archived) steps.forEach(function (st) { if (st.state === 'current') st.state = 'todo'; });
+  return steps;
+}
+function portalAppOut_(c) {
+  return {
+    id: c.id, type: c.type, school: c.school || '', stage: c.stage, status: portalStatus_(c),
+    submittedAt: (c.portal && c.portal.submittedAt) || null, updated: c.updated || '',
+    archived: c.archived ? { at: c.archived.at } : null,
+    steps: portalSteps_(c)
+  };
+}
+/* The staff side's row — the CRM record plus the applicant's contact and
+   messenger, so one tap opens the chat. */
+function portalCandOut_(c, byId) {
+  const acct = c.staffId ? byId[c.staffId] : null;
+  return Object.assign({}, c, {
+    messenger: c.messenger || (acct && acct.messenger) || '',
+    phone: c.phone || (acct && acct.phone) || '',
+    email: c.email || (acct && acct.email) || '',
+    status: portalStatus_(c),
+    hasAccount: !!acct
+  });
+}
+async function candidateFor_(rows, s) {
+  const cid = s.applicant && s.applicant.candidateId;
+  return rows.find(function (r) { return r && (r.id === cid || r.staffId === s.id); }) || null;
+}
+
+async function portalRegister(payload) {
+  payload = payload && typeof payload === 'object' ? payload : {};
+  const u = normUser_(payload.username);
+  if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { ok: false, err: 'bad_username' };
+  if (!/^\d{4}$/.test(String(payload.pin))) return { ok: false, err: 'bad_pin' };
+  const name = str_(payload.name, 120);
+  if (!name) return { ok: false, err: 'name_required' };
+  const email = cleanEmail_(payload.email);
+  if (email === null) return { ok: false, err: 'bad_email' };
+  if (!email) return { ok: false, err: 'email_required' };
+  const phone = cleanPhone_(payload.phone);
+  if (!phone) return { ok: false, err: 'phone_required' };
+  const messenger = PORTAL_MESSENGERS.indexOf(payload.messenger) > -1 ? payload.messenger : '';
+  if (!messenger) return { ok: false, err: 'messenger_required' };
+  const type = PORTAL_TYPES.indexOf(payload.type) > -1 ? payload.type : '';
+  if (!type) return { ok: false, err: 'type_required' };
+  const school = type === 'student' ? (PORTAL_SCHOOLS.indexOf(payload.school) > -1 ? payload.school : '') : '';
+  if (type === 'student' && !school) return { ok: false, err: 'school_required' };
+  const country = cleanCountry_(payload.country);
+  const rows = await getStaff_();
+  if (findStaff_(rows, u)) return { ok: false, err: 'taken' };
+  if (rows.some(function (r) { return r.email && r.email === email; })) return { ok: false, err: 'email_taken' };
+  const cands = await getCandidates_();
+  if (cands.length >= CAND_MAX) return { ok: false, err: 'too_many' };
+  const salt = pinSalt_(), now = new Date().toISOString();
+  const id = newStaffId_(), candId = hrId_('cd');
+  const rec = {
+    id: id, username: u, name: name, email: email, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
+    kind: 'applicant', campus: PORTAL_CAMPUS, dept: '', ministry: '', role: '', photo: '',
+    phone: phone, messenger: messenger, country: country,
+    applicant: { type: type, school: school, candidateId: candId },
+    active: true, isAdmin: false, created: now, updated: now
+  };
+  const cand = {
+    id: candId, campus: PORTAL_CAMPUS, name: name, type: type, stage: 'new',
+    subtype: school ? school.toUpperCase() : '', school: school,
+    email: email, phone: phone, messenger: messenger, country: country, source: 'portal',
+    assignedTo: '', nextStep: '', nextDate: '', expected: '', notes: '', staffId: id,
+    portal: { createdAt: now, submittedAt: null, form: null, docs: [], references: [] },
+    log: [{ at: now, by: id, kind: 'stage', text: 'new' }], archived: null,
+    created: now, createdBy: id, updated: now, updatedBy: id
+  };
+  // The account first — a candidate row without an account is a loose end
+  // staff can see and clean up; an account without its candidate would be a
+  // person who signed up and sees nothing.
+  const made = await mutateStaff_(function (all) {
+    if (findStaff_(all, u)) return { abort: true, ok: false, err: 'taken' };
+    if (all.some(function (r) { return r.email && r.email === email; })) return { abort: true, ok: false, err: 'email_taken' };
+    all.push(rec);
+    return { ok: true };
+  });
+  if (!made || !made.ok) return made || { ok: false };
+  const fresh = await getCandidates_();
+  fresh.push(cand);
+  await writeJSON('candidates', fresh);
+  return { ok: true, role: 'applicant', me: portalMeOut_(rec), application: portalAppOut_(cand) };
+}
+function portalMeOut_(s) {
+  return { id: s.id, name: s.name, username: s.username, email: s.email || '', phone: s.phone || '', messenger: s.messenger || '', country: s.country || '',
+    type: s.applicant ? s.applicant.type : '', school: s.applicant ? s.applicant.school : '' };
+}
+/* One call per page open, same as getMyBoot: who you are, and either your own
+   application or — for portal staff — everyone's. A bad PIN is 'auth' so the
+   page knows to sign out; a staff member without portal access is told so
+   and shown nothing. */
+async function portalBoot(username, pin) {
+  const s = await verifyStaff_(username, pin, true);
+  if (!s) return { ok: false, err: 'auth' };
+  const cands = await getCandidates_();
+  if (isApplicant_(s)) {
+    const cand = await candidateFor_(cands, s);
+    if (!cand) return { ok: false, err: 'no_application' };
+    return { ok: true, role: 'applicant', me: portalMeOut_(s), application: portalAppOut_(cand) };
+  }
+  if (!canPortal_(s)) return { ok: false, err: 'not_authorized' };
+  const rows = await getStaff_();
+  const byId = {}; rows.forEach(function (r) { byId[r.id] = r; });
+  return {
+    ok: true, role: portalRole_(s), me: portalStaffOut_(s),
+    applicants: cands.map(function (c) { return portalCandOut_(c, byId); }),
+    staff: rows.filter(function (r) { return canPortal_(r); }).map(portalStaffOut_),
+    stages: CAND_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS
+  };
+}
+/* Grant or revoke portal access. A portal admin may hand out portalStaff;
+   only an app admin may make (or unmake) a portal admin. Never to an
+   applicant, and never to nobody. */
+async function portalSetAccess(username, pin, staffId, flags) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  flags = flags && typeof flags === 'object' ? flags : {};
+  if (flags.portalAdmin !== undefined && !me.isAdmin) return { ok: false, err: 'not_authorized' };
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === str_(staffId, 60); });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const rec = rows[idx];
+    if (isApplicant_(rec)) return { abort: true, ok: false, err: 'is_applicant' };
+    if (flags.portalStaff !== undefined) rec.portalStaff = !!flags.portalStaff;
+    if (flags.portalAdmin !== undefined) rec.portalAdmin = !!flags.portalAdmin;
+    rec.updated = new Date().toISOString();
+    rows[idx] = rec;
+    return { ok: true, staff: adminStaffOut_(rec) };
+  });
+}
+/* The staff side's writes go through the CRM's own handlers (hrSaveCandidate,
+   hrCandidateNote, hrArchiveCandidate — hrGate_ admits portal staff). This
+   one is the applicant's: their contact details, which they own. */
+async function portalUpdateContact(username, pin, payload) {
+  const s = await verifyStaff_(username, pin, true);
+  if (!s || !isApplicant_(s)) return { ok: false, err: 'auth' };
+  payload = payload && typeof payload === 'object' ? payload : {};
+  const phone = cleanPhone_(payload.phone);
+  if (!phone) return { ok: false, err: 'phone_required' };
+  const messenger = PORTAL_MESSENGERS.indexOf(payload.messenger) > -1 ? payload.messenger : '';
+  if (!messenger) return { ok: false, err: 'messenger_required' };
+  const country = payload.country !== undefined ? cleanCountry_(payload.country) : s.country;
+  const out = await mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === s.id; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    rows[idx].phone = phone; rows[idx].messenger = messenger; rows[idx].country = country;
+    rows[idx].updated = new Date().toISOString();
+    return { ok: true };
+  });
+  if (!out || !out.ok) return out || { ok: false };
+  const cands = await getCandidates_();
+  const cand = await candidateFor_(cands, s);
+  if (cand) {
+    cand.phone = phone; cand.messenger = messenger; cand.country = country; cand.updated = new Date().toISOString(); cand.updatedBy = s.id;
+    await writeJSON('candidates', cands);
+  }
+  return portalBoot(username, pin);
 }
 
 /* ==================== dispatcher ==================== */
@@ -2993,7 +3254,11 @@ const HANDLERS = {
   hrCandidateNote: function (a) { return hrCandidateNote(a[0], a[1], a[2], a[3]); },
   hrArchiveCandidate: function (a) { return hrArchiveCandidate(a[0], a[1], a[2], a[3]); },
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
-  sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); }
+  sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); },
+  portalRegister: function (a) { return portalRegister(a[0]); },
+  portalBoot: function (a) { return portalBoot(a[0], a[1]); },
+  portalSetAccess: function (a) { return portalSetAccess(a[0], a[1], a[2], a[3]); },
+  portalUpdateContact: function (a) { return portalUpdateContact(a[0], a[1], a[2]); }
 };
 
 export default async (req) => {

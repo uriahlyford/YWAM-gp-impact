@@ -153,7 +153,7 @@ await page.waitForTimeout(600);
 const ar = sent.find(x => x.fn === 'hrArchiveCandidate');
 ok('Archive asks, then posts the reason', ar && ar.args[2] === 'cd1' && ar.args[3].reason === 'Withdrew — family reasons', ar && JSON.stringify(ar.args[3]));
 const arch = await page.evaluate(() => ({ banner: !!document.querySelector('.hrBanner.archived'), un: !!document.querySelector('#candUnarchive'), steps: document.querySelectorAll('.candStep:disabled').length }));
-ok('the page shows them archived, the stage row is frozen, Bring back is offered', arch.banner && arch.un && arch.steps === 6, JSON.stringify(arch));
+ok('the page shows them archived, the stage row is frozen, Bring back is offered', arch.banner && arch.un && arch.steps === 7, JSON.stringify(arch));
 await page.click('#candUnarchive');
 await page.waitForTimeout(600);
 ok('Bring back posts an unarchive', sent.some(x => x.fn === 'hrArchiveCandidate' && x.args[3] === null) && !(await page.$('.hrBanner.archived')));
