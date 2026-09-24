@@ -400,6 +400,12 @@ renewals-due count from boot's `hrDue`). `S.view==='hr'`, `hrHtml` / `hrPersonHt
 bindings in `bindHr()`; the list loads on demand (`hrList`) with the same error card +
 Try again as My Ministry.
 
+- **A contract is for this base; time in YWAM is the person's**: `ywamSince` (a year,
+  `ywamSinceOf_`, 1960..now) sits on the staff record, is set from the contract form through
+  `hrSaveContract`'s payload (`ywamSince`; empty string clears, missing leaves it), and shows as
+  "In YWAM since 2003 — 23 years" beside "Serving in Siem Reap since …" on the HR person page
+  and as "N yrs in YWAM" in the list. Someone can be 23 years in YWAM on a 2-year Siem Reap
+  contract; the contract's `years` still drives the renewal date.
 - **Contracts live on the staff record**: `contracts: [{id, signed:'YYYY-MM', years,
   notes, files:[{id,name,mime,size,added}], added, addedBy}]`, sorted oldest first; the
   **current** contract is the last one, a renewal is another row (`hrSaveContract`; same
