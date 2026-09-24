@@ -32,12 +32,22 @@ const STEPS = (current) => {
   const ci = ids.indexOf(current);
   return ids.map((id, i) => ({ id, state: i < ci ? 'done' : i === ci ? 'current' : 'todo', items: id === 'docs' ? [{ id: 'documents', done: false }, { id: 'reference', done: false }] : undefined }));
 };
-let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form') };
+const FORM = { key: 'dts', title: { en: 'DTS application', km: 'ពាក្យសុំ DTS' }, sections: [
+  { id: 'about', title: { en: 'About you', km: 'អំពីអ្នក' }, help: { en: '', km: '' }, questions: [
+    { id: 'dob', type: 'date', label: { en: 'Date of birth', km: 'ថ្ងៃខែឆ្នាំកំណើត' }, help: { en: '', km: '' }, required: true, audience: 'all', options: [] },
+    { id: 'gender', type: 'choice', label: { en: 'Gender', km: 'ភេទ' }, help: { en: '', km: '' }, required: true, audience: 'all', options: [{ en: 'Male', km: 'ប្រុស' }, { en: 'Female', km: 'ស្រី' }] },
+    { id: 'leaderContact', type: 'short', label: { en: 'Leader’s phone', km: 'ទូរស័ព្ទអ្នកដឹកនាំ' }, help: { en: 'We will ask for a reference.', km: '' }, required: true, audience: 'international', options: [] },
+    { id: 'english', type: 'choice', label: { en: 'How is your English?', km: 'អង់គ្លេស?' }, help: { en: '', km: '' }, required: true, audience: 'khmer', options: [{ en: 'Basic', km: '' }, { en: 'Good', km: '' }] } ] },
+  { id: 'faith', title: { en: 'Your faith', km: 'ជំនឿ' }, help: { en: '', km: '' }, questions: [
+    { id: 'testimony', type: 'long', label: { en: 'Tell us how you came to know Jesus.', km: 'ប្រាប់យើង' }, help: { en: '', km: '' }, required: true, audience: 'all', options: [] },
+    { id: 'gifts', type: 'multi', label: { en: 'Gifts', km: '' }, help: { en: '', km: '' }, required: false, audience: 'all', options: [{ en: 'Teaching', km: '' }, { en: 'Music', km: '' }] } ] } ] };
+const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: { ...FORM, key: 'team' } };
+let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
 const ME_APP = { id: 'st_anna', name: 'Anna Example', username: 'anna.b', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', type: 'student', school: 'dts' };
 const STAFF = [{ id: 'st_dara', name: 'Dara Pen', username: 'dara', campus: 'siemreap', isAdmin: false, portalAdmin: false, portalStaff: true, role: 'portal-staff' }, { id: 'st_sina', name: 'Sina Sok', username: 'sina', campus: 'siemreap', isAdmin: false, portalAdmin: true, portalStaff: false, role: 'portal-admin' }];
 let CANDS = [
-  { id: 'cd_anna', campus: 'siemreap', name: 'Anna Example', type: 'student', school: 'dts', stage: 'applied', status: 'pending', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', source: 'portal', assignedTo: '', nextStep: '', nextDate: '', staffId: 'st_anna', hasAccount: true, updated: '2026-09-20T10:00:00Z', log: [{ at: '2026-09-19T09:00:00Z', by: 'st_anna', kind: 'stage', text: 'new' }], archived: null, portal: { createdAt: '2026-09-19' } },
-  { id: 'cd_tom', campus: 'siemreap', name: 'Tom Volunteer', type: 'volunteer', school: '', stage: 'contacted', status: 'in_review', email: 'tom@example.org', phone: '+1 555 000 1111', messenger: 'telegram', country: 'United States', source: 'portal', assignedTo: 'st_dara', nextStep: 'Video call', nextDate: '2026-09-30', staffId: 'st_tom', hasAccount: true, updated: '2026-09-21T10:00:00Z', log: [], archived: null },
+  { id: 'cd_anna', campus: 'siemreap', name: 'Anna Example', type: 'student', school: 'dts', stage: 'applied', status: 'pending', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', source: 'portal', assignedTo: '', nextStep: '', nextDate: '', staffId: 'st_anna', hasAccount: true, updated: '2026-09-20T10:00:00Z', log: [{ at: '2026-09-19T09:00:00Z', by: 'st_anna', kind: 'stage', text: 'new' }], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', portal: { createdAt: '2026-09-19', submittedAt: '2026-09-20T10:00:00Z', form: { answers: { dob: '1999-05-05', gender: 'Female', leaderContact: '+46 1', testimony: 'Long story', gifts: ['Music'] } } } },
+  { id: 'cd_tom', campus: 'siemreap', name: 'Tom Volunteer', type: 'volunteer', school: '', stage: 'contacted', status: 'in_review', email: 'tom@example.org', phone: '+1 555 000 1111', messenger: 'telegram', country: 'United States', source: 'portal', assignedTo: 'st_dara', nextStep: 'Video call', nextDate: '2026-09-30', staffId: 'st_tom', hasAccount: true, updated: '2026-09-21T10:00:00Z', log: [], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'volunteer' },
   { id: 'cd_pp', campus: 'poipet', name: 'Poipet Person', type: 'student', school: 'dbs', stage: 'new', status: 'draft', email: '', phone: '+855 11 222 333', messenger: 'telegram', country: 'Cambodia', source: 'portal', assignedTo: '', staffId: 'st_pp', hasAccount: true, updated: '2026-09-18T10:00:00Z', log: [], archived: null },
   { id: 'cd_team', campus: 'siemreap', name: 'Grace Church Team', type: 'team', school: '', stage: 'new', status: 'draft', email: 'team@example.org', phone: '+61 400 000 000', messenger: 'whatsapp', country: 'Australia', source: 'portal', assignedTo: '', staffId: 'st_team', hasAccount: true, updated: '2026-09-17T10:00:00Z', log: [], archived: null },
   { id: 'cd_old', campus: 'siemreap', name: 'Closed Case', type: 'staff', school: '', stage: 'new', status: 'closed', email: '', phone: '', messenger: '', country: '', source: 'hr', assignedTo: '', staffId: '', hasAccount: false, updated: '2026-08-01T10:00:00Z', log: [], archived: { at: '2026-08-02', reason: 'Withdrew' } }
@@ -56,10 +66,12 @@ async function open(viewport, query, seed) {
       const p = b.args[0];
       out = p.username === 'taken' ? { ok: false, err: 'taken' } : { ok: true, role: 'applicant', me: { ...ME_APP, name: p.name, username: p.username, phone: p.phone, messenger: p.messenger, type: p.type, school: p.school }, application: { ...ANNA, type: p.type, school: p.school } };
     } else if (b.fn === 'portalBoot') {
-      if (u === 'anna.b' && pin === '2468') out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA };
-      else if (u === 'dara' && pin === '1234') out = { ok: true, role: 'portal-staff', me: STAFF[0], applicants: CANDS, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
+      if (u === 'anna.b' && pin === '2468') out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM };
+      else if (u === 'srey.k' && pin === '2468') out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Srey Khmer', username: 'srey.k', country: 'Cambodia' }, application: { ...ANNA, name: 'Srey Khmer', stage: 'accepted', status: 'accepted', audience: 'khmer', needsVisa: false, refNeeded: false, steps: STEPS('practical').map(s => s.id === 'docs' ? { ...s, items: [{ id: 'documents', done: true }] } : s), submittedAt: '2026-09-01T00:00:00Z' }, form: FORM };
+      else if (u === 'team.au' && pin === '2468') out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: { ...ANNA, type: 'team', school: '', stage: 'accepted', status: 'accepted', refNeeded: false, formKey: 'team', steps: STEPS('practical').map(s => s.id === 'docs' ? { ...s, items: [{ id: 'documents', done: false }] } : s), submittedAt: '2026-09-01T00:00:00Z', visa: { flightsConfirmed: true, invitationSent: false } }, form: { ...FORM, key: 'team' } };
+      else if (u === 'dara' && pin === '1234') out = { ok: true, role: 'portal-staff', me: STAFF[0], applicants: CANDS, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'], forms: FORMS };
       else if (u === 'rithy' && pin === '1234') out = { ok: true, role: 'portal-staff', me: { id: 'st_teams', name: 'Rithy Team', username: 'rithy', campus: 'siemreap', role: 'portal-staff' }, applicants: CANDS.filter(c => c.type === 'team'), scope: ['team'], staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
-      else if (u === 'sina' && pin === '1234') out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
+      else if (u === 'sina' && pin === '1234') out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'], forms: FORMS };
       else if (u === 'bopha' && pin === '1234') out = { ok: false, err: 'not_authorized' };
       else out = { ok: false, err: 'auth' };
     } else if (b.fn === 'portalUpdateContact') {
@@ -68,6 +80,18 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'hrSaveCandidate') {
       const c = b.args[2]; CANDS = CANDS.map(x => x.id === c.id ? { ...x, ...c, log: x.log.concat(x.stage !== c.stage ? [{ at: new Date().toISOString(), by: u === 'dara' ? 'st_dara' : 'x', kind: 'stage', text: c.stage }] : []) } : x);
       out = { ok: true, candidate: CANDS.find(x => x.id === c.id) };
+    } else if (b.fn === 'portalSaveDraft') {
+      ANNA = { ...ANNA, answers: b.args[2], draftAt: new Date().toISOString() }; out = { ok: true, savedAt: ANNA.draftAt, answers: b.args[2] };
+    } else if (b.fn === 'portalSubmit') {
+      const ans = b.args[2]; const miss = ['dob', 'gender', 'leaderContact', 'testimony'].filter(k => !ans[k]);
+      if (miss.length) out = { ok: false, err: 'missing', missing: miss };
+      else { ANNA = { ...ANNA, answers: ans, stage: 'applied', status: 'pending', submittedAt: new Date().toISOString(), steps: STEPS('contact') }; out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM }; }
+    } else if (b.fn === 'portalSetVisaFlags') {
+      CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, portal: { ...(x.portal || {}), visa: { ...((x.portal || {}).visa || {}), ...b.args[3] } } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
+    } else if (b.fn === 'portalStaffSaveAnswers') {
+      CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, portal: { ...(x.portal || {}), form: { answers: b.args[3] }, submittedAt: '2026-09-20T10:00:00Z' } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
+    } else if (b.fn === 'portalSaveForm') {
+      FORMS[b.args[2]] = { ...b.args[3], key: b.args[2], updated: new Date().toISOString() }; delete FORMS[b.args[2]].isDefault; out = { ok: true, form: FORMS[b.args[2]], forms: FORMS };
     } else if (b.fn === 'portalDeleteApplicant') {
       CANDS = CANDS.filter(x => x.id !== b.args[2]);
       out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: [], schools: [], deleted: b.args[2], accountRemoved: true };
@@ -139,7 +163,7 @@ async function open(viewport, query, seed) {
   const steps = await page.$$eval('#timeline .step', s => s.map(x => x.getAttribute('data-step') + ':' + (x.classList.contains('done') ? 'done' : x.classList.contains('current') ? 'current' : 'todo')));
   ok('the timeline has nine steps, account done and "fill out" current', steps.length === 9 && steps[0] === 'account:done' && steps[1] === 'form:current' && steps.slice(2).every(s => /todo$/.test(s)), steps.join(' '));
   ok('documents & reference show as pending sub-items', (await page.$$eval('#timeline .subItems li', li => li.length)) === 2);
-  ok('the form card says it opens soon, with nothing to press', /opens here soon/i.test(await page.$eval('#main', e => e.textContent)) && await page.$eval('#main .btn[disabled]', b => !!b));
+  ok('the form card invites them to fill out the application', !!(await page.$('#openForm')) && /Fill out my application/.test(await page.$eval('#openForm', e => e.textContent)));
   ok('contact details are on the page', /\+46 70 000 0000/.test(await page.$eval('#main', e => e.textContent)) && /WhatsApp/.test(await page.$eval('#main', e => e.textContent)));
   ok('one column on a phone', await page.$eval('.two', e => getComputedStyle(e).gridTemplateColumns.split(' ').length === 1));
   // edit contact
@@ -175,6 +199,68 @@ async function open(viewport, query, seed) {
   const [l, r] = await page.$$eval('.two > div', d => d.map(x => x.getBoundingClientRect().left));
   ok('on a desktop the dashboard is two columns side by side', cols === 2 && r > l + 300, cols + ' cols, left ' + Math.round(l) + ' / ' + Math.round(r));
   ok('and stays inside 1100px, centred', await page.$eval('main', m => m.getBoundingClientRect().width <= 1100 && m.getBoundingClientRect().left > 50));
+  await ctx.close();
+}
+
+/* ---------- the application form, applicant side ---------- */
+{
+  ANNA = { ...ANNA, stage: 'new', status: 'draft', submittedAt: null, steps: STEPS('form'), answers: {} };
+  const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'anna.b', pin: '2468' })));
+  await page.waitForSelector('#openForm');
+  ok('the dashboard offers "Fill out my application" — no more "opens soon"', /Fill out my application/.test(await page.$eval('#openForm', e => e.textContent)) && !/Opens soon/.test(await page.$eval('#main', e => e.textContent)));
+  ok('an international applicant is told the visa guide comes with acceptance, and about the leader reference', /visa for Cambodia/.test(await page.$eval('#main', e => e.textContent)) && /leader reference/.test(await page.$eval('#main', e => e.textContent)));
+  await page.click('#openForm');
+  await page.waitForSelector('#formNext');
+  ok('the form opens on section 1 of 2 with a progress bar', /Section 1 of 2/.test(await page.$eval('.formProgress', e => e.textContent)) && /About you/.test(await page.$eval('#main h2', e => e.textContent)));
+  const qs = await page.$$eval('.qBlock', b => b.map(x => x.getAttribute('data-qid')).join(','));
+  ok('it asks the international questions and not the Khmer-only one', qs === 'dob,gender,leaderContact', qs);
+  ok('required questions are marked *', (await page.$$eval('.qBlock .req', r => r.length)) === 3);
+  await page.click('#formNext');
+  await page.waitForTimeout(200);
+  ok('Next is blocked while required answers are missing, and they are marked', (await page.$$eval('.qBlock.missing', b => b.length)) === 3 && /marked \*/.test(await page.$eval('#msg', e => e.textContent)) && /Section 1 of 2/.test(await page.$eval('.formProgress', e => e.textContent)));
+  await page.fill('#a_dob', '1999-05-05');
+  await page.click('input[name="a_gender"][value="Female"]');
+  await page.fill('#a_leaderContact', '+46 70 111 2222');
+  await page.waitForTimeout(1100);
+  const draft = sent.filter(b => b.fn === 'portalSaveDraft').pop();
+  ok('answers save as a draft as you type', draft && draft.args[2].dob === '1999-05-05' && draft.args[2].gender === 'Female');
+  await page.click('#formNext');
+  await page.waitForSelector('#formSubmit');
+  ok('section 2 has the paragraph and the checkboxes, and a Submit button', /Section 2 of 2/.test(await page.$eval('.formProgress', e => e.textContent)) && !!(await page.$('textarea[data-ans="testimony"]')) && (await page.$$eval('input[data-multi]', c => c.length)) === 2);
+  await page.click('#formBack');
+  await page.waitForSelector('#formNext');
+  ok('Back keeps the answers', (await page.$eval('#a_dob', e => e.value)) === '1999-05-05' && await page.$eval('input[name="a_gender"][value="Female"]', e => e.checked));
+  await page.click('#formNext');
+  await page.waitForSelector('#formSubmit');
+  await page.fill('textarea[data-ans="testimony"]', 'I met Jesus at a youth camp.');
+  await page.click('input[data-multi][value="Music"]');
+  await page.click('#formSubmit');
+  await page.waitForSelector('#statusPill');
+  const sub = sent.find(b => b.fn === 'portalSubmit');
+  ok('Submit sends every answer to portalSubmit', sub && sub.args[2].testimony === 'I met Jesus at a youth camp.' && JSON.stringify(sub.args[2].gifts) === '["Music"]' && sub.args[2].leaderContact === '+46 70 111 2222');
+  ok('and the dashboard now reads Application pending with the form submitted', /Application pending/.test(await page.$eval('#statusPill', e => e.textContent)) && /Submitted/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('#openForm')));
+  await page.click('#viewAnswers');
+  await page.waitForTimeout(150);
+  ok('View my answers shows them read-only', /I met Jesus at a youth camp/.test(await page.$eval('#main', e => e.textContent)) && /Music/.test(await page.$eval('#main', e => e.textContent)));
+  await ctx.close();
+}
+
+/* ---------- Khmer student, team: the visa guide and what we need ---------- */
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'srey.k', pin: '2468' })));
+  await page.waitForSelector('#statusPill');
+  const txt = await page.$eval('#main', e => e.textContent);
+  ok('a Khmer student sees no visa card and no leader reference', !/e-visa|visa for Cambodia/.test(txt) && !/Leader reference/.test(txt) && (await page.$$eval('#timeline .subItems li', li => li.length)) === 1);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
+  await page.waitForSelector('#statusPill');
+  const txt = await page.$eval('#main', e => e.textContent);
+  ok('an accepted team gets the e-visa guide, step by step', /Your e-visa, step by step/.test(txt) && /Visa E/.test(txt) && /e-Arrival/.test(txt) && /white sticker/.test(txt));
+  ok('with the two ticks staff set — flights confirmed done, letter pending', /✓ Flights confirmed/.test(txt) && /○ Letter of invitation sent to you/.test(txt));
+  ok('and the list of what we need from a team', /team photo/i.test(txt) && /passport photo/i.test(txt) && /flight or ticket/i.test(txt));
+  ok('a team has no leader reference step', !/Leader reference/.test(txt));
   await ctx.close();
 }
 
@@ -249,6 +335,51 @@ async function open(viewport, query, seed) {
   ok('a note goes through hrCandidateNote and shows in the log', note && note.args[3] === 'Spoke today, very keen' && /Spoke today, very keen/.test(await page.$eval('#panel .log', e => e.textContent)));
   ok('no PIN or hash anywhere on the page', !/2468|1234|pinHash/.test(await page.$eval('#main', e => e.textContent)));
   ok('portal staff are offered no delete', !(await page.$('#deleteCand')));
+  ok('portal staff are offered no Forms button', !(await page.$('#toForms')));
+  await page.click('[data-open="cd_anna"]');
+  await page.waitForSelector('#panel');
+  const pan = await page.$eval('#panel', e => e.textContent);
+  ok('the record panel shows the submitted answers under their questions', /Answers/.test(pan) && /Date of birth/.test(pan) && /1999-05-05/.test(pan) && /Long story/.test(pan) && /Music/.test(pan));
+  ok('and the visa ticks for an international applicant', (await page.$$eval('[data-visaflag]', c => c.map(x => x.getAttribute('data-visaflag')).join(','))) === 'flightsConfirmed,invitationSent');
+  await page.check('[data-visaflag="flightsConfirmed"]');
+  await page.waitForTimeout(300);
+  const vf = sent.filter(b => b.fn === 'portalSetVisaFlags').pop();
+  ok('ticking flights confirmed goes through portalSetVisaFlags', vf && vf.args[2] === 'cd_anna' && vf.args[3].flightsConfirmed === true);
+  await page.click('#editAnswers');
+  await page.waitForSelector('#saveAnswers');
+  await page.fill('#s_leaderContact', '+46 70 999 0000');
+  await page.click('#saveAnswers');
+  await page.waitForTimeout(300);
+  const sa = sent.filter(b => b.fn === 'portalStaffSaveAnswers').pop();
+  ok('staff correct an answer through portalStaffSaveAnswers', sa && sa.args[2] === 'cd_anna' && sa.args[3].leaderContact === '+46 70 999 0000' && sa.args[3].testimony === 'Long story');
+  await ctx.close();
+}
+
+/* ---------- the forms editor, portal admins ---------- */
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  ok('a portal admin has a Forms button in the bar', !!(await page.$('#toForms')));
+  await page.click('#toForms');
+  await page.waitForSelector('#formSave');
+  ok('the editor opens on DTS with a tab per form and the shipped-default note', await page.$eval('[data-formkey="dts"]', b => b.classList.contains('on')) && (await page.$$eval('[data-formkey]', b => b.length)) === 7 && /shipped default/.test(await page.$eval('#main', e => e.textContent)));
+  ok('each question is a card with English and Khmer, a type, an audience and Required', (await page.$$eval('.qcard', c => c.length)) === 6 && (await page.$eval('[data-fe="sections.0.questions.0.label.en"]', i => i.value)) === 'Date of birth' && (await page.$eval('[data-fe="sections.0.questions.0.label.km"]', i => i.value)) === 'ថ្ងៃខែឆ្នាំកំណើត' && (await page.$eval('[data-fe="sections.0.questions.2.audience"]', s => s.value)) === 'international');
+  ok('multiple-choice options are one per line, English | Khmer', /Male \| ប្រុស/.test(await page.$eval('[data-fe="sections.0.questions.1.options"]', t => t.value)));
+  await page.fill('[data-fe="sections.0.questions.0.label.en"]', 'Your date of birth');
+  await page.click('[data-qadd="1"]');
+  await page.waitForTimeout(200);
+  ok('Add question adds a card to that section', (await page.$$eval('[data-sec="1"] .qcard', c => c.length)) === 3);
+  await page.fill('[data-fe="sections.1.questions.2.label.en"]', 'Anything else you want to tell us?');
+  await page.selectOption('[data-fe="sections.1.questions.2.type"]', 'long');
+  await page.waitForTimeout(150);
+  await page.click('[data-qdel="0|3"]');
+  await page.waitForTimeout(150);
+  ok('Delete question removes it', (await page.$$eval('[data-sec="0"] .qcard', c => c.length)) === 3);
+  await page.click('#formSave');
+  await page.waitForTimeout(400);
+  const fs_ = sent.filter(b => b.fn === 'portalSaveForm').pop();
+  ok('Save sends the whole form to portalSaveForm — relabel, the new paragraph question, the deleted one gone', fs_ && fs_.args[2] === 'dts' && fs_.args[3].sections[0].questions[0].label.en === 'Your date of birth' && fs_.args[3].sections[1].questions[2].label.en === 'Anything else you want to tell us?' && fs_.args[3].sections[1].questions[2].type === 'long' && !fs_.args[3].sections[0].questions.some(q => q.id === 'english'));
+  ok('and the note now says when it was saved', /Last saved/.test(await page.$eval('#main', e => e.textContent)));
   await ctx.close();
 }
 

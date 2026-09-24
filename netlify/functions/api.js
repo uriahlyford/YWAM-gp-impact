@@ -23,6 +23,7 @@ import { getStore } from '@netlify/blobs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import TEAM_SEED from './team-seed.js';
+import PORTAL_FORMS_DEFAULT from './portal-forms-default.js';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
 
@@ -3003,6 +3004,15 @@ function cleanPhone_(v) {
 function portalStaffOut_(s) {
   return { id: s.id, name: s.name, username: s.username, campus: s.campus, isAdmin: !!s.isAdmin, portalAdmin: !!s.portalAdmin, portalStaff: !!s.portalStaff, role: portalRole_(s) };
 }
+/* Khmer or international decides two things: whether a leader reference is
+   asked for (Khmer students: no; teams: no — a church, not a person; everyone
+   else: yes) and whether the visa guide applies (everyone not from Cambodia:
+   international students, staff, volunteers, teams). Country comes from
+   sign-up, which is why it is required there. */
+function audienceOf_(c) { return cleanCountry_(c && c.country) === 'Cambodia' ? 'khmer' : 'international'; }
+function needsVisa_(c) { return audienceOf_(c) === 'international'; }
+function refNeeded_(c) { return !(c && (c.type === 'team' || (c.type === 'student' && audienceOf_(c) === 'khmer'))); }
+function formKeyOf_(c) { return c.type === 'student' ? (PORTAL_SCHOOLS.indexOf(c.school) > -1 ? c.school : 'dts') : (PORTAL_FORMS_DEFAULT[c.type] ? c.type : 'staff'); }
 function portalStageIdx_(stage) { const i = PORTAL_STAGE_ORDER.indexOf(stage); return i === -1 ? 0 : i; }
 /* What the applicant is told, derived on the server from the record so the
    dashboard and the staff view can never disagree about where someone is. */
@@ -3018,14 +3028,17 @@ function portalSteps_(c) {
   const idx = portalStageIdx_(c.stage);
   const submitted = !!(c.portal && c.portal.submittedAt) || idx >= portalStageIdx_('applied');
   const docsDone = !!(c.portal && c.portal.docsDone);
-  const refDone = !!(c.portal && c.portal.referenceDone) || !!(c.portal && c.portal.referenceNotNeeded);
+  const refNeeded = refNeeded_(c);
+  const refDone = !refNeeded || !!(c.portal && c.portal.referenceDone);
   const at = function (stage) { return idx >= portalStageIdx_(stage); };
+  const docItems = [{ id: 'documents', done: docsDone || at('interview') }];
+  if (refNeeded) docItems.push({ id: 'reference', done: refDone || at('interview') });
   const steps = [
     { id: 'account', done: true },
     { id: 'form', done: submitted },
     { id: 'received', done: submitted },
     { id: 'contact', done: at('contacted') },
-    { id: 'docs', done: at('interview') || (docsDone && refDone), items: [{ id: 'documents', done: docsDone || at('interview') }, { id: 'reference', done: refDone || at('interview') }] },
+    { id: 'docs', done: at('interview') || (docsDone && refDone), items: docItems },
     { id: 'interview', done: at('accepted') },
     { id: 'accepted', done: at('practical') },
     { id: 'practical', done: at('arrived') },
@@ -3043,6 +3056,10 @@ function portalAppOut_(c) {
     id: c.id, campus: c.campus || '', type: c.type, school: c.school || '', stage: c.stage, status: portalStatus_(c),
     submittedAt: (c.portal && c.portal.submittedAt) || null, updated: c.updated || '',
     archived: c.archived ? { at: c.archived.at } : null,
+    audience: audienceOf_(c), needsVisa: needsVisa_(c), refNeeded: refNeeded_(c), formKey: formKeyOf_(c),
+    visa: (c.portal && c.portal.visa) || {},
+    answers: (c.portal && c.portal.form && c.portal.form.answers) || (c.portal && c.portal.draft) || {},
+    draftAt: (c.portal && c.portal.draftAt) || null,
     steps: portalSteps_(c)
   };
 }
@@ -3055,6 +3072,7 @@ function portalCandOut_(c, byId) {
     phone: c.phone || (acct && acct.phone) || '',
     email: c.email || (acct && acct.email) || '',
     status: portalStatus_(c),
+    audience: audienceOf_(c), needsVisa: needsVisa_(c), refNeeded: refNeeded_(c), formKey: formKeyOf_(c),
     hasAccount: !!acct
   });
 }
@@ -3085,6 +3103,7 @@ async function portalRegister(payload) {
   if (type === 'student' && !school) return { ok: false, err: 'school_required' };
   if (school && PORTAL_CAMPUSES[campus].indexOf(school) === -1) return { ok: false, err: 'school_not_at_campus' };
   const country = cleanCountry_(payload.country);
+  if (!country) return { ok: false, err: 'country_required' };
   const rows = await getStaff_();
   if (findStaff_(rows, u)) return { ok: false, err: 'taken' };
   if (rows.some(function (r) { return r.email && r.email === email; })) return { ok: false, err: 'email_taken' };
@@ -3138,7 +3157,7 @@ async function portalBoot(username, pin) {
   if (isApplicant_(s)) {
     const cand = await candidateFor_(cands, s);
     if (!cand) return { ok: false, err: 'no_application' };
-    return { ok: true, role: 'applicant', me: portalMeOut_(s), application: portalAppOut_(cand) };
+    return { ok: true, role: 'applicant', me: portalMeOut_(s), application: portalAppOut_(cand), form: (await getForms_())[formKeyOf_(cand)] };
   }
   if (!canPortal_(s)) return { ok: false, err: 'not_authorized' };
   const rows = await getStaff_();
@@ -3148,7 +3167,8 @@ async function portalBoot(username, pin) {
     applicants: cands.filter(function (c) { return portalMaySee_(s, c); }).map(function (c) { return portalCandOut_(c, byId); }),
     scope: portalTypes_(s),
     staff: rows.filter(function (r) { return canPortal_(r); }).map(portalStaffOut_),
-    stages: CAND_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS, campuses: PORTAL_CAMPUSES
+    stages: CAND_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS, campuses: PORTAL_CAMPUSES,
+    forms: await getForms_()
   };
 }
 /* Grant or revoke portal access. A portal admin may hand out portalStaff;
@@ -3175,6 +3195,179 @@ async function portalSetAccess(username, pin, staffId, flags) {
 /* The staff side's writes go through the CRM's own handlers (hrSaveCandidate,
    hrCandidateNote, hrArchiveCandidate — hrGate_ admits portal staff). This
    one is the applicant's: their contact details, which they own. */
+/* ==================== the application forms ====================
+   One form per kind of application (portal-forms-default.js is the shipped
+   set). A portal admin edits a form on the staff side — Google Forms style:
+   sections, questions, a type, required, options, and which audience sees
+   it — and the saved copy in the 'portalForms' blob replaces the default
+   for that key; reset drops it. Answers are keyed by question id, so a
+   relabelled question keeps its answers and a deleted one simply stops
+   being asked. The applicant fills the form on their side: every change
+   saves a draft, submit checks the required questions for THEIR audience
+   and moves the record to 'applied'. */
+const FORM_TYPES = ['short', 'long', 'choice', 'multi', 'yesno', 'date', 'number', 'email', 'phone'];
+const FORM_AUDIENCES = ['all', 'khmer', 'international'];
+const FORM_MAX_SECTIONS = 20, FORM_MAX_QUESTIONS = 120, FORM_MAX_OPTIONS = 30, ANSWER_MAX = 4000;
+function langText_(v) {
+  const o = (v && typeof v === 'object') ? v : { en: v };
+  return { en: String(str_(o.en, 600) || ''), km: String(str_(o.km, 600) || '') };
+}
+function cleanForm_(f, key) {
+  if (!f || typeof f !== 'object' || !Array.isArray(f.sections)) return null;
+  const seen = {}; let nq = 0;
+  const sections = f.sections.slice(0, FORM_MAX_SECTIONS).map(function (sec, si) {
+    if (!sec || typeof sec !== 'object') return null;
+    const sid = /^[a-z0-9_-]{1,40}$/i.test(String(sec.id || '')) ? String(sec.id) : 'sec' + (si + 1);
+    const questions = (Array.isArray(sec.questions) ? sec.questions : []).map(function (qq, qi) {
+      if (!qq || typeof qq !== 'object') return null;
+      let id = /^[a-z0-9_-]{1,40}$/i.test(String(qq.id || '')) ? String(qq.id) : 'q' + Date.now().toString(36) + si + qi;
+      while (seen[id]) id += '_';
+      seen[id] = 1; nq++;
+      const type = FORM_TYPES.indexOf(qq.type) > -1 ? qq.type : 'short';
+      const label = langText_(qq.label);
+      if (!label.en && !label.km) return null;
+      const withOptions = type === 'choice' || type === 'multi' || type === 'yesno';
+      return {
+        id: id, type: type, label: label, help: langText_(qq.help), required: !!qq.required,
+        audience: FORM_AUDIENCES.indexOf(qq.audience) > -1 ? qq.audience : 'all',
+        options: withOptions ? (Array.isArray(qq.options) ? qq.options : []).map(langText_).filter(function (o) { return o.en || o.km; }).slice(0, FORM_MAX_OPTIONS) : []
+      };
+    }).filter(Boolean);
+    return { id: sid, title: langText_(sec.title), help: langText_(sec.help), questions: questions };
+  }).filter(Boolean);
+  if (nq > FORM_MAX_QUESTIONS) return null;
+  return { key: key, title: langText_(f.title), sections: sections };
+}
+async function getForms_() {
+  const stored = await readJSON('portalForms', {});
+  const out = {};
+  Object.keys(PORTAL_FORMS_DEFAULT).forEach(function (k) {
+    out[k] = (stored && stored[k] && Array.isArray(stored[k].sections)) ? stored[k] : Object.assign({}, PORTAL_FORMS_DEFAULT[k], { isDefault: true });
+  });
+  return out;
+}
+function askedQuestions_(form, audience) {
+  const out = [];
+  ((form && form.sections) || []).forEach(function (sec) { (sec.questions || []).forEach(function (qq) { if (qq.audience === 'all' || qq.audience === audience) out.push(qq); }); });
+  return out;
+}
+function cleanAnswers_(answers, form, audience) {
+  const out = {};
+  if (!answers || typeof answers !== 'object') return out;
+  askedQuestions_(form, audience).forEach(function (qq) {
+    const v = answers[qq.id];
+    if (v === undefined || v === null) return;
+    if (qq.type === 'multi') { if (Array.isArray(v)) { const arr = v.map(function (x) { return String(str_(x, 300) || ''); }).filter(Boolean).slice(0, FORM_MAX_OPTIONS); if (arr.length) out[qq.id] = arr; } }
+    else { const str = String(v).trim().slice(0, ANSWER_MAX); if (str) out[qq.id] = str; }
+  });
+  return out;
+}
+function missingRequired_(answers, form, audience) {
+  return askedQuestions_(form, audience).filter(function (qq) { return qq.required && (answers[qq.id] === undefined || (Array.isArray(answers[qq.id]) && !answers[qq.id].length)); }).map(function (qq) { return qq.id; });
+}
+async function portalSaveForm(username, pin, key, form) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  if (!PORTAL_FORMS_DEFAULT[key]) return { ok: false, err: 'bad_key' };
+  const rec = cleanForm_(form, key);
+  if (!rec) return { ok: false, err: 'bad_form' };
+  const stored = await readJSON('portalForms', {});
+  stored[key] = Object.assign(rec, { updated: new Date().toISOString(), updatedBy: me.id });
+  await writeJSON('portalForms', stored);
+  return { ok: true, form: stored[key], forms: await getForms_() };
+}
+async function portalResetForm(username, pin, key) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  if (!PORTAL_FORMS_DEFAULT[key]) return { ok: false, err: 'bad_key' };
+  const stored = await readJSON('portalForms', {});
+  delete stored[key];
+  await writeJSON('portalForms', stored);
+  return { ok: true, forms: await getForms_() };
+}
+async function applicantCand_(username, pin) {
+  const s = await verifyStaff_(username, pin, true);
+  if (!s || !isApplicant_(s)) return { out: { ok: false, err: 'auth' } };
+  const rows = await getCandidates_();
+  const cand = await candidateFor_(rows, s);
+  if (!cand) return { out: { ok: false, err: 'no_application' } };
+  if (cand.archived) return { out: { ok: false, err: 'closed' } };
+  return { s: s, rows: rows, cand: cand };
+}
+/* Every change saves — the form is long and phones lose pages. */
+async function portalSaveDraft(username, pin, answers) {
+  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  const cand = a.cand;
+  cand.portal = cand.portal || {};
+  if (cand.portal.submittedAt) return { ok: false, err: 'submitted' };
+  const form = (await getForms_())[formKeyOf_(cand)];
+  cand.portal.draft = cleanAnswers_(answers, form, audienceOf_(cand));
+  cand.portal.draftAt = new Date().toISOString();
+  await writeJSON('candidates', a.rows);
+  return { ok: true, savedAt: cand.portal.draftAt, answers: cand.portal.draft };
+}
+async function portalSubmit(username, pin, answers) {
+  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  const cand = a.cand;
+  cand.portal = cand.portal || {};
+  if (cand.portal.submittedAt) return { ok: false, err: 'submitted' };
+  const form = (await getForms_())[formKeyOf_(cand)], audience = audienceOf_(cand);
+  const merged = cleanAnswers_(answers !== undefined && answers !== null ? answers : (cand.portal.draft || {}), form, audience);
+  const missing = missingRequired_(merged, form, audience);
+  if (missing.length) return { ok: false, err: 'missing', missing: missing };
+  const now = new Date().toISOString();
+  cand.portal.form = { answers: merged, submittedAt: now, audience: audience, formKey: formKeyOf_(cand) };
+  cand.portal.submittedAt = now; cand.portal.draft = null; cand.portal.draftAt = null;
+  if (cand.stage === 'new') {
+    cand.stage = 'applied';
+    cand.log = (Array.isArray(cand.log) ? cand.log : []).concat([{ at: now, by: a.s.id, kind: 'stage', text: 'applied' }]).slice(-CAND_LOG_MAX);
+  }
+  cand.updated = now; cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return portalBoot(username, pin);
+}
+/* Staff-side writes on one record beyond the CRM's own: the visa flags the
+   applicant watches for (flights confirmed, letter of invitation sent) and
+   corrections to submitted answers. Same gate and scope as the CRM writes. */
+async function portalStaffCand_(username, pin, candidateId) {
+  const g = await hrGate_(username, pin); if (g.out) return g;
+  const rows = await getCandidates_();
+  const idx = rows.findIndex(function (r) { return r && r.id === str_(candidateId, 60); });
+  if (idx === -1) return { out: { ok: false, err: 'not_found' } };
+  if (!canHR_(g.s) && !portalMaySee_(g.s, rows[idx])) return { out: { ok: false, err: 'not_authorized' } };
+  return { s: g.s, rows: rows, cand: rows[idx] };
+}
+async function portalSetVisaFlags(username, pin, candidateId, flags) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  flags = flags && typeof flags === 'object' ? flags : {};
+  a.cand.portal = a.cand.portal || {};
+  const visa = Object.assign({}, a.cand.portal.visa || {});
+  if (flags.flightsConfirmed !== undefined) visa.flightsConfirmed = !!flags.flightsConfirmed;
+  if (flags.invitationSent !== undefined) visa.invitationSent = !!flags.invitationSent;
+  a.cand.portal.visa = visa;
+  a.cand.updated = new Date().toISOString(); a.cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
+  return { ok: true, candidate: portalCandOut_(a.cand, byId) };
+}
+async function portalStaffSaveAnswers(username, pin, candidateId, answers) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  const cand = a.cand;
+  cand.portal = cand.portal || {};
+  const form = (await getForms_())[formKeyOf_(cand)];
+  const clean = cleanAnswers_(answers, form, audienceOf_(cand));
+  const now = new Date().toISOString();
+  if (cand.portal.submittedAt) { cand.portal.form = Object.assign({}, cand.portal.form || {}, { answers: clean, editedAt: now, editedBy: a.s.id }); }
+  else { cand.portal.draft = clean; cand.portal.draftAt = now; }
+  cand.log = (Array.isArray(cand.log) ? cand.log : []).concat([{ at: now, by: a.s.id, kind: 'note', text: 'Edited the application answers' }]).slice(-CAND_LOG_MAX);
+  cand.updated = now; cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
+  return { ok: true, candidate: portalCandOut_(cand, byId) };
+}
+
 /* Delete an application and the applicant account behind it — a duplicate
    sign-up, a test account, someone who asked to be forgotten. Portal admins
    (and app admins) only; permanent. Applicant accounts are not in Admin →
@@ -3314,7 +3507,13 @@ const HANDLERS = {
   portalBoot: function (a) { return portalBoot(a[0], a[1]); },
   portalSetAccess: function (a) { return portalSetAccess(a[0], a[1], a[2], a[3]); },
   portalUpdateContact: function (a) { return portalUpdateContact(a[0], a[1], a[2]); },
-  portalDeleteApplicant: function (a) { return portalDeleteApplicant(a[0], a[1], a[2]); }
+  portalDeleteApplicant: function (a) { return portalDeleteApplicant(a[0], a[1], a[2]); },
+  portalSaveForm: function (a) { return portalSaveForm(a[0], a[1], a[2], a[3]); },
+  portalResetForm: function (a) { return portalResetForm(a[0], a[1], a[2]); },
+  portalSaveDraft: function (a) { return portalSaveDraft(a[0], a[1], a[2]); },
+  portalSubmit: function (a) { return portalSubmit(a[0], a[1], a[2]); },
+  portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
+  portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); }
 };
 
 export default async (req) => {

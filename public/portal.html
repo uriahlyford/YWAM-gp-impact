@@ -134,6 +134,32 @@ textarea { min-height:80px; resize:vertical; }
 .whatTab:hover { color:var(--ink); }
 .whatTab.on { background:var(--ink); color:var(--accentInk); }
 .whatTab .n { font-size:11.5px; font-weight:600; opacity:.7; }
+/* the application form */
+.formProgress { display:flex; flex-direction:column; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
+.formProgress .bar { width:220px; max-width:70vw; height:4px; background:var(--border2); border-radius:2px; overflow:hidden; }
+.formProgress .bar div { height:100%; background:var(--ink); border-radius:2px; transition:width .3s; }
+.qBlock { padding:14px 0; border-bottom:1px solid var(--border); }
+.qBlock:last-child { border-bottom:0; }
+.qBlock.missing { border-left:3px solid var(--warn); padding-left:12px; margin-left:-12px; }
+.qLabel { font-size:15px; font-weight:600; margin-bottom:6px; } .req { color:var(--warn); }
+.qHelp { font-size:13px; color:var(--muted); margin:-2px 0 8px; }
+.optList { display:flex; flex-direction:column; gap:6px; }
+.opt { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border2); border-radius:var(--rSm); cursor:pointer; }
+.opt:has(input:checked) { border-color:var(--ink); background:var(--surface2); }
+.opt input { width:18px; height:18px; accent-color:var(--ink); margin:0; }
+.formNav { display:flex; justify-content:space-between; gap:10px; margin-top:6px; }
+.formNav .btn { margin-top:0; }
+.guide { margin:6px 0 0; padding-left:22px; font-size:14px; line-height:1.55; } .guide li { margin-bottom:6px; }
+.ansSec { margin-top:10px; } .kv.ans { flex-direction:column; align-items:flex-start; gap:2px; } .kv.ans span { text-align:left; color:var(--ink); white-space:pre-wrap; }
+/* the forms editor */
+.two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.qcard { background:var(--bg); border:1px solid var(--border2); border-radius:var(--rSm); padding:12px; margin-top:10px; }
+.qcardRow { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center; margin-top:8px; }
+.feTools { display:flex; gap:6px; flex-wrap:wrap; }
+.feTools .hbtn { padding:5px 10px; font-size:12px; } .hbtn.danger { color:var(--bad); border-color:var(--bad); }
+.btn.danger { color:var(--bad); border-color:var(--bad); }
+.portalTick { display:flex; align-items:center; gap:8px; font-size:13.5px; cursor:pointer; } .portalTick input { width:18px; height:18px; accent-color:var(--ink); }
+@media (max-width:599px) { .two2, .qcardRow { grid-template-columns:1fr; } }
 .tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-bottom:16px; }
 .tile { background:var(--surface); border:1px solid var(--border); border-radius:var(--rSm); padding:12px 14px; }
 .tileNum { font-size:26px; font-weight:700; letter-spacing:-.5px; line-height:1.1; }
@@ -263,7 +289,7 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', editContact:false, note:'' };
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, editContact:false, note:'' };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
@@ -275,7 +301,7 @@ var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPU
 })();
 function boot_(){
   run('portalBoot', [P.auth.user, P.auth.pin], function(d){
-    if(d && d.ok){ P.boot=d; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
+    if(d && d.ok){ P.boot=d; if(d.role==='applicant') P.answers=(d.application && d.application.answers)||{}; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
     if(d && d.err==='auth'){ lsDel('gp-portal'); P.auth=null; P.view='login'; showMsg(t('Your PIN didn’t work — please sign in again.')); render(); return; }
     if(d && d.err==='not_authorized'){ P.view='noaccess'; render(); return; }
     if(d && d.err==='no_application'){ P.view='noaccess'; P.err='no_application'; render(); return; }
@@ -299,14 +325,15 @@ var PORTAL_LOGO = 'ywam-logo.png';
 function render(){
   var hb=document.getElementById('hbtns');
   hb.innerHTML='<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+
+    (P.auth && P.boot && P.boot.role==='portal-admin' && (P.view==='crm'||P.view==='forms') ? '<button class="hbtn" id="toForms">'+esc(t('Forms'))+'</button>' : '')+
     (P.auth && P.boot ? '<button class="hbtn" id="outBtn">'+esc(t('Sign out'))+'</button>' : '');
   var m=document.getElementById('main');
   var v=P.view;
   /* The gate — everything before you are signed in — is the portal's name
      and logo on top and one card underneath; signed in, the bar goes slim. */
-  document.body.classList.toggle('gate', v!=='me' && v!=='crm');
+  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms');
   m.innerHTML = v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
-    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_()
+    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_()
     : v==='noaccess' ? noAccessHtml_() : v==='refsoon' ? refSoonHtml_() : loginHtml_();
   bind_();
 }
@@ -385,12 +412,16 @@ function meHtml_(){
       '</div></li>';
   }).join('')+'</ol></div>';
   h+='</div><div>';
-  var formStep = app.steps.filter(function(s){ return s.id==='form'; })[0];
-  h+='<div class="card"><h3 style="margin-top:0">📝 '+esc(t('Application form'))+'</h3>'+
-    (formStep && (formStep.done || formStep.state==='done') ? '<p class="sub" style="margin:0">'+esc(t('Submitted'))+(app.submittedAt?' · '+esc(fmtDate_(app.submittedAt)):'')+'</p>'
-      : '<p class="sub" style="margin:0 0 8px">'+esc(t('Your application form opens here soon. We will message you the moment it is ready — nothing to do until then.'))+'</p>'+
-        '<button class="btn small ghost" disabled>'+esc(t('Opens soon'))+'</button>')+'</div>';
-  h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3><p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+'</p></div>';
+  var submitted = !!app.submittedAt;
+  var total = d.form ? askedAll_(d.form, app.audience).length : 0, done = d.form ? askedAll_(d.form, app.audience).filter(function(q){ return answered_(q, P.answers[q.id]); }).length : 0;
+  h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📝 '+esc(t('Application form'))+'</h3>'+(submitted?'<button class="linkbtn inline" id="viewAnswers">'+esc(P.showAnswers?t('Hide'):t('View my answers'))+'</button>':'')+'</div>'+
+    (submitted ? '<p class="sub" style="margin:0">✓ '+esc(t('Submitted'))+(app.submittedAt?' · '+esc(fmtDate_(app.submittedAt)):'')+'</p>'+(P.showAnswers ? answersHtml_(d.form, P.answers, app.audience) : '')
+      : '<p class="sub" style="margin:0 0 8px">'+esc(done ? gpT('{done} of {total} answered — pick up where you left off.',{done:done,total:total}) : t('A few sections about you, your faith and what you are applying for. Your answers save as you go.'))+'</p>'+
+        '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
+  h+=visaCardHtml_(app);
+  h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
+    (app.type==='team' ? '<p class="sub">'+esc(t('To move forward we need from your team, as soon as you can:'))+'</p><ul class="subItems">'+TEAM_NEEDS.map(function(x){ return '<li>○ '+esc(t(x))+'</li>'; }).join('')+'</ul><p class="hint">'+esc(t('Uploading them here is coming; until then your contact will tell you where to send them.'))+'</p>'
+      : '<p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+(app.refNeeded?' '+esc(t('International applicants also send one leader reference — you will get a link to pass to your pastor or leader.')):'')+'</p>')+'</div>';
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📱 '+esc(t('How we reach you'))+'</h3>'+(P.editContact?'':'<button class="linkbtn inline" id="editContact">'+esc(t('Edit'))+'</button>')+'</div>';
   if(P.editContact){
     var c=P.contact||{ phone:me.phone, messenger:me.messenger, country:me.country };
@@ -474,6 +505,8 @@ function panelHtml_(c, byId){
   h+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
   h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
   h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
+  h+=panelVisaHtml_(c);
+  h+=panelAnswersHtml_(c);
   h+='<h3>'+esc(t('Notes'))+'</h3><textarea id="p_note" placeholder="'+esc(t('Add a note…'))+'">'+esc(P.note)+'</textarea><button class="btn small ghost" id="addNote" style="margin-top:8px">'+esc(t('Add note'))+'</button>';
   var log=(c.log||[]).slice().reverse();
   h+='<ul class="log">'+(log.length ? log.map(function(l){ var who=byId[l.by] ? byId[l.by].name : (l.by===c.staffId ? c.name : '—');
@@ -483,6 +516,256 @@ function panelHtml_(c, byId){
   h+='</div>';
   return h;
 }
+/* ==================== the application form (applicant side) ====================
+   One section per screen, Google Forms style: a progress line, the
+   section's questions for THIS applicant's audience, Back / Next, and
+   Submit on the last section. Every change is kept in P.answers and saved
+   as a draft (debounced) so a phone that loses the page loses nothing.
+   Labels come in Khmer and English from the form itself (lt_). */
+function lt_(o){ if(!o) return ''; if(typeof o==='string') return o; return LANG==='km' ? (o.km||o.en||'') : (o.en||o.km||''); }
+function askedIn_(sec, aud){ return (sec.questions||[]).filter(function(q){ return q.audience==='all' || q.audience===aud; }); }
+function askedAll_(form, aud){ var out=[]; (form.sections||[]).forEach(function(s){ out=out.concat(askedIn_(s, aud)); }); return out; }
+function answered_(q, v){ if(v===undefined||v===null) return false; if(Array.isArray(v)) return v.length>0; return String(v).trim()!==''; }
+function questionInputHtml_(q, v, prefix){
+  var id=prefix+q.id, name=esc(id);
+  if(q.type==='long') return '<textarea data-ans="'+esc(q.id)+'" id="'+name+'">'+esc(v||'')+'</textarea>';
+  if(q.type==='choice' || q.type==='yesno'){
+    return '<div class="optList">'+(q.options||[]).map(function(o){ var val=o.en||o.km; return '<label class="opt"><input type="radio" name="'+name+'" data-ans="'+esc(q.id)+'" value="'+esc(val)+'"'+(v===val?' checked':'')+'> <span>'+esc(lt_(o))+'</span></label>'; }).join('')+'</div>';
+  }
+  if(q.type==='multi'){
+    var arr=Array.isArray(v)?v:[];
+    return '<div class="optList">'+(q.options||[]).map(function(o){ var val=o.en||o.km; return '<label class="opt"><input type="checkbox" data-ans="'+esc(q.id)+'" data-multi="1" value="'+esc(val)+'"'+(arr.indexOf(val)>-1?' checked':'')+'> <span>'+esc(lt_(o))+'</span></label>'; }).join('')+'</div>';
+  }
+  var type = q.type==='date' ? 'date' : q.type==='number' ? 'number' : q.type==='email' ? 'email' : q.type==='phone' ? 'tel' : 'text';
+  return '<input type="'+type+'" data-ans="'+esc(q.id)+'" id="'+name+'" value="'+esc(v||'')+'"'+(q.type==='number'?' inputmode="numeric"':'')+'>';
+}
+function questionHtml_(q, v, prefix, missing){
+  return '<div class="qBlock'+(missing?' missing':'')+'" data-qid="'+esc(q.id)+'"><div class="qLabel">'+esc(lt_(q.label))+(q.required?' <span class="req">*</span>':'')+'</div>'+
+    (lt_(q.help) ? '<div class="qHelp">'+esc(lt_(q.help))+'</div>' : '')+questionInputHtml_(q, v, prefix)+'</div>';
+}
+function formHtml_(){
+  var d=P.boot, app=d.application, form=d.form;
+  if(!form){ return '<div class="center"><div class="card"><p class="sub">'+esc(t('Loading…'))+'</p></div></div>'; }
+  var secs=(form.sections||[]).filter(function(s){ return askedIn_(s, app.audience).length; });
+  if(P.formSec>=secs.length) P.formSec=secs.length-1; if(P.formSec<0) P.formSec=0;
+  var sec=secs[P.formSec], qs=askedIn_(sec, app.audience);
+  var h='<div class="wide"><div class="gateTitle"><div class="eyebrow">'+esc(lt_(form.title))+'</div>'+
+    '<div class="formProgress"><span>'+esc(gpT('Section {i} of {n}',{i:P.formSec+1, n:secs.length}))+'</span><div class="bar"><div style="width:'+Math.round((P.formSec+1)/secs.length*100)+'%"></div></div></div></div>';
+  h+='<div class="card"><h2>'+esc(lt_(sec.title))+'</h2>'+(lt_(sec.help)?'<p class="sub">'+esc(lt_(sec.help))+'</p>':'')+
+    qs.map(function(q){ return questionHtml_(q, P.answers[q.id], 'a_', P.formMissing && P.formMissing.indexOf(q.id)>-1); }).join('')+'</div>';
+  h+='<div class="formNav">'+(P.formSec>0 ? '<button class="btn ghost small" id="formBack">← '+esc(t('Back'))+'</button>' : '<button class="btn ghost small" id="formClose">'+esc(t('Save and close'))+'</button>')+
+    (P.formSec<secs.length-1 ? '<button class="btn small" id="formNext">'+esc(t('Next'))+' →</button>' : '<button class="btn small" id="formSubmit"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Sending…'):t('Submit my application'))+'</button>')+'</div>';
+  h+='<p class="hint" style="text-align:center">'+esc(P.draftSaved ? gpT('Draft saved {when}',{when:P.draftSaved}) : t('Your answers save as a draft as you go.'))+' · <span class="req">*</span> '+esc(t('required'))+'</p>';
+  h+='<button class="linkbtn" id="formClose2">'+esc(t('Back to my application'))+'</button></div>';
+  return h;
+}
+function readAnswers_(root){
+  root=root||document;
+  root.querySelectorAll('[data-ans]').forEach(function(el){
+    var id=el.getAttribute('data-ans');
+    if(el.type==='radio'){ if(el.checked) P.answers[id]=el.value; return; }
+    if(el.type==='checkbox'){ var arr=Array.isArray(P.answers[id])?P.answers[id].slice():[]; var i=arr.indexOf(el.value); if(el.checked && i===-1) arr.push(el.value); if(!el.checked && i>-1) arr.splice(i,1); P.answers[id]=arr; return; }
+    P.answers[id]=el.value;
+  });
+}
+var draftTimer_=null;
+function saveDraft_(now){
+  if(!P.boot || P.boot.role!=='applicant' || P.boot.application.submittedAt) return;
+  clearTimeout(draftTimer_);
+  var go=function(){ run('portalSaveDraft', [P.auth.user, P.auth.pin, P.answers], function(d){ if(d && d.ok){ P.draftSaved=fmtTime_(d.savedAt); var el=document.querySelector('.formNav + .hint'); if(el) el.firstChild.textContent=gpT('Draft saved {when}',{when:P.draftSaved})+' · '; } }, function(){}); };
+  if(now) go(); else draftTimer_=setTimeout(go, 800);
+}
+function fmtTime_(iso){ var d=new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString(LANG==='km'?'km-KH':'en-GB', { hour:'2-digit', minute:'2-digit' }); }
+function sectionMissing_(sec, aud){ return askedIn_(sec, aud).filter(function(q){ return q.required && !answered_(q, P.answers[q.id]); }).map(function(q){ return q.id; }); }
+function bindForm_(){
+  if(P.view!=='form') return;
+  var app=P.boot.application, form=P.boot.form;
+  var secs=(form.sections||[]).filter(function(s){ return askedIn_(s, app.audience).length; });
+  document.querySelectorAll('[data-ans]').forEach(function(el){ el.oninput=el.onchange=function(){ readAnswers_(); P.formMissing=null; saveDraft_(false); }; });
+  var close=function(){ readAnswers_(); saveDraft_(true); P.view='me'; render(); };
+  on_('formClose', close); on_('formClose2', close);
+  on_('formBack', function(){ readAnswers_(); saveDraft_(true); P.formSec--; P.formMissing=null; render(); window.scrollTo(0,0); });
+  on_('formNext', function(){
+    readAnswers_();
+    var miss=sectionMissing_(secs[P.formSec], app.audience);
+    if(miss.length){ P.formMissing=miss; render(); showMsg(t('Please answer the questions marked *')); var first=document.querySelector('.qBlock.missing'); if(first) first.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+    saveDraft_(true); P.formSec++; P.formMissing=null; render(); window.scrollTo(0,0);
+  });
+  on_('formSubmit', function(){
+    readAnswers_();
+    var miss=sectionMissing_(secs[P.formSec], app.audience);
+    if(miss.length){ P.formMissing=miss; render(); showMsg(t('Please answer the questions marked *')); return; }
+    clearTimeout(draftTimer_); P.busy=true; render();
+    run('portalSubmit', [P.auth.user, P.auth.pin, P.answers], function(d){
+      P.busy=false;
+      if(d && d.ok){ P.boot=d; P.answers=d.application.answers||{}; P.view='me'; P.formSec=0; showMsg(t('Your application is in. We will be in touch!')); render(); return; }
+      if(d && d.err==='missing' && d.missing){
+        P.formMissing=d.missing;
+        for(var i=0;i<secs.length;i++){ if(askedIn_(secs[i], app.audience).some(function(q){ return d.missing.indexOf(q.id)>-1; })){ P.formSec=i; break; } }
+        showMsg(t('A few required answers are still missing.')); render(); return;
+      }
+      showMsg(d && d.err==='submitted' ? t('This application was already submitted.') : t('Could not send — try again.')); render();
+    });
+  });
+}
+/* Read-only answers, for the applicant after submitting and for staff. */
+function answersHtml_(form, answers, aud){
+  if(!form) return '';
+  var h='';
+  (form.sections||[]).forEach(function(sec){
+    var qs=askedIn_(sec, aud); if(!qs.length) return;
+    h+='<div class="ansSec"><div class="eyebrow">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){
+      var v=answers[q.id]; var txt=Array.isArray(v)?v.join(', '):(v||'');
+      return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(txt?esc(txt):'<i>—</i>')+'</span></div>'; }).join('')+'</div>';
+  });
+  return h;
+}
+/* ==================== the e-visa guide (applicant side) ====================
+   For everyone not from Cambodia — international students, staff,
+   volunteers, teams — from acceptance on. The two things we do (flights
+   confirmed → letter of invitation) are ticks staff set on the record. */
+var VISA_STEPS = [
+  'We send you a letter of invitation once your flights are confirmed.',
+  'Go to evisa.gov.kh and click Apply now, then follow the instructions.',
+  'There are two visas, T and E. Choose Visa E ($35) and attach the letter of invitation. Under occupation you can write “Volunteer”.',
+  'You will receive the e-visa as a PDF in 3–4 business days — apply sooner rather than later. Send the PDF to your contact here.'
+];
+var VISA_PREP = [
+  'Print 2 colour copies of the letter of invitation.',
+  'Print the e-visa PDF.',
+  'Download the Cambodia e-Arrival app and complete the arrival form up to 3 days before you land. A team can do everyone on one phone.',
+  'At the airport, go to the immigration officers in person, not the machines — show your e-visa. Check your passport has the white sticker.'
+];
+function visaCardHtml_(app){
+  if(!app.needsVisa) return '';
+  var idx=['new','applied','contacted','interview','accepted','practical','arrived'].indexOf(app.stage);
+  if(idx<4) return '<div class="card"><h3 style="margin-top:0">🛂 '+esc(t('Visa'))+'</h3><p class="sub" style="margin:0">'+esc(t('You will need a visa for Cambodia. The step-by-step e-visa guide appears here once you are accepted.'))+'</p></div>';
+  var v=app.visa||{};
+  var tick=function(done, label){ return '<li class="'+(done?'done':'')+'">'+(done?'✓':'○')+' '+esc(label)+(done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; };
+  return '<div class="card"><h3 style="margin-top:0">🛂 '+esc(t('Your e-visa, step by step'))+'</h3>'+
+    '<p class="sub">'+esc(t('The Cambodian government has changed how visitors enter, so the process looks a little different now.'))+'</p>'+
+    '<ul class="subItems" style="margin-bottom:10px">'+tick(!!v.flightsConfirmed, t('Flights confirmed'))+tick(!!v.invitationSent, t('Letter of invitation sent to you'))+'</ul>'+
+    '<ol class="guide">'+VISA_STEPS.map(function(s){ return '<li>'+esc(t(s))+'</li>'; }).join('')+'</ol>'+
+    '<div class="eyebrow" style="margin-top:12px">'+esc(t('Preparing to come'))+'</div><ol class="guide">'+VISA_PREP.map(function(s){ return '<li>'+esc(t(s))+'</li>'; }).join('')+'</ol>'+
+    '<p class="hint"><a href="https://www.evisa.gov.kh/" target="_blank" rel="noopener">evisa.gov.kh ↗</a></p></div>';
+}
+var TEAM_NEEDS = ['A team photo with each member’s name', 'A passport photo of each team member', 'Your flight or ticket confirmations'];
+/* ==================== the forms editor (staff side, portal admins) ====================
+   Google Forms style: one form at a time, sections as cards, a card per
+   question with its label in English and Khmer, help text, a type, required,
+   who sees it, and options one per line ("English | ខ្មែរ"). Edits live in
+   P.formDraft until Save; Reset brings back the shipped default. */
+var FE_TYPES=[['short','Short answer'],['long','Paragraph'],['choice','Multiple choice'],['multi','Checkboxes'],['yesno','Yes / No'],['date','Date'],['number','Number'],['email','Email'],['phone','Phone']];
+var FE_AUD=[['all','Everyone'],['khmer','Khmer applicants only'],['international','International applicants only']];
+function feOptsText_(opts){ return (opts||[]).map(function(o){ return o.km ? (o.en+' | '+o.km) : o.en; }).join('\n'); }
+function feOptsParse_(txt){ return String(txt||'').split('\n').map(function(l){ var p=l.split('|'); return { en:(p[0]||'').trim(), km:(p[1]||'').trim() }; }).filter(function(o){ return o.en||o.km; }); }
+function feNewQ_(){ return { id:'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), type:'short', label:{en:'',km:''}, help:{en:'',km:''}, required:false, audience:'all', options:[] }; }
+function formsHtml_(){
+  var d=P.boot, forms=d.forms||{};
+  if(!P.formKey || !forms[P.formKey]) P.formKey='dts';
+  if(!P.formDraft || P.formDraft.key!==P.formKey) P.formDraft=JSON.parse(JSON.stringify(forms[P.formKey]));
+  var f=P.formDraft;
+  var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Application forms'))+'</h1><p class="sub">'+esc(t('What each kind of applicant is asked. Edit the wording in both languages, add or remove questions, then Save.'))+'</p></div>'+
+    '<button class="btn ghost small" id="toCrm">← '+esc(t('Applications'))+'</button></div>';
+  h+='<div class="whatTabs">'+APPLY.map(function(a){ return '<button class="whatTab'+(P.formKey===a.key?' on':'')+'" data-formkey="'+a.key+'">'+esc(a.key==='team'?t('Teams'):a.label)+'</button>'; }).join('')+'</div>';
+  h+='<div class="card"><label class="f" style="margin-top:0">'+esc(t('Form title'))+'</label><div class="two2"><input type="text" data-fe="title.en" value="'+esc(f.title.en)+'" placeholder="English"><input type="text" data-fe="title.km" value="'+esc(f.title.km)+'" placeholder="ខ្មែរ"></div>'+
+    (forms[P.formKey].isDefault ? '<p class="hint">'+esc(t('This is the shipped default — it has not been edited yet.'))+'</p>' : '<p class="hint">'+esc(gpT('Last saved {when}',{when:fmtDate_(forms[P.formKey].updated)}))+'</p>')+'</div>';
+  f.sections.forEach(function(sec, si){
+    h+='<div class="card secCard" data-sec="'+si+'"><div class="panelHead"><div class="eyebrow">'+esc(gpT('Section {n}',{n:si+1}))+'</div><div class="feTools">'+
+      '<button class="hbtn" data-secmove="'+si+'|-1" title="'+esc(t('Move up'))+'">↑</button><button class="hbtn" data-secmove="'+si+'|1" title="'+esc(t('Move down'))+'">↓</button><button class="hbtn danger" data-secdel="'+si+'">'+esc(t('Delete section'))+'</button></div></div>'+
+      '<div class="two2"><input type="text" data-fe="sections.'+si+'.title.en" value="'+esc(sec.title.en)+'" placeholder="'+esc(t('Section title (English)'))+'"><input type="text" data-fe="sections.'+si+'.title.km" value="'+esc(sec.title.km)+'" placeholder="'+esc(t('Section title (Khmer)'))+'"></div>'+
+      '<div class="two2" style="margin-top:8px"><input type="text" data-fe="sections.'+si+'.help.en" value="'+esc(sec.help.en)+'" placeholder="'+esc(t('Help text (English, optional)'))+'"><input type="text" data-fe="sections.'+si+'.help.km" value="'+esc(sec.help.km)+'" placeholder="'+esc(t('Help text (Khmer, optional)'))+'"></div>';
+    sec.questions.forEach(function(q, qi){
+      var p='sections.'+si+'.questions.'+qi+'.';
+      var withOpts=q.type==='choice'||q.type==='multi'||q.type==='yesno';
+      h+='<div class="qcard" data-q="'+si+'|'+qi+'"><div class="two2"><input type="text" data-fe="'+p+'label.en" value="'+esc(q.label.en)+'" placeholder="'+esc(t('Question (English)'))+'"><input type="text" data-fe="'+p+'label.km" value="'+esc(q.label.km)+'" placeholder="'+esc(t('Question (Khmer)'))+'"></div>'+
+        '<div class="two2" style="margin-top:6px"><input type="text" data-fe="'+p+'help.en" value="'+esc(q.help.en)+'" placeholder="'+esc(t('Help text (English, optional)'))+'"><input type="text" data-fe="'+p+'help.km" value="'+esc(q.help.km)+'" placeholder="'+esc(t('Help text (Khmer, optional)'))+'"></div>'+
+        '<div class="qcardRow"><select data-fe="'+p+'type" data-rerender="1">'+FE_TYPES.map(function(x){ return '<option value="'+x[0]+'"'+(q.type===x[0]?' selected':'')+'>'+esc(t(x[1]))+'</option>'; }).join('')+'</select>'+
+        '<select data-fe="'+p+'audience">'+FE_AUD.map(function(x){ return '<option value="'+x[0]+'"'+(q.audience===x[0]?' selected':'')+'>'+esc(t(x[1]))+'</option>'; }).join('')+'</select>'+
+        '<label class="portalTick"><input type="checkbox" data-fe="'+p+'required"'+(q.required?' checked':'')+'> '+esc(t('Required'))+'</label></div>'+
+        (withOpts ? '<textarea data-fe="'+p+'options" placeholder="'+esc(t('One option per line — English | ខ្មែរ'))+'" style="margin-top:6px;min-height:64px">'+esc(feOptsText_(q.options))+'</textarea>' : '')+
+        '<div class="feTools" style="margin-top:6px"><button class="hbtn" data-qmove="'+si+'|'+qi+'|-1">↑</button><button class="hbtn" data-qmove="'+si+'|'+qi+'|1">↓</button><button class="hbtn danger" data-qdel="'+si+'|'+qi+'">'+esc(t('Delete question'))+'</button></div></div>';
+    });
+    h+='<button class="btn ghost small" data-qadd="'+si+'" style="margin-top:10px">+ '+esc(t('Add question'))+'</button></div>';
+  });
+  h+='<button class="btn ghost" id="secAdd">+ '+esc(t('Add section'))+'</button>';
+  h+='<div class="formNav" style="margin-top:14px"><button class="btn small ghost danger" id="formReset">'+esc(t('Reset to default'))+'</button><button class="btn small" id="formSave"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save form'))+'</button></div>';
+  return h;
+}
+function feSet_(path, value){
+  var parts=path.split('.'), o=P.formDraft;
+  for(var i=0;i<parts.length-1;i++){ o=o[parts[i]]; if(o===undefined) return; }
+  var last=parts[parts.length-1];
+  if(last==='options') o.options=feOptsParse_(value); else o[last]=value;
+}
+function feRead_(){
+  document.querySelectorAll('[data-fe]').forEach(function(el){ var v = el.type==='checkbox' ? el.checked : el.value; feSet_(el.getAttribute('data-fe'), v); });
+}
+function bindForms_(){
+  if(P.view!=='forms') return;
+  on_('toCrm', function(){ P.view='crm'; render(); });
+  document.querySelectorAll('[data-formkey]').forEach(function(b){ b.onclick=function(){ var k=b.getAttribute('data-formkey'); if(k===P.formKey) return; if(P.formDirty && !confirm(t('Leave without saving this form?'))) return; P.formKey=k; P.formDraft=null; P.formDirty=false; render(); }; });
+  document.querySelectorAll('[data-fe]').forEach(function(el){
+    el.onchange=el.oninput=function(){ feRead_(); P.formDirty=true; if(el.getAttribute('data-rerender')) render(); };
+  });
+  var moveIn=function(arr, i, dir){ var j=i+dir; if(j<0||j>=arr.length) return; var x=arr[i]; arr[i]=arr[j]; arr[j]=x; };
+  document.querySelectorAll('[data-secmove]').forEach(function(b){ b.onclick=function(){ feRead_(); var p=b.getAttribute('data-secmove').split('|'); moveIn(P.formDraft.sections, +p[0], +p[1]); P.formDirty=true; render(); }; });
+  document.querySelectorAll('[data-secdel]').forEach(function(b){ b.onclick=function(){ feRead_(); var i=+b.getAttribute('data-secdel'); var sec=P.formDraft.sections[i]; if(sec.questions.length && !confirm(gpT('Delete this section and its {n} questions?',{n:sec.questions.length}))) return; P.formDraft.sections.splice(i,1); P.formDirty=true; render(); }; });
+  document.querySelectorAll('[data-qmove]').forEach(function(b){ b.onclick=function(){ feRead_(); var p=b.getAttribute('data-qmove').split('|'); moveIn(P.formDraft.sections[+p[0]].questions, +p[1], +p[2]); P.formDirty=true; render(); }; });
+  document.querySelectorAll('[data-qdel]').forEach(function(b){ b.onclick=function(){ feRead_(); var p=b.getAttribute('data-qdel').split('|'); P.formDraft.sections[+p[0]].questions.splice(+p[1],1); P.formDirty=true; render(); }; });
+  document.querySelectorAll('[data-qadd]').forEach(function(b){ b.onclick=function(){ feRead_(); P.formDraft.sections[+b.getAttribute('data-qadd')].questions.push(feNewQ_()); P.formDirty=true; render(); var cards=document.querySelectorAll('[data-sec="'+b.getAttribute('data-qadd')+'"] .qcard'); var last=cards[cards.length-1]; if(last){ last.scrollIntoView({ behavior:'smooth', block:'center' }); var inp=last.querySelector('input'); if(inp) inp.focus(); } }; });
+  on_('secAdd', function(){ feRead_(); P.formDraft.sections.push({ id:'sec'+Date.now().toString(36), title:{en:'',km:''}, help:{en:'',km:''}, questions:[feNewQ_()] }); P.formDirty=true; render(); window.scrollTo(0, document.body.scrollHeight); });
+  on_('formSave', function(){
+    feRead_();
+    var empty=[]; P.formDraft.sections.forEach(function(s){ s.questions.forEach(function(q){ if(!q.label.en && !q.label.km) empty.push(q); }); });
+    if(empty.length){ showMsg(t('Every question needs a label in at least one language.')); return; }
+    P.busy=true; render();
+    run('portalSaveForm', [P.auth.user, P.auth.pin, P.formKey, P.formDraft], function(d){
+      P.busy=false;
+      if(d && d.ok){ P.boot.forms=d.forms; P.formDraft=null; P.formDirty=false; showMsg(t('Form saved')); render(); return; }
+      showMsg(d && d.err==='not_authorized' ? t('Only a portal admin can edit forms') : t('Could not save the form')); render();
+    });
+  });
+  on_('formReset', function(){
+    if(!confirm(t('Throw away every edit to this form and go back to the shipped questions?'))) return;
+    run('portalResetForm', [P.auth.user, P.auth.pin, P.formKey], function(d){ if(d && d.ok){ P.boot.forms=d.forms; P.formDraft=null; P.formDirty=false; showMsg(t('Back to the default')); } else showMsg(t('Could not reset')); render(); });
+  });
+}
+/* ---- staff: answers and visa ticks on a record ---- */
+function panelAnswersHtml_(c){
+  var form=(P.boot.forms||{})[c.formKey]; if(!form) return '';
+  var submitted=!!(c.portal && c.portal.submittedAt);
+  var answers=(c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {};
+  var h='<div class="panelHead" style="margin-top:14px"><h3 style="margin:0">'+esc(t('Answers'))+(submitted?'':' · <span class="pill draft" style="font-size:11px">'+esc(t('draft'))+'</span>')+'</h3>'+
+    (P.editAnswers ? '' : '<button class="linkbtn inline" id="editAnswers">'+esc(t('Edit'))+'</button>')+'</div>';
+  if(P.editAnswers){
+    (form.sections||[]).forEach(function(sec){ var qs=askedIn_(sec, c.audience); if(!qs.length) return; h+='<div class="eyebrow" style="margin-top:10px">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){ return questionHtml_(q, P.staffAnswers[q.id], 's_', false); }).join(''); });
+    h+='<button class="btn small" id="saveAnswers"'+(P.busy?' disabled':'')+'>'+esc(t('Save answers'))+'</button> <button class="linkbtn inline" id="cancelAnswers">'+esc(t('Cancel'))+'</button>';
+  } else {
+    h+= Object.keys(answers).length ? answersHtml_(form, answers, c.audience) : '<p class="sub" style="margin:0">'+esc(t('Nothing answered yet.'))+'</p>';
+  }
+  return h;
+}
+function panelVisaHtml_(c){
+  if(!c.needsVisa) return '';
+  var v=(c.portal && c.portal.visa)||{};
+  return '<h3>'+esc(t('Visa'))+'</h3><label class="portalTick" style="margin-bottom:6px"><input type="checkbox" data-visaflag="flightsConfirmed"'+(v.flightsConfirmed?' checked':'')+'> '+esc(t('Flights confirmed'))+'</label>'+
+    '<label class="portalTick"><input type="checkbox" data-visaflag="invitationSent"'+(v.invitationSent?' checked':'')+'> '+esc(t('Letter of invitation sent'))+'</label>'+
+    '<p class="hint">'+esc(t('The applicant sees these two ticks on their e-visa guide.'))+'</p>';
+}
+function bindPanelExtras_(){
+  var c=selected_(); if(!c) return;
+  document.querySelectorAll('[data-visaflag]').forEach(function(cb){ cb.onchange=function(){ var flags={}; flags[cb.getAttribute('data-visaflag')]=cb.checked; cb.disabled=true;
+    run('portalSetVisaFlags', [P.auth.user, P.auth.pin, c.id, flags], function(d){ if(putCand_(d)) showMsg(t('Saved')); render(); }); }; });
+  on_('editAnswers', function(){ P.editAnswers=true; P.staffAnswers=JSON.parse(JSON.stringify((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {})); render(); });
+  on_('cancelAnswers', function(){ P.editAnswers=false; render(); });
+  on_('saveAnswers', function(){
+    var saved=P.answers; P.answers=P.staffAnswers; readAnswers_(document.getElementById('panel')); P.staffAnswers=P.answers; P.answers=saved;
+    P.busy=true; render();
+    run('portalStaffSaveAnswers', [P.auth.user, P.auth.pin, c.id, P.staffAnswers], function(d){ P.busy=false; if(putCand_(d)){ P.editAnswers=false; showMsg(t('Answers saved')); } render(); });
+  });
+}
+
 /* ---- bindings ---- */
 function on_(id, fn){ var el=document.getElementById(id); if(el) el.onclick=fn; }
 function bind_(){
@@ -509,12 +792,16 @@ function bind_(){
   // staff
   var q=document.getElementById('q'); if(q){ q.oninput=function(){ P.q=q.value; renderList_(); }; }
   document.querySelectorAll('[data-filter]').forEach(function(b){ b.onclick=function(){ P.filter=b.getAttribute('data-filter'); render(); }; });
-  document.querySelectorAll('[data-open]').forEach(function(b){ b.onclick=function(e){ if(e.target.closest('[data-chat]')) return; P.sel=b.getAttribute('data-open'); P.note=''; render(); var p=document.getElementById('panel'); if(p && window.innerWidth<900) p.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
+  document.querySelectorAll('[data-open]').forEach(function(b){ b.onclick=function(e){ if(e.target.closest('[data-chat]')) return; P.sel=b.getAttribute('data-open'); P.note=''; P.editAnswers=false; render(); var p=document.getElementById('panel'); if(p && window.innerWidth<900) p.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
   on_('closePanel', function(){ P.sel=null; render(); });
   on_('saveCand', saveCand_);
   on_('addNote', addNote_);
   on_('archiveCand', archiveCand_);
   on_('deleteCand', deleteCand_);
+  on_('openForm', function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
+  on_('viewAnswers', function(){ P.showAnswers=!P.showAnswers; render(); });
+  on_('toForms', function(){ P.view='forms'; render(); });
+  bindForm_(); bindForms_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){
@@ -623,7 +910,7 @@ function register_(){
   var payload={ username:String(r.username).trim().toLowerCase(), pin:pin, name:String(r.name).trim(), email:String(r.email).trim(), phone:String(r.phone).trim(), messenger:r.messenger, country:r.country||'', type:a.type, school:a.school, campus:P.campus||DEFAULT_CAMPUS };
   run('portalRegister', [payload], function(d){
     P.busy=false;
-    if(d && d.ok){ P.auth={ user:payload.username, pin:pin }; lsSet('gp-portal', JSON.stringify(P.auth)); P.boot=d; P.view='me'; P.reg={}; showMsg(t('Welcome — your account is ready.')); render(); return; }
+    if(d && d.ok){ P.auth={ user:payload.username, pin:pin }; lsSet('gp-portal', JSON.stringify(P.auth)); P.boot=d; P.answers={}; P.view='me'; P.reg={}; showMsg(t('Welcome — your account is ready.')); render(); return; }
     var e=d && d.err;
     showMsg(e==='taken' ? t('That username is taken — try another.') : e==='email_taken' ? t('There is already an account with that email. Sign in instead.')
       : e==='bad_email' ? t('Add a real email address.') : e==='phone_required' ? t('Add a phone number with the country code.') : t('Check your details and try again.'));
@@ -637,7 +924,7 @@ function login_(){
   P.auth={ user:u, pin:pin };
   run('portalBoot', [u, pin], function(d){
     P.busy=false;
-    if(d && d.ok){ P.boot=d; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
+    if(d && d.ok){ P.boot=d; if(d.role==='applicant') P.answers=(d.application && d.application.answers)||{}; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
     if(d && d.err==='not_authorized'){ P.view='noaccess'; render(); return; }
     if(d && d.err==='no_application'){ P.view='noaccess'; P.err='no_application'; render(); return; }
     P.auth=null; showMsg(t('Wrong username or PIN.')); render();

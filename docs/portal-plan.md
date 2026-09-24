@@ -114,11 +114,20 @@ name typed back to confirm) — applicant accounts live nowhere else.
    door (deep links), sign-up, sign-in, the dashboard with the status pill and
    the timeline, and a first staff view (every applicant, stage, owner, notes,
    one-tap WhatsApp / Telegram). Tests for every access rule.
-2. **Application forms.** `portal-forms.js` from the four Google Forms (paste
-   the questions in — docs.google.com is not reachable from the build sandbox),
-   the in-portal form with draft autosave (`portalSaveDraft`), submit
-   (`portalSubmit` → stage `applied`, "Application pending"), the staff-side
-   read and edit of answers.
+2. **Application forms** (built). `netlify/functions/portal-forms-default.js` is the
+   shipped question set (one form per kind — the Google Forms were not reachable from the
+   build sandbox, so these are a sensible start); a portal admin edits any form on the
+   staff side (Applications → Forms, Google Forms style: sections, question cards with
+   English + Khmer, type, required, audience, options) — `portalSaveForm` /
+   `portalResetForm`, stored per form in the `portalForms` blob. The applicant fills it
+   section by section with draft autosave (`portalSaveDraft`) and submits
+   (`portalSubmit` → stage `applied`, required checked for their audience). Staff read and
+   correct answers on the record (`portalStaffSaveAnswers`).
+   **Khmer vs international**: country at sign-up decides the audience — Khmer students
+   need no leader reference; everyone not from Cambodia gets the **e-visa guide** on the
+   dashboard from acceptance on, with two staff-set ticks (flights confirmed, letter of
+   invitation sent — `portalSetVisaFlags`). Teams need no reference and their dashboard
+   lists what we need (team photo with names, passport photos, flight confirmations).
 3. **Documents and the leader reference.** Per-type required-document list
    (you supply the exact list), upload with checked / pending state
    (`portalUploadDoc`, `portalGetDoc`, own blobs), reference links
