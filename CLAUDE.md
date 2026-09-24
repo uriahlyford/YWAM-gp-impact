@@ -479,7 +479,9 @@ forms, documents and references follow.
 - **The application forms** live in data: `netlify/functions/portal-forms-default.js` (one
   form per key — dts/dbs/bcs/sms/staff/volunteer/team; sections → questions with `{en,km}`
   labels, a type, required, options, and an `audience` of all / khmer / international)
-  is the shipped set; a portal admin's edits (`portalSaveForm`, Google-Forms-style editor
+  is the shipped set — the DTS form (`dtsForm`) mirrors the base's own GP DTS Application
+  Google Form (its Khmer is a fresh translation for review; the source PDF's Khmer was
+  unreadable), the other schools share `studentForm`; a portal admin's edits (`portalSaveForm`, Google-Forms-style editor
   on the staff side, `formsHtml_`) are stored per key in the `portalForms` blob and
   `getForms_` lays them over the defaults (`isDefault` marks an unedited one;
   `portalResetForm` drops the stored copy). **Every server test copies this module next to
