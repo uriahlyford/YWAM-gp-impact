@@ -151,19 +151,13 @@ async function open(viewport, query, seed) {
   ok('nothing on the gate wears the GP app’s cobalt or paper', await page.evaluate(() => ![...document.querySelectorAll('#main *, header *')].some(el => { const s = getComputedStyle(el); return /rgb\(31, 68, 255\)|rgb\(250, 246, 240\)/.test(s.backgroundColor + s.color + s.borderColor); })));
   await page.click('#toChoose');
   await page.waitForTimeout(150);
-  ok('Start an application asks where first, opening on Siem Reap', (await page.$$eval('[data-campus]', b => b.map(x => x.getAttribute('data-campus') + (x.classList.contains('on') ? '*' : '')).join(','))) === 'siemreap*,poipet');
+  ok('while only Siem Reap is open there is no campus picker — Poipet is hidden for now', (await page.$$eval('[data-campus]', b => b.length)) === 0 && !/Where/.test(await page.$eval('#main', e => e.textContent)));
   ok('Siem Reap shows the seven choices — the four schools, staff, volunteer and team', (await page.$$eval('[data-apply]', b => b.map(x => x.getAttribute('data-apply')).join(','))) === 'dts,dbs,bcs,sms,staff,volunteer,team');
   ok('the secondary schools say they need a completed DTS, DTS does not', (await page.$$eval('[data-apply]', b => b.filter(x => /Requires a completed DTS/.test(x.textContent)).map(x => x.getAttribute('data-apply')).join(','))) === 'dbs,bcs,sms');
   ok('the schools carry their full names', /Biblical Counseling School/.test(await page.$eval('[data-apply="bcs"]', e => e.textContent)) && /Social Media School/.test(await page.$eval('[data-apply="sms"]', e => e.textContent)));
-  await page.click('[data-campus="poipet"]');
-  await page.waitForTimeout(150);
-  ok('Poipet runs DTS and DBS only, plus staff, volunteer and team', (await page.$$eval('[data-apply]', b => b.map(x => x.getAttribute('data-apply')).join(','))) === 'dts,dbs,staff,volunteer,team');
   await page.click('[data-apply="dbs"]');
   await page.waitForTimeout(150);
-  ok('picking DBS at Poipet opens sign-up with Poipet and DBS set', await page.$eval('[data-campus="poipet"]', b => b.classList.contains('on')) && await page.$eval('[data-pick="dbs"]', b => b.classList.contains('on')) && !(await page.$('[data-pick="bcs"]')));
-  await page.click('[data-campus="siemreap"]');
-  await page.waitForTimeout(150);
-  ok('switching campus on sign-up keeps a school both run', await page.$eval('[data-pick="dbs"]', b => b.classList.contains('on')) && !!(await page.$('[data-pick="bcs"]')));
+  ok('picking DBS opens sign-up with DBS set and no campus picker, all four schools on offer', (await page.$$eval('[data-campus]', b => b.length)) === 0 && await page.$eval('[data-pick="dbs"]', b => b.classList.contains('on')) && !!(await page.$('[data-pick="bcs"]')));
   ok('no horizontal scroll on a phone', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await page.click('[data-pick="volunteer"]');
   await page.waitForTimeout(150);
@@ -322,6 +316,8 @@ async function open(viewport, query, seed) {
 /* ---------- Outreach Teams: teams only ---------- */
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'rithy', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  ok('with every applicant at Siem Reap and Poipet hidden, there is no campus chip row', (await page.$$eval('[data-campusfilter]', b => b.length)) === 0);
   await page.waitForSelector('.trow');
   ok('someone on Outreach Teams sees only team applications', (await page.$$eval('.trow', r => r.length)) === 1 && /Grace Church Team/.test(await page.$eval('.tbl', e => e.textContent)) && !/Anna Example|Tom Volunteer/.test(await page.$eval('#main', e => e.textContent)));
   ok('and only the Teams tab — no All, no schools', (await page.$$eval('.whatTab', b => b.map(x => x.getAttribute('data-whatfilter')).join(','))) === 'team' && await page.$eval('[data-whatfilter="team"]', b => b.classList.contains('on')));
@@ -572,10 +568,7 @@ async function open(viewport, query, seed) {
   await page.waitForSelector('[data-acc]');
   await page.click('#accAdd');
   await page.waitForSelector('#accPanel');
-  ok('Add shows campus and what-for pickers plus the account fields', (await page.$$eval('[data-acccampus]', b => b.length)) === 2 && (await page.$$eval('[data-accpick]', b => b.length)) === 7 && /4-digit PIN/.test(await page.$eval('#accPanel', e => e.textContent)));
-  await page.click('[data-acccampus="poipet"]');
-  await page.waitForTimeout(150);
-  ok('Poipet offers only its two schools plus staff, volunteer, team', (await page.$$eval('[data-accpick]', b => b.map(x => x.getAttribute('data-accpick')).join(','))) === 'dts,dbs,staff,volunteer,team');
+  ok('Add shows the what-for picker and the account fields, no campus picker while only Siem Reap is open', (await page.$$eval('[data-acccampus]', b => b.length)) === 0 && (await page.$$eval('[data-accpick]', b => b.map(x => x.getAttribute('data-accpick')).join(','))) === 'dts,dbs,bcs,sms,staff,volunteer,team' && /4-digit PIN/.test(await page.$eval('#accPanel', e => e.textContent)));
   await page.click('[data-accpick="dbs"]');
   await page.waitForTimeout(150);
   await page.fill('#acc_name', 'Made Person');
@@ -587,7 +580,7 @@ async function open(viewport, query, seed) {
   await page.click('#accSave');
   await page.waitForTimeout(400);
   const ca = sent.find(b => b.fn === 'portalCreateApplicant');
-  ok('Create sends the same payload as sign-up, on the admin’s behalf', ca && ca.args[2].username === 'made.x' && ca.args[2].pin === '2468' && ca.args[2].type === 'student' && ca.args[2].school === 'dbs' && ca.args[2].campus === 'poipet' && ca.args[2].country === 'Norway');
+  ok('Create sends the same payload as sign-up, on the admin’s behalf', ca && ca.args[2].username === 'made.x' && ca.args[2].pin === '2468' && ca.args[2].type === 'student' && ca.args[2].school === 'dbs' && ca.args[2].campus === 'siemreap' && ca.args[2].country === 'Norway');
   ok('the new account tops the list and stays open for edits', (await page.$$eval('[data-acc]', r => r.length)) === 3 && (await page.$eval('#acc_name', i => i.value)) === 'Made Person' && !(await page.$('[data-accpick]')));
   await ctx.close();
 }
