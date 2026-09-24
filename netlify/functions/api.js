@@ -3164,7 +3164,8 @@ async function createApplicant_(payload, by) {
 async function portalRegister(payload) {
   const made = await createApplicant_(payload, null);
   if (!made.ok) return made;
-  return { ok: true, role: 'applicant', me: portalMeOut_(made.rec), application: portalAppOut_(made.cand) };
+  // the same shape portalBoot gives, form included — the dashboard opens the form straight away
+  return { ok: true, role: 'applicant', me: portalMeOut_(made.rec), application: portalAppOut_(made.cand), form: (await getForms_())[formKeyOf_(made.cand)] };
 }
 
 /* ==================== accounts (staff side, portal admins) ====================

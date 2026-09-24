@@ -645,7 +645,7 @@ function questionHtml_(q, v, prefix, missing){
 }
 function formHtml_(){
   var d=P.boot, app=d.application, form=d.form;
-  if(!form){ return '<div class="center"><div class="card"><p class="sub">'+esc(t('Loading…'))+'</p></div></div>'; }
+  if(!form){ return '<div class="center"><div class="card"><p class="sub">'+esc(t('Loading…'))+'</p><button class="linkbtn" id="formClose2">'+esc(t('Back to my application'))+'</button></div></div>'; }
   var secs=(form.sections||[]).filter(function(s){ return askedIn_(s, app.audience).length; });
   if(!secs.length){ return '<div class="center"><div class="card"><p class="sub">'+esc(t('This form has no questions yet — our team is still setting it up. Please check back soon.'))+'</p><button class="linkbtn" id="formClose2">'+esc(t('Back to my application'))+'</button></div></div>'; }
   if(P.formSec>=secs.length) P.formSec=secs.length-1; if(P.formSec<0) P.formSec=0;
@@ -687,6 +687,7 @@ function sectionMissing_(sec, aud){ return askedIn_(sec, aud).filter(function(q)
 function bindForm_(){
   if(P.view!=='form') return;
   var app=P.boot.application, form=P.boot.form;
+  if(!form){ on_('formClose2', function(){ P.view='me'; render(); }); return; }
   var secs=(form.sections||[]).filter(function(s){ return askedIn_(s, app.audience).length; });
   document.querySelectorAll('[data-ans]').forEach(function(el){ el.oninput=el.onchange=function(){ readAnswers_(); P.formMissing=null; saveDraft_(false); }; });
   var close=function(){ readAnswers_(); saveDraft_(true); if(app.submittedAt){ P.answers=JSON.parse(JSON.stringify(app.answers||{})); P.editMine=false; } P.view='me'; render(); };
@@ -1053,7 +1054,13 @@ function bind_(){
   on_('addNote', addNote_);
   on_('archiveCand', archiveCand_);
   on_('deleteCand', deleteCand_);
-  on_('openForm', function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
+  on_('openForm', function(){
+    var go=function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); };
+    if(P.boot.form) return go();
+    // an older sign-up reply had no form — fetch the dashboard again, then open
+    P.busy=true; render();
+    run('portalBoot', [P.auth.user, P.auth.pin], function(d){ P.busy=false; if(d && d.ok && d.form){ P.boot=d; go(); return; } showMsg(t('Could not load the form — try again.')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
   on_('viewAnswers', function(){ P.showAnswers=!P.showAnswers; render(); });
   on_('refNew', function(){ makeRefLink_(null, function(link, d){ P.refLink=link; if(P.boot.application) P.boot.application.reference=d.reference; render(); }); });
   on_('refCopy', function(){ copyText_(P.refLink); });

@@ -194,6 +194,12 @@ async function open(viewport, query, seed) {
   ok('the timeline has nine steps, account done and "fill out" current', steps.length === 9 && steps[0] === 'account:done' && steps[1] === 'form:current' && steps.slice(2).every(s => /todo$/.test(s)), steps.join(' '));
   ok('documents & reference show as pending sub-items', (await page.$$eval('#timeline .subItems li', li => li.length)) === 2);
   ok('the form card invites them to fill out the application', !!(await page.$('#openForm')) && /Fill out my application/.test(await page.$eval('#openForm', e => e.textContent)));
+  // the sign-up mock answers without a form, as the server did before — the page must fetch it, not die
+  await page.click('#openForm');
+  await page.waitForSelector('#formSubmit, #formNext', { timeout: 5000 });
+  ok('Fill out my application straight after sign-up opens the form (fetching it when the sign-up reply had none)', /Section 1 of/.test(await page.$eval('#main', e => e.textContent)) && !/Something went wrong/.test(await page.$eval('#main', e => e.textContent)) && sent.some(b => b.fn === 'portalBoot'));
+  await page.click('#formClose');
+  await page.waitForSelector('#statusPill');
   ok('contact details are on the page', /\+46 70 000 0000/.test(await page.$eval('#main', e => e.textContent)) && /WhatsApp/.test(await page.$eval('#main', e => e.textContent)));
   ok('one column on a phone', await page.$eval('.two', e => getComputedStyle(e).gridTemplateColumns.split(' ').length === 1));
   // edit contact
