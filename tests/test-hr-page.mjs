@@ -28,14 +28,14 @@ function ok(name, cond, extra) {
 }
 const Y = new Date().getFullYear(), M = new Date().getMonth() + 1;
 const ym = (y, m) => { while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return y + '-' + ('0' + m).slice(-2); };
-const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [], active: true, archived: null, contracts: [], joined: '', hr: false };
-const ADMIN = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Director', isAdmin: true };
+const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [], active: true, archived: null, contracts: [], joined: '', hr: false, staffType: 'ministry' };
+const ADMIN = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Director', isAdmin: true, staffType: 'campus' };
 const DARA = { ...base, id: 'st_dara', name: 'Dara Pen', username: 'dara', dept: 'Community Service', ministry: 'Cafe', role: 'Barista' };
 let staff = [ADMIN,
   { ...base, id: 'st_1', name: 'Andrew Lee', username: 'andrew', dept: 'Community Service', ministry: 'Cafe', role: 'Base Leader', contracts: [{ id: 'c1', signed: ym(Y - 5, M + 1), years: 5, notes: 'first term', files: [{ id: 'f1', name: 'contract 2021.pdf', mime: 'application/pdf', size: 245000 }] }] },
   { ...base, id: 'st_2', name: 'Sreilea Chan', username: 'spicy', dept: 'Community Service', ministry: 'Cafe', contracts: [{ id: 'c2', signed: ym(Y - 3, M - 1), years: 2, files: [] }] },   // ran out about 13 months ago
   DARA,
-  { ...base, id: 'st_4', name: 'Tinh Vong', username: 'tinh', dept: 'Youth Education', ministry: 'GP Media', joined: '2022' },
+  { ...base, id: 'st_4', name: 'Tinh Vong', username: 'tinh', dept: 'Youth Education', ministry: 'GP Media', joined: '2022', staffType: '' },
   { ...base, id: 'st_5', name: 'Sokna Non', username: 'sokna', dept: 'Community Service', ministry: 'Cafe', active: false, archived: { at: '2026-07-16', reason: 'Finished term', by: 'st_admin' } },
 ];
 
@@ -96,10 +96,14 @@ console.log('=== the menu ===');
   const chips = await chipsOf(page);
   ok('every row carries a short status chip', chips.includes('Andrew Lee=Renew soon') && chips.includes('Sreilea Chan=Expired') && chips.includes('Dara Pen=No contract') && chips.includes('Tinh Vong=No contract'), chips.join(' | '));
   ok('archived people are hidden until asked for', !chips.some(c => /Sokna/.test(c)));
+  const groups = await page.evaluate(() => [].map.call(document.querySelectorAll('#hrList [data-hrgroup]'), g => g.getAttribute('data-hrgroup') + ':' + g.querySelector('.mentorLabel').textContent.trim() + ':' + [].map.call(g.querySelectorAll('.rowName'), r => r.textContent.trim()).join('/')));
+  ok('the list is in the same two groups as Admin → Accounts, then whoever is not sorted yet', JSON.stringify(groups) === JSON.stringify(['ministry:Siem Reap ministries · 3:Andrew Lee/Dara Pen/Sreilea Chan', 'campus:YAP and Campus staff · 1:Uriah Lyford', 'unset:Kind of staff not set yet · 1:Tinh Vong']), JSON.stringify(groups));
   await page.click('#hrShowArchived');
   await page.waitForTimeout(300);
   ok('Show archived brings them in, marked', (await chipsOf(page)).includes('Sokna Non=Archived'));
   await page.fill('#hrSearch', 'andrew');
+  await page.waitForTimeout(200);
+  ok('a search hides the groups with no match', JSON.stringify(await page.evaluate(() => [].map.call(document.querySelectorAll('#hrList [data-hrgroup]'), g => g.style.display === 'none' ? 'hidden' : 'shown'))) === JSON.stringify(['shown', 'hidden', 'hidden']));
   await page.waitForTimeout(200);
   const visible = await page.evaluate(() => [].filter.call(document.querySelectorAll('#hrList [data-hrrow]'), r => r.style.display !== 'none').length);
   ok('the search narrows the list without a request', visible === 1 && sent.filter(x => x.fn === 'hrList').length === 1);

@@ -4480,6 +4480,18 @@ function adminKpisHtml_(){
   return h+'</div>';
 }
 
+/* A campus's people in two groups by kind of staff — the ministries (cafe,
+   schools, outreach, media…) and the people who carry the base itself, YAP
+   and campus staff — plus a small third group for anyone whose kind was
+   never set, so an admin can see who still needs sorting. Admin → Accounts
+   and HR share it. */
+function staffGroups_(people, campusLabel){
+  return [
+    { id:'ministry', label:gpT('{campus} ministries',{campus:campusLabel}), rows:people.filter(function(x){ return x.staffType==='ministry'; }) },
+    { id:'campus', label:t('YAP and Campus staff'), rows:people.filter(function(x){ return x.staffType==='yap' || x.staffType==='campus'; }) },
+    { id:'unset', label:t('Kind of staff not set yet'), rows:people.filter(function(x){ return x.staffType!=='ministry' && x.staffType!=='yap' && x.staffType!=='campus'; }) }
+  ];
+}
 function adminAccountsHtml_(){
   if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
   var h='';
@@ -4514,12 +4526,7 @@ function adminAccountsHtml_(){
      outreach, media…) and the people who carry the base itself — YAP and
      campus staff. Anyone whose kind is not set yet gets a third, small
      group so an admin can see who still needs sorting. */
-  var groupCampus = activeTab==='__other' ? t('Other') : campusShort(activeTab);
-  var groups=[
-    { id:'ministry', label:gpT('{campus} ministries',{campus:groupCampus}), rows:shown.filter(function(x){ return x.staffType==='ministry'; }) },
-    { id:'campus', label:t('YAP and Campus staff'), rows:shown.filter(function(x){ return x.staffType==='yap' || x.staffType==='campus'; }) },
-    { id:'unset', label:t('Kind of staff not set yet'), rows:shown.filter(function(x){ return x.staffType!=='ministry' && x.staffType!=='yap' && x.staffType!=='campus'; }) }
-  ];
+  var groups=staffGroups_(shown, activeTab==='__other' ? t('Other') : campusShort(activeTab));
   groups.forEach(function(g){
     if(!g.rows.length) return;
     h+='<div data-admingroup="'+g.id+'"><div class="mentorLabel" style="margin:12px 0 6px">'+esc(g.label)+' · '+g.rows.length+'</div>';
@@ -4721,6 +4728,10 @@ function bindHr(){
     document.querySelectorAll('#hrList [data-hrrow]').forEach(function(row){
       var show=!q || (row.getAttribute('data-hrrow')||'').indexOf(q)>-1;
       row.style.display=show?'':'none'; if(show) any=true;
+    });
+    document.querySelectorAll('[data-hrgroup]').forEach(function(g){
+      var some=[].some.call(g.querySelectorAll('[data-hrrow]'), function(r){ return r.style.display!=='none'; });
+      g.style.display = some ? '' : 'none';
     });
     var empty=document.getElementById('hrSearchEmpty');
     if(empty) empty.style.display=(q && !any)?'':'none';
@@ -5916,7 +5927,13 @@ function hrHtml(){
   var shown = activeTab==='__other' ? other : pool.filter(function(x){ return x.campus===activeTab; });
   shown.sort(function(a,b){ return a.name<b.name?-1:1; });
   if(!shown.length) return h+'<p class="sub">'+esc(t('No accounts yet.'))+'</p>';
-  h+='<div class="accCard adminList" id="hrList">'+shown.map(hrRowHtml_).join('')+'</div>';
+  h+='<div id="hrList">';
+  staffGroups_(shown, activeTab==='__other' ? t('Other') : campusShort(activeTab)).forEach(function(g){
+    if(!g.rows.length) return;
+    h+='<div data-hrgroup="'+g.id+'"><div class="mentorLabel" style="margin:12px 0 6px">'+esc(g.label)+' · '+g.rows.length+'</div>'+
+      '<div class="accCard adminList">'+g.rows.map(hrRowHtml_).join('')+'</div></div>';
+  });
+  h+='</div>';
   return h;
 }
 function hrTabsHtml_(){
