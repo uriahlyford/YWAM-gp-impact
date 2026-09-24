@@ -3061,6 +3061,7 @@ function portalAppOut_(c) {
     answers: (c.portal && c.portal.form && c.portal.form.answers) || (c.portal && c.portal.draft) || {},
     draftAt: (c.portal && c.portal.draftAt) || null,
     answersUpdatedAt: (c.portal && c.portal.form && c.portal.form.updatedAt) || null,
+    reference: (function (r) { delete r.answers; delete r.leaderEmail; return r; })(refState_(c)), // the applicant never reads the reference
     steps: portalSteps_(c)
   };
 }
@@ -3074,6 +3075,7 @@ function portalCandOut_(c, byId) {
     email: c.email || (acct && acct.email) || '',
     status: portalStatus_(c),
     audience: audienceOf_(c), needsVisa: needsVisa_(c), refNeeded: refNeeded_(c), formKey: formKeyOf_(c),
+    reference: refState_(c),
     hasAccount: !!acct
   });
 }
@@ -3433,6 +3435,92 @@ async function portalUpdateAnswers(username, pin, answers) {
   await writeJSON('candidates', a.rows);
   return portalBoot(username, pin);
 }
+/* ==================== the leader reference ====================
+   International applicants (and every staff / volunteer applicant) send one
+   reference from a pastor or leader. The applicant — or staff, from the
+   record — makes a link; the leader opens portal.html?ref=<token> with no
+   account and fills in the reference form (forms.reference, editable like
+   the others). The token is random, kept only as a sha256 hash on the record,
+   single-use, and expires after REF_TTL_DAYS; making a new link revokes the
+   pending one. The two public handlers answer with the applicant's name and
+   the form — nothing else about them. */
+const REF_TTL_DAYS = 14;
+function refHash_(token) { return hashPin_(String(token), 'reference'); }
+function refs_(c) { return (c && c.portal && Array.isArray(c.portal.references)) ? c.portal.references : []; }
+function refValid_(ref, now) {
+  if (!ref || ref.usedAt) return 'used';
+  if (ref.revokedAt || !ref.expiresAt || new Date(ref.expiresAt).getTime() < (now || Date.now())) return 'expired';
+  return 'ok';
+}
+/* What the applicant and the staff see about the reference: nothing about the
+   token itself. */
+function refState_(c) {
+  const list = refs_(c);
+  const got = list.filter(function (r) { return r && r.usedAt; }).sort(function (a, b) { return String(b.usedAt).localeCompare(String(a.usedAt)); })[0];
+  if (got) return { status: 'received', receivedAt: got.usedAt, leaderName: got.leaderName || '', leaderEmail: got.leaderEmail || '', answers: got.answers || {}, sentAt: got.createdAt || null };
+  const open = list.filter(function (r) { return r && refValid_(r) === 'ok'; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); })[0];
+  if (open) return { status: 'pending', sentAt: open.createdAt, expiresAt: open.expiresAt };
+  const last = list.filter(function (r) { return r && !r.usedAt; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); })[0];
+  if (last) return { status: 'expired', sentAt: last.createdAt, expiresAt: last.expiresAt };
+  return { status: 'none' };
+}
+async function portalReferenceLink(username, pin, candidateId) {
+  let a;
+  if (candidateId) { a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out; }
+  else { a = await applicantCand_(username, pin); if (a.out) return a.out; }
+  const cand = a.cand;
+  if (!refNeeded_(cand)) return { ok: false, err: 'not_needed' };
+  if (cand.archived) return { ok: false, err: 'closed' };
+  cand.portal = cand.portal || {};
+  const list = refs_(cand);
+  if (list.some(function (r) { return r && r.usedAt; })) return { ok: false, err: 'received' };
+  const now = new Date();
+  list.forEach(function (r) { if (r && !r.usedAt && !r.revokedAt) r.revokedAt = now.toISOString(); });
+  const token = pinSalt_() + pinSalt_() + pinSalt_();
+  const ref = { id: 'ref_' + pinSalt_(), hash: refHash_(token), createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + REF_TTL_DAYS * 86400000).toISOString(), by: a.s.id };
+  list.push(ref);
+  cand.portal.references = list.slice(-10);
+  cand.updated = now.toISOString(); cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return { ok: true, token: token, expiresAt: ref.expiresAt, reference: refState_(cand) };
+}
+async function findRef_(token) {
+  token = String(token || '');
+  if (!/^[a-f0-9]{24,128}$/.test(token)) return null;
+  const h = refHash_(token);
+  const rows = await getCandidates_();
+  for (const c of rows) {
+    const ref = refs_(c).find(function (r) { return r && r.hash === h; });
+    if (ref) return { rows: rows, cand: c, ref: ref };
+  }
+  return null;
+}
+function refApplyingFor_(c) { return c.type === 'student' ? String(c.school || '').toUpperCase() : c.type; }
+async function portalReferenceForm(token) {
+  const f = await findRef_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  const v = refValid_(f.ref);
+  if (v !== 'ok') return { ok: false, err: v };
+  return { ok: true, applicantName: f.cand.name, applyingFor: refApplyingFor_(f.cand), expiresAt: f.ref.expiresAt, form: (await getForms_()).reference };
+}
+async function portalReferenceSubmit(token, answers) {
+  const f = await findRef_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  const v = refValid_(f.ref);
+  if (v !== 'ok') return { ok: false, err: v };
+  const form = (await getForms_()).reference;
+  const clean = cleanAnswers_(answers && typeof answers === 'object' ? answers : {}, form, 'all');
+  const missing = missingRequired_(clean, form, 'all');
+  if (missing.length) return { ok: false, err: 'missing', missing: missing };
+  const now = new Date().toISOString();
+  f.ref.usedAt = now; f.ref.answers = clean;
+  f.ref.leaderName = str_(clean.leaderName, 120) || ''; f.ref.leaderEmail = cleanEmail_(clean.leaderEmail) || '';
+  f.cand.portal.referenceDone = true;
+  f.cand.log = (Array.isArray(f.cand.log) ? f.cand.log : []).concat([{ at: now, by: 'reference', kind: 'note', text: 'Leader reference received' + (f.ref.leaderName ? ' from ' + f.ref.leaderName : '') }]).slice(-CAND_LOG_MAX);
+  f.cand.updated = now; f.cand.updatedBy = 'reference';
+  await writeJSON('candidates', f.rows);
+  return { ok: true, applicantName: f.cand.name };
+}
 /* Staff-side writes on one record beyond the CRM's own: the visa flags the
    applicant watches for (flights confirmed, letter of invitation sent) and
    corrections to submitted answers. Same gate and scope as the CRM writes. */
@@ -3618,6 +3706,9 @@ const HANDLERS = {
   portalSaveDraft: function (a) { return portalSaveDraft(a[0], a[1], a[2]); },
   portalSubmit: function (a) { return portalSubmit(a[0], a[1], a[2]); },
   portalUpdateAnswers: function (a) { return portalUpdateAnswers(a[0], a[1], a[2]); },
+  portalReferenceLink: function (a) { return portalReferenceLink(a[0], a[1], a[2]); },
+  portalReferenceForm: function (a) { return portalReferenceForm(a[0]); },
+  portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
   portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); },
   portalListAccounts: function (a) { return portalListAccounts(a[0], a[1]); },

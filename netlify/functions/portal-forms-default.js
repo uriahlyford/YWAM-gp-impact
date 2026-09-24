@@ -227,6 +227,93 @@ const teamForm = {
   }]
 };
 
+/* The leader reference — what an applicant's pastor or leader fills in at
+   portal.html?ref=<token>, following the base's "YWAM SR Leader Reference
+   Form" (Google Form, September 2026). Leaders of international applicants
+   read English, so the Khmer side is left empty here (English shows for both
+   languages) — a portal admin adds Khmer in the editor when it is wanted.
+   The applicant's name is shown from the link, not asked. */
+const E = (en) => T(en, '');
+const rq = (id, type, en, extra) => Object.assign(q(id, type, en, ''), { required: true }, extra || {});
+const RATING = opts([['1 — Poor', ''], ['2', ''], ['3', ''], ['4', ''], ['5 — Excellent', '']]);
+const STRENGTH = opts([['Strong', ''], ['Moderate', ''], ['Limited', ''], ['Not known', '']]);
+const YNU = opts([['Yes', ''], ['No', ''], ['Unsure', '']]);
+const referenceForm = {
+  key: 'reference', title: E('Leader reference form'),
+  sections: [{
+    id: 'basic', title: E('Basic information'),
+    help: E('The applicant has applied to YWAM Siem Reap (Youth With A Mission), an international, interdenominational Christian missionary organization whose training is part of the University of the Nations. Your comments will be considered seriously, so we ask that you complete this form carefully. Your prompt attention (within 7 days) is appreciated. Thank you for your assistance.'),
+    questions: [
+      rq('leaderName', 'short', 'Your full name'),
+      rq('leaderEmail', 'email', 'Your email')
+    ]
+  }, {
+    id: 'character', title: E('Character and spiritual life'), help: E('Please answer each question, and comment where necessary.'),
+    questions: [
+      rq('known', 'long', 'How long and in what capacity have you known the applicant?'),
+      rq('relationship', 'short', 'What is your relationship to the applicant? (Pastor, mentor, employer, leader, teacher, etc.)'),
+      rq('godRelationship', 'long', 'How would you describe the applicant’s relationship with God?'),
+      rq('teachable', 'long', 'In your opinion, is the applicant teachable and open to correction?'),
+      rq('authority', 'long', 'How does the applicant handle authority and leadership?')
+    ]
+  }, {
+    id: 'maturity', title: E('Emotional and relational maturity'), help: E(''),
+    questions: [
+      rq('peers', 'long', 'How does the applicant relate to peers and those in authority?'),
+      rq('stress', 'long', 'How does the applicant respond to stress, disappointment, or conflict?'),
+      rq('team', 'long', 'Does the applicant work well in a team environment?')
+    ]
+  }, {
+    id: 'lifestyle', title: E('Lifestyle and conduct'), help: E(''),
+    questions: [
+      rq('integrity', 'long', 'Do they show integrity and honesty in daily life?'),
+      rq('addictions', 'long', 'To your knowledge, does the applicant struggle with any addictive behaviors (alcohol, drugs, pornography, etc.)?'),
+      rq('concerns', 'long', 'Is there anything in the applicant’s lifestyle that may be a concern in a cross-cultural ministry setting?'),
+      rq('responsible', 'long', 'How responsible is the applicant with commitments, time, and finances?')
+    ]
+  }, {
+    id: 'influences', title: E('Influences on the decision to serve'), help: E('Has the applicant’s decision to serve been significantly influenced by any of the following?'),
+    questions: [
+      rq('travel', 'choice', 'A desire for travel or sightseeing', { options: YNU }),
+      rq('escape', 'choice', 'A desire to escape a difficult personal, family, or vocational problem', { options: YNU }),
+      rq('romance', 'choice', 'An emotional involvement with someone on (or going to) the same field', { options: YNU })
+    ]
+  }, {
+    id: 'evaluation', title: E('Character evaluation'), help: E('For each trait, please rate the applicant based on your knowledge. If unknown, please leave it blank.'),
+    questions: [
+      q('rIntegrity', 'choice', 'Integrity and honesty', '', { options: RATING }),
+      q('rSpiritual', 'choice', 'Spiritual maturity', '', { options: RATING }),
+      q('rTeachable', 'choice', 'Teachable spirit (willingness to learn and accept correction)', '', { options: RATING }),
+      q('rEmotional', 'choice', 'Emotional stability', '', { options: RATING }),
+      q('rRelationships', 'choice', 'Relationships with others', '', { options: RATING }),
+      q('rStress', 'choice', 'Ability to handle stress and conflict', '', { options: RATING }),
+      q('rLeadership', 'choice', 'Leadership ability', '', { options: RATING }),
+      q('rServant', 'choice', 'Servant attitude (willingness to serve others)', '', { options: RATING })
+    ]
+  }, {
+    id: 'giftings', title: E('Applicant’s giftings'), help: E('Please mark the appropriate strength for each.'),
+    questions: [
+      rq('gEvangelism', 'choice', 'Evangelism', { options: STRENGTH }),
+      rq('gTeaching', 'choice', 'Teaching', { options: STRENGTH }),
+      rq('gLeadership', 'choice', 'Leadership', { options: STRENGTH }),
+      rq('gEncouragement', 'choice', 'Encouragement', { options: STRENGTH }),
+      rq('gWorship', 'choice', 'Worship / arts', { options: STRENGTH }),
+      rq('gMedia', 'choice', 'Media', { options: STRENGTH }),
+      rq('gService', 'choice', 'Service / helps', { options: STRENGTH }),
+      rq('gCrossCultural', 'choice', 'Cross-cultural adaptability', { options: STRENGTH })
+    ]
+  }, {
+    id: 'suitability', title: E('Suitability for missions'), help: E(''),
+    questions: [
+      rq('ready', 'long', 'Do you believe the applicant is ready for short-term / long-term missions? Why or why not?'),
+      rq('cambodia', 'long', 'Would you recommend the applicant for ministry in Cambodia, where they will face cultural and spiritual challenges?'),
+      rq('reservations', 'long', 'Do you have any reservations about this applicant joining YWAM Siem Reap?'),
+      rq('recommend', 'choice', 'Would you:', { options: opts([['Highly recommend', ''], ['Recommend with reservations', ''], ['Not recommend this applicant', '']]) }),
+      q('additional', 'long', 'Is there any additional information you feel we should know?', '')
+    ]
+  }]
+};
+
 const PORTAL_FORMS_DEFAULT = {
   dts: dtsForm(),
   dbs: studentForm('dbs', 'DBS', 'DBS', true),
@@ -234,6 +321,7 @@ const PORTAL_FORMS_DEFAULT = {
   sms: studentForm('sms', 'SMS', 'SMS', true),
   staff: staffForm,
   volunteer: volunteerForm,
-  team: teamForm
+  team: teamForm,
+  reference: referenceForm
 };
 export default PORTAL_FORMS_DEFAULT;

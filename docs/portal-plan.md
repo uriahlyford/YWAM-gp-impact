@@ -133,12 +133,14 @@ name typed back to confirm) — applicant accounts live nowhere else.
    dashboard from acceptance on, with two staff-set ticks (flights confirmed, letter of
    invitation sent — `portalSetVisaFlags`). Teams need no reference and their dashboard
    lists what we need (team photo with names, passport photos, flight confirmations).
-3. **Documents and the leader reference.** Per-type required-document list
-   (you supply the exact list), upload with checked / pending state
-   (`portalUploadDoc`, `portalGetDoc`, own blobs), reference links
-   (`portalReferenceLink` → single-use, expiring token; `portalReferenceForm`
-   + `portalReferenceSubmit` at `?ref=`), "Reference received" on the
-   dashboard and on the record. Khmer students exempt, internationals need one.
+3. **Documents and the leader reference.** The leader reference is built:
+   `portalReferenceLink` (applicant or staff) → single-use token, 14 days, hash only on the
+   record; the leader fills `forms.reference` (the base's Leader Reference Form) at
+   `?ref=<token>` with no account (`portalReferenceForm`, `portalReferenceSubmit`);
+   "Received from …" on the dashboard and on the record, where staff read it. Khmer students
+   and teams are exempt. Still to come: the per-type required-document list (you supply the
+   exact list) and upload with checked / pending state (`portalUploadDoc`, `portalGetDoc`,
+   own blobs).
 4. **The staff CRM, desktop-first.** Filters, search, columns, the record
    page (answers, documents, reference, log), owner / next step / next date,
    editing an application, archive, bell reminders for portal staff.

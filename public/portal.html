@@ -153,6 +153,8 @@ textarea { min-height:80px; resize:vertical; }
 .ansSec { margin-top:10px; } .kv.ans { flex-direction:column; align-items:flex-start; gap:2px; } .kv.ans span { text-align:left; color:var(--ink); white-space:pre-wrap; }
 /* the forms editor */
 .two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.refBox { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+#refLinkBox { font-size:13px; }
 .qcard { background:var(--bg); border:1px solid var(--border2); border-radius:var(--rSm); padding:12px; margin-top:10px; }
 .audTag { display:inline-block; font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase; color:var(--warn); margin-bottom:8px; }
 .qcard.aud-khmer { border-left:3px solid var(--warn); } .qcard.aud-international { border-left:3px solid var(--info); }
@@ -292,13 +294,13 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false };
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
   if(qs.campus && CAMPUS_SCHOOLS[qs.campus]) P.campus=qs.campus;
   if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
-  if(qs.ref){ P.view='refsoon'; }
+  if(qs.ref){ P.view='ref'; P.refToken=String(qs.ref); }
   var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
   if(saved && saved.user && saved.pin){ P.auth=saved; P.view='booting'; boot_(); }
 })();
@@ -337,7 +339,7 @@ function render(){
   document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts');
   try { m.innerHTML = v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
     : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='accounts' ? accountsHtml_()
-    : v==='noaccess' ? noAccessHtml_() : v==='refsoon' ? refSoonHtml_() : loginHtml_();
+    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_();
   bind_();
   } catch (e) {
     /* A dead screen where nothing responds is the worst outcome — show what
@@ -362,9 +364,89 @@ function chooseHtml_(){
     '<div class="choices">'+APPLY.filter(function(a){ return offeredAt_(a, here); }).map(function(a){ return '<button class="choice" data-apply="'+a.key+'"><span class="choiceKey">'+esc(a.label)+'</span><span class="choiceSub">'+esc(t(a.blurb))+(a.secondary?'<br><span class="prereq">'+esc(t('Requires a completed DTS'))+'</span>':'')+'</span></button>'; }).join('')+'</div>'+
     '<button class="linkbtn" id="toLogin">'+esc(t('I already have an account'))+'</button>'+langRowHtml_()+'</div>';
 }
-function refSoonHtml_(){
-  return '<div class="center"><div class="card"><h2>'+esc(t('Leader reference'))+'</h2><p class="sub">'+esc(t('The reference form is not open yet. The applicant will send you a new link when it is.'))+'</p>'+
-    '<button class="linkbtn" id="toLanding">'+esc(t('Back to the portal'))+'</button></div></div>';
+/* ==================== the leader reference (no account) ====================
+   A pastor or leader opens portal.html?ref=<token>. The server answers with
+   the applicant's name and the reference form, or why the link no longer
+   works; the whole form is one page with Submit at the bottom. */
+function refHtml_(){
+  var d=P.refData;
+  var h='<div class="center"><div class="gateTitle"><h2>'+esc(t('Leader reference'))+'</h2>';
+  if(d===null){ return h+'</div><div class="card"><p class="sub">'+esc(t('Loading…'))+'</p></div></div>'; }
+  if(P.refDone){ return h+'</div><div class="card"><h3 style="margin-top:0">✓ '+esc(t('Thank you'))+'</h3><p class="sub">'+esc(gpT('Your reference for {name} has reached our applications team. You can close this page.',{name:d.applicantName||''}))+'</p></div></div>'; }
+  if(!d.ok){
+    var why = d.err==='used' ? t('This reference has already been submitted — thank you. Nothing more is needed.') : d.err==='expired' ? t('This link has expired or was replaced. Please ask the applicant to send you a new one.') : t('This link is not valid. Please ask the applicant to send you a new one.');
+    return h+'</div><div class="card"><p class="sub">'+esc(why)+'</p><button class="linkbtn" id="toLanding">'+esc(t('Back to the portal'))+'</button></div>'+langRowHtml_()+'</div>';
+  }
+  var form=d.form;
+  h+='<p class="sub">'+esc(gpT('For {name}, applying for {what} with YWAM GP.',{name:d.applicantName||'', what:d.applyingFor||''}))+'</p></div>';
+  (form.sections||[]).forEach(function(sec){
+    var qs=askedIn_(sec, 'all'); if(!qs.length) return;
+    h+='<div class="card"><h3 style="margin-top:0">'+esc(lt_(sec.title))+'</h3>'+(lt_(sec.help)?'<p class="sub">'+esc(lt_(sec.help))+'</p>':'')+
+      qs.map(function(q){ return questionHtml_(q, P.refAnswers[q.id], 'r_', P.refMissing && P.refMissing.indexOf(q.id)>-1); }).join('')+'</div>';
+  });
+  h+='<div class="card"><p class="hint" style="margin:0 0 10px"><span class="req">*</span> '+esc(t('required'))+' · '+esc(t('Only our applications team sees what you write; the applicant does not.'))+'</p>'+
+    '<button class="btn" id="refSubmit"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Sending…'):t('Submit the reference'))+'</button></div>'+langRowHtml_()+'</div>';
+  return h;
+}
+/* On the applicant's dashboard: one leader reference — make the link, pass it
+   on with one tap, see when it has arrived. The link itself is only known
+   here right after it is made (the server keeps a hash), so a lost link
+   means a new one. */
+function refCardHtml_(app){
+  var r=app.reference||{ status:'none' };
+  var h='<div class="refBox"><div class="eyebrow">'+esc(t('Leader reference'))+'</div>';
+  if(r.status==='received'){
+    return h+'<p class="sub" style="margin:0">✓ '+esc(gpT('Received{from} on {when}.',{from: r.leaderName ? ' '+gpT('from {name}',{name:r.leaderName}) : '', when: fmtDate_(r.receivedAt)}))+'</p></div>';
+  }
+  h+='<p class="sub" style="margin:0 0 8px">'+esc(t('We ask your pastor or a leader who knows you well for one short reference. Make a link and send it to them; they fill it in online, no account needed.'))+'</p>';
+  if(P.refLink){
+    var txt=gpT('Hi! I am applying to YWAM GP and they ask for a short leader reference. Could you fill this in for me? {link}',{link:P.refLink});
+    h+='<input type="text" id="refLinkBox" readonly value="'+esc(P.refLink)+'" onclick="this.select()">'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn small" id="refCopy">'+esc(t('Copy link'))+'</button>'+
+      '<a class="chatBtn" href="https://wa.me/?text='+encodeURIComponent(txt)+'" target="_blank" rel="noopener">💬 WhatsApp</a>'+
+      '<a class="chatBtn" href="https://t.me/share/url?url='+encodeURIComponent(P.refLink)+'&text='+encodeURIComponent(txt.replace(P.refLink,'').trim())+'" target="_blank" rel="noopener">✈️ Telegram</a>'+
+      '<a class="chatBtn" href="mailto:?subject='+encodeURIComponent(t('Leader reference for my YWAM GP application'))+'&body='+encodeURIComponent(txt)+'">✉️ '+esc(t('Email'))+'</a></div>'+
+      '<p class="hint">'+esc(gpT('Valid until {when}. Keep this page open until you have sent it — the link is not shown again.',{when:fmtDate_(r.expiresAt||'')}))+'</p>';
+  } else if(r.status==='pending'){
+    h+='<p class="sub" style="margin:0 0 8px">○ '+esc(gpT('Link made {when}, valid until {until}. Waiting for your leader.',{when:fmtDate_(r.sentAt), until:fmtDate_(r.expiresAt)}))+'</p>'+
+      '<button class="btn ghost small" id="refNew">'+esc(t('Make a new link'))+'</button><p class="hint">'+esc(t('A new link replaces the old one.'))+'</p>';
+  } else {
+    h+=(r.status==='expired' ? '<p class="sub" style="margin:0 0 8px">'+esc(t('The last link expired without a reference.'))+'</p>' : '')+
+      '<button class="btn small" id="refNew"'+(P.busy?' disabled':'')+'>'+esc(t('Get my reference link'))+'</button>';
+  }
+  return h+'</div>';
+}
+function makeRefLink_(candidateId, after){
+  P.busy=true; render();
+  run('portalReferenceLink', candidateId ? [P.auth.user, P.auth.pin, candidateId] : [P.auth.user, P.auth.pin], function(d){
+    P.busy=false;
+    if(d && d.ok){ after(location.origin+location.pathname+'?ref='+d.token, d); return; }
+    showMsg(d && d.err==='received' ? t('A reference has already arrived — no link is needed.') : d && d.err==='not_needed' ? t('No leader reference is needed for this application.') : d && d.err==='not_authorized' ? t('Only a portal admin can do this') : t('Could not make the link — try again.')); render();
+  });
+}
+function copyText_(txt){ try { navigator.clipboard.writeText(txt).then(function(){ showMsg(t('Copied')); }, function(){ showMsg(t('Select the link and copy it')); }); } catch(e){ showMsg(t('Select the link and copy it')); } }
+function readRefAnswers_(){ var saved=P.answers; P.answers=P.refAnswers; readAnswers_(); P.refAnswers=P.answers; P.answers=saved; }
+function bindRef_(){
+  if(P.view!=='ref') return;
+  if(P.refData===null){
+    run('portalReferenceForm', [P.refToken], function(d){ P.refData=d||{ ok:false, err:'invalid' }; render(); }, function(){ P.refData={ ok:false, err:'network' }; render(); showMsg(t('Connection problem — try again.')); });
+    return;
+  }
+  document.querySelectorAll('[data-ans]').forEach(function(el){ el.oninput=el.onchange=function(){ readRefAnswers_(); P.refMissing=null; }; });
+  on_('refSubmit', function(){
+    readRefAnswers_();
+    var form=P.refData.form, miss=[];
+    askedAll_(form, 'all').forEach(function(q){ if(q.required && !answered_(q, P.refAnswers[q.id])) miss.push(q.id); });
+    if(miss.length){ P.refMissing=miss; render(); showMsg(t('Please answer the questions marked *')); var first=document.querySelector('.qBlock.missing'); if(first) first.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+    P.busy=true; render();
+    run('portalReferenceSubmit', [P.refToken, P.refAnswers], function(d){
+      P.busy=false;
+      if(d && d.ok){ P.refDone=true; render(); window.scrollTo(0,0); return; }
+      if(d && d.err==='missing' && d.missing){ P.refMissing=d.missing; render(); showMsg(t('A few required answers are still missing.')); return; }
+      if(d && (d.err==='used'||d.err==='expired'||d.err==='invalid')){ P.refData=d; render(); return; }
+      showMsg(t('Could not send — try again.')); render();
+    });
+  });
 }
 function noAccessHtml_(){
   var noApp = P.err==='no_application';
@@ -436,7 +518,7 @@ function meHtml_(){
   h+=visaCardHtml_(app);
   h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
     (app.type==='team' ? '<p class="sub">'+esc(t('To move forward we need from your team, as soon as you can:'))+'</p><ul class="subItems">'+TEAM_NEEDS.map(function(x){ return '<li>○ '+esc(t(x))+'</li>'; }).join('')+'</ul><p class="hint">'+esc(t('Uploading them here is coming; until then your contact will tell you where to send them.'))+'</p>'
-      : '<p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+(app.refNeeded?' '+esc(t('International applicants also send one leader reference — you will get a link to pass to your pastor or leader.')):'')+'</p>')+'</div>';
+      : '<p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+'</p>'+(app.refNeeded ? refCardHtml_(app) : ''))+'</div>';
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📱 '+esc(t('How we reach you'))+'</h3>'+(P.editContact?'':'<button class="linkbtn inline" id="editContact">'+esc(t('Edit'))+'</button>')+'</div>';
   if(P.editContact){
     var c=P.contact||{ phone:me.phone, messenger:me.messenger, country:me.country };
@@ -523,6 +605,7 @@ function panelHtml_(c, byId){
   h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
   h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
   h+=panelVisaHtml_(c);
+  h+=panelReferenceHtml_(c);
   h+=panelAnswersHtml_(c);
   h+='<h3>'+esc(t('Notes'))+'</h3><textarea id="p_note" placeholder="'+esc(t('Add a note…'))+'">'+esc(P.note)+'</textarea><button class="btn small ghost" id="addNote" style="margin-top:8px">'+esc(t('Add note'))+'</button>';
   var log=(c.log||[]).slice().reverse();
@@ -806,7 +889,9 @@ function formsHtml_(){
   var f=P.formDraft;
   var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Application forms'))+'</h1><p class="sub">'+esc(t('What each kind of applicant is asked. Edit the wording in both languages, add or remove questions, then Save.'))+'</p></div>'+
     '<button class="btn ghost small" id="toCrm">← '+esc(t('Applications'))+'</button></div>';
-  h+='<div class="whatTabs">'+APPLY.map(function(a){ return '<button class="whatTab'+(P.formKey===a.key?' on':'')+'" data-formkey="'+a.key+'">'+esc(a.key==='team'?t('Teams'):a.label)+'</button>'; }).join('')+'</div>';
+  h+='<div class="whatTabs">'+APPLY.map(function(a){ return '<button class="whatTab'+(P.formKey===a.key?' on':'')+'" data-formkey="'+a.key+'">'+esc(a.key==='team'?t('Teams'):a.label)+'</button>'; }).join('')+
+    (forms.reference ? '<button class="whatTab'+(P.formKey==='reference'?' on':'')+'" data-formkey="reference">'+esc(t('Leader reference'))+'</button>' : '')+'</div>';
+  if(P.formKey==='reference') h+='<p class="hint" style="margin:-4px 0 12px">'+esc(t('What a pastor or leader fills in at the reference link. Shown to leaders of international applicants, so English comes first; Khmer is optional here.'))+'</p>';
   var isSchool = ['dts','dbs','bcs','sms'].indexOf(P.formKey)>-1;
   if(isSchool){
     h+='<div class="card" style="padding:14px 16px"><label class="f" style="margin-top:0">'+esc(t('Show the questions for'))+'</label>'+
@@ -895,6 +980,23 @@ function panelAnswersHtml_(c){
   }
   return h;
 }
+function panelReferenceHtml_(c){
+  if(!c.refNeeded) return '';
+  var r=c.reference||{ status:'none' }, form=(P.boot.forms||{}).reference;
+  var h='<h3>'+esc(t('Leader reference'))+'</h3>';
+  if(r.status==='received'){
+    h+='<p class="sub" style="margin:0">✓ '+esc(gpT('Received{from} on {when}.',{from: r.leaderName ? ' '+gpT('from {name}',{name:r.leaderName}) : '', when: fmtDate_(r.receivedAt)}))+(r.leaderEmail?' · '+esc(r.leaderEmail):'')+
+      ' <button class="linkbtn inline" id="showRef">'+esc(P.showRef?t('Hide'):t('Read it'))+'</button></p>'+(P.showRef && form ? answersHtml_(form, r.answers||{}, 'all') : '');
+    return h;
+  }
+  h+='<p class="sub" style="margin:0 0 8px">'+esc(r.status==='pending' ? gpT('Link made {when}, valid until {until}. Waiting for the leader.',{when:fmtDate_(r.sentAt), until:fmtDate_(r.expiresAt)}) : r.status==='expired' ? t('The last link expired without a reference.') : t('No link made yet.'))+'</p>';
+  if(P.refLink && P.refLinkFor===c.id){
+    h+='<input type="text" id="refLinkBox" readonly value="'+esc(P.refLink)+'" onclick="this.select()"><div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" id="refCopy">'+esc(t('Copy link'))+'</button></div><p class="hint">'+esc(t('Send it to the leader yourself, or the applicant can make their own from their dashboard.'))+'</p>';
+  } else {
+    h+='<button class="btn ghost small" id="refLinkStaff"'+(P.busy?' disabled':'')+'>'+esc(r.status==='pending' ? t('Make a new link') : t('Make a reference link'))+'</button>';
+  }
+  return h;
+}
 function panelVisaHtml_(c){
   if(!c.needsVisa) return '';
   var v=(c.portal && c.portal.visa)||{};
@@ -906,6 +1008,9 @@ function bindPanelExtras_(){
   var c=selected_(); if(!c) return;
   document.querySelectorAll('[data-visaflag]').forEach(function(cb){ cb.onchange=function(){ var flags={}; flags[cb.getAttribute('data-visaflag')]=cb.checked; cb.disabled=true;
     run('portalSetVisaFlags', [P.auth.user, P.auth.pin, c.id, flags], function(d){ if(putCand_(d)) showMsg(t('Saved')); render(); }); }; });
+  on_('showRef', function(){ P.showRef=!P.showRef; render(); });
+  on_('refLinkStaff', function(){ makeRefLink_(c.id, function(link){ P.refLink=link; P.refLinkFor=c.id; var cur=selected_(); if(cur) cur.reference={ status:'pending' }; render(); }); });
+  on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswers', function(){ P.editAnswers=true; P.staffAnswers=JSON.parse(JSON.stringify((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {})); render(); });
   on_('cancelAnswers', function(){ P.editAnswers=false; render(); });
   on_('saveAnswers', function(){
@@ -950,10 +1055,12 @@ function bind_(){
   on_('deleteCand', deleteCand_);
   on_('openForm', function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('viewAnswers', function(){ P.showAnswers=!P.showAnswers; render(); });
+  on_('refNew', function(){ makeRefLink_(null, function(link, d){ P.refLink=link; if(P.boot.application) P.boot.application.reference=d.reference; render(); }); });
+  on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('toForms', function(){ P.view='forms'; render(); });
   on_('toAccounts', function(){ if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
-  bindForm_(); bindForms_(); bindAccounts_(); if(P.view==='crm') bindPanelExtras_();
+  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){
