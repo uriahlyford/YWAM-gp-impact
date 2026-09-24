@@ -488,6 +488,20 @@ forms, documents and references follow.
   (`formHtml_`, `P.answers`, draft autosave via `portalSaveDraft`), `portalSubmit`
   checks required for their audience (`missingRequired_`) and moves stage new → applied.
   Staff read the answers on the record and correct them (`portalStaffSaveAnswers`, logged).
+  After submitting, the applicant can still **edit their own answers** (`portalUpdateAnswers`:
+  whole answer set, required re-checked, logged "Updated their application answers", stage
+  untouched; the dashboard's "Edit my answers" reopens `formHtml_` in update mode — no
+  autosave, "Save changes" on every section). Teams apply with estimated dates and head
+  counts and firm them up this way; the team form's help text says so.
+- **Accounts (staff side, portal admins only, `accountsHtml_`)**: every applicant account
+  in one list — applicant accounts are not in Admin → Accounts, so this is their one
+  place. `portalListAccounts` (no PIN material), `portalCreateApplicant` (same
+  `createApplicant_` as sign-up, `createdBy` = the admin), `portalUpdateAccount` (name,
+  username, email, phone, messenger, country, optional new 4-digit PIN; unique username /
+  email; the CRM record's contact facts follow; refuses staff accounts with
+  `not_applicant`), delete = `portalDeleteApplicant`. Portal staff get `not_authorized`.
+- **A dead screen is the worst failure**: `render()` wraps building and binding in try/catch
+  and shows the error with a Back button instead of leaving nothing clickable.
 - **Khmer or international** (`audienceOf_` — country Cambodia at sign-up, which is why
   country is required there): `refNeeded_` is false for Khmer students and for teams (the
   docs step then has no reference item); `needsVisa_` is true for everyone not from

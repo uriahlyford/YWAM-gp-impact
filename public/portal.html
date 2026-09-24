@@ -154,6 +154,9 @@ textarea { min-height:80px; resize:vertical; }
 /* the forms editor */
 .two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .qcard { background:var(--bg); border:1px solid var(--border2); border-radius:var(--rSm); padding:12px; margin-top:10px; }
+.audTag { display:inline-block; font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase; color:var(--warn); margin-bottom:8px; }
+.qcard.aud-khmer { border-left:3px solid var(--warn); } .qcard.aud-international { border-left:3px solid var(--info); }
+.qcard.aud-international .audTag { color:var(--info); }
 .qcardRow { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center; margin-top:8px; }
 .feTools { display:flex; gap:6px; flex-wrap:wrap; }
 .feTools .hbtn { padding:5px 10px; font-size:12px; } .hbtn.danger { color:var(--bad); border-color:var(--bad); }
@@ -289,7 +292,7 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, editContact:false, note:'' };
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
@@ -325,17 +328,26 @@ var PORTAL_LOGO = 'ywam-logo.png';
 function render(){
   var hb=document.getElementById('hbtns');
   hb.innerHTML='<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+
-    (P.auth && P.boot && P.boot.role==='portal-admin' && (P.view==='crm'||P.view==='forms') ? '<button class="hbtn" id="toForms">'+esc(t('Forms'))+'</button>' : '')+
+    (P.auth && P.boot && P.boot.role==='portal-admin' && (P.view==='crm'||P.view==='forms'||P.view==='accounts') ? '<button class="hbtn" id="toForms">'+esc(t('Forms'))+'</button><button class="hbtn" id="toAccounts">'+esc(t('Accounts'))+'</button>' : '')+
     (P.auth && P.boot ? '<button class="hbtn" id="outBtn">'+esc(t('Sign out'))+'</button>' : '');
   var m=document.getElementById('main');
   var v=P.view;
   /* The gate — everything before you are signed in — is the portal's name
      and logo on top and one card underneath; signed in, the bar goes slim. */
-  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms');
-  m.innerHTML = v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
-    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_()
+  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts');
+  try { m.innerHTML = v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
+    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='accounts' ? accountsHtml_()
     : v==='noaccess' ? noAccessHtml_() : v==='refsoon' ? refSoonHtml_() : loginHtml_();
   bind_();
+  } catch (e) {
+    /* A dead screen where nothing responds is the worst outcome — show what
+       broke and a way out, and keep the error in the console for the report. */
+    console.error(e);
+    m.innerHTML='<div class="center"><div class="card"><h2>'+esc(t('Something went wrong on this screen'))+'</h2><p class="sub">'+esc(String(e && e.message || e))+'</p>'+
+      '<button class="btn small" id="errBack">'+esc(t('Back'))+'</button> <button class="linkbtn inline" id="errOut">'+esc(t('Sign out'))+'</button></div></div>';
+    on_('errBack', function(){ P.view = (P.boot && P.boot.role==='applicant') ? 'me' : (P.boot ? 'crm' : 'login'); P.sel=null; P.formDraft=null; P.accSel=null; P.accNew=false; render(); });
+    on_('errOut', signOut_);
+  }
 }
 function langRowHtml_(){
   return '<div class="langRow"><button id="langBtn2">'+(LANG==='km' ? 'English' : 'ភាសាខ្មែរ')+'</button></div>';
@@ -415,7 +427,10 @@ function meHtml_(){
   var submitted = !!app.submittedAt;
   var total = d.form ? askedAll_(d.form, app.audience).length : 0, done = d.form ? askedAll_(d.form, app.audience).filter(function(q){ return answered_(q, P.answers[q.id]); }).length : 0;
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📝 '+esc(t('Application form'))+'</h3>'+(submitted?'<button class="linkbtn inline" id="viewAnswers">'+esc(P.showAnswers?t('Hide'):t('View my answers'))+'</button>':'')+'</div>'+
-    (submitted ? '<p class="sub" style="margin:0">✓ '+esc(t('Submitted'))+(app.submittedAt?' · '+esc(fmtDate_(app.submittedAt)):'')+'</p>'+(P.showAnswers ? answersHtml_(d.form, P.answers, app.audience) : '')
+    (submitted ? '<p class="sub" style="margin:0">✓ '+esc(t('Submitted'))+(app.submittedAt?' · '+esc(fmtDate_(app.submittedAt)):'')+(app.answersUpdatedAt?' · '+esc(gpT('updated {when}',{when:fmtDate_(app.answersUpdatedAt)})):'')+'</p>'+
+        (app.type==='team' ? '<p class="hint">'+esc(t('Dates and head counts can be estimates — come back and update them here as your plans firm up.'))+'</p>' : '')+
+        (app.status!=='closed' ? '<button class="btn ghost small" id="editAnswersMine" style="margin-top:10px">'+esc(t('Edit my answers'))+'</button>' : '')+
+        (P.showAnswers ? answersHtml_(d.form, P.answers, app.audience) : '')
       : '<p class="sub" style="margin:0 0 8px">'+esc(done ? gpT('{done} of {total} answered — pick up where you left off.',{done:done,total:total}) : t('A few sections about you, your faith and what you are applying for. Your answers save as you go.'))+'</p>'+
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
   h+=visaCardHtml_(app);
@@ -452,7 +467,7 @@ function crmHtml_(){
   var whatKeys=APPLY.filter(function(a){ return !scope || scope.indexOf(a.type)>-1; }).map(function(a){ return a.key; });
   if(P.what===null || (P.what && whatKeys.indexOf(P.what)===-1)) P.what = (scope && whatKeys.length===1) ? whatKeys[0] : '';
   var whatOf=function(c){ return c.type==='student' ? (c.school||'') : c.type; };
-  var list=all.filter(function(c){ return (!P.campusFilter || c.campus===P.campusFilter) && (!P.what || whatOf(c)===P.what); });
+  var list=all.filter(function(c){ return (!P.campusFilter || c.campus===P.campusFilter) && (!P.what || whatOf(c)===P.what) && (!P.audFilter || c.audience===P.audFilter); });
   var live=list.filter(function(c){ return !c.archived; });
   var counts={}; live.forEach(function(c){ counts[c.stage]=(counts[c.stage]||0)+1; });
   var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Applications'))+'</h1><p class="sub">'+esc(gpT('{n} open · signed in as {name} ({role})',{n:live.length, name:d.me.name, role:(d.role==='portal-admin' ? t('portal admin') : t('portal staff'))}))+'</p></div></div>';
@@ -463,6 +478,8 @@ function crmHtml_(){
   h+='<div class="whatTabs" role="tablist">'+(scope && whatKeys.length===1 ? '' : '<button class="whatTab'+(P.what===''?' on':'')+'" data-whatfilter="" role="tab">'+esc(t('All'))+' <span class="n">'+byCampus.length+'</span></button>')+
     whatKeys.map(function(k){ var a=applyByKey_(k); var n=byCampus.filter(function(c){ return whatOf(c)===k; }).length;
       return '<button class="whatTab'+(P.what===k?' on':'')+'" data-whatfilter="'+k+'" role="tab">'+esc(k==='team' ? t('Teams') : a.label)+' <span class="n">'+n+'</span></button>'; }).join('')+'</div>';
+  h+='<div class="chips" style="margin:-6px 0 12px">'+[['',t('Khmer and international')],['khmer',t('Khmer')],['international',t('International')]].map(function(x){
+    return '<button class="chip'+(P.audFilter===x[0]?' on':'')+'" data-audfilter="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('')+'</div>';
   h+='<div class="tiles">'+[['new',t('New')],['applied',t('Applied')],['contacted',t('Contacted')],['interview',t('Interview')],['accepted',t('Accepted')],['practical',t('Getting ready')]].map(function(x){
     return '<div class="tile"><div class="tileNum">'+(counts[x[0]]||0)+'</div><div class="tileLbl">'+esc(x[1])+'</div></div>'; }).join('')+'</div>';
   h+='<div class="crm'+(P.sel?' open':'')+'"><div>';
@@ -482,7 +499,7 @@ function crmHtml_(){
     var chat=chatHref_(c.messenger, c.phone);
     h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
       '<span><span class="who">'+esc(c.name)+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span></span>'+
-      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(P.campusFilter?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
+      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(P.campusFilter?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
       '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
       '<span class="meta desk">'+esc(owner)+'</span>'+
       '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
@@ -547,16 +564,23 @@ function formHtml_(){
   var d=P.boot, app=d.application, form=d.form;
   if(!form){ return '<div class="center"><div class="card"><p class="sub">'+esc(t('Loading…'))+'</p></div></div>'; }
   var secs=(form.sections||[]).filter(function(s){ return askedIn_(s, app.audience).length; });
+  if(!secs.length){ return '<div class="center"><div class="card"><p class="sub">'+esc(t('This form has no questions yet — our team is still setting it up. Please check back soon.'))+'</p><button class="linkbtn" id="formClose2">'+esc(t('Back to my application'))+'</button></div></div>'; }
   if(P.formSec>=secs.length) P.formSec=secs.length-1; if(P.formSec<0) P.formSec=0;
   var sec=secs[P.formSec], qs=askedIn_(sec, app.audience);
   var h='<div class="wide"><div class="gateTitle"><div class="eyebrow">'+esc(lt_(form.title))+'</div>'+
     '<div class="formProgress"><span>'+esc(gpT('Section {i} of {n}',{i:P.formSec+1, n:secs.length}))+'</span><div class="bar"><div style="width:'+Math.round((P.formSec+1)/secs.length*100)+'%"></div></div></div></div>';
   h+='<div class="card"><h2>'+esc(lt_(sec.title))+'</h2>'+(lt_(sec.help)?'<p class="sub">'+esc(lt_(sec.help))+'</p>':'')+
     qs.map(function(q){ return questionHtml_(q, P.answers[q.id], 'a_', P.formMissing && P.formMissing.indexOf(q.id)>-1); }).join('')+'</div>';
-  h+='<div class="formNav">'+(P.formSec>0 ? '<button class="btn ghost small" id="formBack">← '+esc(t('Back'))+'</button>' : '<button class="btn ghost small" id="formClose">'+esc(t('Save and close'))+'</button>')+
-    (P.formSec<secs.length-1 ? '<button class="btn small" id="formNext">'+esc(t('Next'))+' →</button>' : '<button class="btn small" id="formSubmit"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Sending…'):t('Submit my application'))+'</button>')+'</div>';
-  h+='<p class="hint" style="text-align:center">'+esc(P.draftSaved ? gpT('Draft saved {when}',{when:P.draftSaved}) : t('Your answers save as a draft as you go.'))+' · <span class="req">*</span> '+esc(t('required'))+'</p>';
-  h+='<button class="linkbtn" id="formClose2">'+esc(t('Back to my application'))+'</button></div>';
+  /* Two modes: filling in (draft autosave, Submit on the last section) and,
+     after submitting, updating — nothing autosaves, Save changes is on every
+     section, so a team leader can fix one date and be done. */
+  var updating = !!app.submittedAt;
+  h+='<div class="formNav">'+(P.formSec>0 ? '<button class="btn ghost small" id="formBack">← '+esc(t('Back'))+'</button>' : '<button class="btn ghost small" id="formClose">'+esc(updating ? t('Cancel') : t('Save and close'))+'</button>')+
+    (P.formSec<secs.length-1 ? '<button class="btn '+(updating?'ghost ':'')+'small" id="formNext">'+esc(t('Next'))+' →</button>' : '')+
+    (updating ? '<button class="btn small" id="formSubmit"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save changes'))+'</button>'
+      : (P.formSec<secs.length-1 ? '' : '<button class="btn small" id="formSubmit"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Sending…'):t('Submit my application'))+'</button>'))+'</div>';
+  h+='<p class="hint" style="text-align:center">'+esc(updating ? t('Your changes are kept when you press Save changes.') : (P.draftSaved ? gpT('Draft saved {when}',{when:P.draftSaved}) : t('Your answers save as a draft as you go.')))+' · <span class="req">*</span> '+esc(t('required'))+'</p>';
+  h+='<button class="linkbtn" id="formClose2">'+esc(updating ? t('Back without saving') : t('Back to my application'))+'</button></div>';
   return h;
 }
 function readAnswers_(root){
@@ -582,7 +606,7 @@ function bindForm_(){
   var app=P.boot.application, form=P.boot.form;
   var secs=(form.sections||[]).filter(function(s){ return askedIn_(s, app.audience).length; });
   document.querySelectorAll('[data-ans]').forEach(function(el){ el.oninput=el.onchange=function(){ readAnswers_(); P.formMissing=null; saveDraft_(false); }; });
-  var close=function(){ readAnswers_(); saveDraft_(true); P.view='me'; render(); };
+  var close=function(){ readAnswers_(); saveDraft_(true); if(app.submittedAt){ P.answers=JSON.parse(JSON.stringify(app.answers||{})); P.editMine=false; } P.view='me'; render(); };
   on_('formClose', close); on_('formClose2', close);
   on_('formBack', function(){ readAnswers_(); saveDraft_(true); P.formSec--; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('formNext', function(){
@@ -596,15 +620,129 @@ function bindForm_(){
     var miss=sectionMissing_(secs[P.formSec], app.audience);
     if(miss.length){ P.formMissing=miss; render(); showMsg(t('Please answer the questions marked *')); return; }
     clearTimeout(draftTimer_); P.busy=true; render();
-    run('portalSubmit', [P.auth.user, P.auth.pin, P.answers], function(d){
+    var updating=!!app.submittedAt;
+    run(updating ? 'portalUpdateAnswers' : 'portalSubmit', [P.auth.user, P.auth.pin, P.answers], function(d){
       P.busy=false;
-      if(d && d.ok){ P.boot=d; P.answers=d.application.answers||{}; P.view='me'; P.formSec=0; showMsg(t('Your application is in. We will be in touch!')); render(); return; }
+      if(d && d.ok){ P.boot=d; P.answers=d.application.answers||{}; P.editMine=false; P.view='me'; P.formSec=0; showMsg(updating ? t('Your changes are saved.') : t('Your application is in. We will be in touch!')); render(); return; }
       if(d && d.err==='missing' && d.missing){
         P.formMissing=d.missing;
         for(var i=0;i<secs.length;i++){ if(askedIn_(secs[i], app.audience).some(function(q){ return d.missing.indexOf(q.id)>-1; })){ P.formSec=i; break; } }
         showMsg(t('A few required answers are still missing.')); render(); return;
       }
       showMsg(d && d.err==='submitted' ? t('This application was already submitted.') : t('Could not send — try again.')); render();
+    });
+  });
+}
+/* ==================== Accounts (staff side, portal admins) ====================
+   Every applicant account in one list: who, what they applied for, where the
+   application is. Open one to fix the name, contact details, country or
+   username, set a new PIN when someone is locked out, jump to the
+   application, or delete the whole thing. Add makes an account on someone's
+   behalf (a team leader on the phone, a student without email access). */
+function accountsHtml_(){
+  var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Accounts'))+'</h1><p class="sub">'+esc(t('Every applicant account. Open one to edit it, set a new PIN or delete it; Add makes an account for someone.'))+'</p></div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost small" id="toCrm">← '+esc(t('Applications'))+'</button><button class="btn small" id="accAdd">+ '+esc(t('Add account'))+'</button></div></div>';
+  if(P.accounts===null){ return h+'<p class="sub" style="padding:30px 0;text-align:center">'+esc(t('Loading…'))+'</p>'; }
+  var q=String(P.accQ||'').toLowerCase();
+  var list=P.accounts.filter(function(a){ return !q || [a.name,a.username,a.email,a.phone,a.country].join(' ').toLowerCase().indexOf(q)>-1; });
+  h+='<div class="crm"><div>';
+  h+='<input type="search" id="accQ" placeholder="'+esc(t('Search name, username, email, phone'))+'" value="'+esc(P.accQ||'')+'" style="margin-bottom:10px">';
+  h+='<p class="hint" style="margin:0 0 8px">'+esc(gpT('{n} accounts',{n:list.length}))+'</p>';
+  h+='<div class="tbl">'+(list.length ? list.map(function(a){
+    return '<div class="trow arow'+(P.accSel===a.id?' on':'')+'" data-acc="'+esc(a.id)+'"><div class="who">'+esc(a.name)+'</div>'+
+      '<div class="meta">@'+esc(a.username)+' · '+esc(applyLabel_(a.type, a.school))+' · '+esc(campusName_(a.campus))+(a.country?' · '+esc(a.country):'')+'<br>'+esc(a.email)+(a.phone?' · '+esc(a.phone):'')+'</div>'+
+      '<span class="stage"><span class="pill '+esc(a.status)+'">'+esc(a.stage ? t(STAGE_LABEL[a.stage]||a.stage) : t('no application'))+'</span></span></div>';
+  }).join('') : '<p class="sub" style="padding:18px">'+esc(t('No accounts match.'))+'</p>')+'</div></div><div>';
+  if(P.accNew) h+=accountFormHtml_(null);
+  else { var sel=P.accounts.filter(function(a){ return a.id===P.accSel; })[0]; if(sel) h+=accountFormHtml_(sel); }
+  h+='</div></div>';
+  return h;
+}
+function accountFormHtml_(a){
+  var f=P.accForm, isNew=!a;
+  var h='<div class="panel" id="accPanel"><div class="panelHead"><h2 style="margin:0">'+esc(isNew ? t('Add an account') : a.name)+'</h2><button class="hbtn" id="accClose">✕</button></div>';
+  if(isNew){
+    var here=f.campus||DEFAULT_CAMPUS, pick=applyByKey_(f.apply);
+    h+='<label class="f" style="margin-top:6px">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-acccampus', here)+
+      '<label class="f">'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(pick&&pick.key===x.key?' on':'')+'" data-accpick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>';
+  } else {
+    h+='<p class="sub" style="margin:2px 0 10px">'+esc(applyLabel_(a.type, a.school))+' · '+esc(campusName_(a.campus))+(a.created?' · '+esc(gpT('since {when}',{when:fmtDate_(a.created)})):'')+'</p>'+
+      (a.candidateId ? '<button class="linkbtn inline" id="accOpenApp">'+esc(t('Open the application'))+' →</button>' : '<p class="hint">'+esc(t('This account has no application record.'))+'</p>');
+  }
+  h+='<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="acc_name" value="'+esc(f.name||'')+'">'+
+    '<label class="f">'+esc(t('Username'))+'</label><input type="text" id="acc_user" autocapitalize="none" value="'+esc(f.username||'')+'"><p class="hint">'+esc(t('Lowercase letters, numbers, dots or dashes — 2 to 20 characters.'))+'</p>'+
+    '<label class="f">'+esc(t('Email'))+'</label><input type="email" id="acc_email" value="'+esc(f.email||'')+'">'+
+    '<label class="f">'+esc(t('Phone number (with country code)'))+'</label><input type="tel" id="acc_phone" placeholder="+855 …" value="'+esc(f.phone||'')+'">'+
+    '<label class="f">'+esc(t('Where can we message you?'))+'</label><div class="seg"><button data-accmsgr="whatsapp" class="'+(f.messenger==='whatsapp'?'on':'')+'">WhatsApp</button><button data-accmsgr="telegram" class="'+(f.messenger==='telegram'?'on':'')+'">Telegram</button></div>'+
+    '<label class="f">'+esc(t('Country'))+'</label><select id="acc_country"><option value="">'+esc(t('— choose —'))+'</option>'+(typeof COUNTRIES!=='undefined' ? COUNTRIES : ['Cambodia']).map(function(c){ return '<option value="'+esc(c)+'"'+(f.country===c?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+'</select>'+
+    '<label class="f">'+esc(isNew ? t('4-digit PIN') : t('New PIN (leave empty to keep the current one)'))+'</label><input type="text" id="acc_pin" inputmode="numeric" maxlength="4" autocomplete="off" value="'+esc(f.pin||'')+'">';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center"><button class="btn small" id="accSave"'+(P.busy?' disabled':'')+'>'+esc(P.busy ? t('Saving…') : (isNew ? t('Create the account') : t('Save')))+'</button>'+
+    (!isNew && a.candidateId ? '<button class="linkbtn inline danger" id="accDelete">'+esc(t('Delete this account'))+'</button>' : '')+'</div></div>';
+  return h;
+}
+function loadAccounts_(){
+  run('portalListAccounts', [P.auth.user, P.auth.pin], function(d){
+    if(d && d.ok){ P.accounts=d.accounts||[]; render(); return; }
+    P.accounts=[]; showMsg(d && d.err==='not_authorized' ? t('Only a portal admin can see the accounts') : t('Could not load')); render();
+  });
+}
+function readAccForm_(){
+  var g=function(id){ var el=document.getElementById(id); return el ? el.value : ''; };
+  P.accForm.name=g('acc_name'); P.accForm.username=g('acc_user'); P.accForm.email=g('acc_email'); P.accForm.phone=g('acc_phone'); P.accForm.country=g('acc_country'); P.accForm.pin=g('acc_pin');
+}
+function accErr_(e){
+  return e==='taken' ? t('That username is already taken.') : e==='email_taken' ? t('That email is already on another account.') : e==='bad_username' ? t('Username: lowercase letters, numbers, dots or dashes — 2 to 20 characters.')
+    : e==='bad_pin' ? t('The PIN is 4 digits.') : e==='bad_email' ? t('Add a real email address.') : e==='phone_required' ? t('Add a phone number with the country code.') : e==='messenger_required' ? t('Choose WhatsApp or Telegram.')
+    : e==='country_required' ? t('Choose a country.') : e==='name_required' ? t('Add the full name.') : e==='not_authorized' ? t('Only a portal admin can do this') : t('Could not save — try again.');
+}
+function bindAccounts_(){
+  if(P.view!=='accounts') return;
+  if(P.accounts===null){ loadAccounts_(); return; }
+  on_('toCrm', function(){ P.view='crm'; render(); });
+  on_('accAdd', function(){ P.accNew=true; P.accSel=null; P.accForm={ campus:DEFAULT_CAMPUS, messenger:'whatsapp' }; render(); });
+  on_('accClose', function(){ P.accNew=false; P.accSel=null; render(); });
+  var q=document.getElementById('accQ'); if(q){ q.oninput=function(){ P.accQ=q.value; var keep=q.selectionStart; render(); var n=document.getElementById('accQ'); if(n){ n.focus(); try{ n.setSelectionRange(keep, keep); }catch(e){} } }; }
+  document.querySelectorAll('[data-acc]').forEach(function(r){ r.onclick=function(){ var id=r.getAttribute('data-acc'); var a=P.accounts.filter(function(x){ return x.id===id; })[0]; if(!a) return; P.accNew=false; P.accSel=id; P.accForm={ name:a.name, username:a.username, email:a.email, phone:a.phone, messenger:a.messenger, country:a.country }; render(); }; });
+  document.querySelectorAll('[data-acccampus]').forEach(function(b){ b.onclick=function(){ readAccForm_(); P.accForm.campus=b.getAttribute('data-acccampus'); var a=applyByKey_(P.accForm.apply); if(a && !offeredAt_(a, P.accForm.campus)) P.accForm.apply=null; render(); }; });
+  document.querySelectorAll('[data-accpick]').forEach(function(b){ b.onclick=function(){ readAccForm_(); P.accForm.apply=b.getAttribute('data-accpick'); render(); }; });
+  document.querySelectorAll('[data-accmsgr]').forEach(function(b){ b.onclick=function(){ readAccForm_(); P.accForm.messenger=b.getAttribute('data-accmsgr'); render(); }; });
+  on_('accOpenApp', function(){ var a=P.accounts.filter(function(x){ return x.id===P.accSel; })[0]; if(!a) return; P.view='crm'; P.sel=a.candidateId; P.what=''; P.campusFilter=''; P.audFilter=''; P.filter=''; render(); });
+  on_('accSave', function(){
+    readAccForm_(); var f=P.accForm;
+    if(P.accNew){
+      var a=applyByKey_(f.apply);
+      if(!a){ showMsg(t('Pick what they are applying for.')); return; }
+      if(!/^\d{4}$/.test(f.pin||'')){ showMsg(t('The PIN is 4 digits.')); return; }
+      P.busy=true; render();
+      var payload={ username:String(f.username||'').trim().toLowerCase(), pin:f.pin, name:String(f.name||'').trim(), email:String(f.email||'').trim(), phone:String(f.phone||'').trim(), messenger:f.messenger, country:f.country||'', type:a.type, school:a.school, campus:f.campus||DEFAULT_CAMPUS };
+      run('portalCreateApplicant', [P.auth.user, P.auth.pin, payload], function(d){
+        P.busy=false;
+        if(d && d.ok){ P.accounts=[d.account].concat(P.accounts); P.accNew=false; P.accSel=d.account.id; P.accForm={ name:d.account.name, username:d.account.username, email:d.account.email, phone:d.account.phone, messenger:d.account.messenger, country:d.account.country }; showMsg(gpT('Account made — tell {name} their username and PIN.',{name:d.account.name})); render(); return; }
+        showMsg(accErr_(d && d.err)); render();
+      });
+      return;
+    }
+    var id=P.accSel; if(!id) return;
+    if(f.pin && !/^\d{4}$/.test(f.pin)){ showMsg(t('The PIN is 4 digits.')); return; }
+    P.busy=true; render();
+    var upd={ name:f.name, username:String(f.username||'').trim().toLowerCase(), email:f.email, phone:f.phone, messenger:f.messenger, country:f.country };
+    if(f.pin) upd.newPin=f.pin;
+    run('portalUpdateAccount', [P.auth.user, P.auth.pin, id, upd], function(d){
+      P.busy=false;
+      if(d && d.ok){ P.accounts=P.accounts.map(function(x){ return x.id===id ? d.account : x; }); P.accForm.pin=''; showMsg(f.pin ? t('Saved — the new PIN works now.') : t('Saved')); render(); return; }
+      showMsg(accErr_(d && d.err)); render();
+    });
+  });
+  on_('accDelete', function(){
+    var a=P.accounts.filter(function(x){ return x.id===P.accSel; })[0]; if(!a || !a.candidateId) return;
+    var typed=prompt(gpT('This deletes {name}’s account and application for good. Type their name to confirm.', {name:a.name}));
+    if(typed===null) return;
+    if(String(typed).trim().toLowerCase()!==String(a.name).trim().toLowerCase()){ showMsg(t('The name did not match — nothing was deleted.')); return; }
+    P.busy=true; render();
+    run('portalDeleteApplicant', [P.auth.user, P.auth.pin, a.candidateId], function(d){
+      P.busy=false;
+      if(d && d.ok){ if(d.role) P.boot=d; P.accounts=P.accounts.filter(function(x){ return x.id!==a.id; }); P.accSel=null; showMsg(t('Deleted')); render(); return; }
+      showMsg(d && d.err==='not_authorized' ? t('Only a portal admin can delete') : t('Could not delete')); render();
     });
   });
 }
@@ -644,6 +782,7 @@ function visaCardHtml_(app){
   var tick=function(done, label){ return '<li class="'+(done?'done':'')+'">'+(done?'✓':'○')+' '+esc(label)+(done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; };
   return '<div class="card"><h3 style="margin-top:0">🛂 '+esc(t('Your e-visa, step by step'))+'</h3>'+
     '<p class="sub">'+esc(t('The Cambodian government has changed how visitors enter, so the process looks a little different now.'))+'</p>'+
+    (app.type==='team' ? '<div class="banner">'+esc(t('The location your team arrives at first is responsible for your visa. If that is us, we send the letter of invitation once your flights are confirmed; if you start elsewhere in Cambodia, that location will.'))+'</div>' : '')+
     '<ul class="subItems" style="margin-bottom:10px">'+tick(!!v.flightsConfirmed, t('Flights confirmed'))+tick(!!v.invitationSent, t('Letter of invitation sent to you'))+'</ul>'+
     '<ol class="guide">'+VISA_STEPS.map(function(s){ return '<li>'+esc(t(s))+'</li>'; }).join('')+'</ol>'+
     '<div class="eyebrow" style="margin-top:12px">'+esc(t('Preparing to come'))+'</div><ol class="guide">'+VISA_PREP.map(function(s){ return '<li>'+esc(t(s))+'</li>'; }).join('')+'</ol>'+
@@ -659,7 +798,7 @@ var FE_TYPES=[['short','Short answer'],['long','Paragraph'],['choice','Multiple 
 var FE_AUD=[['all','Everyone'],['khmer','Khmer applicants only'],['international','International applicants only']];
 function feOptsText_(opts){ return (opts||[]).map(function(o){ return o.km ? (o.en+' | '+o.km) : o.en; }).join('\n'); }
 function feOptsParse_(txt){ return String(txt||'').split('\n').map(function(l){ var p=l.split('|'); return { en:(p[0]||'').trim(), km:(p[1]||'').trim() }; }).filter(function(o){ return o.en||o.km; }); }
-function feNewQ_(){ return { id:'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), type:'short', label:{en:'',km:''}, help:{en:'',km:''}, required:false, audience:'all', options:[] }; }
+function feNewQ_(){ var aud = (['dts','dbs','bcs','sms'].indexOf(P.formKey)>-1 && P.feAud!=='all') ? P.feAud : 'all'; return { id:'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), type:'short', label:{en:'',km:''}, help:{en:'',km:''}, required:false, audience:aud, options:[] }; }
 function formsHtml_(){
   var d=P.boot, forms=d.forms||{};
   if(!P.formKey || !forms[P.formKey]) P.formKey='dts';
@@ -668,6 +807,14 @@ function formsHtml_(){
   var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Application forms'))+'</h1><p class="sub">'+esc(t('What each kind of applicant is asked. Edit the wording in both languages, add or remove questions, then Save.'))+'</p></div>'+
     '<button class="btn ghost small" id="toCrm">← '+esc(t('Applications'))+'</button></div>';
   h+='<div class="whatTabs">'+APPLY.map(function(a){ return '<button class="whatTab'+(P.formKey===a.key?' on':'')+'" data-formkey="'+a.key+'">'+esc(a.key==='team'?t('Teams'):a.label)+'</button>'; }).join('')+'</div>';
+  var isSchool = ['dts','dbs','bcs','sms'].indexOf(P.formKey)>-1;
+  if(isSchool){
+    h+='<div class="card" style="padding:14px 16px"><label class="f" style="margin-top:0">'+esc(t('Show the questions for'))+'</label>'+
+      '<div class="seg">'+[['all',t('Everyone')],['khmer',t('Khmer students')],['international',t('International students')]].map(function(x){ return '<button data-feaud="'+x[0]+'" class="'+(P.feAud===x[0]?'on':'')+'">'+esc(x[1])+'</button>'; }).join('')+'</div>'+
+      '<p class="hint">'+esc(P.feAud==='all' ? t('Every question. A question marked Everyone is asked of both Khmer and international students; mark one Khmer only or International only where what you ask differs.')
+        : P.feAud==='khmer' ? t('What a Khmer student is asked: the Everyone questions plus the Khmer-only ones. A question you add here is Khmer only.')
+        : t('What an international student is asked: the Everyone questions plus the International-only ones. A question you add here is International only.'))+'</p></div>';
+  }
   h+='<div class="card"><label class="f" style="margin-top:0">'+esc(t('Form title'))+'</label><div class="two2"><input type="text" data-fe="title.en" value="'+esc(f.title.en)+'" placeholder="English"><input type="text" data-fe="title.km" value="'+esc(f.title.km)+'" placeholder="ខ្មែរ"></div>'+
     (forms[P.formKey].isDefault ? '<p class="hint">'+esc(t('This is the shipped default — it has not been edited yet.'))+'</p>' : '<p class="hint">'+esc(gpT('Last saved {when}',{when:fmtDate_(forms[P.formKey].updated)}))+'</p>')+'</div>';
   f.sections.forEach(function(sec, si){
@@ -676,9 +823,10 @@ function formsHtml_(){
       '<div class="two2"><input type="text" data-fe="sections.'+si+'.title.en" value="'+esc(sec.title.en)+'" placeholder="'+esc(t('Section title (English)'))+'"><input type="text" data-fe="sections.'+si+'.title.km" value="'+esc(sec.title.km)+'" placeholder="'+esc(t('Section title (Khmer)'))+'"></div>'+
       '<div class="two2" style="margin-top:8px"><input type="text" data-fe="sections.'+si+'.help.en" value="'+esc(sec.help.en)+'" placeholder="'+esc(t('Help text (English, optional)'))+'"><input type="text" data-fe="sections.'+si+'.help.km" value="'+esc(sec.help.km)+'" placeholder="'+esc(t('Help text (Khmer, optional)'))+'"></div>';
     sec.questions.forEach(function(q, qi){
+      if(isSchool && P.feAud!=='all' && q.audience!=='all' && q.audience!==P.feAud) return;
       var p='sections.'+si+'.questions.'+qi+'.';
       var withOpts=q.type==='choice'||q.type==='multi'||q.type==='yesno';
-      h+='<div class="qcard" data-q="'+si+'|'+qi+'"><div class="two2"><input type="text" data-fe="'+p+'label.en" value="'+esc(q.label.en)+'" placeholder="'+esc(t('Question (English)'))+'"><input type="text" data-fe="'+p+'label.km" value="'+esc(q.label.km)+'" placeholder="'+esc(t('Question (Khmer)'))+'"></div>'+
+      h+='<div class="qcard'+(q.audience!=='all'?' aud-'+q.audience:'')+'" data-q="'+si+'|'+qi+'">'+(q.audience!=='all' ? '<div class="audTag">'+esc(q.audience==='khmer'?t('Khmer students only'):t('International students only'))+'</div>' : '')+'<div class="two2"><input type="text" data-fe="'+p+'label.en" value="'+esc(q.label.en)+'" placeholder="'+esc(t('Question (English)'))+'"><input type="text" data-fe="'+p+'label.km" value="'+esc(q.label.km)+'" placeholder="'+esc(t('Question (Khmer)'))+'"></div>'+
         '<div class="two2" style="margin-top:6px"><input type="text" data-fe="'+p+'help.en" value="'+esc(q.help.en)+'" placeholder="'+esc(t('Help text (English, optional)'))+'"><input type="text" data-fe="'+p+'help.km" value="'+esc(q.help.km)+'" placeholder="'+esc(t('Help text (Khmer, optional)'))+'"></div>'+
         '<div class="qcardRow"><select data-fe="'+p+'type" data-rerender="1">'+FE_TYPES.map(function(x){ return '<option value="'+x[0]+'"'+(q.type===x[0]?' selected':'')+'>'+esc(t(x[1]))+'</option>'; }).join('')+'</select>'+
         '<select data-fe="'+p+'audience">'+FE_AUD.map(function(x){ return '<option value="'+x[0]+'"'+(q.audience===x[0]?' selected':'')+'>'+esc(t(x[1]))+'</option>'; }).join('')+'</select>'+
@@ -704,6 +852,7 @@ function feRead_(){
 function bindForms_(){
   if(P.view!=='forms') return;
   on_('toCrm', function(){ P.view='crm'; render(); });
+  document.querySelectorAll('[data-feaud]').forEach(function(b){ b.onclick=function(){ feRead_(); P.feAud=b.getAttribute('data-feaud'); render(); }; });
   document.querySelectorAll('[data-formkey]').forEach(function(b){ b.onclick=function(){ var k=b.getAttribute('data-formkey'); if(k===P.formKey) return; if(P.formDirty && !confirm(t('Leave without saving this form?'))) return; P.formKey=k; P.formDraft=null; P.formDirty=false; render(); }; });
   document.querySelectorAll('[data-fe]').forEach(function(el){
     el.onchange=el.oninput=function(){ feRead_(); P.formDirty=true; if(el.getAttribute('data-rerender')) render(); };
@@ -779,6 +928,7 @@ function bind_(){
   document.querySelectorAll('[data-campus]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.campus=b.getAttribute('data-campus'); var a=applyByKey_(P.apply); if(a && !offeredAt_(a, P.campus)) P.apply=null; render(); }; });
   document.querySelectorAll('[data-campusfilter]').forEach(function(b){ b.onclick=function(){ P.campusFilter=b.getAttribute('data-campusfilter'); P.sel=null; render(); }; });
   document.querySelectorAll('[data-whatfilter]').forEach(function(b){ b.onclick=function(){ P.what=b.getAttribute('data-whatfilter'); P.sel=null; render(); }; });
+  document.querySelectorAll('[data-audfilter]').forEach(function(b){ b.onclick=function(){ P.audFilter=b.getAttribute('data-audfilter'); P.sel=null; render(); }; });
   document.querySelectorAll('[data-pick]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.apply=b.getAttribute('data-pick'); render(); }; });
   document.querySelectorAll('[data-msgr]').forEach(function(b){ b.onclick=function(){ keepReg_(); P.reg.messenger=b.getAttribute('data-msgr'); render(); }; });
   on_('regBtn', register_);
@@ -800,8 +950,10 @@ function bind_(){
   on_('deleteCand', deleteCand_);
   on_('openForm', function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('viewAnswers', function(){ P.showAnswers=!P.showAnswers; render(); });
+  on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('toForms', function(){ P.view='forms'; render(); });
-  bindForm_(); bindForms_(); if(P.view==='crm') bindPanelExtras_();
+  on_('toAccounts', function(){ if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
+  bindForm_(); bindForms_(); bindAccounts_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){

@@ -110,23 +110,27 @@ const teamForm = {
       q('focus', 'long', 'What kind of outreach is your team hoping to do?', 'ក្រុមរបស់អ្នកសង្ឃឹមធ្វើការផ្សព្វផ្សាយប្រភេទណា?', { required: true })
     ]
   }, {
-    id: 'dates', title: T('Dates', 'កាលបរិច្ឆេទ'), help: T('Dates staying at our base.', 'កាលបរិច្ឆេទស្នាក់នៅមូលដ្ឋានរបស់យើង។'),
+    id: 'dates', title: T('Dates at our base', 'កាលបរិច្ឆេទនៅមូលដ្ឋានរបស់យើង'), help: T('The days your team stays with us. Estimates are fine — you can come back and update them in your account as your plans firm up.', 'ថ្ងៃដែលក្រុមរបស់អ្នកស្នាក់នៅជាមួយយើង។ ការប៉ាន់ស្មានក៏បាន — អ្នកអាចត្រឡប់មកកែក្នុងគណនីរបស់អ្នក នៅពេលផែនការច្បាស់ជាងនេះ។'),
     questions: [
       q('arrival', 'date', 'Arrival at our base', 'មកដល់មូលដ្ឋានរបស់យើង', { required: true }),
-      q('departure', 'date', 'Departure from our base', 'ចាកចេញពីមូលដ្ឋានរបស់យើង', { required: true }),
-      q('otherLocations', 'long', 'Will you serve in other locations in Cambodia before or after our base? If so, where — and will our base be the first place you serve?', 'អ្នកនឹងបម្រើនៅទីកន្លែងផ្សេងក្នុងកម្ពុជាមុន ឬក្រោយមូលដ្ឋានរបស់យើងទេ? បើដូច្នេះ នៅទីណា — ហើយមូលដ្ឋានរបស់យើងជាកន្លែងដំបូងដែលអ្នកបម្រើឬ?', { required: true })
+      q('departure', 'date', 'Departure from our base', 'ចាកចេញពីមូលដ្ឋានរបស់យើង', { required: true })
     ]
   }, {
-    id: 'visa', title: T('Visa', 'ទិដ្ឋាការ'), help: T('This decides the visa we invite you on.', 'នេះកំណត់ទិដ្ឋាការដែលយើងអញ្ជើញអ្នក។'),
+    id: 'cambodia', title: T('Dates in Cambodia', 'កាលបរិច្ឆេទនៅកម្ពុជា'),
+    help: T('For your visa: your whole time in the country, not only at our base. The location your team starts at is responsible for handling your visa.', 'សម្រាប់ទិដ្ឋាការរបស់អ្នក៖ ពេលវេលាទាំងមូលក្នុងប្រទេស មិនមែនតែនៅមូលដ្ឋានយើងទេ។ ទីតាំងដែលក្រុមរបស់អ្នកចាប់ផ្តើមមុនគេ ទទួលខុសត្រូវរៀបចំទិដ្ឋាការរបស់អ្នក។'),
     questions: [
-      q('totalDays', 'short', 'How many days will you be in Cambodia in total, and what are those dates?', 'អ្នកនឹងនៅកម្ពុជាប៉ុន្មានថ្ងៃសរុប ហើយកាលបរិច្ឆេទណាខ្លះ?', { required: true, help: T('Your whole time in the country, not only at our base.', 'ពេលវេលាទាំងមូលក្នុងប្រទេស មិនមែនតែនៅមូលដ្ឋានយើងទេ។') })
+      q('arrivalKh', 'date', 'Arrival in Cambodia', 'មកដល់កម្ពុជា', { required: true }),
+      q('departureKh', 'date', 'Departure from Cambodia', 'ចាកចេញពីកម្ពុជា', { required: true }),
+      q('otherLocations', 'long', 'Will you serve in other locations in Cambodia before or after our base? If so, where?', 'អ្នកនឹងបម្រើនៅទីកន្លែងផ្សេងក្នុងកម្ពុជាមុន ឬក្រោយមូលដ្ឋានរបស់យើងទេ? បើដូច្នេះ នៅទីណា?', { required: true }),
+      q('firstLocation', 'choice', 'Which location will your team arrive at first?', 'ក្រុមរបស់អ្នកនឹងមកដល់ទីតាំងណាមុនគេ?', { required: true, options: opts([['Our base', 'មូលដ្ឋានរបស់យើង'], ['Another location in Cambodia', 'ទីតាំងផ្សេងក្នុងកម្ពុជា']]),
+        help: T('The location you start at handles your team’s visa. If that is us, we send the letter of invitation once your flights are confirmed.', 'ទីតាំងដែលអ្នកចាប់ផ្តើមមុនគេ រៀបចំទិដ្ឋាការក្រុមរបស់អ្នក។ បើជាយើង យើងផ្ញើលិខិតអញ្ជើញនៅពេលការហោះហើររបស់អ្នកបានបញ្ជាក់។') })
     ]
   }, {
-    id: 'hospitality', title: T('Hospitality', 'បដិសណ្ឋារកិច្ច'), help: T('So we can prepare rooms and meals.', 'ដើម្បីឱ្យយើងរៀបចំបន្ទប់ និងអាហារ។'),
+    id: 'hospitality', title: T('Hospitality', 'បដិសណ្ឋារកិច្ច'), help: T('So we can prepare rooms and meals. Your best estimate for now — update the numbers in your account once your team is confirmed.', 'ដើម្បីឱ្យយើងរៀបចំបន្ទប់ និងអាហារ។ ប៉ាន់ស្មានឱ្យបានល្អបំផុតសិន — កែចំនួនក្នុងគណនីរបស់អ្នក នៅពេលក្រុមរបស់អ្នកបានបញ្ជាក់ច្បាស់។'),
     questions: [
-      q('singleMales', 'number', 'How many single males?', 'បុរសនៅលីវប៉ុន្មាននាក់?', { required: true }),
-      q('singleFemales', 'number', 'How many single females?', 'ស្ត្រីនៅលីវប៉ុន្មាននាក់?', { required: true }),
-      q('couples', 'number', 'How many couples?', 'គូស្វាមីភរិយាប៉ុន្មានគូ?', { required: true }),
+      q('males', 'number', 'How many males?', 'បុរសប៉ុន្មាននាក់?', { required: true }),
+      q('females', 'number', 'How many females?', 'ស្ត្រីប៉ុន្មាននាក់?', { required: true }),
+      q('couples', 'number', 'How many couples or families?', 'គូស្វាមីភរិយា ឬគ្រួសារប៉ុន្មាន?', { required: true }),
       q('allergies', 'long', 'Any food allergies?', 'មានអាឡែស៉ីអាហារទេ?')
     ]
   }]

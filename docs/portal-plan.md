@@ -123,6 +123,11 @@ name typed back to confirm) — applicant accounts live nowhere else.
    section by section with draft autosave (`portalSaveDraft`) and submits
    (`portalSubmit` → stage `applied`, required checked for their audience). Staff read and
    correct answers on the record (`portalStaffSaveAnswers`).
+   The applicant can edit their own answers after submitting (`portalUpdateAnswers`, logged) —
+   teams apply with estimates and firm dates and head counts up later.
+   **Accounts** (staff side, portal admins): every applicant account, with add / edit / new
+   PIN / delete (`portalListAccounts`, `portalCreateApplicant`, `portalUpdateAccount`,
+   `portalDeleteApplicant`).
    **Khmer vs international**: country at sign-up decides the audience — Khmer students
    need no leader reference; everyone not from Cambodia gets the **e-visa guide** on the
    dashboard from acceptance on, with two staff-set ticks (flights confirmed, letter of
