@@ -476,6 +476,25 @@ forms, documents and references follow.
   the scope for a non-HR caller (creating one included). Everyone else with access sees
   all kinds. The staff list's tab row (`.whatTab[data-whatfilter]`, All · DTS · DBS · BCS ·
   SMS · Staff · Volunteer · Teams with counts) shows only the tabs in scope.
+- **The application forms** live in data: `netlify/functions/portal-forms-default.js` (one
+  form per key — dts/dbs/bcs/sms/staff/volunteer/team; sections → questions with `{en,km}`
+  labels, a type, required, options, and an `audience` of all / khmer / international)
+  is the shipped set; a portal admin's edits (`portalSaveForm`, Google-Forms-style editor
+  on the staff side, `formsHtml_`) are stored per key in the `portalForms` blob and
+  `getForms_` lays them over the defaults (`isDefault` marks an unedited one;
+  `portalResetForm` drops the stored copy). **Every server test copies this module next to
+  api.js**, like team-seed.js. Answers are keyed by question id (`cleanAnswers_` keeps
+  only questions asked of that audience). The applicant fills it section by section
+  (`formHtml_`, `P.answers`, draft autosave via `portalSaveDraft`), `portalSubmit`
+  checks required for their audience (`missingRequired_`) and moves stage new → applied.
+  Staff read the answers on the record and correct them (`portalStaffSaveAnswers`, logged).
+- **Khmer or international** (`audienceOf_` — country Cambodia at sign-up, which is why
+  country is required there): `refNeeded_` is false for Khmer students and for teams (the
+  docs step then has no reference item); `needsVisa_` is true for everyone not from
+  Cambodia, and their dashboard shows the e-visa guide (`visaCardHtml_`, the text in
+  `VISA_STEPS` / `VISA_PREP`) from acceptance on, with two ticks staff set on the record
+  (`portalSetVisaFlags`: flightsConfirmed, invitationSent). A team's Documents card lists
+  `TEAM_NEEDS`.
 - **Deleting an applicant** (`portalDeleteApplicant`, portal admins / app admins only): removes
   the CRM record, any document blobs it lists, and the applicant account behind it — never a
   staff account (a record whose `staffId` is real staff loses only the record). The panel's
