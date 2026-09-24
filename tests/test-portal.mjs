@@ -80,6 +80,7 @@ r = await call('portalRegister', [{ ...APP, email: 'u@x.org' }]);
 ok('so is an email someone already has', r.body.ok === false && r.body.err === 'email_taken');
 r = await call('portalRegister', [APP]);
 ok('a good sign-up answers with the applicant’s own dashboard', r.body.ok === true && r.body.role === 'applicant' && r.body.me.username === 'anna.b' && r.body.application.type === 'student' && r.body.application.school === 'dts');
+ok('and with the application form, so "Fill out my application" works straight after sign-up', r.body.form && r.body.form.key === 'dts' && Array.isArray(r.body.form.sections));
 ok('the application starts as a draft on the "fill out" step', r.body.application.status === 'draft' && r.body.application.steps.find(s => s.state === 'current').id === 'form');
 ok('the account step is already done', r.body.application.steps[0].id === 'account' && r.body.application.steps[0].state === 'done');
 const anna = mem.staff.find(s => s.username === 'anna.b');

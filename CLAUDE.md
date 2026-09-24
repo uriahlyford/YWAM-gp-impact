@@ -525,6 +525,10 @@ forms, documents and references follow.
   The reference form is `referenceForm` in portal-forms-default.js (the base's Leader
   Reference Google Form; English only, Khmer left empty), key `reference`, editable in the
   Forms editor like the others. The leader's page is the `ref` view (`refHtml_`, gate look).
+- **Sign-up answers like portalBoot, form included** (`portalRegister`): the dashboard opens the
+  form from the sign-up reply with nothing else fetched. The client still copes with a reply
+  that lacks it (`openForm` refetches `portalBoot`; `bindForm_` returns without a form) — the
+  first live team sign-up hit exactly that and got the error screen.
 - **A dead screen is the worst failure**: `render()` wraps building and binding in try/catch
   and shows the error with a Back button instead of leaving nothing clickable.
 - **Khmer or international** (`audienceOf_` — country Cambodia at sign-up, which is why
