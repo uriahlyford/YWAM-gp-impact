@@ -4510,8 +4510,21 @@ function adminAccountsHtml_(){
     return h;
   }
   h+='<p class="hint" style="margin:0 0 6px">'+esc(t('Tap someone to open their account.'))+'</p>';
-  h+='<div class="accCard adminList">';
-  shown.forEach(function(x, i){
+  /* Two groups per campus, by kind of staff: the ministries (cafe, schools,
+     outreach, media…) and the people who carry the base itself — YAP and
+     campus staff. Anyone whose kind is not set yet gets a third, small
+     group so an admin can see who still needs sorting. */
+  var groupCampus = activeTab==='__other' ? t('Other') : campusShort(activeTab);
+  var groups=[
+    { id:'ministry', label:gpT('{campus} ministries',{campus:groupCampus}), rows:shown.filter(function(x){ return x.staffType==='ministry'; }) },
+    { id:'campus', label:t('YAP and Campus staff'), rows:shown.filter(function(x){ return x.staffType==='yap' || x.staffType==='campus'; }) },
+    { id:'unset', label:t('Kind of staff not set yet'), rows:shown.filter(function(x){ return x.staffType!=='ministry' && x.staffType!=='yap' && x.staffType!=='campus'; }) }
+  ];
+  groups.forEach(function(g){
+    if(!g.rows.length) return;
+    h+='<div data-admingroup="'+g.id+'"><div class="mentorLabel" style="margin:12px 0 6px">'+esc(g.label)+' · '+g.rows.length+'</div>';
+    h+='<div class="accCard adminList">';
+    g.rows.forEach(function(x, i){
     // the row key is the id; an account that somehow has none gets its own per-row key
     var key = x.id || ('row'+i);
     var status = x.archived ? '📦 '+t('Archived') : !x.active ? '⏳ '+t('Pending approval') : (x.isAdmin ? '🛡️ '+t('Admin') : '');
@@ -4525,8 +4538,9 @@ function adminAccountsHtml_(){
         '<span class="rowSub">'+esc(summary)+'</span></span>'+
         '<span class="accChevron" style="transform:rotate(-90deg)">'+ACC_CHEVRON+'</span></button>'+
     '</div>';
+    });
+    h+='</div></div>';
   });
-  h+='</div>';
   return h;
 }
 
@@ -5008,6 +5022,10 @@ function bindAdmin(){
       var show=!q || hay.indexOf(q)>-1;
       row.style.display = show?'':'none';
       if(show) anyVisible=true;
+    });
+    document.querySelectorAll('[data-admingroup]').forEach(function(g){
+      var any=[].some.call(g.querySelectorAll('[data-adminrow]'), function(r){ return r.style.display!=='none'; });
+      g.style.display = any ? '' : 'none';
     });
     var empty=document.getElementById('adminSearchEmpty');
     if(empty) empty.style.display = (q && !anyVisible) ? '' : 'none';
