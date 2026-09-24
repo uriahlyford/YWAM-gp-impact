@@ -41,13 +41,24 @@ const FORM = { key: 'dts', title: { en: 'DTS application', km: 'ពាក្យ�
   { id: 'faith', title: { en: 'Your faith', km: 'ជំនឿ' }, help: { en: '', km: '' }, questions: [
     { id: 'testimony', type: 'long', label: { en: 'Tell us how you came to know Jesus.', km: 'ប្រាប់យើង' }, help: { en: '', km: '' }, required: true, audience: 'all', options: [] },
     { id: 'gifts', type: 'multi', label: { en: 'Gifts', km: '' }, help: { en: '', km: '' }, required: false, audience: 'all', options: [{ en: 'Teaching', km: '' }, { en: 'Music', km: '' }] } ] } ] };
-const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: { ...FORM, key: 'team' } };
+const REF_FORM = { key: 'reference', title: { en: 'Leader reference form', km: '' }, sections: [
+  { id: 'basic', title: { en: 'Basic information', km: '' }, help: { en: 'Your comments will be considered seriously.', km: '' }, questions: [
+    { id: 'leaderName', type: 'short', label: { en: 'Your full name', km: '' }, help: { en: '', km: '' }, required: true, options: [], audience: 'all' },
+    { id: 'leaderEmail', type: 'email', label: { en: 'Your email', km: '' }, help: { en: '', km: '' }, required: true, options: [], audience: 'all' } ] },
+  { id: 'suitability', title: { en: 'Suitability for missions', km: '' }, help: { en: '', km: '' }, questions: [
+    { id: 'recommend', type: 'choice', label: { en: 'Would you:', km: '' }, help: { en: '', km: '' }, required: true, options: [{ en: 'Highly recommend', km: '' }, { en: 'Not recommend this applicant', km: '' }], audience: 'all' },
+    { id: 'additional', type: 'long', label: { en: 'Anything else?', km: '' }, help: { en: '', km: '' }, required: false, options: [], audience: 'all' } ] } ] };
+const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: { ...FORM, key: 'team' }, reference: REF_FORM };
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
 const ME_APP = { id: 'st_anna', name: 'Anna Example', username: 'anna.b', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', type: 'student', school: 'dts' };
 const STAFF = [{ id: 'st_dara', name: 'Dara Pen', username: 'dara', campus: 'siemreap', isAdmin: false, portalAdmin: false, portalStaff: true, role: 'portal-staff' }, { id: 'st_sina', name: 'Sina Sok', username: 'sina', campus: 'siemreap', isAdmin: false, portalAdmin: true, portalStaff: false, role: 'portal-admin' }];
+let ACCOUNTS = [
+  { id: 'st_anna', username: 'anna.b', name: 'Anna Example', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', campus: 'siemreap', type: 'student', school: 'dts', candidateId: 'cd_anna', stage: 'new', status: 'draft', created: '2026-09-20T10:00:00Z' },
+  { id: 'st_team', username: 'team.au', name: 'Grace Team', email: 'team@example.org', phone: '+61 400 000 000', messenger: 'telegram', country: 'Australia', campus: 'siemreap', type: 'team', school: '', candidateId: 'cd_team', stage: 'accepted', status: 'accepted', created: '2026-09-01T10:00:00Z' }
+];
 let CANDS = [
-  { id: 'cd_anna', campus: 'siemreap', name: 'Anna Example', type: 'student', school: 'dts', stage: 'applied', status: 'pending', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', source: 'portal', assignedTo: '', nextStep: '', nextDate: '', staffId: 'st_anna', hasAccount: true, updated: '2026-09-20T10:00:00Z', log: [{ at: '2026-09-19T09:00:00Z', by: 'st_anna', kind: 'stage', text: 'new' }], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', portal: { createdAt: '2026-09-19', submittedAt: '2026-09-20T10:00:00Z', form: { answers: { dob: '1999-05-05', gender: 'Female', leaderContact: '+46 1', testimony: 'Long story', gifts: ['Music'] } } } },
-  { id: 'cd_tom', campus: 'siemreap', name: 'Tom Volunteer', type: 'volunteer', school: '', stage: 'contacted', status: 'in_review', email: 'tom@example.org', phone: '+1 555 000 1111', messenger: 'telegram', country: 'United States', source: 'portal', assignedTo: 'st_dara', nextStep: 'Video call', nextDate: '2026-09-30', staffId: 'st_tom', hasAccount: true, updated: '2026-09-21T10:00:00Z', log: [], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'volunteer' },
+  { id: 'cd_anna', campus: 'siemreap', name: 'Anna Example', type: 'student', school: 'dts', stage: 'applied', status: 'pending', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', source: 'portal', assignedTo: '', nextStep: '', nextDate: '', staffId: 'st_anna', hasAccount: true, refNeeded: true, reference: { status: 'none' }, updated: '2026-09-20T10:00:00Z', log: [{ at: '2026-09-19T09:00:00Z', by: 'st_anna', kind: 'stage', text: 'new' }], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', portal: { createdAt: '2026-09-19', submittedAt: '2026-09-20T10:00:00Z', form: { answers: { dob: '1999-05-05', gender: 'Female', leaderContact: '+46 1', testimony: 'Long story', gifts: ['Music'] } } } },
+  { id: 'cd_tom', campus: 'siemreap', name: 'Tom Volunteer', type: 'volunteer', school: '', stage: 'contacted', status: 'in_review', email: 'tom@example.org', phone: '+1 555 000 1111', messenger: 'telegram', country: 'United States', source: 'portal', assignedTo: 'st_dara', nextStep: 'Video call', nextDate: '2026-09-30', staffId: 'st_tom', hasAccount: true, refNeeded: true, reference: { status: 'received', receivedAt: '2026-09-22T10:00:00Z', leaderName: 'Pastor Example', leaderEmail: 'pastor@example.org', answers: { leaderName: 'Pastor Example', leaderEmail: 'pastor@example.org', recommend: 'Highly recommend' } }, updated: '2026-09-21T10:00:00Z', log: [], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'volunteer' },
   { id: 'cd_pp', campus: 'poipet', name: 'Poipet Person', type: 'student', school: 'dbs', stage: 'new', status: 'draft', email: '', phone: '+855 11 222 333', messenger: 'telegram', country: 'Cambodia', source: 'portal', assignedTo: '', staffId: 'st_pp', hasAccount: true, updated: '2026-09-18T10:00:00Z', log: [], archived: null },
   { id: 'cd_team', campus: 'siemreap', name: 'Grace Church Team', type: 'team', school: '', stage: 'new', status: 'draft', email: 'team@example.org', phone: '+61 400 000 000', messenger: 'whatsapp', country: 'Australia', source: 'portal', assignedTo: '', staffId: 'st_team', hasAccount: true, updated: '2026-09-17T10:00:00Z', log: [], archived: null },
   { id: 'cd_old', campus: 'siemreap', name: 'Closed Case', type: 'staff', school: '', stage: 'new', status: 'closed', email: '', phone: '', messenger: '', country: '', source: 'hr', assignedTo: '', staffId: '', hasAccount: false, updated: '2026-08-01T10:00:00Z', log: [], archived: { at: '2026-08-02', reason: 'Withdrew' } }
@@ -86,6 +97,25 @@ async function open(viewport, query, seed) {
       const ans = b.args[2]; const miss = ['dob', 'gender', 'leaderContact', 'testimony'].filter(k => !ans[k]);
       if (miss.length) out = { ok: false, err: 'missing', missing: miss };
       else { ANNA = { ...ANNA, answers: ans, stage: 'applied', status: 'pending', submittedAt: new Date().toISOString(), steps: STEPS('contact') }; out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM }; }
+    } else if (b.fn === 'portalUpdateAnswers') {
+      ANNA = { ...ANNA, answers: b.args[2], answersUpdatedAt: new Date().toISOString() }; out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM };
+    } else if (b.fn === 'portalReferenceLink') {
+      out = b.args[2] === 'cd_tom' ? { ok: false, err: 'received' } : { ok: true, token: 'abc123abc123abc123abc123abc123', expiresAt: '2026-10-08T10:00:00Z', reference: { status: 'pending', sentAt: new Date().toISOString(), expiresAt: '2026-10-08T10:00:00Z' } };
+    } else if (b.fn === 'portalReferenceForm') {
+      const tk = b.args[0];
+      out = tk === 'goodtoken' ? { ok: true, applicantName: 'Anna Example', applyingFor: 'DTS', expiresAt: '2026-10-08T10:00:00Z', form: REF_FORM } : tk === 'usedtoken' ? { ok: false, err: 'used' } : { ok: false, err: 'invalid' };
+    } else if (b.fn === 'portalReferenceSubmit') {
+      const ans = b.args[1]; const miss = ['leaderName', 'leaderEmail', 'recommend'].filter(k => !ans[k]);
+      out = b.args[0] !== 'goodtoken' ? { ok: false, err: 'invalid' } : miss.length ? { ok: false, err: 'missing', missing: miss } : { ok: true, applicantName: 'Anna Example' };
+    } else if (b.fn === 'portalListAccounts') {
+      out = u === 'sina' ? { ok: true, accounts: ACCOUNTS } : { ok: false, err: 'not_authorized' };
+    } else if (b.fn === 'portalCreateApplicant') {
+      const p = b.args[2];
+      if (p.username === 'taken') out = { ok: false, err: 'taken' };
+      else { const acc = { id: 'st_' + p.username, username: p.username, name: p.name, email: p.email, phone: p.phone, messenger: p.messenger, country: p.country, campus: p.campus, type: p.type, school: p.school, candidateId: 'cd_' + p.username, stage: 'new', status: 'draft', created: new Date().toISOString() }; ACCOUNTS.unshift(acc); out = { ok: true, account: acc }; }
+    } else if (b.fn === 'portalUpdateAccount') {
+      const p = b.args[3]; ACCOUNTS = ACCOUNTS.map(a => a.id === b.args[2] ? { ...a, name: p.name, username: p.username, email: p.email, phone: p.phone, messenger: p.messenger, country: p.country } : a);
+      out = { ok: true, account: ACCOUNTS.find(a => a.id === b.args[2]) };
     } else if (b.fn === 'portalSetVisaFlags') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, portal: { ...(x.portal || {}), visa: { ...((x.portal || {}).visa || {}), ...b.args[3] } } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
     } else if (b.fn === 'portalStaffSaveAnswers') {
@@ -208,7 +238,12 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'anna.b', pin: '2468' })));
   await page.waitForSelector('#openForm');
   ok('the dashboard offers "Fill out my application" — no more "opens soon"', /Fill out my application/.test(await page.$eval('#openForm', e => e.textContent)) && !/Opens soon/.test(await page.$eval('#main', e => e.textContent)));
-  ok('an international applicant is told the visa guide comes with acceptance, and about the leader reference', /visa for Cambodia/.test(await page.$eval('#main', e => e.textContent)) && /leader reference/.test(await page.$eval('#main', e => e.textContent)));
+  ok('an international applicant is told the visa guide comes with acceptance, and about the leader reference', /visa for Cambodia/.test(await page.$eval('#main', e => e.textContent)) && /Leader reference/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#refNew')));
+  await page.click('#refNew');
+  await page.waitForSelector('#refLinkBox');
+  const rl = sent.find(b => b.fn === 'portalReferenceLink');
+  ok('Get my reference link asks the server and shows the link with one-tap WhatsApp / Telegram / email sharing', rl && rl.args.length === 2 && /portal\.html\?ref=abc123abc123abc123abc123abc123$/.test(await page.$eval('#refLinkBox', i => i.value)) && (await page.$$eval('.refBox a.chatBtn', a => a.map(x => x.getAttribute('href')))).some(h => /wa\.me\/\?text=.*ref%3Dabc123/.test(h)) && !!(await page.$('#refCopy')));
+  ok('and says how long it is valid, and that it is not shown again', /Valid until/.test(await page.$eval('.refBox', e => e.textContent)) && /not shown again/.test(await page.$eval('.refBox', e => e.textContent)));
   await page.click('#openForm');
   await page.waitForSelector('#formNext');
   ok('the form opens on section 1 of 2 with a progress bar', /Section 1 of 2/.test(await page.$eval('.formProgress', e => e.textContent)) && /About you/.test(await page.$eval('#main h2', e => e.textContent)));
@@ -242,6 +277,19 @@ async function open(viewport, query, seed) {
   await page.click('#viewAnswers');
   await page.waitForTimeout(150);
   ok('View my answers shows them read-only', /I met Jesus at a youth camp/.test(await page.$eval('#main', e => e.textContent)) && /Music/.test(await page.$eval('#main', e => e.textContent)));
+  ok('and offers Edit my answers', !!(await page.$('#editAnswersMine')));
+  await page.click('#editAnswersMine');
+  await page.waitForSelector('#formSubmit');
+  ok('the form reopens in update mode: Save changes on the first section, Cancel, nothing autosaving', /Save changes/.test(await page.$eval('#formSubmit', e => e.textContent)) && /Cancel/.test(await page.$eval('#formClose', e => e.textContent)) && /kept when you press Save changes/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#formNext')));
+  ok('prefilled with the submitted answers', (await page.$eval('[data-ans="dob"]', i => i.value)) === '1999-05-05');
+  const before = sent.length;
+  await page.fill('[data-ans="dob"]', '1999-06-06');
+  await page.waitForTimeout(1200);
+  ok('typing does not save a draft', !sent.slice(before).some(b => b.fn === 'portalSaveDraft'));
+  await page.click('#formSubmit');
+  await page.waitForTimeout(400);
+  const upd = sent.find(b => b.fn === 'portalUpdateAnswers');
+  ok('Save changes sends the whole answer set to portalUpdateAnswers and returns to the dashboard', upd && upd.args[2].dob === '1999-06-06' && upd.args[2].testimony === 'I met Jesus at a youth camp.' && /Application pending/.test(await page.$eval('#statusPill', e => e.textContent)) && /updated/.test(await page.$eval('#main', e => e.textContent)));
   await ctx.close();
 }
 
@@ -260,6 +308,7 @@ async function open(viewport, query, seed) {
   ok('an accepted team gets the e-visa guide, step by step', /Your e-visa, step by step/.test(txt) && /Visa E/.test(txt) && /e-Arrival/.test(txt) && /white sticker/.test(txt));
   ok('with the two ticks staff set — flights confirmed done, letter pending', /✓ Flights confirmed/.test(txt) && /○ Letter of invitation sent to you/.test(txt));
   ok('and the list of what we need from a team', /team photo/i.test(txt) && /passport photo/i.test(txt) && /flight or ticket/i.test(txt));
+  ok('a team is told dates and head counts can be estimates, with Edit my answers', /can be estimates/.test(txt) && !!(await page.$('#editAnswersMine')));
   ok('a team has no leader reference step', !/Leader reference/.test(txt));
   await ctx.close();
 }
@@ -303,6 +352,12 @@ async function open(viewport, query, seed) {
   await page.waitForTimeout(150);
   ok('the list opens on the staff member’s own campus, with an All-campuses chip', (await page.$eval('[data-campusfilter].on', c => c.getAttribute('data-campusfilter'))) === 'siemreap' && !!(await page.$('[data-campusfilter=""]')));
   ok('closed applications are behind the Archived filter', !/Closed Case/.test(await page.$eval('.tbl', e => e.textContent)));
+  ok('a Khmer / International split sits under the tabs', (await page.$$eval('[data-audfilter]', b => b.map(x => x.getAttribute('data-audfilter')).join(','))) === ',khmer,international');
+  await page.click('[data-audfilter="khmer"]');
+  await page.waitForTimeout(150);
+  ok('Khmer shows nobody here — every fixture is international', (await page.$$eval('.trow', r => r.length)) === 0);
+  await page.click('[data-audfilter=""]');
+  await page.waitForTimeout(150);
   await page.click('[data-filter="archived"]');
   await page.waitForTimeout(150);
   ok('and appear there', /Closed Case/.test(await page.$eval('.tbl', e => e.textContent)) && (await page.$$eval('.trow', r => r.length)) === 1);
@@ -336,11 +391,29 @@ async function open(viewport, query, seed) {
   ok('no PIN or hash anywhere on the page', !/2468|1234|pinHash/.test(await page.$eval('#main', e => e.textContent)));
   ok('portal staff are offered no delete', !(await page.$('#deleteCand')));
   ok('portal staff are offered no Forms button', !(await page.$('#toForms')));
+  ok('nor an Accounts button', !(await page.$('#toAccounts')));
   await page.click('[data-open="cd_anna"]');
   await page.waitForSelector('#panel');
   const pan = await page.$eval('#panel', e => e.textContent);
   ok('the record panel shows the submitted answers under their questions', /Answers/.test(pan) && /Date of birth/.test(pan) && /1999-05-05/.test(pan) && /Long story/.test(pan) && /Music/.test(pan));
   ok('and the visa ticks for an international applicant', (await page.$$eval('[data-visaflag]', c => c.map(x => x.getAttribute('data-visaflag')).join(','))) === 'flightsConfirmed,invitationSent');
+  ok('and a Leader reference block with "No link made yet" and a button to make one', /Leader reference/.test(pan) && /No link made yet/.test(pan) && !!(await page.$('#refLinkStaff')));
+  await page.click('#refLinkStaff');
+  await page.waitForSelector('#refLinkBox');
+  const srl = sent.filter(b => b.fn === 'portalReferenceLink').pop();
+  ok('staff make a link from the record, for that record', srl && srl.args[2] === 'cd_anna' && /ref=abc123/.test(await page.$eval('#refLinkBox', i => i.value)));
+  await page.click('#closePanel');
+  await page.waitForTimeout(150);
+  await page.click('[data-open="cd_tom"]');
+  await page.waitForSelector('#panel');
+  ok('a received reference shows who sent it, with Read it', /Received from Pastor Example/.test(await page.$eval('#panel', e => e.textContent)) && !!(await page.$('#showRef')) && !(await page.$('#refLinkStaff')));
+  await page.click('#showRef');
+  await page.waitForTimeout(150);
+  ok('Read it shows the leader’s answers under the reference form’s questions', /Would you:/.test(await page.$eval('#panel', e => e.textContent)) && /Highly recommend/.test(await page.$eval('#panel', e => e.textContent)));
+  await page.click('#closePanel');
+  await page.waitForTimeout(150);
+  await page.click('[data-open="cd_anna"]');
+  await page.waitForSelector('#panel');
   await page.check('[data-visaflag="flightsConfirmed"]');
   await page.waitForTimeout(300);
   const vf = sent.filter(b => b.fn === 'portalSetVisaFlags').pop();
@@ -362,9 +435,24 @@ async function open(viewport, query, seed) {
   ok('a portal admin has a Forms button in the bar', !!(await page.$('#toForms')));
   await page.click('#toForms');
   await page.waitForSelector('#formSave');
-  ok('the editor opens on DTS with a tab per form and the shipped-default note', await page.$eval('[data-formkey="dts"]', b => b.classList.contains('on')) && (await page.$$eval('[data-formkey]', b => b.length)) === 7 && /shipped default/.test(await page.$eval('#main', e => e.textContent)));
+  ok('the editor opens on DTS with a tab per form and the shipped-default note', await page.$eval('[data-formkey="dts"]', b => b.classList.contains('on')) && (await page.$$eval('[data-formkey]', b => b.length)) === 8 && /shipped default/.test(await page.$eval('#main', e => e.textContent)));
   ok('each question is a card with English and Khmer, a type, an audience and Required', (await page.$$eval('.qcard', c => c.length)) === 6 && (await page.$eval('[data-fe="sections.0.questions.0.label.en"]', i => i.value)) === 'Date of birth' && (await page.$eval('[data-fe="sections.0.questions.0.label.km"]', i => i.value)) === 'ថ្ងៃខែឆ្នាំកំណើត' && (await page.$eval('[data-fe="sections.0.questions.2.audience"]', s => s.value)) === 'international');
   ok('multiple-choice options are one per line, English | Khmer', /Male \| ប្រុស/.test(await page.$eval('[data-fe="sections.0.questions.1.options"]', t => t.value)));
+  ok('a school form has an Everyone / Khmer students / International students switch', (await page.$$eval('[data-feaud]', b => b.map(x => x.getAttribute('data-feaud')).join(','))) === 'all,khmer,international');
+  await page.click('[data-feaud="khmer"]');
+  await page.waitForTimeout(150);
+  ok('Khmer students shows the shared questions plus the Khmer-only one, not the international one', (await page.$$eval('.qcard', c => c.length)) === 5 && !!(await page.$('[data-fe="sections.0.questions.3.label.en"]')) && !(await page.$('[data-fe="sections.0.questions.2.label.en"]')));
+  ok('the Khmer-only question is tagged', /Khmer students only/.test(await page.$eval('.qcard.aud-khmer .audTag', e => e.textContent)));
+  await page.click('[data-qadd="1"]');
+  await page.waitForTimeout(150);
+  ok('a question added while on Khmer students is Khmer only', (await page.$eval('[data-fe="sections.1.questions.2.audience"]', s => s.value)) === 'khmer');
+  await page.click('[data-qdel="1|2"]');
+  await page.waitForTimeout(150);
+  await page.click('[data-feaud="international"]');
+  await page.waitForTimeout(150);
+  ok('International students shows the international-only one instead', !!(await page.$('[data-fe="sections.0.questions.2.label.en"]')) && !(await page.$('[data-fe="sections.0.questions.3.label.en"]')));
+  await page.click('[data-feaud="all"]');
+  await page.waitForTimeout(150);
   await page.fill('[data-fe="sections.0.questions.0.label.en"]', 'Your date of birth');
   await page.click('[data-qadd="1"]');
   await page.waitForTimeout(200);
@@ -410,6 +498,91 @@ async function open(viewport, query, seed) {
   await page.waitForSelector('#panel');
   const [listL, panelL] = await page.evaluate(() => [document.querySelector('.tbl').getBoundingClientRect().left, document.querySelector('#panel').getBoundingClientRect().left]);
   ok('and the record opens beside the list, not under it', panelL > listL + 400, Math.round(listL) + ' / ' + Math.round(panelL));
+  await ctx.close();
+}
+
+/* ---------- the leader's reference page, no account ---------- */
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?ref=goodtoken');
+  await page.waitForSelector('#refSubmit');
+  const txt = await page.$eval('#main', e => e.textContent);
+  ok('?ref= opens the reference form for the applicant, no sign-in, with the intro and the questions', /Leader reference/.test(txt) && /For Anna Example, applying for DTS/.test(txt) && /considered seriously/.test(txt) && /Your full name/.test(txt) && /Would you:/.test(txt) && !(await page.$('#loginBtn')));
+  ok('the leader is told the applicant does not see it', /the applicant does not/.test(txt));
+  ok('the reference page is a gate screen (logo and title on top)', await page.$eval('body', b => b.classList.contains('gate')));
+  await page.click('#refSubmit');
+  await page.waitForTimeout(200);
+  ok('Submit with required answers missing marks them and sends nothing', (await page.$$eval('.qBlock.missing', q => q.length)) === 3 && !sent.some(b => b.fn === 'portalReferenceSubmit'));
+  await page.fill('#r_leaderName', 'Pastor Example');
+  await page.fill('#r_leaderEmail', 'pastor@example.org');
+  await page.click('[data-ans="recommend"][value="Highly recommend"]');
+  await page.click('#refSubmit');
+  await page.waitForTimeout(400);
+  const rs = sent.find(b => b.fn === 'portalReferenceSubmit');
+  ok('a complete reference goes to portalReferenceSubmit with the token, then a thank-you', rs && rs.args[0] === 'goodtoken' && rs.args[1].recommend === 'Highly recommend' && rs.args[1].leaderName === 'Pastor Example' && /Thank you/.test(await page.$eval('#main', e => e.textContent)) && /reached our applications team/.test(await page.$eval('#main', e => e.textContent)));
+  await page.goto(URL + '?ref=usedtoken', { waitUntil: 'load' });
+  await page.waitForSelector('#main h2');
+  await page.waitForTimeout(300);
+  ok('a used link says the reference is already in', /already been submitted/.test(await page.$eval('#main', e => e.textContent)));
+  await page.goto(URL + '?ref=nonsense', { waitUntil: 'load' });
+  await page.waitForSelector('#main h2');
+  await page.waitForTimeout(300);
+  ok('an unknown link says so and offers the way back', /not valid/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#toLanding')));
+  await ctx.close();
+}
+
+/* ---------- Accounts, portal admins ---------- */
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  ok('a portal admin has an Accounts button in the bar', !!(await page.$('#toAccounts')));
+  await page.click('#toAccounts');
+  await page.waitForSelector('[data-acc]');
+  ok('Accounts lists every applicant account with who, what and where the application is', (await page.$$eval('[data-acc]', r => r.length)) === 2 && /@anna\.b/.test(await page.$eval('[data-acc="st_anna"]', e => e.textContent)) && /DTS/.test(await page.$eval('[data-acc="st_anna"]', e => e.textContent)) && /Accepted/.test(await page.$eval('[data-acc="st_team"]', e => e.textContent)));
+  await page.fill('#accQ', 'grace');
+  await page.waitForTimeout(200);
+  ok('search narrows the list', (await page.$$eval('[data-acc]', r => r.length)) === 1);
+  await page.fill('#accQ', '');
+  await page.waitForTimeout(200);
+  await page.click('[data-acc="st_anna"]');
+  await page.waitForSelector('#accPanel');
+  ok('opening one shows an edit panel prefilled, a link to the application, a new-PIN field and Delete', (await page.$eval('#acc_name', i => i.value)) === 'Anna Example' && (await page.$eval('#acc_user', i => i.value)) === 'anna.b' && (await page.$eval('#acc_country', i => i.value)) === 'Sweden' && !!(await page.$('#accOpenApp')) && !!(await page.$('#acc_pin')) && !!(await page.$('#accDelete')));
+  await page.fill('#acc_name', 'Anna Exemplar');
+  await page.fill('#acc_pin', '12');
+  await page.click('#accSave');
+  await page.waitForTimeout(200);
+  ok('a short PIN is refused before sending', !sent.some(b => b.fn === 'portalUpdateAccount'));
+  await page.fill('#acc_pin', '4321');
+  await page.click('[data-accmsgr="telegram"]');
+  await page.waitForTimeout(150);
+  await page.click('#accSave');
+  await page.waitForTimeout(400);
+  const ua = sent.find(b => b.fn === 'portalUpdateAccount');
+  ok('Save sends the edited fields and the new PIN to portalUpdateAccount', ua && ua.args[2] === 'st_anna' && ua.args[3].name === 'Anna Exemplar' && ua.args[3].messenger === 'telegram' && ua.args[3].newPin === '4321');
+  ok('and the list shows the new name', /Anna Exemplar/.test(await page.$eval('[data-acc="st_anna"]', e => e.textContent)));
+  await page.click('#accOpenApp');
+  await page.waitForSelector('#panel');
+  ok('Open the application jumps to that record on the Applications side', /Anna/.test(await page.$eval('#panel h2', e => e.textContent)));
+  await page.click('#toAccounts');
+  await page.waitForSelector('[data-acc]');
+  await page.click('#accAdd');
+  await page.waitForSelector('#accPanel');
+  ok('Add shows campus and what-for pickers plus the account fields', (await page.$$eval('[data-acccampus]', b => b.length)) === 2 && (await page.$$eval('[data-accpick]', b => b.length)) === 7 && /4-digit PIN/.test(await page.$eval('#accPanel', e => e.textContent)));
+  await page.click('[data-acccampus="poipet"]');
+  await page.waitForTimeout(150);
+  ok('Poipet offers only its two schools plus staff, volunteer, team', (await page.$$eval('[data-accpick]', b => b.map(x => x.getAttribute('data-accpick')).join(','))) === 'dts,dbs,staff,volunteer,team');
+  await page.click('[data-accpick="dbs"]');
+  await page.waitForTimeout(150);
+  await page.fill('#acc_name', 'Made Person');
+  await page.fill('#acc_user', 'Made.X');
+  await page.fill('#acc_email', 'made@example.org');
+  await page.fill('#acc_phone', '+47 123 456');
+  await page.selectOption('#acc_country', 'Norway');
+  await page.fill('#acc_pin', '2468');
+  await page.click('#accSave');
+  await page.waitForTimeout(400);
+  const ca = sent.find(b => b.fn === 'portalCreateApplicant');
+  ok('Create sends the same payload as sign-up, on the admin’s behalf', ca && ca.args[2].username === 'made.x' && ca.args[2].pin === '2468' && ca.args[2].type === 'student' && ca.args[2].school === 'dbs' && ca.args[2].campus === 'poipet' && ca.args[2].country === 'Norway');
+  ok('the new account tops the list and stays open for edits', (await page.$$eval('[data-acc]', r => r.length)) === 3 && (await page.$eval('#acc_name', i => i.value)) === 'Made Person' && !(await page.$('[data-accpick]')));
   await ctx.close();
 }
 

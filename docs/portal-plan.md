@@ -123,17 +123,24 @@ name typed back to confirm) — applicant accounts live nowhere else.
    section by section with draft autosave (`portalSaveDraft`) and submits
    (`portalSubmit` → stage `applied`, required checked for their audience). Staff read and
    correct answers on the record (`portalStaffSaveAnswers`).
+   The applicant can edit their own answers after submitting (`portalUpdateAnswers`, logged) —
+   teams apply with estimates and firm dates and head counts up later.
+   **Accounts** (staff side, portal admins): every applicant account, with add / edit / new
+   PIN / delete (`portalListAccounts`, `portalCreateApplicant`, `portalUpdateAccount`,
+   `portalDeleteApplicant`).
    **Khmer vs international**: country at sign-up decides the audience — Khmer students
    need no leader reference; everyone not from Cambodia gets the **e-visa guide** on the
    dashboard from acceptance on, with two staff-set ticks (flights confirmed, letter of
    invitation sent — `portalSetVisaFlags`). Teams need no reference and their dashboard
    lists what we need (team photo with names, passport photos, flight confirmations).
-3. **Documents and the leader reference.** Per-type required-document list
-   (you supply the exact list), upload with checked / pending state
-   (`portalUploadDoc`, `portalGetDoc`, own blobs), reference links
-   (`portalReferenceLink` → single-use, expiring token; `portalReferenceForm`
-   + `portalReferenceSubmit` at `?ref=`), "Reference received" on the
-   dashboard and on the record. Khmer students exempt, internationals need one.
+3. **Documents and the leader reference.** The leader reference is built:
+   `portalReferenceLink` (applicant or staff) → single-use token, 14 days, hash only on the
+   record; the leader fills `forms.reference` (the base's Leader Reference Form) at
+   `?ref=<token>` with no account (`portalReferenceForm`, `portalReferenceSubmit`);
+   "Received from …" on the dashboard and on the record, where staff read it. Khmer students
+   and teams are exempt. Still to come: the per-type required-document list (you supply the
+   exact list) and upload with checked / pending state (`portalUploadDoc`, `portalGetDoc`,
+   own blobs).
 4. **The staff CRM, desktop-first.** Filters, search, columns, the record
    page (answers, documents, reference, log), owner / next step / next date,
    editing an application, archive, bell reminders for portal staff.

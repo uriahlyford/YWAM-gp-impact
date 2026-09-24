@@ -479,7 +479,9 @@ forms, documents and references follow.
 - **The application forms** live in data: `netlify/functions/portal-forms-default.js` (one
   form per key — dts/dbs/bcs/sms/staff/volunteer/team; sections → questions with `{en,km}`
   labels, a type, required, options, and an `audience` of all / khmer / international)
-  is the shipped set; a portal admin's edits (`portalSaveForm`, Google-Forms-style editor
+  is the shipped set — the DTS form (`dtsForm`) mirrors the base's own GP DTS Application
+  Google Form (its Khmer is a fresh translation for review; the source PDF's Khmer was
+  unreadable), the other schools share `studentForm`; a portal admin's edits (`portalSaveForm`, Google-Forms-style editor
   on the staff side, `formsHtml_`) are stored per key in the `portalForms` blob and
   `getForms_` lays them over the defaults (`isDefault` marks an unedited one;
   `portalResetForm` drops the stored copy). **Every server test copies this module next to
@@ -488,6 +490,33 @@ forms, documents and references follow.
   (`formHtml_`, `P.answers`, draft autosave via `portalSaveDraft`), `portalSubmit`
   checks required for their audience (`missingRequired_`) and moves stage new → applied.
   Staff read the answers on the record and correct them (`portalStaffSaveAnswers`, logged).
+  After submitting, the applicant can still **edit their own answers** (`portalUpdateAnswers`:
+  whole answer set, required re-checked, logged "Updated their application answers", stage
+  untouched; the dashboard's "Edit my answers" reopens `formHtml_` in update mode — no
+  autosave, "Save changes" on every section). Teams apply with estimated dates and head
+  counts and firm them up this way; the team form's help text says so.
+- **Accounts (staff side, portal admins only, `accountsHtml_`)**: every applicant account
+  in one list — applicant accounts are not in Admin → Accounts, so this is their one
+  place. `portalListAccounts` (no PIN material), `portalCreateApplicant` (same
+  `createApplicant_` as sign-up, `createdBy` = the admin), `portalUpdateAccount` (name,
+  username, email, phone, messenger, country, optional new 4-digit PIN; unique username /
+  email; the CRM record's contact facts follow; refuses staff accounts with
+  `not_applicant`), delete = `portalDeleteApplicant`. Portal staff get `not_authorized`.
+- **The leader reference** (everyone but Khmer students and teams, `refNeeded_`): the applicant
+  (dashboard, `refCardHtml_`) or staff (record panel, `panelReferenceHtml_`) makes a link with
+  `portalReferenceLink` → `portal.html?ref=<token>`. The token is random, stored only as a
+  sha256 hash in `cand.portal.references[]` (`refHash_`), expires after `REF_TTL_DAYS`
+  (14), is single-use, and a new link revokes the pending one. Two public handlers need no
+  account: `portalReferenceForm(token)` answers with the applicant's name, what they apply
+  for and `forms.reference`; `portalReferenceSubmit(token, answers)` checks required, marks
+  the token used, sets `portal.referenceDone` (ticks the timeline item) and logs "Leader
+  reference received from …". `refState_` is what both sides see — the applicant's copy
+  (`portalAppOut_`) never carries the leader's answers; staff read them under "Read it".
+  The reference form is `referenceForm` in portal-forms-default.js (the base's Leader
+  Reference Google Form; English only, Khmer left empty), key `reference`, editable in the
+  Forms editor like the others. The leader's page is the `ref` view (`refHtml_`, gate look).
+- **A dead screen is the worst failure**: `render()` wraps building and binding in try/catch
+  and shows the error with a Back button instead of leaving nothing clickable.
 - **Khmer or international** (`audienceOf_` — country Cambodia at sign-up, which is why
   country is required there): `refNeeded_` is false for Khmer students and for teams (the
   docs step then has no reference item); `needsVisa_` is true for everyone not from

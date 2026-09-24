@@ -3060,6 +3060,8 @@ function portalAppOut_(c) {
     visa: (c.portal && c.portal.visa) || {},
     answers: (c.portal && c.portal.form && c.portal.form.answers) || (c.portal && c.portal.draft) || {},
     draftAt: (c.portal && c.portal.draftAt) || null,
+    answersUpdatedAt: (c.portal && c.portal.form && c.portal.form.updatedAt) || null,
+    reference: (function (r) { delete r.answers; delete r.leaderEmail; return r; })(refState_(c)), // the applicant never reads the reference
     steps: portalSteps_(c)
   };
 }
@@ -3073,6 +3075,7 @@ function portalCandOut_(c, byId) {
     email: c.email || (acct && acct.email) || '',
     status: portalStatus_(c),
     audience: audienceOf_(c), needsVisa: needsVisa_(c), refNeeded: refNeeded_(c), formKey: formKeyOf_(c),
+    reference: refState_(c),
     hasAccount: !!acct
   });
 }
@@ -3081,7 +3084,10 @@ async function candidateFor_(rows, s) {
   return rows.find(function (r) { return r && (r.id === cid || r.staffId === s.id); }) || null;
 }
 
-async function portalRegister(payload) {
+/* Validate and create an applicant account + its candidate record. `by` is
+   who made it: the applicant themself (sign-up) or a portal admin (Accounts →
+   Add). Answers {ok:false, err} or {ok:true, rec, cand}. */
+async function createApplicant_(payload, by) {
   payload = payload && typeof payload === 'object' ? payload : {};
   const u = normUser_(payload.username);
   if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { ok: false, err: 'bad_username' };
@@ -3124,8 +3130,8 @@ async function portalRegister(payload) {
     email: email, phone: phone, messenger: messenger, country: country, source: 'portal',
     assignedTo: '', nextStep: '', nextDate: '', expected: '', notes: '', staffId: id,
     portal: { createdAt: now, submittedAt: null, form: null, docs: [], references: [] },
-    log: [{ at: now, by: id, kind: 'stage', text: 'new' }], archived: null,
-    created: now, createdBy: id, updated: now, updatedBy: id
+    log: [{ at: now, by: by || id, kind: 'stage', text: 'new' }], archived: null,
+    created: now, createdBy: by || id, updated: now, updatedBy: by || id
   };
   // The account first — a candidate row without an account is a loose end
   // staff can see and clean up; an account without its candidate would be a
@@ -3140,7 +3146,87 @@ async function portalRegister(payload) {
   const fresh = await getCandidates_();
   fresh.push(cand);
   await writeJSON('candidates', fresh);
-  return { ok: true, role: 'applicant', me: portalMeOut_(rec), application: portalAppOut_(cand) };
+  return { ok: true, rec: rec, cand: cand };
+}
+async function portalRegister(payload) {
+  const made = await createApplicant_(payload, null);
+  if (!made.ok) return made;
+  return { ok: true, role: 'applicant', me: portalMeOut_(made.rec), application: portalAppOut_(made.cand) };
+}
+
+/* ==================== accounts (staff side, portal admins) ====================
+   Every applicant account, to see, fix, add or remove. Applicant accounts are
+   not in Admin → Accounts (they are not staff), so this is their one place.
+   Editing keeps the candidate record in step (name, contact); a new PIN is
+   set here when someone is locked out; delete is portalDeleteApplicant. */
+function portalAccountOut_(s, cand) {
+  return { id: s.id, username: s.username, name: s.name, email: s.email || '', phone: s.phone || '', messenger: s.messenger || '', country: s.country || '',
+    campus: s.campus || '', type: s.applicant ? s.applicant.type : '', school: s.applicant ? s.applicant.school : '',
+    candidateId: (s.applicant && s.applicant.candidateId) || (cand && cand.id) || '', stage: cand ? cand.stage : '', status: cand ? portalStatus_(cand) : 'none',
+    created: s.created || '', updated: s.updated || '' };
+}
+async function portalListAccounts(username, pin) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  const rows = await getStaff_(), cands = await getCandidates_();
+  const byStaff = {}; cands.forEach(function (c) { if (c && c.staffId) byStaff[c.staffId] = c; });
+  return { ok: true, accounts: rows.filter(isApplicant_).map(function (s) { return portalAccountOut_(s, byStaff[s.id] || null); }) };
+}
+async function portalCreateApplicant(username, pin, payload) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  const made = await createApplicant_(payload, me.id);
+  if (!made.ok) return made;
+  return { ok: true, account: portalAccountOut_(made.rec, made.cand) };
+}
+async function portalUpdateAccount(username, pin, staffId, payload) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  payload = payload && typeof payload === 'object' ? payload : {};
+  let changed = null;
+  const out = await mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === str_(staffId, 60); });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const rec = rows[idx];
+    if (!isApplicant_(rec)) return { abort: true, ok: false, err: 'not_applicant' };
+    if (payload.name !== undefined) { const nm = str_(payload.name, 120); if (!nm) return { abort: true, ok: false, err: 'name_required' }; rec.name = nm; }
+    if (payload.username !== undefined) {
+      const u = normUser_(payload.username);
+      if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { abort: true, ok: false, err: 'bad_username' };
+      if (rows.some(function (r) { return r.id !== rec.id && r.username === u; })) return { abort: true, ok: false, err: 'taken' };
+      rec.username = u;
+    }
+    if (payload.email !== undefined) {
+      const email = cleanEmail_(payload.email);
+      if (email === null || !email) return { abort: true, ok: false, err: 'bad_email' };
+      if (rows.some(function (r) { return r.id !== rec.id && r.email && r.email === email; })) return { abort: true, ok: false, err: 'email_taken' };
+      rec.email = email;
+    }
+    if (payload.phone !== undefined) { const ph = cleanPhone_(payload.phone); if (!ph) return { abort: true, ok: false, err: 'phone_required' }; rec.phone = ph; }
+    if (payload.messenger !== undefined) { if (PORTAL_MESSENGERS.indexOf(payload.messenger) === -1) return { abort: true, ok: false, err: 'messenger_required' }; rec.messenger = payload.messenger; }
+    if (payload.country !== undefined) { const co = cleanCountry_(payload.country); if (!co) return { abort: true, ok: false, err: 'country_required' }; rec.country = co; }
+    if (payload.newPin !== undefined && payload.newPin !== '') {
+      if (!/^\d{4}$/.test(String(payload.newPin))) return { abort: true, ok: false, err: 'bad_pin' };
+      rec.pinSalt = pinSalt_(); rec.pinHash = hashPin_(payload.newPin, rec.pinSalt);
+    }
+    rec.updated = new Date().toISOString();
+    rows[idx] = rec; changed = rec;
+    return { ok: true };
+  });
+  if (!out || !out.ok) return out || { ok: false };
+  // the CRM record carries the same contact facts — keep them in step
+  const cands = await getCandidates_();
+  const cand = await candidateFor_(cands, changed);
+  if (cand) {
+    cand.name = changed.name; cand.email = changed.email || ''; cand.phone = changed.phone || ''; cand.messenger = changed.messenger || ''; cand.country = changed.country || '';
+    cand.updated = new Date().toISOString(); cand.updatedBy = me.id;
+    await writeJSON('candidates', cands);
+  }
+  await clearLoginThrottle_(changed.username);
+  return { ok: true, account: portalAccountOut_(changed, cand) };
 }
 function portalMeOut_(s) {
   return { id: s.id, name: s.name, username: s.username, email: s.email || '', phone: s.phone || '', messenger: s.messenger || '', country: s.country || '',
@@ -3328,6 +3414,113 @@ async function portalSubmit(username, pin, answers) {
   await writeJSON('candidates', a.rows);
   return portalBoot(username, pin);
 }
+/* After submitting, the applicant may still correct their answers — teams in
+   particular apply with estimated dates and head counts and firm them up
+   later. The whole answer set is replaced (required still checked), the
+   record logs that the applicant changed it, and the stage is left alone. */
+async function portalUpdateAnswers(username, pin, answers) {
+  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  const cand = a.cand;
+  cand.portal = cand.portal || {};
+  if (!cand.portal.submittedAt || !cand.portal.form) return { ok: false, err: 'not_submitted' };
+  if (cand.archived) return { ok: false, err: 'closed' };
+  const form = (await getForms_())[formKeyOf_(cand)], audience = audienceOf_(cand);
+  const merged = cleanAnswers_(answers && typeof answers === 'object' ? answers : {}, form, audience);
+  const missing = missingRequired_(merged, form, audience);
+  if (missing.length) return { ok: false, err: 'missing', missing: missing };
+  const now = new Date().toISOString();
+  cand.portal.form.answers = merged; cand.portal.form.updatedAt = now;
+  cand.log = (Array.isArray(cand.log) ? cand.log : []).concat([{ at: now, by: a.s.id, kind: 'note', text: 'Updated their application answers' }]).slice(-CAND_LOG_MAX);
+  cand.updated = now; cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return portalBoot(username, pin);
+}
+/* ==================== the leader reference ====================
+   International applicants (and every staff / volunteer applicant) send one
+   reference from a pastor or leader. The applicant — or staff, from the
+   record — makes a link; the leader opens portal.html?ref=<token> with no
+   account and fills in the reference form (forms.reference, editable like
+   the others). The token is random, kept only as a sha256 hash on the record,
+   single-use, and expires after REF_TTL_DAYS; making a new link revokes the
+   pending one. The two public handlers answer with the applicant's name and
+   the form — nothing else about them. */
+const REF_TTL_DAYS = 14;
+function refHash_(token) { return hashPin_(String(token), 'reference'); }
+function refs_(c) { return (c && c.portal && Array.isArray(c.portal.references)) ? c.portal.references : []; }
+function refValid_(ref, now) {
+  if (!ref || ref.usedAt) return 'used';
+  if (ref.revokedAt || !ref.expiresAt || new Date(ref.expiresAt).getTime() < (now || Date.now())) return 'expired';
+  return 'ok';
+}
+/* What the applicant and the staff see about the reference: nothing about the
+   token itself. */
+function refState_(c) {
+  const list = refs_(c);
+  const got = list.filter(function (r) { return r && r.usedAt; }).sort(function (a, b) { return String(b.usedAt).localeCompare(String(a.usedAt)); })[0];
+  if (got) return { status: 'received', receivedAt: got.usedAt, leaderName: got.leaderName || '', leaderEmail: got.leaderEmail || '', answers: got.answers || {}, sentAt: got.createdAt || null };
+  const open = list.filter(function (r) { return r && refValid_(r) === 'ok'; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); })[0];
+  if (open) return { status: 'pending', sentAt: open.createdAt, expiresAt: open.expiresAt };
+  const last = list.filter(function (r) { return r && !r.usedAt; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); })[0];
+  if (last) return { status: 'expired', sentAt: last.createdAt, expiresAt: last.expiresAt };
+  return { status: 'none' };
+}
+async function portalReferenceLink(username, pin, candidateId) {
+  let a;
+  if (candidateId) { a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out; }
+  else { a = await applicantCand_(username, pin); if (a.out) return a.out; }
+  const cand = a.cand;
+  if (!refNeeded_(cand)) return { ok: false, err: 'not_needed' };
+  if (cand.archived) return { ok: false, err: 'closed' };
+  cand.portal = cand.portal || {};
+  const list = refs_(cand);
+  if (list.some(function (r) { return r && r.usedAt; })) return { ok: false, err: 'received' };
+  const now = new Date();
+  list.forEach(function (r) { if (r && !r.usedAt && !r.revokedAt) r.revokedAt = now.toISOString(); });
+  const token = pinSalt_() + pinSalt_() + pinSalt_();
+  const ref = { id: 'ref_' + pinSalt_(), hash: refHash_(token), createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + REF_TTL_DAYS * 86400000).toISOString(), by: a.s.id };
+  list.push(ref);
+  cand.portal.references = list.slice(-10);
+  cand.updated = now.toISOString(); cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return { ok: true, token: token, expiresAt: ref.expiresAt, reference: refState_(cand) };
+}
+async function findRef_(token) {
+  token = String(token || '');
+  if (!/^[a-f0-9]{24,128}$/.test(token)) return null;
+  const h = refHash_(token);
+  const rows = await getCandidates_();
+  for (const c of rows) {
+    const ref = refs_(c).find(function (r) { return r && r.hash === h; });
+    if (ref) return { rows: rows, cand: c, ref: ref };
+  }
+  return null;
+}
+function refApplyingFor_(c) { return c.type === 'student' ? String(c.school || '').toUpperCase() : c.type; }
+async function portalReferenceForm(token) {
+  const f = await findRef_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  const v = refValid_(f.ref);
+  if (v !== 'ok') return { ok: false, err: v };
+  return { ok: true, applicantName: f.cand.name, applyingFor: refApplyingFor_(f.cand), expiresAt: f.ref.expiresAt, form: (await getForms_()).reference };
+}
+async function portalReferenceSubmit(token, answers) {
+  const f = await findRef_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  const v = refValid_(f.ref);
+  if (v !== 'ok') return { ok: false, err: v };
+  const form = (await getForms_()).reference;
+  const clean = cleanAnswers_(answers && typeof answers === 'object' ? answers : {}, form, 'all');
+  const missing = missingRequired_(clean, form, 'all');
+  if (missing.length) return { ok: false, err: 'missing', missing: missing };
+  const now = new Date().toISOString();
+  f.ref.usedAt = now; f.ref.answers = clean;
+  f.ref.leaderName = str_(clean.leaderName, 120) || ''; f.ref.leaderEmail = cleanEmail_(clean.leaderEmail) || '';
+  f.cand.portal.referenceDone = true;
+  f.cand.log = (Array.isArray(f.cand.log) ? f.cand.log : []).concat([{ at: now, by: 'reference', kind: 'note', text: 'Leader reference received' + (f.ref.leaderName ? ' from ' + f.ref.leaderName : '') }]).slice(-CAND_LOG_MAX);
+  f.cand.updated = now; f.cand.updatedBy = 'reference';
+  await writeJSON('candidates', f.rows);
+  return { ok: true, applicantName: f.cand.name };
+}
 /* Staff-side writes on one record beyond the CRM's own: the visa flags the
    applicant watches for (flights confirmed, letter of invitation sent) and
    corrections to submitted answers. Same gate and scope as the CRM writes. */
@@ -3512,8 +3705,15 @@ const HANDLERS = {
   portalResetForm: function (a) { return portalResetForm(a[0], a[1], a[2]); },
   portalSaveDraft: function (a) { return portalSaveDraft(a[0], a[1], a[2]); },
   portalSubmit: function (a) { return portalSubmit(a[0], a[1], a[2]); },
+  portalUpdateAnswers: function (a) { return portalUpdateAnswers(a[0], a[1], a[2]); },
+  portalReferenceLink: function (a) { return portalReferenceLink(a[0], a[1], a[2]); },
+  portalReferenceForm: function (a) { return portalReferenceForm(a[0]); },
+  portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
-  portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); }
+  portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); },
+  portalListAccounts: function (a) { return portalListAccounts(a[0], a[1]); },
+  portalCreateApplicant: function (a) { return portalCreateApplicant(a[0], a[1], a[2]); },
+  portalUpdateAccount: function (a) { return portalUpdateAccount(a[0], a[1], a[2], a[3]); }
 };
 
 export default async (req) => {
