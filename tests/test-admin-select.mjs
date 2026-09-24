@@ -28,9 +28,10 @@ function ok(name, cond, extra) {
   else { fail++; console.log('FAIL ' + name + (extra !== undefined ? '  → ' + extra : '')); }
 }
 const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [], active: true };
-const ME = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Director', isAdmin: true };
+const ME = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Director', isAdmin: true, staffType: 'campus' };
 const staff = [ME];
-for (let i = 0; i < 14; i++) staff.push({ ...base, id: 'st_' + i, name: 'Person ' + i, username: 'p' + i, dept: 'Community Service', ministry: 'Cafe', role: '' });
+// ten ministry staff, three YAP, one whose kind of staff was never set
+for (let i = 0; i < 14; i++) staff.push({ ...base, id: 'st_' + i, name: 'Person ' + i, username: 'p' + i, dept: 'Community Service', ministry: 'Cafe', role: '', staffType: i < 10 ? 'ministry' : i < 13 ? 'yap' : '' });
 
 const browser = await chromium.launch({ executablePath: CHROMIUM });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 700 } });
@@ -60,6 +61,13 @@ await page.waitForTimeout(500);
 
 const visible = () => page.evaluate(() => [].filter.call(document.querySelectorAll('[data-adminrow]'), r => r.style.display !== 'none').map(r => r.querySelector('[data-adminperson]').getAttribute('data-adminperson')));
 ok('every Siem Reap account is listed', (await visible()).length === 15, (await visible()).length);
+const groups = () => page.evaluate(() => [].map.call(document.querySelectorAll('[data-admingroup]'), g => g.getAttribute('data-admingroup') + ':' + g.querySelector('.mentorLabel').textContent.trim() + ':' + g.querySelectorAll('[data-adminrow]').length + ':' + (g.style.display === 'none' ? 'hidden' : 'shown')));
+ok('the list is split into Siem Reap ministries, then YAP and Campus staff, then whoever is not sorted yet', JSON.stringify(await groups()) === JSON.stringify(['ministry:Siem Reap ministries · 10:10:shown', 'campus:YAP and Campus staff · 4:4:shown', 'unset:Kind of staff not set yet · 1:1:shown']), JSON.stringify(await groups()));
+await page.fill('#adminSearch', 'uriah');
+await page.waitForTimeout(200);
+ok('a search hides the groups with no match', JSON.stringify((await groups()).map(g => g.split(':').pop())) === JSON.stringify(['hidden', 'shown', 'hidden']), JSON.stringify(await groups()));
+await page.fill('#adminSearch', '');
+await page.waitForTimeout(200);
 await page.fill('#adminSearch', 'person 1');
 await page.waitForTimeout(200);
 const narrowed = await visible();

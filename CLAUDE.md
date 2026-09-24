@@ -406,6 +406,10 @@ Try again as My Ministry.
   "In YWAM since 2003 — 23 years" beside "Serving in Siem Reap since …" on the HR person page
   and as "N yrs in YWAM" in the list. Someone can be 23 years in YWAM on a 2-year Siem Reap
   contract; the contract's `years` still drives the renewal date.
+- **Admin → Accounts groups a campus's people by kind of staff** (`adminAccountsHtml_`): "{Campus}
+  ministries" (`staffType==='ministry'`), then "YAP and Campus staff" (`yap` / `campus`), then
+  "Kind of staff not set yet" for anyone unsorted — each a `[data-admingroup]` with a
+  `.mentorLabel` heading and count; the search hides a group whose rows all miss.
 - **Contracts live on the staff record**: `contracts: [{id, signed:'YYYY-MM', years,
   notes, files:[{id,name,mime,size,added}], added, addedBy}]`, sorted oldest first; the
   **current** contract is the last one, a renewal is another row (`hrSaveContract`; same
