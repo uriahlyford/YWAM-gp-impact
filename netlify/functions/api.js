@@ -2743,7 +2743,16 @@ function hrDueCount_(rows) {
 function hrStaffOut_(s) {
   const out = adminStaffOut_(s);
   out.joined = s.joined || ''; out.photo = s.photo || ''; out.contracts = contractsOf_(s);
+  out.ywamSince = ywamSinceOf_(s);
   return out;
+}
+/* A contract covers this base only; many staff served YWAM elsewhere first.
+   `ywamSince` is the year they joined YWAM anywhere — a fact about the
+   person, not the contract — so "Serving in Siem Reap since 2021" and "In
+   YWAM since 2003" can both be true. Set from the contract form. */
+function ywamSinceOf_(s) {
+  const y = Number(s && s.ywamSince);
+  return (Number.isInteger(y) && y >= 1960 && y <= new Date().getFullYear()) ? y : null;
 }
 async function hrList(username, pin) {
   const s = await verifyStaff_(username, pin);
@@ -2774,6 +2783,10 @@ async function hrSaveContract(username, pin, staffId, contract) {
     if (!existing) { clean.added = new Date().toISOString(); clean.addedBy = me.id; if (list.length >= HR_MAX_CONTRACTS) return { abort: true, ok: false, err: 'too_many' }; }
     else { clean.added = existing.added; clean.addedBy = existing.addedBy; }
     rec.contracts = list.filter(function (c) { return c.id !== clean.id; }).concat([clean]);
+    if (contract && contract.ywamSince !== undefined) {
+      if (contract.ywamSince === '' || contract.ywamSince === null) rec.ywamSince = null;
+      else { const y = ywamSinceOf_({ ywamSince: contract.ywamSince }); if (!y) return { abort: true, ok: false, err: 'bad_ywam_since' }; rec.ywamSince = y; }
+    }
   });
 }
 async function hrDeleteContract(username, pin, staffId, contractId) {

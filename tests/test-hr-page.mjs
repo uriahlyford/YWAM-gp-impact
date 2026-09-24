@@ -54,7 +54,7 @@ async function open(who) {
       trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [], base: { leader: false, entries: {}, okrs: [], survey: [], metricOverrides: [] }, hrDue: who.isAdmin ? 2 : null };
     else if (b.fn === 'getData') out = { entries: {}, okrs: [], survey: [] };
     else if (b.fn === 'hrList') out = { ok: true, staff };
-    else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); out = { ok: true, staff: p }; }
+    else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; if (c.ywamSince !== undefined) p.ywamSince = c.ywamSince === '' ? null : c.ywamSince; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); out = { ok: true, staff: p }; }
     else if (b.fn === 'hrUploadFile') { const p = find(b.args[2]); const c = p.contracts.find(x => x.id === b.args[3]); const meta = { id: 'f_new', name: b.args[4], mime: b.args[5], size: Math.floor(b.args[6].length * 3 / 4) }; c.files = c.files.concat([meta]); out = { ok: true, staff: p, file: meta }; }
     else if (b.fn === 'hrGetFile') out = { ok: true, id: b.args[2], name: 'contract 2021.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQ=' };
     else if (b.fn === 'hrArchive') { const p = find(b.args[2]); p.active = false; p.archived = { at: b.args[3].at, reason: b.args[3].reason, by: 'st_admin' }; out = { ok: true, staff: p }; }
@@ -116,7 +116,7 @@ console.log('=== the menu ===');
     addLabel: document.querySelector('#hrAddContract').textContent.trim(),
     archiveBtn: !!document.querySelector('#hrArchive'), search: !!document.querySelector('#hrSearch'),
   }));
-  ok('their page: name, how long they have served, since when', person.name === 'Andrew Lee' && /Serving 4 yr 11 mo/.test(person.serving) && /since/.test(person.serving), person.serving);
+  ok('their page: name, how long they have served, since when', person.name === 'Andrew Lee' && /Serving in YWAM Siem Reap 4 yr 11 mo/.test(person.serving) && /since/.test(person.serving), person.serving);
   ok('the banner says the contract is coming up for renewal', /due/.test(person.bannerClass) && /Renew in \d+ days/.test(person.banner) && /5 years/.test(person.banner), person.banner);
   ok('their contract is listed with its attached paper', person.contracts === 1 && person.files === 1);
   ok('the add button offers a renewal, and the archive box is there; the list is not', /renewal/.test(person.addLabel) && person.archiveBtn && !person.search);
@@ -133,12 +133,15 @@ console.log('=== the menu ===');
   await page.fill('#hr_signed', ym(Y, M + 1));
   await page.fill('#hr_years', '2');
   await page.fill('#hr_notes', 'second term');
+  ok('the form names the campus for the contract years and asks separately for the year they joined YWAM', /Years serving in YWAM Siem Reap/.test(await page.$eval('#hrContractForm', e => e.textContent)) && !!(await page.$('#hr_ywamsince')));
+  await page.fill('#hr_ywamsince', '2003');
   await page.click('#hrContractSave');
   await page.waitForTimeout(600);
   const sv = sent.find(x => x.fn === 'hrSaveContract');
-  ok('Save posts the month signed, the years and the note for this person', sv && sv.args[2] === 'st_1' && sv.args[3].signed === ym(Y, M + 1) && sv.args[3].years === 2 && sv.args[3].notes === 'second term', sv && JSON.stringify(sv.args[3]));
+  ok('Save posts the month signed, the years and the note for this person', sv && sv.args[2] === 'st_1' && sv.args[3].signed === ym(Y, M + 1) && sv.args[3].years === 2 && sv.args[3].notes === 'second term' && sv.args[3].ywamSince === 2003, sv && JSON.stringify(sv.args[3]));
   const after = await page.evaluate(() => ({ contracts: document.querySelectorAll('[data-hrcontract]').length, banner: document.querySelector('.hrBanner').className, form: !!document.querySelector('#hrContractForm') }));
   ok('the renewal shows as a second contract and the banner turns green', after.contracts === 2 && /active/.test(after.banner) && !after.form, JSON.stringify(after));
+  ok('the person header now says how long they have been in YWAM, apart from this base', /In YWAM since 2003/.test(await page.$eval('#hrYwamSince', e => e.textContent)) && /Serving in YWAM Siem Reap/.test(await page.$eval('.adminPersonHead', e => e.textContent)));
 
   // attach a file to the new contract
   const input = await page.$('[data-hrattach="c_new"]');
