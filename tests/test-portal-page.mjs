@@ -536,6 +536,28 @@ async function open(viewport, query, seed) {
   await ctx.close();
 }
 
+/* ---------- staff tools bar on a phone ---------- */
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  const bar = await page.evaluate(() => ({
+    header: [...document.querySelectorAll('#hbtns button')].map(b => b.id),
+    nav: [...document.querySelectorAll('#staffNav button')].map(b => b.id),
+    inView: [...document.querySelectorAll('#staffNav button, #hbtns button')].every(b => { const r = b.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }),
+    noScroll: document.documentElement.scrollWidth <= innerWidth + 1
+  }));
+  ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
+  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, View as applicant', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toPreview']), JSON.stringify(bar.nav));
+  ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll);
+  await page.click('#toPreview');
+  await page.waitForSelector('#pvFrame');
+  ok('the bar marks where you are and takes you back', await page.$eval('#toPreview', b => b.classList.contains('on')) && !!(await page.$('#navCrm')));
+  await page.click('#navCrm');
+  await page.waitForSelector('.trow');
+  ok('Applications in the bar returns to the list', await page.$eval('#navCrm', b => b.classList.contains('on')));
+  await ctx.close();
+}
+
 /* ---------- View as applicant, staff side ---------- */
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));

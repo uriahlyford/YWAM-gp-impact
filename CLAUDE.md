@@ -525,8 +525,12 @@ forms, documents and references follow.
   The reference form is `referenceForm` in portal-forms-default.js (the base's Leader
   Reference Google Form; English only, Khmer left empty), key `reference`, editable in the
   Forms editor like the others. The leader's page is the `ref` view (`refHtml_`, gate look).
+- **Staff tools live in a bar, not the header** (`staffNavHtml_`, `#staffNav`: Applications `#navCrm`,
+  Forms `#toForms` and Accounts `#toAccounts` for portal admins, View as applicant `#toPreview`).
+  The header keeps only language and Sign out: on a phone, four more buttons in it overflowed
+  over the title and pushed Sign out off screen. The bar wraps rather than scrolls.
 - **View as applicant** (staff side, anyone with portal access; `previewHtml_`, view `preview`,
-  header button, and "View as this applicant" on the record panel): `portalViewAs(username, pin,
+  staff-bar button, and "View as this applicant" on the record panel): `portalViewAs(username, pin,
   {candidateId})` returns one record's own boot (scope applies, no PIN material) and
   `portalViewAs(…, {type, school, audience, stage, campus})` a sample applicant built through
   the same `portalAppOut_` / `getForms_`; nothing is written. The page swaps `P.boot` /

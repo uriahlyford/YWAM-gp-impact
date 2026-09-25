@@ -154,6 +154,10 @@ textarea { min-height:80px; resize:vertical; }
 /* the forms editor */
 .two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .refBox { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.staffNav { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 16px; padding:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); }
+.staffNavBtn { flex:1 1 auto; border:0; background:transparent; color:var(--muted); font:inherit; font-size:13.5px; font-weight:600; padding:9px 12px; border-radius:var(--rSm); cursor:pointer; white-space:nowrap; }
+.staffNavBtn:hover { color:var(--ink); }
+.staffNavBtn.on { background:var(--ink); color:var(--accentInk); }
 .pvBar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 10px; }
 .pvWho { font-size:13px; color:var(--muted); }
 .pvFrame { border:2px dashed var(--border2); border-radius:var(--r); padding:14px; pointer-events:none; user-select:none; opacity:.96; }
@@ -340,17 +344,17 @@ var PORTAL_LOGO = 'ywam-logo.png';
 function render(){
   var hb=document.getElementById('hbtns');
   hb.innerHTML='<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+
-    (P.auth && P.boot && P.boot.role==='portal-admin' && (P.view==='crm'||P.view==='forms'||P.view==='accounts'||P.view==='preview') ? '<button class="hbtn" id="toForms">'+esc(t('Forms'))+'</button><button class="hbtn" id="toAccounts">'+esc(t('Accounts'))+'</button>' : '')+
-    (P.auth && P.boot && P.boot.role!=='applicant' && (P.view==='crm'||P.view==='forms'||P.view==='accounts'||P.view==='preview') ? '<button class="hbtn" id="toPreview">👁 '+esc(t('View as applicant'))+'</button>' : '')+
+
     (P.auth && P.boot ? '<button class="hbtn" id="outBtn">'+esc(t('Sign out'))+'</button>' : '');
   var m=document.getElementById('main');
   var v=P.view;
   /* The gate — everything before you are signed in — is the portal's name
      and logo on top and one card underneath; signed in, the bar goes slim. */
   document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts' && v!=='preview');
-  try { m.innerHTML = v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
+  var staffView = P.auth && P.boot && P.boot.role!=='applicant' && (v==='crm'||v==='forms'||v==='accounts'||v==='preview');
+  try { m.innerHTML = (staffView ? staffNavHtml_(v) : '') + (v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
     : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='accounts' ? accountsHtml_() : v==='preview' ? previewHtml_()
-    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_();
+    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_());
   bind_();
   } catch (e) {
     /* A dead screen where nothing responds is the worst outcome — show what
@@ -361,6 +365,16 @@ function render(){
     on_('errBack', function(){ P.view = (P.boot && P.boot.role==='applicant') ? 'me' : (P.boot ? 'crm' : 'login'); P.sel=null; P.formDraft=null; P.accSel=null; P.accNew=false; render(); });
     on_('errOut', signOut_);
   }
+}
+/* The staff side's tools, as a bar under the header rather than buttons in
+   it — a phone's header has room for the name, the language and Sign out,
+   not four more. Forms and Accounts are portal-admin only. */
+function staffNavHtml_(v){
+  var admin=P.boot.role==='portal-admin';
+  var items=[['crm','navCrm','📋 '+t('Applications')]];
+  if(admin){ items.push(['forms','toForms','📝 '+t('Forms')]); items.push(['accounts','toAccounts','👤 '+t('Accounts')]); }
+  items.push(['preview','toPreview','👁 '+t('View as applicant')]);
+  return '<nav class="staffNav" id="staffNav">'+items.map(function(x){ return '<button class="staffNavBtn'+(v===x[0]?' on':'')+'" id="'+x[1]+'">'+esc(x[2])+'</button>'; }).join('')+'</nav>';
 }
 function langRowHtml_(){
   return '<div class="langRow"><button id="langBtn2">'+(LANG==='km' ? 'English' : 'ភាសាខ្មែរ')+'</button></div>';
@@ -1153,7 +1167,8 @@ function bind_(){
   on_('refNew', function(){ makeRefLink_(null, function(link, d){ P.refLink=link; if(P.boot.application) P.boot.application.reference=d.reference; render(); }); });
   on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
-  on_('toForms', function(){ P.view='forms'; render(); });
+  on_('toForms', function(){ if(P.view==='forms') return; P.view='forms'; render(); });
+  on_('navCrm', function(){ if(P.view==='crm') return; P.view='crm'; render(); });
   on_('toPreview', function(){ if(P.view==='preview') return; P.view='preview'; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; render(); });
   on_('toAccounts', function(){ if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
   bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); if(P.view==='crm') bindPanelExtras_();
