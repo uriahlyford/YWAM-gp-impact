@@ -204,7 +204,7 @@ textarea { min-height:80px; resize:vertical; }
 <header>
   <div class="brandRow">
     <img id="brandLogo" alt="YWAM" class="logoImg">
-    <div><div class="brandTitle">YWAM GP Portal</div><div class="brandSub">Poipet · Siem Reap</div></div>
+    <div><div class="brandTitle">YWAM GP Portal</div><div class="brandSub" id="brandSub">Siem Reap</div></div>
   </div>
   <div class="hbtns" id="hbtns"></div>
 </header>
@@ -253,6 +253,12 @@ function run(fn, args, onOk, onErr){
 var CAMPUS_SCHOOLS = { poipet:['dts','dbs'], siemreap:['dts','dbs','bcs','sms'] };
 var CAMPUS_LIST = [['siemreap','YWAM Siem Reap','Siem Reap'],['poipet','YWAM Poipet','Poipet']];
 var DEFAULT_CAMPUS = 'siemreap';
+/* Which campuses take applications right now. Poipet is set up (schools,
+   forms, the staff side all know it) but hidden until the base says go —
+   add it here and every picker, chip and deep link comes back. */
+var PORTAL_OPEN = ['siemreap'];
+function openCampuses_(){ return CAMPUS_LIST.filter(function(c){ return PORTAL_OPEN.indexOf(c[0])>-1; }); }
+function isOpenCampus_(id){ return PORTAL_OPEN.indexOf(id)>-1; }
 function campusName_(id){ for(var i=0;i<CAMPUS_LIST.length;i++) if(CAMPUS_LIST[i][0]===id) return t(CAMPUS_LIST[i][1]); return id||''; }
 function campusShort_(id){ for(var i=0;i<CAMPUS_LIST.length;i++) if(CAMPUS_LIST[i][0]===id) return t(CAMPUS_LIST[i][2]); return id||''; }
 var APPLY = [
@@ -298,7 +304,7 @@ var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPU
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
-  if(qs.campus && CAMPUS_SCHOOLS[qs.campus]) P.campus=qs.campus;
+  if(qs.campus && CAMPUS_SCHOOLS[qs.campus] && isOpenCampus_(qs.campus)) P.campus=qs.campus;
   if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
   if(qs.ref){ P.view='ref'; P.refToken=String(qs.ref); }
   var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
@@ -355,12 +361,13 @@ function langRowHtml_(){
   return '<div class="langRow"><button id="langBtn2">'+(LANG==='km' ? 'English' : 'ភាសាខ្មែរ')+'</button></div>';
 }
 function campusSegHtml_(attr, current){
-  return '<div class="seg campusSeg">'+CAMPUS_LIST.map(function(c){ return '<button '+attr+'="'+c[0]+'" class="'+(current===c[0]?'on':'')+'">'+esc(t(c[1]))+'</button>'; }).join('')+'</div>';
+  var open=openCampuses_(); if(open.length<2) return '';
+  return '<div class="seg campusSeg">'+open.map(function(c){ return '<button '+attr+'="'+c[0]+'" class="'+(current===c[0]?'on':'')+'">'+esc(t(c[1]))+'</button>'; }).join('')+'</div>';
 }
 function chooseHtml_(){
   var here=P.campus||DEFAULT_CAMPUS;
   return '<div class="wide"><div class="gateTitle"><h2>'+esc(t('I want to apply'))+'</h2><p class="sub">'+esc(t('Pick where, then what you are applying for. You will create a small account so you can come back to it on your phone.'))+'</p></div>'+
-    '<div class="center" style="margin-bottom:14px"><label class="f" style="text-align:center">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here)+'</div>'+
+    (openCampuses_().length>1 ? '<div class="center" style="margin-bottom:14px"><label class="f" style="text-align:center">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here)+'</div>' : '')+
     '<div class="choices">'+APPLY.filter(function(a){ return offeredAt_(a, here); }).map(function(a){ return '<button class="choice" data-apply="'+a.key+'"><span class="choiceKey">'+esc(a.label)+'</span><span class="choiceSub">'+esc(t(a.blurb))+(a.secondary?'<br><span class="prereq">'+esc(t('Requires a completed DTS'))+'</span>':'')+'</span></button>'; }).join('')+'</div>'+
     '<button class="linkbtn" id="toLogin">'+esc(t('I already have an account'))+'</button>'+langRowHtml_()+'</div>';
 }
@@ -468,8 +475,8 @@ function registerHtml_(){
   var h='<div class="center"><div class="gateTitle"><h2>'+esc(t('Create your account'))+'</h2>';
   h+='<p class="sub">'+esc(t('A few details so we can reach you, then your application. Nothing here is shared outside our applications team.'))+'</p></div>';
   var here=P.campus||DEFAULT_CAMPUS;
-  h+='<div class="card"><label class="f" style="margin-top:0">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here)+
-    '<label class="f">'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(a&&a.key===x.key?' on':'')+'" data-pick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>'+
+  h+='<div class="card">'+(openCampuses_().length>1 ? '<label class="f" style="margin-top:0">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here) : '')+
+    '<label class="f"'+(openCampuses_().length>1?'':' style="margin-top:0"')+'>'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(a&&a.key===x.key?' on':'')+'" data-pick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>'+
     (a ? '<p class="hint">'+esc(t(a.blurb))+(a.secondary?' · '+esc(t('Requires a completed DTS')):'')+'</p>' : '<p class="hint">'+esc(t('Pick one to continue.'))+'</p>')+'</div>';
   h+='<div class="card">'+
     '<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="r_name" autocomplete="name" value="'+esc(r.name||'')+'">'+
@@ -541,7 +548,12 @@ function meHtml_(){
 function crmHtml_(){
   var d=P.boot, all=d.applicants.slice();
   var byId={}; d.staff.forEach(function(s){ byId[s.id]=s; });
-  if(P.campusFilter===null) P.campusFilter = CAMPUS_SCHOOLS[d.me.campus] ? d.me.campus : '';
+  /* Campuses worth a chip: the open ones plus any a current applicant is at
+     (so nobody at a hidden campus disappears). One campus → no chip row. */
+  var seenCampus={}; all.forEach(function(c){ if(c.campus) seenCampus[c.campus]=1; });
+  var campusChips=CAMPUS_LIST.filter(function(c){ return isOpenCampus_(c[0]) || seenCampus[c[0]]; });
+  if(campusChips.length<2){ P.campusFilter=''; }
+  else if(P.campusFilter===null) P.campusFilter = campusChips.some(function(c){ return c[0]===d.me.campus; }) ? d.me.campus : '';
   /* What am I looking at: one kind of application at a time — the four
      schools, staff, volunteers, teams — as a tab row. A scoped staff member
      (Outreach Teams: teams only) gets just their tabs, opened on the first. */
@@ -553,7 +565,7 @@ function crmHtml_(){
   var live=list.filter(function(c){ return !c.archived; });
   var counts={}; live.forEach(function(c){ counts[c.stage]=(counts[c.stage]||0)+1; });
   var h='<div class="panelHead"><div><h1 style="font-size:28px">'+esc(t('Applications'))+'</h1><p class="sub">'+esc(gpT('{n} open · signed in as {name} ({role})',{n:live.length, name:d.me.name, role:(d.role==='portal-admin' ? t('portal admin') : t('portal staff'))}))+'</p></div></div>';
-  h+='<div class="chips" style="margin-bottom:12px">'+[['',t('All campuses')]].concat(CAMPUS_LIST.map(function(c){ return [c[0], t(c[1])]; })).map(function(x){
+  if(campusChips.length>1) h+='<div class="chips" style="margin-bottom:12px">'+[['',t('All campuses')]].concat(campusChips.map(function(c){ return [c[0], t(c[1])]; })).map(function(x){
     var n=all.filter(function(c){ return !c.archived && (!x[0] || c.campus===x[0]); }).length;
     return '<button class="chip'+(P.campusFilter===x[0]?' on':'')+'" data-campusfilter="'+x[0]+'">'+esc(x[1])+' · '+n+'</button>'; }).join('')+'</div>';
   var byCampus=all.filter(function(c){ return !c.archived && (!P.campusFilter || c.campus===P.campusFilter); });
@@ -581,7 +593,7 @@ function crmHtml_(){
     var chat=chatHref_(c.messenger, c.phone);
     h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
       '<span><span class="who">'+esc(c.name)+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span></span>'+
-      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(P.campusFilter?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
+      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
       '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
       '<span class="meta desk">'+esc(owner)+'</span>'+
       '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
@@ -747,7 +759,7 @@ function accountFormHtml_(a){
   var h='<div class="panel" id="accPanel"><div class="panelHead"><h2 style="margin:0">'+esc(isNew ? t('Add an account') : a.name)+'</h2><button class="hbtn" id="accClose">✕</button></div>';
   if(isNew){
     var here=f.campus||DEFAULT_CAMPUS, pick=applyByKey_(f.apply);
-    h+='<label class="f" style="margin-top:6px">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-acccampus', here)+
+    h+=(openCampuses_().length>1 ? '<label class="f" style="margin-top:6px">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-acccampus', here) : '')+
       '<label class="f">'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(pick&&pick.key===x.key?' on':'')+'" data-accpick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>';
   } else {
     h+='<p class="sub" style="margin:2px 0 10px">'+esc(applyLabel_(a.type, a.school))+' · '+esc(campusName_(a.campus))+(a.created?' · '+esc(gpT('since {when}',{when:fmtDate_(a.created)})):'')+'</p>'+
