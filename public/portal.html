@@ -154,6 +154,10 @@ textarea { min-height:80px; resize:vertical; }
 /* the forms editor */
 .two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .refBox { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.pvBar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 10px; }
+.pvWho { font-size:13px; color:var(--muted); }
+.pvFrame { border:2px dashed var(--border2); border-radius:var(--r); padding:14px; pointer-events:none; user-select:none; opacity:.96; }
+.pvFrame .two { grid-template-columns:1fr; }
 #refLinkBox { font-size:13px; }
 .qcard { background:var(--bg); border:1px solid var(--border2); border-radius:var(--rSm); padding:12px; margin-top:10px; }
 .audTag { display:inline-block; font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase; color:var(--warn); margin-bottom:8px; }
@@ -300,7 +304,7 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, pv:{ mode:'sample', key:'dts', aud:'international', stage:'new', candId:null, q:'', screen:'me', sec:0, boot:null, busy:false }, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
@@ -336,15 +340,16 @@ var PORTAL_LOGO = 'ywam-logo.png';
 function render(){
   var hb=document.getElementById('hbtns');
   hb.innerHTML='<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+
-    (P.auth && P.boot && P.boot.role==='portal-admin' && (P.view==='crm'||P.view==='forms'||P.view==='accounts') ? '<button class="hbtn" id="toForms">'+esc(t('Forms'))+'</button><button class="hbtn" id="toAccounts">'+esc(t('Accounts'))+'</button>' : '')+
+    (P.auth && P.boot && P.boot.role==='portal-admin' && (P.view==='crm'||P.view==='forms'||P.view==='accounts'||P.view==='preview') ? '<button class="hbtn" id="toForms">'+esc(t('Forms'))+'</button><button class="hbtn" id="toAccounts">'+esc(t('Accounts'))+'</button>' : '')+
+    (P.auth && P.boot && P.boot.role!=='applicant' && (P.view==='crm'||P.view==='forms'||P.view==='accounts'||P.view==='preview') ? '<button class="hbtn" id="toPreview">👁 '+esc(t('View as applicant'))+'</button>' : '')+
     (P.auth && P.boot ? '<button class="hbtn" id="outBtn">'+esc(t('Sign out'))+'</button>' : '');
   var m=document.getElementById('main');
   var v=P.view;
   /* The gate — everything before you are signed in — is the portal's name
      and logo on top and one card underneath; signed in, the bar goes slim. */
-  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts');
+  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts' && v!=='preview');
   try { m.innerHTML = v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
-    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='accounts' ? accountsHtml_()
+    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='accounts' ? accountsHtml_() : v==='preview' ? previewHtml_()
     : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_();
   bind_();
   } catch (e) {
@@ -624,6 +629,7 @@ function panelHtml_(c, byId){
   h+='<ul class="log">'+(log.length ? log.map(function(l){ var who=byId[l.by] ? byId[l.by].name : (l.by===c.staffId ? c.name : '—');
     return '<li><span class="when">'+esc(fmtDate_(l.at))+' · '+esc(who)+'</span>'+(l.kind==='stage' ? '→ '+esc(t(STAGE_LABEL[l.text]||l.text)) : esc(l.text))+'</li>'; }).join('') : '<li class="empty">'+esc(t('No notes yet.'))+'</li>')+'</ul>';
   h+='<button class="linkbtn" id="archiveCand">'+esc(c.archived ? t('Reopen this application') : t('Close this application'))+'</button>';
+  h+='<button class="linkbtn" id="viewAsCand">👁 '+esc(t('View as this applicant'))+'</button>';
   if(P.boot.role==='portal-admin') h+='<button class="linkbtn danger" id="deleteCand">'+esc(c.hasAccount ? t('Delete this account and application') : t('Delete this application'))+'</button>';
   h+='</div>';
   return h;
@@ -728,6 +734,75 @@ function bindForm_(){
       showMsg(d && d.err==='submitted' ? t('This application was already submitted.') : t('Could not send — try again.')); render();
     });
   });
+}
+/* ==================== View as applicant (staff side) ====================
+   The applicant's dashboard and form, drawn by the same code they get, inside
+   a read-only frame — so an edit to a form or a stage can be checked from
+   the other side without making test accounts. Either a sample applicant
+   (kind, Khmer or international, stage) or any real one in scope. */
+function previewHtml_(){
+  var d=P.boot, pv=P.pv;
+  var h='<div class="panelHead"><div><h1 style="font-size:28px">👁 '+esc(t('View as applicant'))+'</h1><p class="sub">'+esc(t('What an applicant sees on their own screen, drawn by the same code. Look only — nothing here can be changed from this side.'))+'</p></div>'+
+    '<button class="btn ghost small" id="toCrm">← '+esc(t('Applications'))+'</button></div>';
+  h+='<div class="whatTabs"><button class="whatTab'+(pv.mode==='sample'?' on':'')+'" data-pvmode="sample">'+esc(t('A sample applicant'))+'</button><button class="whatTab'+(pv.mode==='record'?' on':'')+'" data-pvmode="record">'+esc(t('One of our applicants'))+'</button></div>';
+  if(pv.mode==='sample'){
+    var scope=Array.isArray(d.scope) ? d.scope : null;
+    var kinds=APPLY.filter(function(a){ return !scope || scope.indexOf(a.type)>-1; });
+    if(!kinds.some(function(a){ return a.key===pv.key; })) pv.key=kinds[0].key;
+    var isSchool=['dts','dbs','bcs','sms'].indexOf(pv.key)>-1;
+    h+='<div class="card"><label class="f" style="margin-top:0">'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+kinds.map(function(a){ return '<button class="chip'+(pv.key===a.key?' on':'')+'" data-pvkey="'+a.key+'">'+esc(a.key==='team'?t('Team'):a.label)+'</button>'; }).join('')+'</div>'+
+      (isSchool ? '<label class="f">'+esc(t('Who'))+'</label><div class="seg"><button data-pvaud="khmer" class="'+(pv.aud==='khmer'?'on':'')+'">'+esc(t('Khmer student'))+'</button><button data-pvaud="international" class="'+(pv.aud==='international'?'on':'')+'">'+esc(t('International student'))+'</button></div>'
+        : '<p class="hint">'+esc(t('Staff, volunteers and teams are shown as international applicants (visa guide, and a leader reference except for teams).'))+'</p>')+
+      '<label class="f">'+esc(t('Where their application is'))+'</label><div class="chips" style="margin-bottom:0">'+(d.stages||[]).map(function(st){ return '<button class="chip'+(pv.stage===st?' on':'')+'" data-pvstage="'+st+'">'+esc(t(STAGE_LABEL[st]||st))+'</button>'; }).join('')+'</div></div>';
+  } else {
+    var q=String(pv.q||'').toLowerCase();
+    var list=(d.applicants||[]).filter(function(c){ return !q || (c.name+' '+(c.email||'')).toLowerCase().indexOf(q)>-1; });
+    h+='<div class="card"><input type="search" id="pvQ" placeholder="'+esc(t('Search by name'))+'" value="'+esc(pv.q||'')+'"><div class="chips" style="margin:10px 0 0;max-height:180px;overflow:auto">'+
+      (list.length ? list.slice(0,60).map(function(c){ return '<button class="chip'+(pv.candId===c.id?' on':'')+'" data-pvcand="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(applyLabel_(c.type, c.school))+'</button>'; }).join('') : '<p class="sub" style="margin:0">'+esc(t('No one matches.'))+'</p>')+'</div></div>';
+  }
+  if(pv.mode==='record' && !pv.candId) return h+'<p class="sub">'+esc(t('Pick an applicant above.'))+'</p>';
+  if(pv.busy || !pv.boot) return h+'<p class="sub" style="padding:24px 0;text-align:center">'+esc(t('Loading…'))+'</p>';
+  var b=pv.boot;
+  if(!b.ok) return h+'<p class="sub">'+esc(b.err==='not_authorized' ? t('That applicant is outside your scope.') : t('Could not load'))+'</p>';
+  /* which screen of theirs */
+  var form=b.form, aud=b.application.audience;
+  var secs=form ? (form.sections||[]).filter(function(sec){ return askedIn_(sec, aud).length; }) : [];
+  h+='<div class="pvBar"><span class="pvWho">'+esc(gpT('Seeing what {name} sees',{name:b.me.name}))+(b.preview==='sample' ? ' · '+esc(t('sample data')) : '')+'</span>'+
+    '<div class="seg" style="max-width:360px"><button data-pvscreen="me" class="'+(pv.screen==='me'?'on':'')+'">'+esc(t('Their dashboard'))+'</button><button data-pvscreen="form" class="'+(pv.screen==='form'?'on':'')+'"'+(secs.length?'':' disabled')+'>'+esc(t('Their form'))+'</button></div></div>';
+  if(pv.screen==='form' && secs.length){
+    if(pv.sec>=secs.length) pv.sec=secs.length-1;
+    h+='<div class="chips" style="margin:0 0 10px">'+secs.map(function(sec, i){ return '<button class="chip'+(pv.sec===i?' on':'')+'" data-pvsec="'+i+'">'+(i+1)+'. '+esc(lt_(sec.title))+'</button>'; }).join('')+'</div>';
+  }
+  /* draw their screen with their data, then put ours back */
+  var saved={ boot:P.boot, answers:P.answers, formSec:P.formSec, formMissing:P.formMissing, showAnswers:P.showAnswers, editContact:P.editContact, refLink:P.refLink, editMine:P.editMine };
+  P.boot=b; P.answers=(b.application && b.application.answers)||{}; P.formSec=pv.sec; P.formMissing=null; P.showAnswers=false; P.editContact=false; P.refLink=null; P.editMine=false;
+  var inner='';
+  try { inner = pv.screen==='form' ? formHtml_() : meHtml_(); } catch(e){ inner='<p class="sub">'+esc(String(e && e.message || e))+'</p>'; }
+  P.boot=saved.boot; P.answers=saved.answers; P.formSec=saved.formSec; P.formMissing=saved.formMissing; P.showAnswers=saved.showAnswers; P.editContact=saved.editContact; P.refLink=saved.refLink; P.editMine=saved.editMine;
+  h+='<div class="pvFrame" id="pvFrame" inert>'+inner+'</div>';
+  return h;
+}
+function loadPreview_(){
+  var pv=P.pv; pv.busy=true; pv.boot=null;
+  var a=applyByKey_(pv.key)||APPLY[0];
+  var opts = pv.mode==='record' ? { candidateId: pv.candId } : { type:a.type, school:a.school, audience: pv.aud, stage: pv.stage, campus: (P.boot.me && P.boot.me.campus) || DEFAULT_CAMPUS };
+  run('portalViewAs', [P.auth.user, P.auth.pin, opts], function(d){ pv.busy=false; pv.boot=d||{ ok:false }; render(); }, function(){ pv.busy=false; pv.boot={ ok:false }; render(); });
+}
+function bindPreview_(){
+  if(P.view!=='preview') return;
+  var pv=P.pv;
+  on_('toCrm', function(){ P.view='crm'; render(); });
+  var reload=function(){ pv.boot=null; pv.sec=0; render(); };
+  // a different person (or kind of preview) opens on their dashboard; stage / audience keep the screen you are comparing
+  document.querySelectorAll('[data-pvmode]').forEach(function(b){ b.onclick=function(){ pv.mode=b.getAttribute('data-pvmode'); pv.screen='me'; reload(); }; });
+  document.querySelectorAll('[data-pvkey]').forEach(function(b){ b.onclick=function(){ pv.key=b.getAttribute('data-pvkey'); reload(); }; });
+  document.querySelectorAll('[data-pvaud]').forEach(function(b){ b.onclick=function(){ pv.aud=b.getAttribute('data-pvaud'); reload(); }; });
+  document.querySelectorAll('[data-pvstage]').forEach(function(b){ b.onclick=function(){ pv.stage=b.getAttribute('data-pvstage'); reload(); }; });
+  document.querySelectorAll('[data-pvcand]').forEach(function(b){ b.onclick=function(){ pv.candId=b.getAttribute('data-pvcand'); pv.screen='me'; reload(); }; });
+  document.querySelectorAll('[data-pvscreen]').forEach(function(b){ b.onclick=function(){ pv.screen=b.getAttribute('data-pvscreen'); render(); }; });
+  document.querySelectorAll('[data-pvsec]').forEach(function(b){ b.onclick=function(){ pv.sec=+b.getAttribute('data-pvsec'); render(); }; });
+  var q=document.getElementById('pvQ'); if(q){ q.oninput=function(){ pv.q=q.value; var keep=q.selectionStart; render(); var n=document.getElementById('pvQ'); if(n){ n.focus(); try{ n.setSelectionRange(keep, keep); }catch(e){} } }; }
+  if(!pv.boot && !pv.busy && (pv.mode==='sample' || pv.candId)) loadPreview_();
 }
 /* ==================== Accounts (staff side, portal admins) ====================
    Every applicant account in one list: who, what they applied for, where the
@@ -1066,6 +1141,7 @@ function bind_(){
   on_('addNote', addNote_);
   on_('archiveCand', archiveCand_);
   on_('deleteCand', deleteCand_);
+  on_('viewAsCand', function(){ var c=selected_(); if(!c) return; P.pv.mode='record'; P.pv.candId=c.id; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; P.view='preview'; render(); window.scrollTo(0,0); });
   on_('openForm', function(){
     var go=function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); };
     if(P.boot.form) return go();
@@ -1078,8 +1154,9 @@ function bind_(){
   on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('toForms', function(){ P.view='forms'; render(); });
+  on_('toPreview', function(){ if(P.view==='preview') return; P.view='preview'; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; render(); });
   on_('toAccounts', function(){ if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
-  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); if(P.view==='crm') bindPanelExtras_();
+  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){

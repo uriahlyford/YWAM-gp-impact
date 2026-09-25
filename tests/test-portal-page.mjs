@@ -107,6 +107,10 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'portalReferenceSubmit') {
       const ans = b.args[1]; const miss = ['leaderName', 'leaderEmail', 'recommend'].filter(k => !ans[k]);
       out = b.args[0] !== 'goodtoken' ? { ok: false, err: 'invalid' } : miss.length ? { ok: false, err: 'missing', missing: miss } : { ok: true, applicantName: 'Anna Example' };
+    } else if (b.fn === 'portalViewAs') {
+      const o = b.args[2] || {};
+      if (o.candidateId) { const c = CANDS.find(x => x.id === o.candidateId); out = c ? { ok: true, preview: 'record', role: 'applicant', me: { ...ME_APP, name: c.name, type: c.type, school: c.school }, application: { ...ANNA, id: c.id, name: c.name, type: c.type, school: c.school, stage: c.stage, status: c.status, submittedAt: c.stage === 'new' ? null : '2026-09-20T10:00:00Z', answers: (c.portal && c.portal.form && c.portal.form.answers) || {}, refNeeded: c.type !== 'team', formKey: c.type === 'student' ? c.school : c.type }, form: FORMS[c.type === 'student' ? c.school : c.type] } : { ok: false, err: 'not_found' }; }
+      else out = { ok: true, preview: 'sample', role: 'applicant', me: { ...ME_APP, name: o.type === 'team' ? 'Sample Team' : 'Sample Applicant', type: o.type, school: o.school, country: o.audience === 'khmer' ? 'Cambodia' : 'Australia' }, application: { ...ANNA, id: 'preview', type: o.type, school: o.school, stage: o.stage, status: o.stage === 'new' ? 'draft' : o.stage === 'applied' ? 'pending' : o.stage, submittedAt: o.stage === 'new' ? null : '2026-09-20T10:00:00Z', audience: o.audience === 'khmer' ? 'khmer' : 'international', needsVisa: o.audience !== 'khmer', refNeeded: !(o.type === 'team' || (o.type === 'student' && o.audience === 'khmer')), formKey: o.type === 'student' ? o.school : o.type, steps: STEPS(o.stage === 'new' ? 'form' : 'contact') }, form: FORMS[o.type === 'student' ? o.school : o.type] };
     } else if (b.fn === 'portalListAccounts') {
       out = u === 'sina' ? { ok: true, accounts: ACCOUNTS } : { ok: false, err: 'not_authorized' };
     } else if (b.fn === 'portalCreateApplicant') {
@@ -529,6 +533,52 @@ async function open(viewport, query, seed) {
   await page.waitForSelector('#main h2');
   await page.waitForTimeout(300);
   ok('an unknown link says so and offers the way back', /not valid/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#toLanding')));
+  await ctx.close();
+}
+
+/* ---------- View as applicant, staff side ---------- */
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  ok('portal staff have a View as applicant button in the bar', !!(await page.$('#toPreview')));
+  await page.click('#toPreview');
+  await page.waitForSelector('#pvFrame');
+  const first = sent.filter(b => b.fn === 'portalViewAs').pop();
+  ok('it opens on a sample DTS international student at "new" and asks the server for that', first && first.args[2].type === 'student' && first.args[2].school === 'dts' && first.args[2].audience === 'international' && first.args[2].stage === 'new' && (await page.$$eval('[data-pvkey]', b => b.length)) === 7 && (await page.$$eval('[data-pvstage]', b => b.length)) === 7);
+  ok('the frame shows their dashboard, read-only: sample name, status pill, the timeline, inert', /Sample Applicant/.test(await page.$eval('#pvFrame', e => e.textContent)) && !!(await page.$('#pvFrame #statusPill')) && !!(await page.$('#pvFrame #timeline')) && (await page.$eval('#pvFrame', e => e.hasAttribute('inert'))) && /Seeing what Sample Applicant sees/.test(await page.$eval('.pvBar', e => e.textContent)));
+  await page.click('[data-pvaud="khmer"]');
+  await page.waitForTimeout(300);
+  await page.click('[data-pvstage="accepted"]');
+  await page.waitForTimeout(300);
+  const k = sent.filter(b => b.fn === 'portalViewAs').pop();
+  ok('Khmer + Accepted re-asks with those and the frame follows (accepted pill, no visa guide)', k.args[2].audience === 'khmer' && k.args[2].stage === 'accepted' && /Accepted/.test(await page.$eval('#pvFrame #statusPill', e => e.textContent)) && !/e-visa/.test(await page.$eval('#pvFrame', e => e.textContent)));
+  await page.click('[data-pvkey="team"]');
+  await page.waitForTimeout(300);
+  ok('Team hides the Khmer / International switch and shows the team dashboard', !(await page.$('[data-pvaud]')) && /Sample Team/.test(await page.$eval('#pvFrame', e => e.textContent)) && /team photo/i.test(await page.$eval('#pvFrame', e => e.textContent)));
+  await page.click('[data-pvscreen="form"]');
+  await page.waitForTimeout(200);
+  ok('Their form shows the team form section by section, with section chips to move through it', /Section 1 of/.test(await page.$eval('#pvFrame', e => e.textContent)) && (await page.$$eval('[data-pvsec]', b => b.length)) > 1 && !!(await page.$('#pvFrame [data-ans]')));
+  await page.click('[data-pvsec="1"]');
+  await page.waitForTimeout(200);
+  ok('a section chip moves the frame to that section', /Section 2 of/.test(await page.$eval('#pvFrame', e => e.textContent)));
+  await page.click('[data-pvmode="record"]');
+  await page.waitForTimeout(200);
+  ok('One of our applicants lists them with a search, and asks to pick one', (await page.$$eval('[data-pvcand]', b => b.length)) >= 3 && /Pick an applicant above/.test(await page.$eval('#main', e => e.textContent)));
+  await page.fill('#pvQ', 'tom');
+  await page.waitForTimeout(200);
+  ok('search narrows the list', (await page.$$eval('[data-pvcand]', b => b.length)) === 1);
+  await page.click('[data-pvcand="cd_tom"]');
+  await page.waitForSelector('#pvFrame');
+  const rec = sent.filter(b => b.fn === 'portalViewAs').pop();
+  ok('picking one asks for that record and shows their dashboard', rec.args[2].candidateId === 'cd_tom' && /Tom Volunteer/.test(await page.$eval('#pvFrame', e => e.textContent)) && /Seeing what Tom Volunteer sees/.test(await page.$eval('.pvBar', e => e.textContent)));
+  await page.click('#toCrm');
+  await page.waitForSelector('.trow');
+  await page.click('[data-open="cd_anna"]');
+  await page.waitForSelector('#panel');
+  ok('the record panel has View as this applicant', !!(await page.$('#viewAsCand')));
+  await page.click('#viewAsCand');
+  await page.waitForSelector('#pvFrame');
+  ok('which opens the preview on that applicant', /Anna Example/.test(await page.$eval('#pvFrame', e => e.textContent)) && (await page.$eval('[data-pvmode="record"]', b => b.classList.contains('on'))));
   await ctx.close();
 }
 

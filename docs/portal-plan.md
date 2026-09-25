@@ -125,6 +125,9 @@ name typed back to confirm) — applicant accounts live nowhere else.
    correct answers on the record (`portalStaffSaveAnswers`).
    The applicant can edit their own answers after submitting (`portalUpdateAnswers`, logged) —
    teams apply with estimates and firm dates and head counts up later.
+   **View as applicant** (staff side): a sample applicant (kind, Khmer / international, stage)
+   or any real one, shown exactly as they see it — dashboard and form — in a read-only frame
+   (`portalViewAs`).
    **Accounts** (staff side, portal admins): every applicant account, with add / edit / new
    PIN / delete (`portalListAccounts`, `portalCreateApplicant`, `portalUpdateAccount`,
    `portalDeleteApplicant`).
