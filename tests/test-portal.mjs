@@ -295,6 +295,26 @@ ok('staff cannot use the applicant handler', r.body.ok === false);
 r = await call('portalUpdateAnswers', ['tom.v', '2468', full]);
 ok('an applicant who has not submitted is told so', r.body.ok === false && r.body.err === 'not_submitted');
 
+console.log('\n=== view as applicant (staff side) ===');
+r = await call('portalViewAs', ['dara', '1234', { candidateId: fannyCand.id }]);
+ok('portal staff see one applicant’s own dashboard, built like their boot: me, application, form', r.body.ok === true && r.body.preview === 'record' && r.body.role === 'applicant' && r.body.me.username === 'fanny.f' && r.body.application.id === fannyCand.id && r.body.application.status === 'pending' && r.body.form.key === 'dts' && Array.isArray(r.body.application.steps));
+ok('and no PIN material comes with it', !JSON.stringify(r.body).includes('pinHash') && !JSON.stringify(r.body).includes('pinSalt'));
+r = await call('portalViewAs', ['rithy', '1234', { candidateId: fannyCand.id }]);
+ok('scope applies — Outreach Teams cannot view a student', r.body.ok === false && r.body.err === 'not_authorized');
+r = await call('portalViewAs', ['anna.b', '2468', { candidateId: fannyCand.id }]);
+ok('an applicant cannot use it', r.body.ok === false);
+r = await call('portalViewAs', ['dara', '1234', { candidateId: 'nope' }]);
+ok('an unknown record is not found', r.body.ok === false && r.body.err === 'not_found');
+r = await call('portalViewAs', ['dara', '1234', { type: 'student', school: 'dts', audience: 'khmer', stage: 'new' }]);
+ok('a sample Khmer DTS student at "new": draft, no reference, no visa, the DTS form', r.body.ok === true && r.body.preview === 'sample' && r.body.application.audience === 'khmer' && r.body.application.refNeeded === false && r.body.application.needsVisa === false && r.body.application.status === 'draft' && r.body.form.key === 'dts' && r.body.application.steps.find(s => s.state === 'current').id === 'form');
+r = await call('portalViewAs', ['dara', '1234', { type: 'team', stage: 'accepted' }]);
+ok('a sample team at "accepted": submitted, visa guide, no reference, the team form', r.body.ok === true && r.body.application.type === 'team' && r.body.application.submittedAt && r.body.application.needsVisa === true && r.body.application.refNeeded === false && r.body.form.key === 'team' && r.body.application.status === 'accepted');
+r = await call('portalViewAs', ['dara', '1234', { type: 'student', school: 'dts', audience: 'international', stage: 'practical' }]);
+ok('a sample international student at "getting ready": reference received, visa ticks set', r.body.ok === true && r.body.application.reference.status === 'received' && r.body.application.visa.flightsConfirmed === true && r.body.application.steps.find(s => s.id === 'docs').items.find(i => i.id === 'reference').done === true);
+r = await call('portalViewAs', ['dara', '1234', { type: 'student', school: 'bcs', campus: 'poipet' }]);
+ok('a school not at that campus is refused', r.body.ok === false && r.body.err === 'school_not_at_campus');
+ok('nothing was written', !mem.candidates.some(c => c.id === 'preview'));
+
 console.log('\n=== the leader reference: link, form, submit ===');
 r = await call('portalReferenceLink', ['fanny.f', '2468']);
 ok('an international applicant makes a reference link', r.body.ok === true && /^[a-f0-9]{24,}$/.test(r.body.token) && r.body.reference.status === 'pending' && new Date(r.body.expiresAt) - Date.now() > 13 * 86400000);

@@ -3449,6 +3449,41 @@ async function portalUpdateAnswers(username, pin, answers) {
   await writeJSON('candidates', a.rows);
   return portalBoot(username, pin);
 }
+/* ==================== view as applicant (staff side) ====================
+   What a given applicant sees — their dashboard and form, built by the very
+   same functions their own portalBoot uses — so staff can check what an edit
+   looks like from the other side. Either one real record (scope applies) or
+   a sample applicant of a chosen kind, audience and stage. Read-only: the
+   reply is just data; nothing is written. */
+const PREVIEW_STAGES = CAND_STAGES;
+async function portalViewAs(username, pin, opts) {
+  opts = opts && typeof opts === 'object' ? opts : {};
+  const forms = await getForms_();
+  if (opts.candidateId) {
+    const a = await portalStaffCand_(username, pin, opts.candidateId); if (a.out) return a.out;
+    const cand = a.cand;
+    const rows = await getStaff_();
+    const acct = cand.staffId ? rows.find(function (r) { return r.id === cand.staffId && isApplicant_(r); }) : null;
+    const me = acct ? portalMeOut_(acct) : { id: '', name: cand.name, username: '', email: cand.email || '', phone: cand.phone || '', messenger: cand.messenger || '', country: cand.country || '', campus: cand.campus || '', type: cand.type, school: cand.school || '' };
+    return { ok: true, preview: 'record', role: 'applicant', me: me, application: portalAppOut_(cand), form: forms[formKeyOf_(cand)] };
+  }
+  const g = await hrGate_(username, pin); if (g.out) return g.out;
+  const type = PORTAL_TYPES.indexOf(opts.type) > -1 ? opts.type : 'student';
+  const school = type === 'student' ? (PORTAL_SCHOOLS.indexOf(opts.school) > -1 ? opts.school : 'dts') : '';
+  const stage = PREVIEW_STAGES.indexOf(opts.stage) > -1 ? opts.stage : 'new';
+  const khmer = opts.audience === 'khmer';
+  const campus = PORTAL_CAMPUSES[opts.campus] ? opts.campus : 'siemreap';
+  if (school && PORTAL_CAMPUSES[campus].indexOf(school) === -1) return { ok: false, err: 'school_not_at_campus' };
+  const idx = portalStageIdx_(stage), now = new Date().toISOString();
+  const cand = { id: 'preview', campus: campus, name: type === 'team' ? 'Sample Team' : 'Sample Applicant', type: type, school: school, stage: stage,
+    country: khmer ? 'Cambodia' : 'Australia', email: 'sample@example.org', phone: khmer ? '+855 12 345 678' : '+61 400 000 000', messenger: 'whatsapp', source: 'portal',
+    portal: { createdAt: now, submittedAt: idx >= portalStageIdx_('applied') ? now : null, form: idx >= portalStageIdx_('applied') ? { answers: {}, submittedAt: now } : null, draft: null,
+      visa: { flightsConfirmed: idx >= portalStageIdx_('practical'), invitationSent: idx >= portalStageIdx_('practical') },
+      referenceDone: idx >= portalStageIdx_('interview'), references: idx >= portalStageIdx_('interview') ? [{ id: 'ref_sample', usedAt: now, leaderName: 'Sample Leader', createdAt: now }] : [] },
+    log: [], archived: null, created: now, updated: now };
+  const me = { id: 'preview', name: cand.name, username: 'sample', email: cand.email, phone: cand.phone, messenger: 'whatsapp', country: cand.country, campus: campus, type: type, school: school };
+  return { ok: true, preview: 'sample', role: 'applicant', me: me, application: portalAppOut_(cand), form: forms[formKeyOf_(cand)] };
+}
 /* ==================== the leader reference ====================
    International applicants (and every staff / volunteer applicant) send one
    reference from a pastor or leader. The applicant — or staff, from the
@@ -3721,6 +3756,7 @@ const HANDLERS = {
   portalSubmit: function (a) { return portalSubmit(a[0], a[1], a[2]); },
   portalUpdateAnswers: function (a) { return portalUpdateAnswers(a[0], a[1], a[2]); },
   portalReferenceLink: function (a) { return portalReferenceLink(a[0], a[1], a[2]); },
+  portalViewAs: function (a) { return portalViewAs(a[0], a[1], a[2]); },
   portalReferenceForm: function (a) { return portalReferenceForm(a[0]); },
   portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },

@@ -525,6 +525,14 @@ forms, documents and references follow.
   The reference form is `referenceForm` in portal-forms-default.js (the base's Leader
   Reference Google Form; English only, Khmer left empty), key `reference`, editable in the
   Forms editor like the others. The leader's page is the `ref` view (`refHtml_`, gate look).
+- **View as applicant** (staff side, anyone with portal access; `previewHtml_`, view `preview`,
+  header button, and "View as this applicant" on the record panel): `portalViewAs(username, pin,
+  {candidateId})` returns one record's own boot (scope applies, no PIN material) and
+  `portalViewAs(…, {type, school, audience, stage, campus})` a sample applicant built through
+  the same `portalAppOut_` / `getForms_`; nothing is written. The page swaps `P.boot` /
+  `P.answers` for the preview boot, draws `meHtml_` or `formHtml_` (section chips), restores,
+  and puts the result in `#pvFrame` with `inert` + pointer-events none, so nothing inside binds
+  or fires.
 - **Sign-up answers like portalBoot, form included** (`portalRegister`): the dashboard opens the
   form from the sign-up reply with nothing else fetched. The client still copes with a reply
   that lacks it (`openForm` refetches `portalBoot`; `bindForm_` returns without a form) — the
