@@ -141,9 +141,9 @@ name typed back to confirm) — applicant accounts live nowhere else.
    record; the leader fills `forms.reference` (the base's Leader Reference Form) at
    `?ref=<token>` with no account (`portalReferenceForm`, `portalReferenceSubmit`);
    "Received from …" on the dashboard and on the record, where staff read it. Khmer students
-   and teams are exempt. Still to come: the per-type required-document list (you supply the
-   exact list) and upload with checked / pending state (`portalUploadDoc`, `portalGetDoc`,
-   own blobs).
+   and teams are exempt. Document upload is built for teams (passport copies and a team photo
+   needed, flight itineraries when booked — `portalUploadDoc`, `portalGetDoc`, `portalDeleteDoc`,
+   own blobs); the other kinds of application get theirs when the base gives the lists.
 4. **The staff CRM, desktop-first.** Filters, search, columns, the record
    page (answers, documents, reference, log), owner / next step / next date,
    editing an application, archive, bell reminders for portal staff.

@@ -154,6 +154,50 @@ textarea { min-height:80px; resize:vertical; }
 /* the forms editor */
 .two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .refBox { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.stays { display:flex; flex-direction:column; gap:10px; }
+.stayRow { border:1px solid var(--border); border-radius:var(--r); padding:10px; background:var(--bg); }
+.stayRow.open { border-color:var(--ink); }
+.stayPlace.base { font-weight:600; font-size:14px; margin:0 0 8px; }
+.stayPlaceRow { display:flex; gap:8px; margin:0 0 8px; }
+.stayPlaceRow input { flex:1; min-width:0; }
+.stayDel { border:1px solid var(--border2); background:transparent; color:var(--muted); border-radius:var(--rSm); padding:0 12px; cursor:pointer; }
+.stayDates { display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:var(--rSm); padding:10px 12px; cursor:pointer; font:inherit; }
+.stayDates .sdPart { display:flex; flex-direction:column; min-width:0; }
+.stayDates small { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+.stayDates b { font-size:15px; font-weight:600; }
+.stayDates:not(.set) b { color:var(--muted); font-weight:500; }
+.stayDates .sdArrow { color:var(--muted); }
+.stayDates .sdDays { margin-left:auto; font-size:12.5px; color:var(--muted); white-space:nowrap; }
+.stayAdd { align-self:flex-start; }
+.staySum { font-size:13.5px; color:var(--muted); line-height:1.5; }
+.staySum b { color:var(--ink); }
+.cal { margin-top:10px; }
+.calHead { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.calHint { font-size:13px; color:var(--muted); text-align:center; }
+.calNav { border:1px solid var(--border2); background:transparent; color:var(--ink); border-radius:999px; width:34px; height:34px; font-size:18px; cursor:pointer; }
+.calMonths { display:grid; grid-template-columns:1fr; gap:16px; }
+.calMonth2 { display:none; }
+@media (min-width:600px) { .calMonths { grid-template-columns:1fr 1fr; } .calMonth2 { display:block; } }
+.calTitle { font-weight:600; text-align:center; margin:4px 0 6px; font-size:14px; }
+.calGrid { display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; }
+.calWd { font-size:11px; color:var(--faint); text-align:center; padding:4px 0; }
+.calDay { border:0; background:transparent; color:var(--ink); font:inherit; font-size:14px; aspect-ratio:1/1; border-radius:8px; cursor:pointer; }
+.calDay:hover { background:var(--surface2); }
+.calDay.past { color:var(--faint); }
+.calDay.today { box-shadow:inset 0 0 0 1px var(--border2); }
+.calDay.in { background:var(--surface2); border-radius:0; }
+.calDay.from, .calDay.to { background:var(--ink); color:var(--accentInk); font-weight:700; }
+.calFoot { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+.docKind { padding:10px 0; border-bottom:1px solid var(--border); }
+.docKind:last-child { border-bottom:0; }
+.docList { list-style:none; padding:0; margin:6px 0; }
+.docList li { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13.5px; padding:4px 0; }
+.docName { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.docWhen { font-size:12px; color:var(--faint); }
+.docUp { display:inline-block; margin-top:6px; cursor:pointer; }
+.tripBox .kv, .hospBox { font-size:14px; }
+.hospBox { margin-top:10px; }
+.hospBox textarea { width:100%; margin-top:6px; font-family:inherit; font-size:14px; line-height:1.5; }
 .staffNav { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 16px; padding:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); }
 .staffNavBtn { flex:1 1 auto; border:0; background:transparent; color:var(--muted); font:inherit; font-size:13.5px; font-weight:600; padding:9px 12px; border-radius:var(--rSm); cursor:pointer; white-space:nowrap; }
 .staffNavBtn:hover { color:var(--ink); }
@@ -308,7 +352,7 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, pv:{ mode:'sample', key:'dts', aud:'international', stage:'new', candId:null, q:'', screen:'me', sec:0, boot:null, busy:false }, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
+var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, cal:null, pv:{ mode:'sample', key:'dts', aud:'international', stage:'new', candId:null, q:'', screen:'me', sec:0, boot:null, busy:false }, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
@@ -543,7 +587,7 @@ function meHtml_(){
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
   h+=visaCardHtml_(app);
   h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
-    (app.type==='team' ? '<p class="sub">'+esc(t('To move forward we need from your team, as soon as you can:'))+'</p><ul class="subItems">'+TEAM_NEEDS.map(function(x){ return '<li>○ '+esc(t(x))+'</li>'; }).join('')+'</ul><p class="hint">'+esc(t('Uploading them here is coming; until then your contact will tell you where to send them.'))+'</p>'
+    ((app.docKinds||[]).length ? docsBodyHtml_(app.docKinds, app.docs||[], app.submittedAt ? 'me' : 'before', '')
       : '<p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+'</p>'+(app.refNeeded ? refCardHtml_(app) : ''))+'</div>';
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📱 '+esc(t('How we reach you'))+'</h3>'+(P.editContact?'':'<button class="linkbtn inline" id="editContact">'+esc(t('Edit'))+'</button>')+'</div>';
   if(P.editContact){
@@ -612,7 +656,7 @@ function crmHtml_(){
     var chat=chatHref_(c.messenger, c.phone);
     h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
       '<span><span class="who">'+esc(c.name)+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span></span>'+
-      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
+      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(c.type==='team' ? (function(){ var tr=tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); return tr && tr.days ? ' · '+esc(gpT('{n} in Cambodia',{n:daysLabel_(tr.days)})) : ''; })() : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
       '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
       '<span class="meta desk">'+esc(owner)+'</span>'+
       '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
@@ -635,7 +679,9 @@ function panelHtml_(c, byId){
   h+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
   h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
   h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
+  h+=panelTripHtml_(c);
   h+=panelVisaHtml_(c);
+  h+=panelDocsHtml_(c);
   h+=panelReferenceHtml_(c);
   h+=panelAnswersHtml_(c);
   h+='<h3>'+esc(t('Notes'))+'</h3><textarea id="p_note" placeholder="'+esc(t('Add a note…'))+'">'+esc(P.note)+'</textarea><button class="btn small ghost" id="addNote" style="margin-top:8px">'+esc(t('Add note'))+'</button>';
@@ -657,9 +703,11 @@ function panelHtml_(c, byId){
 function lt_(o){ if(!o) return ''; if(typeof o==='string') return o; return LANG==='km' ? (o.km||o.en||'') : (o.en||o.km||''); }
 function askedIn_(sec, aud){ return (sec.questions||[]).filter(function(q){ return q.audience==='all' || q.audience===aud; }); }
 function askedAll_(form, aud){ var out=[]; (form.sections||[]).forEach(function(s){ out=out.concat(askedIn_(s, aud)); }); return out; }
-function answered_(q, v){ if(v===undefined||v===null) return false; if(Array.isArray(v)) return v.length>0; return String(v).trim()!==''; }
+function answered_(q, v){ if(v===undefined||v===null) return false; if(q && q.type==='stays') return staysDone_(v); if(Array.isArray(v)) return v.length>0; return String(v).trim()!==''; }
+function staysDone_(v){ return Array.isArray(v) && !!v[0] && !!v[0].from && !!v[0].to && v.slice(1).every(function(r){ return r && r.place && r.from && r.to; }); }
 function questionInputHtml_(q, v, prefix){
   var id=prefix+q.id, name=esc(id);
+  if(q.type==='stays') return staysInputHtml_(q, v, prefix);
   if(q.type==='long') return '<textarea data-ans="'+esc(q.id)+'" id="'+name+'">'+esc(v||'')+'</textarea>';
   if(q.type==='choice' || q.type==='yesno'){
     return '<div class="optList">'+(q.options||[]).map(function(o){ var val=o.en||o.km; return '<label class="opt"><input type="radio" name="'+name+'" data-ans="'+esc(q.id)+'" value="'+esc(val)+'"'+(v===val?' checked':'')+'> <span>'+esc(lt_(o))+'</span></label>'; }).join('')+'</div>';
@@ -938,7 +986,9 @@ function answersHtml_(form, answers, aud){
   (form.sections||[]).forEach(function(sec){
     var qs=askedIn_(sec, aud); if(!qs.length) return;
     h+='<div class="ansSec"><div class="eyebrow">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){
-      var v=answers[q.id]; var txt=Array.isArray(v)?v.join(', '):(v||'');
+      var v=answers[q.id];
+      if(q.type==='stays'){ var rows=Array.isArray(v)?v:[]; return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(rows.length ? rows.map(function(r, i){ var n=daysIncl_(r.from, r.to); return '📍 '+esc(i===0 ? (r.place||basePlace_()) : (r.place||'—'))+': '+esc(rangeLabel_(r.from, r.to))+(n?' ('+esc(daysLabel_(n))+')':''); }).join('<br>') : '<i>—</i>')+'</span></div>'; }
+      var txt=Array.isArray(v)?v.join(', '):(v||'');
       return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(txt?esc(txt):'<i>—</i>')+'</span></div>'; }).join('')+'</div>';
   });
   return h;
@@ -973,13 +1023,224 @@ function visaCardHtml_(app){
     '<div class="eyebrow" style="margin-top:12px">'+esc(t('Preparing to come'))+'</div><ol class="guide">'+VISA_PREP.map(function(s){ return '<li>'+esc(t(s))+'</li>'; }).join('')+'</ol>'+
     '<p class="hint"><a href="https://www.evisa.gov.kh/" target="_blank" rel="noopener">evisa.gov.kh ↗</a></p></div>';
 }
-var TEAM_NEEDS = ['A team photo with each member’s name', 'A passport photo of each team member', 'Your flight or ticket confirmations'];
+/* ==================== documents ====================
+   Kind by kind, as the server lists them for this kind of application
+   (teams for now). The applicant uploads once their application is in;
+   staff see the same list on the record, open files and can add one a team
+   emailed them. Pictures are shrunk on the phone before they go up. */
+var DOC_LABEL = { passports:'Passport copies — one for each team member', photo:'A team photo with each member’s name', flights:'Flight itineraries' };
+var DOC_HINT = { passports:'A clear photo or scan of the photo page of each passport.', photo:'Write the names on the photo, or send a list of names with it.',
+  flights:'Not booked yet? That is fine — upload them once you have them. We use them to arrange your transport from the airport.' };
+function docsBodyHtml_(kinds, docs, mode, candId){
+  if(mode==='before'){
+    return '<p class="sub">'+esc(t('Once your application is in, you upload these here:'))+'</p><ul class="subItems">'+kinds.map(function(k){ return '<li>○ '+esc(t(DOC_LABEL[k.id]||k.id))+(k.required?'':' · <i>'+esc(t('when you have them'))+'</i>')+'</li>'; }).join('')+'</ul>';
+  }
+  return kinds.map(function(k){
+    var mine=docs.filter(function(d){ return d.kind===k.id; });
+    var chip = mine.length ? '<span class="pill accepted" style="font-size:11px">✓ '+esc(mine.length===1 ? t('1 file') : gpT('{n} files',{n:mine.length}))+'</span>'
+      : k.required ? '<span class="pill pending" style="font-size:11px">'+esc(t('Needed'))+'</span>' : '<span class="pill" style="font-size:11px">'+esc(t('When you have them'))+'</span>';
+    return '<div class="docKind" data-dockind="'+esc(k.id)+'"><div class="panelHead"><b>'+esc(t(DOC_LABEL[k.id]||k.id))+'</b>'+chip+'</div>'+
+      (DOC_HINT[k.id] && mode==='me' ? '<p class="hint" style="margin:4px 0 6px">'+esc(t(DOC_HINT[k.id]))+'</p>' : '')+
+      (mine.length ? '<ul class="docList">'+mine.map(function(d){ return '<li><span class="docName">📄 '+esc(d.name)+'</span><span class="docWhen">'+esc(fmtDate_(d.added))+'</span>'+
+        '<button type="button" class="linkbtn inline" data-docopen="'+esc(d.id)+'">'+esc(t('Open'))+'</button> <button type="button" class="linkbtn inline danger" data-docdel="'+esc(d.id)+'">'+esc(t('Remove'))+'</button></li>'; }).join('')+'</ul>' : '')+
+      '<label class="btn ghost small docUp">⬆ '+esc(mine.length ? t('Add more') : t('Upload'))+'<input type="file" multiple accept="application/pdf,image/*" data-docup="'+esc(k.id)+'"'+(candId?' data-doccand="'+esc(candId)+'"':'')+' hidden></label></div>';
+  }).join('');
+}
+function shrinkImage_(file, done){
+  if(!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size<=1.5*1024*1024) return done(null);
+  try {
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      var max=2000, w=img.naturalWidth, h=img.naturalHeight, k=Math.min(1, max/Math.max(w,h));
+      var c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      done(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); done(null); };
+    img.src=url;
+  } catch(e){ done(null); }
+}
+function uploadDocs_(files, kind, candId){
+  var i=0, okN=0;
+  var next=function(){
+    if(i>=files.length){ P.busy=false; showMsg(okN ? (okN===1 ? t('Uploaded') : gpT('{n} files uploaded',{n:okN})) : t('Nothing was uploaded.')); render(); return; }
+    var file=files[i++];
+    var send=function(mime, b64, name){
+      if(b64.length > 5.6*1024*1024){ showMsg(gpT('{name} is too big — keep it under 4 MB.',{name:file.name})); return next(); }
+      showMsg(files.length>1 ? gpT('Uploading {i} of {n}…',{i:i, n:files.length}) : t('Uploading…'));
+      run('portalUploadDoc', [P.auth.user, P.auth.pin, kind, name, mime, b64].concat(candId ? [candId] : []), function(d){
+        if(d && d.ok){ okN++; if(candId){ var c=(P.boot.applicants||[]).filter(function(x){ return x.id===candId; })[0]; if(c){ c.portal=c.portal||{}; c.portal.docs=d.docs; } } else if(d.application) P.boot.application=d.application; }
+        else showMsg(d && d.err==='too_large' ? gpT('{name} is too big — keep it under 4 MB.',{name:file.name}) : d && d.err==='bad_type' ? t('Only PDFs and pictures can be uploaded.') : d && d.err==='not_submitted' ? t('Submit your application first.') : t('Could not upload — try again.'));
+        next();
+      }, function(){ showMsg(t('Connection problem — try again.')); next(); });
+    };
+    var mime=file.type || (/\.pdf$/i.test(file.name)?'application/pdf':'');
+    shrinkImage_(file, function(dataUrl){
+      if(dataUrl) return send('image/jpeg', dataUrl.split(',')[1]||'', file.name.replace(/\.[a-z0-9]+$/i,'')+'.jpg');
+      if(file.size>4*1024*1024){ showMsg(gpT('{name} is too big — keep it under 4 MB.',{name:file.name})); return next(); }
+      var r=new FileReader(); r.onload=function(){ send(mime, String(r.result||'').split(',')[1]||'', file.name); }; r.onerror=function(){ next(); }; r.readAsDataURL(file);
+    });
+  };
+  P.busy=true; next();
+}
+function openDataUrl_(dataUrl, name){
+  try {
+    var m=/^data:([^;]+);base64,(.*)$/.exec(dataUrl); if(!m) throw new Error('bad');
+    var bin=atob(m[2]), arr=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([arr],{type:m[1]}));
+    var a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener';
+    if(!/^(application\/pdf|image\/)/.test(m[1])) a.download=name||'file';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  } catch(e){ showMsg(t('Could not open the file')); }
+}
+function bindDocs_(){
+  document.querySelectorAll('[data-docup]').forEach(function(inp){ inp.onchange=function(){ var files=[].slice.call(inp.files||[]); inp.value=''; if(files.length) uploadDocs_(files, inp.getAttribute('data-docup'), inp.getAttribute('data-doccand')||''); }; });
+  document.querySelectorAll('[data-docopen]').forEach(function(b){ b.onclick=function(){
+    b.disabled=true; run('portalGetDoc', [P.auth.user, P.auth.pin, b.getAttribute('data-docopen')], function(d){ b.disabled=false; if(d && d.ok) openDataUrl_(d.dataUrl, d.name); else showMsg(t('Could not open the file')); }, function(){ b.disabled=false; showMsg(t('Connection problem — try again.')); });
+  }; });
+  document.querySelectorAll('[data-docdel]').forEach(function(b){ b.onclick=function(){
+    if(!confirm(t('Remove this file?'))) return;
+    var id=b.getAttribute('data-docdel');
+    run('portalDeleteDoc', [P.auth.user, P.auth.pin, id], function(d){
+      if(!(d && d.ok)){ showMsg(t('Could not remove it')); return; }
+      if(P.boot.role==='applicant') P.boot.application=d.application;
+      else (P.boot.applicants||[]).forEach(function(c){ if(c.portal && Array.isArray(c.portal.docs) && c.portal.docs.some(function(x){ return x.id===id; })) c.portal.docs=d.docs; });
+      showMsg(t('Removed')); render();
+    });
+  }; });
+}
+/* ==================== trips: dates like booking a flight ====================
+   A team's stay is a list of places with dates, our base first. Tap the
+   dates to open a two-month calendar: tap the day you arrive, then the day
+   you leave. "Add another location" adds a place in Cambodia with its own
+   dates. The total in Cambodia runs from the first arrival to the last
+   departure. Old applications (arrival / departure fields) read the same. */
+function ymd_(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function parseYmd_(v){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; }
+function daysIncl_(from, to){ var a=parseYmd_(from), b=parseYmd_(to); if(!a||!b||b<a) return 0; return Math.round((b-a)/86400000)+1; }
+function fmtDay_(v, weekday){ var d=parseYmd_(v); if(!d) return ''; return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', weekday ? { weekday:'short', day:'numeric', month:'short', year:'numeric' } : { day:'numeric', month:'short', year:'numeric' }); }
+function rangeLabel_(from, to, weekday){ return from && to ? fmtDay_(from, weekday)+' – '+fmtDay_(to, weekday) : from ? fmtDay_(from, weekday)+' – …' : t('no dates yet'); }
+function daysLabel_(n){ return n===1 ? t('1 day') : gpT('{n} days',{n:n}); }
+function nightsLabel_(n){ return n===1 ? t('1 night') : gpT('{n} nights',{n:n}); }
+function addMonths_(ym, k){ var y=+ym.slice(0,4), m=+ym.slice(5,7)-1+k; var d=new Date(y, m, 1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
+function basePlace_(){
+  var c = (P.view==='crm' && typeof selected_==='function' && P.boot && P.boot.applicants) ? selected_() : (P.boot && P.boot.application);
+  return campusName_((c && c.campus) || DEFAULT_CAMPUS);
+}
+function staysOf_(v, base){
+  var a=Array.isArray(v) ? v.map(function(r){ return { place:(r && r.place)||'', from:(r && r.from)||'', to:(r && r.to)||'' }; }) : [];
+  if(!a.length) a=[{ place:base, from:'', to:'' }];
+  a[0].place=base; a[0].base=true;
+  return a;
+}
+function tripOf_(ans, base){
+  ans=ans||{};
+  var stays=null, note='';
+  if(Array.isArray(ans.itinerary) && ans.itinerary.length) stays=staysOf_(ans.itinerary, base);
+  else if(ans.arrival || ans.departure){ stays=[{ place:base, from:ans.arrival||'', to:ans.departure||'', base:true }]; note=ans.otherLocations||''; }
+  if(!stays) return null;
+  var dated=stays.filter(function(r){ return r.from && r.to; });
+  var start='', end='';
+  dated.forEach(function(r){ if(!start || r.from<start) start=r.from; if(!end || r.to>end) end=r.to; });
+  if(!Array.isArray(ans.itinerary) && ans.arrivalKh && ans.departureKh){ start=ans.arrivalKh; end=ans.departureKh; }
+  var first=dated.slice().sort(function(a,b){ return a.from<b.from?-1:a.from>b.from?1:(a.base?-1:1); })[0]||null;
+  return { stays:stays, start:start, end:end, days:daysIncl_(start, end), first:first, note:note };
+}
+function ansStore_(prefix){ return prefix==='s_' ? P.staffAnswers : prefix==='r_' ? P.refAnswers : P.answers; }
+function flushAnswers_(prefix){
+  if(prefix==='s_'){ var saved=P.answers; P.answers=P.staffAnswers; readAnswers_(document.getElementById('panel')); P.staffAnswers=P.answers; P.answers=saved; }
+  else if(prefix==='r_'){ if(typeof readRefAnswers_==='function') readRefAnswers_(); }
+  else readAnswers_();
+}
+function staysInputHtml_(q, v, prefix){
+  var base=basePlace_(), rows=staysOf_(v, base), key=prefix+q.id;
+  var h='<div class="stays" data-stays="'+esc(key)+'">';
+  rows.forEach(function(r, i){
+    var open=!!(P.cal && P.cal.key===key && P.cal.row===i), n=daysIncl_(r.from, r.to);
+    h+='<div class="stayRow'+(open?' open':'')+'">'+
+      (i===0 ? '<div class="stayPlace base">📍 '+esc(base)+'</div>'
+        : '<div class="stayPlaceRow"><input type="text" data-stayplace="'+esc(key)+'|'+i+'" value="'+esc(r.place)+'" placeholder="'+esc(t('Place, e.g. Phnom Penh'))+'" maxlength="80"><button type="button" class="stayDel" data-staydel="'+esc(key)+'|'+i+'" title="'+esc(t('Remove this location'))+'">✕</button></div>')+
+      '<button type="button" class="stayDates'+(r.from?' set':'')+'" data-stayopen="'+esc(key)+'|'+i+'">'+
+        '<span class="sdPart"><small>'+esc(t('Arrive'))+'</small><b>'+esc(r.from ? fmtDay_(r.from) : t('Add date'))+'</b></span><span class="sdArrow">→</span>'+
+        '<span class="sdPart"><small>'+esc(t('Leave'))+'</small><b>'+esc(r.to ? fmtDay_(r.to) : t('Add date'))+'</b></span>'+
+        (n ? '<span class="sdDays">'+esc(daysLabel_(n))+'</span>' : '')+'</button>'+
+      (open ? calendarHtml_(r) : '')+'</div>';
+  });
+  h+='<button type="button" class="btn ghost small stayAdd" data-stayadd="'+esc(key)+'">+ '+esc(t('Add another location'))+'</button>';
+  var trip=tripOf_({ itinerary:rows }, base);
+  if(trip && trip.days){
+    h+='<div class="staySum"><b>'+esc(gpT('{n} in Cambodia in total',{n:daysLabel_(trip.days)}))+'</b> · '+esc(rangeLabel_(trip.start, trip.end))+
+      (rows.length>1 && trip.first ? '<br>'+esc(trip.first.base ? t('You arrive at our base first, so we handle your visa.') : gpT('You arrive at {place} first, so that location handles your visa.',{place:trip.first.place||t('another location')})) : '')+'</div>';
+  }
+  return h+'</div>';
+}
+function calendarHtml_(r){
+  var today=ymd_(new Date()), wk=[];
+  for(var i=0;i<7;i++) wk.push(new Date(2024,0,1+i).toLocaleDateString(LANG==='km'?'km-KH':'en-GB',{ weekday:'narrow' }));
+  var month=function(ym, k){
+    var y=+ym.slice(0,4), mo=+ym.slice(5,7)-1, first=new Date(y, mo, 1), n=new Date(y, mo+1, 0).getDate(), lead=(first.getDay()+6)%7;
+    var g=wk.map(function(w){ return '<span class="calWd">'+esc(w)+'</span>'; }).join('');
+    for(var b=0;b<lead;b++) g+='<span></span>';
+    for(var d=1; d<=n; d++){
+      var iso=ymd_(new Date(y, mo, d)), cls='calDay';
+      if(iso===r.from) cls+=' from'; if(iso===r.to) cls+=' to';
+      if(r.from && r.to && iso>r.from && iso<r.to) cls+=' in';
+      if(iso===today) cls+=' today'; if(iso<today) cls+=' past';
+      g+='<button type="button" class="'+cls+'" data-calday="'+iso+'">'+d+'</button>';
+    }
+    return '<div class="calMonth'+(k?' calMonth2':'')+'"><div class="calTitle">'+esc(first.toLocaleDateString(LANG==='km'?'km-KH':'en-GB',{ month:'long', year:'numeric' }))+'</div><div class="calGrid">'+g+'</div></div>';
+  };
+  return '<div class="cal"><div class="calHead"><button type="button" class="calNav" data-calnav="-1" title="'+esc(t('Previous month'))+'">‹</button>'+
+    '<span class="calHint">'+esc(P.cal.pick==='from' ? t('Tap the day you arrive') : t('Now tap the day you leave'))+'</span>'+
+    '<button type="button" class="calNav" data-calnav="1" title="'+esc(t('Next month'))+'">›</button></div>'+
+    '<div class="calMonths">'+month(P.cal.month, 0)+month(addMonths_(P.cal.month, 1), 1)+'</div>'+
+    '<div class="calFoot"><button type="button" class="linkbtn inline" data-calclear="1">'+esc(t('Clear dates'))+'</button><button type="button" class="btn small" data-caldone="1">'+esc(t('Done'))+'</button></div></div>';
+}
+function bindStays_(){
+  var split=function(v){ var i=v.lastIndexOf('|'); return { key:v.slice(0,i), row:+v.slice(i+1) }; };
+  var rowsOf=function(key){ return staysOf_(ansStore_(key.slice(0,2))[key.slice(2)], basePlace_()); };
+  var put=function(key, rows){ var p=key.slice(0,2); ansStore_(p)[key.slice(2)]=rows; if(p==='a_'){ P.formMissing=null; saveDraft_(false); } };
+  var redraw=function(){ var y=window.scrollY; render(); window.scrollTo(0, y); };
+  document.querySelectorAll('[data-stayopen]').forEach(function(b){ b.onclick=function(){
+    var x=split(b.getAttribute('data-stayopen')); flushAnswers_(x.key.slice(0,2));
+    if(P.cal && P.cal.key===x.key && P.cal.row===x.row){ P.cal=null; return redraw(); }
+    var r=rowsOf(x.key)[x.row]||{};
+    var prevTo = x.row>0 ? (rowsOf(x.key)[x.row-1]||{}).to : '';
+    P.cal={ key:x.key, row:x.row, pick:(r.from && !r.to) ? 'to' : 'from', month:(r.from || prevTo || ymd_(new Date())).slice(0,7) };
+    redraw();
+  }; });
+  document.querySelectorAll('[data-calday]').forEach(function(b){ b.onclick=function(){
+    if(!P.cal) return; flushAnswers_(P.cal.key.slice(0,2));
+    var rows=rowsOf(P.cal.key), r=rows[P.cal.row], iso=b.getAttribute('data-calday');
+    if(P.cal.pick==='from'){ r.from=iso; r.to=''; P.cal.pick='to'; }
+    else if(iso<r.from){ r.from=iso; }
+    else { r.to=iso; P.cal=null; }
+    put(P.cal ? P.cal.key : b.closest('[data-stays]').getAttribute('data-stays'), rows); redraw();
+  }; });
+  document.querySelectorAll('[data-calnav]').forEach(function(b){ b.onclick=function(){ if(!P.cal) return; flushAnswers_(P.cal.key.slice(0,2)); P.cal.month=addMonths_(P.cal.month, +b.getAttribute('data-calnav')); redraw(); }; });
+  document.querySelectorAll('[data-calclear]').forEach(function(b){ b.onclick=function(){ if(!P.cal) return; flushAnswers_(P.cal.key.slice(0,2)); var rows=rowsOf(P.cal.key); rows[P.cal.row].from=''; rows[P.cal.row].to=''; P.cal.pick='from'; put(P.cal.key, rows); redraw(); }; });
+  document.querySelectorAll('[data-caldone]').forEach(function(b){ b.onclick=function(){ P.cal=null; redraw(); }; });
+  document.querySelectorAll('[data-stayadd]').forEach(function(b){ b.onclick=function(){
+    var key=b.getAttribute('data-stayadd'); flushAnswers_(key.slice(0,2));
+    var rows=rowsOf(key); rows.push({ place:'', from:'', to:'' }); put(key, rows); P.cal=null; redraw();
+    var inp=document.querySelector('[data-stayplace="'+key+'|'+(rows.length-1)+'"]'); if(inp) inp.focus();
+  }; });
+  document.querySelectorAll('[data-staydel]').forEach(function(b){ b.onclick=function(){
+    var x=split(b.getAttribute('data-staydel')); flushAnswers_(x.key.slice(0,2));
+    var rows=rowsOf(x.key); rows.splice(x.row, 1); put(x.key, rows); P.cal=null; redraw();
+  }; });
+  document.querySelectorAll('[data-stayplace]').forEach(function(inp){ inp.oninput=function(){
+    var x=split(inp.getAttribute('data-stayplace')); var rows=rowsOf(x.key); if(!rows[x.row]) return; rows[x.row].place=inp.value; put(x.key, rows);
+  }; });
+}
 /* ==================== the forms editor (staff side, portal admins) ====================
    Google Forms style: one form at a time, sections as cards, a card per
    question with its label in English and Khmer, help text, a type, required,
    who sees it, and options one per line ("English | ខ្មែរ"). Edits live in
    P.formDraft until Save; Reset brings back the shipped default. */
-var FE_TYPES=[['short','Short answer'],['long','Paragraph'],['choice','Multiple choice'],['multi','Checkboxes'],['yesno','Yes / No'],['date','Date'],['number','Number'],['email','Email'],['phone','Phone']];
+var FE_TYPES=[['short','Short answer'],['long','Paragraph'],['choice','Multiple choice'],['multi','Checkboxes'],['yesno','Yes / No'],['date','Date'],['number','Number'],['email','Email'],['phone','Phone'],['stays','Trip: dates and places']];
 var FE_AUD=[['all','Everyone'],['khmer','Khmer applicants only'],['international','International applicants only']];
 function feOptsText_(opts){ return (opts||[]).map(function(o){ return o.km ? (o.en+' | '+o.km) : o.en; }).join('\n'); }
 function feOptsParse_(txt){ return String(txt||'').split('\n').map(function(l){ var p=l.split('|'); return { en:(p[0]||'').trim(), km:(p[1]||'').trim() }; }).filter(function(o){ return o.en||o.km; }); }
@@ -1082,6 +1343,40 @@ function panelAnswersHtml_(c){
   }
   return h;
 }
+/* For a team: how long they are in Cambodia, each place with its dates,
+   who handles the visa — and a ready-to-paste note for hospitality. */
+function panelTripHtml_(c){
+  if(c.type!=='team') return '';
+  var ans=(c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {};
+  var base=campusName_(c.campus||DEFAULT_CAMPUS), trip=tripOf_(ans, base);
+  var h='<h3>✈️ '+esc(t('Trip'))+'</h3>';
+  if(!trip || !trip.days){ return h+'<p class="sub" style="margin:0">'+esc(t('No dates yet.'))+'</p>'+hospitalityHtml_(c, ans, trip); }
+  h+='<div class="tripBox"><div class="kv"><b>'+esc(t('In Cambodia'))+'</b><span id="tripTotal">'+esc(daysLabel_(trip.days))+' · '+esc(rangeLabel_(trip.start, trip.end))+'</span></div>'+
+    trip.stays.map(function(r){ var n=daysIncl_(r.from, r.to); return '<div class="kv tripStay"><b>📍 '+esc(r.place||'—')+'</b><span>'+esc(rangeLabel_(r.from, r.to))+(n?' · '+esc(daysLabel_(n)):'')+'</span></div>'; }).join('')+
+    (trip.note ? '<div class="kv"><b>'+esc(t('Other locations'))+'</b><span>'+esc(trip.note)+'</span></div>' : '')+
+    (trip.first && trip.stays.length>1 ? '<div class="kv"><b>'+esc(t('Arrives first at'))+'</b><span>'+esc(trip.first.place)+' · '+esc(trip.first.base ? t('we handle the visa') : t('that location handles the visa'))+'</span></div>' : '')+'</div>';
+  return h+hospitalityHtml_(c, ans, trip);
+}
+function hospitalityText_(c, ans, trip){
+  var sr=trip && trip.stays[0], n=sr ? daysIncl_(sr.from, sr.to) : 0;
+  return [
+    ans.teamName || c.name,
+    campusShort_(c.campus||DEFAULT_CAMPUS)+': '+(n ? rangeLabel_(sr.from, sr.to, true)+' ('+daysLabel_(n)+', '+nightsLabel_(n-1)+')' : t('no dates yet')),
+    t('Males')+': '+(ans.males||'—'),
+    t('Females')+': '+(ans.females||'—'),
+    t('Couples / families')+': '+(ans.couples||'—')
+  ].join('\n');
+}
+function hospitalityHtml_(c, ans, trip){
+  var txt=hospitalityText_(c, ans, trip);
+  return '<div class="hospBox"><div class="panelHead"><b>🛏 '+esc(t('For hospitality'))+'</b><button type="button" class="btn small ghost" id="copyHosp">'+esc(t('Copy'))+'</button></div>'+
+    '<textarea id="hospText" readonly rows="7">'+esc(txt)+'</textarea></div>';
+}
+function panelDocsHtml_(c){
+  var kinds=c.docKinds||[]; if(!kinds.length) return '';
+  var docs=(c.portal && Array.isArray(c.portal.docs)) ? c.portal.docs : [];
+  return '<h3>📎 '+esc(t('Documents'))+'</h3>'+docsBodyHtml_(kinds, docs, 'staff', c.id);
+}
 function panelReferenceHtml_(c){
   if(!c.refNeeded) return '';
   var r=c.reference||{ status:'none' }, form=(P.boot.forms||{}).reference;
@@ -1111,6 +1406,7 @@ function bindPanelExtras_(){
   document.querySelectorAll('[data-visaflag]').forEach(function(cb){ cb.onchange=function(){ var flags={}; flags[cb.getAttribute('data-visaflag')]=cb.checked; cb.disabled=true;
     run('portalSetVisaFlags', [P.auth.user, P.auth.pin, c.id, flags], function(d){ if(putCand_(d)) showMsg(t('Saved')); render(); }); }; });
   on_('showRef', function(){ P.showRef=!P.showRef; render(); });
+  on_('copyHosp', function(){ var el=document.getElementById('hospText'); if(el) copyText_(el.value); });
   on_('refLinkStaff', function(){ makeRefLink_(c.id, function(link){ P.refLink=link; P.refLinkFor=c.id; var cur=selected_(); if(cur) cur.reference={ status:'pending' }; render(); }); });
   on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswers', function(){ P.editAnswers=true; P.staffAnswers=JSON.parse(JSON.stringify((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {})); render(); });
@@ -1171,7 +1467,7 @@ function bind_(){
   on_('navCrm', function(){ if(P.view==='crm') return; P.view='crm'; render(); });
   on_('toPreview', function(){ if(P.view==='preview') return; P.view='preview'; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; render(); });
   on_('toAccounts', function(){ if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
-  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); if(P.view==='crm') bindPanelExtras_();
+  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); bindStays_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){
