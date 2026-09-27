@@ -3351,6 +3351,7 @@ function cleanForm_(f, key) {
       return {
         id: id, type: type, label: label, help: langText_(qq.help), required: !!qq.required,
         audience: FORM_AUDIENCES.indexOf(qq.audience) > -1 ? qq.audience : 'all',
+        attach: (type === 'yesno' || type === 'choice') && /^[a-z]{2,20}$/.test(String(qq.attach || '')) ? String(qq.attach) : undefined,
         options: withOptions ? (Array.isArray(qq.options) ? qq.options : []).map(langText_).filter(function (o) { return o.en || o.km; }).slice(0, FORM_MAX_OPTIONS) : []
       };
     }).filter(Boolean);
@@ -3506,7 +3507,12 @@ async function portalUploadDoc(username, pin, kind, name, mime, base64, candidat
   const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
   const cand = a.cand;
   if (!docKindsFor_(cand).some(function (k) { return k.id === kind; })) return { ok: false, err: 'bad_kind' };
-  if (a.own && !(cand.portal && cand.portal.submittedAt)) return { ok: false, err: 'not_submitted' };
+  // documents come after applying — except one the form itself asks to attach (a team's flight itinerary)
+  if (a.own && !(cand.portal && cand.portal.submittedAt)) {
+    const form = (await getForms_())[formKeyOf_(cand)];
+    const inForm = askedQuestions_(form, audienceOf_(cand)).some(function (qq) { return qq.attach === kind; });
+    if (!inForm) return { ok: false, err: 'not_submitted' };
+  }
   mime = str_(mime, 80);
   if (HR_FILE_MIME.indexOf(mime) === -1) return { ok: false, err: 'bad_type' };
   if (typeof base64 !== 'string' || !base64) return { ok: false, err: 'bad_file' };

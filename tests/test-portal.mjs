@@ -378,7 +378,7 @@ ok('a team needs no leader reference but does need the visa guide', r.body.ok ==
 const teamAcct = mem.staff.find(s => s.username === 'team.au'), teamRec = mem.candidates.find(c => c.staffId === teamAcct.id);
 
 console.log('\n=== team trip: Siem Reap and other places ===');
-const teamFull = { teamName: 'Grace Church Team', org: 'Grace Church', leaderName: 'Pat Leader', leaderEmail: 'pat@example.org', size: '14', focus: 'Kids programmes', males: '6', females: '8', couples: '2' };
+const teamFull = { teamName: 'Grace Church Team', org: 'Grace Church', leaderName: 'Pat Leader', leaderEmail: 'pat@example.org', size: '14', focus: 'Kids programmes', males: '6', females: '8', couples: '2', flightsBooked: 'Yes' };
 r = await call('portalSaveDraft', ['team.au', '2468', { ...teamFull, itinerary: [{ place: 'YWAM Siem Reap', from: '2027-01-20', to: '2027-01-10' }, { place: '', from: '', to: '' }, { place: 'Phnom Penh', from: '2027-01-20', to: '2027-01-23' }, { place: 'x'.repeat(200), from: 'soon', to: '2027-02-01' }, 'junk'] }]);
 ok('a trip is cleaned: reversed dates swapped, empty rows dropped, bad dates blanked, long names cut', r.body.ok === true && JSON.stringify(r.body.answers.itinerary.map(x => [x.place.length > 60 ? 'long' : x.place, x.from, x.to])) === JSON.stringify([['YWAM Siem Reap', '2027-01-10', '2027-01-20'], ['Phnom Penh', '2027-01-20', '2027-01-23'], ['long', '', '2027-02-01']]) && r.body.answers.itinerary[2].place.length === 80 && r.body.answers.itinerary[0].base === true, JSON.stringify(r.body.answers.itinerary));
 r = await call('portalSubmit', ['team.au', '2468', { ...teamFull, itinerary: [{ place: 'YWAM Siem Reap', from: '2027-01-10', to: '' }] }]);
@@ -387,12 +387,22 @@ r = await call('portalSubmit', ['team.au', '2468', { ...teamFull, itinerary: [{ 
 ok('and an added place needs its name and both dates too', r.body.ok === false && r.body.missing.includes('itinerary'));
 r = await call('portalUploadDoc', ['team.au', '2468', 'passports', 'p.pdf', 'application/pdf', 'JVBERi0x']);
 ok('documents open only once the application is in', r.body.ok === false && r.body.err === 'not_submitted');
+r = await call('portalSubmit', ['team.au', '2468', { ...teamFull, flightsBooked: undefined, itinerary: [{ place: 'YWAM Siem Reap', from: '2027-01-10', to: '2027-01-20' }] }]);
+ok('the team form asks whether flights are booked yet (required)', r.body.ok === false && r.body.missing.includes('flightsBooked'));
+r = await call('portalUploadDoc', ['team.au', '2468', 'flights', 'itinerary.pdf', 'application/pdf', 'JVBERi0xLjcK']);
+ok('but the flight itinerary the form asks for can be attached while filling it in', r.body.ok === true && r.body.doc.kind === 'flights');
+const earlyFlight = r.body.doc;
 r = await call('portalSubmit', ['team.au', '2468', { ...teamFull, itinerary: [{ place: 'YWAM Siem Reap', from: '2027-01-10', to: '2027-01-20' }, { place: 'Phnom Penh', from: '2027-01-20', to: '2027-01-23' }] }]);
 ok('Siem Reap only, or with other places, goes in', r.body.ok === true && r.body.application.submittedAt && r.body.application.answers.itinerary.length === 2);
-ok('the team is told what to send: passport copies and a team photo needed, flights when booked', JSON.stringify(r.body.application.docKinds) === JSON.stringify([{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: false }]) && r.body.application.docs.length === 0);
+ok('the team is told what to send: passport copies and a team photo needed, flights when booked — the itinerary attached in the form is already there', JSON.stringify(r.body.application.docKinds) === JSON.stringify([{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: false }]) && r.body.application.docs.length === 1 && r.body.application.docs[0].id === earlyFlight.id);
+r = await call('portalDeleteDoc', ['team.au', '2468', earlyFlight.id]);
 r = await call('portalSubmit', ['srey.k', '2468', {}]);
 
 console.log('\n=== team documents ===');
+{ const tf = JSON.parse(JSON.stringify((await call('portalBoot', ['sina', '1234'])).body.forms.team)); delete tf.isDefault;
+  r = await call('portalSaveForm', ['sina', '1234', 'team', tf]);
+  ok('a form saved in the editor keeps the question’s attach box', r.body.ok === true && r.body.forms.team.sections.flatMap(s => s.questions).find(q => q.id === 'flightsBooked').attach === 'flights');
+  r = await call('portalResetForm', ['sina', '1234', 'team']); }
 r = await call('portalUploadDoc', ['team.au', '2468', 'visa-selfie', 'p.pdf', 'application/pdf', 'JVBERi0x']);
 ok('an unknown kind is refused', r.body.ok === false && r.body.err === 'bad_kind');
 r = await call('portalUploadDoc', ['team.au', '2468', 'passports', 'p.exe', 'application/x-msdownload', 'TVqQ']);

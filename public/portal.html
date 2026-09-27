@@ -188,6 +188,8 @@ textarea { min-height:80px; resize:vertical; }
 .calDay.in { background:var(--surface2); border-radius:0; }
 .calDay.from, .calDay.to { background:var(--ink); color:var(--accentInk); font-weight:700; }
 .calFoot { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+.qAttach { margin-top:10px; padding:10px 12px; border:1px dashed var(--border2); border-radius:var(--rSm); }
+.qAttach .docKind { padding:0; border:0; }
 .docKind { padding:10px 0; border-bottom:1px solid var(--border); }
 .docKind:last-child { border-bottom:0; }
 .docList { list-style:none; padding:0; margin:6px 0; }
@@ -710,7 +712,7 @@ function questionInputHtml_(q, v, prefix){
   if(q.type==='stays') return staysInputHtml_(q, v, prefix);
   if(q.type==='long') return '<textarea data-ans="'+esc(q.id)+'" id="'+name+'">'+esc(v||'')+'</textarea>';
   if(q.type==='choice' || q.type==='yesno'){
-    return '<div class="optList">'+(q.options||[]).map(function(o){ var val=o.en||o.km; return '<label class="opt"><input type="radio" name="'+name+'" data-ans="'+esc(q.id)+'" value="'+esc(val)+'"'+(v===val?' checked':'')+'> <span>'+esc(lt_(o))+'</span></label>'; }).join('')+'</div>';
+    return '<div class="optList">'+(q.options||[]).map(function(o){ var val=o.en||o.km; return '<label class="opt"><input type="radio" name="'+name+'" data-ans="'+esc(q.id)+'"'+(q.attach?' data-attachq="1"':'')+' value="'+esc(val)+'"'+(v===val?' checked':'')+'> <span>'+esc(lt_(o))+'</span></label>'; }).join('')+'</div>';
   }
   if(q.type==='multi'){
     var arr=Array.isArray(v)?v:[];
@@ -721,7 +723,18 @@ function questionInputHtml_(q, v, prefix){
 }
 function questionHtml_(q, v, prefix, missing){
   return '<div class="qBlock'+(missing?' missing':'')+'" data-qid="'+esc(q.id)+'"><div class="qLabel">'+esc(lt_(q.label))+(q.required?' <span class="req">*</span>':'')+'</div>'+
-    (lt_(q.help) ? '<div class="qHelp">'+esc(lt_(q.help))+'</div>' : '')+questionInputHtml_(q, v, prefix)+'</div>';
+    (lt_(q.help) ? '<div class="qHelp">'+esc(lt_(q.help))+'</div>' : '')+questionInputHtml_(q, v, prefix)+attachHtml_(q, v, prefix)+'</div>';
+}
+/* A question with "attach" (a team's "Have you booked your flights yet?")
+   opens an upload box for that document once it is answered with its first
+   option (Yes), right there in the form. Applicant side only — staff see the
+   files in the record's Documents block. */
+function attachHtml_(q, v, prefix){
+  if(!q.attach || prefix!=='a_' || !P.boot || !P.boot.application) return '';
+  var yes=((q.options||[])[0]||{}).en || 'Yes';
+  if(v!==yes) return '';
+  var app=P.boot.application;
+  return '<div class="qAttach" data-attachfor="'+esc(q.id)+'">'+docsBodyHtml_([{ id:q.attach, required:false }], app.docs||[], 'form', '')+'</div>';
 }
 function formHtml_(){
   var d=P.boot, app=d.application, form=d.form;
@@ -769,7 +782,7 @@ function bindForm_(){
   var app=P.boot.application, form=P.boot.form;
   if(!form){ on_('formClose2', function(){ P.view='me'; render(); }); return; }
   var secs=(form.sections||[]).filter(function(s){ return askedIn_(s, app.audience).length; });
-  document.querySelectorAll('[data-ans]').forEach(function(el){ el.oninput=el.onchange=function(){ readAnswers_(); P.formMissing=null; saveDraft_(false); }; });
+  document.querySelectorAll('[data-ans]').forEach(function(el){ el.oninput=el.onchange=function(){ readAnswers_(); P.formMissing=null; saveDraft_(false); if(el.hasAttribute('data-attachq')){ var y=window.scrollY; render(); window.scrollTo(0, y); } }; });
   var close=function(){ readAnswers_(); saveDraft_(true); if(app.submittedAt){ P.answers=JSON.parse(JSON.stringify(app.answers||{})); P.editMine=false; } P.view='me'; render(); };
   on_('formClose', close); on_('formClose2', close);
   on_('formBack', function(){ readAnswers_(); saveDraft_(true); P.formSec--; P.formMissing=null; render(); window.scrollTo(0,0); });
@@ -1033,12 +1046,12 @@ var DOC_HINT = { passports:'A clear photo or scan of the photo page of each pass
   flights:'Not booked yet? That is fine — upload them once you have them. We use them to arrange your transport from the airport.' };
 function docsBodyHtml_(kinds, docs, mode, candId){
   if(mode==='before'){
-    return '<p class="sub">'+esc(t('Once your application is in, you upload these here:'))+'</p><ul class="subItems">'+kinds.map(function(k){ return '<li>○ '+esc(t(DOC_LABEL[k.id]||k.id))+(k.required?'':' · <i>'+esc(t('when you have them'))+'</i>')+'</li>'; }).join('')+'</ul>';
+    return '<p class="sub">'+esc(t('Once your application is in, you upload these here:'))+'</p><ul class="subItems">'+kinds.map(function(k){ var n=docs.filter(function(d){ return d.kind===k.id; }).length; return '<li class="'+(n?'done':'')+'">'+(n?'✓':'○')+' '+esc(t(DOC_LABEL[k.id]||k.id))+(n ? ' · '+esc(n===1 ? t('1 file') : gpT('{n} files',{n:n})) : k.required?'':' · <i>'+esc(t('when you have them'))+'</i>')+'</li>'; }).join('')+'</ul>';
   }
   return kinds.map(function(k){
     var mine=docs.filter(function(d){ return d.kind===k.id; });
     var chip = mine.length ? '<span class="pill accepted" style="font-size:11px">✓ '+esc(mine.length===1 ? t('1 file') : gpT('{n} files',{n:mine.length}))+'</span>'
-      : k.required ? '<span class="pill pending" style="font-size:11px">'+esc(t('Needed'))+'</span>' : '<span class="pill" style="font-size:11px">'+esc(t('When you have them'))+'</span>';
+      : mode==='form' ? '' : k.required ? '<span class="pill pending" style="font-size:11px">'+esc(t('Needed'))+'</span>' : '<span class="pill" style="font-size:11px">'+esc(t('When you have them'))+'</span>';
     return '<div class="docKind" data-dockind="'+esc(k.id)+'"><div class="panelHead"><b>'+esc(t(DOC_LABEL[k.id]||k.id))+'</b>'+chip+'</div>'+
       (DOC_HINT[k.id] && mode==='me' ? '<p class="hint" style="margin:4px 0 6px">'+esc(t(DOC_HINT[k.id]))+'</p>' : '')+
       (mine.length ? '<ul class="docList">'+mine.map(function(d){ return '<li><span class="docName">📄 '+esc(d.name)+'</span><span class="docWhen">'+esc(fmtDate_(d.added))+'</span>'+
@@ -1354,6 +1367,7 @@ function panelTripHtml_(c){
   h+='<div class="tripBox"><div class="kv"><b>'+esc(t('In Cambodia'))+'</b><span id="tripTotal">'+esc(daysLabel_(trip.days))+' · '+esc(rangeLabel_(trip.start, trip.end))+'</span></div>'+
     trip.stays.map(function(r){ var n=daysIncl_(r.from, r.to); return '<div class="kv tripStay"><b>📍 '+esc(r.place||'—')+'</b><span>'+esc(rangeLabel_(r.from, r.to))+(n?' · '+esc(daysLabel_(n)):'')+'</span></div>'; }).join('')+
     (trip.note ? '<div class="kv"><b>'+esc(t('Other locations'))+'</b><span>'+esc(trip.note)+'</span></div>' : '')+
+    (ans.flightsBooked ? '<div class="kv" id="tripFlights"><b>'+esc(t('Flights booked'))+'</b><span>'+esc(ans.flightsBooked==='Yes' ? t('Yes') : t('Not yet'))+'</span></div>' : '')+
     (trip.first && trip.stays.length>1 ? '<div class="kv"><b>'+esc(t('Arrives first at'))+'</b><span>'+esc(trip.first.place)+' · '+esc(trip.first.base ? t('we handle the visa') : t('that location handles the visa'))+'</span></div>' : '')+'</div>';
   return h+hospitalityHtml_(c, ans, trip);
 }

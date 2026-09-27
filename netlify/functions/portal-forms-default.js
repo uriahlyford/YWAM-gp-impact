@@ -209,7 +209,11 @@ const teamForm = {
          like booking a flight; "Add another location" adds a place in
          Cambodia with its own dates. The total in Cambodia is worked out. */
       q('itinerary', 'stays', 'When will your team be with us, and anywhere else in Cambodia?', 'តើក្រុមរបស់អ្នកនឹងនៅជាមួយយើង និងកន្លែងផ្សេងទៀតក្នុងកម្ពុជា នៅពេលណា?', { required: true,
-        help: T('Pick your arrival and departure for Siem Reap. Serving somewhere else in Cambodia too? Add each place with its dates. The location your team arrives at first is responsible for handling your visa.', 'ជ្រើសរើសថ្ងៃមកដល់ និងចាកចេញសម្រាប់សៀមរាប។ បម្រើនៅកន្លែងផ្សេងក្នុងកម្ពុជាដែរ? បន្ថែមកន្លែងនីមួយៗជាមួយកាលបរិច្ឆេទ។ ទីតាំងដែលក្រុមរបស់អ្នកមកដល់មុនគេ ទទួលខុសត្រូវរៀបចំទិដ្ឋាការរបស់អ្នក។') })
+        help: T('Pick your arrival and departure for Siem Reap. Serving somewhere else in Cambodia too? Add each place with its dates. The location your team arrives at first is responsible for handling your visa.', 'ជ្រើសរើសថ្ងៃមកដល់ និងចាកចេញសម្រាប់សៀមរាប។ បម្រើនៅកន្លែងផ្សេងក្នុងកម្ពុជាដែរ? បន្ថែមកន្លែងនីមួយៗជាមួយកាលបរិច្ឆេទ។ ទីតាំងដែលក្រុមរបស់អ្នកមកដល់មុនគេ ទទួលខុសត្រូវរៀបចំទិដ្ឋាការរបស់អ្នក។') }),
+      /* "attach" puts an upload box for that kind of document under the
+         question once it is answered Yes — here, the flight itinerary. */
+      q('flightsBooked', 'yesno', 'Have you booked your flights yet?', 'តើអ្នកបានកក់ជើងហោះហើររួចហើយឬនៅ?', { required: true, options: YESNO, attach: 'flights',
+        help: T('If yes, attach your itinerary here — a PDF or a picture. Not yet? That is fine; add it later from your dashboard. We use it to arrange your transport from the airport.', 'បើបាទ/ចាស សូមភ្ជាប់កាលវិភាគជើងហោះហើររបស់អ្នកនៅទីនេះ — PDF ឬរូបភាព។ មិនទាន់ទេ? មិនអីទេ; បន្ថែមនៅពេលក្រោយពីផ្ទាំងរបស់អ្នក។ យើងប្រើវាដើម្បីរៀបចំការដឹកជញ្ជូនរបស់អ្នកពីព្រលានយន្តហោះ។') })
     ]
   }, {
     id: 'hospitality', title: T('Hospitality', 'បដិសណ្ឋារកិច្ច'), help: T('So we can prepare rooms and meals. Your best estimate for now — update the numbers in your account once your team is confirmed.', 'ដើម្បីឱ្យយើងរៀបចំបន្ទប់ និងអាហារ។ ប៉ាន់ស្មានឱ្យបានល្អបំផុតសិន — កែចំនួនក្នុងគណនីរបស់អ្នក នៅពេលក្រុមរបស់អ្នកបានបញ្ជាក់ច្បាស់។'),

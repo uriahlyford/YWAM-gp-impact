@@ -539,6 +539,11 @@ forms, documents and references follow.
   images, ~4 MB, blobs `pdoc:<id>`, the record keeps only the list), `portalGetDoc`,
   `portalDeleteDoc` (own record, or portal staff / HR in scope). Required kinds all present tick
   the Documents item. The page shrinks big photos before upload (`shrinkImage_`).
+- **A question can open an upload box** (`attach: '<doc kind>'` on a yesno / choice question,
+  kept by `cleanForm_`): answered with its first option (Yes) the form shows `attachHtml_` —
+  that document's upload list — under it, applicant side only. The team form's
+  `flightsBooked` ("Have you booked your flights yet?") attaches `flights`, and
+  `portalUploadDoc` lets a kind the form attaches go up before the application is submitted.
 - **Staff record for a team**: `panelTripHtml_` (total in Cambodia, each place, who handles the
   visa) and `hospitalityHtml_` — a copy-ready note: team name, Siem Reap dates with days and
   nights, males, females, couples / families. The list row shows "N days in Cambodia".
