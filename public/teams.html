@@ -959,6 +959,14 @@ body.hxOn { overflow:hidden; }
 .orgBox.top { border-color:var(--accent); box-shadow:0 1px 0 var(--border); }
 .orgBox.loose { border-style:dashed; margin-top:14px; }
 .orgBox.students { margin-top:14px; }
+.arrangeBar { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; border:1.5px solid var(--accent); border-radius:14px; padding:10px 12px; margin:0 0 12px; background:var(--surface); position:sticky; top:8px; z-index:5; }
+.arrangeBtns { display:flex; gap:8px; }
+.arrangeBtns .btn { width:auto; margin:0; }
+body.arranging .orgPerson[data-arrange] { touch-action:none; cursor:grab; border:1px dashed var(--border); border-radius:999px; padding:2px 8px 2px 2px; background:var(--surface); }
+.orgPerson.dragging { opacity:.35; }
+.orgGhost { position:fixed; z-index:1000; pointer-events:none; background:var(--surface); border:1.5px solid var(--accent); border-radius:999px; padding:3px 10px 3px 3px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+[data-drop].dropOver { outline:2px dashed var(--accent); outline-offset:2px; background:var(--surface2); }
+.orgDropOverseer { border:1px dashed var(--border); border-radius:10px; padding:6px; font-size:12px; color:var(--faint); margin:6px 0; text-align:center; }
 .okrAdminNew { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin:0 0 12px; }
 .okrAdminNew .pick { flex:1 1 140px; min-width:0; }
 .stuRow { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
@@ -7459,7 +7467,7 @@ function leaveHtml(){
    is editing their profile in Admin — one source of truth, nothing to
    hand-draw and nothing to fall out of date. Tap anyone to open them. */
 function orgPersonChip_(p, lead){
-  return '<button class="orgPerson'+(lead?' lead':'')+'" data-person="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
+  return '<button class="orgPerson'+(lead?' lead':'')+'" '+(S.orgArranging ? 'data-arrange' : 'data-person')+'="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
     '<span>'+(lead?'👑 ':'')+esc(p.name)+'</span></button>';
 }
 function orgPeople_(list, leads){
@@ -7495,14 +7503,25 @@ function orgStructureHtml_(campus){
   if(structIsLive_()){
     var isSaved = c && c.doc && c.source==='saved', early = structIsNext_();
     var savedNote = isSaved ? gpT('Q{q} {year} structure saved on {date}',{q:q, year:year, date:teamDate_((c.doc.savedAt||'').slice(0,10))}) : gpT('Q{q} {year} structure not saved yet',{q:q, year:year});
-    h+='<p class="sub" style="margin:0 0 8px">'+esc(early ? t('Next quarter — live from everyone’s profile, so set people’s ministry and role first, then save it early.') : t('Live from everyone’s profile.'))+' '+esc(savedNote)+'.</p>';
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(early ? t('Next quarter — it starts from this quarter’s chart. Arrange it, then save it early.') : t('Live from everyone’s profile and this quarter’s arrangement.'))+' '+esc(savedNote)+'.</p>';
     if(S.me.isAdmin) h+='<button class="btn ghost" id="structSaveBtn" style="margin:0 0 10px;width:auto;padding:9px 14px">💾 '+esc(isSaved ? gpT('Update Q{q} {year} structure',{q:q, year:year}) : early ? gpT('Save Q{q} {year} structure early',{q:q, year:year}) : gpT('Save Q{q} {year} structure',{q:q, year:year}))+'</button>';
     var stu=(c && c.plan && c.plan.students) || {}, stuN=Object.keys(stu).length;
     if(S.me.isAdmin){
       h+='<button class="btn ghost" id="structStudentsBtn" style="margin:0 0 10px 8px;width:auto;padding:9px 14px">🎓 '+esc(gpT('Students in Q{q} {year}',{q:q, year:year}))+(stuN?' · '+stuN:'')+'</button>';
       if(S.structStudentsEdit===key) h+=structStudentsEditorHtml_(campus, q, year);
     }
-    return h+orgChartHtml_(campus, S.roster, stu);
+    var place=(c && c.plan && c.plan.place) || {}, arranging=S.me.isAdmin && S.structArrange===key;
+    S.structCtx={ campus:campus, year:year, q:q, key:key };
+    if(S.me.isAdmin && !arranging) h+='<button class="btn ghost" id="structArrangeBtn" style="margin:0 0 10px 8px;width:auto;padding:9px 14px">✏️ '+esc(gpT('Arrange Q{q} {year}',{q:q, year:year}))+'</button>';
+    if(c && c.plan && c.plan.inherited && c.plan.from) h+='<p class="hint" style="margin:0 0 8px">'+esc(gpT('Starting from the Q{q} {year} arrangement.',{q:c.plan.from.quarter, year:c.plan.from.year}))+'</p>';
+    if(arranging){
+      h+='<div class="arrangeBar" id="arrangeBar"><div><b>✏️ '+esc(gpT('Arranging Q{q} {year}',{q:q, year:year}))+'</b><p class="hint" style="margin:2px 0 0">'+
+        esc(t('Drag someone onto a ministry, the Campus Director box or a department’s Overseer spot — or tap them to choose. Each move saves for this quarter only; profiles stay as they are.'))+'</p></div>'+
+        '<div class="arrangeBtns">'+(Object.keys(place).length ? '<button class="btn ghost small" id="structArrangeReset">'+esc(t('Back to profiles'))+'</button>' : '')+
+        '<button class="btn small" id="structArrangeDone">'+esc(t('Done'))+'</button></div></div>';
+      if(S.structMove) h+=structMoveHtml_(campus, S.structMove, place, stu);
+    }
+    return h+orgChartHtml_(campus, S.roster, stu, place, arranging);
   }
   if(S.structError[key]) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load this quarter.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.structError[key])+'</p><button class="btn ghost" id="structRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
   if(!c) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
@@ -7511,6 +7530,80 @@ function orgStructureHtml_(campus){
     : gpT('Nothing saved for Q{q} {year} — showing the Q{q2} {year2} structure.',{q:q, year:year, q2:c.doc.quarter, year2:c.doc.year});
   h+='<p class="sub" style="margin:0 0 8px">💾 '+esc(note)+'</p>';
   return h+orgChartHtml_(campus, (c.doc.people||[]).map(function(p){ return Object.assign({ campus:campus }, p); }));
+}
+/* Tap someone in Arrange mode: pick where they sit this quarter. */
+function structMoveHtml_(campus, id, place, stu){
+  var p=null; S.roster.forEach(function(x){ if(x.id===id) p=x; }); if(!p) return '';
+  var cur=place[id] || { dept:p.dept, ministry:p.ministry||'' }, curKey=cur.dept+'|'+cur.ministry;
+  var deps=getDepartments(campus), opts=[['Campus Leadership|Campus Director', t('Campus Director')]];
+  Object.keys(deps).forEach(function(d){ if(d===BL_DEPT) return; opts.push(['Campus Leadership|'+d, gpT('{dept} · overseer',{dept:t(d)})]); });
+  var h='<div class="card" id="structMoveCard"><h3 style="margin-top:0">'+esc(gpT('Move {name}',{name:p.name}))+'</h3><select id="structMoveSel">'+
+    opts.map(function(o){ return '<option value="'+esc(o[0])+'"'+(o[0]===curKey?' selected':'')+'>'+esc(o[1])+'</option>'; }).join('');
+  Object.keys(deps).forEach(function(d){ if(d===BL_DEPT) return;
+    h+='<optgroup label="'+esc(t(d))+'">'+Object.keys(deps[d]).map(function(m){ var k=d+'|'+m; return '<option value="'+esc(k)+'"'+(k===curKey?' selected':'')+'>'+esc(t(m))+'</option>'; }).join('')+'</optgroup>'; });
+  h+='</select>'+(stu[id] ? '<p class="hint">'+esc(gpT('Moving them takes them out of the {school} students.',{school:String(stu[id]).toUpperCase()}))+'</p>' : '')+
+    '<p class="hint">'+esc(gpT('Their profile says {where}.',{where:t(p.ministry||p.dept||'')+(p.ministry?' · '+t(p.dept):'')}))+'</p>'+
+    '<button class="btn" id="structMoveGo">'+esc(t('Move'))+'</button><button class="btn ghost" id="structMoveCancel">'+esc(t('Cancel'))+'</button></div>';
+  return h;
+}
+function structMoveTo_(id, target){
+  var ctx=S.structCtx; if(!ctx || !target) return;
+  var c=S.structCache[ctx.key] || { doc:null, source:'none' };
+  var plan=c.plan || { students:{}, place:{} };
+  var place=Object.assign({}, plan.place||{}), students=Object.assign({}, plan.students||{});
+  var i=target.indexOf('|'), dept=target.slice(0,i), ministry=target.slice(i+1);
+  var p=null; S.roster.forEach(function(x){ if(x.id===id) p=x; }); if(!p) return;
+  var profDept = p.dept==='Base Director' ? 'Campus Leadership' : p.dept;
+  if(dept===profDept && ministry===(p.ministry||'')) delete place[id]; else place[id]={ dept:dept, ministry:ministry };
+  var wasStudent=!!students[id]; delete students[id];
+  var prev=c.plan; c.plan={ students:students, place:place, inherited:false }; S.structCache[ctx.key]=c; S.structMove=null; render();
+  run('saveStructurePlan',[S.auth.user,S.auth.pin,ctx.campus,ctx.year,ctx.q, wasStudent ? students : undefined, place],function(d){
+    if(d && d.ok){ c.plan=d.plan; if(d.doc){ c.doc=d.doc; c.source='saved'; } showMsg(gpT('Moved — {name}',{name:p.name})); }
+    else { c.plan=prev; showMsg(t('Could not save the move')); }
+    render();
+  }, function(){ c.plan=prev; showMsg(t('Connection problem — try again.')); render(); });
+}
+function bindStructArrange_(){
+  var ab=document.getElementById('structArrangeBtn');
+  if(ab) ab.onclick=function(){ gpTap(); S.structArrange=S.structCtx && S.structCtx.key; S.structMove=null; S.structStudentsEdit=null; render(); };
+  var ad=document.getElementById('structArrangeDone');
+  if(ad) ad.onclick=function(){ S.structArrange=null; S.structMove=null; render(); };
+  var ar=document.getElementById('structArrangeReset');
+  if(ar) ar.onclick=function(){
+    if(!confirm(t('Put everyone back where their profile says, for this quarter?'))) return;
+    var ctx=S.structCtx, c=S.structCache[ctx.key]||{ doc:null, source:'none' };
+    run('saveStructurePlan',[S.auth.user,S.auth.pin,ctx.campus,ctx.year,ctx.q, undefined, {}],function(d){ if(d && d.ok){ c.plan=d.plan; if(d.doc){ c.doc=d.doc; c.source='saved'; } S.structCache[ctx.key]=c; showMsg(t('Back to profiles')); } else showMsg(t('Could not save')); render(); });
+  };
+  var mg=document.getElementById('structMoveGo');
+  if(mg) mg.onclick=function(){ var sel=document.getElementById('structMoveSel'); if(sel) structMoveTo_(S.structMove, sel.value); };
+  var mc=document.getElementById('structMoveCancel');
+  if(mc) mc.onclick=function(){ S.structMove=null; render(); };
+  document.body.classList.toggle('arranging', !!document.getElementById('arrangeBar'));
+  /* Drag with a mouse or a finger (pointer events; chips don't scroll the page
+     while arranging, the gaps between them still do). A tap opens the picker. */
+  document.querySelectorAll('[data-arrange]').forEach(function(chip){
+    chip.onclick=function(e){ e.preventDefault(); };
+    chip.onpointerdown=function(e){
+      if(e.button>0) return;
+      var id=chip.getAttribute('data-arrange'), sx=e.clientX, sy=e.clientY, ghost=null, over=null;
+      try{ chip.setPointerCapture(e.pointerId); }catch(err){}
+      var move=function(ev){
+        if(!ghost && Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy)>6){ ghost=chip.cloneNode(true); ghost.className='orgPerson orgGhost'; ghost.removeAttribute('data-arrange'); document.body.appendChild(ghost); chip.classList.add('dragging'); }
+        if(!ghost) return;
+        ev.preventDefault();
+        ghost.style.left=(ev.clientX+8)+'px'; ghost.style.top=(ev.clientY-14)+'px';
+        var el=document.elementFromPoint(ev.clientX, ev.clientY), tg=el && el.closest ? el.closest('[data-drop]') : null;
+        if(over!==tg){ if(over) over.classList.remove('dropOver'); over=tg; if(over) over.classList.add('dropOver'); }
+        if(ev.clientY<70) window.scrollBy(0,-14); else if(ev.clientY>window.innerHeight-70) window.scrollBy(0,14);
+      };
+      var end=function(ev){
+        chip.removeEventListener('pointermove', move); chip.removeEventListener('pointerup', end); chip.removeEventListener('pointercancel', end);
+        if(ghost){ ghost.remove(); chip.classList.remove('dragging'); if(over){ over.classList.remove('dropOver'); if(ev.type==='pointerup') structMoveTo_(id, over.getAttribute('data-drop')); } return; }
+        if(ev.type==='pointerup'){ S.structMove=id; render(); var mc2=document.getElementById('structMoveCard'); if(mc2) mc2.scrollIntoView({ behavior:'smooth', block:'center' }); }
+      };
+      chip.addEventListener('pointermove', move); chip.addEventListener('pointerup', end); chip.addEventListener('pointercancel', end);
+    };
+  });
 }
 function structStudentsEditorHtml_(campus, q, year){
   var draft=S.structStudentsDraft||{};
@@ -7523,8 +7616,12 @@ function structStudentsEditorHtml_(campus, q, year){
     }).join('')+
     '<button class="btn" id="structStudentsSave">'+esc(t('Save'))+'</button><button class="btn ghost" id="structStudentsCancel">'+esc(t('Cancel'))+'</button></div>';
 }
-function orgChartHtml_(campus, roster, studentsMap){
-  var everyone=(roster||S.roster).filter(function(p){ return p.campus===campus && p.kind!=='applicant'; });
+function orgChartHtml_(campus, roster, studentsMap, placeMap, arranging){
+  /* The chart is the base's structure for the quarter, which can differ from
+     what a profile says: placeMap (the quarter's arrangement) wins. */
+  var everyone=(roster||S.roster).filter(function(p){ return p.campus===campus && p.kind!=='applicant'; }).map(function(p){
+    var pl=placeMap && placeMap[p.id]; return pl ? Object.assign({}, p, { dept:pl.dept, ministry:pl.ministry }) : p; });
+  S.orgArranging = !!arranging;
   /* Staff doing a school this quarter (the quarter's plan, or a snapshot's
      own "student" mark) sit in a Students box, not their ministry. */
   var studentOf=function(p){ return (studentsMap && studentsMap[p.id]) || p.student || ''; };
@@ -7539,7 +7636,7 @@ function orgChartHtml_(campus, roster, studentsMap){
 
   // level 1 — campus leadership
   h+='<div class="orgLevelLabel">'+esc(t('Campus Leadership'))+'</div>';
-  h+='<div class="orgBox top" data-orgbox="leadership"><div class="orgBoxTitle">🧭 '+esc(t('Campus Director'))+'</div>';
+  h+='<div class="orgBox top" data-orgbox="leadership"'+(arranging?' data-drop="Campus Leadership|Campus Director"':'')+'><div class="orgBoxTitle">🧭 '+esc(t('Campus Director'))+'</div>';
   if(directors.length) h+=orgPeople_(directors, directors); else h+='<div class="orgEmpty">'+esc(t('Nobody here yet'))+'</div>';
   directors.forEach(function(p){ placed[p.id]=1; });
   if(overseers.length){
@@ -7558,6 +7655,7 @@ function orgChartHtml_(campus, roster, studentsMap){
     h+='<div class="orgBox dept" data-orgbox="'+esc(dept)+'"><div class="orgBoxTitle">'+(MIN_EMOJI[dept]?MIN_EMOJI[dept]+' ':'')+esc(t(dept))+
       '<span class="orgBoxMeta">'+esc(gpT('{n} staff',{n:staffN}))+'</span></div>';
     if(ov.length) h+='<div class="orgSub">'+esc(t('Overseen by'))+'</div>'+orgPeople_(ov, ov);
+    if(arranging) h+='<div class="orgDropOverseer" data-drop="Campus Leadership|'+esc(dept)+'">＋ '+esc(t('Overseer'))+'</div>';
     h+='<div class="orgMins">';
     mins.forEach(function(min){
       var key=dept+'|'+min;
@@ -7565,7 +7663,7 @@ function orgChartHtml_(campus, roster, studentsMap){
       var members=here.filter(function(p){ return p.dept===dept && p.ministry===min && leads.indexOf(p)===-1; });
       var all=leads.concat(members);
       all.forEach(function(p){ placed[p.id]=1; });
-      h+='<div class="orgMin'+(all.length?'':' bare')+'" data-orgmin="'+esc(key)+'"><div class="orgMinHead"><span>'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span>'+
+      h+='<div class="orgMin'+(all.length?'':' bare')+'" data-orgmin="'+esc(key)+'"'+(arranging?' data-drop="'+esc(key)+'"':'')+'><div class="orgMinHead"><span>'+(MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'</span>'+
         '<span class="orgMinN">'+(all.length||'—')+'</span></div>'+
         (all.length ? orgPeople_(all, leads) : '')+'</div>';
     });
@@ -7587,7 +7685,8 @@ function orgChartHtml_(campus, roster, studentsMap){
     h+='<div class="orgLevelLabel">'+esc(t('Not placed yet'))+' · '+unplaced.length+'</div>'+
       '<div class="orgBox loose"><p class="hint" style="margin:0 0 6px">'+esc(t('Their profile names a department or ministry that isn’t on this campus’s chart.'))+'</p>'+orgPeople_(unplaced, [])+'</div>';
   }
-  h+='<p class="hint" style="margin:12px 0 0;text-align:center">'+esc(t('To move someone, edit their profile in Admin.'))+'</p>';
+  h+='<p class="hint" style="margin:12px 0 0;text-align:center">'+esc(t('This chart is the base’s structure for the quarter. It can differ from what people have on their profile.'))+'</p>';
+  S.orgArranging=false;
   return h+'</div>';
 }
 
@@ -7609,7 +7708,7 @@ function teamHtml(){
   h+='<div class="campusSeg teamModeSeg">'+
     '<button class="campusBtn'+(mode==='dir'?' on':'')+'" data-teammode="dir">👥 '+esc(t('Directory'))+'</button>'+
     '<button class="campusBtn'+(mode==='org'?' on':'')+'" data-teammode="org">🧭 '+esc(t('Structure'))+'</button></div>';
-  h+='<p class="sub">'+esc(mode==='org' ? t('Departments and ministries, and who is in each — from everyone’s profile.') : t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
+  h+='<p class="sub">'+esc(mode==='org' ? t('Departments and ministries, and who is in each this quarter.') : t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
 
   h+='<div class="campusSeg">'+CAMPUSES.map(function(c){
     return '<button class="campusBtn'+(campus===c.id?' on':'')+'" data-teamcampus="'+esc(c.id)+'">'+esc(t(c.name))+'</button>';
@@ -9394,6 +9493,7 @@ function bind(){
     });
     var srt=document.getElementById('structRetry');
     if(srt) srt.onclick=function(){ S.structError[sKey]=''; render(); };
+    bindStructArrange_();
     var stb=document.getElementById('structStudentsBtn');
     if(stb) stb.onclick=function(){ gpTap(); if(S.structStudentsEdit===sKey){ S.structStudentsEdit=null; } else { var c0=S.structCache[sKey]; S.structStudentsDraft=Object.assign({}, (c0 && c0.plan && c0.plan.students) || {}); S.structStudentsEdit=sKey; } render(); };
     document.querySelectorAll('[data-stu]').forEach(function(sel){ sel.onchange=function(){ var id=sel.getAttribute('data-stu'); S.structStudentsDraft=S.structStudentsDraft||{}; if(sel.value) S.structStudentsDraft[id]=sel.value; else delete S.structStudentsDraft[id]; }; });

@@ -100,7 +100,7 @@ ok('and one saved before that rule reads back without them', r.body.ok === true 
 
 console.log('\n=== staff who are students for one quarter ===');
 r = await call('getStructure', ['dara', '1234', 'siemreap', 2026, 4]);
-ok('a quarter with no plan answers an empty students list', r.body.ok === true && JSON.stringify(r.body.plan) === JSON.stringify({ students: {} }));
+ok('a quarter with no plan answers an empty students list and no arrangement', r.body.ok === true && JSON.stringify(r.body.plan.students) === '{}' && JSON.stringify(r.body.plan.place) === '{}' && r.body.plan.inherited === false);
 r = await call('saveStructurePlan', ['dara', '1234', 'siemreap', 2026, 4, { st_dara: 'bcs' }]);
 ok('only an admin sets it', r.body.ok === false && !mem.structurePlans);
 r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2026, 4, { st_dara: 'BCS', st_lead: 'dts', st_pp: 'bcs', st_appl: 'dts', st_gone: 'bcs', st_admin: 'cooking' }]);
@@ -114,6 +114,24 @@ r = await call('saveStructure', ['uriah', '1234', 'siemreap', 2026, 4]);
 ok('saving Q4 carries who is a student in the snapshot', r.body.doc.people.find(p => p.id === 'st_dara').student === 'bcs' && r.body.doc.people.find(p => p.id === 'st_lead').student === 'dts' && !r.body.doc.people.find(p => p.id === 'st_admin').student);
 r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2026, 4, { st_dara: 'bcs' }]);
 ok('changing the plan updates a snapshot already saved for that quarter', r.body.ok === true && r.body.doc.people.find(p => p.id === 'st_lead').student === undefined && mem.structure.find(x => x.year === 2026 && x.quarter === 4).people.find(p => p.id === 'st_dara').student === 'bcs');
+
+console.log('\n=== the chart’s own arrangement, separate from profiles ===');
+r = await call('saveStructurePlan', ['dara', '1234', 'siemreap', 2027, 1, undefined, { st_dara: { dept: 'Youth Education', ministry: 'GP Media' } }]);
+ok('only an admin arranges the chart', r.body.ok === false);
+r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2027, 1, undefined, { st_dara: { dept: 'Youth Education', ministry: 'GP Media' }, st_pp: { dept: 'Youth Education', ministry: 'YDC' }, st_appl: { dept: 'Youth Education', ministry: 'YDC' }, st_lead: { ministry: 'no department' } }]);
+ok('the admin moves Dara to GP Media for Q1 2027; other campuses, applicants and a place without a department are dropped', r.body.ok === true && JSON.stringify(r.body.plan.place) === JSON.stringify({ st_dara: { dept: 'Youth Education', ministry: 'GP Media' } }), JSON.stringify(r.body.plan.place));
+ok('her profile is untouched', mem.staff.find(x => x.id === 'st_dara').dept === 'Community Service' && mem.staff.find(x => x.id === 'st_dara').ministry === 'Cafe');
+r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2027, 1, { st_lead: 'sms' }]);
+ok('saving students alone keeps the arrangement', r.body.plan.place.st_dara.ministry === 'GP Media' && r.body.plan.students.st_lead === 'sms');
+r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2027, 1, undefined, { st_dara: { dept: 'Youth Education', ministry: 'GP Media' }, st_admin: { dept: 'Campus Leadership', ministry: 'Campus Director' } }]);
+ok('and saving the arrangement alone keeps the students', r.body.plan.students.st_lead === 'sms' && r.body.plan.place.st_admin.ministry === 'Campus Director');
+r = await call('getStructure', ['sreilea', '1234', 'siemreap', 2027, 2]);
+ok('the next quarter starts from that arrangement (not its students)', r.body.plan.inherited === true && r.body.plan.from.quarter === 1 && r.body.plan.place.st_dara.ministry === 'GP Media' && JSON.stringify(r.body.plan.students) === '{}');
+r = await call('saveStructure', ['uriah', '1234', 'siemreap', 2027, 1]);
+const q1p = r.body.doc.people.find(p => p.id === 'st_dara');
+ok('a snapshot saved for that quarter follows the arrangement', q1p.dept === 'Youth Education' && q1p.ministry === 'GP Media');
+r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2027, 1, undefined, {}]);
+ok('clearing the arrangement puts people back where their profile says, in the saved snapshot too', JSON.stringify(r.body.plan.place) === '{}' && r.body.doc.people.find(p => p.id === 'st_dara').ministry === 'Cafe');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
