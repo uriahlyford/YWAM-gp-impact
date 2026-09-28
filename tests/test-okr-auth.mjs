@@ -191,7 +191,16 @@ mem.staff = mem.staff.map(s => s.id === 'st_uriah' ? { ...s, active: false } : s
 await call('saveObjective', [objFor('ad2', 'poipet', 'Youth Education'), '', 'uriah', '1234']);
 check('a deactivated admin has no reach', !okrIds().includes('ad2') || (okrRow('ad2') && okrRow('ad2').campus === 'siemreap'), okrIds().join(','));
 
+// more than three key results: all of them are kept, up to the server cap of ten
+const manyKrs = (n) => Array.from({ length: n }, (_, i) => ({ text: "kr " + (i + 1), metricKey: "", target: 0, manual: 0 }));
+await call("saveObjective", [{ ...objFor("many7", "poipet", "Community Service"), krs: manyKrs(7) }, "", "sokha", "1234"]);
+const rows7 = (mem.okrs || []).filter(r => r.id === "many7");
+check("an objective keeps all seven of its key results", rows7.length === 7 && rows7[6].kr === "kr 7", rows7.length);
+await call("saveObjective", [{ ...objFor("many12", "poipet", "Community Service"), krs: manyKrs(12) }, "", "sokha", "1234"]);
+const rows12 = (mem.okrs || []).filter(r => r.id === "many12");
+check("but no more than ten are stored", rows12.length === 10 && rows12[9].kr === "kr 10", rows12.length);
+
 console.log(fails.length ? '\n' + fails.length + ' FAILED:\n - ' + fails.join('\n - ')
-                         : '\nall 19 authorization checks passed');
+                         : '\nall 21 authorization checks passed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fails.length ? 1 : 0);

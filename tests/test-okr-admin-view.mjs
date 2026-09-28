@@ -150,6 +150,29 @@ if (otherGroupBtn) {
   await p2.waitForTimeout(500);
   const nv = saves2.pop();
   ok('and it saves for the campus and department picked', nv && nv.campus === 'siemreap' && nv.dept === 'Leadership Development' && nv.objective === 'A new objective for Siem Reap' && /^o\d+$/.test(nv.id), JSON.stringify(nv));
+
+  // More than three key results: "+ Add a key result" adds a row without losing what was typed.
+  await p2.click('#okrAdmNewBtn');
+  await p2.waitForSelector('#okrForm');
+  const rowCount = () => p2.$$eval('#okrForm [data-okr-kr]', r => r.length);
+  ok('the form starts with three key-result rows', (await rowCount()) === 3, await rowCount());
+  await p2.fill('#okrObjText', 'Lots of key results');
+  await p2.fill('#okrKrText0', 'First');
+  await p2.click('#okrKrAddBtn');
+  await p2.click('#okrKrAddBtn');
+  ok('each tap on Add a key result adds a row', (await rowCount()) === 5, await rowCount());
+  ok('typing already in the form stays put', (await p2.$eval('#okrObjText', i => i.value)) === 'Lots of key results' && (await p2.$eval('#okrKrText0', i => i.value)) === 'First');
+  ok('the new row is numbered and has its own KPI picker', /Key result 5/.test(await p2.$eval('#okrForm', e => e.textContent)) && !!(await p2.$('#okrKrMetric4')));
+  await p2.fill('#okrKrText4', 'Fifth');
+  await p2.click('#okrSaveBtn');
+  await p2.waitForTimeout(500);
+  const mv = saves2.pop();
+  ok('saving sends every filled row, including the added ones', mv && mv.krs.length === 2 && mv.krs[1].text === 'Fifth', JSON.stringify(mv && mv.krs));
+  await p2.click('#okrAdmNewBtn');
+  await p2.waitForSelector('#okrForm');
+  for (let i = 0; i < 10; i++) { if (await p2.isVisible('#okrKrAddBtn')) await p2.click('#okrKrAddBtn'); }
+  ok('it stops at ten, the most the server keeps', (await rowCount()) === 10 && !(await p2.isVisible('#okrKrAddBtn')), await rowCount());
+  await p2.click('#okrCancelBtn');
 }
 ok('admin: no console/page errors', errs2.length === 0, errs2.slice(0, 3).join(' | '));
 await b2.close(); srv2.close();

@@ -2765,8 +2765,41 @@ function okrTargetCheck(k){
     Number(tin.value)||0);
 }
 
-/* The write form. Three key-result slots, same as the dashboard's — enough to be
-   useful, few enough that an objective stays an objective. */
+/* The write form. It opens with three key-result slots (or as many as the
+   objective already has), and "+ Add a key result" adds more, up to OKR_MAX_KRS —
+   the server keeps no more than that. */
+var OKR_MAX_KRS = 10;
+function okrKrRowHtml(k, kr, campus){
+  kr = kr || { text:'', metricKey:'', target:'' };
+  return '<div class="formBlock" data-okr-kr="'+k+'"><label class="f">'+esc(t('Key result'))+' '+(k+1)+'</label>'+
+    '<input type="text" id="okrKrText'+k+'" value="'+esc(kr.text)+'">'+
+    '<label class="f">'+esc(t('Measure by'))+'</label>'+
+    '<select id="okrKrMetric'+k+'">'+okrMetricOptions(kr.metricKey, null, campus)+'</select>'+
+    '<label class="f">'+esc(t('Target (if linked to a KPI)'))+'</label>'+
+    '<input type="number" id="okrKrTarget'+k+'" inputmode="decimal" placeholder="0" value="'+
+      (kr.target||'')+'" style="width:130px">'+
+    '<div class="krWarn" id="okrKrWarn'+k+'"></div>'+
+    '</div>';
+}
+function okrBindKrRow_(k){
+  var sel=document.getElementById('okrKrMetric'+k), tin=document.getElementById('okrKrTarget'+k);
+  if(!sel || !tin) return;
+  sel.addEventListener('change', function(){ okrTargetCheck(k); });
+  tin.addEventListener('input', function(){ okrTargetCheck(k); });
+  okrTargetCheck(k);
+}
+/* Adds a row in place, so whatever is already typed in the form stays put. */
+function okrAddKr_(){
+  var btn = document.getElementById('okrKrAddBtn');
+  if(!btn) return;
+  var k = document.querySelectorAll('#okrForm [data-okr-kr]').length;
+  if(k >= OKR_MAX_KRS) return;
+  btn.insertAdjacentHTML('beforebegin', okrKrRowHtml(k, null, btn.getAttribute('data-campus')||null));
+  okrBindKrRow_(k);
+  if(k+1 >= OKR_MAX_KRS) btn.style.display = 'none';
+  var box = document.getElementById('okrKrText'+k);
+  if(box) box.focus();
+}
 function okrFormHtml(editing, target){
   var krs = editing ? (editing.krs||[]) : [];
   var h = '<div class="okrCard" id="okrForm"><div class="okrObj">'+
@@ -2775,18 +2808,10 @@ function okrFormHtml(editing, target){
   h += '<label class="f">'+esc(t('Objective'))+'</label>'+
     '<input type="text" id="okrObjText" value="'+(editing?esc(editing.objective):'')+'" '+
     'placeholder="'+esc(t('What are we aiming at this quarter?'))+'">';
-  for(var k=0;k<3;k++){
-    var kr = krs[k] || { text:'', metricKey:'', target:'' };
-    h += '<div class="formBlock"><label class="f">'+esc(t('Key result'))+' '+(k+1)+'</label>'+
-      '<input type="text" id="okrKrText'+k+'" value="'+esc(kr.text)+'">'+
-      '<label class="f">'+esc(t('Measure by'))+'</label>'+
-      '<select id="okrKrMetric'+k+'">'+okrMetricOptions(kr.metricKey, null, target && target.campus)+'</select>'+
-      '<label class="f">'+esc(t('Target (if linked to a KPI)'))+'</label>'+
-      '<input type="number" id="okrKrTarget'+k+'" inputmode="decimal" placeholder="0" value="'+
-        (kr.target||'')+'" style="width:130px">'+
-      '<div class="krWarn" id="okrKrWarn'+k+'"></div>'+
-      '</div>';
-  }
+  var rows = Math.min(OKR_MAX_KRS, Math.max(3, krs.length));
+  for(var k=0;k<rows;k++) h += okrKrRowHtml(k, krs[k], target && target.campus);
+  h += '<button class="btn ghost" id="okrKrAddBtn" type="button" data-campus="'+esc((target && target.campus)||'')+'"'+
+    (rows>=OKR_MAX_KRS?' style="display:none"':'')+'>'+esc(t('+ Add a key result'))+'</button>';
   h += '<button class="btn" id="okrSaveBtn">'+esc(t(editing?'Save changes':'Add objective'))+'</button>'+
     '<button class="btn ghost" id="okrCancelBtn">'+esc(t('Cancel'))+'</button></div>';
   return h;
@@ -2875,7 +2900,7 @@ function okrSave(btn){
   var text = (document.getElementById('okrObjText').value||'').trim();
   if(!text){ showMsg(t('Give the objective a name first.')); return; }
   var krs = [];
-  for(var k=0;k<3;k++){
+  for(var k=0;document.getElementById('okrKrText'+k);k++){
     var tx = (document.getElementById('okrKrText'+k).value||'').trim();
     if(!tx) continue;
     krs.push({ text:tx,
@@ -9309,13 +9334,9 @@ function bind(){
   if(ocb) ocb.onclick=function(){ S.okrForm=false; S.okrEditId=null; S.okrAdmin=null; render(); };
   var osb=document.getElementById('okrSaveBtn');
   if(osb) osb.onclick=function(){ okrSave(osb); };
-  for(var kw=0;kw<3;kw++)(function(k){
-    var sel=document.getElementById('okrKrMetric'+k), tin=document.getElementById('okrKrTarget'+k);
-    if(!sel || !tin) return;
-    sel.addEventListener('change', function(){ okrTargetCheck(k); });
-    tin.addEventListener('input', function(){ okrTargetCheck(k); });
-    okrTargetCheck(k);
-  })(kw);
+  for(var kw=0;document.getElementById('okrKrText'+kw);kw++) okrBindKrRow_(kw);
+  var oka=document.getElementById('okrKrAddBtn');
+  if(oka) oka.onclick=function(){ gpTap(); okrAddKr_(); };
   document.querySelectorAll('[data-okr-edit]').forEach(function(b){
     b.onclick=function(){
       var id=b.getAttribute('data-okr-edit'), o=null;
