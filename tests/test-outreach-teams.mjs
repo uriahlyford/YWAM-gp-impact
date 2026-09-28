@@ -8,6 +8,13 @@
    ministry dashboard's period toggle and the folded personal card are
    checked on a Cafe page too. */
 import { PUBLIC, CHROMIUM } from './env.mjs';
+import { testNow, pinClock, weekOf, quarterOf } from './clock.mjs';
+/* Two clocks. The trips are one year's story — teams that came January to May,
+   one next January — so those pages run on a fixed day after them (12 Aug).
+   The Cafe block is about "this quarter" versus "this year", which must hold on
+   any day, so it runs on the real now, or GP_TEST_NOW to check an edge. */
+const SCENARIO_NOW = testNow('2026-08-12');
+const NOW = testNow();
 import { chromium } from 'playwright';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -28,7 +35,7 @@ function ok(name, cond, extra) {
   if (cond) { pass++; console.log('ok   ' + name + (extra !== undefined ? '  → ' + extra : '')); }
   else { fail++; console.log('FAIL ' + name + (extra !== undefined ? '  → ' + extra : '')); }
 }
-const Y = new Date().getFullYear();
+const Y = SCENARIO_NOW.getFullYear();
 const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [] };
 const SOK = { ...base, id: 'st_sok', name: 'Sok Chan', username: 'sok', dept: 'Community Service', ministry: 'Outreach Teams', role: 'Teams coordinator' };
 const DARA = { ...base, id: 'st_dara', name: 'Dara Pen', username: 'dara', dept: 'Community Service', ministry: 'Cafe', role: 'Barista' };
@@ -43,13 +50,20 @@ const TRIPS = [
   trip({ id: 't4', name: 'Delta DTS', from: Y + '-02-05', to: Y + '-02-25', size: 5, status: 'cancelled' }),
   trip({ id: 't5', name: 'Echo Team', from: (Y + 1) + '-01-05', to: (Y + 1) + '-01-25', size: 9 }),
 ];
-const WK = (() => { const d = new Date(), y = d.getFullYear(), j = new Date(y, 0, 1), m = new Date(y, 0, 1 - ((j.getDay() + 6) % 7)); return Math.max(1, Math.min(52, Math.floor((d - m) / (7 * 86400000)) + 1)); })();
-const CAFE = { ok: true, campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', entries: { 'Cups Sold': { 1: 1000, [WK - 1]: 270, [WK]: 286 } }, daily: {}, prev: {}, pins: [] };
+const WK = weekOf(NOW);
+/* Two weeks inside the page's current quarter (this week and a neighbour in the
+   same 13-week block) and one in another quarter of the same year, so "the
+   quarter" and "the year" differ on any day — first week of a quarter, last
+   week, or Q1 (where week 1 is inside the quarter). */
+const WK_IN = WK > 1 && quarterOf(WK - 1) === quarterOf(WK) ? WK - 1 : WK + 1;
+const WK_OUT = quarterOf(WK) === 0 ? 40 : 1;
+const CAFE = { ok: true, campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', entries: { 'Cups Sold': { [WK_OUT]: 1000, [WK_IN]: 270, [WK]: 286 } }, daily: {}, prev: {}, pins: [] };
 
 const browser = await chromium.launch({ executablePath: CHROMIUM });
 async function open(who, opts) {
   opts = opts || {};
   const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  await pinClock(ctx, opts.now || SCENARIO_NOW);
   const page = await ctx.newPage();
   const errors = [], sent = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -185,7 +199,7 @@ console.log('=== Outreach Teams staff open on the teams page ===');
 
 console.log('\n=== a Cafe member: period toggle, folded personal card, teams read-only ===');
 {
-  const { ctx, page, errors, sent } = await open(DARA);
+  const { ctx, page, errors, sent } = await open(DARA, { now: NOW });
   let s = await state(page);
   ok('the Cafe page keeps its week strip and form button', s.strip && s.form && !s.teamsPage);
   ok('the dashboard opens on the quarter', await page.evaluate(() => document.querySelector('[data-mmperiod].on').getAttribute('data-mmperiod')) === 'quarter');
@@ -193,7 +207,7 @@ console.log('\n=== a Cafe member: period toggle, folded personal card, teams rea
   await page.click('[data-mmperiod="year"]');
   await page.waitForTimeout(300);
   const yr = await tileOf(page, 'Cups Sold');
-  ok('Year adds week 1 in; the quarter did not', Number(yr.replace(/,/g, '')) === 1556 && Number(q.replace(/,/g, '')) === 556, q + ' → ' + yr);
+  ok('Year adds the other quarter’s week in; the quarter did not', Number(yr.replace(/,/g, '')) === 1556 && Number(q.replace(/,/g, '')) === 556, q + ' → ' + yr);
   ok('and the heading says so', await page.evaluate(() => document.querySelector('h3').textContent.includes(String(new Date().getFullYear()))));
   await page.click('[data-mmperiod="month"]');
   await page.waitForTimeout(300);

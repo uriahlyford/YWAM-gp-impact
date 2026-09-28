@@ -4,6 +4,8 @@
    worth of objectives open at once would bury the one thing this page is
    actually for). A non-admin never sees that section at all. */
 import { PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
+import { testNow, pinClock, weekOf, quarterOf } from './clock.mjs';
+const NOW = testNow();
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = PUBLIC;
@@ -16,7 +18,7 @@ const srv = http.createServer((q, r) => {
 });
 await new Promise(res => srv.listen(4414, res));
 
-const Q = Math.floor((new Date().getMonth()) / 3) + 1;
+const Q = quarterOf(weekOf(NOW)) + 1;   // the app's quarter (13-week blocks), not the calendar month's
 const OKRS = [
   { id: 'o1', campus: 'poipet', quarter: Q, dept: 'Community Service', objective: 'My own department’s objective', krs: [{ text: 'A key result', metricKey: '', target: 0, manual: 40 }] },
   { id: 'o2', campus: 'poipet', quarter: Q, dept: 'Youth Education', objective: 'A different department’s objective', krs: [{ text: 'Their key result', metricKey: '', target: 0, manual: 70 }] }
@@ -29,6 +31,7 @@ const STAFF = { id: 'st_staff', name: 'Dara', username: 'dara', campus: 'poipet'
 async function run(who, label) {
   const b = await chromium.launch({ executablePath: CHROMIUM });
   const p = await b.newPage({ viewport: { width: 400, height: 900 } });
+  await pinClock(p, NOW);
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   p.on('console', m => { if (m.type() === 'error' && !/fonts|ERR_CONN/.test(m.text())) errs.push('console: ' + m.text()); });
   await p.route('**/.netlify/functions/api', r => {
@@ -85,6 +88,7 @@ const srv2 = http.createServer((q, r) => {
 await new Promise(res => srv2.listen(4415, res));
 const b2 = await chromium.launch({ executablePath: CHROMIUM });
 const p2 = await b2.newPage({ viewport: { width: 400, height: 900 } });
+await pinClock(p2, NOW);
 const errs2 = []; p2.on('pageerror', e => errs2.push(String(e)));
 await p2.route('**/.netlify/functions/api', r => {
   const q = JSON.parse(r.request().postData() || '{}');

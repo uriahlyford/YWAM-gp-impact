@@ -1019,3 +1019,12 @@ Each of these looked harmless and took the whole page down. `test-degraded.mjs`,
   `logo.js` now holds the real marks, so these can be generated from `GP_LOGO`.
 - **Web push for the daily nudge.** iOS 16.4+ supports it for installed PWAs; one
   reminder at a chosen time is the difference between a daily tool and a forgotten one.
+
+
+**Dates in tests** (`tests/clock.mjs`): a browser test whose fixtures depend on today must
+build them from `testNow()` and pin the page to the same moment with `pinClock(pageOrContext,
+now)` before the first goto (time is shifted, not frozen). Count quarters the app's way —
+`quarterOf(weekOf(now))`, 13-week blocks of the week number — never from the month: on
+28 Sep (week 40) the app is in Q4. A test whose fixtures are one fixed scenario pins itself
+(`testNow('2026-08-12')`, as test-base does); one that should hold on any day uses
+`testNow()` and is checked at the edges with `GP_TEST_NOW=YYYY-MM-DD node tests/<file>`.

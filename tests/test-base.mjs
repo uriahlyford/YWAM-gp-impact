@@ -3,6 +3,11 @@
 /* Paths and the browser binary come from tests/env.mjs so this runs from a clone
    rather than from one machine's scratch directory. */
 import { PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
+import { testNow, pinClock, weekOf, quarterOf } from './clock.mjs';
+/* The fixtures below are one year's story up to Q3 — data in weeks 1–20, Q3
+   objectives measured by weeks 30/32 — so the page runs on a fixed day in
+   that quarter (week 33) whatever today is. */
+const NOW = testNow('2026-08-12');
 import { chromium } from 'playwright';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -48,9 +53,7 @@ put(P, 'Campus Leadership', 'Campus Director', 'Base Vision (1-10)', { 2: 8 });
 put(P, 'Campus Leadership', 'Community Service', 'Staff Debt ($)', { 2: 900 });
 
 /* My own weekly health, as syncWeekSurvey_ would have derived it from my logs. */
-const NOWWK = (() => { const y=new Date().getFullYear(), j=new Date(y,0,1);
-  const m=new Date(y,0,1-((j.getDay()+6)%7));
-  return Math.max(1,Math.min(52,Math.floor((new Date()-m)/(7*86400000))+1)); })();
+const NOWWK = weekOf(NOW);
 let CHECKIN_STORE;
 const MY_CHECKINS = [NOWWK, NOWWK-1, NOWWK-2].map((w,i) => ({
   week: w, days: 5-i, lonely: 2+i, clarity: 8-i, growth: 7, porn: 0,
@@ -60,7 +63,7 @@ const MY_CHECKINS = [NOWWK, NOWWK-1, NOWWK-2].map((w,i) => ({
 CHECKIN_STORE = MY_CHECKINS.map(c => ({ ...c, source: 'daily' }));
 const MATE = { id: 'st2', name: 'Mealea Sok', username: 'mealea', campus: P, dept: 'Youth Education', ministry: 'YDC', role: 'YDC teacher', photo: '', mentorId: '', staffType: 'ministry', country: 'Cambodia' };
 const ME = { id: 'st1', name: 'Sokha Chan', username: 'sokha', campus: P, dept: 'Community Service', ministry: 'Outreach Teams', role: 'Outreach coordinator', photo: '', mentorId: '', staffType: 'campus', country: 'United States' };
-const Q = Math.min(4, Math.floor((new Date().getMonth()) / 3) + 1);
+const Q = quarterOf(NOWWK) + 1;   // the app's quarter: 13-week blocks of the week number
 const OKRS = [{
   id: 'o1', campus: P, quarter: Q,
   dept: 'Community Service', objective: 'Every outreach team leaves a village with a church contact',
@@ -99,6 +102,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM });
 const errors = [];
 async function newPage(seed) {
   const page = await browser.newPage({ viewport: { width: 400, height: 900 }, deviceScaleFactor: 2 });
+  await pinClock(page, NOW);
   page.on('pageerror', x => errors.push('PAGEERROR ' + x));
   page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CONNECTION/.test(m.text())) errors.push('console: ' + m.text()); });
   await page.route('**/.netlify/functions/api', r => {
