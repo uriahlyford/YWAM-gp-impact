@@ -959,6 +959,8 @@ body.hxOn { overflow:hidden; }
 .orgBox.top { border-color:var(--accent); box-shadow:0 1px 0 var(--border); }
 .orgBox.loose { border-style:dashed; margin-top:14px; }
 .orgBox.students { margin-top:14px; }
+.okrAdminNew { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin:0 0 12px; }
+.okrAdminNew .pick { flex:1 1 140px; min-width:0; }
 .stuRow { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
 .stuRow:last-of-type { border-bottom:0; }
 .stuName { display:flex; flex-direction:column; min-width:0; font-weight:600; }
@@ -2724,8 +2726,8 @@ function okrCardHtml(o, R, editable){
 /* Every metric on this campus, for tying a key result to a real KPI. Grouped by
    department so the list is navigable — a key result can measure any ministry's
    number, not just your own. */
-function okrMetricOptions(selected, noneLabel){
-  var deps = getDepartments(S.me.campus);
+function okrMetricOptions(selected, noneLabel, campus){
+  var deps = getDepartments(campus || S.me.campus);
   var h = '<option value="">'+esc(t(noneLabel||'Manual progress (%)'))+'</option>';
   Object.keys(deps).forEach(function(d){
     h += '<optgroup label="'+esc(t(d))+'">';
@@ -2754,10 +2756,11 @@ function okrTargetCheck(k){
 
 /* The write form. Three key-result slots, same as the dashboard's — enough to be
    useful, few enough that an objective stays an objective. */
-function okrFormHtml(editing){
+function okrFormHtml(editing, target){
   var krs = editing ? (editing.krs||[]) : [];
   var h = '<div class="okrCard" id="okrForm"><div class="okrObj">'+
-    esc(t(editing?'Edit objective':'New objective'))+'</div>';
+    esc(t(editing?'Edit objective':'New objective'))+'</div>'+
+    (target ? '<div class="okrDept">'+(MIN_EMOJI[target.dept]?MIN_EMOJI[target.dept]+' ':'')+esc(t(target.dept))+' · '+esc(campusName(target.campus))+'</div>' : '');
   h += '<label class="f">'+esc(t('Objective'))+'</label>'+
     '<input type="text" id="okrObjText" value="'+(editing?esc(editing.objective):'')+'" '+
     'placeholder="'+esc(t('What are we aiming at this quarter?'))+'">';
@@ -2766,7 +2769,7 @@ function okrFormHtml(editing){
     h += '<div class="formBlock"><label class="f">'+esc(t('Key result'))+' '+(k+1)+'</label>'+
       '<input type="text" id="okrKrText'+k+'" value="'+esc(kr.text)+'">'+
       '<label class="f">'+esc(t('Measure by'))+'</label>'+
-      '<select id="okrKrMetric'+k+'">'+okrMetricOptions(kr.metricKey)+'</select>'+
+      '<select id="okrKrMetric'+k+'">'+okrMetricOptions(kr.metricKey, null, target && target.campus)+'</select>'+
       '<label class="f">'+esc(t('Target (if linked to a KPI)'))+'</label>'+
       '<input type="number" id="okrKrTarget'+k+'" inputmode="decimal" placeholder="0" value="'+
         (kr.target||'')+'" style="width:130px">'+
@@ -2838,7 +2841,7 @@ function okrSectionHtml(who, mine, noHeading){
   }
 
   if(mine){
-    if(S.okrForm){
+    if(S.okrForm && !S.okrAdmin){
       var editing = null;
       if(S.okrEditId) theirs.forEach(function(o){ if(o.id===S.okrEditId) editing=o; });
       h += okrFormHtml(editing);
@@ -2886,11 +2889,12 @@ function okrSave(btn){
   }
 
   var myDept = S.me.dept==='Base Director' ? 'Campus Leadership' : S.me.dept;
+  var tgt = S.okrAdmin || { campus:S.me.campus, dept:myDept };   // an admin may write any campus / department
   var obj = {
     id: S.okrEditId || ('o'+Date.now()),
-    campus: S.me.campus,
+    campus: tgt.campus,
     quarter: Math.min(4, Math.floor((thisWeek()-1)/13)+1),
-    dept: myDept,
+    dept: tgt.dept,
     objective: text,
     krs: krs
   };
@@ -2898,7 +2902,7 @@ function okrSave(btn){
   run('saveObjective', [obj, '', S.auth.user, S.auth.pin], function(d){
     // saveObjective answers with the whole getData payload; if it didn't, the
     // write was refused, so say so rather than blanking the page.
-    if(d && d.entries){ S.base = d; S.okrForm = false; S.okrEditId = null; showMsg(t('Saved')); }
+    if(d && d.entries){ S.base = d; S.okrForm = false; S.okrEditId = null; S.okrAdmin = null; showMsg(t('Saved')); }
     else { btn.disabled = false; btn.textContent = t('Save changes'); showMsg(t('That didn’t save — try again.')); }
     render();
   });
@@ -2906,7 +2910,7 @@ function okrSave(btn){
 
 function okrDelete(id){
   run('deleteObjective', [id, '', S.auth.user, S.auth.pin], function(d){
-    if(d && d.entries){ S.base = d; S.okrForm = false; S.okrEditId = null; }
+    if(d && d.entries){ S.base = d; S.okrForm = false; S.okrEditId = null; S.okrAdmin = null; }
     else showMsg(t('That didn’t save — try again.'));
     render();
   });
@@ -4131,12 +4135,25 @@ function okrTabHtml_(){
   h+='<p class="sub" style="margin:0 0 2px">'+esc(t(S.me.dept))+(S.me.ministry?' · '+esc(t(S.me.ministry)):'')+'</p>';
   h+=okrSectionHtml(S.me, true, true);
 
-  /* Admin sees every department's objectives too, read-only and collapsed by
-     default — a full page of every OKR on both campuses open at once would
-     bury the one thing this page is actually for: editing your own. */
+  /* Admin sees — and can edit, delete and add — every department's objectives
+     on both campuses, collapsed by default so the page still opens on your
+     own. The server lets an admin write any campus / department. */
   if(S.me.isAdmin && S.base){
     var qOkrs = (S.base.okrs||[]).filter(function(o){ return Number(o.quarter)===qNow; });
-    h += '<h3>🗂️ '+esc(t('Every department’s OKRs'))+'</h3>';
+    h += '<h3 id="adminOkrs">🗂️ '+esc(t('Every department’s OKRs'))+'</h3>';
+    var pick = S.okrAdminPick || { campus:S.me.campus, dept:'' };
+    var pickDepts = Object.keys(getDepartments(pick.campus));
+    if(pickDepts.indexOf(pick.dept)===-1) pick.dept = pickDepts[0] || '';
+    S.okrAdminPick = pick;
+    if(S.okrForm && S.okrAdmin){
+      var aEditing = null;
+      if(S.okrEditId) (S.base.okrs||[]).forEach(function(o){ if(o.id===S.okrEditId) aEditing=o; });
+      h += okrFormHtml(aEditing, S.okrAdmin);
+    } else {
+      h += '<div class="okrAdminNew"><label class="pick"><span>'+esc(t('Campus'))+'</span><select id="okrAdmCampus">'+CAMPUSES.map(function(c){ return '<option value="'+esc(c.id)+'"'+(c.id===pick.campus?' selected':'')+'>'+esc(c.short)+'</option>'; }).join('')+'</select></label>'+
+        '<label class="pick"><span>'+esc(t('Department'))+'</span><select id="okrAdmDept">'+pickDepts.map(function(d){ return '<option value="'+esc(d)+'"'+(d===pick.dept?' selected':'')+'>'+esc(t(d))+'</option>'; }).join('')+'</select></label>'+
+        '<button class="btn ghost" id="okrAdmNewBtn" style="width:auto;margin:0">+ '+esc(t('New objective'))+'</button></div>';
+    }
     if(!qOkrs.length){
       h += '<p class="sub">'+esc(t('No objectives set anywhere yet this quarter.'))+'</p>';
     } else {
@@ -4153,8 +4170,8 @@ function okrTabHtml_(){
         var summary = list.length===1 ? esc(t('1 objective')) : esc(gpT('{n} objectives',{n:list.length}));
         h += accRowHtml('adminOkrAcc', key, title, summary, function(){
           var b = '';
-          list.forEach(function(o){ b += okrCardHtml(o, R, false); });
-          return b;
+          list.forEach(function(o){ b += okrCardHtml(o, R, true); });
+          return '<div data-okradmin="1">'+b+'</div>';
         });
       });
     }
@@ -9158,9 +9175,9 @@ function bind(){
   var okn=document.getElementById('okrNext');
   if(okn) okn.onclick=function(){ gpTap(); S.okrIdx=(S.okrIdx||0)+1; render(); };
   var onb=document.getElementById('okrNewBtn');
-  if(onb) onb.onclick=function(){ S.okrForm=true; S.okrEditId=null; render(); };
+  if(onb) onb.onclick=function(){ S.okrAdmin=null; S.okrForm=true; S.okrEditId=null; render(); };
   var ocb=document.getElementById('okrCancelBtn');
-  if(ocb) ocb.onclick=function(){ S.okrForm=false; S.okrEditId=null; render(); };
+  if(ocb) ocb.onclick=function(){ S.okrForm=false; S.okrEditId=null; S.okrAdmin=null; render(); };
   var osb=document.getElementById('okrSaveBtn');
   if(osb) osb.onclick=function(){ okrSave(osb); };
   for(var kw=0;kw<3;kw++)(function(k){
@@ -9171,8 +9188,21 @@ function bind(){
     okrTargetCheck(k);
   })(kw);
   document.querySelectorAll('[data-okr-edit]').forEach(function(b){
-    b.onclick=function(){ S.okrEditId=b.getAttribute('data-okr-edit'); S.okrForm=true; render(); };
+    b.onclick=function(){
+      var id=b.getAttribute('data-okr-edit'), o=null;
+      (S.base && S.base.okrs || []).forEach(function(x){ if(x.id===id) o=x; });
+      // an admin editing from "Every department's OKRs" writes that objective's own campus / department
+      S.okrAdmin = (o && S.me.isAdmin && b.closest('[data-okradmin]')) ? { campus:o.campus, dept:o.dept } : null;
+      S.okrEditId=id; S.okrForm=true; render();
+      var f=document.getElementById('okrForm'); if(f) f.scrollIntoView({behavior:'smooth', block:'start'});
+    };
   });
+  var oac=document.getElementById('okrAdmCampus');
+  if(oac) oac.onchange=function(){ S.okrAdminPick={ campus:oac.value, dept:'' }; render(); };
+  var oad=document.getElementById('okrAdmDept');
+  if(oad) oad.onchange=function(){ S.okrAdminPick=Object.assign({}, S.okrAdminPick||{}, { dept:oad.value }); };
+  var oan=document.getElementById('okrAdmNewBtn');
+  if(oan) oan.onclick=function(){ var p=S.okrAdminPick||{}; if(!p.campus || !p.dept) return; S.okrAdmin={ campus:p.campus, dept:p.dept }; S.okrEditId=null; S.okrForm=true; render(); var f=document.getElementById('okrForm'); if(f) f.scrollIntoView({behavior:'smooth', block:'start'}); };
   document.querySelectorAll('[data-okr-del]').forEach(function(b){
     b.onclick=function(){
       if(!confirm(t('Delete this objective?'))) return;

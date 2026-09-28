@@ -1307,10 +1307,13 @@ async function saveEntries(campus, updates, code, username, pin) {
    department; profiles created before the rename still carry it. */
 function deptOf_(s) { return normDept_(s.dept); }
 
+/* An app admin (isAdmin) writes every campus's and department's objectives,
+   the same reach as the leader code; everyone else stays pinned to their own. */
 async function okrWriter_(code, username, pin) {
   if (isLeader_(code)) return { leader: true };
   const s = await verifyStaff_(username, pin);
   if (!s) return null;
+  if (s.isAdmin && s.active !== false) return { leader: true, admin: true };
   return { leader: false, campus: s.campus, dept: deptOf_(s) };
 }
 
