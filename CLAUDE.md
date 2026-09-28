@@ -1028,3 +1028,4 @@ now)` before the first goto (time is shifted, not frozen). Count quarters the ap
 28 Sep (week 40) the app is in Q4. A test whose fixtures are one fixed scenario pins itself
 (`testNow('2026-08-12')`, as test-base does); one that should hold on any day uses
 `testNow()` and is checked at the edges with `GP_TEST_NOW=YYYY-MM-DD node tests/<file>`.
+- **Structure: the next quarter can be saved early** (`nextQuarter_`, `structIsNext_`, `structIsLive_` in teams.html): it shows the live chart like the current quarter, with "Save Q{n} {year} structure early" for admins, so the base can set up a quarter while planning it a couple of weeks ahead. Q4's next is Q1 of next year (the year picker then offers next year). The server already took any quarter from an admin.
