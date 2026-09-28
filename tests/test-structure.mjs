@@ -39,6 +39,7 @@ mem.staff = [
   withPin({ id: 'st_pend', name: 'Pending', username: 'pend', campus: 'siemreap', dept: 'Campus Leadership', ministry: 'Community Service', active: false }),
   withPin({ id: 'st_gone', name: 'Gone', username: 'gone', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', active: false, archived: { at: '2026-01-01', reason: 'left' } }),
   withPin({ id: 'st_pp', name: 'Bopha', username: 'bopha', campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', active: true }),
+  withPin({ id: 'st_appl', name: 'Anna Applicant', username: 'anna.a', campus: 'siemreap', dept: '', ministry: '', active: true, kind: 'applicant', applicant: { type: 'student', school: 'dts' } }),
 ];
 async function call(fn, args) {
   const res = await api.default({ method: 'POST', json: async () => ({ fn, args }), headers: new Map() }, {});
@@ -88,6 +89,31 @@ r = await call('getStructure', ['uriah', '1234', 'siemreap', 2026, 3]);
 ok('Q3 still shows the picture as it was — Dara there, Sreilea in the Cafe', r.body.doc.people.length === 3 && r.body.doc.people.find(p => p.id === 'st_lead').ministry === 'Cafe');
 r = await call('saveStructure', ['uriah', '1234', 'siemreap', 2026, 4]);
 ok('saving the same quarter again replaces it rather than adding a row', r.body.ok === true && mem.structure.length === 2);
+
+console.log('\n=== portal applicants are never on the chart ===');
+mem.staff = mem.staff.map(x => x.id === 'st_dara' ? { ...x, active: true, archived: null } : x);   // an earlier block archived her
+r = await call('saveStructure', ['uriah', '1234', 'siemreap', 2026, 3]);
+ok('a snapshot leaves applicant accounts out', r.body.ok === true && !r.body.doc.people.some(p => p.id === 'st_appl'));
+mem.structure.find(x => x.year === 2026 && x.quarter === 3).people.push({ id: 'st_appl', name: 'Anna Applicant', dept: '', ministry: '', role: '', leads: [] });
+r = await call('getStructure', ['dara', '1234', 'siemreap', 2026, 3]);
+ok('and one saved before that rule reads back without them', r.body.ok === true && !r.body.doc.people.some(p => p.id === 'st_appl'));
+
+console.log('\n=== staff who are students for one quarter ===');
+r = await call('getStructure', ['dara', '1234', 'siemreap', 2026, 4]);
+ok('a quarter with no plan answers an empty students list', r.body.ok === true && JSON.stringify(r.body.plan) === JSON.stringify({ students: {} }));
+r = await call('saveStructurePlan', ['dara', '1234', 'siemreap', 2026, 4, { st_dara: 'bcs' }]);
+ok('only an admin sets it', r.body.ok === false && !mem.structurePlans);
+r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2026, 4, { st_dara: 'BCS', st_lead: 'dts', st_pp: 'bcs', st_appl: 'dts', st_gone: 'bcs', st_admin: 'cooking' }]);
+ok('the admin marks Dara in the BCS and Sreilea in the DTS for Q4; other campuses, applicants, archived people and unknown schools are dropped', r.body.ok === true && JSON.stringify(r.body.plan.students) === JSON.stringify({ st_dara: 'bcs', st_lead: 'dts' }), JSON.stringify(r.body.plan));
+r = await call('getStructure', ['dara', '1234', 'siemreap', 2026, 4]);
+ok('anyone reads it back with the quarter', r.body.plan.students.st_dara === 'bcs');
+r = await call('getStructure', ['dara', '1234', 'siemreap', 2026, 3]);
+ok('it is for that quarter only', JSON.stringify(r.body.plan.students) === '{}');
+ok('and nobody’s profile changed', mem.staff.find(x => x.id === 'st_dara').ministry === 'Cafe' && !mem.staff.find(x => x.id === 'st_dara').student);
+r = await call('saveStructure', ['uriah', '1234', 'siemreap', 2026, 4]);
+ok('saving Q4 carries who is a student in the snapshot', r.body.doc.people.find(p => p.id === 'st_dara').student === 'bcs' && r.body.doc.people.find(p => p.id === 'st_lead').student === 'dts' && !r.body.doc.people.find(p => p.id === 'st_admin').student);
+r = await call('saveStructurePlan', ['uriah', '1234', 'siemreap', 2026, 4, { st_dara: 'bcs' }]);
+ok('changing the plan updates a snapshot already saved for that quarter', r.body.ok === true && r.body.doc.people.find(p => p.id === 'st_lead').student === undefined && mem.structure.find(x => x.year === 2026 && x.quarter === 4).people.find(p => p.id === 'st_dara').student === 'bcs');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -40,11 +40,11 @@ const ROSTER = [URIAH, NAOMI, SINA, SREILEA, DARA, LOST, BOPHA];
 const browser = await chromium.launch({ executablePath: CHROMIUM });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
 const page = await ctx.newPage();
-const errors = [], sent = [];
+const errors = [], sent = [], sentBodies = [];
 page.on('pageerror', e => errors.push(String(e)));
 page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION/.test(m.text())) errors.push('console: ' + m.text()); });
 await ctx.route('**/.netlify/functions/api', r => {
-  const b = JSON.parse(r.request().postData() || '{}'); sent.push(b.fn);
+  const b = JSON.parse(r.request().postData() || '{}'); sent.push(b.fn); sentBodies.push(b);
   let out = { ok: true };
   if (b.fn === 'getMyBoot') out = { ok: true, staff: DARA, profile: {}, roster: ROSTER, logs: [], habits: null, mentees: [], mentorRequests: [],
     goals: [], checkins: [], ministry: null, personal: { ok: true, entries: {} },
@@ -62,6 +62,7 @@ await ctx.route('**/.netlify/functions/api', r => {
     else if (quarter === 2) out = { ok: true, campus, year, quarter, source: 'copied', doc: { campus, year, quarter: 1, savedAt: year + '-03-30T00:00:00Z', people: [{ id: 'st_uriah', name: 'Uriah Lyford', dept: 'Campus Leadership', ministry: 'Campus Director', role: '', leads: [] }] } };
     else out = { ok: true, campus, year, quarter, source: 'none', doc: null };
   }
+  else if (b.fn === 'saveStructurePlan') out = { ok: true, campus: b.args[2], year: b.args[3], quarter: b.args[4], plan: { students: b.args[5] }, doc: null };
   else if (b.fn === 'saveStructure') out = { ok: true, campus: b.args[2], year: b.args[3], quarter: b.args[4], source: 'saved', doc: { campus: b.args[2], year: b.args[3], quarter: b.args[4], savedAt: new Date().toISOString(), people: [] } };
   else if (/^getMy/.test(b.fn)) out = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
   r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
@@ -151,6 +152,17 @@ console.log('\n=== the admin sets up the next quarter early ===');
   await page.click('#structSaveBtn');
   await page.waitForTimeout(600);
   ok('saving it posts next quarter’s year and quarter, and it then reads as saved', sent.filter(f => f === 'saveStructure').length === before + 1 && await page.evaluate(() => /structure saved on/.test(document.body.innerText) && /Update Q\d \d{4} structure/.test((document.querySelector('#structSaveBtn') || {}).textContent || '')));
+  ok('an admin gets a Students button for that quarter', new RegExp('Students in Q' + next.q + ' ' + next.y).test(await page.$eval('#structStudentsBtn', b => b.textContent)));
+  await page.click('#structStudentsBtn');
+  await page.waitForSelector('#structStudentsCard');
+  ok('it lists this campus’s staff with a school picker each, no one a student yet', (await page.$$eval('[data-stu]', x => x.length)) >= 3 && (await page.$$eval('[data-stu]', x => x.every(s => s.value === ''))) && (await page.$$eval('[data-stu="st_dara"] option', o => o.map(x => x.value).join(','))) === ',dts,dbs,bcs,sms');
+  await page.selectOption('[data-stu="st_dara"]', 'bcs');
+  await page.click('#structStudentsSave');
+  await page.waitForTimeout(500);
+  const sp = sentBodies.filter(b => b.fn === 'saveStructurePlan').pop();
+  ok('Save sends that quarter and who is a student in which school', sp && sp.args[3] === next.y && sp.args[4] === next.q && JSON.stringify(sp.args[5]) === JSON.stringify({ st_dara: 'bcs' }));
+  const stu = await page.evaluate(() => ({ box: (document.querySelector('[data-orgbox="students"]') || {}).innerText || '', cafe: (document.querySelector('[data-orgmin="Community Service|Cafe"]') || {}).innerText || '', btn: (document.querySelector('#structStudentsBtn') || {}).textContent || '' }));
+  ok('Dara now sits in a Students box under BCS, and is no longer in the Cafe for that quarter', /Students this quarter/i.test(await page.evaluate(() => document.body.innerText)) && /BCS · 1/.test(stu.box) && /Dara Pen/.test(stu.box) && !/Dara Pen/.test(stu.cafe) && /· 1$/.test(stu.btn.trim()), JSON.stringify(stu));
   const q2after = next.q === 4 ? 2 : null;
   if (q2after) { await page.click('[data-structq="2"]'); await page.waitForTimeout(400); ok('a past quarter still has no Save button', !(await page.$('#structSaveBtn'))); }
   ok('no page errors', errors.length === 0, errors.join(' | '));
