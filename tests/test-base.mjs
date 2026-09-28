@@ -326,7 +326,7 @@ console.log('OKR entry card: ' + await page.$$eval('#main h3', e => e.map(x => x
 await page.click('#goOkrFromMe');                             // OKRs — its own full page now
 await page.waitForTimeout(1100);
 console.log('OKR heading:   ' + await page.$$eval('#main h3, #main h2', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
-console.log('focus card:    ' + await page.$eval('.focusCard', e => e.innerText.replace(/\n+/g, ' | ').slice(0, 120)));
+console.log('focus card:    ' + await page.$eval('.focusCard', e => e.innerText.replace(/\n+/g, ' | ').slice(0, 120)).catch(() => '(none on your own OKR page — the page is just the OKRs)'));
 console.log('my objectives: ' + await page.$$eval('.okrCard', e => e.length));
 console.log('key results:   ' + (await page.$$eval('.kr', e => e.map(x => x.innerText.replace(/\n+/g, ' | ')))).join('  //  '));
 console.log('other depts shown (should be 0): ' + await page.evaluate(() =>
@@ -356,19 +356,17 @@ if (card) {
 }
 
 // 10c. the editor: create, edit, hand-tracked %, delete
-// More than one objective in the same quarter now pages one card at a time
-// (#okrPrev/#okrNext) instead of stacking every card at once, so this walks
-// to whichever objective it needs by title rather than assuming position.
+// Every objective is on the page at once (no pager), so this just finds the
+// card by its title.
 async function okrPageTo(re) {
-  for (let i = 0; i < 6; i++) {
-    const cur = await page.$eval('.okrObj', e => e.textContent.trim()).catch(() => '');
-    if (re.test(cur)) return true;
-    const next = await page.$('#okrNext');
-    if (!next || await next.evaluate(b => b.disabled)) return false;
-    await next.click();
-    await page.waitForTimeout(400);
-  }
-  return false;
+  return page.evaluate(src => Array.from(document.querySelectorAll('.okrCard .okrObj')).some(o => new RegExp(src).test(o.textContent)), re.source);
+}
+async function okrCardClick(re, sel) {
+  const h = await page.evaluateHandle(({ src, sel }) => {
+    const c = Array.from(document.querySelectorAll('.okrCard')).find(x => new RegExp(src).test(x.textContent));
+    return c && c.querySelector(sel);
+  }, { src: re.source, sel });
+  await h.asElement().click();
 }
 console.log('\n=== OKR EDITOR (on its own page) ===');
 await page.click('nav.bottom [data-tab="week"]');
@@ -397,7 +395,7 @@ if (!/a target of 5 is passed/.test(tgtNote)) {
 }
 await page.fill('#okrKrText1', 'Debrief within a week');
 await page.click('#okrSaveBtn'); await page.waitForTimeout(1800);
-console.log('pager present after 2nd objective: ' + await page.evaluate(() => !!document.querySelector('#okrNext')));
+console.log('no pager, both objectives on the page: ' + await page.evaluate(() => !document.querySelector('#okrNext') && document.querySelectorAll('.okrCard').length >= 2));
 console.log('paged to the new one: ' + await okrPageTo(/Plant a church/));
 console.log('new one shows figure/target: ' + await page.evaluate(() => {
   const c = Array.from(document.querySelectorAll('.okrCard')).find(x => /Plant a church/.test(x.textContent));
@@ -406,18 +404,16 @@ console.log('new one shows figure/target: ' + await page.evaluate(() => {
   return m ? m[0] : 'no figure/target found';
 }));
 
-// edit — currently paged to the new objective, so its own edit button is the only one shown
-await page.click('[data-okr-edit]'); await page.waitForTimeout(700);
+// edit — the new objective's own Edit button
+await okrCardClick(/Plant a church/, '[data-okr-edit]'); await page.waitForTimeout(700);
 console.log('form prefilled: ' + await page.$eval('#okrObjText', e => e.value));
 await page.fill('#okrObjText', 'Plant a church in every village (revised)');
 await page.click('#okrSaveBtn'); await page.waitForTimeout(1800);
 console.log('paged to the edited one: ' + await okrPageTo(/revised/));
-console.log('after edit: ' + await page.$eval('.okrObj', e => e.textContent.trim()));
+console.log('after edit: ' + await page.evaluate(() => Array.from(document.querySelectorAll('.okrObj')).map(o => o.textContent.trim()).find(x => /revised/.test(x)) || '(not found)'));
 
-// hand-tracked percentage saves on change — key results are collapsed by
-// default now, so open the card's key results first
-await page.click('[data-kr-toggle]');
-await page.waitForTimeout(500);
+// hand-tracked percentage (a slider now) saves on change — key results show
+// without opening anything
 
 /* Same target, now saved: the row reads 100% because the percentage is capped,
    so the row itself has to say the target is the thing that is wrong. */
@@ -433,29 +429,21 @@ if (!(krPct > 100)) {
 }
 const manKey = await page.$eval('[data-okr-manual]', e => e.getAttribute('data-okr-manual'));
 console.log('editing manual kr: ' + manKey);
-await page.fill('[data-okr-manual="' + manKey + '"]', '80');
-await page.dispatchEvent('[data-okr-manual="' + manKey + '"]', 'change');
+await page.$eval('[data-okr-manual="' + manKey + '"]', e => { e.value = '80'; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); });
 await page.waitForTimeout(1800);
 console.log('manual % persisted: ' + await page.$eval('[data-okr-manual="' + manKey + '"]', e => e.value));
 console.log('its bar reflects it: ' + await page.evaluate(k => {
   const inp = document.querySelector('[data-okr-manual=\"' + k + '\"]');
   const kr = inp && inp.closest('.kr');
-  return kr ? kr.querySelector('.barFill').style.width : 'not found';
+  return kr ? kr.querySelector('.krPctLbl').textContent.trim() : 'not found';
 }, manKey));
 
-// delete — still paged to the revised objective from the edit step above
+// delete the revised objective
 page.on('dialog', d => d.accept());
-// .weekPill is reused by Weekly Goals/My Ministry too, so read the one that
-// actually sits next to the OKR pager's own #okrNext button.
-const beforeDel = await page.evaluate(() => {
-  const next = document.querySelector('#okrNext');
-  const pill = next && next.previousElementSibling;
-  const m = pill && pill.textContent.match(/of (\d+)/);
-  return m ? Number(m[1]) : 1;
-});
-await page.click('[data-okr-del]'); await page.waitForTimeout(1800);
-console.log('objectives ' + beforeDel + ' -> ' + await page.$$eval('.okrCard', e => e.length) + ' after delete (pager gone: ' +
-  await page.evaluate(() => !document.querySelector('#okrNext')) + ')');
+const beforeDel = await page.$$eval('.okrCard', e => e.length);
+await okrCardClick(/revised/, '[data-okr-del]'); await page.waitForTimeout(1800);
+console.log('objectives ' + beforeDel + ' -> ' + await page.$$eval('.okrCard', e => e.length) + ' after delete (revised gone: ' +
+  !(await okrPageTo(/revised/)) + ')');
 await page.screenshot({ path: OUT + 'okr-editor.png', fullPage: true });
 
 // a teammate's page must stay read-only

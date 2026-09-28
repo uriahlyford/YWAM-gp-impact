@@ -46,6 +46,30 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   person's work. Key results tied to a KPI show the quarter's real figure against the
   target, so it is visible the number came from what the ministry logged — nothing to type.
   🎯 means "objectives" throughout, which is why weekly goals use 🗒️.
+  **The OKR page is laid out like SugarOKR.** Uriah asked for it, and Campus Leadership
+  is the first team using OKRs.
+  - The page shows every objective at once, numbered. A quarter summary sits on top
+    (overall % and "Week n of 13"), and every key result shows. There is no pager and no
+    "Show key results" fold.
+  - Each key result has exactly one control:
+    - a **slider** for hand-tracked % (`manual`);
+    - a **− / + count** toward its target (`kind:"count"`, `current`). Tapping the number
+      lets you type it, and three taps are one save;
+    - nothing, when it is linked to a ministry metric (`metricKey`).
+  - Key results can sit under a **heading** (`group`: Money, Time…).
+  - The edit form opens in the objective's place:
+    - one box per key result, and one "how is it measured" picker;
+    - a target box only when the picker needs one;
+    - "+ Heading" rows, and ✕ to remove a row;
+    - up to 10 key results, which is the server's cap.
+  - **📋 Paste OKRs** (`okrParsePaste_`) turns written OKRs into objectives:
+    - "Objective 1:" starts an objective;
+    - a bulleted or numbered line is a key result;
+    - any other line under an objective is a heading.
+
+    You see a preview first, then there is one saveObjective call per objective.
+  - saveObjective puts re-saved rows back in the objective's old place, so moving a slider
+    doesn't send the objective to the bottom.
   **Your own are editable, a teammate's are not.** On Me you can add, edit and delete
   your department's objectives, and type the percentage for a key result that has no KPI
   behind it (the only kind with a box — the rest are answered by what the ministry logs).

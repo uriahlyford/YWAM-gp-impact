@@ -162,7 +162,7 @@ if (otherGroupBtn) {
   await p2.click('#okrKrAddBtn');
   ok('each tap on Add a key result adds a row', (await rowCount()) === 5, await rowCount());
   ok('typing already in the form stays put', (await p2.$eval('#okrObjText', i => i.value)) === 'Lots of key results' && (await p2.$eval('#okrKrText0', i => i.value)) === 'First');
-  ok('the new row is numbered and has its own KPI picker', /Key result 5/.test(await p2.$eval('#okrForm', e => e.textContent)) && !!(await p2.$('#okrKrMetric4')));
+  ok('the new row is numbered and has its own KPI picker', /Key result 5/.test(await p2.$eval('#okrKrText4', e => e.placeholder)) && !!(await p2.$('#okrKrMetric4')));
   await p2.fill('#okrKrText4', 'Fifth');
   await p2.click('#okrSaveBtn');
   await p2.waitForTimeout(500);

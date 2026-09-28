@@ -200,7 +200,24 @@ await call("saveObjective", [{ ...objFor("many12", "poipet", "Community Service"
 const rows12 = (mem.okrs || []).filter(r => r.id === "many12");
 check("but no more than ten are stored", rows12.length === 10 && rows12[9].kr === "kr 10", rows12.length);
 
+// headings and counts come back as saved, and re-saving keeps the objective in its place
+await call("saveObjective", [{ ...objFor("ord1", "poipet", "Community Service"), krs: [
+  { text: "budget", group: "Money", metricKey: "", target: 0, manual: 40 },
+  { text: "recruit", group: "", kind: "count", current: 3, metricKey: "", target: 20, manual: 0 }] }, "", "sokha", "1234"]);
+await call("saveObjective", [objFor("ord2", "poipet", "Community Service"), "", "sokha", "1234"]);
+const beforeOrder = okrIds().filter(i => /^ord/.test(i)).join(",");
+const back = await call("saveObjective", [{ ...objFor("ord1", "poipet", "Community Service"), krs: [
+  { text: "budget", group: "Money", metricKey: "", target: 0, manual: 60 },
+  { text: "recruit", group: "", kind: "count", current: 5, metricKey: "", target: 20, manual: 0 }] }, "", "sokha", "1234"]);
+check("re-saving an objective keeps its place", okrIds().filter(i => /^ord/.test(i)).join(",") === beforeOrder && beforeOrder === "ord1,ord2", okrIds().join(","));
+const ord1 = (back.okrs || []).find(o => o.id === "ord1");
+check("headings, counts and the count so far come back", ord1 && ord1.krs[0].group === "Money" && ord1.krs[0].manual === 60 &&
+  ord1.krs[1].kind === "count" && ord1.krs[1].current === 5 && ord1.krs[1].target === 20, JSON.stringify(ord1 && ord1.krs));
+await call("saveObjective", [{ ...objFor("ord3", "poipet", "Community Service"), krs: [{ text: "x", kind: "sneaky", group: "g".repeat(200), current: -4 }] }, "", "sokha", "1234"]);
+const ord3 = okrRow("ord3");
+check("an unknown kind, an over-long heading and a negative count are dropped", ord3 && ord3.kind === "" && ord3.group === "" && ord3.current === 0, JSON.stringify(ord3));
+
 console.log(fails.length ? '\n' + fails.length + ' FAILED:\n - ' + fails.join('\n - ')
-                         : '\nall 21 authorization checks passed');
+                         : '\nall 24 authorization checks passed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fails.length ? 1 : 0);

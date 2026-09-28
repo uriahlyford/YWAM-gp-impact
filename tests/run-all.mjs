@@ -80,6 +80,7 @@ const BROWSER = [
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
   'test-mentor-health.mjs', // a mentor sees a mentee by name
   'test-mentor-weeks.mjs',  // a mentor can look back at any week: picker, check-in, habits, goals, logs
+  'test-okr-easy.mjs',      // OKRs the SugarOKR way: all on one page, a slider or count per key result, headings, Paste OKRs
   'test-notif-bell-actions.mjs', // an action button drawn in the bell drawer actually works, not just the inline card
   'test-okr-admin-view.mjs', // admin sees every department's OKRs, collapsed, read-only; non-admin sees none of it
   'test-ministry-browse.mjs', // My Ministry's "jump to any ministry" picker: admin authorization, and Save Week uses the browsed ministry's own dept

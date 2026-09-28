@@ -1434,11 +1434,14 @@ function okrHtml(){
       if(kr.metricKey){
         var met = kr.metricKey.split('|')[2];
         h += '<span>'+fmt(kp.actual,met)+' / '+fmt(kr.target,met)+' · '+esc(t('auto from KPI'))+'</span><span>'+kp.pct+'%</span>';
+      } else if(kr.kind==='count'){
+        // counted on the staff app (− / +); the dashboard just shows it
+        h += '<span>'+(Number(kr.current)||0)+' / '+(Number(kr.target)||0)+'</span><span>'+kp.pct+'%</span>';
       } else {
         // Empty rather than 0 when nothing is set — see the staff page's copy.
         h += '<span>'+esc(t('manual'))+'</span><span><input type="number" class="manualIn" min="0" max="100" placeholder="0" value="'+(Number(kr.manual) ? Number(kr.manual) : '')+'" data-manual="'+o.id+'|'+ki+'"'+(state.data.leader?'':' disabled')+'> %</span>';
       }
-      h += '</div><div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div>'+gpKrWarnHtml(kp)+'</div>';
+      h += '</div><div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div>'+(kr.metricKey?gpKrWarnHtml(kp):'')+'</div>';
     });
     if(state.data.leader){
       h += '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'+
@@ -1632,7 +1635,12 @@ function saveOkrForm(btn){
     state.data.okrs.forEach(function(o){
       if(o.id===state.editingId){
         krs.forEach(function(nk){
-          o.krs.forEach(function(ok){ if(ok.text===nk.text && !nk.metricKey && !ok.metricKey) nk.manual=ok.manual; });
+          o.krs.forEach(function(ok){
+            if(ok.text!==nk.text) return;
+            // headings and counts are set on the staff app; editing here keeps them
+            nk.group = ok.group||'';
+            if(!nk.metricKey && !ok.metricKey){ nk.manual=ok.manual; nk.kind=ok.kind||''; nk.current=ok.current||0; }
+          });
         });
       }
     });
