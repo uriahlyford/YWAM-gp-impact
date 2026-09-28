@@ -2540,6 +2540,24 @@ function structFind_(rows, campus, year, quarter) {
   if (earlier) return { doc: earlier, source: 'copied' };
   return { doc: null, source: 'none' };
 }
+/* Staff who are students for a quarter (a school: DTS, DBS, BCS, SMS) —
+   e.g. staff doing the BCS in Q4. Kept per campus / year / quarter in
+   'structurePlans', separate from anyone's profile, so it is true for that
+   quarter only. The chart moves them out of their ministry into a Students
+   box, and a saved snapshot carries it. */
+const STRUCT_SCHOOLS = ['dts', 'dbs', 'bcs', 'sms'];
+async function getPlans_() { return readJSON('structurePlans', []); }
+function planFor_(plans, campus, y, q) {
+  const p = plans.find(function (r) { return r.campus === campus && Number(r.year) === y && Number(r.quarter) === q; });
+  return { students: (p && p.students) || {} };
+}
+/* Applicant accounts (the portal) are never on the staff chart — including
+   in snapshots saved before that rule. */
+function structPeopleOnly_(doc, rows) {
+  if (!doc || !Array.isArray(doc.people)) return doc;
+  const applicants = {}; (rows || []).forEach(function (r) { if (isApplicant_(r)) applicants[r.id] = 1; });
+  return Object.assign({}, doc, { people: doc.people.filter(function (p) { return p && !applicants[p.id]; }) });
+}
 async function getStructure(username, pin, campus, year, quarter) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
@@ -2547,7 +2565,31 @@ async function getStructure(username, pin, campus, year, quarter) {
   const y = finiteNum_(year, 2020, 2100) || currentYear_();
   const q = finiteNum_(quarter, 1, 4) || currentQuarter_();
   const found = structFind_(await getStructures_(), campus, y, q);
-  return { ok: true, campus: campus, year: y, quarter: q, doc: found.doc, source: found.source };
+  return { ok: true, campus: campus, year: y, quarter: q, doc: structPeopleOnly_(found.doc, await getStaff_()), source: found.source, plan: planFor_(await getPlans_(), campus, y, q) };
+}
+async function saveStructurePlan(username, pin, campus, year, quarter, students) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  campus = str_(campus, 40) || admin.campus;
+  const y = finiteNum_(year, 2020, 2100), q = finiteNum_(quarter, 1, 4);
+  if (y == null || q == null) return { ok: false, err: 'bad_quarter' };
+  const staff = await getStaff_();
+  const here = {}; staff.forEach(function (r) { if (r.active && !r.archived && !isApplicant_(r) && r.campus === campus) here[r.id] = 1; });
+  const clean = {};
+  Object.keys(students && typeof students === 'object' ? students : {}).forEach(function (id) {
+    const school = String(students[id] || '').toLowerCase();
+    if (here[id] && STRUCT_SCHOOLS.indexOf(school) > -1) clean[id] = school;
+  });
+  const plans = await getPlans_();
+  const idx = plans.findIndex(function (r) { return r.campus === campus && Number(r.year) === y && Number(r.quarter) === q; });
+  const rec = { campus: campus, year: y, quarter: q, students: clean, savedAt: new Date().toISOString(), savedBy: admin.id };
+  if (idx > -1) plans[idx] = rec; else plans.push(rec);
+  await writeJSON('structurePlans', plans);
+  // a snapshot already saved for that quarter follows
+  const rows = await getStructures_();
+  const snap = rows.find(function (r) { return r.campus === campus && Number(r.year) === y && Number(r.quarter) === q; });
+  if (snap) { snap.people = snap.people.map(function (p) { const o = Object.assign({}, p); if (clean[p.id]) o.student = clean[p.id]; else delete o.student; return o; }); await writeJSON('structure', rows); }
+  return { ok: true, campus: campus, year: y, quarter: q, plan: { students: clean }, doc: snap ? structPeopleOnly_(snap, staff) : null };
 }
 async function saveStructure(username, pin, campus, year, quarter) {
   const admin = await adminGate_(username, pin);
@@ -2555,8 +2597,9 @@ async function saveStructure(username, pin, campus, year, quarter) {
   campus = str_(campus, 40) || admin.campus;
   const y = finiteNum_(year, 2020, 2100), q = finiteNum_(quarter, 1, 4);
   if (y == null || q == null) return { ok: false, err: 'bad_quarter' };
-  const people = (await getStaff_()).filter(function (r) { return r.active && !r.archived && r.campus === campus; })
-    .map(function (r) { return { id: r.id, name: r.name, dept: r.dept, ministry: r.ministry || '', role: r.role || '', leads: leadsOf_(r), photo: '' }; })
+  const plan = planFor_(await getPlans_(), campus, y, q);
+  const people = (await getStaff_()).filter(function (r) { return r.active && !r.archived && !isApplicant_(r) && r.campus === campus; })
+    .map(function (r) { const o = { id: r.id, name: r.name, dept: r.dept, ministry: r.ministry || '', role: r.role || '', leads: leadsOf_(r), photo: '' }; if (plan.students[r.id]) o.student = plan.students[r.id]; return o; })
     .slice(0, STRUCT_MAX);
   const rec = { campus: campus, year: y, quarter: q, people: people, savedAt: new Date().toISOString(), savedBy: admin.id };
   const rows = await getStructures_();
@@ -3844,6 +3887,7 @@ const HANDLERS = {
   adminListTrips: function (a) { return adminListTrips(a[0], a[1]); },
   adminDecideTrip: function (a) { return adminDecideTrip(a[0], a[1], a[2], a[3]); },
   saveStructure: function (a) { return saveStructure(a[0], a[1], a[2], a[3], a[4]); },
+  saveStructurePlan: function (a) { return saveStructurePlan(a[0], a[1], a[2], a[3], a[4], a[5]); },
   hrCandidates: function (a) { return hrCandidates(a[0], a[1]); },
   hrSaveCandidate: function (a) { return hrSaveCandidate(a[0], a[1], a[2]); },
   hrCandidateNote: function (a) { return hrCandidateNote(a[0], a[1], a[2], a[3]); },

@@ -958,6 +958,11 @@ body.hxOn { overflow:hidden; }
 .orgBox { border:1.5px solid var(--border); border-radius:14px; background:var(--surface); padding:12px; min-width:0; }
 .orgBox.top { border-color:var(--accent); box-shadow:0 1px 0 var(--border); }
 .orgBox.loose { border-style:dashed; margin-top:14px; }
+.orgBox.students { margin-top:14px; }
+.stuRow { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+.stuRow:last-of-type { border-bottom:0; }
+.stuName { display:flex; flex-direction:column; min-width:0; font-weight:600; }
+.stuRow select { width:auto; min-width:130px; }
 .orgBoxTitle { font-weight:700; font-size:15px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
 .orgBoxMeta { font-size:11.5px; color:var(--faint); font-weight:600; margin-left:auto; }
 .orgSub { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--faint); font-weight:700; margin-top:10px; }
@@ -7475,7 +7480,12 @@ function orgStructureHtml_(campus){
     var savedNote = isSaved ? gpT('Q{q} {year} structure saved on {date}',{q:q, year:year, date:teamDate_((c.doc.savedAt||'').slice(0,10))}) : gpT('Q{q} {year} structure not saved yet',{q:q, year:year});
     h+='<p class="sub" style="margin:0 0 8px">'+esc(early ? t('Next quarter — live from everyone’s profile, so set people’s ministry and role first, then save it early.') : t('Live from everyone’s profile.'))+' '+esc(savedNote)+'.</p>';
     if(S.me.isAdmin) h+='<button class="btn ghost" id="structSaveBtn" style="margin:0 0 10px;width:auto;padding:9px 14px">💾 '+esc(isSaved ? gpT('Update Q{q} {year} structure',{q:q, year:year}) : early ? gpT('Save Q{q} {year} structure early',{q:q, year:year}) : gpT('Save Q{q} {year} structure',{q:q, year:year}))+'</button>';
-    return h+orgChartHtml_(campus, S.roster);
+    var stu=(c && c.plan && c.plan.students) || {}, stuN=Object.keys(stu).length;
+    if(S.me.isAdmin){
+      h+='<button class="btn ghost" id="structStudentsBtn" style="margin:0 0 10px 8px;width:auto;padding:9px 14px">🎓 '+esc(gpT('Students in Q{q} {year}',{q:q, year:year}))+(stuN?' · '+stuN:'')+'</button>';
+      if(S.structStudentsEdit===key) h+=structStudentsEditorHtml_(campus, q, year);
+    }
+    return h+orgChartHtml_(campus, S.roster, stu);
   }
   if(S.structError[key]) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load this quarter.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.structError[key])+'</p><button class="btn ghost" id="structRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
   if(!c) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
@@ -7485,8 +7495,24 @@ function orgStructureHtml_(campus){
   h+='<p class="sub" style="margin:0 0 8px">💾 '+esc(note)+'</p>';
   return h+orgChartHtml_(campus, (c.doc.people||[]).map(function(p){ return Object.assign({ campus:campus }, p); }));
 }
-function orgChartHtml_(campus, roster){
-  var here=(roster||S.roster).filter(function(p){ return p.campus===campus; });
+function structStudentsEditorHtml_(campus, q, year){
+  var draft=S.structStudentsDraft||{};
+  var people=S.roster.filter(function(p){ return p.campus===campus && p.kind!=='applicant'; }).slice().sort(function(a,b){ return a.name<b.name?-1:a.name>b.name?1:0; });
+  return '<div class="card" id="structStudentsCard"><h3 style="margin-top:0">🎓 '+esc(gpT('Who is a student in Q{q} {year}?',{q:q, year:year}))+'</h3>'+
+    '<p class="sub">'+esc(t('Pick the school for anyone doing one this quarter. It is for this quarter only — their profile stays as it is.'))+'</p>'+
+    people.map(function(p){
+      return '<div class="stuRow"><span class="stuName">'+esc(p.name)+'<span class="pmeta">'+esc(t(p.ministry||p.dept||''))+'</span></span>'+
+        '<select data-stu="'+esc(p.id)+'"><option value="">'+esc(t('Not a student'))+'</option>'+['dts','dbs','bcs','sms'].map(function(sc){ return '<option value="'+sc+'"'+(draft[p.id]===sc?' selected':'')+'>'+sc.toUpperCase()+'</option>'; }).join('')+'</select></div>';
+    }).join('')+
+    '<button class="btn" id="structStudentsSave">'+esc(t('Save'))+'</button><button class="btn ghost" id="structStudentsCancel">'+esc(t('Cancel'))+'</button></div>';
+}
+function orgChartHtml_(campus, roster, studentsMap){
+  var everyone=(roster||S.roster).filter(function(p){ return p.campus===campus && p.kind!=='applicant'; });
+  /* Staff doing a school this quarter (the quarter's plan, or a snapshot's
+     own "student" mark) sit in a Students box, not their ministry. */
+  var studentOf=function(p){ return (studentsMap && studentsMap[p.id]) || p.student || ''; };
+  var students=everyone.filter(function(p){ return !!studentOf(p); });
+  var here=everyone.filter(function(p){ return !studentOf(p); });
   var deps=getDepartments(campus);
   var depts=Object.keys(deps).filter(function(d){ return d!==BL_DEPT; });
   var directors=here.filter(function(p){ return p.dept===BL_DEPT && p.ministry==='Campus Director'; });
@@ -7530,6 +7556,14 @@ function orgChartHtml_(campus, roster){
   });
   h+='</div>';
 
+  if(students.length){
+    h+='<div class="orgLevelLabel">🎓 '+esc(t('Students this quarter'))+' · '+students.length+'</div><div class="orgBox students" data-orgbox="students">';
+    ['dts','dbs','bcs','sms'].forEach(function(sc){
+      var g=students.filter(function(p){ return studentOf(p)===sc; });
+      if(g.length) h+='<div class="orgSub" data-orgschool="'+sc+'">'+esc(sc.toUpperCase())+' · '+g.length+'</div>'+orgPeople_(g, []);
+    });
+    h+='<p class="hint" style="margin:6px 0 0">'+esc(t('Staff doing a school this quarter. Their profiles are unchanged.'))+'</p></div>';
+  }
   // anyone on this campus whose profile points nowhere on the chart
   var unplaced=here.filter(function(p){ return !placed[p.id]; });
   if(unplaced.length){
@@ -9310,7 +9344,7 @@ function bind(){
       S.structLoading[sKey]=true;
       run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
         S.structLoading[sKey]=false;
-        if(d && d.ok) S.structCache[sKey]={ doc:d.doc, source:d.source }; else S.structError[sKey]=(d && d.err) || t('The server answered without the saved structure.');
+        if(d && d.ok) S.structCache[sKey]={ doc:d.doc, source:d.source, plan:d.plan }; else S.structError[sKey]=(d && d.err) || t('The server answered without the saved structure.');
         render();
       }, function(e){ S.structLoading[sKey]=false; S.structError[sKey]=(e && e.message) || t('Connection problem — try again.'); render(); });
     }
@@ -9319,7 +9353,7 @@ function bind(){
       S.structLoading[sKey]=true;
       run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
         S.structLoading[sKey]=false;
-        S.structCache[sKey] = (d && d.ok) ? { doc:d.doc, source:d.source } : { doc:null, source:'none' };
+        S.structCache[sKey] = (d && d.ok) ? { doc:d.doc, source:d.source, plan:d.plan } : { doc:null, source:'none' };
         render();
       }, function(e){ S.structLoading[sKey]=false; S.structCache[sKey]={ doc:null, source:'none' }; render(); });
     }
@@ -9330,12 +9364,27 @@ function bind(){
     });
     var srt=document.getElementById('structRetry');
     if(srt) srt.onclick=function(){ S.structError[sKey]=''; render(); };
+    var stb=document.getElementById('structStudentsBtn');
+    if(stb) stb.onclick=function(){ gpTap(); if(S.structStudentsEdit===sKey){ S.structStudentsEdit=null; } else { var c0=S.structCache[sKey]; S.structStudentsDraft=Object.assign({}, (c0 && c0.plan && c0.plan.students) || {}); S.structStudentsEdit=sKey; } render(); };
+    document.querySelectorAll('[data-stu]').forEach(function(sel){ sel.onchange=function(){ var id=sel.getAttribute('data-stu'); S.structStudentsDraft=S.structStudentsDraft||{}; if(sel.value) S.structStudentsDraft[id]=sel.value; else delete S.structStudentsDraft[id]; }; });
+    var sts=document.getElementById('structStudentsCancel');
+    if(sts) sts.onclick=function(){ S.structStudentsEdit=null; render(); };
+    var stv=document.getElementById('structStudentsSave');
+    if(stv) stv.onclick=function(){
+      if(S.busy) return; S.busy=true; stv.disabled=true; stv.textContent=t('Saving…');
+      run('saveStructurePlan',[S.auth.user,S.auth.pin,sCampus,sYear,sQ,S.structStudentsDraft||{}],function(d){
+        S.busy=false;
+        if(d && d.ok){ var c1=S.structCache[sKey]||{ doc:null, source:'none' }; c1.plan=d.plan; if(d.doc){ c1.doc=d.doc; c1.source='saved'; } S.structCache[sKey]=c1; S.structStudentsEdit=null; showMsg(gpT('Saved — students in Q{q} {year}',{q:sQ, year:sYear})); }
+        else showMsg(t('Could not save'));
+        render();
+      }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+    };
     var ssb=document.getElementById('structSaveBtn');
     if(ssb) ssb.onclick=function(){
       if(S.busy) return; S.busy=true; ssb.disabled=true; ssb.textContent=t('Saving…');
       run('saveStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
         S.busy=false;
-        if(d && d.ok){ S.structCache[sKey]={ doc:d.doc, source:'saved' }; showMsg(gpT('Saved — Q{q} {year} structure',{q:sQ, year:sYear})); }
+        if(d && d.ok){ S.structCache[sKey]={ doc:d.doc, source:'saved', plan:(S.structCache[sKey]||{}).plan }; showMsg(gpT('Saved — Q{q} {year} structure',{q:sQ, year:sYear})); }
         else showMsg(t('Could not save'));
         render();
       });
