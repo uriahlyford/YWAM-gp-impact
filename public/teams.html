@@ -967,6 +967,9 @@ body.arranging .orgPerson[data-arrange] { touch-action:none; cursor:grab; border
 .orgGhost { position:fixed; z-index:1000; pointer-events:none; background:var(--surface); border:1.5px solid var(--accent); border-radius:999px; padding:3px 10px 3px 3px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
 [data-drop].dropOver { outline:2px dashed var(--accent); outline-offset:2px; background:var(--surface2); }
 .orgDropOverseer { border:1px dashed var(--border); border-radius:10px; padding:6px; font-size:12px; color:var(--faint); margin:6px 0; text-align:center; }
+.mWeekRow { width:100%; background:none; border:0; border-bottom:1px solid var(--border); font:inherit; color:inherit; text-align:left; cursor:pointer; }
+.mWeekRow.on { background:var(--surface2); border-radius:8px; }
+.mWeekNav { margin:10px 0 6px; }
 .okrAdminNew { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin:0 0 12px; }
 .okrAdminNew .pick { flex:1 1 140px; min-width:0; }
 .stuRow { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
@@ -7816,6 +7819,23 @@ function mentorHtml(){
     h+='<div class="banner">🔒 Shared with you as '+esc(m.name.split(' ')[0])+'\u2019s mentor. Hold it with care and prayer — this is trust, not surveillance.</div>';
     if(S.menteeProfile && S.menteeProfile.debt) h+='<div class="banner">💰 Currently carrying staff debt.</div>';
 
+    /* Any week, not just the latest: a picker at the top, and every section
+       below — check-in, habits, goals, daily logs — follows it. Opens on the
+       newest week they checked in (or this week). */
+    var yrNow=new Date().getFullYear(), wkNow=thisWeek();
+    var logWeek=function(l){ return l.week ? Number(l.week) : isoWeekOf(new Date(String(l.date)+'T00:00:00')); };
+    wl=(wl||[]).filter(function(l){ return !l.date || String(l.date).slice(0,4)===String(yrNow); });
+    var ckWeeks=(S.menteeCheckins||[]).map(function(c){ return Number(c.week); });
+    var anyWeeks=ckWeeks.concat(wl.map(logWeek)).concat((S.menteeGoals||[]).map(function(g){ return Number(g.week); })).filter(function(w){ return w>0; });
+    var minWk=anyWeeks.length ? Math.min.apply(null, anyWeeks) : wkNow;
+    if(!S.menteeWeek) S.menteeWeek = ckWeeks.length ? Math.max.apply(null, ckWeeks) : wkNow;
+    S.menteeWeek=Math.max(Math.min(minWk, wkNow), Math.min(wkNow, S.menteeWeek));
+    var W=S.menteeWeek;
+    h+='<div class="weekNavRow mWeekNav" id="mWeekNav"><button class="weekArrow" id="mWeekPrev" aria-label="'+esc(t('Previous week'))+'"'+(W<=minWk?' disabled':'')+'>‹</button>'+
+      '<div class="weekPill" id="mWeekPill">'+esc(t('Week'))+' '+W+(W===wkNow?' · '+esc(t('this week')):'')+'</div>'+
+      '<button class="weekArrow" id="mWeekNext" aria-label="'+esc(t('Next week'))+'"'+(W>=wkNow?' disabled':'')+'>›</button></div>'+
+      (ckWeeks.length && W!==Math.max.apply(null, ckWeeks) ? '<button class="linkbtn inline" id="mWeekLatest" style="display:block;margin:0 auto 8px">'+esc(t('Back to the latest check-in'))+'</button>' : '');
+
     /* Their weekly check-ins, by name. This is the one place a survey answer is
        attached to a person: the base average pools tokens and never sees a name,
        and choosing a mentor is what opens this view to that one person. Newest
@@ -7827,7 +7847,14 @@ function mentorHtml(){
       h+='<div class="card"><p class="sub" style="margin:6px 0">'+
          esc(t('No check-ins yet.'))+'</p></div>';
     } else {
-      var latest=mc[0], prior=mc[1]||null;
+      var latest=null, prior=null;
+      mc.forEach(function(c){ if(Number(c.week)===W) latest=c; });
+      mc.forEach(function(c){ if(!prior && Number(c.week)<W) prior=c; });
+    }
+    if(mc.length && !latest){
+      h+='<div class="card"><p class="sub" style="margin:6px 0">'+esc(gpT('No check-in for week {n}.',{n:W}))+'</p></div>';
+    }
+    if(mc.length && latest){
       var lsc=compositeOf(latest), psc=prior?compositeOf(prior):null;
       h+='<div class="card"><div class="row" style="border:0;padding-top:0">'+
          '<span class="rowName"><strong>'+esc(t('Week'))+' '+latest.week+'</strong>'+
@@ -7857,32 +7884,32 @@ function mentorHtml(){
            yn(latest[q[0]])+mt(q[0],q[2],true)+'</span></div>';
       });
       h+='</div>';
-      if(mc.length>1){
-        h+='<div class="card">';
-        mc.forEach(function(c,i){
-          var sc=compositeOf(c), older=mc[i+1]?compositeOf(mc[i+1]):null;
-          h+='<div class="row"><span class="rowName">'+esc(t('Week'))+' '+c.week+'</span>'+
-             '<span class="pctSm">'+sc.toFixed(1)+
-               (older!==null?trendBadge(pctChange(older,sc), true):'')+'</span></div>';
-        });
-        h+='</div>';
-      }
+    }
+    if(mc.length>1){
+      h+='<div class="card"><div class="pmeta" style="margin:0 0 4px">'+esc(t('Every week — tap one to look at it'))+'</div>';
+      mc.forEach(function(c,i){
+        var sc=compositeOf(c), older=mc[i+1]?compositeOf(mc[i+1]):null;
+        h+='<button class="row mWeekRow'+(Number(c.week)===W?' on':'')+'" data-mweek="'+c.week+'"><span class="rowName">'+esc(t('Week'))+' '+c.week+'</span>'+
+           '<span class="pctSm">'+sc.toFixed(1)+
+             (older!==null?trendBadge(pctChange(older,sc), true):'')+'</span></button>';
+      });
+      h+='</div>';
     }
 
     // Trajectory beats a compliance grid: last 7 days against the 7 before, so
     // you see direction rather than policing individual days.
     var menteeHabits=S.menteeHabits||[];
     if(menteeHabits.length){
-      var recent=wl.slice(0,7), prior=wl.slice(7,14);
+      var recent=wl.filter(function(l){ return logWeek(l)===W; }), prior=wl.filter(function(l){ return logWeek(l)===W-1; });
       var cnt=function(rows,id){ var n=0; rows.forEach(function(l){ if(l.habits&&l.habits[id]) n++; }); return n; };
-      h+='<h3>'+esc(gpT('{name}’s habits',{name:m.name.split(' ')[0]}))+'</h3><div class="card">';
+      h+='<h3>'+esc(gpT('{name}’s habits',{name:m.name.split(' ')[0]}))+' · '+esc(t('Week'))+' '+W+'</h3><div class="card">';
       menteeHabits.forEach(function(hb){
         var meta=habitMeta(hb.id);
         var a=cnt(recent,hb.id), b=cnt(prior,hb.id);
         var arrow = !prior.length ? '' :
           (a>b?' <span class="trend up">▲</span>':(a<b?' <span class="trend down">▼</span>':' <span class="trend flat">–</span>'));
         h+='<div class="row"><span class="rowName">'+meta.icon+' '+esc(t(meta.label))+
-          '<div class="pmeta">'+(prior.length?esc(t('previous 7 days'))+': '+b:esc(t('first week of data')))+'</div></span>'+
+          '<div class="pmeta">'+(prior.length?esc(gpT('week {n}',{n:W-1}))+': '+b:esc(t('no data the week before')))+'</div></span>'+
           '<span class="pctSm">'+a+'/7'+arrow+'</span></div>';
       });
       h+='</div>';
@@ -7900,7 +7927,9 @@ function mentorHtml(){
         '<div class="pmeta">across '+mg.length+' week'+(mg.length===1?'':'s')+'</div></span>'+
         '<span class="pctBig">'+(avg===null?'—':avg+'%')+'</span></div>';
       h+='<div class="bar"><div class="barFill'+(avg>=100?' done':'')+'" style="width:'+(avg||0)+'%"></div></div></div>';
-      mg.slice(0,4).forEach(function(g){
+      var gw=mg.filter(function(g){ return Number(g.week)===W; });
+      if(!gw.length) h+='<div class="card"><p class="sub" style="margin:6px 0">'+esc(gpT('No goals written for week {n}.',{n:W}))+'</p></div>';
+      gw.forEach(function(g){
         h+='<div class="card"><div class="row" style="border:0;padding-top:0"><span class="rowName">Week '+g.week+'</span>'+
           '<span class="pctSm">'+(g.pct===null?'—':g.pct+'%')+'</span></div>';
         g.items.filter(function(i){return i.text;}).forEach(function(i){
@@ -7912,9 +7941,10 @@ function mentorHtml(){
       });
     }
 
-    h+='<h3>Recent check-ins</h3><div class="card">';
-    if(!wl.length) h+='<p class="sub" style="margin:6px 0">No entries yet.</p>';
-    wl.slice(0,14).forEach(function(l){
+    var wkLogs=wl.filter(function(l){ return logWeek(l)===W; });
+    h+='<h3>'+esc(t('Daily logs'))+' · '+esc(t('Week'))+' '+W+'</h3><div class="card">';
+    if(!wkLogs.length) h+='<p class="sub" style="margin:6px 0">'+esc(gpT('No daily logs for week {n}.',{n:W}))+'</p>';
+    wkLogs.forEach(function(l){
       var flags=[];
       if(l.lonely!=null) flags.push('lonely '+l.lonely+'/10');
       if(l.porn) flags.push('⚠ porn');
@@ -8667,7 +8697,7 @@ function bindHome(){
       var id=b.getAttribute('data-openmentee');
       run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(d){
         if(d.ok){
-          S.view='mentor'; S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[];
+          S.view='mentor'; S.mentee=d.mentee; S.menteeWeek=null; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[];
           S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[];
           S.menteeHabits=d.habits||[]; S.menteeMinistry=d.ministry||null; S.menteeTrips=d.trips||null; S.menteeSmart=d.smartGoals||[];
           render();
@@ -9526,7 +9556,7 @@ function bind(){
       var id=c.getAttribute('data-mentee');
       run('getMenteeLogs',[S.auth.user,S.auth.pin,id],function(d){
         if(d.ok){
-          S.mentee=d.mentee; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[];
+          S.mentee=d.mentee; S.menteeWeek=null; S.menteeLogs=d.logs; S.menteeGoals=d.goals||[];
           S.menteeProfile=d.profile; S.menteeCheckins=d.checkins||[];
           S.menteeHabits=d.habits||[]; S.menteeMinistry=d.ministry||null; S.menteeTrips=d.trips||null; S.menteeSmart=d.smartGoals||[];
           render();
@@ -9535,7 +9565,11 @@ function bind(){
       });
     };
   });
-  var mBack=document.getElementById('menteeBack'); if(mBack) mBack.onclick=function(){ S.mentee=null; render(); };
+  var mBack=document.getElementById('menteeBack'); if(mBack) mBack.onclick=function(){ S.mentee=null; S.menteeWeek=null; render(); };
+  var mwp=document.getElementById('mWeekPrev'); if(mwp) mwp.onclick=function(){ gpTap(); S.menteeWeek=(S.menteeWeek||thisWeek())-1; render(); };
+  var mwn=document.getElementById('mWeekNext'); if(mwn) mwn.onclick=function(){ gpTap(); S.menteeWeek=(S.menteeWeek||thisWeek())+1; render(); };
+  var mwl=document.getElementById('mWeekLatest'); if(mwl) mwl.onclick=function(){ S.menteeWeek=null; render(); };
+  document.querySelectorAll('[data-mweek]').forEach(function(b){ b.onclick=function(){ gpTap(); S.menteeWeek=Number(b.getAttribute('data-mweek')); render(); var nav=document.getElementById('mWeekNav'); if(nav) nav.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
   document.querySelectorAll('[data-accept]').forEach(function(b){
     b.onclick=function(){
       var id=b.getAttribute('data-accept');
