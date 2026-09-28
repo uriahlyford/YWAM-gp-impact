@@ -217,6 +217,7 @@ async function open(viewport, query, seed) {
   ok('the timeline has nine steps, account done and "fill out" current', steps.length === 9 && steps[0] === 'account:done' && steps[1] === 'form:current' && steps.slice(2).every(s => /todo$/.test(s)), steps.join(' '));
   ok('documents & reference show as pending sub-items', (await page.$$eval('#timeline .subItems li', li => li.length)) === 2);
   ok('the form card invites them to fill out the application', !!(await page.$('#openForm')) && /Fill out my application/.test(await page.$eval('#openForm', e => e.textContent)));
+  ok('an applicant has no staff bar and no link into the GP app', !(await page.$('#staffNav')) && !(await page.$('#toGpApp')));
   // the sign-up mock answers without a form, as the server did before — the page must fetch it, not die
   await page.click('#openForm');
   await page.waitForSelector('#formSubmit, #formNext', { timeout: 5000 });
@@ -434,6 +435,7 @@ async function open(viewport, query, seed) {
   ok('no PIN or hash anywhere on the page', !/2468|1234|pinHash/.test(await page.$eval('#main', e => e.textContent)));
   ok('portal staff are offered no delete', !(await page.$('#deleteCand')));
   ok('portal staff are offered no Forms button', !(await page.$('#toForms')));
+  ok('but do get the GP app home link', !!(await page.$('#toGpApp')));
   ok('nor an Accounts button', !(await page.$('#toAccounts')));
   await page.click('[data-open="cd_anna"]');
   await page.waitForSelector('#panel');
@@ -667,7 +669,8 @@ async function open(viewport, query, seed) {
   }));
   ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
   ok('the staff tools sit in their own bar: Applications, Forms, Accounts, View as applicant', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toPreview']), JSON.stringify(bar.nav));
-  ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll);
+  ok('and the bar starts with a way back to the GP app home', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent)));
+  ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll && await page.$eval('#toGpApp', a => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }));
   await page.click('#toPreview');
   await page.waitForSelector('#pvFrame');
   ok('the bar marks where you are and takes you back', await page.$eval('#toPreview', b => b.classList.contains('on')) && !!(await page.$('#navCrm')));

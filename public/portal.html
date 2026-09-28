@@ -204,6 +204,8 @@ textarea { min-height:80px; resize:vertical; }
 .staffNavBtn { flex:1 1 auto; border:0; background:transparent; color:var(--muted); font:inherit; font-size:13.5px; font-weight:600; padding:9px 12px; border-radius:var(--rSm); cursor:pointer; white-space:nowrap; }
 .staffNavBtn:hover { color:var(--ink); }
 .staffNavBtn.on { background:var(--ink); color:var(--accentInk); }
+a.staffNavBtn { text-decoration:none; text-align:center; }
+.staffNavBtn.home { border:1px solid var(--border2); }
 .pvBar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 10px; }
 .pvWho { font-size:13px; color:var(--muted); }
 .pvFrame { border:2px dashed var(--border2); border-radius:var(--r); padding:14px; pointer-events:none; user-select:none; opacity:.96; }
@@ -420,7 +422,9 @@ function staffNavHtml_(v){
   var items=[['crm','navCrm','📋 '+t('Applications')]];
   if(admin){ items.push(['forms','toForms','📝 '+t('Forms')]); items.push(['accounts','toAccounts','👤 '+t('Accounts')]); }
   items.push(['preview','toPreview','👁 '+t('View as applicant')]);
-  return '<nav class="staffNav" id="staffNav">'+items.map(function(x){ return '<button class="staffNavBtn'+(v===x[0]?' on':'')+'" id="'+x[1]+'">'+esc(x[2])+'</button>'; }).join('')+'</nav>';
+  /* Staff come here from the GP app; this takes them back to its home. */
+  return '<nav class="staffNav" id="staffNav"><a class="staffNavBtn home" id="toGpApp" href="teams.html">🏠 '+esc(t('GP app home'))+'</a>'+
+    items.map(function(x){ return '<button class="staffNavBtn'+(v===x[0]?' on':'')+'" id="'+x[1]+'">'+esc(x[2])+'</button>'; }).join('')+'</nav>';
 }
 function langRowHtml_(){
   return '<div class="langRow"><button id="langBtn2">'+(LANG==='km' ? 'English' : 'ភាសាខ្មែរ')+'</button></div>';
