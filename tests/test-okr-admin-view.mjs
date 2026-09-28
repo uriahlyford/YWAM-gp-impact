@@ -89,7 +89,7 @@ await new Promise(res => srv2.listen(4415, res));
 const b2 = await chromium.launch({ executablePath: CHROMIUM });
 const p2 = await b2.newPage({ viewport: { width: 400, height: 900 } });
 await pinClock(p2, NOW);
-const errs2 = []; p2.on('pageerror', e => errs2.push(String(e)));
+const errs2 = [], saves2 = []; p2.on('pageerror', e => errs2.push(String(e)));
 await p2.route('**/.netlify/functions/api', r => {
   const q = JSON.parse(r.request().postData() || '{}');
   let o = { ok: true };
@@ -100,6 +100,7 @@ await p2.route('**/.netlify/functions/api', r => {
     base: BASE_DATA
   };
   else if (q.fn === 'teamRoster') o = [ADMIN];
+  else if (q.fn === 'saveObjective') { saves2.push(q.args[0]); const ob = q.args[0]; BASE_DATA.okrs = BASE_DATA.okrs.filter(x => x.id !== ob.id).concat([ob]); o = BASE_DATA; }
   else if (q.fn === 'staffLogin') o = { ok: true, staff: ADMIN, profile: {} };
   else if (/^getMy/.test(q.fn)) o = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
   r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
@@ -128,7 +129,27 @@ if (otherGroupBtn) {
     const card = cards.find(c => c.textContent.includes('A different department’s objective'));
     return card ? !!card.querySelector('[data-okr-edit], [data-okr-del]') : null;
   });
-  ok('and it is read-only — no edit/delete controls on someone else’s objective', editBtn === false, editBtn);
+  ok('an admin can edit and delete another department’s objective there', editBtn === true, editBtn);
+  await p2.click('[data-okradmin] [data-okr-edit="o2"]');
+  await p2.waitForSelector('#okrForm');
+  ok('Edit opens the form for that objective, labelled with its department and campus', /Edit objective/.test(await p2.$eval('#okrForm', e => e.textContent)) && /Youth Education/.test(await p2.$eval('#okrForm', e => e.textContent)) && (await p2.$eval('#okrObjText', i => i.value)) === 'A different department’s objective');
+  await p2.fill('#okrObjText', 'Edited by the admin');
+  await p2.click('#okrSaveBtn');
+  await p2.waitForTimeout(500);
+  const sv = saves2.pop();
+  ok('Save keeps that objective’s own campus and department, not the admin’s', sv && sv.id === 'o2' && sv.campus === 'poipet' && sv.dept === 'Youth Education' && sv.objective === 'Edited by the admin', JSON.stringify(sv));
+  ok('there is a New objective with a campus and department picker', !!(await p2.$('#okrAdmCampus')) && !!(await p2.$('#okrAdmDept')) && !!(await p2.$('#okrAdmNewBtn')));
+  await p2.selectOption('#okrAdmCampus', 'siemreap');
+  await p2.waitForTimeout(200);
+  await p2.selectOption('#okrAdmDept', 'Leadership Development');
+  await p2.click('#okrAdmNewBtn');
+  await p2.waitForSelector('#okrForm');
+  await p2.fill('#okrObjText', 'A new objective for Siem Reap');
+  await p2.fill('#okrKrText0', 'One key result');
+  await p2.click('#okrSaveBtn');
+  await p2.waitForTimeout(500);
+  const nv = saves2.pop();
+  ok('and it saves for the campus and department picked', nv && nv.campus === 'siemreap' && nv.dept === 'Leadership Development' && nv.objective === 'A new objective for Siem Reap' && /^o\d+$/.test(nv.id), JSON.stringify(nv));
 }
 ok('admin: no console/page errors', errs2.length === 0, errs2.slice(0, 3).join(' | '));
 await b2.close(); srv2.close();

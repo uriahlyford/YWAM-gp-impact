@@ -57,10 +57,12 @@ const CHANNA = { id: 'st_channa', name: 'Channa', username: 'channa', campus: 's
   dept: 'Leadership Development', ministry: 'GPDTS', role: '', active: true, photo: '' };
 const MEALEA = { id: 'st_mealea', name: 'Mealea', username: 'mealea', campus: 'poipet',
   dept: 'Youth Education', ministry: 'YDC', role: '', active: true, photo: '' };
+const URIAH = { id: 'st_uriah', name: 'Uriah', username: 'uriah', campus: 'siemreap',
+  dept: 'Campus Leadership', ministry: 'Campus Director', role: '', active: true, photo: '', isAdmin: true };
 
 function seed() {
   for (const k of Object.keys(mem)) delete mem[k];
-  mem.staff = [SOKHA, CHANNA, MEALEA].map(s => ({ ...s, pinSalt: s.id, pinHash: mkHash('1234', s.id) }));
+  mem.staff = [SOKHA, CHANNA, MEALEA, URIAH].map(s => ({ ...s, pinSalt: s.id, pinHash: mkHash('1234', s.id) }));
   mem.okrs = [];
   mem.entries = [];
   mem.survey = [];
@@ -170,7 +172,26 @@ check('another staff member is pinned to their own campus + dept',
   ch1 && ch1.campus === 'siemreap' && ch1.dept === 'Leadership Development',
   ch1 ? ch1.campus + '|' + ch1.dept : 'missing');
 
+// 14. an app admin reaches every campus and department
+seed();
+await call('saveObjective', [objFor('ad1', 'poipet', 'Youth Education'), '', 'uriah', '1234']);
+const ad1 = okrRow('ad1');
+check('an admin creates an objective for another campus and department', ad1 && ad1.campus === 'poipet' && ad1.dept === 'Youth Education', ad1 ? ad1.campus + '|' + ad1.dept : 'missing');
+await call('saveObjective', [objFor('s1', 'poipet', 'Community Service'), '', 'sokha', '1234']);
+await call('saveObjective', [{ ...objFor('s1', 'poipet', 'Community Service'), objective: 'Edited by the admin' }, '', 'uriah', '1234']);
+check('an admin edits another department’s objective', okrRow('s1') && okrRow('s1').objective === 'Edited by the admin' && okrRow('s1').dept === 'Community Service', okrRow('s1') && okrRow('s1').objective);
+await call('saveObjective', [{ ...objFor('s1', 'poipet', 'Community Service'), krs: [{ text: 'kr', metricKey: '', target: 0, manual: 75 }] }, '', 'uriah', '1234']);
+check('and moves its hand-tracked percentage', okrRow('s1') && Number(okrRow('s1').manualPct) === 75, okrRow('s1') && okrRow('s1').manualPct);
+await call('deleteObjective', ['s1', '', 'uriah', '1234']);
+check('and deletes it', !okrIds().includes('s1'), okrIds().join(','));
+await call('saveObjective', [objFor('m9', 'poipet', 'Youth Education'), '', 'mealea', '1234']);
+await call('saveObjective', [{ ...objFor('m9', 'poipet', 'Youth Education'), objective: 'Hijack' }, '', 'sokha', '1234']);
+check('a non-admin still cannot touch another department’s', okrRow('m9') && okrRow('m9').objective === 'Obj m9', okrRow('m9') && okrRow('m9').objective);
+mem.staff = mem.staff.map(s => s.id === 'st_uriah' ? { ...s, active: false } : s);
+await call('saveObjective', [objFor('ad2', 'poipet', 'Youth Education'), '', 'uriah', '1234']);
+check('a deactivated admin has no reach', !okrIds().includes('ad2') || (okrRow('ad2') && okrRow('ad2').campus === 'siemreap'), okrIds().join(','));
+
 console.log(fails.length ? '\n' + fails.length + ' FAILED:\n - ' + fails.join('\n - ')
-                         : '\nall 13 authorization checks passed');
+                         : '\nall 19 authorization checks passed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fails.length ? 1 : 0);
