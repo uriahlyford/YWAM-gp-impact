@@ -41,6 +41,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
 const page = await ctx.newPage();
 const errors = [], sent = [], sentBodies = [];
+let PLAN_PLACE = {}, PLAN_STU = {};
 page.on('pageerror', e => errors.push(String(e)));
 page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION/.test(m.text())) errors.push('console: ' + m.text()); });
 await ctx.route('**/.netlify/functions/api', r => {
@@ -62,7 +63,7 @@ await ctx.route('**/.netlify/functions/api', r => {
     else if (quarter === 2) out = { ok: true, campus, year, quarter, source: 'copied', doc: { campus, year, quarter: 1, savedAt: year + '-03-30T00:00:00Z', people: [{ id: 'st_uriah', name: 'Uriah Lyford', dept: 'Campus Leadership', ministry: 'Campus Director', role: '', leads: [] }] } };
     else out = { ok: true, campus, year, quarter, source: 'none', doc: null };
   }
-  else if (b.fn === 'saveStructurePlan') out = { ok: true, campus: b.args[2], year: b.args[3], quarter: b.args[4], plan: { students: b.args[5] }, doc: null };
+  else if (b.fn === 'saveStructurePlan') { PLAN_PLACE = b.args[6] == null ? PLAN_PLACE : b.args[6]; PLAN_STU = b.args[5] == null ? PLAN_STU : b.args[5]; out = { ok: true, campus: b.args[2], year: b.args[3], quarter: b.args[4], plan: { students: PLAN_STU, place: PLAN_PLACE, inherited: false }, doc: null }; }
   else if (b.fn === 'saveStructure') out = { ok: true, campus: b.args[2], year: b.args[3], quarter: b.args[4], source: 'saved', doc: { campus: b.args[2], year: b.args[3], quarter: b.args[4], savedAt: new Date().toISOString(), people: [] } };
   else if (/^getMy/.test(b.fn)) out = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
   r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
@@ -138,6 +139,54 @@ await page.waitForTimeout(600);
 ok('Save posts the campus, year and quarter — the server builds the snapshot itself', sent.includes('saveStructure') && await page.evaluate(() => /structure saved on/.test(document.body.innerText) && /Update Q\d \d{4} structure/.test(document.querySelector('#structSaveBtn').textContent)));
 ok('no page errors', errors.length === 0, errors.join(' | '));
 
+console.log('\n=== the admin arranges the chart (separate from profiles) ===');
+{
+  ok('an admin gets Arrange for this quarter', /Arrange Q\d \d{4}/.test(await page.$eval('#structArrangeBtn', b => b.textContent)));
+  await page.click('#structArrangeBtn');
+  await page.waitForSelector('#arrangeBar');
+  const ar = await page.evaluate(() => ({ drag: document.querySelectorAll('.orgChart [data-arrange]').length, open: document.querySelectorAll('.orgChart [data-person]').length, drops: document.querySelectorAll('[data-drop]').length, overseer: document.querySelectorAll('.orgDropOverseer').length }));
+  ok('Arrange mode: people become draggable (not links), and ministries, the director box and overseer spots take drops', ar.drag >= 5 && ar.open === 0 && ar.drops > 5 && ar.overseer > 0, JSON.stringify(ar));
+  await page.click('[data-arrange="st_dara"]');
+  await page.waitForSelector('#structMoveCard');
+  ok('tapping someone opens Move, on where they sit now, saying what their profile says', /Move Dara Pen/.test(await page.$eval('#structMoveCard', e => e.textContent)) && (await page.$eval('#structMoveSel', s => s.value)) === 'Community Service|Cafe' && /Their profile says/.test(await page.$eval('#structMoveCard', e => e.textContent)));
+  const dest = await page.$$eval('#structMoveSel optgroup option', o => o.map(x => x.value).find(v => v !== 'Community Service|Cafe'));
+  await page.selectOption('#structMoveSel', dest);
+  await page.click('#structMoveGo');
+  await page.waitForTimeout(500);
+  const mv = sentBodies.filter(b => b.fn === 'saveStructurePlan').pop();
+  ok('Move saves the quarter’s arrangement only — students untouched, profile not written', mv && mv.args[5] == null && JSON.stringify(mv.args[6]) === JSON.stringify({ st_dara: { dept: dest.split('|')[0], ministry: dest.split('|')[1] } }) && !sentBodies.some(b => b.fn === 'adminUpdateStaff' || b.fn === 'updateProfile'), JSON.stringify(mv && mv.args));
+  ok('and the chart shows her there, not in the Cafe', await page.evaluate((k) => { const box = document.querySelector('[data-orgmin="' + k + '"]'); const cafe = document.querySelector('[data-orgmin="Community Service|Cafe"]'); return !!box && /Dara Pen/.test(box.innerText) && !/Dara Pen/.test(cafe.innerText); }, dest));
+  // drag Sreilea from the Cafe onto another ministry with the mouse
+  const from = await page.$eval('[data-arrange="st_sreilea"]', e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.$eval('[data-drop="' + dest + '"]', e => e.scrollIntoView({ block: 'center' }));
+  const from2 = await page.$eval('[data-arrange="st_sreilea"]', e => { e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const to = await page.$eval('[data-drop="' + dest + '"]', e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 30) }; });
+  await page.mouse.move(from2.x, from2.y); await page.mouse.down();
+  await page.mouse.move(from2.x + 10, from2.y + 10, { steps: 3 });
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  const hovering = await page.$eval('[data-drop="' + dest + '"]', e => e.classList.contains('dropOver'));
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  const dv = sentBodies.filter(b => b.fn === 'saveStructurePlan').pop();
+  ok('dragging someone onto a ministry highlights it and moves them there', hovering && dv && dv.args[6].st_sreilea && dv.args[6].st_sreilea.ministry === dest.split('|')[1] && dv.args[6].st_dara, JSON.stringify(dv && dv.args[6]));
+  await page.click('[data-arrange="st_dara"]');
+  await page.waitForSelector('#structMoveCard');
+  await page.selectOption('#structMoveSel', 'Community Service|Cafe');
+  await page.click('#structMoveGo');
+  await page.waitForTimeout(500);
+  const back = sentBodies.filter(b => b.fn === 'saveStructurePlan').pop();
+  ok('moving someone back to where their profile says drops them from the arrangement', back && !back.args[6].st_dara && back.args[6].st_sreilea, JSON.stringify(back && back.args[6]));
+  page.once('dialog', d => d.accept());
+  await page.click('#structArrangeReset');
+  await page.waitForTimeout(500);
+  const rs = sentBodies.filter(b => b.fn === 'saveStructurePlan').pop();
+  ok('Back to profiles clears the quarter’s arrangement', rs && JSON.stringify(rs.args[6]) === '{}');
+  await page.click('#structArrangeDone');
+  await page.waitForTimeout(300);
+  ok('Done leaves Arrange mode; people open their page again', !(await page.$('#arrangeBar')) && (await page.$$eval('.orgChart [data-person]', x => x.length)) > 0 && (await page.$$eval('.orgChart [data-arrange]', x => x.length)) === 0);
+  ok('no page errors', errors.length === 0, errors.join(' | '));
+}
+
 console.log('\n=== the admin sets up the next quarter early ===');
 {
   const qNow = Math.floor(new Date().getMonth() / 3) + 1, yNow = new Date().getFullYear();
@@ -148,7 +197,7 @@ console.log('\n=== the admin sets up the next quarter early ===');
   await page.click('[data-structq="' + next.q + '"]');
   await page.waitForTimeout(500);
   const nx = await page.evaluate(() => ({ note: document.body.innerText, btn: (document.querySelector('#structSaveBtn') || {}).textContent || '', chart: !!document.querySelector('.orgChart') }));
-  ok('the next quarter shows the live chart, says to set profiles first, and offers Save … early', nx.chart && /Next quarter — live from everyone’s profile/.test(nx.note) && new RegExp('Save Q' + next.q + ' ' + next.y + ' structure early').test(nx.btn), nx.btn);
+  ok('the next quarter shows the live chart, says to set profiles first, and offers Save … early', nx.chart && /Next quarter — it starts from this quarter’s chart/.test(nx.note) && new RegExp('Save Q' + next.q + ' ' + next.y + ' structure early').test(nx.btn), nx.btn);
   await page.click('#structSaveBtn');
   await page.waitForTimeout(600);
   ok('saving it posts next quarter’s year and quarter, and it then reads as saved', sent.filter(f => f === 'saveStructure').length === before + 1 && await page.evaluate(() => /structure saved on/.test(document.body.innerText) && /Update Q\d \d{4} structure/.test((document.querySelector('#structSaveBtn') || {}).textContent || '')));
