@@ -50,7 +50,8 @@ const REF_FORM = { key: 'reference', title: { en: 'Leader reference form', km: '
     { id: 'additional', type: 'long', label: { en: 'Anything else?', km: '' }, help: { en: '', km: '' }, required: false, options: [], audience: 'all' } ] } ] };
 const TEAM_FORM = { key: 'team', title: { en: 'Short-term team application', km: '' }, sections: [
   { id: 'team', title: { en: 'Your team', km: '' }, help: { en: '', km: '' }, questions: [
-    { id: 'teamName', type: 'short', label: { en: 'Team name', km: '' }, help: { en: '', km: '' }, required: true, options: [], audience: 'all' } ] },
+    { id: 'teamName', type: 'short', label: { en: 'Team name', km: '' }, help: { en: '', km: '' }, required: true, options: [], audience: 'all' },
+    { id: 'coLeaders', type: 'people', label: { en: 'Co-leaders', km: '' }, help: { en: 'Add as many as you have.', km: '' }, required: false, options: [], audience: 'all', addLabel: { en: 'Add a co-leader', km: '' } } ] },
   { id: 'trip', title: { en: 'Your trip', km: '' }, help: { en: 'Estimates are fine.', km: '' }, questions: [
     { id: 'itinerary', type: 'stays', label: { en: 'When will your team be with us, and anywhere else in Cambodia?', km: '' }, help: { en: 'The location your team arrives at first is responsible for handling your visa.', km: '' }, required: true, options: [], audience: 'all' },
     { id: 'flightsBooked', type: 'yesno', label: { en: 'Have you booked your flights yet?', km: '' }, help: { en: 'If yes, attach your itinerary here.', km: '' }, required: true, options: [{ en: 'Yes', km: '' }, { en: 'No', km: '' }], audience: 'all', attach: 'flights' } ] },
@@ -583,6 +584,20 @@ async function open(viewport, query, seed) {
   await page.click('#openForm');
   await page.waitForSelector('#formNext');
   await page.fill('#a_teamName', 'New Team');
+  ok('co-leaders start empty, with Add a co-leader', /None added/.test(await page.$eval('[data-people]', e => e.textContent)) && /Add a co-leader/.test(await page.$eval('[data-personadd]', e => e.textContent)));
+  for (const [i, who] of ['Sam Co', 'Jo Co', 'Lee Co'].entries()) {
+    await page.click('[data-personadd]');
+    await page.waitForSelector('[data-person="a_coLeaders|' + i + '|name"]');
+    await page.fill('[data-person="a_coLeaders|' + i + '|name"]', who);
+  }
+  await page.fill('[data-person="a_coLeaders|0|email"]', 'sam@example.org');
+  ok('Add a co-leader adds as many as needed, each with name, email and phone', (await page.$$eval('.personRow', r => r.length)) === 3 && (await page.$eval('#a_teamName', i => i.value)) === 'New Team');
+  await page.click('[data-persondel="a_coLeaders|1"]');
+  await page.waitForTimeout(150);
+  ok('✕ removes one and keeps the others', JSON.stringify(await page.$$eval('[data-person$="|name"]', i => i.map(x => x.value))) === JSON.stringify(['Sam Co', 'Lee Co']));
+  await page.waitForTimeout(1000);
+  const cd = sent.filter(b => b.fn === 'portalSaveDraft').pop();
+  ok('the co-leaders save with the draft', cd && JSON.stringify(cd.args[2].coLeaders) === JSON.stringify([{ name: 'Sam Co', email: 'sam@example.org', phone: '' }, { name: 'Lee Co', email: '', phone: '' }]) && cd.args[2].teamName === 'New Team', cd && JSON.stringify(cd.args[2].coLeaders));
   await page.click('#formNext');
   await page.waitForSelector('.stays');
   ok('the trip question starts with Siem Reap and two empty date slots, plus Add another location', /YWAM Siem Reap/.test(await page.$eval('.stays', e => e.textContent)) && (await page.$$eval('[data-stayopen]', b => b.length)) === 1 && /Add date/.test(await page.$eval('[data-stayopen]', e => e.textContent)) && !!(await page.$('[data-stayadd]')));
