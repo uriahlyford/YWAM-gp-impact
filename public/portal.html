@@ -155,6 +155,11 @@ textarea { min-height:80px; resize:vertical; }
 .two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .refBox { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
 .stays { display:flex; flex-direction:column; gap:10px; }
+.people { display:flex; flex-direction:column; gap:10px; }
+.people .btn { align-self:flex-start; }
+.personRow { border:1px solid var(--border); border-radius:var(--r); padding:10px; background:var(--bg); }
+.personHead { display:flex; justify-content:space-between; align-items:center; margin:0 0 8px; }
+.personHead .stayDel { padding:4px 10px; }
 .stayRow { border:1px solid var(--border); border-radius:var(--r); padding:10px; background:var(--bg); }
 .stayRow.open { border-color:var(--ink); }
 .stayPlace.base { font-weight:600; font-size:14px; margin:0 0 8px; }
@@ -709,11 +714,12 @@ function panelHtml_(c, byId){
 function lt_(o){ if(!o) return ''; if(typeof o==='string') return o; return LANG==='km' ? (o.km||o.en||'') : (o.en||o.km||''); }
 function askedIn_(sec, aud){ return (sec.questions||[]).filter(function(q){ return q.audience==='all' || q.audience===aud; }); }
 function askedAll_(form, aud){ var out=[]; (form.sections||[]).forEach(function(s){ out=out.concat(askedIn_(s, aud)); }); return out; }
-function answered_(q, v){ if(v===undefined||v===null) return false; if(q && q.type==='stays') return staysDone_(v); if(Array.isArray(v)) return v.length>0; return String(v).trim()!==''; }
+function answered_(q, v){ if(v===undefined||v===null) return false; if(q && q.type==='stays') return staysDone_(v); if(q && q.type==='people') return Array.isArray(v) && v.some(function(r){ return r && String(r.name||'').trim(); }); if(Array.isArray(v)) return v.length>0; return String(v).trim()!==''; }
 function staysDone_(v){ return Array.isArray(v) && !!v[0] && !!v[0].from && !!v[0].to && v.slice(1).every(function(r){ return r && r.place && r.from && r.to; }); }
 function questionInputHtml_(q, v, prefix){
   var id=prefix+q.id, name=esc(id);
   if(q.type==='stays') return staysInputHtml_(q, v, prefix);
+  if(q.type==='people') return peopleInputHtml_(q, v, prefix);
   if(q.type==='long') return '<textarea data-ans="'+esc(q.id)+'" id="'+name+'">'+esc(v||'')+'</textarea>';
   if(q.type==='choice' || q.type==='yesno'){
     return '<div class="optList">'+(q.options||[]).map(function(o){ var val=o.en||o.km; return '<label class="opt"><input type="radio" name="'+name+'" data-ans="'+esc(q.id)+'"'+(q.attach?' data-attachq="1"':'')+' value="'+esc(val)+'"'+(v===val?' checked':'')+'> <span>'+esc(lt_(o))+'</span></label>'; }).join('')+'</div>';
@@ -1004,6 +1010,7 @@ function answersHtml_(form, answers, aud){
     var qs=askedIn_(sec, aud); if(!qs.length) return;
     h+='<div class="ansSec"><div class="eyebrow">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){
       var v=answers[q.id];
+      if(q.type==='people'){ var ppl=(Array.isArray(v)?v:[]).filter(function(r){ return r && r.name; }); return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(ppl.length ? ppl.map(function(r){ return esc(r.name)+(r.email?' · '+esc(r.email):'')+(r.phone?' · '+esc(r.phone):''); }).join('<br>') : '<i>—</i>')+'</span></div>'; }
       if(q.type==='stays'){ var rows=Array.isArray(v)?v:[]; return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(rows.length ? rows.map(function(r, i){ var n=daysIncl_(r.from, r.to); return '📍 '+esc(i===0 ? (r.place||basePlace_()) : (r.place||'—'))+': '+esc(rangeLabel_(r.from, r.to))+(n?' ('+esc(daysLabel_(n))+')':''); }).join('<br>') : '<i>—</i>')+'</span></div>'; }
       var txt=Array.isArray(v)?v.join(', '):(v||'');
       return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(txt?esc(txt):'<i>—</i>')+'</span></div>'; }).join('')+'</div>';
@@ -1171,6 +1178,40 @@ function flushAnswers_(prefix){
   else if(prefix==='r_'){ if(typeof readRefAnswers_==='function') readRefAnswers_(); }
   else readAnswers_();
 }
+/* ==================== a list of people (a team's co-leaders) ====================
+   Add as many as needed, each with a name and optional email and phone; ✕
+   removes one. Stored like any answer: [{name, email, phone}, …]. */
+function peopleInputHtml_(q, v, prefix){
+  var key=prefix+q.id, rows=Array.isArray(v) ? v : [];
+  var h='<div class="people" data-people="'+esc(key)+'">';
+  if(!rows.length) h+='<p class="hint" style="margin:0 0 8px">'+esc(t('None added.'))+'</p>';
+  rows.forEach(function(r, i){
+    h+='<div class="personRow" data-personrow="'+i+'"><div class="personHead"><b>'+esc(gpT('Person {n}',{n:i+1}))+'</b><button type="button" class="stayDel" data-persondel="'+esc(key)+'|'+i+'" title="'+esc(t('Remove'))+'">✕</button></div>'+
+      '<input type="text" data-person="'+esc(key)+'|'+i+'|name" value="'+esc(r.name||'')+'" placeholder="'+esc(t('Full name'))+'" maxlength="120">'+
+      '<div class="two2" style="margin-top:6px"><input type="email" data-person="'+esc(key)+'|'+i+'|email" value="'+esc(r.email||'')+'" placeholder="'+esc(t('Email'))+'" maxlength="160">'+
+      '<input type="tel" data-person="'+esc(key)+'|'+i+'|phone" value="'+esc(r.phone||'')+'" placeholder="'+esc(t('Phone number (with country code)'))+'" maxlength="40"></div></div>';
+  });
+  h+='<button type="button" class="btn ghost small" data-personadd="'+esc(key)+'">+ '+esc(lt_(q.addLabel) || t('Add a person'))+'</button>';
+  return h+'</div>';
+}
+function bindPeople_(){
+  var split=function(v){ var p=v.split('|'); return { key:p[0], row:+p[1], field:p[2] }; };
+  var rowsOf=function(key){ var v=ansStore_(key.slice(0,2))[key.slice(2)]; return Array.isArray(v) ? v.map(function(r){ return { name:r.name||'', email:r.email||'', phone:r.phone||'' }; }) : []; };
+  var put=function(key, rows){ var p=key.slice(0,2); ansStore_(p)[key.slice(2)]=rows; if(p==='a_'){ P.formMissing=null; saveDraft_(false); } };
+  var redraw=function(){ var y=window.scrollY; render(); window.scrollTo(0, y); };
+  document.querySelectorAll('[data-personadd]').forEach(function(b){ b.onclick=function(){
+    var key=b.getAttribute('data-personadd'); flushAnswers_(key.slice(0,2));
+    var rows=rowsOf(key); rows.push({ name:'', email:'', phone:'' }); put(key, rows); redraw();
+    var inp=document.querySelector('[data-person="'+key+'|'+(rows.length-1)+'|name"]'); if(inp) inp.focus();
+  }; });
+  document.querySelectorAll('[data-persondel]').forEach(function(b){ b.onclick=function(){
+    var x=split(b.getAttribute('data-persondel')); flushAnswers_(x.key.slice(0,2));
+    var rows=rowsOf(x.key); rows.splice(x.row, 1); put(x.key, rows); redraw();
+  }; });
+  document.querySelectorAll('[data-person]').forEach(function(inp){ inp.oninput=function(){
+    var x=split(inp.getAttribute('data-person')); var rows=rowsOf(x.key); if(!rows[x.row]) return; rows[x.row][x.field]=inp.value; put(x.key, rows);
+  }; });
+}
 function staysInputHtml_(q, v, prefix){
   var base=basePlace_(), rows=staysOf_(v, base), key=prefix+q.id;
   var h='<div class="stays" data-stays="'+esc(key)+'">';
@@ -1257,7 +1298,7 @@ function bindStays_(){
    question with its label in English and Khmer, help text, a type, required,
    who sees it, and options one per line ("English | ខ្មែរ"). Edits live in
    P.formDraft until Save; Reset brings back the shipped default. */
-var FE_TYPES=[['short','Short answer'],['long','Paragraph'],['choice','Multiple choice'],['multi','Checkboxes'],['yesno','Yes / No'],['date','Date'],['number','Number'],['email','Email'],['phone','Phone'],['stays','Trip: dates and places']];
+var FE_TYPES=[['short','Short answer'],['long','Paragraph'],['choice','Multiple choice'],['multi','Checkboxes'],['yesno','Yes / No'],['date','Date'],['number','Number'],['email','Email'],['phone','Phone'],['stays','Trip: dates and places'],['people','People: add as many as needed']];
 var FE_AUD=[['all','Everyone'],['khmer','Khmer applicants only'],['international','International applicants only']];
 function feOptsText_(opts){ return (opts||[]).map(function(o){ return o.km ? (o.en+' | '+o.km) : o.en; }).join('\n'); }
 function feOptsParse_(txt){ return String(txt||'').split('\n').map(function(l){ var p=l.split('|'); return { en:(p[0]||'').trim(), km:(p[1]||'').trim() }; }).filter(function(o){ return o.en||o.km; }); }
@@ -1485,7 +1526,7 @@ function bind_(){
   on_('navCrm', function(){ if(P.view==='crm') return; P.view='crm'; render(); });
   on_('toPreview', function(){ if(P.view==='preview') return; P.view='preview'; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; render(); });
   on_('toAccounts', function(){ if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
-  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); bindStays_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();
+  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); bindStays_(); bindPeople_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){

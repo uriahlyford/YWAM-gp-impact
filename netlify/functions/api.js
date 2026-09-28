@@ -3353,7 +3353,21 @@ async function portalSetAccess(username, pin, staffId, flags) {
    being asked. The applicant fills the form on their side: every change
    saves a draft, submit checks the required questions for THEIR audience
    and moves the record to 'applied'. */
-const FORM_TYPES = ['short', 'long', 'choice', 'multi', 'yesno', 'date', 'number', 'email', 'phone', 'stays'];
+const FORM_TYPES = ['short', 'long', 'choice', 'multi', 'yesno', 'date', 'number', 'email', 'phone', 'stays', 'people'];
+const PEOPLE_MAX = 20;
+/* A list of people (a team's co-leaders): rows need a name; email and phone
+   are kept if given. */
+function cleanPeople_(v) {
+  if (!Array.isArray(v)) return null;
+  const out = [];
+  v.slice(0, PEOPLE_MAX).forEach(function (r) {
+    if (!r || typeof r !== 'object') return;
+    const name = String(r.name == null ? '' : r.name).trim().slice(0, 120);
+    if (!name) return;
+    out.push({ name: name, email: String(r.email == null ? '' : r.email).trim().slice(0, 160), phone: String(r.phone == null ? '' : r.phone).trim().slice(0, 40) });
+  });
+  return out.length ? out : null;
+}
 const STAYS_MAX = 8;
 /* A trip: our base first, then any other places in Cambodia, each with its
    dates. Rows without both dates are dropped, except the base, which stays
@@ -3396,6 +3410,7 @@ function cleanForm_(f, key) {
       const withOptions = type === 'choice' || type === 'multi' || type === 'yesno';
       return {
         id: id, type: type, label: label, help: langText_(qq.help), required: !!qq.required,
+        addLabel: type === 'people' && qq.addLabel ? langText_(qq.addLabel) : undefined,
         audience: FORM_AUDIENCES.indexOf(qq.audience) > -1 ? qq.audience : 'all',
         attach: (type === 'yesno' || type === 'choice') && /^[a-z]{2,20}$/.test(String(qq.attach || '')) ? String(qq.attach) : undefined,
         options: withOptions ? (Array.isArray(qq.options) ? qq.options : []).map(langText_).filter(function (o) { return o.en || o.km; }).slice(0, FORM_MAX_OPTIONS) : []
@@ -3426,6 +3441,7 @@ function cleanAnswers_(answers, form, audience) {
     const v = answers[qq.id];
     if (v === undefined || v === null) return;
     if (qq.type === 'stays') { const st = cleanStays_(v); if (st) out[qq.id] = st; return; }
+    if (qq.type === 'people') { const pl = cleanPeople_(v); if (pl) out[qq.id] = pl; return; }
     if (qq.type === 'multi') { if (Array.isArray(v)) { const arr = v.map(function (x) { return String(str_(x, 300) || ''); }).filter(Boolean).slice(0, FORM_MAX_OPTIONS); if (arr.length) out[qq.id] = arr; } }
     else { const str = String(v).trim().slice(0, ANSWER_MAX); if (str) out[qq.id] = str; }
   });
@@ -3435,6 +3451,7 @@ function missingRequired_(answers, form, audience) {
   return askedQuestions_(form, audience).filter(function (qq) {
     if (!qq.required) return false;
     if (qq.type === 'stays') return !staysDone_(answers[qq.id]);
+    if (qq.type === 'people') return !(Array.isArray(answers[qq.id]) && answers[qq.id].length);
     return answers[qq.id] === undefined || (Array.isArray(answers[qq.id]) && !answers[qq.id].length);
   }).map(function (qq) { return qq.id; });
 }

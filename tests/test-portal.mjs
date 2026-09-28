@@ -377,6 +377,12 @@ r = await call('portalRegister', [{ ...APP, username: 'team.au', email: 'team@ex
 ok('a team needs no leader reference but does need the visa guide', r.body.ok === true && r.body.application.refNeeded === false && r.body.application.needsVisa === true && r.body.application.formKey === 'team');
 const teamAcct = mem.staff.find(s => s.username === 'team.au'), teamRec = mem.candidates.find(c => c.staffId === teamAcct.id);
 
+console.log('\n=== team co-leaders: add as many ===');
+{ const tq = (await call('portalBoot', ['sina', '1234'])).body.forms.team.sections.flatMap(s => s.questions).find(q => q.id === 'coLeaders');
+  ok('the team form has an optional co-leaders list', tq && tq.type === 'people' && !tq.required && /co-leader/i.test(tq.addLabel.en)); }
+r = await call('portalSaveDraft', ['team.au', '2468', { coLeaders: [{ name: '  Sam Co  ', email: 'sam@example.org', phone: '+61 1' }, { name: '', email: 'blank@example.org' }, { name: 'Jo Co' }, 'junk', { name: 'x'.repeat(300) }] }]);
+ok('co-leaders are cleaned: names trimmed and cut, rows without a name dropped, as many as given', r.body.ok === true && JSON.stringify(r.body.answers.coLeaders.map(p => [p.name.length > 100 ? 'long' : p.name, p.email, p.phone])) === JSON.stringify([['Sam Co', 'sam@example.org', '+61 1'], ['Jo Co', '', ''], ['long', '', '']]), JSON.stringify(r.body.answers.coLeaders));
+
 console.log('\n=== team trip: Siem Reap and other places ===');
 const teamFull = { teamName: 'Grace Church Team', org: 'Grace Church', leaderName: 'Pat Leader', leaderEmail: 'pat@example.org', size: '14', focus: 'Kids programmes', males: '6', females: '8', couples: '2', flightsBooked: 'Yes' };
 r = await call('portalSaveDraft', ['team.au', '2468', { ...teamFull, itinerary: [{ place: 'YWAM Siem Reap', from: '2027-01-20', to: '2027-01-10' }, { place: '', from: '', to: '' }, { place: 'Phnom Penh', from: '2027-01-20', to: '2027-01-23' }, { place: 'x'.repeat(200), from: 'soon', to: '2027-02-01' }, 'junk'] }]);
