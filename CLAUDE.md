@@ -525,6 +525,28 @@ forms, documents and references follow.
   The reference form is `referenceForm` in portal-forms-default.js (the base's Leader
   Reference Google Form; English only, Khmer left empty), key `reference`, editable in the
   Forms editor like the others. The leader's page is the `ref` view (`refHtml_`, gate look).
+- **A team's trip is one 'stays' answer** (form type `stays`, question `itinerary` in the team form):
+  `[{place, from, to}, …]`, the first row always our base (`base:true`, place = the campus name).
+  Server: `cleanStays_` (drops empty extra rows, swaps reversed dates, cuts places at 80),
+  `staysDone_` for required (base both dates, every added row complete). Page:
+  `staysInputHtml_` + `calendarHtml_` (tap arrival then departure; two months from 600px),
+  state in `P.cal`, writes go to the store for the input's prefix (`ansStore_`: a_ applicant,
+  s_ staff edit, r_ reference) after `flushAnswers_`. `tripOf_` gives days in Cambodia (first
+  arrival to last departure, inclusive), each place's days, and the first stop (visa); it also
+  reads old applications' arrival / departure / arrivalKh / departureKh answers.
+- **Team documents** (`PORTAL_DOC_KINDS.team`: passports + photo required, flights when booked):
+  `portalUploadDoc` (applicant after submitting, or staff in scope with a candidateId; PDF /
+  images, ~4 MB, blobs `pdoc:<id>`, the record keeps only the list), `portalGetDoc`,
+  `portalDeleteDoc` (own record, or portal staff / HR in scope). Required kinds all present tick
+  the Documents item. The page shrinks big photos before upload (`shrinkImage_`).
+- **A question can open an upload box** (`attach: '<doc kind>'` on a yesno / choice question,
+  kept by `cleanForm_`): answered with its first option (Yes) the form shows `attachHtml_` —
+  that document's upload list — under it, applicant side only. The team form's
+  `flightsBooked` ("Have you booked your flights yet?") attaches `flights`, and
+  `portalUploadDoc` lets a kind the form attaches go up before the application is submitted.
+- **Staff record for a team**: `panelTripHtml_` (total in Cambodia, each place, who handles the
+  visa) and `hospitalityHtml_` — a copy-ready note: team name, Siem Reap dates with days and
+  nights, males, females, couples / families. The list row shows "N days in Cambodia".
 - **Staff tools live in a bar, not the header** (`staffNavHtml_`, `#staffNav`: Applications `#navCrm`,
   Forms `#toForms` and Accounts `#toAccounts` for portal admins, View as applicant `#toPreview`).
   The header keeps only language and Sign out: on a phone, four more buttons in it overflowed

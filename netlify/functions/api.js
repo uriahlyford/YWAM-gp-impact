@@ -3044,14 +3044,14 @@ function portalSteps_(c) {
   const refNeeded = refNeeded_(c);
   const refDone = !refNeeded || !!(c.portal && c.portal.referenceDone);
   const at = function (stage) { return idx >= portalStageIdx_(stage); };
-  const docItems = [{ id: 'documents', done: docsDone || at('interview') }];
+  const docItems = [{ id: 'documents', done: docsDone || docsRequiredIn_(c) || at('interview') }];
   if (refNeeded) docItems.push({ id: 'reference', done: refDone || at('interview') });
   const steps = [
     { id: 'account', done: true },
     { id: 'form', done: submitted },
     { id: 'received', done: submitted },
     { id: 'contact', done: at('contacted') },
-    { id: 'docs', done: at('interview') || (docsDone && refDone), items: docItems },
+    { id: 'docs', done: at('interview') || ((docsDone || docsRequiredIn_(c)) && refDone), items: docItems },
     { id: 'interview', done: at('accepted') },
     { id: 'accepted', done: at('practical') },
     { id: 'practical', done: at('arrived') },
@@ -3074,6 +3074,7 @@ function portalAppOut_(c) {
     answers: (c.portal && c.portal.form && c.portal.form.answers) || (c.portal && c.portal.draft) || {},
     draftAt: (c.portal && c.portal.draftAt) || null,
     answersUpdatedAt: (c.portal && c.portal.form && c.portal.form.updatedAt) || null,
+    docKinds: docKindsFor_(c), docs: docsOf_(c).map(docMeta_),
     reference: (function (r) { delete r.answers; delete r.leaderEmail; return r; })(refState_(c)), // the applicant never reads the reference
     steps: portalSteps_(c)
   };
@@ -3089,6 +3090,7 @@ function portalCandOut_(c, byId) {
     status: portalStatus_(c),
     audience: audienceOf_(c), needsVisa: needsVisa_(c), refNeeded: refNeeded_(c), formKey: formKeyOf_(c),
     reference: refState_(c),
+    docKinds: docKindsFor_(c),
     hasAccount: !!acct
   });
 }
@@ -3305,7 +3307,26 @@ async function portalSetAccess(username, pin, staffId, flags) {
    being asked. The applicant fills the form on their side: every change
    saves a draft, submit checks the required questions for THEIR audience
    and moves the record to 'applied'. */
-const FORM_TYPES = ['short', 'long', 'choice', 'multi', 'yesno', 'date', 'number', 'email', 'phone'];
+const FORM_TYPES = ['short', 'long', 'choice', 'multi', 'yesno', 'date', 'number', 'email', 'phone', 'stays'];
+const STAYS_MAX = 8;
+/* A trip: our base first, then any other places in Cambodia, each with its
+   dates. Rows without both dates are dropped, except the base, which stays
+   so a half-filled draft keeps its place; reversed dates are swapped. */
+function cleanStays_(v) {
+  if (!Array.isArray(v)) return null;
+  const out = [];
+  v.slice(0, STAYS_MAX).forEach(function (row, i) {
+    if (!row || typeof row !== 'object') return;
+    let from = isoDate_(row.from), to = isoDate_(row.to);
+    if (from && to && to < from) { const x = from; from = to; to = x; }
+    const place = String(row.place == null ? '' : row.place).trim().slice(0, 80);
+    if (i === 0) { out.push({ place: place, from: from, to: to, base: true }); return; }
+    if (!place && !from && !to) return;
+    out.push({ place: place, from: from, to: to });
+  });
+  return out.length ? out : null;
+}
+function staysDone_(v) { return Array.isArray(v) && v[0] && !!v[0].from && !!v[0].to && v.slice(1).every(function (r) { return r.place && r.from && r.to; }); }
 const FORM_AUDIENCES = ['all', 'khmer', 'international'];
 const FORM_MAX_SECTIONS = 20, FORM_MAX_QUESTIONS = 120, FORM_MAX_OPTIONS = 30, ANSWER_MAX = 4000;
 function langText_(v) {
@@ -3330,6 +3351,7 @@ function cleanForm_(f, key) {
       return {
         id: id, type: type, label: label, help: langText_(qq.help), required: !!qq.required,
         audience: FORM_AUDIENCES.indexOf(qq.audience) > -1 ? qq.audience : 'all',
+        attach: (type === 'yesno' || type === 'choice') && /^[a-z]{2,20}$/.test(String(qq.attach || '')) ? String(qq.attach) : undefined,
         options: withOptions ? (Array.isArray(qq.options) ? qq.options : []).map(langText_).filter(function (o) { return o.en || o.km; }).slice(0, FORM_MAX_OPTIONS) : []
       };
     }).filter(Boolean);
@@ -3357,13 +3379,18 @@ function cleanAnswers_(answers, form, audience) {
   askedQuestions_(form, audience).forEach(function (qq) {
     const v = answers[qq.id];
     if (v === undefined || v === null) return;
+    if (qq.type === 'stays') { const st = cleanStays_(v); if (st) out[qq.id] = st; return; }
     if (qq.type === 'multi') { if (Array.isArray(v)) { const arr = v.map(function (x) { return String(str_(x, 300) || ''); }).filter(Boolean).slice(0, FORM_MAX_OPTIONS); if (arr.length) out[qq.id] = arr; } }
     else { const str = String(v).trim().slice(0, ANSWER_MAX); if (str) out[qq.id] = str; }
   });
   return out;
 }
 function missingRequired_(answers, form, audience) {
-  return askedQuestions_(form, audience).filter(function (qq) { return qq.required && (answers[qq.id] === undefined || (Array.isArray(answers[qq.id]) && !answers[qq.id].length)); }).map(function (qq) { return qq.id; });
+  return askedQuestions_(form, audience).filter(function (qq) {
+    if (!qq.required) return false;
+    if (qq.type === 'stays') return !staysDone_(answers[qq.id]);
+    return answers[qq.id] === undefined || (Array.isArray(answers[qq.id]) && !answers[qq.id].length);
+  }).map(function (qq) { return qq.id; });
 }
 async function portalSaveForm(username, pin, key, form) {
   const me = await verifyStaff_(username, pin);
@@ -3448,6 +3475,84 @@ async function portalUpdateAnswers(username, pin, answers) {
   cand.updated = now; cand.updatedBy = a.s.id;
   await writeJSON('candidates', a.rows);
   return portalBoot(username, pin);
+}
+/* ==================== applicant documents ====================
+   What an applicant sends us once they have applied, kind by kind. Teams
+   for now (the base gives the list for the others later): passport copies
+   and a team photo with names are needed; flight itineraries come when the
+   flights are booked, and are what we arrange airport transport from.
+   Each file is its own blob ('pdoc:<id>'); the record keeps only the list.
+   Readable by the applicant themself and by portal staff who may see that
+   record — nobody else. */
+const PORTAL_DOC_KINDS = {
+  team: [{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: false }]
+};
+const PORTAL_DOCS_MAX = 40;
+function docKindsFor_(c) { return PORTAL_DOC_KINDS[c && c.type] || []; }
+function docsOf_(c) { return (c && c.portal && Array.isArray(c.portal.docs)) ? c.portal.docs : []; }
+function docsRequiredIn_(c) {
+  const kinds = docKindsFor_(c).filter(function (k) { return k.required; });
+  if (!kinds.length) return false;
+  const have = docsOf_(c);
+  return kinds.every(function (k) { return have.some(function (d) { return d && d.kind === k.id; }); });
+}
+function docMeta_(d) { return { id: d.id, kind: d.kind, name: d.name, mime: d.mime, size: d.size, added: d.added, by: d.by }; }
+/* whose record, and may this person touch its documents */
+async function docCand_(username, pin, candidateId) {
+  if (candidateId) return portalStaffCand_(username, pin, candidateId);
+  const a = await applicantCand_(username, pin); if (a.out) return a;
+  return Object.assign(a, { own: true });
+}
+async function portalUploadDoc(username, pin, kind, name, mime, base64, candidateId) {
+  const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
+  const cand = a.cand;
+  if (!docKindsFor_(cand).some(function (k) { return k.id === kind; })) return { ok: false, err: 'bad_kind' };
+  // documents come after applying — except one the form itself asks to attach (a team's flight itinerary)
+  if (a.own && !(cand.portal && cand.portal.submittedAt)) {
+    const form = (await getForms_())[formKeyOf_(cand)];
+    const inForm = askedQuestions_(form, audienceOf_(cand)).some(function (qq) { return qq.attach === kind; });
+    if (!inForm) return { ok: false, err: 'not_submitted' };
+  }
+  mime = str_(mime, 80);
+  if (HR_FILE_MIME.indexOf(mime) === -1) return { ok: false, err: 'bad_type' };
+  if (typeof base64 !== 'string' || !base64) return { ok: false, err: 'bad_file' };
+  if (base64.length > HR_FILE_MAX_B64) return { ok: false, err: 'too_large' };
+  cand.portal = cand.portal || {};
+  const list = docsOf_(cand);
+  if (list.length >= PORTAL_DOCS_MAX) return { ok: false, err: 'too_many' };
+  const meta = { id: 'pd' + pinSalt_(), kind: kind, name: str_(name, 160) || 'file', mime: mime, size: Math.floor(base64.length * 3 / 4), added: new Date().toISOString(), by: a.s.id };
+  await writeJSON('pdoc:' + meta.id, { id: meta.id, candidateId: cand.id, kind: kind, name: meta.name, mime: mime, data: base64, added: meta.added, by: a.s.id });
+  cand.portal.docs = list.concat([meta]);
+  cand.updated = meta.added; cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return { ok: true, doc: docMeta_(meta), docs: cand.portal.docs.map(docMeta_), application: portalAppOut_(cand) };
+}
+async function findDoc_(username, pin, docId) {
+  docId = str_(docId, 60);
+  const s = await verifyStaff_(username, pin, true);
+  if (!s) return { out: { ok: false } };
+  const rows = await getCandidates_();
+  const cand = rows.find(function (c) { return docsOf_(c).some(function (d) { return d && d.id === docId; }); });
+  if (!cand) return { out: { ok: false, err: 'not_found' } };
+  if (isApplicant_(s)) {
+    const mine = await candidateFor_(rows, s);
+    if (!mine || mine.id !== cand.id) return { out: { ok: false, err: 'not_found' } };
+  } else if (!(canPortal_(s) || canHR_(s)) || (!canHR_(s) && !portalMaySee_(s, cand))) return { out: { ok: false, err: 'not_authorized' } };
+  return { s: s, rows: rows, cand: cand, docId: docId };
+}
+async function portalGetDoc(username, pin, docId) {
+  const f = await findDoc_(username, pin, docId); if (f.out) return f.out;
+  const blob = await readJSON('pdoc:' + f.docId, null);
+  if (!blob || !blob.data) return { ok: false, err: 'not_found' };
+  return { ok: true, id: blob.id, name: blob.name, mime: blob.mime, dataUrl: 'data:' + blob.mime + ';base64,' + blob.data };
+}
+async function portalDeleteDoc(username, pin, docId) {
+  const f = await findDoc_(username, pin, docId); if (f.out) return f.out;
+  f.cand.portal.docs = docsOf_(f.cand).filter(function (d) { return d.id !== f.docId; });
+  f.cand.updated = new Date().toISOString(); f.cand.updatedBy = f.s.id;
+  await writeJSON('candidates', f.rows);
+  try { await store().delete('pdoc:' + f.docId); } catch (e) { /* the record is already clean */ }
+  return { ok: true, docs: f.cand.portal.docs.map(docMeta_), application: portalAppOut_(f.cand) };
 }
 /* ==================== view as applicant (staff side) ====================
    What a given applicant sees — their dashboard and form, built by the very
@@ -3625,7 +3730,7 @@ async function portalDeleteApplicant(username, pin, candidateId) {
   if (idx === -1) return { ok: false, err: 'not_found' };
   const cand = rows[idx];
   const docs = (cand.portal && Array.isArray(cand.portal.docs)) ? cand.portal.docs : [];
-  for (const d of docs) { if (d && d.id) { try { await store().delete('hrfile:' + d.id); } catch (e) { /* already gone */ } } }
+  for (const d of docs) { if (d && d.id) { try { await store().delete('pdoc:' + d.id); } catch (e) { /* already gone */ } try { await store().delete('hrfile:' + d.id); } catch (e) { /* already gone */ } } }
   rows.splice(idx, 1);
   await writeJSON('candidates', rows);
   let accountRemoved = false;
@@ -3757,6 +3862,9 @@ const HANDLERS = {
   portalUpdateAnswers: function (a) { return portalUpdateAnswers(a[0], a[1], a[2]); },
   portalReferenceLink: function (a) { return portalReferenceLink(a[0], a[1], a[2]); },
   portalViewAs: function (a) { return portalViewAs(a[0], a[1], a[2]); },
+  portalUploadDoc: function (a) { return portalUploadDoc(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
+  portalGetDoc: function (a) { return portalGetDoc(a[0], a[1], a[2]); },
+  portalDeleteDoc: function (a) { return portalDeleteDoc(a[0], a[1], a[2]); },
   portalReferenceForm: function (a) { return portalReferenceForm(a[0]); },
   portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
