@@ -137,6 +137,25 @@ await page.waitForTimeout(600);
 ok('Save posts the campus, year and quarter — the server builds the snapshot itself', sent.includes('saveStructure') && await page.evaluate(() => /structure saved on/.test(document.body.innerText) && /Update Q\d \d{4} structure/.test(document.querySelector('#structSaveBtn').textContent)));
 ok('no page errors', errors.length === 0, errors.join(' | '));
 
+console.log('\n=== the admin sets up the next quarter early ===');
+{
+  const qNow = Math.floor(new Date().getMonth() / 3) + 1, yNow = new Date().getFullYear();
+  const next = qNow === 4 ? { y: yNow + 1, q: 1 } : { y: yNow, q: qNow + 1 };
+  if (next.y !== yNow) { await page.selectOption('#structYearSel', String(next.y)); await page.waitForTimeout(300); }
+  ok('the year picker offers next year only when the next quarter is in it', (await page.$$eval('#structYearSel option', o => o.map(x => x.value))).includes(String(yNow + 1)) === (next.y !== yNow));
+  const before = sent.filter(f => f === 'saveStructure').length;
+  await page.click('[data-structq="' + next.q + '"]');
+  await page.waitForTimeout(500);
+  const nx = await page.evaluate(() => ({ note: document.body.innerText, btn: (document.querySelector('#structSaveBtn') || {}).textContent || '', chart: !!document.querySelector('.orgChart') }));
+  ok('the next quarter shows the live chart, says to set profiles first, and offers Save … early', nx.chart && /Next quarter — live from everyone’s profile/.test(nx.note) && new RegExp('Save Q' + next.q + ' ' + next.y + ' structure early').test(nx.btn), nx.btn);
+  await page.click('#structSaveBtn');
+  await page.waitForTimeout(600);
+  ok('saving it posts next quarter’s year and quarter, and it then reads as saved', sent.filter(f => f === 'saveStructure').length === before + 1 && await page.evaluate(() => /structure saved on/.test(document.body.innerText) && /Update Q\d \d{4} structure/.test((document.querySelector('#structSaveBtn') || {}).textContent || '')));
+  const q2after = next.q === 4 ? 2 : null;
+  if (q2after) { await page.click('[data-structq="2"]'); await page.waitForTimeout(400); ok('a past quarter still has no Save button', !(await page.$('#structSaveBtn'))); }
+  ok('no page errors', errors.length === 0, errors.join(' | '));
+}
+
 await browser.close();
 server.close();
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

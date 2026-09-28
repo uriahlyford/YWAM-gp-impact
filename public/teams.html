@@ -7452,10 +7452,16 @@ function currentQuarter_(){ return Math.floor(new Date().getMonth()/3)+1; }
 function structYear_(){ return S.structYear || new Date().getFullYear(); }
 function structQ_(){ return S.structQ || currentQuarter_(); }
 function structIsCurrent_(){ return structYear_()===new Date().getFullYear() && structQ_()===currentQuarter_(); }
+/* The quarter after this one can be set up early: it shows the live chart
+   like the current quarter, and an admin may save it before it starts (then
+   save again later if people move). Q4's next is Q1 of next year. */
+function nextQuarter_(){ var q=currentQuarter_(), y=new Date().getFullYear(); return q===4 ? { year:y+1, q:1 } : { year:y, q:q+1 }; }
+function structIsNext_(){ var n=nextQuarter_(); return structYear_()===n.year && structQ_()===n.q; }
+function structIsLive_(){ return structIsCurrent_() || structIsNext_(); }
 function orgQuarterBarHtml_(campus){
   var yNow=new Date().getFullYear(), year=structYear_(), q=structQ_();
   var h='<div class="orgQuarterBar"><label class="pick" style="max-width:130px"><span>'+esc(t('Year'))+'</span><select id="structYearSel">'+
-    [yNow-2,yNow-1,yNow].map(function(y){ return '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></label>';
+    [yNow-2,yNow-1,yNow].concat(nextQuarter_().year>yNow ? [yNow+1] : []).map(function(y){ return '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></label>';
   h+='<div class="deptChips" style="margin:0">'+[1,2,3,4].map(function(n){
     return '<button class="deptChip'+(n===q?' on':'')+'" data-structq="'+n+'">Q'+n+'</button>'; }).join('')+'</div></div>';
   return h;
@@ -7464,11 +7470,11 @@ function orgStructureHtml_(campus){
   var year=structYear_(), q=structQ_(), key=structKey_(campus,year,q), c=S.structCache[key];
   var h=orgQuarterBarHtml_(campus);
   h+='<h3 style="margin:8px 0 2px">'+esc(gpT('{campus} · Q{q} {year}',{campus:campusShort(campus), q:q, year:year}))+'</h3>';
-  if(structIsCurrent_()){
-    var isSaved = c && c.doc && c.source==='saved';
+  if(structIsLive_()){
+    var isSaved = c && c.doc && c.source==='saved', early = structIsNext_();
     var savedNote = isSaved ? gpT('Q{q} {year} structure saved on {date}',{q:q, year:year, date:teamDate_((c.doc.savedAt||'').slice(0,10))}) : gpT('Q{q} {year} structure not saved yet',{q:q, year:year});
-    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Live from everyone’s profile.'))+' '+esc(savedNote)+'.</p>';
-    if(S.me.isAdmin) h+='<button class="btn ghost" id="structSaveBtn" style="margin:0 0 10px;width:auto;padding:9px 14px">💾 '+esc(isSaved ? gpT('Update Q{q} {year} structure',{q:q, year:year}) : gpT('Save Q{q} {year} structure',{q:q, year:year}))+'</button>';
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(early ? t('Next quarter — live from everyone’s profile, so set people’s ministry and role first, then save it early.') : t('Live from everyone’s profile.'))+' '+esc(savedNote)+'.</p>';
+    if(S.me.isAdmin) h+='<button class="btn ghost" id="structSaveBtn" style="margin:0 0 10px;width:auto;padding:9px 14px">💾 '+esc(isSaved ? gpT('Update Q{q} {year} structure',{q:q, year:year}) : early ? gpT('Save Q{q} {year} structure early',{q:q, year:year}) : gpT('Save Q{q} {year} structure',{q:q, year:year}))+'</button>';
     return h+orgChartHtml_(campus, S.roster);
   }
   if(S.structError[key]) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load this quarter.'))+'</p><p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.structError[key])+'</p><button class="btn ghost" id="structRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div>';
@@ -9300,7 +9306,7 @@ function bind(){
   if(S.view==='team' && S.teamMode==='org' && !S.person && S.me){
     var sCampus=S.teamCampus || S.me.campus || CAMPUSES[0].id, sYear=structYear_(), sQ=structQ_(), sKey=structKey_(sCampus,sYear,sQ);
     // a quarter other than the current one is read from its snapshot, once
-    if(!structIsCurrent_() && !S.structCache[sKey] && !S.structLoading[sKey] && !S.structError[sKey]){
+    if(!structIsLive_() && !S.structCache[sKey] && !S.structLoading[sKey] && !S.structError[sKey]){
       S.structLoading[sKey]=true;
       run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
         S.structLoading[sKey]=false;
@@ -9308,8 +9314,8 @@ function bind(){
         render();
       }, function(e){ S.structLoading[sKey]=false; S.structError[sKey]=(e && e.message) || t('Connection problem — try again.'); render(); });
     }
-    // the current quarter's own snapshot (for the "saved on" note), once
-    if(structIsCurrent_() && !S.structCache[sKey] && !S.structLoading[sKey] && !S.structError[sKey]){
+    // the current (or next) quarter's own snapshot, for the "saved on" note, once
+    if(structIsLive_() && !S.structCache[sKey] && !S.structLoading[sKey] && !S.structError[sKey]){
       S.structLoading[sKey]=true;
       run('getStructure',[S.auth.user,S.auth.pin,sCampus,sYear,sQ],function(d){
         S.structLoading[sKey]=false;
