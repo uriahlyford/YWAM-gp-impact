@@ -41,6 +41,7 @@ const SERVER = [
   'test-rollups.mjs',    // the roll-up maths
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted
+  'test-personality.mjs', // personality types: scoring, and who can see a type, an avatar or a season
   'test-staff-email.mjs', // one profile per email; adminMergeStaff cleans up a real duplicate
   'test-overscroll-behavior.mjs', // none of the three pages' html/body may go back to overscroll-behavior:none (confirmed live: it disabled scrolling entirely on real desktop Chrome)
 ];
@@ -76,6 +77,7 @@ const BROWSER = [
   'test-hr-page.mjs', // the HR page: menu item + badge, home tiles and renewals due, status chips, a person's contracts, add a renewal, attach a file, old-CRM pre-fill, archive
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
+  'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
   'test-mentor-health.mjs', // a mentor sees a mentee by name

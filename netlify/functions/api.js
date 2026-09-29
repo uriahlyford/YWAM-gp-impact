@@ -353,6 +353,71 @@ function cleanCountry_(v) {
   });
 }
 
+/* ==================== personality types ====================
+   A person's four-letter type, from GP's own questionnaire in personality.js
+   (or picked directly by someone who already knows theirs). Stored on the staff
+   record as:
+
+     personality: { type, scores, source, takenAt, share, season }
+     sex:         'male' | 'female' | ''     — a profile field; it picks the avatar
+
+   Who sees what, and why the lines fall where they do:
+     · the unauthenticated teamRoster sees NONE of it. That endpoint is public
+       to the internet, and nothing new should be readable there;
+     · signed-in staff see a shared type and its avatar (type + sex) on the
+       directory, and the type's bars on someone's profile — only while that
+       person has sharing switched on, which is the default the brief asked for;
+     · season is the person's own business: it says how they are doing ("a
+       stretched season"), which is not a directory fact. It never leaves their
+       own boot/profile.
+
+   The lists below mirror personality.js. tests/test-personality.mjs checks the
+   two agree, the same way test-jobfocus keeps jobfocus.js and help.html in step. */
+const PTYPE_CODES = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
+  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'];
+const PSEASON_IDS = ['ordinary', 'school', 'outreach', 'transition', 'holidays', 'stretched'];
+const PAXES = [['E', 'E', 'I'], ['S', 'S', 'N'], ['T', 'T', 'F'], ['J', 'J', 'P']];
+
+function cleanSex_(v) { return v === 'male' || v === 'female' ? v : ''; }
+
+/* Percentages toward each pair's first letter, whole numbers 0-100 — and they
+   must agree with the type they came with. A client sending INFJ with E:80 is
+   either broken or lying, and either way the bars would contradict the letters. */
+function cleanPScores_(scores, type) {
+  if (!scores || typeof scores !== 'object') return null;
+  const out = {};
+  for (let i = 0; i < PAXES.length; i++) {
+    const ax = PAXES[i];
+    const v = finiteNum_(scores[ax[0]], 0, 100);
+    if (v == null) return null;
+    out[ax[0]] = Math.round(v);
+    const letter = out[ax[0]] > 50 ? ax[1] : ax[2];
+    if (type.charAt(i) !== letter) return null;
+  }
+  return out;
+}
+
+/* What a teammate may see: the type and its avatar, or nothing. */
+function sharedAvatar_(s) {
+  const p = s && s.personality;
+  if (!p || !p.type || p.share === false) return null;
+  return { type: p.type, sex: cleanSex_(s.sex) };
+}
+/* publicStaff_ plus the shared avatar — for signed-in readers only. */
+function rosterStaff_(s) {
+  const out = publicStaff_(s);
+  const av = sharedAvatar_(s);
+  if (av) out.avatar = av;
+  return out;
+}
+/* The owner's own copy: everything, including season. */
+function ownPersonality_(s) {
+  const p = s && s.personality;
+  if (!p || !p.type) return null;
+  return { type: p.type, scores: p.scores || null, source: p.source || 'test',
+    takenAt: p.takenAt || '', share: p.share !== false, season: p.season || 'ordinary' };
+}
+
 /* Deliberately narrow: this is what every staff member can see about every
    other one. surveyToken must never appear here — it's what keeps weekly
    check-ins anonymous in the base survey.
@@ -392,9 +457,13 @@ function cleanLeads_(list) {
   return out.slice(0, MAX_LEADS);
 }
 
-async function teamRoster() {
+/* Public to the internet when called with no PIN, so it answers with
+   publicStaff_ and nothing more. Signed in, it adds each person's shared
+   personality avatar — see sharedAvatar_. */
+async function teamRoster(username, pin) {
   const rows = await getStaff_();
-  return rows.filter(function (s) { return s.active && !isApplicant_(s); }).map(publicStaff_);
+  const me = username ? await verifyStaff_(username, pin) : null;
+  return rows.filter(function (s) { return s.active && !isApplicant_(s); }).map(me ? rosterStaff_ : publicStaff_);
 }
 
 /* Admin access only ever goes to Campus Leadership, so that is the one
@@ -822,6 +891,7 @@ async function updateProfile(username, pin, payload) {
   if (payload.role !== undefined) rec.role = payload.role;
   if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
   if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
+  if (payload.sex !== undefined) rec.sex = cleanSex_(payload.sex);
   if (payload.mentorId !== undefined) {
     const newMentorId = payload.mentorId || '';
     // Picking a new/different mentor always resets to pending — the mentor
@@ -852,9 +922,53 @@ async function updateProfile(username, pin, payload) {
     ok: true, staff: publicStaff_(rec),
     profile: {
       phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '',
-      dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || '', email: rec.email || ''
+      dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || '', email: rec.email || '',
+      sex: cleanSex_(rec.sex), personality: ownPersonality_(rec)
     }
   };
+}
+
+/* Save (or clear) someone's personality type. Every field is optional, so the
+   same door serves the whole flow: finishing the questionnaire (type + scores),
+   picking a type you already know (type, source 'self'), switching sharing off,
+   choosing a season, and setting the avatar's sex from the test's first screen.
+   { clear: true } removes the type entirely — retaking starts from nothing. */
+async function saveMyPersonality(username, pin, payload) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const p = payload || {};
+  if (p.type !== undefined && PTYPE_CODES.indexOf(p.type) === -1) return { ok: false, err: 'bad_type' };
+  if (p.season !== undefined && PSEASON_IDS.indexOf(p.season) === -1) return { ok: false, err: 'bad_season' };
+  const source = p.source === 'self' ? 'self' : 'test';
+  let scores = null;
+  if (p.type !== undefined && source === 'test') {
+    scores = cleanPScores_(p.scores, p.type);
+    if (!scores) return { ok: false, err: 'bad_scores' };
+  }
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === s.id; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const rec = rows[idx];
+    if (p.sex !== undefined) rec.sex = cleanSex_(p.sex);
+    if (p.clear) {
+      delete rec.personality;
+    } else {
+      const cur = Object.assign({}, rec.personality || {});
+      if (p.type !== undefined) {
+        cur.type = p.type;
+        cur.scores = scores;
+        cur.source = source;
+        cur.takenAt = new Date().toISOString();
+      }
+      if (p.share !== undefined) cur.share = !!p.share;
+      if (p.season !== undefined) cur.season = p.season;
+      /* A share or season setting with no type yet has nothing to attach to. */
+      if (cur.type) rec.personality = cur;
+    }
+    rec.updated = new Date().toISOString();
+    rows[idx] = rec;
+    return { ok: true, staff: rosterStaff_(rec), sex: cleanSex_(rec.sex), personality: ownPersonality_(rec) };
+  });
 }
 
 async function changePin(username, pin, newPin) {
@@ -2445,9 +2559,13 @@ async function staffProfile(username, pin, staffId) {
     awayWork[y] = awayTotals_(myTrips)[y].work;
   });
 
+  /* Their type and its bars, while they share it. Season is theirs alone. */
+  const shared = sharedAvatar_(p);
   return {
     ok: true,
-    staff: publicStaff_(p),
+    staff: rosterStaff_(p),
+    personality: shared ? { type: p.personality.type, scores: p.personality.scores || null,
+      source: p.personality.source || 'test' } : null,
     goals: goals,
     activity: {
       weeksTracked: Object.keys(weeks).length,
@@ -2508,9 +2626,10 @@ async function getMyBoot(username, pin) {
     staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s) }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
-      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || ''
+      dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || '',
+      sex: cleanSex_(s.sex), personality: ownPersonality_(s)
     },
-    roster: (staffRows || []).filter(function (r) { return r.active && !isApplicant_(r); }).map(publicStaff_),
+    roster: (staffRows || []).filter(function (r) { return r.active && !isApplicant_(r); }).map(rosterStaff_),
     logs: (logs && logs.logs) || [],
     habits: (logs && logs.habits) || null,
     mentees: (mentees && mentees.mentees) || [],
@@ -3891,7 +4010,8 @@ const HANDLERS = {
   saveEntries: function (a) { return saveEntries(a[0], a[1], a[2], a[3], a[4]); },
   saveObjective: function (a) { return saveObjective(a[0], a[1], a[2], a[3]); },
   deleteObjective: function (a) { return deleteObjective(a[0], a[1], a[2], a[3]); },
-  teamRoster: function () { return teamRoster(); },
+  teamRoster: function (a) { return teamRoster(a[0], a[1]); },
+  saveMyPersonality: function (a) { return saveMyPersonality(a[0], a[1], a[2]); },
   staffRegister: function (a) { return staffRegister(a[0]); },
   staffLogin: function (a) { return staffLogin(a[0], a[1]); },
   grantAdmin: function (a) { return grantAdmin(a[0], a[1], a[2]); },

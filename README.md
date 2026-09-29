@@ -66,6 +66,7 @@ public/            the whole frontend, served directly by Netlify
   taxonomy.js      campuses, departments, ministries, metrics, staff types, countries
   km.js            Khmer dictionary — REVIEWED_KM and PENDING_KM, kept apart
   jobfocus.js      what each of the 28 ministries is for
+  personality.js   the personality-type questionnaire, sixteen types, avatars and tips — GP's own words and art
   logo.js          the brand marks as base64 — never regenerate these
 netlify/functions/
   api.js           the entire backend: one function, Netlify Blobs for storage

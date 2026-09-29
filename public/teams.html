@@ -61,6 +61,15 @@
    The brand marks in logo.js are white and drawn for the black header, so anything
    showing them needs --headerBg behind it in either theme or they vanish. */
 :root {
+  --pInk:#17150F;          /* personality hero text — fixed: the hero sits on a fixed light tint in both themes */
+  --pInk2:#3B372E;
+  --pAgree:#1F8A6F;        /* the agree side of the seven circles */
+  --pDisagree:#7B4FA0;     /* the disagree side */
+  --pAgreeInk:#1B7A62;     /* the same, as small text */
+  --pDisagreeInk:#6E4592;
+  --pGood:#1F8A6F;         /* strengths ✓ */
+  --pBad:#B3261E;          /* watch out for ! */
+  --pOnMark:#fff;          /* the glyph inside those marks */
   --bg:#FAF6F0;            /* page */
   --surface:#fff;          /* cards */
   --surface2:#F0EADF;      /* tracks, subtle fills */
@@ -105,6 +114,8 @@
    text that sits on cobalt goes dark to match. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --pAgreeInk:#5CC9A8;
+    --pDisagreeInk:#C3A2E0;
     --bg:#121110;
     --surface:#1C1A17;
     --surface2:#26231D;
@@ -143,6 +154,8 @@
   }
 }
 :root[data-theme="dark"] {
+  --pAgreeInk:#5CC9A8;
+  --pDisagreeInk:#C3A2E0;
   --bg:#121110;
   --surface:#1C1A17;
   --surface2:#26231D;
@@ -1144,6 +1157,76 @@ textarea { resize:vertical; min-height:64px; }
 .baseMe .pmeta { line-height:1.4; }
 
 footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px; }
+
+/* ---------- personality types ----------
+   The type screens sit on the group's own light tint with fixed dark ink, in
+   BOTH themes: the four group colours are an identity, not a theme, and white
+   text on the marigold group would fail contrast. Everything around them
+   (cards, bars, chips) uses the normal tokens and follows the theme. */
+.pEntry { display:flex; align-items:center; gap:14px; width:100%; text-align:left; cursor:pointer; }
+.pEntry .pEntryArt { flex:0 0 auto; width:64px; height:64px; }
+.pEntry .pEntryArt svg { width:64px; height:64px; display:block; }
+.pQ { width:64px; height:64px; border-radius:50%; background:var(--accentSoft); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; }
+.pCode { font-size:13px; font-weight:800; letter-spacing:.06em; }
+.pHero { border-radius:18px; padding:20px 16px 18px; text-align:center; color:var(--pInk); margin:10px 0 14px; }
+.pHero .pHeroArt svg { width:132px; height:132px; display:block; margin:0 auto 8px; }
+.pHero .pGroup { display:inline-block; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  padding:3px 10px; border-radius:999px; background:rgba(255,255,255,.72); }
+.pHero .pBig { font-family:'Koulen',sans-serif; font-size:44px; line-height:1; margin:10px 0 2px; letter-spacing:.04em; }
+.pHero .pName { font-size:20px; font-weight:800; }
+.pHero .pTag { font-size:14px; margin-top:6px; color:var(--pInk2); }
+.pHero .pWho { font-size:13px; font-weight:700; margin-bottom:6px; color:var(--pInk2); }
+.pBar { margin:10px 0 14px; }
+.pBar .pBarTop { display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; }
+.pBar .pBarTop b { font-weight:800; }
+.pBar .pTrack { position:relative; height:10px; border-radius:6px; background:var(--surface2); }
+.pBar .pFill { position:absolute; top:0; bottom:0; border-radius:6px; }
+.pBar .pEnds { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:4px; }
+.pList { margin:4px 0 0; padding:0; list-style:none; }
+.pList li { position:relative; padding:6px 0 6px 26px; font-size:14px; line-height:1.4; border-top:1px solid var(--line); }
+.pList li:first-child { border-top:0; }
+.pList li .pMark { position:absolute; left:0; top:6px; width:18px; height:18px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; color:var(--pOnMark); }
+.pSeasons { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 4px; }
+.pSeasons button { border:1.5px solid var(--border2); background:var(--surface); color:var(--ink);
+  border-radius:999px; padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer; }
+.pSeasons button.on { background:var(--ink); color:var(--surface); border-color:var(--ink); }
+.pFine { font-size:12px; color:var(--muted); line-height:1.45; margin:14px 2px 4px; }
+.pProg { position:sticky; top:0; z-index:5; background:var(--bg); padding:8px 0 10px; }
+.pProg .pTrack { height:8px; border-radius:6px; background:var(--surface2); overflow:hidden; }
+.pProg .pTrack div { height:100%; background:var(--accent); border-radius:6px; transition:width .25s var(--ease); }
+.pProg .pProgTxt { font-size:12px; color:var(--muted); margin-top:5px; text-align:right; }
+.pStmt { padding:18px 4px 20px; border-bottom:1px solid var(--line); transition:opacity .2s; }
+.pStmt.done { opacity:.55; }
+.pStmt .pText { font-size:16px; font-weight:700; text-align:center; line-height:1.4; margin-bottom:14px; }
+.pScale { display:flex; align-items:center; justify-content:space-between; max-width:300px; margin:0 auto; }
+.pScaleEnds { display:flex; justify-content:space-between; max-width:300px; margin:8px auto 0;
+  font-size:13px; font-weight:800; }
+.pScaleEnds .ag { color:var(--pAgreeInk); } .pScaleEnds .dis { color:var(--pDisagreeInk); }
+.pDot { border-radius:50%; background:transparent; cursor:pointer; padding:0; flex:0 0 auto;
+  transition:transform .15s var(--spring), background .15s; -webkit-tap-highlight-color:transparent; }
+.pDot:active { transform:scale(.9); }
+.pDot.s3 { width:40px; height:40px; } .pDot.s2 { width:32px; height:32px; }
+.pDot.s1 { width:25px; height:25px; } .pDot.s0 { width:19px; height:19px; }
+.pDot.ag { border:2.5px solid var(--pAgree); } .pDot.ag.on { background:var(--pAgree); }
+.pDot.dis { border:2.5px solid var(--pDisagree); } .pDot.dis.on { background:var(--pDisagree); }
+.pDot.mid { border:2.5px solid var(--border2); } .pDot.mid.on { background:var(--muted); border-color:var(--muted); }
+.pPick { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:10px 0; }
+.pPick button { border:1.5px solid var(--border); background:var(--surface); color:var(--ink); border-radius:14px;
+  padding:10px 8px; text-align:center; cursor:pointer; }
+.pPick button svg { width:64px; height:64px; display:block; margin:0 auto 4px; }
+.pPick button .pCode { display:block; }
+.pPick button .pPickName { font-size:12px; color:var(--muted); }
+.pSexRow { display:flex; gap:10px; margin:8px 0 2px; }
+.pSexRow button { flex:1; border:2px solid var(--border2); background:var(--surface); color:var(--ink);
+  border-radius:14px; padding:10px; font-weight:700; cursor:pointer; }
+.pSexRow button.on { border-color:var(--accent); background:var(--accentSoft); }
+.pSexRow button svg { width:56px; height:56px; display:block; margin:0 auto 4px; }
+.avatar.pav { padding:0; overflow:hidden; background:transparent; }
+.avatar.pav svg { width:100%; height:100%; display:block; }
+.ptChip { display:inline-block; margin-top:4px; font-size:11px; font-weight:800; letter-spacing:.06em;
+  padding:2px 7px; border-radius:999px; color:var(--pInk); }
 </style>
 </head>
 <body>
@@ -1334,6 +1417,7 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 </script>
 <script src="km.js" data-optional></script>
 <script src="jobfocus.js" data-optional></script>
+<script src="personality.js" data-optional></script>
 <script src="sr-checkin-history.js" data-optional></script>
 <script src="taxonomy.js"></script>
 <script src="rollup.js"></script>
@@ -1569,6 +1653,13 @@ function personOf(id){ for(var i=0;i<S.roster.length;i++) if(S.roster[i].id===id
 
 function avatarHtml(person, cls){
   cls = cls||'';
+  /* Someone with no photo but a shared personality type shows their type's
+     character rather than initials — see personality.js. A photo always wins:
+     a real face is better than any drawing of one. */
+  if(person && !person.photo && person.avatar && typeof gpPAvatar==='function'){
+    var pav = gpPAvatar(person.avatar.type, person.avatar.sex, 96, true);
+    if(pav) return '<div class="avatar pav '+cls+'">'+pav+'</div>';
+  }
   if(person && person.photo) return '<img class="avatar '+cls+'" src="'+esc(person.photo)+'" alt="" onerror="this.outerHTML=\'<div class=\\\'avatar '+cls+' ph\\\'>'+esc(initials(person.name))+'</div>\'">';
   return '<div class="avatar '+cls+' ph">'+esc(initials(person?person.name:'')) +'</div>';
 }
@@ -1968,6 +2059,8 @@ function render(){
      the old view lands there rather than on a page that no longer exists. */
   else if(S.view==='okr'){ S.view='ministry'; S.mmTab='okr'; m.innerHTML=myMinistryHtml(); }
   else if(S.view==='admin') m.innerHTML=adminHtml();
+  else if(S.view==='ptest') m.innerHTML=ptestHtml();
+  else if(S.view==='ptype') m.innerHTML=ptypeHtml();
   else m.innerHTML=profileHtml();
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
@@ -3575,6 +3668,355 @@ function notificationsHtml(){
   return h+'</div>';
 }
 
+/* ==================== personality types ====================
+   Take a short questionnaire, get a four-letter type and a character to go with
+   it, and read what it means — for yourself, in your ministry and in the season
+   you are in, and for anyone on the team who wants to know how to work well
+   with you. The words, questions and pictures live in personality.js; this is
+   only the screens.
+
+   Three screens: the card on My Home, the test (S.view 'ptest') and the type
+   page (S.view 'ptype'), which shows either your own type or a teammate's.
+   A teammate's page leaves out your season on purpose — see saveMyPersonality
+   in api.js for who sees what. */
+var P_PAGE = 5;                 // statements per screen, as on the phones this runs on
+var P_DRAFT_KEY = 'gp-ptest';   // answers survive a reload or a dropped connection
+
+function pOK(){ return typeof gpPAvatar==='function' && typeof GP_PTYPES!=='undefined'; }
+function myPType(){ return (S.profile && S.profile.personality) || null; }
+function mySex(){ return (S.profile && S.profile.sex) || ''; }
+/* "The Guide", translated as ONE phrase: Khmer has no article, so gluing a
+   translated "The" to a translated name would put a stray word on screen. */
+function pTheName(code){ var ty=GP_PTYPES[code]; if(!ty) return ''; var key='The '+ty.name; return t(key); }
+function firstName_(n){ return String(n||'').trim().split(/\s+/)[0] || ''; }
+
+function pDraftLoad(){
+  try { var d=JSON.parse(localStorage.getItem(P_DRAFT_KEY)||'null'); return (d && typeof d==='object') ? d : {}; }
+  catch(e){ return {}; }
+}
+function pDraftSave(a){ try { localStorage.setItem(P_DRAFT_KEY, JSON.stringify(a||{})); } catch(e){} }
+function pDraftClear(){ try { localStorage.removeItem(P_DRAFT_KEY); } catch(e){} }
+
+/* The chip under a name in the directory — the type, in its group's tint. */
+function ptChipHtml(p){
+  if(!pOK() || !p || !p.avatar) return '';
+  var g=gpPGroupOf(p.avatar.type);
+  return g ? '<div><span class="ptChip" style="background:'+g.tint+'">'+esc(p.avatar.type)+'</span></div>' : '';
+}
+
+function personalityCardHtml(){
+  if(!pOK()) return '';
+  var p=myPType();
+  var h='<h3 id="sec-ptype">🧭 '+esc(t('Personality'))+'</h3>';
+  if(!p){
+    return h+'<button class="card pEntry" id="pStart">'+
+      '<span class="pEntryArt"><span class="pQ">?</span></span>'+
+      '<span style="flex:1"><div style="font-size:15px;font-weight:800">'+esc(t('Discover your personality type'))+'</div>'+
+      '<div class="pmeta">'+esc(t('40 quick statements · about 5 minutes'))+'</div></span>'+
+      PCHEV+'</button>';
+  }
+  var ty=GP_PTYPES[p.type];
+  return h+'<button class="card pEntry" id="pSeeMine">'+
+    '<span class="pEntryArt">'+gpPAvatar(p.type, mySex(), 64)+'</span>'+
+    '<span style="flex:1"><div class="pCode" style="color:'+gpPGroupOf(p.type).ink+'">'+esc(p.type)+'</div>'+
+    '<div style="font-size:16px;font-weight:800">'+esc(pTheName(p.type))+'</div>'+
+    '<div class="pmeta">'+esc(t(ty.tagline))+'</div></span>'+PCHEV+'</button>';
+}
+var PCHEV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>';
+
+/* On a teammate's profile: their character and a way into their type. */
+function personTypeCardHtml(d){
+  if(!pOK() || !d || !d.personality || !GP_PTYPES[d.personality.type]) return '';
+  var p=d.staff, ty=GP_PTYPES[d.personality.type];
+  return '<h3>🧭 '+esc(t('Personality'))+'</h3>'+
+    '<button class="card pEntry" id="pSeePerson">'+
+    '<span class="pEntryArt">'+gpPAvatar(d.personality.type, (p.avatar&&p.avatar.sex)||'', 64)+'</span>'+
+    '<span style="flex:1"><div class="pCode" style="color:'+gpPGroupOf(d.personality.type).ink+'">'+esc(d.personality.type)+'</div>'+
+    '<div style="font-size:16px;font-weight:800">'+esc(pTheName(d.personality.type))+'</div>'+
+    '<div class="pmeta">'+esc(gpT('How to work well with {name}',{name:firstName_(p.name)}))+'</div></span>'+PCHEV+'</button>';
+}
+
+/* ---------- the test ---------- */
+function ptestHtml(){
+  if(!pOK()) return '<p class="sub">'+esc(t('Personality types could not load. Pull down to refresh.'))+'</p>';
+  var T=S.ptest||(S.ptest={stage:'intro', answers:pDraftLoad(), page:0, sex:mySex()});
+  var h='<button class="linkbtn" id="pBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+
+  if(T.stage==='intro'){
+    var started = Object.keys(T.answers||{}).length;
+    h+='<h2>'+esc(t('Personality type'))+'</h2>'+
+      '<div class="card">'+
+      '<p style="margin:2px 0 10px;font-size:15px;line-height:1.5">'+
+        esc(t('Forty short statements. Answer how you really are — not how you wish you were, or how your job needs you to be.'))+'</p>'+
+      '<p class="sub" style="margin:0 0 12px">'+esc(t('There are no right answers, and no type is better than another.'))+'</p>'+
+      '<label class="f">'+esc(t('Your character'))+'</label>'+
+      '<div class="pSexRow">'+
+        '<button data-psex="female" class="'+(T.sex==='female'?'on':'')+'">'+gpPAvatar('ENFJ','female',56)+esc(t('Female'))+'</button>'+
+        '<button data-psex="male" class="'+(T.sex==='male'?'on':'')+'">'+gpPAvatar('ENFJ','male',56)+esc(t('Male'))+'</button>'+
+      '</div>'+
+      '<button class="btn" id="pBegin"'+(T.sex?'':' disabled')+'>'+
+        esc(started? gpT('Carry on — {n} of 40 answered',{n:started}) : t('Start'))+'</button>'+
+      (T.sex?'':'<div class="hint" style="text-align:center">'+esc(t('Choose one to start.'))+'</div>')+
+      '<button class="linkbtn" id="pKnow">'+esc(t('I already know my type'))+'</button>'+
+      '</div>'+pFineHtml();
+    return h;
+  }
+
+  if(T.stage==='pick'){
+    h+='<h2>'+esc(t('Choose your type'))+'</h2>'+
+      '<p class="sub">'+esc(t('Already taken a test like this before? Pick the four letters you got.'))+'</p>';
+    if(!T.sex){
+      h+='<div class="pSexRow">'+
+        '<button data-psex="female">'+esc(t('Female'))+'</button><button data-psex="male">'+esc(t('Male'))+'</button></div>'+
+        '<div class="hint">'+esc(t('For your character — choose one first.'))+'</div>';
+    }
+    ['minds','hearts','anchors','movers'].forEach(function(gid){
+      var g=GP_PGROUPS[gid];
+      h+='<h3 style="color:'+g.ink+'">'+esc(t(g.name))+'</h3><div class="pPick">';
+      GP_PTYPE_CODES.filter(function(c){ return gpPGroupOf(c).id===gid; }).forEach(function(c){
+        h+='<button data-ppick="'+c+'"'+(T.sex?'':' disabled')+'>'+gpPAvatar(c, T.sex||'female', 64)+
+          '<span class="pCode" style="color:'+g.ink+'">'+c+'</span>'+
+          '<span class="pPickName">'+esc(pTheName(c))+'</span></button>';
+      });
+      h+='</div>';
+    });
+    return h+pFineHtml();
+  }
+
+  /* the questions, a page at a time */
+  var pages=Math.ceil(GP_PQUESTIONS.length/P_PAGE);
+  var page=Math.max(0, Math.min(pages-1, T.page||0));
+  var answered=GP_PQUESTIONS.filter(function(q){ return T.answers[q.id]!==undefined; }).length;
+  h+='<div class="pProg"><div class="pTrack"><div style="width:'+Math.round(answered/GP_PQUESTIONS.length*100)+'%"></div></div>'+
+    '<div class="pProgTxt">'+esc(gpT('{n} of {total}',{n:answered,total:GP_PQUESTIONS.length}))+'</div></div>';
+  var qs=GP_PQUESTIONS.slice(page*P_PAGE, page*P_PAGE+P_PAGE);
+  var pageDone=qs.every(function(q){ return T.answers[q.id]!==undefined; });
+  qs.forEach(function(q){
+    var v=T.answers[q.id];
+    h+='<div class="pStmt'+(v!==undefined?' done':'')+'" id="pq_'+q.id+'">'+
+      '<div class="pText">'+esc(t(q.text))+'</div>'+
+      '<div class="pScale" role="radiogroup" aria-label="'+esc(t(q.text))+'">';
+    [3,2,1,0,-1,-2,-3].forEach(function(n){
+      var side = n>0?'ag':(n<0?'dis':'mid');
+      h+='<button class="pDot s'+Math.abs(n)+' '+side+(v===n?' on':'')+'" data-pans="'+q.id+'|'+n+'"'+
+        ' role="radio" aria-checked="'+(v===n?'true':'false')+'"'+
+        ' aria-label="'+esc(pScaleWord(n))+'"></button>';
+    });
+    /* the words sit under the ends rather than beside them, so seven circles
+       still fit a 320px phone */
+    h+='</div><div class="pScaleEnds"><span class="ag">'+esc(t('Agree'))+'</span><span class="dis">'+esc(t('Disagree'))+'</span></div></div>';
+  });
+  var last = page===pages-1;
+  h+='<div style="display:flex;gap:10px;margin:18px 0 6px">'+
+    (page>0?'<button class="btn ghost" id="pPrev" style="flex:1">'+esc(t('Back'))+'</button>':'')+
+    (last
+      ? '<button class="btn" id="pFinish" style="flex:2"'+(answered===GP_PQUESTIONS.length?'':' disabled')+'>'+esc(t('See my type'))+'</button>'
+      : '<button class="btn" id="pNext" style="flex:2"'+(pageDone?'':' disabled')+'>'+esc(t('Next'))+'</button>')+
+    '</div>';
+  return h;
+}
+function pScaleWord(n){
+  return t(['Strongly disagree','Disagree','Slightly disagree','Neutral','Slightly agree','Agree','Strongly agree'][n+3]);
+}
+function pFineHtml(){
+  return '<p class="pFine">'+esc(t('Uses the same four letters as Myers–Briggs®. This is GP’s own short questionnaire, not the official MBTI® assessment.'))+' '+
+    esc(t('A type describes what comes naturally to you — not what you are able to do.'))+'</p>';
+}
+
+/* ---------- the type page ---------- */
+function ptypeHtml(){
+  if(!pOK()) return '<p class="sub">'+esc(t('Personality types could not load. Pull down to refresh.'))+'</p>';
+  var other=S.ptypeOther;                 // set when opened from a teammate's profile
+  var mine=!other;
+  var P = mine ? myPType() : other;
+  var back='<button class="linkbtn" id="ptypeBack" style="text-align:left;text-decoration:none;padding-left:0">← '+
+    esc(mine?t('My Home'):firstName_(other.name))+'</button>';
+  if(!P || !GP_PTYPES[P.type]) return back+'<p class="sub">'+esc(t('No type chosen yet.'))+'</p>';
+  var ty=GP_PTYPES[P.type], g=gpPGroupOf(P.type);
+  var sex = mine ? mySex() : (other.sex||'');
+  var who = mine ? '' : gpT('{name}’s type',{name:firstName_(other.name)});
+
+  var h=back;
+  h+='<div class="pHero" style="background:'+g.tint+'">'+
+    (who?'<div class="pWho">'+esc(who)+'</div>':'')+
+    '<div class="pHeroArt">'+gpPAvatar(P.type, sex, 132)+'</div>'+
+    '<span class="pGroup" style="color:'+g.ink+'">'+esc(t(g.name))+'</span>'+
+    '<div class="pBig" style="color:'+g.ink+'">'+esc(P.type)+'</div>'+
+    '<div class="pName">'+esc(pTheName(P.type))+'</div>'+
+    '<div class="pTag">'+esc(t(ty.tagline))+'</div></div>';
+
+  /* the four bars — only when there are scores to show (a picked type has none) */
+  if(P.scores){
+    h+='<div class="card">';
+    GP_PAXES.forEach(function(ax){
+      var pct=Number(P.scores[ax.id]);
+      var first = pct>50;
+      var shown = first?pct:100-pct;
+      var name = first?ax.aName:ax.bName;
+      /* the fill grows from the side that won, so the bar reads the way the words do */
+      var fill = first ? 'left:0;width:'+pct+'%' : 'right:0;width:'+(100-pct)+'%';
+      h+='<div class="pBar"><div class="pBarTop"><span>'+esc(t(ax.label))+'</span><span><b>'+shown+'%</b> '+esc(t(name))+'</span></div>'+
+        '<div class="pTrack"><div class="pFill" style="'+fill+';background:'+g.color+'"></div></div>'+
+        '<div class="pEnds"><span>'+esc(t(ax.aName))+'</span><span>'+esc(t(ax.bName))+'</span></div></div>';
+    });
+    h+='</div>';
+  }
+
+  h+='<div class="card"><p style="margin:2px 0;font-size:15px;line-height:1.55">'+esc(t(ty.about))+'</p></div>';
+
+  h+='<h3>'+esc(t('Strengths'))+'</h3><div class="card"><ul class="pList">'+
+    ty.strengths.map(function(x){ return '<li><span class="pMark" style="background:var(--pGood)">✓</span>'+esc(t(x))+'</li>'; }).join('')+
+    '</ul></div>';
+  h+='<h3>'+esc(t('Watch out for'))+'</h3><div class="card"><ul class="pList">'+
+    ty.watch.map(function(x){ return '<li><span class="pMark" style="background:var(--pBad)">!</span>'+esc(t(x))+'</li>'; }).join('')+
+    '</ul></div>';
+
+  /* yours only: the same type, in the ministry you are in and the season you are in */
+  if(mine){
+    var job=gpPJobOf(S.me.dept, S.me.ministry);
+    var season=P.season||'ordinary';
+    var tips=gpPTipsFor(P.type, job, season);
+    h+='<h3>🌱 '+esc(t('For you, right now'))+'</h3><div class="card">'+
+      '<div class="pmeta" style="margin-bottom:6px">'+esc(t(S.me.ministry||S.me.dept||''))+' · '+esc(t(GP_PJOB[job]))+'</div>'+
+      '<label class="f" style="margin-top:6px">'+esc(t('What season are you in?'))+'</label>'+
+      '<div class="pSeasons">'+GP_PSEASONS.map(function(se){
+        return '<button data-pseason="'+se.id+'" class="'+(season===se.id?'on':'')+'">'+esc(t(se.name))+'</button>';
+      }).join('')+'</div>'+
+      '<div class="hint" style="margin-bottom:6px">'+esc(t((GP_PSEASONS.filter(function(se){return se.id===season;})[0]||{}).blurb||''))+
+        ' · 🔒 '+esc(t('only you see this'))+'</div>'+
+      '<ul class="pList">'+tips.map(function(tip){
+        return '<li><span class="pMark" style="background:'+(tip.kind==='season'?g.color:'var(--accent)')+'">'+(tip.kind==='season'?'◷':'★')+'</span>'+esc(t(tip.text))+'</li>';
+      }).join('')+'</ul></div>';
+  }
+
+  h+='<h3>🤝 '+esc(mine?t('How others can work well with you'):gpT('Working with {name}',{name:firstName_(other.name)}))+'</h3>'+
+    '<div class="card"><ul class="pList">'+
+    ty.workWith.map(function(x){ return '<li><span class="pMark" style="background:'+g.color+'">→</span>'+esc(t(x))+'</li>'; }).join('')+
+    '</ul></div>';
+
+  if(mine){
+    var share = P.share!==false;
+    h+='<div class="card">'+
+      '<label class="f">'+esc(t('Show my type to the team'))+'</label>'+
+      '<div class="seg" style="max-width:220px">'+
+        '<button id="pShareOn" class="'+(share?'on':'')+'">'+esc(t('Yes'))+'</button>'+
+        '<button id="pShareOff" class="'+(!share?'on':'')+'">'+esc(t('No'))+'</button></div>'+
+      '<div class="hint">'+esc(t('Your season always stays private.'))+'</div>'+
+      '<button class="btn ghost" id="pRetake">'+esc(t('Retake the test'))+'</button>'+
+      '<button class="linkbtn" id="pChoose">'+esc(t('Choose a different type'))+'</button>'+
+      '</div>';
+  }
+  return h+pFineHtml();
+}
+
+/* ---------- saving ---------- */
+function pSave(payload, then){
+  run('saveMyPersonality',[S.auth.user,S.auth.pin,payload],function(d){
+    S.busy=false;
+    if(!d || !d.ok){ showMsg(t('Could not save — check your connection and try again.')); render(); return; }
+    S.profile=Object.assign({}, S.profile||{}, { sex:d.sex, personality:d.personality });
+    /* my own directory card follows straight away, without another roster fetch */
+    (S.roster||[]).forEach(function(r){ if(r.id===S.me.id){ if(d.staff && d.staff.avatar) r.avatar=d.staff.avatar; else delete r.avatar; } });
+    if(then) then(d); else render();
+  });
+}
+
+function bindPersonality(){
+  var st=document.getElementById('pStart');
+  if(st) st.onclick=function(){ S.ptest={stage:'intro', answers:pDraftLoad(), page:0, sex:mySex()}; S.view='ptest'; render(); };
+  var sm=document.getElementById('pSeeMine');
+  if(sm) sm.onclick=function(){ S.ptypeOther=null; S.ptypeBack='week'; S.view='ptype'; render(); };
+  var sp=document.getElementById('pSeePerson');
+  if(sp) sp.onclick=function(){
+    var d=S.person; if(!d || !d.personality) return;
+    S.ptypeOther={ name:d.staff.name, type:d.personality.type, scores:d.personality.scores,
+      sex:(d.staff.avatar&&d.staff.avatar.sex)||'' };
+    S.ptypeBack='team'; S.view='ptype'; render();
+  };
+  var pb=document.getElementById('pBack');
+  if(pb) pb.onclick=function(){
+    var T=S.ptest;
+    /* inside the questions, Back steps a page; from the start screen it leaves */
+    if(T && T.stage==='q' && T.page>0){ T.page--; render(); window.scrollTo(0,0); return; }
+    if(T && T.stage!=='intro'){ T.stage='intro'; render(); return; }
+    S.view='week'; render();
+  };
+  var tb=document.getElementById('ptypeBack');
+  if(tb) tb.onclick=function(){ S.view=S.ptypeBack||'week'; S.ptypeOther=null; render(); };
+
+  document.querySelectorAll('[data-psex]').forEach(function(b){
+    b.onclick=function(){ S.ptest.sex=b.getAttribute('data-psex'); render(); };
+  });
+  var bg=document.getElementById('pBegin');
+  if(bg) bg.onclick=function(){
+    var T=S.ptest; T.stage='q';
+    /* carry on where they left off: the first page with a gap in it */
+    var first=GP_PQUESTIONS.findIndex(function(q){ return T.answers[q.id]===undefined; });
+    T.page = first<0 ? Math.ceil(GP_PQUESTIONS.length/P_PAGE)-1 : Math.floor(first/P_PAGE);
+    render(); window.scrollTo(0,0);
+  };
+  var kn=document.getElementById('pKnow');
+  if(kn) kn.onclick=function(){ S.ptest.stage='pick'; render(); window.scrollTo(0,0); };
+
+  document.querySelectorAll('[data-pans]').forEach(function(b){
+    b.onclick=function(){
+      var parts=b.getAttribute('data-pans').split('|');
+      var T=S.ptest; T.answers[parts[0]]=Number(parts[1]);
+      pDraftSave(T.answers);
+      gpTap();
+      render();
+      /* bring the next unanswered statement on this page into view, as a
+         thumb would expect after each answer */
+      var qs=GP_PQUESTIONS.slice(T.page*P_PAGE, T.page*P_PAGE+P_PAGE);
+      var next=qs.filter(function(q){ return T.answers[q.id]===undefined; })[0];
+      var el = next ? document.getElementById('pq_'+next.id) : document.getElementById(T.page===Math.ceil(GP_PQUESTIONS.length/P_PAGE)-1?'pFinish':'pNext');
+      if(el && el.scrollIntoView) try { el.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e){ el.scrollIntoView(); }
+    };
+  });
+  var nx=document.getElementById('pNext');
+  if(nx) nx.onclick=function(){ S.ptest.page++; render(); window.scrollTo(0,0); };
+  var pv=document.getElementById('pPrev');
+  if(pv) pv.onclick=function(){ S.ptest.page--; render(); window.scrollTo(0,0); };
+  var fin=document.getElementById('pFinish');
+  if(fin) fin.onclick=function(){
+    if(S.busy) return;
+    var r=gpPScore(S.ptest.answers);
+    if(!r){ showMsg(t('Answer every statement first.')); return; }
+    S.busy=true; fin.disabled=true; fin.textContent=t('Saving…');
+    pSave({ type:r.type, scores:r.scores, source:'test', sex:S.ptest.sex }, function(){
+      pDraftClear(); S.ptest=null; S.ptypeOther=null; S.ptypeBack='week'; S.view='ptype'; render(); window.scrollTo(0,0);
+    });
+  };
+  document.querySelectorAll('[data-ppick]').forEach(function(b){
+    b.onclick=function(){
+      if(S.busy) return; S.busy=true;
+      pSave({ type:b.getAttribute('data-ppick'), source:'self', sex:S.ptest.sex }, function(){
+        S.ptest=null; S.ptypeOther=null; S.ptypeBack='week'; S.view='ptype'; render(); window.scrollTo(0,0);
+      });
+    };
+  });
+
+  document.querySelectorAll('[data-pseason]').forEach(function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-pseason');
+      /* shown at once, saved behind it — a season chip should feel like a switch */
+      S.profile.personality=Object.assign({}, S.profile.personality, { season:id });
+      render();
+      pSave({ season:id });
+    };
+  });
+  var on=document.getElementById('pShareOn'), off=document.getElementById('pShareOff');
+  if(on) on.onclick=function(){ pSave({ share:true }); };
+  if(off) off.onclick=function(){ pSave({ share:false }); };
+  var rt=document.getElementById('pRetake');
+  if(rt) rt.onclick=function(){
+    pDraftClear();
+    S.ptest={stage:'intro', answers:{}, page:0, sex:mySex()}; S.view='ptest'; render(); window.scrollTo(0,0);
+  };
+  var ch=document.getElementById('pChoose');
+  if(ch) ch.onclick=function(){ S.ptest={stage:'pick', answers:{}, page:0, sex:mySex()}; S.view='ptest'; render(); window.scrollTo(0,0); };
+}
+
 function homeHtml(){
   var wk=thisWeek();
   var phase=weekPhase();
@@ -3605,6 +4047,7 @@ function homeHtml(){
   h += myOkrEntryHtml();
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
+  h += personalityCardHtml();
   h += weekSummaryHtml(wk);
   h += weekStatsHtml();
   h += leaveEntryHtml();
@@ -7982,7 +8425,7 @@ function teamHtml(){
         byMin[min].forEach(function(p){
           h+='<div class="dircard" data-person="'+esc(p.id)+'">'+avatarHtml(p)+
              '<div class="pname">'+esc(p.name)+'</div>'+
-             (p.role?'<div class="pmeta">'+esc(t(p.role))+'</div>':'')+'</div>';
+             (p.role?'<div class="pmeta">'+esc(t(p.role))+'</div>':'')+ptChipHtml(p)+'</div>';
         });
         h+='</div>';
       });
@@ -8014,6 +8457,7 @@ function personHtml(){
        '</div>';
   }
   h+='</div>';
+  h+=personTypeCardHtml(d);
 
   var withGoals=(d.goals||[]).filter(function(g){ return g.items.some(function(i){return i.text;}); });
   h+='<h3>🗒️ '+esc(t('Weekly goals'))+'</h3>';
@@ -8318,6 +8762,11 @@ function profileHtml(){
     '<label class="f">Ministry</label><select id="p_ministry"></select><div class="hint">Sets which KPIs show on your home page.</div>'+
     '<label class="f">Role / team</label><input type="text" id="p_role" value="'+esc(S.me.role)+'">'+
     staffTypeFieldHtml('p_type', S.me.staffType||'')+
+    '<label class="f">'+esc(t('Male or female'))+'</label><select id="p_sex">'+
+      '<option value="">'+esc(t('— choose —'))+'</option>'+
+      '<option value="female"'+((p.sex||'')==='female'?' selected':'')+'>'+esc(t('Female'))+'</option>'+
+      '<option value="male"'+((p.sex||'')==='male'?' selected':'')+'>'+esc(t('Male'))+'</option></select>'+
+      '<div class="hint">'+esc(t('Used for your personality character.'))+'</div>'+
     countryFieldHtml('p_country', S.me.country||'')+
     '<label class="f">My mentor <span class="lock">🔒 sees my private check-ins</span></label><select id="p_mentor"><option value="">— none —</option>'+opts+'</select>'+
     (p.mentorStatus==='pending' ? '<div class="hint">⏳ Waiting for them to accept</div>' : p.mentorStatus==='approved' ? '<div class="hint">✓ Accepted — they can see your private check-ins</div>' : '')+
@@ -9680,6 +10129,7 @@ function bind(){
 
   bindAway();
   bindAdmin();
+  bindPersonality();
 
   var gpm=document.getElementById('goProfileFromMe');
   if(gpm) gpm.onclick=function(){ S.view='profile'; render(); };
@@ -9913,6 +10363,7 @@ function bind(){
       ministry:(document.getElementById('p_ministry')||{}).value||'',
       role:document.getElementById('p_role').value.trim(),
       staffType:document.getElementById('p_type').value,
+      sex:(document.getElementById('p_sex')||{}).value||'',
       country:countryValue('p_country'),
       mentorId:document.getElementById('p_mentor').value,
       phone:document.getElementById('p_phone').value.trim(),
@@ -9925,7 +10376,7 @@ function bind(){
         S.me=d.staff; S.profile=d.profile; saveStaffCard(); showMsg('Profile saved');
         // Ministry may have changed, so re-pull the KPI set for the new one.
         run('getMyMinistry',[S.auth.user,S.auth.pin],function(mn){ if(mn.ok) S.ministry=mn; render(); });
-        run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();});
+        run('teamRoster',[S.auth.user,S.auth.pin],function(r){S.roster=Array.isArray(r)?r:[];render();});
       }
       else {
         sp.disabled=false; sp.textContent='Save profile';
@@ -9968,7 +10419,7 @@ function refreshAll(){
   if(!S.me) return Promise.resolve();
   var u=S.auth.user, k=S.auth.pin;
   return Promise.all([
-    runP('teamRoster',[]).then(function(r){ if(Array.isArray(r)) S.roster=r; }),
+    runP('teamRoster',[S.auth.user,S.auth.pin]).then(function(r){ if(Array.isArray(r)) S.roster=r; }),
     runP('getMyLogs',[u,k]).then(function(d){
       if(d&&d.ok){ S.logs=d.logs; adoptHabits(d.habits); if(d.profile) S.profile=Object.assign(S.profile||{}, d.profile); }
     }),

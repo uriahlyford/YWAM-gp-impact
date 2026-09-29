@@ -632,6 +632,40 @@ forms, documents and references follow.
   door + deep link, sign-up, dashboard, Khmer, desktop layout, staff side),
   `test-admin-portal-access.mjs` (the Admin screen).
 
+## Personality types (public/personality.js)
+
+Anyone can take a 40-statement questionnaire (or pick a type they already know)
+and get one of the sixteen four-letter types, a drawn character for it (male or
+female), a description, and tips that change with their ministry and the season
+they say they are in. Entry: the Personality card on My Home; a teammate's type
+from their profile. Screens: `ptestHtml` (S.view 'ptest') and `ptypeHtml` ('ptype').
+
+- **Everything in personality.js is GP's own** — the questions, type names ("The
+  Guide", "The Host"…), descriptions, tips and the avatar art. Only the four
+  letters and the idea of four preference pairs come from Jung / Myers–Briggs.
+  "Myers-Briggs" and "MBTI" are trademarks and the official questionnaire is
+  copyrighted; 16Personalities' test, type names, text and characters are theirs.
+  Never paste any of it in, however close a match looks. The screens may look
+  16Personalities-like; the words and pictures must stay ours. The fine print on
+  every screen says it is not the official MBTI® assessment — keep it.
+- **Who sees what** (tests/test-personality.mjs holds all of it):
+  - the no-PIN `teamRoster` is public to the internet and carries **none** of it —
+    `publicStaff_` is unchanged; `rosterStaff_` adds the avatar for signed-in
+    callers only (boot roster, `teamRoster(user, pin)`, `staffProfile`);
+  - a teammate sees a type, its avatar (type + sex) and its bars only while its
+    owner has "Show my type to the team" on (the default);
+  - **season is private** — "a stretched season" says how someone is doing, which
+    is not a directory fact. It lives only in the owner's `profile.personality`.
+- **The server re-checks the maths.** `cleanPScores_` refuses bars that disagree
+  with the letters (E:80 on an I type), so the screen can never contradict itself.
+- **The type and season lists exist twice** (personality.js and `PTYPE_CODES` /
+  `PSEASON_IDS` in api.js); the test fails if they drift.
+- **Scoring is balanced on purpose:** five statements keyed each way per pair, so
+  agreeing with everything lands on 50/50 rather than on a type.
+- **Khmer:** all ~390 strings are in `PENDING_KM` (machine-translated, unreviewed —
+  docs/khmer-needed.md §52, questions first). Type names translate as one phrase
+  via `pTheName()` — Khmer has no article, so never glue a translated "The" on.
+
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
   checks — `server tests` (seconds, no install) and `browser tests` (Playwright +

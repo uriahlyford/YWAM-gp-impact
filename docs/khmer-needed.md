@@ -1428,3 +1428,416 @@ note now shows which objective(s), if any, that number feeds into.
 |---|---|
 | feeds “{objective}” | ចូលរួមចំណែកដល់ “{objective}” |
 | feeds {n} objectives | ចូលរួមចំណែកដល់គោលដៅចំនួន {n} |
+
+## 52. Personality types (a new section of the app)
+
+Every staff member can take a 40-statement questionnaire and get a four-letter
+personality type, with a character drawn for their type and whether they are male
+or female. The questions, type names, descriptions and tips were all written for
+this app — none of it is copied from 16Personalities or the official MBTI® test —
+and every word below was translated by Claude and has NOT been checked.
+
+**Please read the questions first.** A personality question that means something
+slightly different in Khmer gives people the wrong type, so the 40 statements
+matter more than anything else on this list. The "Strongly agree … strongly
+disagree" words and "Agree / Disagree" under the circles come next.
+
+_"Extraverted / Introverted" are translated as ចេញក្រៅ / ក្នុងខ្លួន, and "Judging /
+Perceiving" as មានផែនការ / បត់បែន (planned / flexible) — plainer than the textbook
+terms. If a better standard Khmer term is in common use, prefer it._
+
+### The 40 statements
+
+| English | ខ្មែរ |
+|---|---|
+| I get energy from being around lots of people. | ខ្ញុំមានកម្លាំងពេលនៅជាមួយមនុស្សច្រើន។ |
+| I trust what I have seen and done more than new ideas. | ខ្ញុំទុកចិត្តអ្វីដែលខ្ញុំបានឃើញ និងបានធ្វើ ច្រើនជាងគំនិតថ្មីៗ។ |
+| When I decide, logic matters more to me than feelings. | ពេលខ្ញុំសម្រេចចិត្ត ហេតុផលសំខាន់សម្រាប់ខ្ញុំជាងអារម្មណ៍។ |
+| I like to plan my week in advance. | ខ្ញុំចូលចិត្តរៀបផែនការសប្តាហ៍របស់ខ្ញុំជាមុន។ |
+| After a busy day with people, I need quiet time alone to recharge. | ក្រោយថ្ងៃរវល់ជាមួយមនុស្ស ខ្ញុំត្រូវការពេលស្ងាត់ម្នាក់ឯងដើម្បីមានកម្លាំងឡើងវិញ។ |
+| I often imagine how things could be in the future. | ខ្ញុំច្រើនស្រមៃថាអ្វីៗអាចនឹងទៅជាយ៉ាងណានៅថ្ងៃអនាគត។ |
+| I think about how a decision will affect people's feelings. | ខ្ញុំគិតថាការសម្រេចចិត្តមួយនឹងប៉ះពាល់ដល់អារម្មណ៍មនុស្សយ៉ាងណា។ |
+| I prefer to keep my options open rather than decide early. | ខ្ញុំចូលចិត្តទុកជម្រើសឱ្យនៅបើក ជាជាងសម្រេចចិត្តឆាប់ពេក។ |
+| I usually think best by talking things through out loud. | ជាធម្មតាខ្ញុំគិតបានល្អបំផុត ដោយនិយាយរឿងនោះចេញមកឮៗ។ |
+| I like clear, practical instructions. | ខ្ញុំចូលចិត្តការណែនាំច្បាស់លាស់ និងជាក់ស្តែង។ |
+| I can give honest criticism even when it is uncomfortable. | ខ្ញុំអាចរិះគន់ដោយស្មោះត្រង់ សូម្បីតែពេលវាមិនស្រួល។ |
+| I feel uneasy when plans change at the last minute. | ខ្ញុំមិនស្រួលចិត្តពេលផែនការផ្លាស់ប្តូរនៅនាទីចុងក្រោយ។ |
+| I prefer to think carefully before I speak in a group. | ខ្ញុំចូលចិត្តគិតឱ្យបានល្អិតល្អន់ មុនពេលនិយាយក្នុងក្រុម។ |
+| I enjoy talking about ideas and possibilities, even if they are not practical yet. | ខ្ញុំចូលចិត្តនិយាយពីគំនិត និងលទ្ធភាព ទោះបីវាមិនទាន់ជាក់ស្តែងក៏ដោយ។ |
+| Keeping peace in the team is very important to me. | ការរក្សាសន្តិភាពក្នុងក្រុម គឺសំខាន់ណាស់សម្រាប់ខ្ញុំ។ |
+| I often do my best work close to a deadline. | ខ្ញុំច្រើនធ្វើការបានល្អបំផុត ពេលជិតដល់ពេលកំណត់។ |
+| I enjoy meeting new people and starting conversations. | ខ្ញុំចូលចិត្តជួបមនុស្សថ្មី និងចាប់ផ្តើមការសន្ទនា។ |
+| I notice details that other people miss. | ខ្ញុំកត់សម្គាល់ព័ត៌មានលម្អិតដែលអ្នកដទៃមើលរំលង។ |
+| Being fair and consistent matters more to me than making exceptions. | ភាពយុត្តិធម៌ និងស្មើៗគ្នា សំខាន់សម្រាប់ខ្ញុំជាងការធ្វើករណីលើកលែង។ |
+| I like to finish one task before starting another. | ខ្ញុំចូលចិត្តបញ្ចប់ការងារមួយ មុនចាប់ផ្តើមការងារមួយទៀត។ |
+| I would rather have a few deep friendships than many casual ones. | ខ្ញុំចូលចិត្តមានមិត្តភាពជ្រៅៗតិចតួច ជាជាងមិត្តធម្មតាច្រើន។ |
+| I see patterns and connections that others don't see. | ខ្ញុំមើលឃើញលំនាំ និងទំនាក់ទំនងដែលអ្នកដទៃមើលមិនឃើញ។ |
+| I easily feel what other people are feeling. | ខ្ញុំងាយដឹងពីអារម្មណ៍របស់អ្នកដទៃ។ |
+| I am comfortable not knowing exactly what will happen tomorrow. | ខ្ញុំស្រួលចិត្ត ទោះមិនដឹងច្បាស់ថាថ្ងៃស្អែកនឹងមានអ្វីកើតឡើង។ |
+| At a gathering, I talk with many different people. | នៅក្នុងការជួបជុំ ខ្ញុំនិយាយជាមួយមនុស្សផ្សេងៗគ្នាច្រើន។ |
+| I would rather improve something that works than try something untested. | ខ្ញុំចូលចិត្តកែលម្អអ្វីដែលដំណើរការស្រាប់ ជាជាងសាកល្បងអ្វីដែលមិនទាន់បានសាក។ |
+| I enjoy a good debate to find the best answer. | ខ្ញុំចូលចិត្តការជជែកដេញដោលល្អៗ ដើម្បីរកចម្លើយល្អបំផុត។ |
+| My room or workspace is usually tidy and organized. | បន្ទប់ ឬកន្លែងធ្វើការរបស់ខ្ញុំ ជាធម្មតាស្អាត និងមានរបៀប។ |
+| I often enjoy working on my own more than in a group. | ខ្ញុំច្រើនចូលចិត្តធ្វើការម្នាក់ឯង ជាងធ្វើក្នុងក្រុម។ |
+| I get bored doing the same task the same way every time. | ខ្ញុំធុញទ្រាន់ពេលធ្វើការងារដដែល តាមរបៀបដដែលរាល់ដង។ |
+| I find it hard to say no when someone asks me for help. | ខ្ញុំពិបាកបដិសេធ ពេលមាននរណាម្នាក់សុំឱ្យខ្ញុំជួយ។ |
+| I enjoy being spontaneous. | ខ្ញុំចូលចិត្តធ្វើអ្វីៗដោយមិនបានគ្រោងទុក។ |
+| Being alone for a long time leaves me restless. | ការនៅម្នាក់ឯងយូរ ធ្វើឱ្យខ្ញុំមិនស្ងប់។ |
+| I remember facts and specific experiences well. | ខ្ញុំចាំការពិត និងបទពិសោធន៍ជាក់លាក់បានល្អ។ |
+| In a conflict, I focus on the facts more than on people's emotions. | ពេលមានជម្លោះ ខ្ញុំផ្តោតលើការពិត ច្រើនជាងអារម្មណ៍របស់មនុស្ស។ |
+| I like making lists and ticking things off. | ខ្ញុំចូលចិត្តធ្វើបញ្ជី ហើយគូសចេញនូវអ្វីដែលបានធ្វើរួច។ |
+| People sometimes have to ask me what I am thinking. | ពេលខ្លះ មនុស្សត្រូវសួរខ្ញុំថាខ្ញុំកំពុងគិតអ្វី។ |
+| I often read between the lines to find the deeper meaning. | ខ្ញុំច្រើនអានរវាងបន្ទាត់ ដើម្បីរកអត្ថន័យដែលជ្រៅជាង។ |
+| I make decisions based on my values and what feels right. | ខ្ញុំសម្រេចចិត្តផ្អែកលើតម្លៃរបស់ខ្ញុំ និងអ្វីដែលមានអារម្មណ៍ថាត្រឹមត្រូវ។ |
+| Rules and routines can feel limiting to me. | ច្បាប់ និងទម្លាប់ដដែលៗ អាចធ្វើឱ្យខ្ញុំមានអារម្មណ៍ថាត្រូវបានកំណត់ព្រំដែន។ |
+
+### Screens, buttons and labels
+
+| English | ខ្មែរ |
+|---|---|
+| Personality | បុគ្គលិកលក្ខណៈ |
+| Discover your personality type | ស្វែងរកប្រភេទបុគ្គលិកលក្ខណៈរបស់អ្នក |
+| 40 quick statements · about 5 minutes | សេចក្តីថ្លែងខ្លីៗ ៤០ · ប្រហែល ៥ នាទី |
+| How to work well with {name} | របៀបធ្វើការល្អជាមួយ {name} |
+| Personality types could not load. Pull down to refresh. | មិនអាចផ្ទុកប្រភេទបុគ្គលិកលក្ខណៈបានទេ។ ទាញចុះក្រោមដើម្បីផ្ទុកឡើងវិញ។ |
+| Personality type | ប្រភេទបុគ្គលិកលក្ខណៈ |
+| Forty short statements. Answer how you really are — not how you wish you were, or how your job needs you to be. | សេចក្តីថ្លែងខ្លីៗសែសិប។ ឆ្លើយតាមអ្វីដែលអ្នកពិតជាជា — មិនមែនអ្វីដែលអ្នកចង់ក្លាយជា ឬអ្វីដែលការងារត្រូវការឱ្យអ្នកជានោះទេ។ |
+| There are no right answers, and no type is better than another. | គ្មានចម្លើយត្រូវទេ ហើយគ្មានប្រភេទណាល្អជាងប្រភេទណាទេ។ |
+| Your character | តួអង្គរបស់អ្នក |
+| Female | ស្រី |
+| Male | ប្រុស |
+| Carry on — {n} of 40 answered | បន្ត — បានឆ្លើយ {n} ក្នុងចំណោម ៤០ |
+| Start | ចាប់ផ្តើម |
+| Choose one to start. | ជ្រើសរើសមួយដើម្បីចាប់ផ្តើម។ |
+| I already know my type | ខ្ញុំដឹងប្រភេទរបស់ខ្ញុំរួចហើយ |
+| Choose your type | ជ្រើសរើសប្រភេទរបស់អ្នក |
+| Already taken a test like this before? Pick the four letters you got. | ធ្លាប់ធ្វើតេស្តបែបនេះពីមុនមែនទេ? ជ្រើសរើសអក្សរបួនដែលអ្នកទទួលបាន។ |
+| For your character — choose one first. | សម្រាប់តួអង្គរបស់អ្នក — ជ្រើសរើសមួយជាមុនសិន។ |
+| Agree | យល់ស្រប |
+| Disagree | មិនយល់ស្រប |
+| See my type | មើលប្រភេទរបស់ខ្ញុំ |
+| Strongly disagree | មិនយល់ស្របខ្លាំង |
+| Slightly disagree | មិនយល់ស្របបន្តិច |
+| Neutral | អព្យាក្រឹត |
+| Slightly agree | យល់ស្របបន្តិច |
+| Strongly agree | យល់ស្របខ្លាំង |
+| Uses the same four letters as Myers–Briggs®. This is GP’s own short questionnaire, not the official MBTI® assessment. | ប្រើអក្សរបួនដូចគ្នានឹង Myers–Briggs®។ នេះជាកម្រងសំណួរខ្លីរបស់ GP ផ្ទាល់ មិនមែនការវាយតម្លៃ MBTI® ផ្លូវការទេ។ |
+| A type describes what comes naturally to you — not what you are able to do. | ប្រភេទមួយពិពណ៌នាអ្វីដែលកើតឡើងដោយធម្មជាតិចំពោះអ្នក — មិនមែនអ្វីដែលអ្នកអាចធ្វើបាននោះទេ។ |
+| No type chosen yet. | មិនទាន់បានជ្រើសរើសប្រភេទនៅឡើយ។ |
+| {name}’s type | ប្រភេទរបស់ {name} |
+| Strengths | ចំណុចខ្លាំង |
+| Watch out for | ត្រូវប្រយ័ត្ន |
+| For you, right now | សម្រាប់អ្នក នៅពេលនេះ |
+| What season are you in? | តើអ្នកកំពុងនៅក្នុងរដូវកាលណា? |
+| only you see this | មានតែអ្នកទេដែលឃើញ |
+| How others can work well with you | របៀបដែលអ្នកដទៃអាចធ្វើការល្អជាមួយអ្នក |
+| Working with {name} | ការធ្វើការជាមួយ {name} |
+| Show my type to the team | បង្ហាញប្រភេទរបស់ខ្ញុំដល់ក្រុម |
+| Your season always stays private. | រដូវកាលរបស់អ្នកតែងតែរក្សាជាឯកជន។ |
+| Retake the test | ធ្វើតេស្តម្តងទៀត |
+| Choose a different type | ជ្រើសរើសប្រភេទផ្សេង |
+| Could not save — check your connection and try again. | មិនអាចរក្សាទុកបានទេ — សូមពិនិត្យការតភ្ជាប់ ហើយព្យាយាមម្តងទៀត។ |
+| Answer every statement first. | សូមឆ្លើយសេចក្តីថ្លែងទាំងអស់ជាមុនសិន។ |
+| Male or female | ប្រុស ឬស្រី |
+| Used for your personality character. | ប្រើសម្រាប់តួអង្គបុគ្គលិកលក្ខណៈរបស់អ្នក។ |
+
+### The sixteen type names, the four groups and the four pairs
+
+_A type name is translated as one phrase ("The Guide" → អ្នកណែនាំ) — Khmer has no "the"._
+
+| English | ខ្មែរ |
+|---|---|
+| The Strategist | អ្នកយុទ្ធសាស្ត្រ |
+| The Thinker | អ្នកគិតពិចារណា |
+| The Director | អ្នកដឹកនាំ |
+| The Innovator | អ្នកច្នៃប្រឌិត |
+| The Guide | អ្នកណែនាំ |
+| The Dreamer | អ្នកស្រមៃ |
+| The Encourager | អ្នកលើកទឹកចិត្ត |
+| The Spark | អ្នកបំផុសចិត្ត |
+| The Steward | អ្នកមើលខុសត្រូវ |
+| The Carer | អ្នកមើលថែ |
+| The Organizer | អ្នករៀបចំ |
+| The Host | ម្ចាស់ផ្ទះ |
+| The Fixer | អ្នកជួសជុល |
+| The Artist | សិល្បករ |
+| The Trailblazer | អ្នកត្រួសត្រាយ |
+| The Energizer | អ្នកផ្តល់ថាមពល |
+| The students need you. So does your own soul — keep your own time with God. | សិស្សត្រូវការអ្នក។ ព្រលឹងរបស់អ្នកក៏ដូច្នោះដែរ — រក្សាពេលផ្ទាល់ខ្លួនរបស់អ្នកជាមួយព្រះ។ |
+| Minds | ក្រុមគំនិត |
+| Hearts | ក្រុមចិត្ត |
+| Anchors | ក្រុមយុថ្កា |
+| Movers | ក្រុមសកម្ម |
+| Energy | ថាមពល |
+| Extraverted | ចេញក្រៅ |
+| Introverted | ក្នុងខ្លួន |
+| Information | ព័ត៌មាន |
+| Sensing | ជាក់ស្តែង |
+| Intuitive | វិចារណញាណ |
+| Decisions | ការសម្រេចចិត្ត |
+| Thinking | ហេតុផល |
+| Feeling | អារម្មណ៍ |
+| Structure | របៀបរស់នៅ |
+| Judging | មានផែនការ |
+| Perceiving | បត់បែន |
+
+### Descriptions, strengths, watch-outs and tips
+
+| English | ខ្មែរ |
+|---|---|
+| Big-picture thinkers who love ideas, systems and getting things right. | អ្នកគិតរូបភាពធំ ដែលស្រឡាញ់គំនិត ប្រព័ន្ធ និងការធ្វើអ្វីៗឱ្យបានត្រឹមត្រូវ។ |
+| People-first idealists who see potential and care about meaning. | អ្នកដែលយកមនុស្សជាធំ មើលឃើញសក្តានុពល និងយកចិត្តទុកដាក់ចំពោះអត្ថន័យ។ |
+| Steady, faithful people who hold a team together with care and order. | មនុស្សនឹងនរ និងស្មោះត្រង់ ដែលរក្សាក្រុមឱ្យនៅជាមួយគ្នា ដោយការយកចិត្តទុកដាក់ និងសណ្តាប់ធ្នាប់។ |
+| Practical, present people who jump in and make things happen. | មនុស្សជាក់ស្តែង រស់នៅក្នុងពេលបច្ចុប្បន្ន ដែលចូលធ្វើភ្លាម ហើយធ្វើឱ្យកិច្ចការកើតឡើង។ |
+| Sees the long road and plans the route. | មើលឃើញផ្លូវវែងឆ្ងាយ ហើយរៀបផែនការផ្លូវដើរ។ |
+| Strategists think in years, not days. They see where things are heading, notice what will not work long before anyone else does, and quietly build a plan to get somewhere better. They are independent, driven and hard to rattle, and they would much rather do a few things excellently than many things halfway. | អ្នកយុទ្ធសាស្ត្រគិតជាឆ្នាំ មិនមែនជាថ្ងៃទេ។ ពួកគេមើលឃើញថាអ្វីៗកំពុងឆ្ពោះទៅណា ដឹងមុនគេថាអ្វីនឹងមិនដំណើរការ ហើយស្ងាត់ៗរៀបផែនការដើម្បីទៅដល់កន្លែងដែលល្អជាង។ ពួកគេឯករាជ្យ មានការតាំងចិត្ត និងមិនងាយរំខាន ហើយពួកគេចូលចិត្តធ្វើរឿងតិចតួចឱ្យបានល្អឥតខ្ចោះ ជាជាងធ្វើរឿងច្រើនពាក់កណ្តាលទី។ |
+| Sees the big picture and plans ahead | មើលឃើញរូបភាពធំ ហើយរៀបផែនការជាមុន |
+| Honest and clear about what needs to change | ស្មោះត្រង់ និងច្បាស់លាស់អំពីអ្វីដែលត្រូវផ្លាស់ប្តូរ |
+| Keeps high standards and follows through | រក្សាស្តង់ដារខ្ពស់ ហើយធ្វើរហូតដល់ចប់ |
+| Can seem cold or critical when focused | អាចមើលទៅត្រជាក់ ឬរិះគន់ នៅពេលកំពុងផ្តោតអារម្មណ៍ |
+| May forget to explain the plan to everyone else | អាចភ្លេចពន្យល់ផែនការដល់អ្នកដទៃ |
+| Can get impatient with people who move slowly | អាចអន្ទះសារជាមួយមនុស្សដែលធ្វើអ្វីយឺត |
+| Give them the goal and the room to work out the route. | ប្រាប់ពួកគេពីគោលដៅ ហើយទុកឱកាសឱ្យពួកគេរកផ្លូវដោយខ្លួនឯង។ |
+| Bring them a problem early — they would rather plan than rescue. | ប្រាប់ពួកគេពីបញ្ហាឱ្យបានឆាប់ — ពួកគេចូលចិត្តរៀបផែនការ ជាជាងដោះស្រាយពេលយឺតពេក។ |
+| Asks why until the answer holds together. | សួរថាហេតុអ្វី រហូតដល់ចម្លើយសមហេតុផល។ |
+| Thinkers want to understand how things really work. They question assumptions, spot the flaw in an argument, and love a problem nobody has solved yet. Quiet and curious, they often have their best ideas alone, and they are happiest when they have time to think something all the way through. | អ្នកគិតពិចារណាចង់យល់ថាអ្វីៗដំណើរការយ៉ាងដូចម្តេចពិតប្រាកដ។ ពួកគេសួរសំណួរលើការសន្មត់ រកឃើញកំហុសក្នុងអំណះអំណាង ហើយស្រឡាញ់បញ្ហាដែលគ្មាននរណាដោះស្រាយបាន។ ស្ងាត់ និងចង់ដឹងចង់ឃើញ ពួកគេច្រើនតែមានគំនិតល្អបំផុតពេលនៅម្នាក់ឯង ហើយសប្បាយចិត្តបំផុតពេលមានពេលគិតរឿងមួយឱ្យដល់ទីបញ្ចប់។ |
+| Solves hard problems in fresh ways | ដោះស្រាយបញ្ហាពិបាកតាមរបៀបថ្មី |
+| Fair-minded and open to any good idea | យុត្តិធម៌ និងបើកចិត្តទទួលគំនិតល្អណាមួយ |
+| Calm and objective under pressure | ស្ងប់ស្ងាត់ និងមិនលម្អៀង នៅពេលមានសម្ពាធ |
+| Can get lost in ideas and lose track of deadlines | អាចវង្វេងក្នុងគំនិត ហើយភ្លេចពេលកំណត់ |
+| May leave feelings unspoken or unnoticed | អាចមិននិយាយ ឬមិនកត់សម្គាល់អារម្មណ៍ |
+| Can find routine tasks draining | អាចហត់នឿយជាមួយការងារដដែលៗ |
+| Ask for their thinking, not just their agreement. | សួររកគំនិតរបស់ពួកគេ មិនមែនគ្រាន់តែការយល់ព្រមទេ។ |
+| Help them turn a good idea into a next step with a date on it. | ជួយពួកគេប្តូរគំនិតល្អ ទៅជាជំហានបន្ទាប់ដែលមានកាលបរិច្ឆេទ។ |
+| Turns a vision into a plan and a plan into action. | ប្តូរចក្ខុវិស័យទៅជាផែនការ ហើយផែនការទៅជាសកម្មភាព។ |
+| Directors are natural leaders who see what could be done and organize people to do it. They are decisive, confident and energized by a challenge. They make hard calls, set clear goals and push the team forward, and they are at their best when there is something big to build. | អ្នកដឹកនាំជាអ្នកដឹកនាំពីធម្មជាតិ ដែលមើលឃើញអ្វីដែលអាចធ្វើបាន ហើយរៀបចំមនុស្សឱ្យធ្វើវា។ ពួកគេសម្រេចចិត្តបានរហ័ស មានទំនុកចិត្ត ហើយមានកម្លាំងពេលជួបបញ្ហាប្រឈម។ ពួកគេសម្រេចរឿងពិបាក កំណត់គោលដៅច្បាស់ ហើយជំរុញក្រុមទៅមុខ ហើយពួកគេល្អបំផុតពេលមានអ្វីធំៗត្រូវកសាង។ |
+| Decisive and clear in a crisis | សម្រេចចិត្តបាន និងច្បាស់លាស់ក្នុងគ្រាលំបាក |
+| Organizes people and resources well | រៀបចំមនុស្ស និងធនធានបានល្អ |
+| Brings energy and ambition to a team | នាំថាមពល និងមហិច្ឆតាមកក្រុម |
+| Can push too hard and leave people behind | អាចជំរុញខ្លាំងពេក ហើយទុកមនុស្សនៅពីក្រោយ |
+| May decide before everyone has been heard | អាចសម្រេចចិត្ត មុនពេលស្តាប់គ្រប់គ្នា |
+| Can come across as blunt or demanding | អាចមើលទៅនិយាយត្រង់ពេក ឬទាមទារច្រើន |
+| Be direct — they respect people who speak plainly. | និយាយត្រង់ៗ — ពួកគេគោរពមនុស្សដែលនិយាយច្បាស់។ |
+| Tell them how the team is feeling; they may not have noticed. | ប្រាប់ពួកគេថាក្រុមមានអារម្មណ៍យ៉ាងណា ព្រោះពួកគេប្រហែលមិនបានកត់សម្គាល់។ |
+| Finds a new way through every old problem. | រកផ្លូវថ្មីឆ្លងកាត់បញ្ហាចាស់ៗ។ |
+| Innovators love new ideas and the debate that sharpens them. Quick-witted and curious, they see possibilities everywhere and enjoy questioning the way things have always been done. They bring energy to a brainstorm and are brilliant at finding a way around a problem that has everyone else stuck. | អ្នកច្នៃប្រឌិតស្រឡាញ់គំនិតថ្មី និងការជជែកដែលធ្វើឱ្យគំនិតកាន់តែមុត។ ឆ្លាតរហ័ស និងចង់ដឹងចង់ឃើញ ពួកគេមើលឃើញលទ្ធភាពគ្រប់ទីកន្លែង ហើយចូលចិត្តសួររបៀបដែលគេធ្លាប់ធ្វើ។ ពួកគេនាំថាមពលមកការបញ្ចេញគំនិត ហើយពូកែរកផ្លូវជុំវិញបញ្ហាដែលធ្វើឱ្យអ្នកដទៃជាប់គាំង។ |
+| Creative and quick at finding solutions | មានការច្នៃប្រឌិត និងរហ័សក្នុងការរកដំណោះស្រាយ |
+| Brings energy and humour to the team | នាំថាមពល និងភាពកំប្លែងមកក្រុម |
+| Adapts easily when things change | សម្របខ្លួនបានងាយពេលអ្វីៗផ្លាស់ប្តូរ |
+| Starts many things and finishes fewer | ចាប់ផ្តើមរឿងច្រើន តែបញ្ចប់បានតិច |
+| Can argue for fun and upset people without meaning to | អាចជជែកដេញដោលលេង ហើយធ្វើឱ្យគេខកចិត្តដោយមិនចេតនា |
+| May find details and routine boring | អាចធុញទ្រាន់នឹងព័ត៌មានលម្អិត និងការងារដដែលៗ |
+| Give them a real problem to crack, not just a task list. | ឱ្យពួកគេនូវបញ្ហាពិតប្រាកដដើម្បីដោះស្រាយ មិនមែនគ្រាន់តែបញ្ជីការងារទេ។ |
+| Pair them with someone who loves to finish things. | ដាក់ពួកគេជាមួយអ្នកដែលចូលចិត្តបញ្ចប់ការងារ។ |
+| Quietly sees who people could become. | ស្ងាត់ៗមើលឃើញថាមនុស្សអាចក្លាយជាអ្វី។ |
+| Guides combine deep care for people with a clear sense of purpose. They notice what others are feeling, often before it is said, and they have a gift for helping people grow. Quiet but determined, they are driven by values and meaning, and they want their work to make a real difference in people's lives. | អ្នកណែនាំរួមបញ្ចូលការយកចិត្តទុកដាក់យ៉ាងជ្រៅចំពោះមនុស្ស ជាមួយនឹងគោលបំណងច្បាស់លាស់។ ពួកគេដឹងពីអារម្មណ៍អ្នកដទៃ ជារឿយៗមុនពេលគេនិយាយ ហើយមានអំណោយទានក្នុងការជួយមនុស្សឱ្យលូតលាស់។ ស្ងាត់ តែមានការតាំងចិត្ត ពួកគេត្រូវបានជំរុញដោយតម្លៃ និងអត្ថន័យ ហើយចង់ឱ្យការងាររបស់ពួកគេធ្វើឱ្យជីវិតមនុស្សប្រែប្រួលពិតប្រាកដ។ |
+| Deep insight into people | យល់ពីមនុស្សយ៉ាងជ្រៅ |
+| Committed to what is right and meaningful | ប្តេជ្ញាចំពោះអ្វីដែលត្រឹមត្រូវ និងមានអត្ថន័យ |
+| Encourages others to grow | លើកទឹកចិត្តអ្នកដទៃឱ្យលូតលាស់ |
+| Takes on other people's burdens and burns out | យកបន្ទុករបស់អ្នកដទៃមកលីខ្លួនឯង រហូតអស់កម្លាំង |
+| Can be too hard on themselves | អាចតឹងរ៉ឹងពេកចំពោះខ្លួនឯង |
+| May hold back concerns to keep the peace | អាចលាក់ការព្រួយបារម្ភ ដើម្បីរក្សាសន្តិភាព |
+| Give them time to think before asking for an answer. | ឱ្យពួកគេមានពេលគិត មុននឹងសួររកចម្លើយ។ |
+| Check in on how they are doing — they rarely say when they are tired. | សួរសុខទុក្ខពួកគេ — ពួកគេកម្រនិយាយពេលហត់នឿយណាស់។ |
+| Lives by deep values and hopes for a better world. | រស់នៅតាមតម្លៃជ្រៅ ហើយសង្ឃឹមលើពិភពលោកដែលល្អជាង។ |
+| Dreamers are gentle, sincere people with a strong inner sense of right and wrong. They care deeply about people and about living with integrity. Creative and imaginative, they see the good in others and hope for a better world, and they give their whole heart to work that matters to them. | អ្នកស្រមៃជាមនុស្សទន់ភ្លន់ និងស្មោះស្ម័គ្រ ដែលមានការយល់ដឹងខាងក្នុងយ៉ាងមាំអំពីត្រូវនិងខុស។ ពួកគេយកចិត្តទុកដាក់យ៉ាងជ្រៅចំពោះមនុស្ស និងការរស់នៅដោយសុចរិត។ មានការច្នៃប្រឌិត និងការស្រមៃ ពួកគេមើលឃើញភាពល្អក្នុងអ្នកដទៃ សង្ឃឹមលើពិភពលោកដែលល្អជាង ហើយថ្វាយចិត្តទាំងស្រុងចំពោះការងារដែលសំខាន់សម្រាប់ពួកគេ។ |
+| Compassionate and genuinely kind | មានចិត្តអាណិតអាសូរ និងចិត្តល្អពិតប្រាកដ |
+| Creative and full of imagination | មានការច្នៃប្រឌិត និងពោរពេញដោយការស្រមៃ |
+| Loyal to people and to their values | ស្មោះត្រង់ចំពោះមនុស្ស និងតម្លៃរបស់ខ្លួន |
+| Takes criticism very personally | យកការរិះគន់មកគិតជារឿងផ្ទាល់ខ្លួនខ្លាំង |
+| Can struggle with practical details and deadlines | អាចពិបាកជាមួយព័ត៌មានលម្អិតជាក់ស្តែង និងពេលកំណត់ |
+| May withdraw instead of addressing conflict | អាចដកខ្លួនចេញ ជំនួសឱ្យការដោះស្រាយជម្លោះ |
+| Show them why the work matters, not just what to do. | បង្ហាញពួកគេថាហេតុអ្វីការងារនេះសំខាន់ មិនមែនត្រឹមតែត្រូវធ្វើអ្វីទេ។ |
+| Give feedback gently and in private. | ផ្តល់មតិយោបល់ដោយទន់ភ្លន់ និងដោយឡែក។ |
+| Draws people together and calls out their best. | ប្រមូលមនុស្សឱ្យនៅជាមួយគ្នា ហើយទាញយកចំណុចល្អបំផុតរបស់ពួកគេ។ |
+| Encouragers are warm, inspiring people who bring out the best in those around them. They notice what each person needs, speak life into them, and naturally gather people around a shared purpose. They are at home leading, teaching and mentoring, and a team feels more united when they are in it. | អ្នកលើកទឹកចិត្តជាមនុស្សកក់ក្តៅ និងបំផុសគំនិត ដែលទាញយកចំណុចល្អបំផុតរបស់អ្នកនៅជុំវិញ។ ពួកគេដឹងថាម្នាក់ៗត្រូវការអ្វី និយាយពាក្យផ្តល់ជីវិតដល់ពួកគេ ហើយប្រមូលមនុស្សជុំវិញគោលបំណងរួមដោយធម្មជាតិ។ ពួកគេស្ទាត់ក្នុងការដឹកនាំ បង្រៀន និងជាអ្នកណែនាំ ហើយក្រុមមានការរួបរួមជាងមុនពេលមានពួកគេ។ |
+| Builds unity and team spirit | កសាងការរួបរួម និងស្មារតីក្រុម |
+| Speaks encouragement and vision | និយាយពាក្យលើកទឹកចិត្ត និងចក្ខុវិស័យ |
+| Reads people and situations well | យល់ពីមនុស្ស និងស្ថានភាពបានល្អ |
+| Can overcommit to helping everyone | អាចសន្យាជួយគ្រប់គ្នាច្រើនពេក |
+| Takes it hard when people are unhappy with them | ពិបាកចិត្តខ្លាំង ពេលមាននរណាម្នាក់មិនពេញចិត្តនឹងខ្លួន |
+| May neglect their own needs | អាចធ្វេសប្រហែសតម្រូវការរបស់ខ្លួនឯង |
+| Thank them — encouragement fuels them too. | អរគុណពួកគេ — ការលើកទឹកចិត្តក៏ផ្តល់កម្លាំងដល់ពួកគេដែរ។ |
+| Help them say no to the extra thing. | ជួយពួកគេឱ្យហ៊ានបដិសេធរឿងបន្ថែម។ |
+| Brings joy, ideas and possibility into the room. | នាំសេចក្តីអំណរ គំនិត និងលទ្ធភាពចូលមកក្នុងបន្ទប់។ |
+| Sparks are enthusiastic, creative people who light up a room. They love people, new ideas and new experiences, and they see possibility everywhere. They connect easily with almost anyone and bring warmth and hope to a team, especially when something new is starting. | អ្នកបំផុសចិត្តជាមនុស្សមានភាពរីករាយ និងការច្នៃប្រឌិត ដែលធ្វើឱ្យបន្ទប់ភ្លឺស្វាង។ ពួកគេស្រឡាញ់មនុស្ស គំនិតថ្មី និងបទពិសោធន៍ថ្មី ហើយមើលឃើញលទ្ធភាពគ្រប់ទីកន្លែង។ ពួកគេភ្ជាប់ទំនាក់ទំនងបានងាយជាមួយស្ទើរតែគ្រប់គ្នា ហើយនាំភាពកក់ក្តៅ និងក្តីសង្ឃឹមមកក្រុម ជាពិសេសពេលមានអ្វីថ្មីកំពុងចាប់ផ្តើម។ |
+| Enthusiastic and full of ideas | មានភាពរីករាយ និងពោរពេញដោយគំនិត |
+| Connects easily with all kinds of people | ភ្ជាប់ទំនាក់ទំនងបានងាយជាមួយមនុស្សគ្រប់ប្រភេទ |
+| Brings hope and energy to a team | នាំក្តីសង្ឃឹម និងថាមពលមកក្រុម |
+| Gets distracted by the next exciting thing | ងាយរំខានដោយរឿងគួរឱ្យរំភើបបន្ទាប់ |
+| Can find routine and follow-through hard | អាចពិបាកជាមួយការងារដដែលៗ និងការធ្វើរហូតដល់ចប់ |
+| May overpromise and feel overwhelmed | អាចសន្យាច្រើនពេក ហើយមានអារម្មណ៍ថាធ្ងន់ពេក |
+| Let them start things and bring others in. | ឱ្យពួកគេចាប់ផ្តើមរឿងថ្មី ហើយនាំអ្នកដទៃចូលរួម។ |
+| Agree on one or two things they will finish this week. | ព្រមព្រៀងគ្នាលើរឿងមួយ ឬពីរដែលពួកគេនឹងបញ្ចប់នៅសប្តាហ៍នេះ។ |
+| Faithful with the details, dependable to the end. | ស្មោះត្រង់ក្នុងរឿងលម្អិត និងអាចទុកចិត្តបានរហូតដល់ចប់។ |
+| Stewards are responsible, careful people who do what they say they will do. They respect order, keep good records and make sure things are done properly. Practical and loyal, they are the ones a team relies on to keep the basics running well — quietly, faithfully and without needing to be thanked. | អ្នកមើលខុសត្រូវជាមនុស្សមានទំនួលខុសត្រូវ និងប្រុងប្រយ័ត្ន ដែលធ្វើអ្វីដែលខ្លួនបាននិយាយ។ ពួកគេគោរពសណ្តាប់ធ្នាប់ រក្សាកំណត់ត្រាបានល្អ ហើយធ្វើឱ្យប្រាកដថាអ្វីៗត្រូវបានធ្វើត្រឹមត្រូវ។ ជាក់ស្តែង និងស្មោះត្រង់ ពួកគេជាអ្នកដែលក្រុមពឹងផ្អែក ដើម្បីឱ្យរឿងមូលដ្ឋានដំណើរការបានល្អ — ដោយស្ងាត់ៗ ដោយស្មោះត្រង់ និងមិនត្រូវការឱ្យគេអរគុណ។ |
+| Reliable and faithful with responsibility | អាចទុកចិត្តបាន និងស្មោះត្រង់ចំពោះទំនួលខុសត្រូវ |
+| Careful with details, money and records | ប្រុងប្រយ័ត្នចំពោះព័ត៌មានលម្អិត លុយ និងកំណត់ត្រា |
+| Calm, steady and practical | ស្ងប់ស្ងាត់ នឹងនរ និងជាក់ស្តែង |
+| Can resist change even when it is needed | អាចទប់ទល់នឹងការផ្លាស់ប្តូរ សូម្បីតែពេលចាំបាច់ |
+| May seem rigid about rules and process | អាចមើលទៅតឹងរ៉ឹងចំពោះច្បាប់ និងដំណើរការ |
+| Can keep stress inside until it builds up | អាចទុកភាពតានតឹងនៅក្នុងខ្លួន រហូតដល់វាកើនឡើង |
+| Explain changes early and give reasons. | ពន្យល់ពីការផ្លាស់ប្តូរឱ្យបានឆាប់ ហើយប្រាប់ពីមូលហេតុ។ |
+| Tell them clearly what is expected and by when. | ប្រាប់ពួកគេឱ្យច្បាស់ថាគេរំពឹងអ្វី និងត្រូវរួចនៅពេលណា។ |
+| Serves quietly and remembers what matters to people. | បម្រើដោយស្ងាត់ៗ ហើយចងចាំអ្វីដែលសំខាន់ចំពោះមនុស្ស។ |
+| Carers are warm, humble people who love to look after others. They remember the small details — someone's birthday, how they like their coffee, what they were worried about last week. Faithful and hardworking, they serve without fuss, and people feel safe and cared for around them. | អ្នកមើលថែជាមនុស្សកក់ក្តៅ និងរាបសា ដែលចូលចិត្តមើលថែអ្នកដទៃ។ ពួកគេចងចាំរឿងតូចៗ — ថ្ងៃកំណើតរបស់នរណាម្នាក់ របៀបដែលគេចូលចិត្តកាហ្វេ អ្វីដែលគេព្រួយបារម្ភកាលពីសប្តាហ៍មុន។ ស្មោះត្រង់ និងឧស្សាហ៍ ពួកគេបម្រើដោយមិនត្អូញត្អែរ ហើយមនុស្សមានអារម្មណ៍សុវត្ថិភាព និងត្រូវបានយកចិត្តទុកដាក់នៅជុំវិញពួកគេ។ |
+| Kind, patient and attentive | ចិត្តល្អ អត់ធ្មត់ និងយកចិត្តទុកដាក់ |
+| Faithful and hardworking | ស្មោះត្រង់ និងឧស្សាហ៍ |
+| Remembers what matters to people | ចងចាំអ្វីដែលសំខាន់ចំពោះមនុស្ស |
+| Finds it hard to say no | ពិបាកនឹងបដិសេធ |
+| May not speak up about their own needs | អាចមិននិយាយពីតម្រូវការរបស់ខ្លួនឯង |
+| Can feel unappreciated and quietly tired | អាចមានអារម្មណ៍ថាគេមិនឱ្យតម្លៃ ហើយហត់នឿយដោយស្ងាត់ៗ |
+| Notice and thank them for the unseen work. | កត់សម្គាល់ ហើយអរគុណពួកគេចំពោះការងារដែលគេមិនបានឃើញ។ |
+| Ask directly what they need — they will not always say. | សួរត្រង់ៗថាពួកគេត្រូវការអ្វី — ពួកគេមិនតែងតែប្រាប់ទេ។ |
+| Brings order, clear roles and follow-through. | នាំសណ្តាប់ធ្នាប់ តួនាទីច្បាស់លាស់ និងការធ្វើរហូតដល់ចប់។ |
+| Organizers are practical, decisive people who like things done well and on time. They set clear expectations, create structure and make sure everyone knows their part. Honest and hardworking, they get projects finished and keep a team moving when things could easily fall apart. | អ្នករៀបចំជាមនុស្សជាក់ស្តែង និងសម្រេចចិត្តបានរហ័ស ដែលចូលចិត្តឱ្យអ្វីៗធ្វើបានល្អ និងទាន់ពេល។ ពួកគេកំណត់ការរំពឹងទុកឱ្យច្បាស់ បង្កើតរចនាសម្ព័ន្ធ ហើយធ្វើឱ្យប្រាកដថាគ្រប់គ្នាដឹងពីតួនាទីរបស់ខ្លួន។ ស្មោះត្រង់ និងឧស្សាហ៍ ពួកគេធ្វើឱ្យគម្រោងបានបញ្ចប់ ហើយរក្សាក្រុមឱ្យដើរទៅមុខ ពេលអ្វីៗអាចបែកបាក់បានយ៉ាងងាយ។ |
+| Organizes people and tasks well | រៀបចំមនុស្ស និងការងារបានល្អ |
+| Clear, honest and dependable | ច្បាស់លាស់ ស្មោះត្រង់ និងអាចទុកចិត្តបាន |
+| Gets things finished on time | ធ្វើការងារឱ្យរួចទាន់ពេល |
+| Can be controlling or impatient | អាចចូលចិត្តគ្រប់គ្រងពេក ឬអន្ទះសារ |
+| May miss how others are feeling | អាចមិនកត់សម្គាល់ពីអារម្មណ៍អ្នកដទៃ |
+| Can find it hard to adapt when plans change | អាចពិបាកសម្របខ្លួនពេលផែនការផ្លាស់ប្តូរ |
+| Be clear, prepared and on time. | ឱ្យច្បាស់លាស់ ត្រៀមខ្លួនរួចរាល់ និងទាន់ពេល។ |
+| Share the reasons behind a change, not just the change. | ប្រាប់ពីមូលហេតុនៃការផ្លាស់ប្តូរ មិនមែនត្រឹមតែការផ្លាស់ប្តូរទេ។ |
+| Makes everyone feel welcome and looked after. | ធ្វើឱ្យគ្រប់គ្នាមានអារម្មណ៍ថាត្រូវបានស្វាគមន៍ និងមើលថែ។ |
+| Hosts are caring, sociable people who make a place feel like home. They notice who is left out, bring people together and make sure everyone has what they need. Loyal and practical, they love serving others and help a community stay warm, connected and well organized. | ម្ចាស់ផ្ទះជាមនុស្សយកចិត្តទុកដាក់ និងរួសរាយរាក់ទាក់ ដែលធ្វើឱ្យកន្លែងមួយមានអារម្មណ៍ដូចផ្ទះ។ ពួកគេកត់សម្គាល់អ្នកដែលត្រូវគេទុកចោល នាំមនុស្សមកជាមួយគ្នា ហើយធ្វើឱ្យប្រាកដថាគ្រប់គ្នាមានអ្វីដែលខ្លួនត្រូវការ។ ស្មោះត្រង់ និងជាក់ស្តែង ពួកគេស្រឡាញ់ការបម្រើអ្នកដទៃ ហើយជួយសហគមន៍ឱ្យនៅតែកក់ក្តៅ ភ្ជាប់ទំនាក់ទំនង និងរៀបចំបានល្អ។ |
+| Welcoming and hospitable | ស្វាគមន៍ និងទទួលភ្ញៀវដោយរាក់ទាក់ |
+| Practical in caring for people | ជាក់ស្តែងក្នុងការមើលថែមនុស្ស |
+| Builds harmony and belonging | កសាងភាពសុខដុម និងអារម្មណ៍ជាផ្នែកមួយ |
+| Worries a lot about what others think | ព្រួយបារម្ភច្រើនពីអ្វីដែលអ្នកដទៃគិត |
+| May avoid hard conversations | អាចជៀសវាងការសន្ទនាពិបាកៗ |
+| Can take on too much to keep everyone happy | អាចទទួលយកច្រើនពេក ដើម្បីឱ្យគ្រប់គ្នាសប្បាយចិត្ត |
+| Show appreciation — it means a lot to them. | បង្ហាញការដឹងគុណ — វាមានន័យច្រើនសម្រាប់ពួកគេ។ |
+| Include them in plans that affect people. | ឱ្យពួកគេចូលរួមក្នុងផែនការដែលប៉ះពាល់ដល់មនុស្ស។ |
+| Calm, hands-on and good in a crisis. | ស្ងប់ស្ងាត់ ធ្វើដោយដៃផ្ទាល់ និងពូកែក្នុងគ្រាលំបាក។ |
+| Fixers are practical, independent people who like to understand how things work and make them work better. Calm under pressure, they stay steady when others panic and are often the first to find a practical solution. They learn by doing and prefer action to long discussion. | អ្នកជួសជុលជាមនុស្សជាក់ស្តែង និងឯករាជ្យ ដែលចូលចិត្តយល់ថាអ្វីៗដំណើរការយ៉ាងណា ហើយធ្វើឱ្យវាដំណើរការល្អជាងមុន។ ស្ងប់ស្ងាត់ពេលមានសម្ពាធ ពួកគេនៅតែនឹងនរពេលអ្នកដទៃភ័យស្លន់ស្លោ ហើយជារឿយៗជាអ្នកដំបូងដែលរកឃើញដំណោះស្រាយជាក់ស្តែង។ ពួកគេរៀនតាមរយៈការធ្វើ ហើយចូលចិត្តសកម្មភាពជាងការពិភាក្សាយូរ។ |
+| Calm and capable in a crisis | ស្ងប់ស្ងាត់ និងមានសមត្ថភាពក្នុងគ្រាលំបាក |
+| Practical and good with their hands | ជាក់ស្តែង និងពូកែធ្វើការដោយដៃ |
+| Independent and adaptable | ឯករាជ្យ និងសម្របខ្លួនបាន |
+| Can seem distant or hard to read | អាចមើលទៅឆ្ងាយ ឬពិបាកយល់ពីចិត្ត |
+| May dislike long meetings and heavy planning | អាចមិនចូលចិត្តការប្រជុំយូរ និងការរៀបផែនការច្រើន |
+| Can take risks without telling others | អាចប្រថុយប្រថាន ដោយមិនប្រាប់អ្នកដទៃ |
+| Give them a real problem and let them get on with it. | ឱ្យពួកគេនូវបញ្ហាពិតប្រាកដ ហើយទុកឱ្យពួកគេដោះស្រាយ។ |
+| Keep meetings short and practical. | ធ្វើការប្រជុំឱ្យខ្លី និងជាក់ស្តែង។ |
+| Gentle, present, and quietly creative. | ទន់ភ្លន់ រស់នៅក្នុងពេលបច្ចុប្បន្ន និងច្នៃប្រឌិតដោយស្ងាត់ៗ។ |
+| Artists are gentle, sensitive people who notice beauty and live in the present moment. They express themselves through what they make and do more than through words. Warm and accepting, they care deeply about people, and they bring kindness and creativity to a team without needing the spotlight. | សិល្បករជាមនុស្សទន់ភ្លន់ និងរសើប ដែលកត់សម្គាល់ភាពស្រស់ស្អាត ហើយរស់នៅក្នុងពេលបច្ចុប្បន្ន។ ពួកគេបង្ហាញខ្លួនតាមរយៈអ្វីដែលពួកគេបង្កើត និងធ្វើ ច្រើនជាងតាមពាក្យសម្តី។ កក់ក្តៅ និងទទួលយកអ្នកដទៃ ពួកគេយកចិត្តទុកដាក់យ៉ាងជ្រៅចំពោះមនុស្ស ហើយនាំចិត្តល្អ និងការច្នៃប្រឌិតមកក្រុម ដោយមិនត្រូវការការយកចិត្តទុកដាក់ពីគេ។ |
+| Kind and accepting of others | ចិត្តល្អ និងទទួលយកអ្នកដទៃ |
+| Creative and practical | ច្នៃប្រឌិត និងជាក់ស្តែង |
+| Flexible and easy to work with | បត់បែន និងងាយធ្វើការជាមួយ |
+| Can avoid conflict until it is too late | អាចជៀសវាងជម្លោះ រហូតដល់យឺតពេល |
+| May struggle with long-term planning | អាចពិបាកជាមួយការរៀបផែនការរយៈពេលវែង |
+| Can feel hurt but not say so | អាចឈឺចាប់ក្នុងចិត្ត តែមិននិយាយ |
+| Give them freedom in how they do the work. | ឱ្យពួកគេមានសេរីភាពក្នុងរបៀបធ្វើការងារ។ |
+| Ask for their opinion — they may not offer it. | សួររកមតិរបស់ពួកគេ — ពួកគេប្រហែលមិននិយាយឡើងដោយខ្លួនឯង។ |
+| Jumps in, takes risks and gets things moving. | ចូលធ្វើភ្លាម ហ៊ានប្រថុយ ហើយធ្វើឱ្យអ្វីៗចាប់ផ្តើមដើរ។ |
+| Trailblazers are bold, energetic people who love action. They think fast, read a situation quickly and are happy to try something new while others are still discussing it. Practical and confident, they bring momentum to a team and are at their best in the middle of things. | អ្នកត្រួសត្រាយជាមនុស្សក្លាហាន និងពោរពេញថាមពល ដែលស្រឡាញ់សកម្មភាព។ ពួកគេគិតលឿន យល់ពីស្ថានភាពបានរហ័ស ហើយរីករាយសាកល្បងអ្វីថ្មី ខណៈពេលអ្នកដទៃនៅតែពិភាក្សា។ ជាក់ស្តែង និងមានទំនុកចិត្ត ពួកគេនាំសន្ទុះមកក្រុម ហើយល្អបំផុតពេលនៅកណ្តាលសកម្មភាព។ |
+| Quick to act and solve problems | រហ័សក្នុងការធ្វើ និងដោះស្រាយបញ្ហា |
+| Confident and persuasive | មានទំនុកចិត្ត និងពូកែបញ្ចុះបញ្ចូល |
+| Adapts easily to change | សម្របខ្លួនបានងាយនឹងការផ្លាស់ប្តូរ |
+| Can act before thinking it through | អាចធ្វើមុនពេលគិតឱ្យបានល្អិតល្អន់ |
+| May get bored with routine and details | អាចធុញទ្រាន់នឹងការងារដដែលៗ និងព័ត៌មានលម្អិត |
+| Can be blunt without meaning harm | អាចនិយាយត្រង់ពេក ដោយគ្មានចេតនាធ្វើឱ្យឈឺចាប់ |
+| Give them something to do, not just something to discuss. | ឱ្យពួកគេមានអ្វីត្រូវធ្វើ មិនមែនគ្រាន់តែអ្វីត្រូវពិភាក្សាទេ។ |
+| Talk through the risks together before they launch. | ពិភាក្សាពីហានិភ័យជាមួយគ្នា មុនពេលពួកគេចាប់ផ្តើម។ |
+| Lights up the room and lives in the moment. | ធ្វើឱ្យបន្ទប់ភ្លឺស្វាង ហើយរស់នៅក្នុងពេលបច្ចុប្បន្ន។ |
+| Energizers are fun, warm and spontaneous. They love people, enjoy life and have a gift for making others feel welcome and happy. They are practical helpers who notice what someone needs right now, and a team is more joyful and more connected when they are around. | អ្នកផ្តល់ថាមពលជាមនុស្សសប្បាយ កក់ក្តៅ និងធ្វើអ្វីដោយស្វ័យប្រវត្តិ។ ពួកគេស្រឡាញ់មនុស្ស រីករាយនឹងជីវិត ហើយមានអំណោយទានធ្វើឱ្យអ្នកដទៃមានអារម្មណ៍ថាត្រូវបានស្វាគមន៍ និងសប្បាយចិត្ត។ ពួកគេជាអ្នកជួយជាក់ស្តែង ដែលកត់សម្គាល់ថានរណាម្នាក់ត្រូវការអ្វីនៅពេលនេះ ហើយក្រុមកាន់តែរីករាយ និងស្និទ្ធស្នាលពេលមានពួកគេ។ |
+| Brings joy and energy to a team | នាំសេចក្តីអំណរ និងថាមពលមកក្រុម |
+| Warm, generous and practical | កក់ក្តៅ ចិត្តទូលាយ និងជាក់ស្តែង |
+| Great with people and new situations | ពូកែជាមួយមនុស្ស និងស្ថានភាពថ្មីៗ |
+| Can avoid planning ahead | អាចជៀសវាងការរៀបផែនការជាមុន |
+| May find serious or slow tasks hard | អាចពិបាកជាមួយការងារធ្ងន់ធ្ងរ ឬយឺត |
+| Can struggle with long-term commitments | អាចពិបាកជាមួយការប្តេជ្ញារយៈពេលវែង |
+| Let them bring energy to events and welcoming. | ឱ្យពួកគេនាំថាមពលមកកម្មវិធី និងការស្វាគមន៍ភ្ញៀវ។ |
+| Help them plan the next step before the excitement fades. | ជួយពួកគេរៀបផែនការជំហានបន្ទាប់ មុនពេលភាពរំភើបរលាយបាត់។ |
+| front-line work with people all day | ធ្វើការផ្ទាល់ជាមួយមនុស្សពេញមួយថ្ងៃ |
+| teaching and discipling in a school | បង្រៀន និងបង្ហាត់សិស្សក្នុងសាលា |
+| leading people and the base | ដឹកនាំមនុស្ស និងមូលដ្ឋាន |
+| money, systems and details | លុយ ប្រព័ន្ធ និងព័ត៌មានលម្អិត |
+| practical, hands-on service | ការបម្រើជាក់ស្តែងដោយដៃផ្ទាល់ |
+| creative work — media and worship | ការងារច្នៃប្រឌិត — ប្រព័ន្ធផ្សព្វផ្សាយ និងការថ្វាយបង្គំ |
+| prayer and intercession | ការអធិស្ឋាន និងការទូលអង្វរ |
+| Ordinary rhythm | ចង្វាក់ធម្មតា |
+| Normal weeks on base. | សប្តាហ៍ធម្មតានៅមូលដ្ឋាន។ |
+| A school is running | សាលាកំពុងដំណើរការ |
+| Lecture phase — teaching and pastoral care are heavy. | ដំណាក់កាលបង្រៀន — ការបង្រៀន និងការថែរក្សាខាងព្រលឹងវិញ្ញាណមានច្រើន។ |
+| Outreach | បេសកកម្មចេញក្រៅ |
+| Travel, change and living as a team. | ការធ្វើដំណើរ ការផ្លាស់ប្តូរ និងការរស់នៅជាក្រុម។ |
+| Between seasons | ចន្លោះរដូវកាល |
+| Debriefing, planning and changing roles. | ការពិភាក្សាក្រោយបេសកកម្ម ការរៀបផែនការ និងការប្តូរតួនាទី។ |
+| Holidays & hosting | ថ្ងៃបុណ្យ និងការទទួលភ្ញៀវ |
+| Khmer New Year, Pchum Ben, Christmas, visitors. | ចូលឆ្នាំខ្មែរ ភ្ជុំបិណ្ឌ បុណ្យណូអែល ភ្ញៀវមកលេង។ |
+| A stretched season | រដូវកាលតានតឹង |
+| Tired, under pressure, or carrying something heavy. | ហត់នឿយ មានសម្ពាធ ឬកំពុងលីបន្ទុកធ្ងន់។ |
+| Your work is people all day. Plan real quiet time to recharge — it is not selfish, it is how you keep giving. | ការងាររបស់អ្នកគឺជាមួយមនុស្សពេញមួយថ្ងៃ។ រៀបចំពេលស្ងាត់ពិតប្រាកដ ដើម្បីមានកម្លាំងឡើងវិញ — វាមិនមែនអាត្មានិយមទេ វាជារបៀបដែលអ្នកអាចបន្តផ្តល់ឱ្យ។ |
+| You are made for this kind of work. Just make sure the quieter people get heard too. | អ្នកកើតមកសម្រាប់ការងារប្រភេទនេះ។ គ្រាន់តែធ្វើឱ្យប្រាកដថា មនុស្សស្ងាត់ៗក៏ត្រូវបានស្តាប់ដែរ។ |
+| People here need warmth before solutions. Ask how someone is before you fix the problem. | មនុស្សនៅទីនេះត្រូវការភាពកក់ក្តៅ មុនដំណោះស្រាយ។ សួរសុខទុក្ខគេ មុនពេលអ្នកដោះស្រាយបញ្ហា។ |
+| You will feel people's struggles deeply. Share the weight with your team and your mentor. | អ្នកនឹងមានអារម្មណ៍យ៉ាងជ្រៅចំពោះការលំបាករបស់មនុស្ស។ ចែករំលែកបន្ទុកជាមួយក្រុម និងអ្នកណែនាំរបស់អ្នក។ |
+| People rarely run on schedule. Plan, but leave space for the conversation that could not wait. | មនុស្សកម្រដើរតាមកាលវិភាគណាស់។ រៀបផែនការ តែទុកចន្លោះសម្រាប់ការសន្ទនាដែលមិនអាចរង់ចាំបាន។ |
+| Your flexibility is a gift here. Write down what you promised so nobody falls through the cracks. | ភាពបត់បែនរបស់អ្នកជាអំណោយទាននៅទីនេះ។ សរសេរអ្វីដែលអ្នកបានសន្យា ដើម្បីកុំឱ្យនរណាម្នាក់ត្រូវបានភ្លេច។ |
+| Teaching uses up your energy fast. Protect your preparation time and your recovery time. | ការបង្រៀនប្រើកម្លាំងអ្នកយ៉ាងលឿន។ ការពារពេលរៀបចំ និងពេលសម្រាករបស់អ្នក។ |
+| Leave space in class for others to think and answer — silence can be where learning happens. | ទុកចន្លោះក្នុងថ្នាក់ឱ្យអ្នកដទៃគិត និងឆ្លើយ — ភាពស្ងៀមស្ងាត់អាចជាពេលដែលការរៀនកើតឡើង។ |
+| Your big ideas inspire students. Add examples and practical steps so everyone can follow. | គំនិតធំៗរបស់អ្នកបំផុសសិស្ស។ បន្ថែមឧទាហរណ៍ និងជំហានជាក់ស្តែង ដើម្បីឱ្យគ្រប់គ្នាអាចតាមបាន។ |
+| Your clear, practical teaching helps people. Remember to share the why, not only the how. | ការបង្រៀនច្បាស់លាស់ និងជាក់ស្តែងរបស់អ្នកជួយមនុស្ស។ កុំភ្លេចប្រាប់ពីហេតុអ្វី មិនមែនត្រឹមតែរបៀបធ្វើទេ។ |
+| Correct gently. Students need to feel safe with you before they can hear hard feedback. | កែតម្រូវដោយទន់ភ្លន់។ សិស្សត្រូវមានអារម្មណ៍សុវត្ថិភាពជាមួយអ្នក មុនពេលពួកគេអាចស្តាប់មតិយោបល់ពិបាកៗ។ |
+| You will care about every student. You cannot carry all of them — trust God and the team. | អ្នកនឹងយកចិត្តទុកដាក់ចំពោះសិស្សគ្រប់រូប។ អ្នកមិនអាចលីពួកគេទាំងអស់បានទេ — ទុកចិត្តលើព្រះ និងក្រុម។ |
+| People may not know what you are thinking. Say your thoughts and your appreciation out loud. | មនុស្សប្រហែលមិនដឹងថាអ្នកកំពុងគិតអ្វីទេ។ និយាយគំនិត និងការដឹងគុណរបស់អ្នកចេញមកឱ្យឮ។ |
+| Before you decide, ask the quiet people in the room what they think. | មុនពេលអ្នកសម្រេចចិត្ត សួរមនុស្សស្ងាត់ៗក្នុងបន្ទប់ថាពួកគេគិតយ៉ាងណា។ |
+| Keep sharing the vision, and pair it with a clear next step for this week. | បន្តចែករំលែកចក្ខុវិស័យ ហើយភ្ជាប់វាជាមួយជំហានបន្ទាប់ច្បាស់លាស់សម្រាប់សប្តាហ៍នេះ។ |
+| Your steadiness helps the base. Make room for people who see new possibilities. | ភាពនឹងនររបស់អ្នកជួយមូលដ្ឋាន។ ទុកកន្លែងសម្រាប់មនុស្សដែលមើលឃើញលទ្ធភាពថ្មីៗ។ |
+| Your clear decisions help. Explain them with care — people remember how they were treated. | ការសម្រេចចិត្តច្បាស់លាស់របស់អ្នកមានប្រយោជន៍។ ពន្យល់វាដោយយកចិត្តទុកដាក់ — មនុស្សចងចាំពីរបៀបដែលពួកគេត្រូវបានប្រព្រឹត្ត។ |
+| You will want everyone happy. Some decisions are still right when they are hard. | អ្នកនឹងចង់ឱ្យគ្រប់គ្នាសប្បាយចិត្ត។ ការសម្រេចចិត្តខ្លះនៅតែត្រឹមត្រូវ ទោះបីវាពិបាកក៏ដោយ។ |
+| Your plans give people security. Hold them loosely when God or the situation changes them. | ផែនការរបស់អ្នកផ្តល់សុវត្ថិភាពដល់មនុស្ស។ កាន់វាដោយបន្ធូរ ពេលព្រះ ឬស្ថានភាពផ្លាស់ប្តូរវា។ |
+| Your flexibility keeps the base agile. Make sure decisions are written down and followed up. | ភាពបត់បែនរបស់អ្នកធ្វើឱ្យមូលដ្ឋានរហ័សរហួន។ ធ្វើឱ្យប្រាកដថាការសម្រេចចិត្តត្រូវបានសរសេរទុក និងតាមដាន។ |
+| Details can feel draining for you. Build simple checklists so the important things are never missed. | ព័ត៌មានលម្អិតអាចធ្វើឱ្យអ្នកហត់នឿយ។ បង្កើតបញ្ជីត្រួតពិនិត្យសាមញ្ញ ដើម្បីកុំឱ្យភ្លេចរឿងសំខាន់ៗ។ |
+| You are good with detail. Step back sometimes to explain the bigger picture to others. | អ្នកពូកែខាងព័ត៌មានលម្អិត។ ពេលខ្លះ ដើរថយក្រោយបន្តិច ដើម្បីពន្យល់រូបភាពធំដល់អ្នកដទៃ។ |
+| Your accuracy protects the base. Soften how you point out other people's mistakes. | ភាពត្រឹមត្រូវរបស់អ្នកការពារមូលដ្ឋាន។ ធ្វើឱ្យទន់ភ្លន់ពេលអ្នកចង្អុលបង្ហាញកំហុសរបស់អ្នកដទៃ។ |
+| Saying no about money can feel hard. Remember that clear rules protect people too. | ការបដិសេធរឿងលុយអាចពិបាក។ ចងចាំថាច្បាប់ច្បាស់លាស់ក៏ការពារមនុស្សដែរ។ |
+| Set a regular time each week for records and receipts, so they never pile up. | កំណត់ពេលទៀងទាត់ជារៀងរាល់សប្តាហ៍សម្រាប់កំណត់ត្រា និងវិក្កយបត្រ ដើម្បីកុំឱ្យវាគរច្រើន។ |
+| You may prefer to work quietly. Let people know what you did, so they can thank you and help. | អ្នកប្រហែលចូលចិត្តធ្វើការដោយស្ងាត់ៗ។ ប្រាប់មនុស្សពីអ្វីដែលអ្នកបានធ្វើ ដើម្បីឱ្យពួកគេអាចអរគុណ និងជួយអ្នក។ |
+| Practical work can feel repetitive. Look for small ways to improve how it is done. | ការងារជាក់ស្តែងអាចមានអារម្មណ៍ដដែលៗ។ រកវិធីតូចៗដើម្បីកែលម្អរបៀបធ្វើ។ |
+| Your service is love in action. Ask for help before you are exhausted. | ការបម្រើរបស់អ្នកគឺជាសេចក្តីស្រឡាញ់ក្នុងសកម្មភាព។ សុំជំនួយមុនពេលអ្នកអស់កម្លាំង។ |
+| Unexpected jobs will come up. Leave a little room in your day for them. | ការងារដែលមិនបានរំពឹងទុកនឹងកើតឡើង។ ទុកចន្លោះបន្តិចក្នុងថ្ងៃរបស់អ្នកសម្រាប់វា។ |
+| You are great at handling what comes up. Keep a short list so the regular jobs still get done. | អ្នកពូកែដោះស្រាយអ្វីដែលកើតឡើងភ្លាមៗ។ រក្សាបញ្ជីខ្លីមួយ ដើម្បីឱ្យការងារប្រចាំនៅតែបានធ្វើ។ |
+| Creative work does not always fit a schedule. Plan the deadline, not every step on the way to it. | ការងារច្នៃប្រឌិតមិនតែងតែសមនឹងកាលវិភាគទេ។ រៀបផែនការពេលកំណត់ មិនមែនគ្រប់ជំហានទៅដល់វាទេ។ |
+| Ideas flow easily for you. Agree on deadlines early so the work gets finished and shared. | គំនិតហូរមកងាយសម្រាប់អ្នក។ ព្រមព្រៀងលើពេលកំណត់ឱ្យបានឆាប់ ដើម្បីឱ្យការងាររួចរាល់ និងបានចែករំលែក។ |
+| Your eye for detail makes the work excellent. Share drafts early instead of waiting for perfect. | ភ្នែកមើលព័ត៌មានលម្អិតរបស់អ្នកធ្វើឱ្យការងារល្អឥតខ្ចោះ។ ចែករំលែកសេចក្តីព្រាងឱ្យបានឆាប់ ជាជាងរង់ចាំឱ្យល្អឥតខ្ចោះ។ |
+| Feedback on your work can feel personal. It is about the work, not about you. | មតិយោបល់លើការងាររបស់អ្នកអាចមានអារម្មណ៍ដូចជារឿងផ្ទាល់ខ្លួន។ វាគឺអំពីការងារ មិនមែនអំពីអ្នកទេ។ |
+| Remember the people the work is for — let it move hearts as well as minds. | ចងចាំមនុស្សដែលការងារនេះធ្វើសម្រាប់ — ឱ្យវាប៉ះពាល់ចិត្ត ក៏ដូចជាគំនិតផងដែរ។ |
+| You may pray best out loud and with others. Find a prayer partner as well as quiet time. | អ្នកប្រហែលអធិស្ឋានបានល្អបំផុតដោយឮៗ និងជាមួយអ្នកដទៃ។ រកដៃគូអធិស្ឋាន ក៏ដូចជាពេលស្ងាត់ផងដែរ។ |
+| Long quiet prayer suits you. Share what you are sensing — the team needs to hear it. | ការអធិស្ឋានស្ងាត់ៗយូរសមនឹងអ្នក។ ចែករំលែកអ្វីដែលអ្នកកំពុងយល់ឃើញ — ក្រុមត្រូវការស្តាប់វា។ |
+| You may sense big themes in prayer. Test them with others and keep them grounded. | អ្នកប្រហែលយល់ឃើញប្រធានបទធំៗក្នុងការអធិស្ឋាន។ ពិនិត្យវាជាមួយអ្នកដទៃ ហើយរក្សាវាឱ្យជាក់ស្តែង។ |
+| You will carry people's pain in prayer. Remember to give it to God and not hold it yourself. | អ្នកនឹងលីការឈឺចាប់របស់មនុស្សក្នុងការអធិស្ឋាន។ កុំភ្លេចប្រគល់វាទៅព្រះ ហើយកុំកាន់វាដោយខ្លួនឯង។ |
+| A prayer rhythm helps you. Leave room for the Spirit to change the plan. | ចង្វាក់អធិស្ឋានជួយអ្នក។ ទុកកន្លែងឱ្យព្រះវិញ្ញាណផ្លាស់ប្តូរផែនការ។ |
+| A good week to build habits that will carry you through busier seasons. | សប្តាហ៍ល្អសម្រាប់កសាងទម្លាប់ ដែលនឹងជួយអ្នកឆ្លងកាត់រដូវកាលរវល់ជាងនេះ។ |
+| Use the calm to plan ahead — the next busy season will be easier for it. | ប្រើពេលស្ងប់នេះដើម្បីរៀបផែនការជាមុន — រដូវកាលរវល់បន្ទាប់នឹងស្រួលជាងមុន។ |
+| Try one new idea while you have the space for it. | សាកល្បងគំនិតថ្មីមួយ ខណៈពេលអ្នកមានពេលសម្រាប់វា។ |
+| Students will want your time constantly. Plan an hour a day that is yours. | សិស្សនឹងចង់បានពេលរបស់អ្នកជានិច្ច។ រៀបចំមួយម៉ោងក្នុងមួយថ្ងៃដែលជារបស់អ្នក។ |
+| You may love this season. Watch that you still rest on your day off. | អ្នកប្រហែលស្រឡាញ់រដូវកាលនេះ។ ប្រយ័ត្នឱ្យនៅតែសម្រាកនៅថ្ងៃឈប់សម្រាករបស់អ្នក។ |
+| Pastoral needs will be heavy. You are not everyone's counselor — refer people on when you need to. | តម្រូវការខាងព្រលឹងវិញ្ញាណនឹងមានច្រើន។ អ្នកមិនមែនជាអ្នកប្រឹក្សារបស់គ្រប់គ្នាទេ — បញ្ជូនមនុស្សទៅអ្នកផ្សេង ពេលចាំបាច់។ |
+| Students can be fragile in this season. Lead with encouragement, then correction. | សិស្សអាចងាយរងរបួសចិត្តក្នុងរដូវកាលនេះ។ ចាប់ផ្តើមដោយការលើកទឹកចិត្ត បន្ទាប់មកការកែតម្រូវ។ |
+| Outreach tests everyone. Grace for your team — and for yourself. | បេសកកម្មចេញក្រៅសាកល្បងគ្រប់គ្នា។ មានព្រះគុណចំពោះក្រុមរបស់អ្នក — និងចំពោះខ្លួនអ្នកផង។ |
+| There is little time alone on outreach. Protect twenty quiet minutes a day. | មានពេលនៅម្នាក់ឯងតិចណាស់ក្នុងបេសកកម្ម។ ការពារពេលស្ងាត់ម្ភៃនាទីក្នុងមួយថ្ងៃ។ |
+| You will bring energy to the team. Notice who needs a quieter day. | អ្នកនឹងនាំថាមពលមកក្រុម។ កត់សម្គាល់អ្នកណាដែលត្រូវការថ្ងៃស្ងាត់ជាងនេះ។ |
+| Plans change daily on outreach. Decide the one or two things that must happen, and hold the rest loosely. | ផែនការផ្លាស់ប្តូររាល់ថ្ងៃក្នុងបេសកកម្ម។ សម្រេចរឿងមួយ ឬពីរដែលត្រូវតែកើតឡើង ហើយកាន់រឿងផ្សេងទៀតដោយបន្ធូរ។ |
+| You will adapt well. Help the planners on the team by confirming details early. | អ្នកនឹងសម្របខ្លួនបានល្អ។ ជួយអ្នករៀបផែនការក្នុងក្រុម ដោយបញ្ជាក់ព័ត៌មានលម្អិតឱ្យបានឆាប់។ |
+| Unfamiliar places can wear you down. Keep a few small routines that feel like home. | កន្លែងមិនធ្លាប់ស្គាល់អាចធ្វើឱ្យអ្នកអស់កម្លាំង។ រក្សាទម្លាប់តូចៗខ្លះ ដែលមានអារម្មណ៍ដូចនៅផ្ទះ។ |
+| Your ideas can inspire the team. Make sure everyone understands the plan for today. | គំនិតរបស់អ្នកអាចបំផុសក្រុម។ ធ្វើឱ្យប្រាកដថាគ្រប់គ្នាយល់ពីផែនការសម្រាប់ថ្ងៃនេះ។ |
+| Endings and beginnings are both hard. Take time to reflect and to grieve what is finishing. | ការបញ្ចប់ និងការចាប់ផ្តើមសុទ្ធតែពិបាក។ ចំណាយពេលពិចារណា និងកាន់ទុក្ខចំពោះអ្វីដែលកំពុងបញ្ចប់។ |
+| Not having a clear plan yet may unsettle you. Write down what you do know. | ការមិនទាន់មានផែនការច្បាស់ អាចធ្វើឱ្យអ្នកមិនស្ងប់។ សរសេរអ្វីដែលអ្នកដឹងច្បាស់។ |
+| You may enjoy the open space. Set a few deadlines so the next season actually starts. | អ្នកប្រហែលរីករាយនឹងពេលទំនេរ។ កំណត់ពេលកំណត់ខ្លះ ដើម្បីឱ្យរដូវកាលបន្ទាប់ពិតជាចាប់ផ្តើម។ |
+| Change can feel unsettling. Hold on to what is staying the same. | ការផ្លាស់ប្តូរអាចធ្វើឱ្យមិនស្ងប់។ កាន់ខ្ជាប់នូវអ្វីដែលនៅតែដដែល។ |
+| You may already be dreaming about what is next. Finish this season well first. | អ្នកប្រហែលកំពុងស្រមៃពីអ្វីបន្ទាប់ហើយ។ បញ្ចប់រដូវកាលនេះឱ្យបានល្អជាមុនសិន។ |
+| Rest is part of the rhythm God gave us. Enjoy it without guilt. | ការសម្រាកជាផ្នែកមួយនៃចង្វាក់ដែលព្រះប្រទានមកយើង។ រីករាយនឹងវាដោយគ្មានអារម្មណ៍ខុស។ |
+| Holidays can mean more people, not fewer. Plan quiet time within the celebrations. | ថ្ងៃបុណ្យអាចមានន័យថាមានមនុស្សច្រើនជាងមុន មិនមែនតិចជាងទេ។ រៀបចំពេលស្ងាត់ក្នុងចំណោមការប្រារព្ធ។ |
+| Enjoy the gatherings. Rest still counts, even when you love being with people. | រីករាយនឹងការជួបជុំ។ ការសម្រាកនៅតែសំខាន់ ទោះបីអ្នកស្រឡាញ់ការនៅជាមួយមនុស្សក៏ដោយ។ |
+| Family time can bring up feelings. Be kind to yourself. | ពេលវេលាជាមួយគ្រួសារអាចធ្វើឱ្យមានអារម្មណ៍ផ្សេងៗកើតឡើង។ មានចិត្តល្អចំពោះខ្លួនឯង។ |
+| Holidays rarely go to plan. Choose what matters most and let the rest go. | ថ្ងៃបុណ្យកម្រដើរតាមផែនការណាស់។ ជ្រើសរើសអ្វីដែលសំខាន់បំផុត ហើយទុករឿងផ្សេងទៀតចោល។ |
+| Tell your mentor how you are really doing. This season will not last forever. | ប្រាប់អ្នកណែនាំរបស់អ្នកពីស្ថានភាពពិតរបស់អ្នក។ រដូវកាលនេះនឹងមិនស្ថិតស្ថេររហូតទេ។ |
+| Under stress you may pull away. Let at least one person in. | ពេលតានតឹង អ្នកប្រហែលដកខ្លួនចេញ។ ឱ្យមនុស្សយ៉ាងហោចណាស់ម្នាក់ចូលមកជិតអ្នក។ |
+| Under stress you may keep busy so you do not have to stop. Make space to stop. | ពេលតានតឹង អ្នកប្រហែលធ្វើខ្លួនឱ្យរវល់ ដើម្បីកុំឱ្យត្រូវឈប់។ ទុកពេលដើម្បីឈប់។ |
+| Under stress you may fix small details instead of the real problem. Name the real problem. | ពេលតានតឹង អ្នកប្រហែលជួសជុលរឿងតូចៗ ជំនួសឱ្យបញ្ហាពិត។ និយាយឈ្មោះបញ្ហាពិតឱ្យច្បាស់។ |
+| Under stress you may imagine the worst. Write down what is actually true. | ពេលតានតឹង អ្នកប្រហែលស្រមៃរឿងអាក្រក់បំផុត។ សរសេរអ្វីដែលពិតប្រាកដ។ |
+| Under stress you may become harsh or critical. Be gentle with people, and with yourself. | ពេលតានតឹង អ្នកប្រហែលក្លាយជាឃោរឃៅ ឬរិះគន់។ ទន់ភ្លន់ជាមួយមនុស្ស និងជាមួយខ្លួនឯង។ |
+| Under stress you may take everything personally. Not every problem is yours to carry. | ពេលតានតឹង អ្នកប្រហែលយកអ្វីៗទាំងអស់មកគិតជារឿងផ្ទាល់ខ្លួន។ មិនមែនគ្រប់បញ្ហាសុទ្ធតែជាបន្ទុករបស់អ្នកទេ។ |
+| Under stress you may try to control more. Let go of one thing this week. | ពេលតានតឹង អ្នកប្រហែលព្យាយាមគ្រប់គ្រងច្រើនជាងមុន។ ទុកចោលរឿងមួយនៅសប្តាហ៍នេះ។ |
+| Under stress you may avoid decisions. Make one small decision today. | ពេលតានតឹង អ្នកប្រហែលជៀសវាងការសម្រេចចិត្ត។ ធ្វើការសម្រេចចិត្តតូចមួយនៅថ្ងៃនេះ។ |

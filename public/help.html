@@ -60,6 +60,15 @@
    The brand marks in logo.js are white and drawn for the black header, so anything
    showing them needs --headerBg behind it in either theme or they vanish. */
 :root {
+  --pInk:#17150F;          /* personality hero text — fixed: the hero sits on a fixed light tint in both themes */
+  --pInk2:#3B372E;
+  --pAgree:#1F8A6F;        /* the agree side of the seven circles */
+  --pDisagree:#7B4FA0;     /* the disagree side */
+  --pAgreeInk:#1B7A62;     /* the same, as small text */
+  --pDisagreeInk:#6E4592;
+  --pGood:#1F8A6F;         /* strengths ✓ */
+  --pBad:#B3261E;          /* watch out for ! */
+  --pOnMark:#fff;          /* the glyph inside those marks */
   --bg:#FAF6F0;            /* page */
   --surface:#fff;          /* cards */
   --surface2:#F0EADF;      /* tracks, subtle fills */
@@ -104,6 +113,8 @@
    text that sits on cobalt goes dark to match. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --pAgreeInk:#5CC9A8;
+    --pDisagreeInk:#C3A2E0;
     --bg:#121110;
     --surface:#1C1A17;
     --surface2:#26231D;
@@ -142,6 +153,8 @@
   }
 }
 :root[data-theme="dark"] {
+  --pAgreeInk:#5CC9A8;
+  --pDisagreeInk:#C3A2E0;
   --bg:#121110;
   --surface:#1C1A17;
   --surface2:#26231D;
