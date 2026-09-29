@@ -1419,7 +1419,7 @@ function panelTripHtml_(c){
 function hospitalityText_(c, ans, trip){
   var sr=trip && trip.stays[0], n=sr ? daysIncl_(sr.from, sr.to) : 0;
   return [
-    ans.teamName || c.name,
+    (ans.teamName || c.name)+(ans.location ? ' — '+ans.location : ''),
     campusShort_(c.campus||DEFAULT_CAMPUS)+': '+(n ? rangeLabel_(sr.from, sr.to, true)+' ('+daysLabel_(n)+', '+nightsLabel_(n-1)+')' : t('no dates yet')),
     t('Males')+': '+(ans.males||'—'),
     t('Females')+': '+(ans.females||'—'),
