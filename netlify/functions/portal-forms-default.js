@@ -193,13 +193,17 @@ const teamForm = {
   sections: [{
     id: 'team', title: T('Your team', 'ក្រុមរបស់អ្នក'), help: T('', ''),
     questions: [
+      /* Order asked for by the base: team name and where it is from first, then
+         who leads it, then the rest. */
       q('teamName', 'short', 'Team name', 'ឈ្មោះក្រុម', { required: true }),
-      q('org', 'short', 'Sending church, base or organisation', 'ព្រះវិហារ មូលដ្ឋាន ឬអង្គការដែលបញ្ជូន', { required: true }),
+      q('location', 'short', 'Where is your team from?', 'តើក្រុមរបស់អ្នកមកពីណា?', { required: true,
+        help: T('City and country', 'ទីក្រុង និងប្រទេស') }),
       q('leaderName', 'short', 'Team leader’s name', 'ឈ្មោះអ្នកដឹកនាំក្រុម', { required: true }),
       q('leaderEmail', 'email', 'Team leader’s email', 'អ៉ីមែលអ្នកដឹកនាំក្រុម', { required: true }),
       /* A 'people' answer is a list — as many as the team has: [{name, email, phone}, …]. */
       q('coLeaders', 'people', 'Co-leaders', 'អ្នកដឹកនាំរួម', { addLabel: T('Add a co-leader', 'បន្ថែមអ្នកដឹកនាំរួម'),
         help: T('Anyone who leads the team with you. Add as many as you have — or none.', 'អ្នកដែលដឹកនាំក្រុមជាមួយអ្នក។ បន្ថែមប៉ុន្មាននាក់ក៏បាន — ឬគ្មានក៏បាន។') }),
+      q('org', 'short', 'Sending church, base or organisation', 'ព្រះវិហារ មូលដ្ឋាន ឬអង្គការដែលបញ្ជូន', { required: true }),
       q('size', 'number', 'How many people in total?', 'មានមនុស្សប៉ុន្មាននាក់សរុប?', { required: true }),
       q('focus', 'long', 'What kind of outreach is your team hoping to do?', 'ក្រុមរបស់អ្នកសង្ឃឹមធ្វើការផ្សព្វផ្សាយប្រភេទណា?', { required: true })
     ]
