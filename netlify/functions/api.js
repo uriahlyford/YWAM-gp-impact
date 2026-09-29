@@ -1203,7 +1203,8 @@ async function getData(code, year) {
       byId[o.id] = { id: o.id, campus: o.campus, quarter: Number(o.quarter), dept: o.dept, objective: o.objective, krs: [] };
       okrs.push(byId[o.id]);
     }
-    byId[o.id].krs.push({ text: o.kr, metricKey: o.metricKey || '', target: Number(o.target) || 0, manual: Number(o.manualPct) || 0 });
+    byId[o.id].krs.push({ text: o.kr, metricKey: o.metricKey || '', target: Number(o.target) || 0, manual: Number(o.manualPct) || 0,
+      group: o.group || '', kind: o.kind === 'count' ? 'count' : '', current: Number(o.current) || 0 });
   });
 
   const nn = function (v) { const n = Number(v); return (v === '' || v == null || isNaN(n)) ? null : n; };
@@ -1338,17 +1339,27 @@ async function saveObjective(obj, code, username, pin) {
     });
     if (foreign) return getData(code);
   }
+  // The new rows go back where the old ones were, so saving a key result's
+  // progress does not move its objective to the bottom of the page.
+  let at = rows.findIndex(function (r) { return String(r.id) === id; });
   rows = rows.filter(function (r) { return String(r.id) !== id; });
+  if (at < 0 || at > rows.length) at = rows.length;
+  const fresh = [];
   const now = new Date().toISOString();
   (Array.isArray(obj.krs) ? obj.krs.slice(0, 10) : []).forEach(function (kr) {
     const text = str_(kr && kr.text, 300);
     if (!text) return;
-    rows.push({
+    fresh.push({
       campus: campus, quarter: quarter, dept: dept, id: id, objective: objective,
       kr: text, metricKey: str_(kr.metricKey, 200) || '',
-      target: finiteNum_(kr.target, 0, 1e9) || 0, manualPct: finiteNum_(kr.manual, 0, 100) || 0, updated: now
+      target: finiteNum_(kr.target, 0, 1e9) || 0, manualPct: finiteNum_(kr.manual, 0, 100) || 0,
+      // A heading the key result sits under (Money, Time…), and a count toward
+      // the target ("Recruit 20 students": 3 so far) for one tracked by number.
+      group: str_(kr.group, 80) || '', kind: kr.kind === 'count' ? 'count' : '',
+      current: finiteNum_(kr.current, 0, 1e9) || 0, updated: now
     });
   });
+  rows.splice.apply(rows, [at, 0].concat(fresh));
   await writeJSON('okrs', rows);
   return getData(code);
 }

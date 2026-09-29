@@ -926,6 +926,40 @@ body.hxOn { overflow:hidden; }
 .okrDept { font-size:11px; letter-spacing:1px; color:var(--muted); text-transform:uppercase; margin-top:2px; }
 .okrPct { font-family:'Koulen',sans-serif; font-size:26px; color:var(--accent); white-space:nowrap; }
 .okrPct.done { color:var(--amberDeep); }
+.okrNum { flex:0 0 auto; width:26px; height:26px; border-radius:50%; background:var(--accentSoft); color:var(--accent);
+  font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+.okrSum { display:flex; gap:16px; align-items:center; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:12px 14px; margin:8px 0 12px; }
+.okrSumPct { font-family:"Koulen",sans-serif; font-size:30px; color:var(--accent); line-height:1; }
+.okrSumWk { flex:1; }
+.krGroup { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-weight:700; margin:16px 0 -4px; }
+.krTop { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.krPctLbl { font-size:13px; font-weight:700; color:var(--muted); white-space:nowrap; }
+.krPctLbl.done { color:var(--amberDeep); }
+.krSlider { width:100%; margin:8px 0 2px; accent-color:var(--accent); height:24px; cursor:pointer; }
+.krCount { display:flex; align-items:center; gap:10px; margin-top:8px; }
+.krStep { width:38px; height:38px; border-radius:50%; border:1.5px solid var(--border2); background:var(--bg);
+  font-size:20px; line-height:1; color:var(--ink); cursor:pointer; }
+.krCountNum { min-width:44px; font:inherit; font-size:18px; font-weight:800; background:none; border:none;
+  border-bottom:1.5px dashed var(--border2); padding:2px 4px; color:var(--ink); cursor:pointer; }
+.krOf { color:var(--muted); font-size:14px; margin-left:-4px; }
+.okrAddRow { display:flex; gap:8px; flex-wrap:wrap; }
+.okrAddRow .btn { flex:1 1 140px; width:auto; margin-top:12px; }
+.okrRow { margin-top:10px; }
+.okrRowTop { display:flex; gap:4px; align-items:center; }
+.okrRowTop input { flex:1; min-width:0; }
+.okrRm { flex:0 0 auto; width:34px; height:34px; border:none; background:none; color:var(--faint); font-size:15px; cursor:pointer; }
+.okrRowHow { display:flex; gap:6px; margin:6px 38px 0 0; }
+.okrRowHow select, .okrRowHow input[type=number] { font-size:12.5px; padding:6px 10px; border:none; border-radius:999px;
+  background:var(--surface2); color:var(--muted); min-height:0; }
+.okrRowHow select { flex:0 1 auto; min-width:0; max-width:100%; }
+.okrRowHow input[type=number] { width:90px; flex:0 0 auto; color:var(--ink); }
+.okrHeadRow { margin-top:16px; }
+.okrHeadRow .okrHeadIn { font-weight:700; text-transform:uppercase; letter-spacing:.5px; font-size:12.5px; border-style:dashed; }
+.okrPrev { border-top:1px solid var(--line); padding:10px 0; }
+.okrPrevObj { font-weight:700; display:flex; gap:8px; align-items:flex-start; }
+.okrPrevKr { font-size:13.5px; margin:4px 0 0 34px; }
+.okrPrev .krGroup { margin:10px 0 0 34px; }
 .kr { padding:9px 0 2px; border-top:1px solid var(--line); margin-top:9px; }
 .krText { font-size:13.5px; line-height:1.35; }
 .krMeta { font-size:12px; color:var(--muted); margin-top:2px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
@@ -936,7 +970,6 @@ body.hxOn { overflow:hidden; }
   border-top:1px solid var(--line); margin-top:12px; padding-top:10px; }
 .manualIn { width:62px; text-align:right; font-size:14px; padding:4px 7px; border-radius:8px;
   border:1.5px solid var(--border2); background:var(--bg); }
-#okrForm .formBlock { border-top:1px dashed var(--border); padding-top:10px; margin-top:12px; }
 #okrForm .btn { margin-top:12px; }
 
 /* department picker on Base, matching the dashboard's */
@@ -1357,7 +1390,7 @@ var S = {
   structEdit:false, structEditNode:null, structDraft:null, structAddTitle:'', structAddParent:'',
   adminMetricCampus:'', adminMetricDept:'', adminMetricMinistry:'',
   trips:null, tripRequests:[], leaveDraft:null, oneOnOnes:[], broadcasts:[],
-  baseDept:null, okrForm:false, okrEditId:null, krOpen:{}, teamCampus:null, okrIdx:0,
+  baseDept:null, okrForm:false, okrEditId:null, okrPaste:false, okrPasteParsed:null, okrPasteText:'', teamCampus:null,
   healthWeek:null, weekForm:null, weekDraftFor:null, weekJustSaved:null,
   healthScope:'week', healthQuarter:null, healthYear:null, healthMonth:null, baseByYear:{}, srScope:'quarter', srQuarter:null, srMonth:null, srOpenQ:null,
   baseAcc:{salv:false, ld:false, cs:false, out:false, church:false, gospel:false, media:false, baseKpi:false, health:false, explorer:false},
@@ -1845,7 +1878,7 @@ function logout(){
   S.teamMode='dir'; S.structYear=null; S.structQ=null; S.structCache={}; S.structLoading={}; S.structError={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
-  S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovError={}; S.ovInputOpen={}; S.okrIdx=0;
+  S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovError={}; S.ovInputOpen={};
   S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminEditDraft=null; S.adminPinDraft={}; S.adminCode=''; S.adminCampusTab=null; S.adminSub=null;
   render();
 }
@@ -2688,48 +2721,67 @@ function srCheckinHistoryHtml(){
 
    Read-only. Writing an objective is a leadership act and stays on the dashboard
    behind the leader code; this is for the people carrying them. */
-function okrCardHtml(o, R, editable){
+/* One objective, laid out the way SugarOKR does it: the objective and its
+   progress on top, then every key result straight underneath — no "show key
+   results" fold — each with the one control that moves it. Key results that
+   share a heading (Money, Time, Projects…) sit under it. `n` is the
+   objective's number on the page, or 0 for none. */
+function okrCardHtml(o, R, editable, n){
   var p = R.objProgress(o);
   var krs = o.krs||[];
-  var open = !!S.krOpen[o.id];
   var h = '<div class="okrCard">'+
-    '<div class="okrHead"><div><div class="okrObj">'+esc(o.objective)+'</div>'+
+    '<div class="okrHead">'+(n?'<div class="okrNum">'+n+'</div>':'')+
+    '<div style="flex:1;min-width:0"><div class="okrObj">'+esc(o.objective)+'</div>'+
     '<div class="okrDept">'+(MIN_EMOJI[o.dept]?MIN_EMOJI[o.dept]+' ':'')+esc(t(o.dept))+'</div></div>'+
     '<div class="okrPct'+(p>=100?' done':'')+'">'+p+'%</div></div>'+
     '<div class="bar"><div class="barFill'+(p>=100?' done':'')+'" style="width:'+Math.min(100,p)+'%"></div></div>';
-  if(krs.length){
-    h += '<button class="linkbtn inline" data-kr-toggle="'+esc(o.id)+'" style="padding:8px 0 0">'+
-      (open ? esc(t('Hide key results')) : esc(gpT('Show {n} key results',{n:krs.length})))+'</button>';
-  }
-  if(open) krs.forEach(function(kr, ki){
-    var kp = R.krProgress(o, kr);
-    /* A key result tied to a KPI shows the quarter's real figure against the
-       target, so it is obvious the number came from what the ministry logged —
-       and there is nothing to type. One tracked by hand is the only kind with a
-       box, because it is the only kind nothing else can answer. */
-    var meta, right = kp.pct+'%';
-    if(kr.metricKey){
-      var met = kr.metricKey.split('|')[2];
-      meta = (kp.actual===null) ? esc(t('Nothing logged yet'))
-        : fmt(kp.actual, met)+' / '+fmt(kr.target, met);
-    } else if(editable){
-      meta = esc(t('tracked by hand'));
-      /* Empty, not 0, when nobody has set a figure — a 0 sitting in the box is
-         a number you have to delete before you can type one. */
-      right = '<input type="number" class="manualIn" min="0" max="100" placeholder="0" value="'+
-        (Number(kr.manual) ? Number(kr.manual) : '')+
-        '" data-okr-manual="'+esc(o.id)+'|'+ki+'">%';
-    } else {
-      meta = esc(t('tracked by hand'));
-    }
-    h += '<div class="kr"><div class="krText">'+esc(kr.text)+'</div>'+
-      '<div class="krMeta"><span>'+meta+'</span><span>'+right+'</span></div>'+
-      '<div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div>'+gpKrWarnHtml(kp)+'</div>';
+  var lastGroup = '';
+  krs.forEach(function(kr, ki){
+    var g = kr.group||'';
+    if(g && g!==lastGroup) h += '<div class="krGroup">'+esc(g)+'</div>';
+    lastGroup = g;
+    h += okrKrViewHtml_(o, kr, ki, R, editable);
   });
   if(editable){
     h += '<div class="okrActions">'+
       '<button class="danger" data-okr-del="'+esc(o.id)+'">'+esc(t('Delete'))+'</button>'+
       '<button class="linkbtn inline" data-okr-edit="'+esc(o.id)+'">'+esc(t('Edit'))+'</button></div>';
+  }
+  return h+'</div>';
+}
+/* A key result is one of three kinds, and each gets exactly one control:
+   - linked to a ministry number: nothing to touch, the figure comes from what
+     the ministry logs each week;
+   - a count toward a number ("Recruit 20 students"): − and + around the count;
+   - anything else: a slider for how far along it is. */
+function okrKrViewHtml_(o, kr, ki, R, editable){
+  var kp = R.krProgress(o, kr);
+  var ref = esc(o.id)+'|'+ki;
+  var h = '<div class="kr"><div class="krTop"><div class="krText">'+esc(kr.text)+'</div>'+
+    '<div class="krPctLbl'+(kp.pct>=100?' done':'')+'" data-okr-pct="'+ref+'">'+(kp.pct>=100?'✓ ':'')+kp.pct+'%</div></div>';
+  var bar = '<div class="krBar"><div class="barFill'+(kp.pct>=100?' done':'')+'" style="width:'+Math.min(100,kp.pct)+'%"></div></div>';
+  if(kr.metricKey){
+    var parts = kr.metricKey.split('|'), met = parts[2];
+    h += bar+'<div class="krMeta"><span>📊 '+esc(t(parts[1])+' · '+t(met))+'</span><span>'+
+      (kp.actual===null ? esc(t('Nothing logged yet')) : fmt(kp.actual, met)+' / '+fmt(kr.target, met))+'</span></div>'+
+      gpKrWarnHtml(kp);
+  } else if(kr.kind==='count'){
+    var cur = Math.max(0, Number(kr.current)||0);
+    h += bar;
+    if(editable){
+      h += '<div class="krCount"><button class="krStep" data-okr-step="'+ref+'|-1" aria-label="'+esc(t('One less'))+'">−</button>'+
+        '<button class="krCountNum" data-okr-count="'+ref+'">'+cur+'</button>'+
+        '<span class="krOf">/ '+(Number(kr.target)||0)+'</span>'+
+        '<button class="krStep" data-okr-step="'+ref+'|1" aria-label="'+esc(t('One more'))+'">+</button></div>';
+    } else {
+      h += '<div class="krMeta"><span>'+cur+' / '+(Number(kr.target)||0)+'</span><span></span></div>';
+    }
+  } else if(editable){
+    var m = Math.max(0, Math.min(100, Number(kr.manual)||0));
+    h += '<input type="range" class="krSlider" min="0" max="100" step="5" value="'+m+'" data-okr-manual="'+ref+'" '+
+      'aria-label="'+esc(t('How far along'))+'" style="--p:'+m+'%">';
+  } else {
+    h += bar;
   }
   return h+'</div>';
 }
@@ -2760,75 +2812,212 @@ function okrTargetCheck(k){
   var sel = document.getElementById('okrKrMetric'+k);
   var tin = document.getElementById('okrKrTarget'+k);
   if(!el || !sel || !tin) return;
+  if(sel.value===OKR_COUNT){ el.textContent=''; return; }
   var wk = thisWeek(), q = Math.min(4, Math.floor((wk-1)/13)+1);
   el.textContent = gpKrTargetNote(baseR(), S.me.campus, q, sel.value,
     Number(tin.value)||0);
 }
 
-/* The write form. It opens with three key-result slots (or as many as the
-   objective already has), and "+ Add a key result" adds more, up to OKR_MAX_KRS —
-   the server keeps no more than that. */
+/* The write form. One box per key result; under it a single "how is it
+   measured" picker, and a target box only when the picker needs one. Headings
+   (Money, Time…) are rows of their own, so a long objective can be split into
+   parts without a box on every key result. Rows are added in place, so
+   nothing typed is lost, up to OKR_MAX_KRS key results — the most the server
+   keeps. */
 var OKR_MAX_KRS = 10;
+var OKR_COUNT = '__count';
+function okrMeasureOptions_(kr, campus){
+  var sel = kr.metricKey ? kr.metricKey : (kr.kind==='count' ? OKR_COUNT : '');
+  var h = '<option value=""'+(sel===''?' selected':'')+'>'+esc(t('Slide it (%)'))+'</option>'+
+    '<option value="'+OKR_COUNT+'"'+(sel===OKR_COUNT?' selected':'')+'>'+esc(t('Count up to a number'))+'</option>';
+  /* okrMetricOptions leads with its own "none" option; the two above replace it */
+  return h + okrMetricOptions(sel, null, campus).replace(/^<option value="">[^<]*<\/option>/, '');
+}
 function okrKrRowHtml(k, kr, campus){
   kr = kr || { text:'', metricKey:'', target:'' };
-  return '<div class="formBlock" data-okr-kr="'+k+'"><label class="f">'+esc(t('Key result'))+' '+(k+1)+'</label>'+
-    '<input type="text" id="okrKrText'+k+'" value="'+esc(kr.text)+'">'+
-    '<label class="f">'+esc(t('Measure by'))+'</label>'+
-    '<select id="okrKrMetric'+k+'">'+okrMetricOptions(kr.metricKey, null, campus)+'</select>'+
-    '<label class="f">'+esc(t('Target (if linked to a KPI)'))+'</label>'+
-    '<input type="number" id="okrKrTarget'+k+'" inputmode="decimal" placeholder="0" value="'+
-      (kr.target||'')+'" style="width:130px">'+
+  var needsTarget = !!kr.metricKey || kr.kind==='count';
+  return '<div class="okrRow" data-okr-kr="'+k+'">'+
+    '<div class="okrRowTop"><input type="text" id="okrKrText'+k+'" value="'+esc(kr.text)+'" placeholder="'+esc(t('Key result'))+' '+(k+1)+'">'+
+    '<button class="okrRm" type="button" data-okr-rm aria-label="'+esc(t('Remove'))+'">✕</button></div>'+
+    '<div class="okrRowHow"><select id="okrKrMetric'+k+'" aria-label="'+esc(t('Measure by'))+'">'+okrMeasureOptions_(kr, campus)+'</select>'+
+    '<input type="number" id="okrKrTarget'+k+'" inputmode="decimal" placeholder="'+esc(t('Target'))+'" aria-label="'+esc(t('Target'))+'" value="'+
+      (kr.target||'')+'"'+(needsTarget?'':' hidden')+'></div>'+
     '<div class="krWarn" id="okrKrWarn'+k+'"></div>'+
     '</div>';
+}
+function okrHeadRowHtml_(text){
+  return '<div class="okrRow okrHeadRow" data-okr-head>'+
+    '<div class="okrRowTop"><input type="text" class="okrHeadIn" value="'+esc(text||'')+'" placeholder="'+esc(t('Heading, e.g. Money'))+'">'+
+    '<button class="okrRm" type="button" data-okr-rm aria-label="'+esc(t('Remove'))+'">✕</button></div></div>';
 }
 function okrBindKrRow_(k){
   var sel=document.getElementById('okrKrMetric'+k), tin=document.getElementById('okrKrTarget'+k);
   if(!sel || !tin) return;
-  sel.addEventListener('change', function(){ okrTargetCheck(k); });
+  sel.addEventListener('change', function(){
+    tin.hidden = !sel.value;
+    if(!tin.hidden && !tin.value) tin.focus();
+    okrTargetCheck(k);
+  });
   tin.addEventListener('input', function(){ okrTargetCheck(k); });
   okrTargetCheck(k);
 }
+function okrKrRows_(){ return document.querySelectorAll('#okrKrList [data-okr-kr]'); }
+function okrSyncAddBtn_(){
+  var btn = document.getElementById('okrKrAddBtn');
+  if(btn) btn.style.display = okrKrRows_().length >= OKR_MAX_KRS ? 'none' : '';
+}
+function okrBindRm_(row){
+  var rm = row.querySelector('[data-okr-rm]');
+  if(rm) rm.onclick = function(){ gpTap(); row.remove(); okrSyncAddBtn_(); };
+}
 /* Adds a row in place, so whatever is already typed in the form stays put. */
 function okrAddKr_(){
-  var btn = document.getElementById('okrKrAddBtn');
-  if(!btn) return;
-  var k = document.querySelectorAll('#okrForm [data-okr-kr]').length;
-  if(k >= OKR_MAX_KRS) return;
-  btn.insertAdjacentHTML('beforebegin', okrKrRowHtml(k, null, btn.getAttribute('data-campus')||null));
+  var list = document.getElementById('okrKrList');
+  if(!list || okrKrRows_().length >= OKR_MAX_KRS) return;
+  var k = 0;
+  okrKrRows_().forEach(function(r){ k = Math.max(k, Number(r.getAttribute('data-okr-kr'))+1); });
+  list.insertAdjacentHTML('beforeend', okrKrRowHtml(k, null, list.getAttribute('data-campus')||null));
   okrBindKrRow_(k);
-  if(k+1 >= OKR_MAX_KRS) btn.style.display = 'none';
+  okrBindRm_(list.lastElementChild);
+  okrSyncAddBtn_();
   var box = document.getElementById('okrKrText'+k);
+  if(box) box.focus();
+}
+function okrAddHead_(){
+  var list = document.getElementById('okrKrList');
+  if(!list) return;
+  list.insertAdjacentHTML('beforeend', okrHeadRowHtml_(''));
+  okrBindRm_(list.lastElementChild);
+  var box = list.lastElementChild.querySelector('input');
   if(box) box.focus();
 }
 function okrFormHtml(editing, target){
   var krs = editing ? (editing.krs||[]) : [];
+  var campus = target && target.campus;
   var h = '<div class="okrCard" id="okrForm"><div class="okrObj">'+
     esc(t(editing?'Edit objective':'New objective'))+'</div>'+
     (target ? '<div class="okrDept">'+(MIN_EMOJI[target.dept]?MIN_EMOJI[target.dept]+' ':'')+esc(t(target.dept))+' · '+esc(campusName(target.campus))+'</div>' : '');
   h += '<label class="f">'+esc(t('Objective'))+'</label>'+
     '<input type="text" id="okrObjText" value="'+(editing?esc(editing.objective):'')+'" '+
     'placeholder="'+esc(t('What are we aiming at this quarter?'))+'">';
-  var rows = Math.min(OKR_MAX_KRS, Math.max(3, krs.length));
-  for(var k=0;k<rows;k++) h += okrKrRowHtml(k, krs[k], target && target.campus);
-  h += '<button class="btn ghost" id="okrKrAddBtn" type="button" data-campus="'+esc((target && target.campus)||'')+'"'+
-    (rows>=OKR_MAX_KRS?' style="display:none"':'')+'>'+esc(t('+ Add a key result'))+'</button>';
+  h += '<label class="f">'+esc(t('Key results'))+'</label>'+
+    '<div id="okrKrList" data-campus="'+esc(campus||'')+'">';
+  var rows = Math.min(OKR_MAX_KRS, Math.max(3, krs.length)), lastGroup = '';
+  for(var k=0;k<rows;k++){
+    var g = (krs[k] && krs[k].group) || '';
+    if(g && g!==lastGroup) h += okrHeadRowHtml_(g);
+    if(krs[k]) lastGroup = g;
+    h += okrKrRowHtml(k, krs[k], campus);
+  }
+  h += '</div><div class="okrAddRow">'+
+    '<button class="btn ghost" id="okrKrAddBtn" type="button"'+(rows>=OKR_MAX_KRS?' style="display:none"':'')+'>'+esc(t('+ Add a key result'))+'</button>'+
+    '<button class="btn ghost" id="okrHeadAddBtn" type="button">'+esc(t('+ Heading'))+'</button></div>';
   h += '<button class="btn" id="okrSaveBtn">'+esc(t(editing?'Save changes':'Add objective'))+'</button>'+
     '<button class="btn ghost" id="okrCancelBtn">'+esc(t('Cancel'))+'</button></div>';
   return h;
 }
 
-/* One person's objectives, with the job they belong to on top. `who` is any
-   staff record — yourself or a teammate. `mine` turns on the wording addressed
-   to you, and the editing controls: you may write your own department's
-   objectives, never another department's, which the server enforces too.
+/* ---- Paste OKRs ----
+   Most teams already have their OKRs written down somewhere — a doc, a chat,
+   a slide. Pasting that in beats retyping it box by box. The rules are loose
+   on purpose:
+     "Objective 1: …" (or "Goal:", "O1.") starts an objective;
+     a bulleted or numbered line is a key result;
+     any other line under an objective is a heading (Money, Time…);
+     a plain line before any objective is taken as one.
+   Nothing is saved until the preview has been seen. */
+var OKR_OBJ_RE = /^\s*(?:(?:objective|goal)\s*\d*|o\d+)\s*(?:[:.)\-–—]\s*|\s+(?=\S))(.*)$/i;
+var OKR_OBJ_BARE_RE = /^\s*(?:(?:objective|goal)\s*\d*|o\d+)\s*[:.)\-–—]?\s*$/i;
+var OKR_BULLET_RE = /^\s*(?:[•\-*–—·●▪◦○■□➢►▶✓✔☐]|\d{1,2}[.)]|[a-z][.)]|kr\s*\d*\s*[:.)\-–—])\s*(.+)$/i;
+function okrParsePaste_(text){
+  var out = [], cur = null, group = '', waitTitle = false, notes = [];
+  String(text||'').split(/\r?\n/).forEach(function(raw){
+    var line = raw.replace(/\s+$/,'');
+    if(!line.trim()) return;
+    var m;
+    if(OKR_OBJ_BARE_RE.test(line)){ waitTitle = true; cur = null; group = ''; return; }
+    if((m = line.match(OKR_OBJ_RE)) && m[1].trim()){
+      cur = { objective:m[1].trim(), krs:[] }; out.push(cur); group = ''; waitTitle = false; return;
+    }
+    if((m = line.match(OKR_BULLET_RE)) && !waitTitle){
+      if(!cur){ cur = { objective:'', krs:[] }; out.push(cur); }
+      cur.krs.push({ text:m[1].trim(), group:group });
+      return;
+    }
+    var plain = line.trim().replace(/:$/,'');
+    if(waitTitle || !cur){ cur = { objective:plain, krs:[] }; out.push(cur); group = ''; waitTitle = false; }
+    else group = plain;
+  });
+  out.forEach(function(o, i){
+    var name = gpT('Objective {n}', { n:i+1 });
+    if(!o.objective) notes.push(gpT('{name} has no title.', { name:name }));
+    if(!o.krs.length) notes.push(gpT('{name} has no key results — put each one on its own line starting with •', { name:name }));
+    if(o.krs.length > OKR_MAX_KRS){
+      notes.push(gpT('{name} has {n} key results; only the first {max} fit.', { name:name, n:o.krs.length, max:OKR_MAX_KRS }));
+      o.krs = o.krs.slice(0, OKR_MAX_KRS);
+    }
+  });
+  return { objectives:out, notes:notes };
+}
+function okrPasteHtml_(){
+  var h = '<div class="okrCard" id="okrPasteCard"><div class="okrObj">📋 '+esc(t('Paste OKRs'))+'</div>'+
+    '<p class="sub" style="margin:4px 0 8px">'+esc(t('Paste your OKRs as you already have them written. Start each objective with “Objective 1:” and put each key result on its own line starting with •'))+'</p>';
+  var parsed = S.okrPasteParsed;
+  if(!parsed){
+    h += '<textarea id="okrPasteText" rows="10" placeholder="'+esc('Objective 1: …\n\nMoney\n• …\n• …\n\nObjective 2: …\n• …')+'">'+esc(S.okrPasteText||'')+'</textarea>'+
+      '<button class="btn" id="okrPastePreview">'+esc(t('Preview'))+'</button>';
+  } else {
+    var good = parsed.objectives.filter(function(o){ return o.objective && o.krs.length; });
+    parsed.objectives.forEach(function(o, i){
+      h += '<div class="okrPrev"><div class="okrPrevObj"><span class="okrNum">'+(i+1)+'</span>'+esc(o.objective||'—')+'</div>';
+      var lg = '';
+      o.krs.forEach(function(kr){
+        if(kr.group && kr.group!==lg) h += '<div class="krGroup">'+esc(kr.group)+'</div>';
+        lg = kr.group;
+        h += '<div class="okrPrevKr">• '+esc(kr.text)+'</div>';
+      });
+      h += '</div>';
+    });
+    parsed.notes.forEach(function(nt){ h += '<div class="krWarn">'+esc(nt)+'</div>'; });
+    var qNow = Math.min(4, Math.floor((thisWeek()-1)/13)+1);
+    h += good.length
+      ? '<button class="btn" id="okrPasteSave">'+esc(gpT(good.length===1?'Add 1 objective to Q{q}':'Add {n} objectives to Q{q}', { n:good.length, q:qNow }))+'</button>'
+      : '';
+    h += '<button class="btn ghost" id="okrPasteBack">'+esc(t('Back to the text'))+'</button>';
+  }
+  h += '<button class="btn ghost" id="okrPasteCancel">'+esc(t('Cancel'))+'</button></div>';
+  return h;
+}
+function okrPasteSave_(btn){
+  var parsed = S.okrPasteParsed; if(!parsed) return;
+  var list = parsed.objectives.filter(function(o){ return o.objective && o.krs.length; });
+  var myDept = S.me.dept==='Base Director' ? 'Campus Leadership' : S.me.dept;
+  var quarter = Math.min(4, Math.floor((thisWeek()-1)/13)+1), stamp = Date.now(), i = 0;
+  btn.disabled = true; btn.textContent = t('Saving…');
+  (function next(){
+    if(i >= list.length){
+      S.okrPaste = false; S.okrPasteParsed = null; S.okrPasteText = '';
+      showMsg(t('Saved')); render(); return;
+    }
+    var o = list[i];
+    var obj = { id:'o'+stamp+'_'+i, campus:S.me.campus, quarter:quarter, dept:myDept, objective:o.objective,
+      krs:o.krs.map(function(kr){ return { text:kr.text, group:kr.group||'', metricKey:'', target:0, manual:0 }; }) };
+    run('saveObjective', [obj, '', S.auth.user, S.auth.pin], function(d){
+      if(d && d.entries){ S.base = d; i++; next(); }
+      else { btn.disabled = false; btn.textContent = t('Try again'); list = list.slice(i); i = 0;
+        S.okrPasteParsed = { objectives:list, notes:[] };
+        showMsg(t('That didn’t save — try again.')); }
+    });
+  })();
+}
 
-   A department overseer (dept: Campus Leadership, ministry: e.g. Community
+/* One person's objectives, with the job they belong to on top. `who` is any
+   staff record; `mine` is true on your own page (where you can write).
+   A department lead who oversees another department (e.g. Community
    Service) sees their OWN department's objectives (Campus Leadership's) plus
-   the objectives of the department they lead — two sets, same as the
-   "Ministries You Oversee" section on My Ministry. When there's more than
-   one objective to show, they're paged one at a time instead of stacked, so
-   the section stays short; each card still says which department it
-   belongs to. */
+   the objectives of the department they lead. Every objective is on the page
+   at once, numbered, with its key results showing — the quarter's whole plan
+   in one scroll, the way SugarOKR lays it out. */
 function okrSectionHtml(who, mine, noHeading){
   var wk = thisWeek();
   var qNow = Math.min(4, Math.floor((wk-1)/13)+1);
@@ -2839,9 +3028,8 @@ function okrSectionHtml(who, mine, noHeading){
   var h = noHeading ? '' : ('<h3'+(mine?' id="sec-okr"':'')+'>🎯 Q'+qNow+' '+esc(t('OKRs'))+'</h3>');
 
   var focus = (typeof jobFocus==='function') ? jobFocus(dept, who.ministry) : null;
-  if(focus){
-    h += '<div class="focusCard"><div class="fLabel">'+
-      esc(t(mine ? 'Your focus' : 'Their focus'))+'</div>'+
+  if(focus && !mine){
+    h += '<div class="focusCard"><div class="fLabel">'+esc(t('Their focus'))+'</div>'+
       '<div class="fMin">'+esc(t(who.ministry || dept))+'</div>'+
       '<p>'+esc(focus)+'</p></div>';
   }
@@ -2854,40 +3042,39 @@ function okrSectionHtml(who, mine, noHeading){
     return o.campus===who.campus && Number(o.quarter)===qNow && depts.indexOf(o.dept)>-1;
   });
 
-  if(!theirs.length && !(mine && S.okrForm)){
+  if(theirs.length){
+    /* the quarter at a glance: overall progress against how far through it we are */
+    var sum = 0; theirs.forEach(function(o){ sum += R.objProgress(o); });
+    var all = Math.round(sum/theirs.length);
+    var qWeek = Math.max(1, Math.min(13, wk-(qNow-1)*13));
+    h += '<div class="okrSum"><div><div class="okrSumPct">'+all+'%</div>'+
+      '<div class="rowSub">'+esc(gpT(theirs.length===1?'1 objective':'{n} objectives',{n:theirs.length}))+'</div></div>'+
+      '<div class="okrSumWk"><div class="rowSub">'+esc(gpT('Week {n} of 13',{n:qWeek}))+'</div>'+
+      '<div class="krBar"><div class="barFill" style="width:'+Math.round(qWeek/13*100)+'%"></div></div></div></div>';
+  } else if(!(mine && (S.okrForm || S.okrPaste))){
     h += '<div class="card"><p class="sub" style="margin:0">'+
       esc(t(mine ? 'No objectives set for your department this quarter.'
                  : 'No objectives set for their department this quarter.'))+'</p></div>';
   }
-  if(theirs.length){
-    if(theirs.length>1){
-      S.okrIdx = Math.max(0, Math.min(S.okrIdx||0, theirs.length-1));
-      h += '<div class="weekNavRow" style="margin-bottom:8px">'+
-        '<button class="weekArrow" id="okrPrev" aria-label="'+esc(t('Previous'))+'"'+(S.okrIdx<=0?' disabled':'')+'>‹</button>'+
-        '<div class="weekPill">'+esc(gpT('{n} of {total}',{n:S.okrIdx+1,total:theirs.length}))+'</div>'+
-        '<button class="weekArrow" id="okrNext" aria-label="'+esc(t('Next'))+'"'+(S.okrIdx>=theirs.length-1?' disabled':'')+'>›</button>'+
-      '</div>';
-    }
-    var shown = theirs.length>1 ? theirs[S.okrIdx] : theirs[0];
-    /* Edit/delete only on your OWN department's objective — the server
-       refuses a write against a department you merely oversee, same as
-       writing its ministries' KPIs numbers goes through a different,
-       explicitly-authorized path (saveMinistryFor), not this one. */
-    h += okrCardHtml(shown, R, mine && shown.dept===dept);
-  }
+  theirs.forEach(function(o, i){
+    /* Editing happens in place: the form takes the card's spot. Edit/delete
+       only on your OWN department's objective — the server refuses a write
+       against a department you merely oversee. */
+    if(mine && S.okrForm && !S.okrAdmin && S.okrEditId===o.id) h += okrFormHtml(o);
+    else h += okrCardHtml(o, R, mine && o.dept===dept, theirs.length>1 ? i+1 : 0);
+  });
 
   if(mine){
-    if(S.okrForm && !S.okrAdmin){
-      var editing = null;
-      if(S.okrEditId) theirs.forEach(function(o){ if(o.id===S.okrEditId) editing=o; });
-      h += okrFormHtml(editing);
-    } else {
-      h += '<button class="btn ghost" id="okrNewBtn">+ '+esc(t('New objective'))+'</button>';
+    if(S.okrForm && !S.okrAdmin && !S.okrEditId) h += okrFormHtml(null);
+    else if(S.okrPaste) h += okrPasteHtml_();
+    else if(!S.okrForm){
+      h += '<div class="okrAddRow"><button class="btn ghost" id="okrNewBtn">+ '+esc(t('New objective'))+'</button>'+
+        '<button class="btn ghost" id="okrPasteBtn">📋 '+esc(t('Paste OKRs'))+'</button></div>';
     }
   }
 
   if(theirs.length){
-    h += '<p class="hint">'+esc(t('Progress comes from what your ministry logs each week, not from ticking a box here.'))+'</p>';
+    h += '<p class="hint">'+esc(t('Slide a key result to show how far along it is. Ones linked to a ministry number fill in from what that ministry logs each week.'))+'</p>';
   }
   return h;
 }
@@ -2895,30 +3082,40 @@ function okrSectionHtml(who, mine, noHeading){
 /* Writing an objective. The server re-checks everything: it takes the campus and
    department from the staff record rather than from this payload, and refuses an
    id that belongs to another department. So the worst a bad request here can do
-   is fail. */
+   is fail. Rows are read in page order, so a heading row labels the key
+   results under it. */
 function okrSave(btn){
   var text = (document.getElementById('okrObjText').value||'').trim();
   if(!text){ showMsg(t('Give the objective a name first.')); return; }
-  var krs = [];
-  for(var k=0;document.getElementById('okrKrText'+k);k++){
+  var krs = [], group = '';
+  document.querySelectorAll('#okrKrList .okrRow').forEach(function(row){
+    if(row.hasAttribute('data-okr-head')){
+      group = (row.querySelector('input').value||'').trim(); return;
+    }
+    var k = row.getAttribute('data-okr-kr');
     var tx = (document.getElementById('okrKrText'+k).value||'').trim();
-    if(!tx) continue;
-    krs.push({ text:tx,
-      metricKey: document.getElementById('okrKrMetric'+k).value,
-      target: Number(document.getElementById('okrKrTarget'+k).value)||0,
-      manual: 0 });
-  }
+    if(!tx) return;
+    var how = document.getElementById('okrKrMetric'+k).value;
+    krs.push({ text:tx, group:group,
+      metricKey: how===OKR_COUNT ? '' : how,
+      kind: how===OKR_COUNT ? 'count' : '',
+      target: how ? (Number(document.getElementById('okrKrTarget'+k).value)||0) : 0,
+      manual: 0, current: 0 });
+  });
   if(!krs.length){ showMsg(t('Add at least one key result.')); return; }
 
-  /* Keep the hand-tracked percentages already entered: the form does not show
-     them, so re-saving an objective must not silently reset them to zero. */
+  /* Keep the progress already entered — the slider's percentage and a count's
+     running total. The form does not show them, so re-saving an objective must
+     not silently reset them to zero. */
   if(S.okrEditId){
     (S.base.okrs||[]).forEach(function(o){
       if(o.id!==S.okrEditId) return;
       krs.forEach(function(nk){
         if(nk.metricKey) return;
         (o.krs||[]).forEach(function(ok){
-          if(ok.text===nk.text && !ok.metricKey) nk.manual = Number(ok.manual)||0;
+          if(ok.text!==nk.text || ok.metricKey) return;
+          nk.manual = Number(ok.manual)||0;
+          nk.current = Number(ok.current)||0;
         });
       });
     });
@@ -2952,19 +3149,20 @@ function okrDelete(id){
   });
 }
 
-/* A hand-tracked key result is the one number a person moves themselves, so it
-   saves on change rather than making them open the form for it. */
-function okrSetManual(id, index, pct){
-  var target = null;
-  (S.base.okrs||[]).forEach(function(o){ if(o.id===id) target=o; });
-  if(!target || !target.krs || !target.krs[index]) return;
+/* Moving a key result — the slider or the count — saves on its own rather than
+   making anyone open the form for it. The page updates straight away; the
+   save follows (the count's a moment later, so tapping + five times is one
+   save, not five). */
+function okrFind_(id){
+  var o = null; (S.base && S.base.okrs || []).forEach(function(x){ if(x.id===id) o=x; });
+  return o;
+}
+function okrSaveProgress_(o){
   var copy = {
-    id: target.id, campus: target.campus, quarter: target.quarter,
-    dept: target.dept, objective: target.objective,
-    krs: target.krs.map(function(kr, i){
-      return { text:kr.text, metricKey:kr.metricKey||'',
-        target:Number(kr.target)||0,
-        manual: i===index ? Math.max(0, Math.min(100, Number(pct)||0)) : (Number(kr.manual)||0) };
+    id: o.id, campus: o.campus, quarter: o.quarter, dept: o.dept, objective: o.objective,
+    krs: o.krs.map(function(kr){
+      return { text:kr.text, group:kr.group||'', metricKey:kr.metricKey||'', kind:kr.kind||'',
+        target:Number(kr.target)||0, manual:Number(kr.manual)||0, current:Number(kr.current)||0 };
     })
   };
   run('saveObjective', [copy, '', S.auth.user, S.auth.pin], function(d){
@@ -2972,6 +3170,21 @@ function okrSetManual(id, index, pct){
     else showMsg(t('That didn’t save — try again.'));
     render();
   });
+}
+function okrSetManual(id, index, pct){
+  var o = okrFind_(id);
+  if(!o || !o.krs || !o.krs[index]) return;
+  o.krs[index].manual = Math.max(0, Math.min(100, Number(pct)||0));
+  okrSaveProgress_(o);
+}
+var okrCountTimer_ = null;
+function okrSetCount(id, index, n){
+  var o = okrFind_(id);
+  if(!o || !o.krs || !o.krs[index]) return;
+  o.krs[index].current = Math.max(0, Math.round(Number(n)||0));
+  render();
+  clearTimeout(okrCountTimer_);
+  okrCountTimer_ = setTimeout(function(){ okrSaveProgress_(o); }, 900);
 }
 
 /* ---------- my week: the personal page ---------- */
@@ -9320,30 +9533,41 @@ function bind(){
     weekClear();
   };
 
-  /* --- OKR editing, on Me only --- */
-  document.querySelectorAll('[data-kr-toggle]').forEach(function(b){
-    b.onclick=function(){ var id=b.getAttribute('data-kr-toggle'); S.krOpen[id]=!S.krOpen[id]; render(); };
-  });
-  var okp=document.getElementById('okrPrev');
-  if(okp) okp.onclick=function(){ gpTap(); S.okrIdx=Math.max(0,(S.okrIdx||0)-1); render(); };
-  var okn=document.getElementById('okrNext');
-  if(okn) okn.onclick=function(){ gpTap(); S.okrIdx=(S.okrIdx||0)+1; render(); };
+  /* --- OKRs --- */
   var onb=document.getElementById('okrNewBtn');
-  if(onb) onb.onclick=function(){ S.okrAdmin=null; S.okrForm=true; S.okrEditId=null; render(); };
+  if(onb) onb.onclick=function(){ S.okrAdmin=null; S.okrForm=true; S.okrEditId=null; S.okrPaste=false; render(); };
   var ocb=document.getElementById('okrCancelBtn');
   if(ocb) ocb.onclick=function(){ S.okrForm=false; S.okrEditId=null; S.okrAdmin=null; render(); };
   var osb=document.getElementById('okrSaveBtn');
   if(osb) osb.onclick=function(){ okrSave(osb); };
-  for(var kw=0;document.getElementById('okrKrText'+kw);kw++) okrBindKrRow_(kw);
+  okrKrRows_().forEach(function(r){ okrBindKrRow_(r.getAttribute('data-okr-kr')); });
+  document.querySelectorAll('#okrKrList .okrRow').forEach(okrBindRm_);
   var oka=document.getElementById('okrKrAddBtn');
   if(oka) oka.onclick=function(){ gpTap(); okrAddKr_(); };
+  var okh=document.getElementById('okrHeadAddBtn');
+  if(okh) okh.onclick=function(){ gpTap(); okrAddHead_(); };
+  var opb=document.getElementById('okrPasteBtn');
+  if(opb) opb.onclick=function(){ gpTap(); S.okrPaste=true; S.okrPasteParsed=null; render();
+    var ta=document.getElementById('okrPasteText'); if(ta) ta.focus(); };
+  var opp=document.getElementById('okrPastePreview');
+  if(opp) opp.onclick=function(){
+    S.okrPasteText = document.getElementById('okrPasteText').value;
+    var parsed = okrParsePaste_(S.okrPasteText);
+    if(!parsed.objectives.length){ showMsg(t('Nothing to add yet — paste your OKRs in the box.')); return; }
+    S.okrPasteParsed = parsed; render();
+  };
+  var opk=document.getElementById('okrPasteBack');
+  if(opk) opk.onclick=function(){ S.okrPasteParsed=null; render(); };
+  var opc=document.getElementById('okrPasteCancel');
+  if(opc) opc.onclick=function(){ S.okrPaste=false; S.okrPasteParsed=null; S.okrPasteText=''; render(); };
+  var ops=document.getElementById('okrPasteSave');
+  if(ops) ops.onclick=function(){ okrPasteSave_(ops); };
   document.querySelectorAll('[data-okr-edit]').forEach(function(b){
     b.onclick=function(){
-      var id=b.getAttribute('data-okr-edit'), o=null;
-      (S.base && S.base.okrs || []).forEach(function(x){ if(x.id===id) o=x; });
+      var id=b.getAttribute('data-okr-edit'), o=okrFind_(id);
       // an admin editing from "Every department's OKRs" writes that objective's own campus / department
       S.okrAdmin = (o && S.me.isAdmin && b.closest('[data-okradmin]')) ? { campus:o.campus, dept:o.dept } : null;
-      S.okrEditId=id; S.okrForm=true; render();
+      S.okrEditId=id; S.okrForm=true; S.okrPaste=false; render();
       var f=document.getElementById('okrForm'); if(f) f.scrollIntoView({behavior:'smooth', block:'start'});
     };
   });
@@ -9360,9 +9584,31 @@ function bind(){
     };
   });
   document.querySelectorAll('[data-okr-manual]').forEach(function(inp){
+    var ref = inp.getAttribute('data-okr-manual');
+    inp.oninput=function(){
+      inp.style.setProperty('--p', inp.value+'%');
+      var lbl=document.querySelector('[data-okr-pct="'+ref+'"]');
+      if(lbl) lbl.textContent=(Number(inp.value)>=100?'✓ ':'')+inp.value+'%';
+    };
     inp.onchange=function(){
-      var parts=inp.getAttribute('data-okr-manual').split('|');
+      var parts=ref.split('|');
       okrSetManual(parts[0], Number(parts[1]), inp.value);
+    };
+  });
+  document.querySelectorAll('[data-okr-step]').forEach(function(b){
+    b.onclick=function(){
+      gpTap();
+      var parts=b.getAttribute('data-okr-step').split('|'), o=okrFind_(parts[0]), kr=o && o.krs[Number(parts[1])];
+      if(kr) okrSetCount(parts[0], Number(parts[1]), (Number(kr.current)||0)+Number(parts[2]));
+    };
+  });
+  document.querySelectorAll('[data-okr-count]').forEach(function(b){
+    b.onclick=function(){
+      var parts=b.getAttribute('data-okr-count').split('|'), o=okrFind_(parts[0]), kr=o && o.krs[Number(parts[1])];
+      if(!kr) return;
+      var v = prompt(t('How many so far?'), String(Number(kr.current)||0));
+      if(v===null || v.trim()==='' || isNaN(Number(v))) return;
+      okrSetCount(parts[0], Number(parts[1]), Number(v));
     };
   });
 

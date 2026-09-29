@@ -479,6 +479,13 @@ function gpRollup(D){
          thing that needs fixing. */
       return { pct:Math.max(0,Math.min(100,p)), actual:actual, raw:Math.max(0,p) };
     }
+    /* Counting toward a number ("Recruit 20 students"): the count so far over
+       the target. */
+    if(kr.kind==='count'){
+      var c = Math.max(0,Number(kr.current)||0);
+      var cp = kr.target>0 ? Math.round(c/kr.target*100) : 0;
+      return { pct:Math.min(100,cp), actual:c, raw:cp };
+    }
     var m = Math.max(0,Number(kr.manual)||0);
     return { pct:Math.min(100,m), actual:null, raw:m };
   }
