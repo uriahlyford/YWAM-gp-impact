@@ -510,6 +510,12 @@ forms, documents and references follow.
   the scope for a non-HR caller (creating one included). Everyone else with access sees
   all kinds. The staff list's tab row (`.whatTab[data-whatfilter]`, All · DTS · DBS · BCS ·
   SMS · Staff · Volunteer · Teams with counts) shows only the tabs in scope.
+- **The Outreach Teams leader gets in without a tick** (`leadsTeams_`). Anyone whose `leads`
+  include `Community Service|Outreach Teams` passes `canPortal_`, and is scoped to team
+  applications unless they are also ticked Portal staff. Making someone that ministry's leader
+  (Admin → Accounts) is the grant. Admin → Portal access says so on their row
+  (`[data-teamsleader]`). `getMyBoot` sends `staff.portal`, so the menu shows the portal link
+  to them too.
 - **The application forms** live in data: `netlify/functions/portal-forms-default.js` (one
   form per key — dts/dbs/bcs/sms/staff/volunteer/team; sections → questions with `{en,km}`
   labels, a type, required, options, and an `audience` of all / khmer / international)

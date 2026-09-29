@@ -2505,7 +2505,7 @@ async function getMyBoot(username, pin) {
 
   return {
     ok: true,
-    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin }),
+    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s) }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || ''
@@ -3081,7 +3081,11 @@ const PORTAL_MESSENGERS = ['whatsapp', 'telegram'];
    round, and a stage move by staff can land anywhere on this line). */
 const PORTAL_STAGE_ORDER = ['new', 'applied', 'contacted', 'interview', 'accepted', 'practical', 'arrived'];
 function isApplicant_(s) { return !!(s && s.kind === 'applicant'); }
-function canPortal_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || s.portalAdmin || s.portalStaff)); }
+/* The leader of Outreach Teams hosts the short-term teams, so they work team
+   applications on the portal without anyone ticking Portal access for them:
+   the admin who makes someone that ministry's leader has already said so. */
+function leadsTeams_(s) { return isLeaderOf_(s, TEAM_DEPT, TEAM_MIN); }
+function canPortal_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || s.portalAdmin || s.portalStaff || leadsTeams_(s))); }
 function isPortalAdmin_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || s.portalAdmin)); }
 /* Which kinds of application a portal staff member works. Outreach Teams
    hosts the short-term teams, so someone on that ministry sees team
@@ -3090,6 +3094,8 @@ function isPortalAdmin_(s) { return !!(s && !isApplicant_(s) && s.active !== fal
 function portalTypes_(s) {
   if (!s || isPortalAdmin_(s)) return null;
   if (deptOf_(s) === TEAM_DEPT && s.ministry === TEAM_MIN) return ['team'];
+  // in only as the Outreach Teams leader: team applications, same as its staff
+  if (!s.portalStaff && leadsTeams_(s)) return ['team'];
   return null;
 }
 function portalMaySee_(s, c) { const ty = portalTypes_(s); return !ty || !c || ty.indexOf(c.type) > -1; }
