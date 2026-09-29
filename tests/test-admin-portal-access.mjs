@@ -30,6 +30,7 @@ const ME = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', d
 let staff = [ME,
   { ...base, id: 'st_dara', name: 'Dara Pen', username: 'dara', dept: 'Community Service', ministry: 'Cafe', portalStaff: true },
   { ...base, id: 'st_sina', name: 'Sina Sok', username: 'sina', dept: 'Campus Leadership', ministry: 'Community Service' },
+  { ...base, id: 'st_kosal', name: 'Kosal Lead', username: 'kosal', dept: 'Campus Leadership', ministry: 'Campus Director', leads: ['Community Service|Outreach Teams'] },
   { ...base, id: 'st_bopha', name: 'Bopha Kim', username: 'bopha', campus: 'poipet', dept: 'Community Service', ministry: 'Cafe' }];
 const browser = await chromium.launch({ executablePath: CHROMIUM });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
@@ -56,11 +57,12 @@ await page.waitForSelector('[data-adminsub="portal"]', { timeout: 10000 });
 ok('the Admin home has a Portal access card', /Portal access/.test(await page.$eval('[data-adminsub="portal"]', e => e.textContent)));
 await page.click('[data-adminsub="portal"]');
 await page.waitForSelector('[data-portalstaff]', { timeout: 10000 });
-ok('it opens on the admin’s own campus with its people', (await page.$$eval('[data-adminportalcampus]', c => c.find(x => x.classList.contains('on')).getAttribute('data-adminportalcampus'))) === 'siemreap' && (await page.$$eval('.portalRow', r => r.length)) === 3);
+ok('it opens on the admin’s own campus with its people', (await page.$$eval('[data-adminportalcampus]', c => c.find(x => x.classList.contains('on')).getAttribute('data-adminportalcampus'))) === 'siemreap' && (await page.$$eval('.portalRow', r => r.length)) === 4);
+ok('the Outreach Teams leader’s row says they already work team applications, with no tick', /Team applications — leads Outreach Teams/.test(await page.$eval('.portalWho[data-adminperson="st_kosal"]', e => e.textContent)) && await page.$eval('[data-portalstaff="st_kosal"]', c => !c.checked) && !(await page.$('.portalWho[data-adminperson="st_dara"] [data-teamsleader]')));
 ok('with a link to open the portal', await page.$eval('#main a[href="portal.html"]', a => !!a));
 ok('the admin is shown as having both, untickable', await page.$eval('[data-portalstaff="st_admin"]', c => c.checked && c.disabled) && await page.$eval('[data-portaladmin="st_admin"]', c => c.checked && c.disabled));
 ok('existing portal staff are ticked, others not', await page.$eval('[data-portalstaff="st_dara"]', c => c.checked) && await page.$eval('[data-portalstaff="st_sina"]', c => !c.checked));
-ok('people with access sort to the top', (await page.$$eval('.portalRow .rowName', n => n.map(x => x.textContent.trim().split(' ')[0]).join(','))) === 'Uriah,Dara,Sina');
+ok('people with access sort to the top', (await page.$$eval('.portalRow .rowName', n => n.map(x => x.textContent.trim().split(' ')[0]).join(','))) === 'Uriah,Dara,Kosal,Sina', await page.$$eval('.portalRow .rowName', n => n.map(x => x.textContent.trim()).join(',')));
 await page.check('[data-portalstaff="st_sina"]');
 await page.waitForTimeout(400);
 const grant = sent.filter(b => b.fn === 'adminUpdateStaff').pop();
@@ -74,7 +76,7 @@ await page.uncheck('[data-portalstaff="st_dara"]');
 await page.waitForTimeout(400);
 const revoke = sent.filter(b => b.fn === 'adminUpdateStaff').pop();
 ok('unticking revokes', revoke && revoke.args[2] === 'st_dara' && JSON.stringify(revoke.args[3]) === '{"portalStaff":false}');
-ok('the count chip follows', /Siem Reap · 1/.test(await page.$eval('[data-adminportalcampus="siemreap"]', e => e.textContent)));
+ok('the count chip follows', /Siem Reap · 2/.test(await page.$eval('[data-adminportalcampus="siemreap"]', e => e.textContent)));
 await page.click('[data-adminportalcampus="poipet"]');
 await page.waitForTimeout(200);
 ok('Poipet shows its own people', (await page.$$eval('.portalRow .rowName', n => n.map(x => x.textContent.trim()).join(','))) === 'Bopha Kim');

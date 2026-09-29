@@ -2147,9 +2147,10 @@ function renderMenu(){
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18"/><path d="M8 2.5V6M16 2.5V6"/><path d="M8 14h4M8 17.5h8"/></svg>',
     label:t('HR')+(((S.hrDue||0)+(S.hrFollowUps||0)) ? ' · '+((S.hrDue||0)+(S.hrFollowUps||0)) : '') });
   // The YWAM GP Portal — applications. Only people with portal access (an
-  // admin, or anyone an admin ticked on Admin → Portal access); opens in its
-  // own tab so the staff app stays where it was.
-  if(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin) items.push({ id:'portal',
+  // admin, anyone an admin ticked on Admin → Portal access, or the Outreach
+  // Teams leader — S.me.portal, worked out by the server); opens in its own
+  // tab so the staff app stays where it was.
+  if(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) items.push({ id:'portal',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><path d="M8 13h8M8 17h5"/></svg>',
     label:t('YWAM GP Portal') });
   if(S.me.isAdmin) items.push({ id:'admin',
@@ -4525,7 +4526,10 @@ function adminApprovalsHtml_(){
 function adminPortalHtml_(){
   if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
   var everyone=S.adminStaff.filter(function(x){ return x.active && !x.archived; });
-  var tabs=CAMPUSES.map(function(c){ return { id:c.id, label:c.short, n:everyone.filter(function(x){ return x.campus===c.id && (x.portalStaff||x.portalAdmin); }).length }; });
+  /* The Outreach Teams leader works team applications without a tick (see
+     leadsTeams_ in api.js) — said on their row so the list is the whole story. */
+  var leadsTeams=function(x){ return (x.leads||[]).indexOf('Community Service|Outreach Teams')>-1; };
+  var tabs=CAMPUSES.map(function(c){ return { id:c.id, label:c.short, n:everyone.filter(function(x){ return x.campus===c.id && (x.portalStaff||x.portalAdmin||leadsTeams(x)); }).length }; });
   var activeTab = tabs.some(function(tb){ return tb.id===S.adminPortalCampus; }) ? S.adminPortalCampus
     : (tabs.some(function(tb){ return tb.id===S.me.campus; }) ? S.me.campus : tabs[0].id);
   S.adminPortalCampus=activeTab;
@@ -4534,9 +4538,9 @@ function adminPortalHtml_(){
   h+='<div class="deptChips">'+tabs.map(function(tb){
     return '<button class="deptChip'+(activeTab===tb.id?' on':'')+'" data-adminportalcampus="'+esc(tb.id)+'">'+esc(tb.label)+' · '+tb.n+'</button>'; }).join('')+'</div>';
   var people=everyone.filter(function(x){ return x.campus===activeTab; }).sort(function(a,b){
-    var ra=(a.isAdmin?4:0)+(a.portalAdmin?2:0)+(a.portalStaff?1:0), rb=(b.isAdmin?4:0)+(b.portalAdmin?2:0)+(b.portalStaff?1:0);
+    var ra=(a.isAdmin?4:0)+(a.portalAdmin?2:0)+(a.portalStaff?1:0)+(leadsTeams(a)?0.5:0), rb=(b.isAdmin?4:0)+(b.portalAdmin?2:0)+(b.portalStaff?1:0)+(leadsTeams(b)?0.5:0);
     return rb-ra || (a.name<b.name?-1:1); });
-  var withN=people.filter(function(x){ return x.portalStaff||x.portalAdmin||x.isAdmin; }).length;
+  var withN=people.filter(function(x){ return x.portalStaff||x.portalAdmin||x.isAdmin||leadsTeams(x); }).length;
   h+='<div class="mmGrid">'+[[t('Can see applications'), withN, false],[t('Portal admins'), people.filter(function(x){ return x.portalAdmin||x.isAdmin; }).length, false]]
     .map(function(x){ return '<div class="mmTile"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
   if(!people.length) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('No accounts yet.'))+'</p></div>';
@@ -4546,7 +4550,9 @@ function adminPortalHtml_(){
     return '<div class="adminRow portalRow" data-adminrow="'+esc((x.name+' '+x.username).toLowerCase())+'">'+
       '<button class="portalWho" data-adminperson="'+esc(x.id)+'">'+avatarHtml(x,'sm')+
         '<span class="adminRowText"><span class="rowName">'+esc(x.name)+(isAdm?' <span class="hrChip active">'+esc(t('Admin'))+'</span>':'')+'</span>'+
-        '<span class="rowSub">'+esc(t(x.dept))+(x.ministry?' · '+esc(t(x.ministry)):'')+'</span></span></button>'+
+        '<span class="rowSub">'+esc(t(x.dept))+(x.ministry?' · '+esc(t(x.ministry)):'')+'</span>'+
+        (leadsTeams(x) && !x.portalStaff && !x.portalAdmin && !isAdm ? '<span class="rowSub" data-teamsleader>🌍 '+esc(t('Team applications — leads Outreach Teams'))+'</span>' : '')+
+        '</span></button>'+
       '<label class="portalTick"><input type="checkbox" data-portalstaff="'+esc(x.id)+'"'+((x.portalStaff||isAdm)?' checked':'')+(isAdm?' disabled':'')+'> '+esc(t('Portal staff'))+'</label>'+
       '<label class="portalTick"><input type="checkbox" data-portaladmin="'+esc(x.id)+'"'+((x.portalAdmin||isAdm)?' checked':'')+(isAdm?' disabled':'')+'> '+esc(t('Portal admin'))+'</label>'+
     '</div>';
