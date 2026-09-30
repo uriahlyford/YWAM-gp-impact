@@ -193,9 +193,12 @@ const teamForm = {
   sections: [{
     id: 'team', title: T('Your team', 'ក្រុមរបស់អ្នក'), help: T('', ''),
     questions: [
-      /* Order asked for by the base: team name and where it is from first, then
-         who leads it, then the rest. */
-      q('teamName', 'short', 'Team name', 'ឈ្មោះក្រុម', { required: true }),
+      /* Order asked for by the base: who is sending the team and where it is
+         from first, then who leads it, then the rest. The sending church, base
+         or organisation IS the team's name here — the staff side lists a team
+         by it rather than by the leader who made the account. (Kept as id
+         'teamName' so earlier answers still read.) */
+      q('teamName', 'short', 'Sending church, base or organization', 'ព្រះវិហារ មូលដ្ឋាន ឬអង្គការដែលបញ្ជូន', { required: true }),
       q('location', 'short', 'Where is your team from?', 'តើក្រុមរបស់អ្នកមកពីណា?', { required: true,
         help: T('City and country', 'ទីក្រុង និងប្រទេស') }),
       q('leaderName', 'short', 'Team leader’s name', 'ឈ្មោះអ្នកដឹកនាំក្រុម', { required: true }),
@@ -203,7 +206,6 @@ const teamForm = {
       /* A 'people' answer is a list — as many as the team has: [{name, email, phone}, …]. */
       q('coLeaders', 'people', 'Co-leaders', 'អ្នកដឹកនាំរួម', { addLabel: T('Add a co-leader', 'បន្ថែមអ្នកដឹកនាំរួម'),
         help: T('Anyone who leads the team with you. Add as many as you have — or none.', 'អ្នកដែលដឹកនាំក្រុមជាមួយអ្នក។ បន្ថែមប៉ុន្មាននាក់ក៏បាន — ឬគ្មានក៏បាន។') }),
-      q('org', 'short', 'Sending church, base or organisation', 'ព្រះវិហារ មូលដ្ឋាន ឬអង្គការដែលបញ្ជូន', { required: true }),
       q('size', 'number', 'How many people in total?', 'មានមនុស្សប៉ុន្មាននាក់សរុប?', { required: true }),
       q('focus', 'long', 'What kind of outreach is your team hoping to do?', 'ក្រុមរបស់អ្នកសង្ឃឹមធ្វើការផ្សព្វផ្សាយប្រភេទណា?', { required: true })
     ]
@@ -219,6 +221,10 @@ const teamForm = {
         help: T('Pick your arrival and departure for Siem Reap. Serving somewhere else in Cambodia too? Add each place with its dates. The location your team arrives at first is responsible for handling your visa.', 'ជ្រើសរើសថ្ងៃមកដល់ និងចាកចេញសម្រាប់សៀមរាប។ បម្រើនៅកន្លែងផ្សេងក្នុងកម្ពុជាដែរ? បន្ថែមកន្លែងនីមួយៗជាមួយកាលបរិច្ឆេទ។ ទីតាំងដែលក្រុមរបស់អ្នកមកដល់មុនគេ ទទួលខុសត្រូវរៀបចំទិដ្ឋាការរបស់អ្នក។') }),
       /* "attach" puts an upload box for that kind of document under the
          question once it is answered Yes — here, the flight itinerary. */
+      /* Passport copies are optional here, but the letter of invitation is
+         written from them — so the sooner the better. Yes opens the upload. */
+      q('passportsReady', 'yesno', 'Do you have passport copies for your team?', 'តើអ្នកមានច្បាប់ចម្លងលិខិតឆ្លងដែនសម្រាប់ក្រុមរបស់អ្នកទេ?', { options: YESNO, attach: 'passports',
+        help: T('Optional for now — but we need them as soon as possible to write your letter of invitation. If yes, attach them here; if not, add them later from your dashboard.', 'ស្រេចចិត្តសម្រាប់ពេលនេះ — ប៉ុន្តែយើងត្រូវការវាឱ្យបានឆាប់តាមដែលអាចធ្វើបាន ដើម្បីសរសេរលិខិតអញ្ជើញរបស់អ្នក។ បើមាន សូមភ្ជាប់នៅទីនេះ; បើមិនទាន់ សូមបន្ថែមពេលក្រោយពីផ្ទាំងរបស់អ្នក។') }),
       q('flightsBooked', 'yesno', 'Have you booked your flights yet?', 'តើអ្នកបានកក់ជើងហោះហើររួចហើយឬនៅ?', { required: true, options: YESNO, attach: 'flights',
         help: T('If yes, attach your itinerary here — a PDF or a picture. Not yet? That is fine; add it later from your dashboard. We use it to arrange your transport from the airport.', 'បើបាទ/ចាស សូមភ្ជាប់កាលវិភាគជើងហោះហើររបស់អ្នកនៅទីនេះ — PDF ឬរូបភាព។ មិនទាន់ទេ? មិនអីទេ; បន្ថែមនៅពេលក្រោយពីផ្ទាំងរបស់អ្នក។ យើងប្រើវាដើម្បីរៀបចំការដឹកជញ្ជូនរបស់អ្នកពីព្រលានយន្តហោះ។') })
     ]

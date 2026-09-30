@@ -571,7 +571,9 @@ forms, documents and references follow.
   s_ staff edit, r_ reference) after `flushAnswers_`. `tripOf_` gives days in Cambodia (first
   arrival to last departure, inclusive), each place's days, and the first stop (visa); it also
   reads old applications' arrival / departure / arrivalKh / departureKh answers.
-- **Team documents** (`PORTAL_DOC_KINDS.team`: passports + photo required, flights when booked):
+- **Team documents** (`PORTAL_DOC_KINDS.team`: passports required; the letter of invitation
+  `from: 'us'` — staff upload it, the team opens it and cannot upload or remove one; flights,
+  e-visas and a team photo optional):
   `portalUploadDoc` (applicant after submitting, or staff in scope with a candidateId; PDF /
   images, ~4 MB, blobs `pdoc:<id>`, the record keeps only the list), `portalGetDoc`,
   `portalDeleteDoc` (own record, or portal staff / HR in scope). Required kinds all present tick
@@ -614,6 +616,27 @@ forms, documents and references follow.
   staff account (a record whose `staffId` is real staff loses only the record). The panel's
   "Delete this account and application" asks for the name to be typed back. Applicant
   accounts are not in Admin → Accounts, so this is their one delete.
+- **A team has its own journey** (`teamSteps_`, shared by `portalAppOut_` and `portalCandOut_`):
+  account → form → **call** (video call) → **accepted** → **passports** → **invitation** (letter
+  of invitation) → **flights** → **evisa** → **orientation** → **checkin** (last check-in) →
+  **arrived**. It has no reference and no generic Documents step. Passports, invitation and
+  e-visa appear only when the team needs a visa, so a team from Cambodia skips them. Each step
+  carries `who` ('you' or 'us') and one of two flags:
+  - `auto` steps tick themselves when their document is on the record. The letter of
+    invitation also ticks from the old `visa.invitationSent` flag, and flights from
+    `visa.flightsConfirmed`.
+  - `tick` steps are staff checkboxes (`portalTeamStep(user, pin, candId, step, done)`, for
+    call / accepted / orientation / checkin / arrived). The call, orientation and check-in
+    are dated flags in `portal.team`, while Accepted and Arrived are stages. A tick only moves
+    the stage forward (call → interview, orientation or check-in → practical); unticking
+    Accepted or Arrived steps it back one. Both changes are logged.
+
+  The staff record shows "🧭 Team steps" with the next one named (`#teamNext`) and the
+  staff list row shows "→ next step". The team's timeline shows a You or Us tag and a line on
+  each step still ahead. A team's visa card leaves the letter and flights ticks to these steps.
+  A team is listed on the staff side by its `teamName` answer, which the form now labels
+  "Sending church, base or organization" (the separate `org` question is gone), and the
+  record names the leader under it (`candName_`).
 - **The timeline is derived on the server** (`portalAppOut_` → `portalSteps_` /
   `portalStatus_`): account → form → received → contact → documents & reference →
   interview → accepted → practical → arrived, walked from the CRM stage in

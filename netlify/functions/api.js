@@ -3280,7 +3280,47 @@ function portalStatus_(c) {
   if (c.stage === 'contacted') return 'in_review';
   return c.stage;   // interview | accepted | practical | arrived
 }
+/* ==================== a team's journey ====================
+   A short-term team runs differently from a student: no reference, and the
+   practical part — passports, the letter of invitation, flights, e-visas,
+   orientation — is most of it. Each step is done AUTOMATICALLY when the
+   portal can see it happen (a document uploaded, a stage reached) and by a
+   STAFF TICK when it happens outside the portal (the video call, the
+   orientation, the last check-in). A tick moves the CRM stage along with it
+   (portalTeamStep), so the staff list and the team's status keep telling the
+   same story. Passport copies, the letter of invitation and the e-visa are
+   only asked of a team that needs a visa (not one from Cambodia). */
+const TEAM_TICKS = ['call', 'accepted', 'orientation', 'checkin', 'arrived'];
+function teamFlags_(c) { return (c && c.portal && c.portal.team) || {}; }
+function hasDoc_(c, kind) { return docsOf_(c).some(function (d) { return d && d.kind === kind; }); }
+function teamSteps_(c) {
+  const idx = portalStageIdx_(c.stage);
+  const at = function (stage) { return idx >= portalStageIdx_(stage); };
+  const f = teamFlags_(c), visa = (c.portal && c.portal.visa) || {}, intl = needsVisa_(c);
+  const submitted = !!(c.portal && c.portal.submittedAt) || at('applied');
+  const all = at('arrived');
+  const steps = [
+    { id: 'account', done: true, who: 'you' },
+    { id: 'form', done: submitted, who: 'you' },
+    { id: 'call', done: all || !!f.call || at('accepted'), who: 'us', tick: true },
+    { id: 'accepted', done: at('accepted'), who: 'us', tick: true },
+    intl && { id: 'passports', done: all || hasDoc_(c, 'passports'), who: 'you', auto: true },
+    intl && { id: 'invitation', done: all || hasDoc_(c, 'invitation') || !!visa.invitationSent, who: 'us', auto: true },
+    { id: 'flights', done: all || hasDoc_(c, 'flights') || !!visa.flightsConfirmed, who: 'you', auto: true },
+    intl && { id: 'evisa', done: all || hasDoc_(c, 'evisa'), who: 'you', auto: true },
+    { id: 'orientation', done: all || !!f.orientation, who: 'us', tick: true },
+    { id: 'checkin', done: all || !!f.checkin, who: 'us', tick: true },
+    { id: 'arrived', done: all, who: 'us', tick: true }
+  ].filter(Boolean);
+  let current = -1;
+  steps.forEach(function (st, i) { if (current === -1 && !st.done) current = i; });
+  if (current === -1) current = steps.length - 1;
+  steps.forEach(function (st, i) { st.state = st.done ? 'done' : (i === current ? 'current' : 'todo'); });
+  if (c.archived) steps.forEach(function (st) { if (st.state === 'current') st.state = 'todo'; });
+  return steps;
+}
 function portalSteps_(c) {
+  if (c && c.type === 'team') return teamSteps_(c);
   const idx = portalStageIdx_(c.stage);
   const submitted = !!(c.portal && c.portal.submittedAt) || idx >= portalStageIdx_('applied');
   const docsDone = !!(c.portal && c.portal.docsDone);
@@ -3334,6 +3374,7 @@ function portalCandOut_(c, byId) {
     audience: audienceOf_(c), needsVisa: needsVisa_(c), refNeeded: refNeeded_(c), formKey: formKeyOf_(c),
     reference: refState_(c),
     docKinds: docKindsFor_(c),
+    steps: portalSteps_(c),
     hasAccount: !!acct
   });
 }
@@ -3744,8 +3785,13 @@ async function portalUpdateAnswers(username, pin, answers) {
    Each file is its own blob ('pdoc:<id>'); the record keeps only the list.
    Readable by the applicant themself and by portal staff who may see that
    record — nobody else. */
+/* `from: 'us'` is a document the base sends the team (the letter of
+   invitation): staff upload it, the team opens it, and only staff can remove
+   it. The team photo is optional now — the passports are what the letter of
+   invitation needs. */
 const PORTAL_DOC_KINDS = {
-  team: [{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: false }]
+  team: [{ id: 'passports', required: true }, { id: 'invitation', required: false, from: 'us' }, { id: 'flights', required: false },
+    { id: 'evisa', required: false }, { id: 'photo', required: false }]
 };
 const PORTAL_DOCS_MAX = 40;
 function docKindsFor_(c) { return PORTAL_DOC_KINDS[c && c.type] || []; }
@@ -3766,7 +3812,9 @@ async function docCand_(username, pin, candidateId) {
 async function portalUploadDoc(username, pin, kind, name, mime, base64, candidateId) {
   const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
   const cand = a.cand;
-  if (!docKindsFor_(cand).some(function (k) { return k.id === kind; })) return { ok: false, err: 'bad_kind' };
+  const kindDef = docKindsFor_(cand).filter(function (k) { return k.id === kind; })[0];
+  if (!kindDef) return { ok: false, err: 'bad_kind' };
+  if (a.own && kindDef.from === 'us') return { ok: false, err: 'from_us' };
   // documents come after applying — except one the form itself asks to attach (a team's flight itinerary)
   if (a.own && !(cand.portal && cand.portal.submittedAt)) {
     const form = (await getForms_())[formKeyOf_(cand)];
@@ -3808,6 +3856,11 @@ async function portalGetDoc(username, pin, docId) {
 }
 async function portalDeleteDoc(username, pin, docId) {
   const f = await findDoc_(username, pin, docId); if (f.out) return f.out;
+  if (isApplicant_(f.s)) {
+    const doc = docsOf_(f.cand).filter(function (d) { return d.id === f.docId; })[0];
+    const def = doc && docKindsFor_(f.cand).filter(function (k) { return k.id === doc.kind; })[0];
+    if (def && def.from === 'us') return { ok: false, err: 'from_us' };
+  }
   f.cand.portal.docs = docsOf_(f.cand).filter(function (d) { return d.id !== f.docId; });
   f.cand.updated = new Date().toISOString(); f.cand.updatedBy = f.s.id;
   await writeJSON('candidates', f.rows);
@@ -3844,6 +3897,7 @@ async function portalViewAs(username, pin, opts) {
     country: khmer ? 'Cambodia' : 'Australia', email: 'sample@example.org', phone: khmer ? '+855 12 345 678' : '+61 400 000 000', messenger: 'whatsapp', source: 'portal',
     portal: { createdAt: now, submittedAt: idx >= portalStageIdx_('applied') ? now : null, form: idx >= portalStageIdx_('applied') ? { answers: {}, submittedAt: now } : null, draft: null,
       visa: { flightsConfirmed: idx >= portalStageIdx_('practical'), invitationSent: idx >= portalStageIdx_('practical') },
+      team: { call: idx >= portalStageIdx_('interview') ? now : null, orientation: idx >= portalStageIdx_('practical') ? now : null },
       referenceDone: idx >= portalStageIdx_('interview'), references: idx >= portalStageIdx_('interview') ? [{ id: 'ref_sample', usedAt: now, leaderName: 'Sample Leader', createdAt: now }] : [] },
     log: [], archived: null, created: now, updated: now };
   const me = { id: 'preview', name: cand.name, username: 'sample', email: cand.email, phone: cand.phone, messenger: 'whatsapp', country: cand.country, campus: campus, type: type, school: school };
@@ -3958,6 +4012,38 @@ async function portalSetVisaFlags(username, pin, candidateId, flags) {
   await writeJSON('candidates', a.rows);
   const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
   return { ok: true, candidate: portalCandOut_(a.cand, byId) };
+}
+/* A staff tick on a team's journey (teamSteps_). The video call, the
+   orientation and the last check-in are dated flags on the record; Accepted
+   and Arrived ARE stages. A tick only ever moves the stage forward (call →
+   interview, orientation / check-in → getting ready); unticking Accepted or
+   Arrived steps the stage back one. Every change is logged. */
+async function portalTeamStep(username, pin, candidateId, step, done) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  const c = a.cand;
+  if (c.type !== 'team') return { ok: false, err: 'not_team' };
+  if (TEAM_TICKS.indexOf(step) === -1) return { ok: false, err: 'bad_step' };
+  done = !!done;
+  const now = new Date().toISOString();
+  c.portal = c.portal || {};
+  const before = c.stage;
+  const forward = function (stage) { if (portalStageIdx_(stage) > portalStageIdx_(c.stage)) c.stage = stage; };
+  if (step === 'accepted') { if (done) forward('accepted'); else if (portalStageIdx_(c.stage) >= portalStageIdx_('accepted')) c.stage = 'interview'; }
+  else if (step === 'arrived') { if (done) c.stage = 'arrived'; else if (c.stage === 'arrived') c.stage = 'practical'; }
+  else {
+    const flags = Object.assign({}, teamFlags_(c));
+    flags[step] = done ? now : null;
+    c.portal.team = flags;
+    if (done) forward(step === 'call' ? 'interview' : 'practical');
+  }
+  const label = { call: 'Video call', accepted: 'Accepted', orientation: 'Cultural orientation', checkin: 'Last check-in', arrived: 'Arrived' }[step];
+  let log = (Array.isArray(c.log) ? c.log : []).concat([{ at: now, by: a.s.id, kind: 'note', text: (done ? '✓ ' : '✗ ') + label }]);
+  if (c.stage !== before) log = log.concat([{ at: now, by: a.s.id, kind: 'stage', text: c.stage }]);
+  c.log = log.slice(-CAND_LOG_MAX);
+  c.updated = now; c.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
+  return { ok: true, candidate: portalCandOut_(c, byId) };
 }
 async function portalStaffSaveAnswers(username, pin, candidateId, answers) {
   const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
@@ -4130,6 +4216,7 @@ const HANDLERS = {
   portalReferenceForm: function (a) { return portalReferenceForm(a[0]); },
   portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
+  portalTeamStep: function (a) { return portalTeamStep(a[0], a[1], a[2], a[3], a[4]); },
   portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); },
   portalListAccounts: function (a) { return portalListAccounts(a[0], a[1]); },
   portalCreateApplicant: function (a) { return portalCreateApplicant(a[0], a[1], a[2]); },
