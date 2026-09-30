@@ -1841,3 +1841,571 @@ _A type name is translated as one phrase ("The Guide" → អ្នកណែន�
 | Under stress you may take everything personally. Not every problem is yours to carry. | ពេលតានតឹង អ្នកប្រហែលយកអ្វីៗទាំងអស់មកគិតជារឿងផ្ទាល់ខ្លួន។ មិនមែនគ្រប់បញ្ហាសុទ្ធតែជាបន្ទុករបស់អ្នកទេ។ |
 | Under stress you may try to control more. Let go of one thing this week. | ពេលតានតឹង អ្នកប្រហែលព្យាយាមគ្រប់គ្រងច្រើនជាងមុន។ ទុកចោលរឿងមួយនៅសប្តាហ៍នេះ។ |
 | Under stress you may avoid decisions. Make one small decision today. | ពេលតានតឹង អ្នកប្រហែលជៀសវាងការសម្រេចចិត្ត។ ធ្វើការសម្រេចចិត្តតូចមួយនៅថ្ងៃនេះ។ |
+
+## 53. Strengths — GP Strengths (the free test) and recording Gallup results
+
+GP's own strengths finder: 102 pairs of statements ("Which is more like you?"),
+then a Top 5 of 34 strengths in four groups (Doing, Leading, Relating,
+Thinking), with what each means for work. It is shaped like CliftonStrengths,
+but every word is GP's own, so all of it is translated. The statements matter
+most — each pair is two good things, and the Khmer should keep them equally
+attractive, so neither side sounds better. Strength names should read as a
+kind of person ("អ្នក…").
+
+People who took the real CliftonStrengths can also record their Gallup Top 5.
+Gallup's theme names (Achiever, Empathy…) stay in English — they must match the
+person's Gallup report — so only the app's words around them are here.
+
+### Screens (both)
+
+| English | Khmer (pending) |
+|---|---|
+| GP: {name} | GP៖ {name} |
+| CliftonStrengths® and its theme names are trademarks of Gallup, Inc. GP records the results you got from Gallup — it does not give the assessment. | CliftonStrengths® និងឈ្មោះប្រធានបទរបស់វា គឺជាពាណិជ្ជសញ្ញារបស់ក្រុមហ៊ុន Gallup។ GP កត់ត្រាលទ្ធផលដែលអ្នកបានទទួលពី Gallup — វាមិនធ្វើការវាយតម្លៃនោះទេ។ |
+| Take CliftonStrengths at gallup.com | ធ្វើតេស្ត CliftonStrengths នៅ gallup.com |
+| CliftonStrengths (from Gallup) | CliftonStrengths (ពី Gallup) |
+| Strengths could not load. Pull down to refresh. | មិនអាចផ្ទុកចំណុចខ្លាំងបានទេ។ ទាញចុះក្រោមដើម្បីផ្ទុកឡើងវិញ។ |
+| My Home | ផ្ទះរបស់ខ្ញុំ |
+| My CliftonStrengths | CliftonStrengths របស់ខ្ញុំ |
+| Add your themes in the order your Gallup report gives them. Most reports list a Top 5; you can add up to 10. | បញ្ចូលប្រធានបទរបស់អ្នកតាមលំដាប់ដែលរបាយការណ៍ Gallup ផ្តល់ឱ្យ។ របាយការណ៍ភាគច្រើនមាន Top 5 ហើយអ្នកអាចបញ្ចូលបានរហូតដល់ ១០។ |
+| None added yet — tap your themes below. | មិនទាន់បានបញ្ចូលទេ — ចុចលើប្រធានបទរបស់អ្នកខាងក្រោម។ |
+| Move up | ផ្លាស់ឡើងលើ |
+| Move down | ផ្លាស់ចុះក្រោម |
+| Remove | ដកចេញ |
+| How this shows up in me (optional) | របៀបដែលវាបង្ហាញក្នុងខ្លួនខ្ញុំ (ស្រេចចិត្ត) |
+| That’s ten — remove one to add another. | គ្រប់ ១០ ហើយ — ដកមួយចេញដើម្បីបញ្ចូលមួយទៀត។ |
+| Add a theme | បញ្ចូលប្រធានបទ |
+| Show my strengths to the team | បង្ហាញចំណុចខ្លាំងរបស់ខ្ញុំដល់ក្រុម |
+| Save my strengths | រក្សាទុកចំណុចខ្លាំងរបស់ខ្ញុំ |
+| Remove my strengths | លុបចំណុចខ្លាំងរបស់ខ្ញុំ |
+| Nobody here has found their strengths yet. Take the free test from My Home. | មិនទាន់មាននរណាម្នាក់នៅទីនេះរកឃើញចំណុចខ្លាំងរបស់ខ្លួនទេ។ ធ្វើតេស្តឥតគិតថ្លៃពីទំព័រដើមរបស់ខ្ញុំ។ |
+| {n} people have shared their Top 5 | មនុស្ស {n} នាក់បានចែករំលែក Top 5 របស់ខ្លួន |
+| Share of the team’s Top 5 strengths in each group. | ចំណែកនៃចំណុចខ្លាំង Top 5 របស់ក្រុម ក្នុងក្រុមនីមួយៗ។ |
+| Not in anyone’s Top 5 yet: | មិនទាន់មានក្នុង Top 5 របស់នរណាម្នាក់ទេ៖ |
+| Could not save — check your connection and try again. | មិនអាចរក្សាទុកបានទេ — សូមពិនិត្យការតភ្ជាប់ ហើយព្យាយាមម្តងទៀត។ |
+| Strengths saved | បានរក្សាទុកចំណុចខ្លាំង |
+| GP Strengths is GP’s own free questionnaire. It is not CliftonStrengths® and is not connected with Gallup. | GP Strengths គឺជាកម្រងសំណួរឥតគិតថ្លៃរបស់ GP ផ្ទាល់។ វាមិនមែនជា CliftonStrengths® ទេ ហើយមិនពាក់ព័ន្ធនឹង Gallup ទេ។ |
+| A strength is what comes naturally to you — everyone can grow in all {n}. | ចំណុចខ្លាំង គឺជាអ្វីដែលកើតឡើងដោយធម្មជាតិចំពោះអ្នក — មនុស្សគ្រប់គ្នាអាចលូតលាស់បានក្នុងទាំង {n}។ |
+| Strengths | ចំណុចខ្លាំង |
+| Find your top 5 strengths | ស្វែងរកចំណុចខ្លាំង Top 5 របស់អ្នក |
+| {n} quick choices · free · about 15 minutes | ជម្រើសរហ័ស {n} · ឥតគិតថ្លៃ · ប្រហែល ១៥ នាទី |
+| Tap to see what your strengths mean for your work. | ចុចដើម្បីមើលថាចំណុចខ្លាំងរបស់អ្នកមានន័យយ៉ាងណាសម្រាប់ការងាររបស់អ្នក។ |
+| Have CliftonStrengths results from Gallup? Add them | មានលទ្ធផល CliftonStrengths ពី Gallup មែនទេ? បញ្ចូលវា |
+| How to make the most of {name}’s strengths | របៀបប្រើចំណុចខ្លាំងរបស់ {name} ឱ្យបានល្អបំផុត |
+| GP Strengths | ចំណុចខ្លាំង GP |
+| {n} pairs of statements. For each pair, choose which one is more like you — even when both are. | ឃ្លាចំនួន {n} គូ។ សម្រាប់គូនីមួយៗ សូមជ្រើសរើសមួយណាដែលដូចអ្នកជាង — ទោះបីជាទាំងពីរដូចអ្នកក៏ដោយ។ |
+| Go with your first answer. Think about what you enjoy and what comes easily, not what your job needs. | ជ្រើសចម្លើយដំបូងរបស់អ្នក។ គិតពីអ្វីដែលអ្នកចូលចិត្ត និងអ្វីដែលងាយស្រួលសម្រាប់អ្នក មិនមែនអ្វីដែលការងាររបស់អ្នកត្រូវការនោះទេ។ |
+| At the end you get your top 5 of {n} strengths, and what they mean for your work. | នៅចុងបញ្ចប់ អ្នកនឹងទទួលបានចំណុចខ្លាំង Top 5 ក្នុងចំណោម {n} និងអត្ថន័យរបស់វាសម្រាប់ការងាររបស់អ្នក។ |
+| Carry on — {n} of {total} answered | បន្ត — បានឆ្លើយ {n} ក្នុងចំណោម {total} |
+| Start | ចាប់ផ្តើម |
+| {n} of {total} | {n} នៃ {total} |
+| Which is more like you? | មួយណាដូចអ្នកជាង? |
+| More like me | ដូចខ្ញុំជាង |
+| Back | ត្រឡប់ |
+| See my strengths | មើលចំណុចខ្លាំងរបស់ខ្ញុំ |
+| Next | បន្ទាប់ |
+| No strengths yet. | មិនទាន់មានចំណុចខ្លាំងនៅឡើយទេ។ |
+| Your top 5 strengths | ចំណុចខ្លាំង Top 5 របស់អ្នក |
+| {name}’s top 5 strengths | ចំណុចខ្លាំង Top 5 របស់ {name} |
+| Mostly {group}: {blurb} | ភាគច្រើនជា {group}៖ {blurb} |
+| For the team: | សម្រាប់ក្រុម៖ |
+| Working together: | ធ្វើការជាមួយគ្នា៖ |
+| Your top 10, by group | Top 10 របស់អ្នក តាមក្រុម |
+| Most people lead from one or two groups. No group is better than another. | មនុស្សភាគច្រើនមានចំណុចខ្លាំងនៅក្នុងក្រុមមួយ ឬពីរ។ គ្មានក្រុមណាល្អជាងក្រុមណាទេ។ |
+| All {n} | ទាំង {n} |
+| The ones lower down are not weaknesses — just what comes less naturally. | អ្វីដែលនៅខាងក្រោម មិនមែនជាចំណុចខ្សោយទេ — គ្រាន់តែជាអ្វីដែលមិនសូវកើតឡើងដោយធម្មជាតិប៉ុណ្ណោះ។ |
+| Compared with your CliftonStrengths | ប្រៀបធៀបជាមួយ CliftonStrengths របស់អ្នក |
+| Each Gallup theme, beside the GP strength that covers the same ground. The number on the GP strength is where it ranks for you here. | ប្រធានបទ Gallup នីមួយៗ នៅក្បែរចំណុចខ្លាំង GP ដែលគ្របដណ្តប់លើរឿងដូចគ្នា។ លេខនៅលើចំណុចខ្លាំង GP គឺជាលំដាប់របស់វាសម្រាប់អ្នកនៅទីនេះ។ |
+| Show my top 5 to the team | បង្ហាញ Top 5 របស់ខ្ញុំដល់ក្រុម |
+| Your answers and the full list always stay private. | ចម្លើយរបស់អ្នក និងបញ្ជីពេញលេញ តែងតែនៅជាឯកជន។ |
+| Retake the test | ធ្វើតេស្តម្តងទៀត |
+| Answer every pair first. | សូមឆ្លើយគ្រប់គូជាមុនសិន។ |
+
+### Groups, strengths, descriptions and the 204 statements
+
+| English | Khmer (pending) |
+|---|---|
+| Doing | ការធ្វើ |
+| People who get it done — plans, follow-through and results. | អ្នកដែលធ្វើឱ្យការងារសម្រេច — ផែនការ ការធ្វើរហូតដល់ចប់ និងលទ្ធផល។ |
+| Leading | ការដឹកនាំ |
+| People who move others — starting, speaking, deciding, rallying. | អ្នកដែលជំរុញអ្នកដទៃ — ការចាប់ផ្តើម ការនិយាយ ការសម្រេចចិត្ត ការប្រមូលផ្តុំ។ |
+| Relating | ទំនាក់ទំនង |
+| People who hold people together — care, trust, welcome and peace. | អ្នកដែលរក្សាមនុស្សឱ្យនៅជាមួយគ្នា — ការយកចិត្តទុកដាក់ ការទុកចិត្ត ការស្វាគមន៍ និងសន្តិភាព។ |
+| Thinking | ហេតុផល |
+| People who see further — curiosity, questions, vision and the way ahead. | អ្នកដែលមើលឃើញឆ្ងាយ — ការចង់ដឹង សំណួរ ចក្ខុវិស័យ និងផ្លូវទៅមុខ។ |
+| Hard Worker | អ្នកឧស្សាហ៍ព្យាយាម |
+| Works hard and loves getting things done. | ធ្វើការយ៉ាងឧស្សាហ៍ ហើយស្រឡាញ់ការធ្វើឱ្យការងារសម្រេច។ |
+| Hard workers have a steady drive to get things done. Every day starts at zero and they feel good when they have been busy and productive. They keep going after the excitement has worn off, and they are often the reason a project actually closes. | អ្នកឧស្សាហ៍ព្យាយាម មានកម្លាំងជំរុញជាប់លាប់ដើម្បីធ្វើឱ្យការងារសម្រេច។ ថ្ងៃនីមួយៗចាប់ផ្តើមពីសូន្យ ហើយពួកគេពេញចិត្តនៅពេលពួកគេបានរវល់ និងធ្វើការបានច្រើន។ ពួកគេបន្តធ្វើ ទោះបីភាពរំភើបបានបាត់ទៅហើយក៏ដោយ ហើយជាញឹកញាប់ ពួកគេជាមូលហេតុដែលគម្រោងមួយបានបិទបញ្ចប់ពិតប្រាកដ។ |
+| Brings projects to a real finish | នាំគម្រោងទៅដល់ការបញ្ចប់ពិតប្រាកដ |
+| Keeps going when others lose steam | បន្តធ្វើ នៅពេលអ្នកដទៃអស់កម្លាំង |
+| Can push on when rest is needed | អាចបន្តធ្វើ នៅពេលដែលត្រូវការសម្រាក |
+| May feel restless on a day with nothing to tick off | អាចមានអារម្មណ៍មិនស្ងប់ នៅថ្ងៃដែលគ្មានអ្វីត្រូវបញ្ចប់ |
+| Give them a clear finish line, and tell them when they have crossed it. | ផ្តល់ឱ្យពួកគេនូវគោលដៅបញ្ចប់ច្បាស់លាស់ ហើយប្រាប់ពួកគេនៅពេលពួកគេបានសម្រេចវា។ |
+| I feel satisfied when I finish a task completely. | ខ្ញុំពេញចិត្ត នៅពេលខ្ញុំបញ្ចប់ការងារមួយទាំងស្រុង។ |
+| I keep working on something until it is really done. | ខ្ញុំបន្តធ្វើការលើអ្វីមួយ រហូតដល់វាចប់ពិតប្រាកដ។ |
+| An unfinished job bothers me until I complete it. | ការងារដែលមិនទាន់ចប់ រំខានខ្ញុំ រហូតដល់ខ្ញុំបញ្ចប់វា។ |
+| I like to see real results at the end of the day. | ខ្ញុំចូលចិត្តឃើញលទ្ធផលពិតប្រាកដ នៅចុងថ្ងៃ។ |
+| I make a list and feel good when I tick everything off. | ខ្ញុំសរសេរបញ្ជី ហើយពេញចិត្តនៅពេលខ្ញុំគូសធីកបានគ្រប់យ៉ាង។ |
+| I work hard even when nobody is checking on me. | ខ្ញុំធ្វើការយ៉ាងសកម្ម ទោះបីជាគ្មាននរណាពិនិត្យមើលខ្ញុំក៏ដោយ។ |
+| Coordinator | អ្នកសម្របសម្រួល |
+| Fits the people and pieces together. | ភ្ជាប់មនុស្ស និងផ្នែកនានាឱ្យចូលគ្នា។ |
+| Coordinators can juggle many things at once and still see how they fit. When plans change, they rearrange people, tasks and resources quickly, and a busy day runs more smoothly because they are in it. | អ្នកសម្របសម្រួល អាចធ្វើរឿងច្រើនក្នុងពេលតែមួយ ហើយនៅតែឃើញពីរបៀបដែលវាភ្ជាប់គ្នា។ នៅពេលផែនការផ្លាស់ប្តូរ ពួកគេរៀបចំមនុស្ស ការងារ និងធនធានឡើងវិញយ៉ាងរហ័ស ហើយថ្ងៃដែលរវល់ដំណើរការរលូនជាង ដោយសារពួកគេនៅទីនោះ។ |
+| Keeps many moving parts working together | ធ្វើឱ្យផ្នែកជាច្រើនដំណើរការជាមួយគ្នា |
+| Adjusts quickly when plans change | កែតម្រូវយ៉ាងរហ័ស នៅពេលផែនការផ្លាស់ប្តូរ |
+| Can keep changing things others want settled | អាចបន្តផ្លាស់ប្តូររឿងដែលអ្នកដទៃចង់ឱ្យនៅនឹង |
+| May take on the organizing of everything | អាចទទួលយកការរៀបចំគ្រប់យ៉ាងដោយខ្លួនឯង |
+| Give them the busy event or the messy week to arrange. | ឱ្យពួកគេរៀបចំកម្មវិធីរវល់ ឬសប្តាហ៍ដែលច្របូកច្របល់។ |
+| I can keep track of many tasks at the same time. | ខ្ញុំអាចតាមដានការងារច្រើនក្នុងពេលតែមួយ។ |
+| When plans change, I quickly work out a new arrangement. | នៅពេលផែនការផ្លាស់ប្តូរ ខ្ញុំរកឃើញការរៀបចំថ្មីយ៉ាងរហ័ស។ |
+| I like working out who should do which job. | ខ្ញុំចូលចិត្តគិតថានរណាគួរធ្វើការងារណា។ |
+| I enjoy putting people and things in the right place so the work flows. | ខ្ញុំចូលចិត្តដាក់មនុស្ស និងរបស់របរនៅកន្លែងត្រឹមត្រូវ ដើម្បីឱ្យការងាររលូន។ |
+| A busy day with lots going on gives me energy. | ថ្ងៃដែលរវល់ និងមានរឿងច្រើន ផ្តល់ថាមពលដល់ខ្ញុំ។ |
+| I find a way to make things work with what we have. | ខ្ញុំរកវិធីធ្វើឱ្យការងារដំណើរការ ជាមួយអ្វីដែលយើងមាន។ |
+| Values-Driven | អ្នកកាន់តម្លៃ |
+| Lives from deep values and a clear calling. | រស់នៅតាមតម្លៃជ្រាលជ្រៅ និងការត្រាស់ហៅច្បាស់លាស់។ |
+| Values-driven people have a few core values that do not move. Their work has to mean something, and they give themselves fully to what they believe God has called them to. Their conviction steadies a team when things are hard. | អ្នកកាន់តម្លៃ មានតម្លៃស្នូលមួយចំនួនដែលមិនរង្គើ។ ការងាររបស់ពួកគេត្រូវតែមានអត្ថន័យ ហើយពួកគេថ្វាយខ្លួនទាំងស្រុងចំពោះអ្វីដែលពួកគេជឿថាព្រះបានត្រាស់ហៅពួកគេឱ្យធ្វើ។ ជំនឿមុតមាំរបស់ពួកគេ ធ្វើឱ្យក្រុមនៅនឹងនរ នៅពេលមានការលំបាក។ |
+| Steady, faithful and committed | នឹងនរ ស្មោះត្រង់ និងប្តេជ្ញាចិត្ត |
+| Reminds the team why the work matters | រំលឹកក្រុមពីមូលហេតុដែលការងារសំខាន់ |
+| Can struggle with work that seems to have no purpose | អាចពិបាកជាមួយការងារដែលហាក់ដូចជាគ្មានគោលបំណង |
+| May find it hard to bend on things that are not core | អាចពិបាកបត់បែនលើរឿងដែលមិនមែនជាស្នូល |
+| Connect their tasks to the mission, and let them hold the team to its values. | ភ្ជាប់ការងាររបស់ពួកគេទៅនឹងបេសកកម្ម ហើយឱ្យពួកគេជួយក្រុមរក្សាតម្លៃរបស់ខ្លួន។ |
+| My values guide the choices I make every day. | តម្លៃរបស់ខ្ញុំណែនាំជម្រើសដែលខ្ញុំធ្វើរាល់ថ្ងៃ។ |
+| I need my work to have a clear purpose. | ខ្ញុំត្រូវការឱ្យការងាររបស់ខ្ញុំមានគោលបំណងច្បាស់លាស់។ |
+| I would rather earn less and do work that matters. | ខ្ញុំសុខចិត្តរកបានតិច ហើយធ្វើការងារដែលមានតម្លៃ។ |
+| I stay committed to what I believe, even when it costs me. | ខ្ញុំនៅតែប្តេជ្ញាចំពោះអ្វីដែលខ្ញុំជឿ ទោះបីវាធ្វើឱ្យខ្ញុំខាតបង់ក៏ដោយ។ |
+| I feel called to the work I do. | ខ្ញុំមានអារម្មណ៍ថាត្រូវបានត្រាស់ហៅឱ្យធ្វើការងារដែលខ្ញុំធ្វើ។ |
+| People know what I stand for. | មនុស្សដឹងថាខ្ញុំឈរលើអ្វី។ |
+| Fair-Minded | អ្នកយុត្តិធម៌ |
+| Treats everyone the same way. | ប្រព្រឹត្តចំពោះមនុស្សគ្រប់គ្នាដូចៗគ្នា។ |
+| Fair-minded people notice when someone is treated differently and want the same rules for everyone. They build clear, steady ways of working, and people trust them because they do not play favourites. | អ្នកយុត្តិធម៌ កត់សម្គាល់នៅពេលនរណាម្នាក់ត្រូវបានប្រព្រឹត្តខុសពីគេ ហើយចង់ឱ្យមានច្បាប់ដូចគ្នាសម្រាប់មនុស្សគ្រប់គ្នា។ ពួកគេបង្កើតរបៀបធ្វើការច្បាស់លាស់ និងទៀងទាត់ ហើយមនុស្សទុកចិត្តពួកគេ ព្រោះពួកគេមិនរើសមុខ។ |
+| Makes sure everyone is treated fairly | ធ្វើឱ្យប្រាកដថាមនុស្សគ្រប់គ្នាត្រូវបានប្រព្រឹត្តដោយយុត្តិធម៌ |
+| Builds clear, steady ways of working | បង្កើតរបៀបធ្វើការច្បាស់លាស់ និងទៀងទាត់ |
+| Can hold to a rule when a person needs an exception | អាចកាន់ច្បាប់តឹង នៅពេលមនុស្សម្នាក់ត្រូវការការលើកលែង |
+| May be slow to accept a change in how things are done | អាចយឺតក្នុងការទទួលយកការផ្លាស់ប្តូររបៀបធ្វើការ |
+| Ask them to help set fair rules and systems for the team. | សុំឱ្យពួកគេជួយកំណត់ច្បាប់ និងប្រព័ន្ធដែលយុត្តិធម៌សម្រាប់ក្រុម។ |
+| I believe the same rules should apply to everyone. | ខ្ញុំជឿថាច្បាប់ដូចគ្នាគួរតែអនុវត្តចំពោះមនុស្សគ្រប់គ្នា។ |
+| It bothers me when someone gets special treatment. | ខ្ញុំមិនស្រួលចិត្ត នៅពេលនរណាម្នាក់ទទួលបានការអនុគ្រោះពិសេស។ |
+| I like clear, steady ways of doing things. | ខ្ញុំចូលចិត្តរបៀបធ្វើអ្វីៗដែលច្បាស់លាស់ និងទៀងទាត់។ |
+| I treat everyone the same, whoever they are. | ខ្ញុំប្រព្រឹត្តចំពោះមនុស្សគ្រប់គ្នាដូចគ្នា មិនថាពួកគេជានរណាទេ។ |
+| I speak up when something is not fair. | ខ្ញុំនិយាយឡើង នៅពេលមានអ្វីមួយមិនយុត្តិធម៌។ |
+| I like to know what is expected, and I expect the same of others. | ខ្ញុំចូលចិត្តដឹងពីអ្វីដែលគេរំពឹងពីខ្ញុំ ហើយខ្ញុំរំពឹងដូចគ្នាពីអ្នកដទៃ។ |
+| Careful | អ្នកប្រុងប្រយ័ត្ន |
+| Thinks it through before acting. | គិតឱ្យល្អិតល្អន់ មុនពេលធ្វើ។ |
+| Careful people see the risks others miss. They take time before a big decision, choose their words and their commitments with thought, and protect a team from rushing into trouble. | អ្នកប្រុងប្រយ័ត្ន មើលឃើញហានិភ័យដែលអ្នកដទៃមើលរំលង។ ពួកគេចំណាយពេល មុនពេលធ្វើការសម្រេចចិត្តធំ ជ្រើសរើសពាក្យសម្តី និងការសន្យារបស់ពួកគេដោយការគិត ហើយការពារក្រុមពីការប្រញាប់ប្រញាល់ចូលទៅក្នុងបញ្ហា។ |
+| Spots risks early | រកឃើញហានិភ័យតាំងពីដំបូង |
+| Makes wise, well-thought-out decisions | ធ្វើការសម្រេចចិត្តដោយប្រាជ្ញា និងគិតបានល្អ |
+| Can seem slow or hesitant to others | អាចមើលទៅយឺត ឬស្ទាក់ស្ទើរចំពោះអ្នកដទៃ |
+| May hold back from trying something new | អាចស្ទាក់ស្ទើរមិនសាកល្បងអ្វីថ្មី |
+| Ask them what could go wrong before a big decision. | សួរពួកគេថាអ្វីអាចខុស មុនពេលធ្វើការសម្រេចចិត្តធំ។ |
+| I think carefully before I make a big decision. | ខ្ញុំគិតយ៉ាងប្រុងប្រយ័ត្ន មុនពេលធ្វើការសម្រេចចិត្តធំ។ |
+| I notice the risks in a plan before others do. | ខ្ញុំកត់សម្គាល់ហានិភ័យក្នុងផែនការ មុនអ្នកដទៃ។ |
+| I choose my words carefully. | ខ្ញុំជ្រើសរើសពាក្យសម្តីរបស់ខ្ញុំដោយប្រុងប្រយ័ត្ន។ |
+| I would rather be safe than sorry. | ខ្ញុំចូលចិត្តប្រុងប្រយ័ត្ន ជាជាងស្តាយក្រោយ។ |
+| I take my time before I trust someone with something important. | ខ្ញុំចំណាយពេល មុនពេលខ្ញុំទុកចិត្តនរណាម្នាក់លើរឿងសំខាន់។ |
+| I do not like to rush into things. | ខ្ញុំមិនចូលចិត្តប្រញាប់ប្រញាល់ធ្វើអ្វីទេ។ |
+| Orderly | អ្នកមានសណ្តាប់ធ្នាប់ |
+| Brings order and routine to the work. | នាំសណ្តាប់ធ្នាប់ និងទម្លាប់មកក្នុងការងារ។ |
+| Orderly people bring structure: a clear plan, a steady routine and things in their place. They turn a messy goal into ordered steps, and a team feels calmer when someone orderly has mapped the way. | អ្នកមានសណ្តាប់ធ្នាប់ នាំមកនូវរចនាសម្ព័ន្ធ៖ ផែនការច្បាស់លាស់ ទម្លាប់ទៀងទាត់ និងរបស់របរនៅកន្លែងរបស់វា។ ពួកគេប្តូរគោលដៅដែលច្របូកច្របល់ ឱ្យទៅជាជំហានតាមលំដាប់ ហើយក្រុមមានអារម្មណ៍ស្ងប់ជាង នៅពេលអ្នកមានសណ្តាប់ធ្នាប់បានគូសផ្លូវរួច។ |
+| Makes a clear plan out of a messy goal | ធ្វើផែនការច្បាស់លាស់ ពីគោលដៅដែលច្របូកច្របល់ |
+| Thinks ahead to what will be needed | គិតទុកជាមុនពីអ្វីដែលនឹងត្រូវការ |
+| Can be thrown when the plan changes | អាចភាន់ច្រឡំ នៅពេលផែនការផ្លាស់ប្តូរ |
+| May over-plan something that could just be tried | អាចរៀបផែនការហួសហេតុ លើអ្វីដែលគ្រាន់តែសាកល្បងក៏បាន |
+| Involve them early, before the plan is fixed. | ឱ្យពួកគេចូលរួមតាំងពីដំបូង មុនពេលផែនការត្រូវបានកំណត់។ |
+| I like to plan the steps before I start. | ខ្ញុំចូលចិត្តរៀបផែនការជំហាននានា មុនពេលចាប់ផ្តើម។ |
+| I think ahead about what we will need. | ខ្ញុំគិតទុកជាមុនពីអ្វីដែលយើងនឹងត្រូវការ។ |
+| I enjoy putting tasks in the right order. | ខ្ញុំចូលចិត្តរៀបការងារតាមលំដាប់ត្រឹមត្រូវ។ |
+| I make a plan for my week before it begins. | ខ្ញុំធ្វើផែនការសម្រាប់សប្តាហ៍របស់ខ្ញុំ មុនពេលវាចាប់ផ្តើម។ |
+| I like having a daily routine. | ខ្ញុំចូលចិត្តមានទម្លាប់ប្រចាំថ្ងៃ។ |
+| I keep my things and my schedule in order. | ខ្ញុំរក្សារបស់របរ និងកាលវិភាគរបស់ខ្ញុំឱ្យមានសណ្តាប់ធ្នាប់។ |
+| Goal-Setter | អ្នកកំណត់គោលដៅ |
+| Knows where they are going and stays on track. | ដឹងថាខ្លួនកំពុងទៅណា ហើយនៅលើផ្លូវត្រូវ។ |
+| Goal-setters choose a clear target and keep moving towards it. They know what matters most today, say no to distractions, and help a team stop drifting and get where it said it would go. | អ្នកកំណត់គោលដៅ ជ្រើសរើសគោលដៅច្បាស់លាស់មួយ ហើយបន្តឆ្ពោះទៅរកវា។ ពួកគេដឹងពីអ្វីដែលសំខាន់បំផុតនៅថ្ងៃនេះ និយាយថាទេចំពោះការរំខាន ហើយជួយក្រុមឱ្យឈប់វង្វេង ហើយទៅដល់កន្លែងដែលខ្លួនបាននិយាយថានឹងទៅ។ |
+| Keeps the team on track | ធ្វើឱ្យក្រុមនៅលើផ្លូវត្រូវ |
+| Knows what matters most right now | ដឹងពីអ្វីដែលសំខាន់បំផុតនៅពេលនេះ |
+| Can seem impatient with side conversations | អាចមើលទៅមិនអត់ធ្មត់ជាមួយការនិយាយក្រៅប្រធានបទ |
+| May push past people to reach the goal | អាចរំលងមនុស្ស ដើម្បីទៅដល់គោលដៅ |
+| Give them a clear goal, and let them help the team set priorities. | ផ្តល់ឱ្យពួកគេនូវគោលដៅច្បាស់លាស់ ហើយឱ្យពួកគេជួយក្រុមកំណត់អាទិភាព។ |
+| I set clear goals for myself. | ខ្ញុំកំណត់គោលដៅច្បាស់លាស់សម្រាប់ខ្លួនឯង។ |
+| I know what is most important for me to do today. | ខ្ញុំដឹងពីអ្វីដែលសំខាន់បំផុតសម្រាប់ខ្ញុំត្រូវធ្វើនៅថ្ងៃនេះ។ |
+| I get frustrated when a meeting drifts off topic. | ខ្ញុំធុញថប់ នៅពេលការប្រជុំវង្វេងចេញពីប្រធានបទ។ |
+| I say no to things that pull me away from my main goal. | ខ្ញុំនិយាយថាទេ ចំពោះអ្វីដែលទាញខ្ញុំចេញពីគោលដៅចម្បង។ |
+| I check my progress towards my goals often. | ខ្ញុំពិនិត្យវឌ្ឍនភាពឆ្ពោះទៅគោលដៅរបស់ខ្ញុំជាញឹកញាប់។ |
+| I keep going in one direction until I get there. | ខ្ញុំបន្តទៅមុខក្នុងទិសដៅតែមួយ រហូតដល់ខ្ញុំទៅដល់។ |
+| Dependable | អ្នកគួរឱ្យទុកចិត្ត |
+| Does what they said they would. | ធ្វើអ្វីដែលខ្លួនបាននិយាយថានឹងធ្វើ។ |
+| Dependable people keep their word. When they say yes, it happens — on time and done properly. Others trust them with important things, because nothing falls through their hands. | អ្នកគួរឱ្យទុកចិត្ត រក្សាពាក្យសន្យា។ នៅពេលពួកគេនិយាយថាបាទ/ចាស វាកើតឡើង — ទាន់ពេល និងធ្វើបានត្រឹមត្រូវ។ អ្នកដទៃទុកចិត្តពួកគេលើរឿងសំខាន់ៗ ព្រោះគ្មានអ្វីធ្លាក់ចេញពីដៃពួកគេទេ។ |
+| Keeps promises, big and small | រក្សាពាក្យសន្យា ទាំងធំទាំងតូច |
+| Can be trusted with important things | អាចទុកចិត្តបានលើរឿងសំខាន់ៗ |
+| Finds it hard to say no | ពិបាកនឹងបដិសេធ |
+| Can carry too much without saying so | អាចទទួលបន្ទុកច្រើនពេក ដោយមិននិយាយប្រាប់ |
+| Trust them with responsibility — and check they are not carrying too much. | ទុកចិត្តពួកគេនូវការទទួលខុសត្រូវ — ហើយពិនិត្យមើលថាពួកគេមិនទទួលបន្ទុកច្រើនពេក។ |
+| When I say I will do something, I do it. | នៅពេលខ្ញុំនិយាយថានឹងធ្វើអ្វីមួយ ខ្ញុំធ្វើវា។ |
+| People trust me with important responsibilities. | មនុស្សទុកចិត្តខ្ញុំលើការទទួលខុសត្រូវសំខាន់ៗ។ |
+| I am usually on time and prepared. | ជាធម្មតា ខ្ញុំមកទាន់ពេល ហើយត្រៀមខ្លួនរួចរាល់។ |
+| I keep my promises, even the small ones. | ខ្ញុំរក្សាពាក្យសន្យារបស់ខ្ញុំ ទោះបីជារឿងតូចៗក៏ដោយ។ |
+| I feel responsible for what I have agreed to do. | ខ្ញុំមានអារម្មណ៍ទទួលខុសត្រូវចំពោះអ្វីដែលខ្ញុំបានយល់ព្រមធ្វើ។ |
+| If I make a mistake, I make it right. | បើខ្ញុំធ្វើខុស ខ្ញុំកែវាឱ្យត្រូវវិញ។ |
+| Problem-Solver | អ្នកដោះស្រាយបញ្ហា |
+| Finds what is broken and makes it work. | រកឃើញអ្វីដែលខូច ហើយធ្វើឱ្យវាដំណើរការ។ |
+| Problem-solvers are drawn to what is not working. They stay calm, find the real cause and fix it, and they feel most useful when something has gone wrong and needs sorting out. | អ្នកដោះស្រាយបញ្ហា ត្រូវបានទាក់ទាញទៅរកអ្វីដែលមិនដំណើរការ។ ពួកគេនៅស្ងប់ រកឃើញមូលហេតុពិត ហើយជួសជុលវា ហើយពួកគេមានអារម្មណ៍ថាមានប្រយោជន៍បំផុត នៅពេលមានអ្វីមួយខុស ហើយត្រូវការដោះស្រាយ។ |
+| Stays calm and practical when things break | នៅស្ងប់ និងជាក់ស្តែង នៅពេលអ្វីៗខូច |
+| Finds the real cause, not just the symptom | រកឃើញមូលហេតុពិត មិនមែនត្រឹមតែរោគសញ្ញា |
+| Can see only problems and miss what is going well | អាចឃើញតែបញ្ហា ហើយមើលរំលងអ្វីដែលកំពុងដំណើរការល្អ |
+| May fix things for someone who needed to be listened to | អាចជួសជុលរឿងឱ្យនរណាម្នាក់ ដែលគ្រាន់តែត្រូវការឱ្យគេស្តាប់ |
+| Bring them the hard problem, not just the easy task. | នាំបញ្ហាពិបាកមកឱ្យពួកគេ មិនមែនត្រឹមតែការងារងាយៗ។ |
+| I like finding out why something is not working. | ខ្ញុំចូលចិត្តស្វែងរកមូលហេតុដែលអ្វីមួយមិនដំណើរការ។ |
+| I stay calm when something goes wrong. | ខ្ញុំនៅស្ងប់ នៅពេលមានអ្វីមួយខុស។ |
+| I enjoy fixing problems other people have given up on. | ខ្ញុំចូលចិត្តដោះស្រាយបញ្ហា ដែលអ្នកដទៃបានបោះបង់ចោល។ |
+| When there is a problem, I look for the real cause. | នៅពេលមានបញ្ហា ខ្ញុំស្វែងរកមូលហេតុពិត។ |
+| I enjoy repairing what is broken — a machine, a plan or a relationship. | ខ្ញុំចូលចិត្តជួសជុលអ្វីដែលខូច — ម៉ាស៊ីន ផែនការ ឬទំនាក់ទំនង។ |
+| I like to be the one people call when something breaks. | ខ្ញុំចូលចិត្តជាអ្នកដែលមនុស្សហៅ នៅពេលមានអ្វីមួយខូច។ |
+| Starter | អ្នកចាប់ផ្តើម |
+| Gets things moving. | ធ្វើឱ្យអ្វីៗចាប់ផ្តើមដំណើរការ។ |
+| Starters would rather begin than keep discussing. They turn talk into action, get the first step taken, and give a team the push it needs to stop waiting and start. | អ្នកចាប់ផ្តើម ចូលចិត្តចាប់ផ្តើមធ្វើ ជាជាងបន្តពិភាក្សា។ ពួកគេប្តូរការនិយាយទៅជាសកម្មភាព ធ្វើឱ្យជំហានដំបូងកើតឡើង ហើយផ្តល់ឱ្យក្រុមនូវការជំរុញដែលវាត្រូវការ ដើម្បីឈប់រង់ចាំ ហើយចាប់ផ្តើម។ |
+| Turns talk into action | ប្តូរការនិយាយទៅជាសកម្មភាព |
+| Gives a stuck team momentum | ផ្តល់សន្ទុះដល់ក្រុមដែលជាប់គាំង |
+| Can start before the plan is ready | អាចចាប់ផ្តើម មុនពេលផែនការរួចរាល់ |
+| May lose interest once the start is over | អាចបាត់ចំណាប់អារម្មណ៍ នៅពេលការចាប់ផ្តើមបានកន្លងផុត |
+| Let them launch things — and pair them with someone who finishes well. | ឱ្យពួកគេចាប់ផ្តើមគម្រោង — ហើយផ្គូផ្គងពួកគេជាមួយអ្នកដែលចេះបញ្ចប់ការងារបានល្អ។ |
+| I would rather start doing something than keep talking about it. | ខ្ញុំចូលចិត្តចាប់ផ្តើមធ្វើអ្វីមួយ ជាជាងបន្តនិយាយពីវា។ |
+| I get things moving when a group is stuck. | ខ្ញុំធ្វើឱ្យអ្វីៗចាប់ផ្តើម នៅពេលក្រុមជាប់គាំង។ |
+| I like being the first to try something new. | ខ្ញុំចូលចិត្តជាអ្នកដំបូងដែលសាកល្បងអ្វីថ្មី។ |
+| I get impatient when we wait too long to begin. | ខ្ញុំអន្ទះអន្ទែង នៅពេលយើងរង់ចាំយូរពេកមុននឹងចាប់ផ្តើម។ |
+| Once a decision is made, I want to act on it now. | នៅពេលការសម្រេចចិត្តត្រូវបានធ្វើរួច ខ្ញុំចង់ធ្វើសកម្មភាពភ្លាម។ |
+| I learn by starting, then adjusting as I go. | ខ្ញុំរៀនដោយចាប់ផ្តើមធ្វើ រួចកែតម្រូវតាមផ្លូវ។ |
+| Take-Charge | អ្នកទទួលបន្ទុកដឹកនាំ |
+| Steps up and leads when a call is needed. | ឈានមុខ ហើយដឹកនាំ នៅពេលត្រូវការការសម្រេចចិត្ត។ |
+| Take-charge people are comfortable leading and making decisions, even hard ones, even without every answer. When a team is stuck, they step forward, weigh the options quickly and choose, so everyone can move. | អ្នកទទួលបន្ទុកដឹកនាំ មានភាពស្រួលក្នុងការដឹកនាំ និងការសម្រេចចិត្ត ទោះបីជាការសម្រេចចិត្តពិបាក ហើយទោះបីជាមិនមានចម្លើយគ្រប់យ៉ាងក៏ដោយ។ នៅពេលក្រុមជាប់គាំង ពួកគេឈានមុខ ថ្លឹងថ្លែងជម្រើសយ៉ាងរហ័ស ហើយជ្រើសរើស ដើម្បីឱ្យមនុស្សគ្រប់គ្នាអាចបន្តទៅមុខ។ |
+| Makes hard calls under pressure | សម្រេចចិត្តលើរឿងពិបាក ក្រោមសម្ពាធ |
+| Helps a stuck team choose | ជួយក្រុមដែលជាប់គាំងឱ្យជ្រើសរើស |
+| Can decide before others feel heard | អាចសម្រេចចិត្ត មុនពេលអ្នកដទៃមានអារម្មណ៍ថាគេបានស្តាប់ |
+| May come across as forceful | អាចមើលទៅដូចជាខ្លាំងពេក |
+| Give them the decision — and ask them to explain it with care. | ឱ្យពួកគេធ្វើការសម្រេចចិត្ត — ហើយសុំឱ្យពួកគេពន្យល់វាដោយយកចិត្តទុកដាក់។ |
+| I am comfortable making hard decisions. | ខ្ញុំមានភាពស្រួលក្នុងការសម្រេចចិត្តលើរឿងពិបាក។ |
+| When a group cannot decide, I help them choose. | នៅពេលក្រុមមិនអាចសម្រេចចិត្តបាន ខ្ញុំជួយពួកគេជ្រើសរើស។ |
+| I can make a decision without having every answer. | ខ្ញុំអាចសម្រេចចិត្ត ដោយមិនចាំបាច់មានចម្លើយគ្រប់យ៉ាង។ |
+| People look to me to make the call. | មនុស្សរំពឹងឱ្យខ្ញុំធ្វើការសម្រេចចិត្ត។ |
+| I am not afraid to take charge. | ខ្ញុំមិនខ្លាចទទួលបន្ទុកដឹកនាំទេ។ |
+| I tell people what I really think, even when it is hard to hear. | ខ្ញុំប្រាប់មនុស្សពីអ្វីដែលខ្ញុំគិតពិតប្រាកដ ទោះបីជាវាពិបាកស្តាប់ក៏ដោយ។ |
+| Voice | សំឡេង |
+| Says what needs saying, clearly. | និយាយអ្វីដែលត្រូវនិយាយ យ៉ាងច្បាស់។ |
+| Voices put things into words. They explain clearly, speak up when something needs to be said, and help a room understand what is going on. People often remember what a Voice said. | អ្នកជាសំឡេង ដាក់អ្វីៗជាពាក្យសម្តី។ ពួកគេពន្យល់យ៉ាងច្បាស់ និយាយឡើង នៅពេលមានអ្វីត្រូវនិយាយ ហើយជួយឱ្យមនុស្សក្នុងបន្ទប់យល់ពីអ្វីដែលកំពុងកើតឡើង។ មនុស្សជាញឹកញាប់ចងចាំអ្វីដែលអ្នកជាសំឡេងបាននិយាយ។ |
+| Explains things clearly | ពន្យល់អ្វីៗយ៉ាងច្បាស់ |
+| Speaks up when others stay quiet | និយាយឡើង នៅពេលអ្នកដទៃនៅស្ងៀម |
+| Can talk before listening | អាចនិយាយមុនពេលស្តាប់ |
+| May fill a silence someone else needed | អាចបំពេញភាពស្ងៀមស្ងាត់ ដែលនរណាម្នាក់ផ្សេងទៀតត្រូវការ |
+| Give them the message to carry — and time to listen first. | ឱ្យពួកគេនាំសារ — ហើយឱ្យពេលពួកគេស្តាប់ជាមុនសិន។ |
+| I can explain things clearly so people understand. | ខ្ញុំអាចពន្យល់អ្វីៗឱ្យច្បាស់ ដើម្បីឱ្យមនុស្សយល់។ |
+| I speak up when something needs to be said. | ខ្ញុំនិយាយឡើង នៅពេលមានអ្វីមួយត្រូវនិយាយ។ |
+| I enjoy speaking in front of a group. | ខ្ញុំចូលចិត្តនិយាយនៅមុខក្រុម។ |
+| People often remember what I said. | មនុស្សជាញឹកញាប់ចងចាំអ្វីដែលខ្ញុំបាននិយាយ។ |
+| I enjoy telling people about our work. | ខ្ញុំចូលចិត្តប្រាប់មនុស្សអំពីការងាររបស់យើង។ |
+| I like putting ideas into words people will remember. | ខ្ញុំចូលចិត្តដាក់គំនិតជាពាក្យសម្តីដែលមនុស្សនឹងចងចាំ។ |
+| Pace-Setter | អ្នកកំណត់ល្បឿន |
+| Measures up and aims to be the best. | វាស់វែងខ្លួនឯង ហើយប្រាថ្នាធ្វើឱ្យល្អបំផុត។ |
+| Pace-setters notice how they measure up and want to do better than before, and often better than others. They love a clear score and a challenge, and their drive lifts the standard for everyone around them. | អ្នកកំណត់ល្បឿន កត់សម្គាល់ពីរបៀបដែលពួកគេប្រៀបធៀប ហើយចង់ធ្វើបានល្អជាងមុន ហើយជាញឹកញាប់ល្អជាងអ្នកដទៃ។ ពួកគេស្រឡាញ់ពិន្ទុច្បាស់លាស់ និងការប្រកួតប្រជែង ហើយកម្លាំងជំរុញរបស់ពួកគេ លើកកម្ពស់ស្តង់ដារសម្រាប់មនុស្សគ្រប់គ្នាជុំវិញពួកគេ។ |
+| Raises the standard for the team | លើកកម្ពស់ស្តង់ដារសម្រាប់ក្រុម |
+| Thrives on a challenge | រីកចម្រើនដោយការប្រកួតប្រជែង |
+| Can take a loss too personally | អាចយកការចាញ់មកគិតជារឿងផ្ទាល់ខ្លួនពេក |
+| May turn teamwork into a contest | អាចប្តូរការធ្វើការជាក្រុមទៅជាការប្រកួត |
+| Give them a clear measure and a worthy challenge — and let them celebrate the team’s wins. | ផ្តល់ឱ្យពួកគេនូវរង្វាស់ច្បាស់លាស់ និងការប្រកួតប្រជែងដែលមានតម្លៃ — ហើយឱ្យពួកគេអបអរជ័យជម្នះរបស់ក្រុម។ |
+| I like to know how my work compares with others. | ខ្ញុំចូលចិត្តដឹងថាការងាររបស់ខ្ញុំប្រៀបធៀបនឹងអ្នកដទៃយ៉ាងដូចម្តេច។ |
+| I want to be the best at what I do. | ខ្ញុំចង់ពូកែបំផុតក្នុងអ្វីដែលខ្ញុំធ្វើ។ |
+| I enjoy a challenge with a clear score. | ខ្ញុំចូលចិត្តការប្រកួតប្រជែងដែលមានពិន្ទុច្បាស់លាស់។ |
+| I work harder when there is something to win. | ខ្ញុំធ្វើការខ្លាំងជាង នៅពេលមានអ្វីមួយត្រូវឈ្នះ។ |
+| I keep track of my results. | ខ្ញុំតាមដានលទ្ធផលរបស់ខ្ញុំ។ |
+| I do not like to lose. | ខ្ញុំមិនចូលចិត្តចាញ់ទេ។ |
+| Improver | អ្នកកែលម្អ |
+| Makes good things better. | ធ្វើឱ្យរបស់ល្អកាន់តែល្អ។ |
+| Improvers notice how something could work better, and they cannot leave it alone. They polish, refine and raise the standard, and they help a team move from good enough to excellent. | អ្នកកែលម្អ កត់សម្គាល់ពីរបៀបដែលអ្វីមួយអាចដំណើរការល្អជាងនេះ ហើយពួកគេមិនអាចទុកវាចោលបានទេ។ ពួកគេខាត់ កែលម្អ និងលើកកម្ពស់ស្តង់ដារ ហើយពួកគេជួយក្រុមឱ្យផ្លាស់ពី "ល្អគ្រប់គ្រាន់" ទៅ "ល្អឥតខ្ចោះ"។ |
+| Raises the quality of what the team does | លើកកម្ពស់គុណភាពនៃអ្វីដែលក្រុមធ្វើ |
+| Sees small changes that make a big difference | ឃើញការផ្លាស់ប្តូរតូចៗដែលធ្វើឱ្យមានភាពខុសគ្នាធំ |
+| Can struggle to call something finished | អាចពិបាកនិយាយថាអ្វីមួយបានចប់ហើយ |
+| May seem critical of other people's work | អាចមើលទៅដូចជារិះគន់ការងាររបស់អ្នកដទៃ |
+| Ask them to make one thing excellent. | សុំឱ្យពួកគេធ្វើឱ្យរបស់មួយល្អឥតខ្ចោះ។ |
+| I notice how things could be done better. | ខ្ញុំកត់សម្គាល់ពីរបៀបដែលអ្វីៗអាចធ្វើបានល្អជាងនេះ។ |
+| I like to take something good and make it excellent. | ខ្ញុំចូលចិត្តយករបស់ល្អមួយ ហើយធ្វើឱ្យវាល្អឥតខ្ចោះ។ |
+| I care a lot about quality. | ខ្ញុំយកចិត្តទុកដាក់ខ្លាំងលើគុណភាព។ |
+| I enjoy polishing work until it is just right. | ខ្ញុំចូលចិត្តខាត់ការងារ រហូតដល់វាត្រឹមត្រូវល្អ។ |
+| I would rather grow what I am good at than fix what I am weak at. | ខ្ញុំចូលចិត្តពង្រីកអ្វីដែលខ្ញុំពូកែ ជាជាងជួសជុលអ្វីដែលខ្ញុំខ្សោយ។ |
+| Average is not good enough for me. | កម្រិតមធ្យម មិនគ្រប់គ្រាន់សម្រាប់ខ្ញុំទេ។ |
+| Confident | អ្នកមានទំនុកចិត្ត |
+| Steady and sure of their direction. | នឹងនរ និងប្រាកដពីទិសដៅរបស់ខ្លួន។ |
+| Confident people trust their own judgment. They can step into the unknown, make up their mind without needing others to agree, and stay steady under pressure — which helps others feel steady too. | អ្នកមានទំនុកចិត្ត ទុកចិត្តលើការវិនិច្ឆ័យរបស់ខ្លួន។ ពួកគេអាចឈានចូលទៅក្នុងអ្វីដែលមិនស្គាល់ សម្រេចចិត្តដោយមិនចាំបាច់ឱ្យអ្នកដទៃយល់ព្រម ហើយនៅនឹងនរក្រោមសម្ពាធ — ដែលជួយឱ្យអ្នកដទៃមានអារម្មណ៍នឹងនរដែរ។ |
+| Steady under pressure | នឹងនរក្រោមសម្ពាធ |
+| Willing to step into the unknown | ហ៊ានឈានចូលទៅក្នុងអ្វីដែលមិនស្គាល់ |
+| Can seem not to need others' input | អាចមើលទៅដូចជាមិនត្រូវការយោបល់ពីអ្នកដទៃ |
+| May find it hard to admit being unsure | អាចពិបាកទទួលស្គាល់ថាមិនប្រាកដ |
+| Let them go first into the new and uncertain — and ask them to invite others’ views. | ឱ្យពួកគេទៅមុនគេក្នុងអ្វីដែលថ្មី និងមិនប្រាកដ — ហើយសុំឱ្យពួកគេអញ្ជើញយោបល់ពីអ្នកដទៃ។ |
+| I trust my own judgment. | ខ្ញុំទុកចិត្តលើការវិនិច្ឆ័យរបស់ខ្ញុំ។ |
+| I stay calm and sure of myself under pressure. | ខ្ញុំនៅស្ងប់ និងប្រាកដក្នុងខ្លួនឯងក្រោមសម្ពាធ។ |
+| I am willing to try something no one has done before. | ខ្ញុំហ៊ានសាកល្បងអ្វីដែលគ្មាននរណាធ្លាប់ធ្វើ។ |
+| I do not need others to agree with me before I act. | ខ្ញុំមិនចាំបាច់ឱ្យអ្នកដទៃយល់ស្របជាមួយខ្ញុំ មុនពេលខ្ញុំធ្វើទេ។ |
+| I know what I am good at. | ខ្ញុំដឹងថាខ្ញុំពូកែអ្វី។ |
+| I feel sure God can use me, even in hard places. | ខ្ញុំប្រាកដថាព្រះអាចប្រើខ្ញុំ ទោះនៅកន្លែងពិបាកក៏ដោយ។ |
+| Difference-Maker | អ្នកបង្កើតភាពខុសគ្នា |
+| Wants their life to count. | ចង់ឱ្យជីវិតរបស់ខ្លួនមានតម្លៃ។ |
+| Difference-makers want to do work that matters and that people will remember. They aim high, take on big responsibility, and are willing to be seen, because they want their life to make a real mark for good. | អ្នកបង្កើតភាពខុសគ្នា ចង់ធ្វើការងារដែលសំខាន់ ហើយដែលមនុស្សនឹងចងចាំ។ ពួកគេប្រាថ្នាខ្ពស់ ទទួលយកការទទួលខុសត្រូវធំ ហើយហ៊ានឱ្យគេឃើញ ព្រោះពួកគេចង់ឱ្យជីវិតរបស់ពួកគេបន្សល់ទុកស្នាមល្អពិតប្រាកដ។ |
+| Takes on big, important work | ទទួលយកការងារធំ និងសំខាន់ |
+| Brings courage and ambition | នាំមកនូវភាពក្លាហាន និងមហិច្ឆតា |
+| Can depend too much on praise | អាចពឹងលើការសរសើរច្រើនពេក |
+| May feel low when their work goes unnoticed | អាចមានអារម្មណ៍ធ្លាក់ចុះ នៅពេលការងាររបស់ពួកគេមិនត្រូវបានគេកត់សម្គាល់ |
+| Give them something big that matters — and thank them for it by name. | ផ្តល់ឱ្យពួកគេនូវអ្វីធំដែលសំខាន់ — ហើយអរគុណពួកគេដោយហៅឈ្មោះ។ |
+| I want my life to make a real difference. | ខ្ញុំចង់ឱ្យជីវិតរបស់ខ្ញុំបង្កើតភាពខុសគ្នាពិតប្រាកដ។ |
+| I want to be known for doing important work. | ខ្ញុំចង់ត្រូវបានគេស្គាល់ថាធ្វើការងារសំខាន់។ |
+| I aim high in what I try to do. | ខ្ញុំប្រាថ្នាខ្ពស់ក្នុងអ្វីដែលខ្ញុំព្យាយាមធ្វើ។ |
+| I like to be trusted with big responsibility. | ខ្ញុំចូលចិត្តត្រូវបានគេទុកចិត្តលើការទទួលខុសត្រូវធំ។ |
+| It matters to me that my work is noticed. | វាសំខាន់សម្រាប់ខ្ញុំ ដែលការងាររបស់ខ្ញុំត្រូវបានគេកត់សម្គាល់។ |
+| I want to leave something that lasts. | ខ្ញុំចង់បន្សល់ទុកអ្វីមួយដែលស្ថិតស្ថេរ។ |
+| Friend-Maker | អ្នករកមិត្ត |
+| Turns strangers into friends. | ប្តូរមនុស្សចម្លែកឱ្យក្លាយជាមិត្ត។ |
+| Friend-makers love meeting new people. They break the ice, remember names, and win people over quickly, and doors open for a team because a Friend-Maker walked through them first. | អ្នករកមិត្ត ស្រឡាញ់ការជួបមនុស្សថ្មី។ ពួកគេបំបែកភាពស្ងៀមស្ងាត់ ចងចាំឈ្មោះ ហើយទាក់ទាញចិត្តមនុស្សបានយ៉ាងរហ័ស ហើយទ្វារបើកចំហសម្រាប់ក្រុម ព្រោះអ្នករកមិត្តបានដើរចូលមុនគេ។ |
+| Builds new connections quickly | បង្កើតទំនាក់ទំនងថ្មីៗយ៉ាងរហ័ស |
+| Makes visitors and partners feel at ease | ធ្វើឱ្យភ្ញៀវ និងដៃគូមានអារម្មណ៍ស្រួល |
+| Can have many friends but few deep ones | អាចមានមិត្តច្រើន តែមិត្តជិតស្និទ្ធតិច |
+| May lose energy with no new people around | អាចអស់កម្លាំង នៅពេលគ្មានមនុស្សថ្មីនៅជុំវិញ |
+| Send them to meet new people — visitors, churches, partners. | ផ្ញើពួកគេទៅជួបមនុស្សថ្មី — ភ្ញៀវ ព្រះវិហារ ដៃគូ។ |
+| I enjoy meeting new people. | ខ្ញុំចូលចិត្តជួបមនុស្សថ្មី។ |
+| I can start a conversation with a stranger easily. | ខ្ញុំអាចចាប់ផ្តើមការសន្ទនាជាមួយមនុស្សចម្លែកបានយ៉ាងងាយ។ |
+| I remember people’s names. | ខ្ញុំចងចាំឈ្មោះមនុស្ស។ |
+| I like to win people over. | ខ្ញុំចូលចិត្តទាក់ទាញចិត្តមនុស្ស។ |
+| I feel at home at a big event full of people. | ខ្ញុំមានអារម្មណ៍ដូចនៅផ្ទះ នៅក្នុងកម្មវិធីធំដែលមានមនុស្សច្រើន។ |
+| I know people in many different places. | ខ្ញុំស្គាល់មនុស្សនៅកន្លែងផ្សេងៗជាច្រើន។ |
+| Flexible | អ្នកបត់បែន |
+| Goes with the flow. | ដើរតាមលំហូរ។ |
+| Flexible people live in the present and adjust easily. When the day changes — and in ministry it often does — they take it in their stride, stay calm and help others keep going. | អ្នកបត់បែន រស់នៅក្នុងពេលបច្ចុប្បន្ន ហើយកែតម្រូវខ្លួនបានយ៉ាងងាយ។ នៅពេលថ្ងៃមួយផ្លាស់ប្តូរ — ហើយក្នុងការងារបម្រើ វាតែងតែផ្លាស់ប្តូរ — ពួកគេទទួលយកវាដោយស្ងប់ស្ងាត់ ហើយជួយអ្នកដទៃឱ្យបន្តទៅមុខ។ |
+| Calm when plans change | ស្ងប់ស្ងាត់ នៅពេលផែនការផ្លាស់ប្តូរ |
+| Responds well to what each moment needs | ឆ្លើយតបបានល្អចំពោះអ្វីដែលពេលនីមួយៗត្រូវការ |
+| Can find long-term planning dull | អាចយល់ថាការរៀបផែនការរយៈពេលវែងគួរឱ្យធុញ |
+| May let others’ plans fill their whole day | អាចឱ្យផែនការរបស់អ្នកដទៃពេញថ្ងៃទាំងមូលរបស់ពួកគេ |
+| Put them where the day is unpredictable. | ដាក់ពួកគេនៅកន្លែងដែលថ្ងៃមិនអាចទាយទុកបាន។ |
+| I am comfortable when plans change at the last minute. | ខ្ញុំមានភាពស្រួល នៅពេលផែនការផ្លាស់ប្តូរនៅនាទីចុងក្រោយ។ |
+| I take each day as it comes. | ខ្ញុំទទួលយកថ្ងៃនីមួយៗតាមដែលវាមក។ |
+| I stay calm when things are unpredictable. | ខ្ញុំនៅស្ងប់ នៅពេលអ្វីៗមិនអាចទាយទុកបាន។ |
+| I can change what I am doing quickly when something else is needed. | ខ្ញុំអាចប្តូរអ្វីដែលខ្ញុំកំពុងធ្វើបានយ៉ាងរហ័ស នៅពេលត្រូវការអ្វីផ្សេង។ |
+| I do not mind interruptions. | ខ្ញុំមិនខ្វល់នឹងការរំខានទេ។ |
+| I enjoy days when I do not know what will happen. | ខ្ញុំចូលចិត្តថ្ងៃដែលខ្ញុំមិនដឹងថានឹងមានអ្វីកើតឡើង។ |
+| Weaver | អ្នកតភ្ជាប់ |
+| Sees how everything is connected. | ឃើញពីរបៀបដែលអ្វីៗទាំងអស់ភ្ជាប់គ្នា។ |
+| Weavers believe things happen for a reason and that people are joined in ways we cannot always see. They notice God’s hand across different lives and events, and they help a team feel part of something bigger than itself. | អ្នកតភ្ជាប់ ជឿថាអ្វីៗកើតឡើងដោយមានហេតុផល ហើយមនុស្សត្រូវបានភ្ជាប់គ្នាតាមរបៀបដែលយើងមិនតែងតែមើលឃើញ។ ពួកគេកត់សម្គាល់ព្រះហស្តរបស់ព្រះ ក្នុងជីវិត និងព្រឹត្តិការណ៍ផ្សេងៗ ហើយជួយក្រុមឱ្យមានអារម្មណ៍ថាជាផ្នែកមួយនៃអ្វីដែលធំជាងខ្លួន។ |
+| Helps people see they belong to something bigger | ជួយមនុស្សឱ្យឃើញថាពួកគេជាផ្នែកមួយនៃអ្វីដែលធំជាង |
+| Brings hope and faith in hard times | នាំក្តីសង្ឃឹម និងជំនឿក្នុងពេលលំបាក |
+| Can be hard to pin down to practical details | អាចពិបាកផ្តោតលើព័ត៌មានលម្អិតជាក់ស្តែង |
+| May accept things that should be challenged | អាចទទួលយករឿងដែលគួរតែជំទាស់ |
+| Ask them to help the team see God’s bigger story in the work. | សុំឱ្យពួកគេជួយក្រុមឱ្យឃើញរឿងរ៉ាវដ៏ធំរបស់ព្រះក្នុងការងារ។ |
+| I believe things happen for a reason. | ខ្ញុំជឿថាអ្វីៗកើតឡើងដោយមានហេតុផល។ |
+| I see how different people and events are connected. | ខ្ញុំឃើញពីរបៀបដែលមនុស្ស និងព្រឹត្តិការណ៍ផ្សេងៗភ្ជាប់គ្នា។ |
+| I often notice God at work in ordinary moments. | ខ្ញុំតែងតែកត់សម្គាល់ឃើញព្រះកំពុងធ្វើការក្នុងពេលវេលាធម្មតា។ |
+| I feel connected to people I have never met. | ខ្ញុំមានអារម្មណ៍ភ្ជាប់ជាមួយមនុស្សដែលខ្ញុំមិនធ្លាប់ជួប។ |
+| I believe we all need each other. | ខ្ញុំជឿថាយើងទាំងអស់គ្នាត្រូវការគ្នាទៅវិញទៅមក។ |
+| I see small things as part of a bigger story. | ខ្ញុំមើលឃើញរឿងតូចៗជាផ្នែកមួយនៃរឿងរ៉ាវដ៏ធំ។ |
+| Mentor | អ្នកណែនាំ |
+| Helps people grow, step by step. | ជួយមនុស្សឱ្យលូតលាស់ មួយជំហានម្តងៗ។ |
+| Mentors see potential in people and love helping it grow. They notice small progress, give patient guidance, and find deep joy in watching someone become more than they were. | អ្នកណែនាំ ឃើញសក្តានុពលក្នុងមនុស្ស ហើយស្រឡាញ់ការជួយឱ្យវាលូតលាស់។ ពួកគេកត់សម្គាល់វឌ្ឍនភាពតូចៗ ផ្តល់ការណែនាំដោយអត់ធ្មត់ ហើយរកឃើញអំណរដ៏ជ្រាលជ្រៅ ក្នុងការមើលនរណាម្នាក់ក្លាយជាច្រើនជាងអ្វីដែលពួកគេធ្លាប់ជា។ |
+| Sees and grows potential in people | ឃើញ ហើយបណ្តុះសក្តានុពលក្នុងមនុស្ស |
+| Patient with slow progress | អត់ធ្មត់ជាមួយវឌ្ឍនភាពយឺត |
+| Can keep investing in someone who is not ready | អាចបន្តវិនិយោគលើនរណាម្នាក់ដែលមិនទាន់រួចរាល់ |
+| May neglect their own growth | អាចមិនយកចិត្តទុកដាក់លើការលូតលាស់ផ្ទាល់ខ្លួន |
+| Give them someone to walk with. | ឱ្យពួកគេមាននរណាម្នាក់ដើម្បីដើរជាមួយ។ |
+| I enjoy helping someone grow over time. | ខ្ញុំចូលចិត្តជួយនរណាម្នាក់ឱ្យលូតលាស់តាមពេលវេលា។ |
+| I notice small progress in people. | ខ្ញុំកត់សម្គាល់វឌ្ឍនភាពតូចៗក្នុងមនុស្ស។ |
+| I am patient when someone learns slowly. | ខ្ញុំអត់ធ្មត់ នៅពេលនរណាម្នាក់រៀនយឺត។ |
+| It gives me joy to see someone become more capable. | វាផ្តល់អំណរដល់ខ្ញុំ ក្នុងការឃើញនរណាម្នាក់កាន់តែមានសមត្ថភាព។ |
+| I encourage people to try things they think they cannot do. | ខ្ញុំលើកទឹកចិត្តមនុស្សឱ្យសាកល្បងអ្វីដែលពួកគេគិតថាធ្វើមិនបាន។ |
+| I love to see people discover what they are good at. | ខ្ញុំស្រឡាញ់ការឃើញមនុស្សរកឃើញអ្វីដែលពួកគេពូកែ។ |
+| Comforter | អ្នកលួងលោម |
+| Feels what others are feeling. | មានអារម្មណ៍ពីអ្វីដែលអ្នកដទៃកំពុងមានអារម្មណ៍។ |
+| Comforters sense other people’s feelings almost as their own. They know when someone is hurting, find the right words or simply stay close, and people feel understood with them. | អ្នកលួងលោម ដឹងពីអារម្មណ៍របស់អ្នកដទៃស្ទើរតែដូចជាអារម្មណ៍របស់ខ្លួនឯង។ ពួកគេដឹងនៅពេលនរណាម្នាក់កំពុងឈឺចាប់ រកពាក្យត្រឹមត្រូវ ឬគ្រាន់តែនៅក្បែរ ហើយមនុស្សមានអារម្មណ៍ថាត្រូវបានយល់ចិត្ត នៅពេលនៅជាមួយពួកគេ។ |
+| Senses how people really feel | ដឹងពីអារម្មណ៍ពិតរបស់មនុស្ស |
+| Brings comfort in hard times | នាំការលួងលោមក្នុងពេលលំបាក |
+| Can carry other people’s pain as their own | អាចទទួលយកការឈឺចាប់របស់អ្នកដទៃដូចជារបស់ខ្លួន |
+| May find hard decisions painful because of how others will feel | អាចយល់ថាការសម្រេចចិត្តពិបាកគឺឈឺចាប់ ដោយសារអារម្មណ៍របស់អ្នកដទៃ |
+| Send them to the person who is hurting — and make sure they are cared for too. | ផ្ញើពួកគេទៅកាន់មនុស្សដែលកំពុងឈឺចាប់ — ហើយធ្វើឱ្យប្រាកដថាពួកគេក៏ត្រូវបានគេយកចិត្តទុកដាក់ដែរ។ |
+| I can feel what other people are feeling. | ខ្ញុំអាចមានអារម្មណ៍ពីអ្វីដែលអ្នកដទៃកំពុងមានអារម្មណ៍។ |
+| I often know someone is hurting before they say it. | ខ្ញុំតែងតែដឹងថានរណាម្នាក់កំពុងឈឺចាប់ មុនពេលពួកគេនិយាយ។ |
+| I laugh or cry easily with others. | ខ្ញុំងាយនឹងសើច ឬយំជាមួយអ្នកដទៃ។ |
+| People come to me when they are sad. | មនុស្សមករកខ្ញុំ នៅពេលពួកគេកើតទុក្ខ។ |
+| I find the right words to comfort someone. | ខ្ញុំរកពាក្យត្រឹមត្រូវដើម្បីលួងលោមនរណាម្នាក់។ |
+| I understand why people feel the way they do. | ខ្ញុំយល់ពីមូលហេតុដែលមនុស្សមានអារម្មណ៍បែបនោះ។ |
+| Peacemaker | អ្នកផ្សះផ្សា |
+| Brings people back together. | នាំមនុស្សឱ្យត្រឡប់មករួមគ្នាវិញ។ |
+| Peacemakers notice tension early and work to heal it. They look for common ground, calm hard conversations, and help people who disagree keep working and living together. | អ្នកផ្សះផ្សា កត់សម្គាល់ភាពតានតឹងតាំងពីដំបូង ហើយខិតខំព្យាបាលវា។ ពួកគេស្វែងរកចំណុចរួម ធ្វើឱ្យការសន្ទនាពិបាកៗស្ងប់ ហើយជួយមនុស្សដែលមិនយល់ស្របគ្នា ឱ្យបន្តធ្វើការ និងរស់នៅជាមួយគ្នា។ |
+| Calms tension and finds common ground | ធ្វើឱ្យភាពតានតឹងស្ងប់ ហើយរកចំណុចរួម |
+| Helps people repair relationships | ជួយមនុស្សជួសជុលទំនាក់ទំនង |
+| Can avoid a conflict that needs facing | អាចជៀសវាងជម្លោះដែលត្រូវតែប្រឈមមុខ |
+| May keep the peace at their own cost | អាចរក្សាសន្តិភាព ដោយខាតបង់ខ្លួនឯង |
+| Include them in hard conversations — and let them say hard things too. | ឱ្យពួកគេចូលរួមក្នុងការសន្ទនាពិបាកៗ — ហើយឱ្យពួកគេនិយាយរឿងពិបាកៗផងដែរ។ |
+| I notice tension between people quickly. | ខ្ញុំកត់សម្គាល់ភាពតានតឹងរវាងមនុស្សយ៉ាងរហ័ស។ |
+| I help people who disagree understand each other. | ខ្ញុំជួយមនុស្សដែលមិនយល់ស្របគ្នា ឱ្យយល់ពីគ្នាទៅវិញទៅមក។ |
+| I work to restore relationships after a conflict. | ខ្ញុំខិតខំស្តារទំនាក់ទំនងឡើងវិញ បន្ទាប់ពីមានជម្លោះ។ |
+| I look for what people agree on. | ខ្ញុំស្វែងរកអ្វីដែលមនុស្សយល់ស្របគ្នា។ |
+| I do not like arguments. | ខ្ញុំមិនចូលចិត្តការឈ្លោះប្រកែកគ្នាទេ។ |
+| I help a group find a way forward everyone can accept. | ខ្ញុំជួយក្រុមរកផ្លូវទៅមុខ ដែលមនុស្សគ្រប់គ្នាអាចទទួលយកបាន។ |
+| Welcomer | អ្នកស្វាគមន៍ |
+| Makes sure nobody is left out. | ធ្វើឱ្យប្រាកដថាគ្មាននរណាម្នាក់ត្រូវបានទុកចោល។ |
+| Welcomers notice who is on the edge and bring them in. New people, shy people, visitors — a Welcomer makes each one feel they belong, and a community is warmer because of them. | អ្នកស្វាគមន៍ កត់សម្គាល់អ្នកដែលនៅខាងក្រៅ ហើយនាំពួកគេចូលមក។ មនុស្សថ្មី មនុស្សខ្មាស់អៀន ភ្ញៀវ — អ្នកស្វាគមន៍ធ្វើឱ្យម្នាក់ៗមានអារម្មណ៍ថាពួកគេជាផ្នែកមួយ ហើយសហគមន៍កក់ក្តៅជាងមុន ដោយសារពួកគេ។ |
+| Notices and includes the person on the edge | កត់សម្គាល់ ហើយនាំអ្នកដែលនៅខាងក្រៅចូលមក |
+| Makes newcomers feel at home | ធ្វើឱ្យអ្នកមកថ្មីមានអារម្មណ៍ដូចនៅផ្ទះ |
+| Can spread themselves too thin | អាចបែងចែកខ្លួនឯងស្តើងពេក |
+| May feel hurt when others do not include people | អាចឈឺចិត្ត នៅពេលអ្នកដទៃមិនរាប់បញ្ចូលមនុស្ស |
+| Put them where new people arrive. | ដាក់ពួកគេនៅកន្លែងដែលមនុស្សថ្មីមកដល់។ |
+| I notice when someone is left out. | ខ្ញុំកត់សម្គាល់ នៅពេលនរណាម្នាក់ត្រូវបានទុកចោល។ |
+| I enjoy making new people feel welcome. | ខ្ញុំចូលចិត្តធ្វើឱ្យមនុស្សថ្មីមានអារម្មណ៍ថាត្រូវបានស្វាគមន៍។ |
+| I invite others to join in. | ខ្ញុំអញ្ជើញអ្នកដទៃឱ្យចូលរួម។ |
+| I want everyone in a group to feel they belong. | ខ្ញុំចង់ឱ្យមនុស្សគ្រប់គ្នាក្នុងក្រុម មានអារម្មណ៍ថាពួកគេជាផ្នែកមួយ។ |
+| I include people who are different from me. | ខ្ញុំរាប់បញ្ចូលមនុស្សដែលខុសពីខ្ញុំ។ |
+| There is always room for one more with me. | ជាមួយខ្ញុំ តែងតែមានកន្លែងសម្រាប់ម្នាក់ទៀត។ |
+| Noticer | អ្នកសង្កេត |
+| Sees what is special in each person. | ឃើញអ្វីដែលពិសេសក្នុងមនុស្សម្នាក់ៗ។ |
+| Noticers see each person as different. They pick up what makes someone tick — what they love, how they learn, what they need — and they help a team put the right person in the right place. | អ្នកសង្កេត មើលឃើញមនុស្សម្នាក់ៗថាខុសៗគ្នា។ ពួកគេដឹងពីអ្វីដែលជំរុញនរណាម្នាក់ — អ្វីដែលពួកគេស្រឡាញ់ របៀបដែលពួកគេរៀន អ្វីដែលពួកគេត្រូវការ — ហើយពួកគេជួយក្រុមដាក់មនុស្សត្រឹមត្រូវនៅកន្លែងត្រឹមត្រូវ។ |
+| Sees each person’s gifts and needs | ឃើញអំណោយទាន និងតម្រូវការរបស់មនុស្សម្នាក់ៗ |
+| Helps the right person find the right role | ជួយមនុស្សត្រឹមត្រូវរកតួនាទីត្រឹមត្រូវ |
+| Can find it hard when people are treated as one group | អាចពិបាកចិត្ត នៅពេលមនុស្សត្រូវបានចាត់ទុកជាក្រុមតែមួយ |
+| May spend a long time on one person’s needs | អាចចំណាយពេលយូរលើតម្រូវការរបស់មនុស្សម្នាក់ |
+| Ask them who would be best for a job, and how to encourage each person. | សួរពួកគេថានរណាល្អបំផុតសម្រាប់ការងារមួយ ហើយរបៀបលើកទឹកចិត្តមនុស្សម្នាក់ៗ។ |
+| I notice what makes each person different. | ខ្ញុំកត់សម្គាល់អ្វីដែលធ្វើឱ្យមនុស្សម្នាក់ៗខុសគ្នា។ |
+| I know what encourages each of my friends. | ខ្ញុំដឹងពីអ្វីដែលលើកទឹកចិត្តមិត្តភក្តិម្នាក់ៗរបស់ខ្ញុំ។ |
+| I can tell which job would suit which person. | ខ្ញុំអាចដឹងថាការងារណាសមនឹងមនុស្សណា។ |
+| I do not like it when everyone is treated as the same. | ខ្ញុំមិនចូលចិត្ត នៅពេលមនុស្សគ្រប់គ្នាត្រូវបានចាត់ទុកដូចគ្នា។ |
+| I pay attention to how each person learns best. | ខ្ញុំយកចិត្តទុកដាក់ពីរបៀបដែលមនុស្សម្នាក់ៗរៀនបានល្អបំផុត។ |
+| I remember what matters to each person. | ខ្ញុំចងចាំអ្វីដែលសំខាន់ចំពោះមនុស្សម្នាក់ៗ។ |
+| Optimist | អ្នកសុទិដ្ឋិនិយម |
+| Brings joy and lifts the mood. | នាំអំណរ និងលើកស្ទួយអារម្មណ៍។ |
+| Optimists carry an enthusiasm people can feel. They laugh easily, celebrate small wins, and see the good in hard days, and a team finds new energy when an Optimist is with them. | អ្នកសុទិដ្ឋិនិយម មានភាពរីករាយដែលមនុស្សអាចមានអារម្មណ៍បាន។ ពួកគេងាយសើច អបអរជ័យជម្នះតូចៗ ហើយឃើញរឿងល្អក្នុងថ្ងៃលំបាក ហើយក្រុមរកឃើញថាមពលថ្មី នៅពេលអ្នកសុទិដ្ឋិនិយមនៅជាមួយ។ |
+| Brings energy and hope | នាំថាមពល និងក្តីសង្ឃឹម |
+| Celebrates people and small wins | អបអរមនុស្ស និងជ័យជម្នះតូចៗ |
+| Can seem to skip over real pain | អាចមើលទៅដូចជារំលងការឈឺចាប់ពិតប្រាកដ |
+| May find heavy, serious moments hard | អាចពិបាកជាមួយពេលវេលាធ្ងន់ធ្ងរ |
+| Let them lead the celebrations — and give them room to be sad too. | ឱ្យពួកគេដឹកនាំការអបអរ — ហើយផ្តល់កន្លែងឱ្យពួកគេកើតទុក្ខផងដែរ។ |
+| I make people laugh. | ខ្ញុំធ្វើឱ្យមនុស្សសើច។ |
+| I find something good even on a hard day. | ខ្ញុំរកឃើញរឿងល្អ ទោះបីជាថ្ងៃលំបាកក៏ដោយ។ |
+| I love to celebrate other people. | ខ្ញុំស្រឡាញ់ការអបអរអ្នកដទៃ។ |
+| My energy lifts a group. | ថាមពលរបស់ខ្ញុំលើកទឹកចិត្តក្រុម។ |
+| I help people have fun together. | ខ្ញុំជួយមនុស្សឱ្យសប្បាយជាមួយគ្នា។ |
+| I am quick to praise people. | ខ្ញុំឆាប់សរសើរមនុស្ស។ |
+| Loyal Friend | មិត្តស្មោះត្រង់ |
+| Goes deep with a few people. | ស្និទ្ធស្នាលយ៉ាងជ្រៅជាមួយមនុស្សមួយចំនួន។ |
+| Loyal friends would rather have a few close friendships than many easy ones. They give time, trust and honesty to the people close to them, and they stay — through hard seasons and over many years. | មិត្តស្មោះត្រង់ ចូលចិត្តមានមិត្តភាពជិតស្និទ្ធពីរបីនាក់ ជាជាងមិត្តភាពងាយៗច្រើន។ ពួកគេផ្តល់ពេលវេលា ការទុកចិត្ត និងភាពស្មោះត្រង់ដល់មនុស្សជិតស្និទ្ធ ហើយពួកគេនៅជាប់ — ឆ្លងកាត់រដូវលំបាក និងអស់រយៈពេលជាច្រើនឆ្នាំ។ |
+| Builds deep, lasting trust | បង្កើតការទុកចិត្តជ្រៅ និងយូរអង្វែង |
+| Stays faithful through hard seasons | នៅស្មោះត្រង់ ឆ្លងកាត់រដូវលំបាក |
+| Can seem slow to let new people in | អាចមើលទៅយឺតក្នុងការទទួលមនុស្សថ្មី |
+| May be deeply hurt when trust is broken | អាចឈឺចាប់ខ្លាំង នៅពេលការទុកចិត្តត្រូវបានបំបែក |
+| Give them time to build trust — and a small team to belong to. | ផ្តល់ពេលឱ្យពួកគេបង្កើតការទុកចិត្ត — និងក្រុមតូចមួយដើម្បីជាផ្នែកមួយ។ |
+| I would rather have a few close friends than many friends. | ខ្ញុំចូលចិត្តមានមិត្តជិតស្និទ្ធពីរបីនាក់ ជាជាងមិត្តច្រើន។ |
+| I stay friends with people for many years. | ខ្ញុំនៅជាមិត្តជាមួយមនុស្សអស់រយៈពេលជាច្រើនឆ្នាំ។ |
+| I am honest with the people close to me. | ខ្ញុំស្មោះត្រង់ជាមួយមនុស្សដែលជិតស្និទ្ធនឹងខ្ញុំ។ |
+| I trust people slowly, but deeply. | ខ្ញុំទុកចិត្តមនុស្សយឺតៗ ប៉ុន្តែយ៉ាងជ្រៅ។ |
+| I enjoy working with people I know well. | ខ្ញុំចូលចិត្តធ្វើការជាមួយមនុស្សដែលខ្ញុំស្គាល់ច្បាស់។ |
+| My friends know they can count on me. | មិត្តភក្តិរបស់ខ្ញុំដឹងថាពួកគេអាចពឹងលើខ្ញុំបាន។ |
+| Fact-Finder | អ្នកស្វែងរកការពិត |
+| Wants the facts before trusting an idea. | ចង់បានការពិត មុនពេលទុកចិត្តលើគំនិតមួយ។ |
+| Fact-finders test an idea before it is trusted. They look for the evidence and the gap in the plan, ask "how do we know?", and they save a team from mistakes that were easy to miss. | អ្នកស្វែងរកការពិត សាកល្បងគំនិតមួយ មុនពេលវាត្រូវបានទុកចិត្ត។ ពួកគេស្វែងរកភស្តុតាង និងចន្លោះក្នុងផែនការ សួរថា "តើយើងដឹងយ៉ាងដូចម្តេច?" ហើយពួកគេជួយក្រុមឱ្យរួចពីកំហុសដែលងាយនឹងមើលរំលង។ |
+| Spots the weak point in a plan | រកឃើញចំណុចខ្សោយក្នុងផែនការ |
+| Helps a team think more clearly | ជួយក្រុមឱ្យគិតកាន់តែច្បាស់ |
+| Can sound negative when they mean to help | អាចស្តាប់ទៅអវិជ្ជមាន ទោះបីពួកគេចង់ជួយក៏ដោយ |
+| May slow a decision down | អាចធ្វើឱ្យការសម្រេចចិត្តយឺត |
+| Ask for their questions early, while changes are still easy. | សុំសំណួររបស់ពួកគេតាំងពីដំបូង ខណៈពេលដែលការផ្លាស់ប្តូរនៅងាយស្រួល។ |
+| I like to test an idea before I accept it. | ខ្ញុំចូលចិត្តសាកល្បងគំនិតមួយ មុនពេលខ្ញុំទទួលយកវា។ |
+| I notice weak points in a plan. | ខ្ញុំកត់សម្គាល់ចំណុចខ្សោយក្នុងផែនការ។ |
+| I often ask, "How do we know this is true?" | ខ្ញុំតែងតែសួរថា "តើយើងដឹងយ៉ាងដូចម្តេចថារឿងនេះពិត?" |
+| I want to see the facts before I believe something. | ខ្ញុំចង់ឃើញការពិត មុនពេលខ្ញុំជឿអ្វីមួយ។ |
+| I like finding patterns in numbers and information. | ខ្ញុំចូលចិត្តស្វែងរកលំនាំក្នុងលេខ និងព័ត៌មាន។ |
+| I ask for the reason behind a decision. | ខ្ញុំសួររកហេតុផលនៅពីក្រោយការសម្រេចចិត្ត។ |
+| Historian | អ្នកប្រវត្តិសាស្ត្រ |
+| Learns from what came before. | រៀនពីអ្វីដែលបានកើតឡើងពីមុន។ |
+| Historians look back to understand the present. They want to know how something started and what has happened before, and they help a team learn from its history instead of repeating it. | អ្នកប្រវត្តិសាស្ត្រ ក្រឡេកមើលក្រោយ ដើម្បីយល់ពីបច្ចុប្បន្ន។ ពួកគេចង់ដឹងថាអ្វីមួយបានចាប់ផ្តើមយ៉ាងដូចម្តេច និងអ្វីដែលបានកើតឡើងពីមុន ហើយពួកគេជួយក្រុមឱ្យរៀនពីប្រវត្តិរបស់ខ្លួន ជាជាងធ្វើម្តងទៀត។ |
+| Brings the lessons of the past | នាំមកនូវមេរៀនពីអតីតកាល |
+| Helps new people understand how things came to be | ជួយមនុស្សថ្មីឱ្យយល់ពីរបៀបដែលអ្វីៗបានកើតឡើង |
+| Can hold on to the way things used to be | អាចប្រកាន់ខ្ជាប់នឹងរបៀបដែលអ្វីៗធ្លាប់ជា |
+| May be slow to trust a new idea with no history | អាចយឺតក្នុងការទុកចិត្តគំនិតថ្មីដែលគ្មានប្រវត្តិ |
+| Ask them to tell new staff how the ministry began. | សុំឱ្យពួកគេប្រាប់បុគ្គលិកថ្មីពីរបៀបដែលក្រសួងបម្រើបានចាប់ផ្តើម។ |
+| I like to know how something started. | ខ្ញុំចូលចិត្តដឹងថាអ្វីមួយបានចាប់ផ្តើមយ៉ាងដូចម្តេច។ |
+| I learn a lot from looking at what has happened before. | ខ្ញុំរៀនបានច្រើន ពីការមើលអ្វីដែលបានកើតឡើងពីមុន។ |
+| I enjoy history and people’s life stories. | ខ្ញុំចូលចិត្តប្រវត្តិសាស្ត្រ និងរឿងរ៉ាវជីវិតរបស់មនុស្ស។ |
+| Before I decide, I ask what we did last time. | មុនពេលខ្ញុំសម្រេចចិត្ត ខ្ញុំសួរថាយើងបានធ្វើអ្វីលើកមុន។ |
+| I remember what happened in the past, and why. | ខ្ញុំចងចាំអ្វីដែលបានកើតឡើងពីមុន និងមូលហេតុ។ |
+| I understand people better when I know where they come from. | ខ្ញុំយល់ពីមនុស្សបានច្បាស់ជាង នៅពេលខ្ញុំដឹងថាពួកគេមកពីណា។ |
+| Visionary | អ្នកមានចក្ខុវិស័យ |
+| Imagines what could be. | ស្រមៃពីអ្វីដែលអាចកើតឡើង។ |
+| Visionaries see a future that does not exist yet and help others see it too. They dream about what God could do, paint a picture people want to join, and give a team hope and direction. | អ្នកមានចក្ខុវិស័យ មើលឃើញអនាគតដែលមិនទាន់មាន ហើយជួយអ្នកដទៃឱ្យមើលឃើញវាដែរ។ ពួកគេស្រមៃពីអ្វីដែលព្រះអាចធ្វើ គូររូបភាពដែលមនុស្សចង់ចូលរួម ហើយផ្តល់ឱ្យក្រុមនូវក្តីសង្ឃឹម និងទិសដៅ។ |
+| Paints a hopeful picture of the future | គូររូបភាពអនាគតដែលពោរពេញដោយក្តីសង្ឃឹម |
+| Gives a team direction | ផ្តល់ទិសដៅដល់ក្រុម |
+| Can overlook what it takes to get there | អាចមើលរំលងអ្វីដែលត្រូវការដើម្បីទៅដល់ទីនោះ |
+| May be frustrated by slow progress | អាចខកចិត្តនឹងវឌ្ឍនភាពយឺត |
+| Let them share the dream — then plan the first step together. | ឱ្យពួកគេចែករំលែកក្តីស្រមៃ — បន្ទាប់មករៀបផែនការជំហានដំបូងជាមួយគ្នា។ |
+| I often imagine what the future could look like. | ខ្ញុំតែងតែស្រមៃពីអនាគតដែលអាចមានរូបរាង។ |
+| I can describe a dream in a way that excites others. | ខ្ញុំអាចរៀបរាប់ពីក្តីស្រមៃ តាមរបៀបដែលធ្វើឱ្យអ្នកដទៃរំភើប។ |
+| I believe things can be much better than they are now. | ខ្ញុំជឿថាអ្វីៗអាចល្អប្រសើរជាងពេលនេះច្រើន។ |
+| I think a lot about what God could do through our work. | ខ្ញុំគិតច្រើនពីអ្វីដែលព្រះអាចធ្វើតាមរយៈការងាររបស់យើង។ |
+| I like to picture where we could be in five years. | ខ្ញុំចូលចិត្តស្រមៃថាយើងអាចនៅទីណាក្នុងរយៈពេលប្រាំឆ្នាំទៀត។ |
+| Big dreams give me energy. | ក្តីស្រមៃធំៗ ផ្តល់ថាមពលដល់ខ្ញុំ។ |
+| Inventor | អ្នកច្នៃប្រឌិត |
+| Comes up with fresh ideas. | បង្កើតគំនិតថ្មីៗ។ |
+| Inventors come up with new ideas easily. They see a different way to do almost anything, connect ideas nobody else put together, and bring creativity to problems that seemed fixed. | អ្នកច្នៃប្រឌិត បង្កើតគំនិតថ្មីៗបានយ៉ាងងាយ។ ពួកគេឃើញវិធីផ្សេងដើម្បីធ្វើស្ទើរតែគ្រប់យ៉ាង ភ្ជាប់គំនិតដែលគ្មាននរណាម្នាក់បានភ្ជាប់ ហើយនាំភាពច្នៃប្រឌិតមកកាន់បញ្ហាដែលហាក់ដូចជាមិនអាចផ្លាស់ប្តូរបាន។ |
+| Full of fresh, creative ideas | ពោរពេញដោយគំនិតថ្មី និងច្នៃប្រឌិត |
+| Finds new ways around old problems | រកឃើញវិធីថ្មីដើម្បីដោះស្រាយបញ្ហាចាស់ៗ |
+| Can have more ideas than the team can use | អាចមានគំនិតច្រើនជាងអ្វីដែលក្រុមអាចប្រើបាន |
+| May lose interest once an idea is chosen | អាចបាត់ចំណាប់អារម្មណ៍ នៅពេលគំនិតមួយត្រូវបានជ្រើសរើសរួច |
+| Invite them to brainstorm — then let others help choose. | អញ្ជើញពួកគេឱ្យបញ្ចេញគំនិត — បន្ទាប់មកឱ្យអ្នកដទៃជួយជ្រើសរើស។ |
+| New ideas come to me easily. | គំនិតថ្មីៗមកដល់ខ្ញុំយ៉ាងងាយ។ |
+| I often think of a different way to do things. | ខ្ញុំតែងតែគិតពីវិធីផ្សេងដើម្បីធ្វើអ្វីៗ។ |
+| I enjoy brainstorming. | ខ្ញុំចូលចិត្តការបញ្ចេញគំនិត។ |
+| I connect ideas that others do not put together. | ខ្ញុំភ្ជាប់គំនិតដែលអ្នកដទៃមិនបានភ្ជាប់។ |
+| I enjoy thinking up new names, designs or plans. | ខ្ញុំចូលចិត្តគិតបង្កើតឈ្មោះ ការរចនា ឬផែនការថ្មីៗ។ |
+| I get bored doing things the same way every time. | ខ្ញុំធុញ នៅពេលធ្វើអ្វីៗតាមរបៀបដដែលរាល់ដង។ |
+| Collector | អ្នកប្រមូល |
+| Gathers what might be useful. | ប្រមូលអ្វីដែលអាចមានប្រយោជន៍។ |
+| Collectors love to gather — information, ideas, stories, resources and contacts. They keep what they find, and when the team needs something, the Collector often already has it. | អ្នកប្រមូល ស្រឡាញ់ការប្រមូល — ព័ត៌មាន គំនិត រឿងរ៉ាវ ធនធាន និងទំនាក់ទំនង។ ពួកគេរក្សាទុកអ្វីដែលពួកគេរកឃើញ ហើយនៅពេលក្រុមត្រូវការអ្វីមួយ អ្នកប្រមូលជាញឹកញាប់មានវារួចហើយ។ |
+| Finds and keeps useful information and resources | រកឃើញ និងរក្សាទុកព័ត៌មាន និងធនធានដែលមានប្រយោជន៍ |
+| Often has what the team needs | ជាញឹកញាប់មានអ្វីដែលក្រុមត្រូវការ |
+| Can gather more than they use | អាចប្រមូលច្រើនជាងអ្វីដែលពួកគេប្រើ |
+| May find it hard to let things go | អាចពិបាកបោះបង់ចោលរបស់របរ |
+| Ask them to find things out — and to keep the team’s resources in order. | សុំឱ្យពួកគេស្វែងរកព័ត៌មាន — និងរក្សាធនធានរបស់ក្រុមឱ្យមានសណ្តាប់ធ្នាប់។ |
+| I collect useful information, ideas or things. | ខ្ញុំប្រមូលព័ត៌មាន គំនិត ឬរបស់របរដែលមានប្រយោជន៍។ |
+| I save notes and links in case they are useful later. | ខ្ញុំរក្សាទុកកំណត់ត្រា និងតំណភ្ជាប់ ក្រែងលោមានប្រយោជន៍នៅពេលក្រោយ។ |
+| I like to have resources ready before someone needs them. | ខ្ញុំចូលចិត្តត្រៀមធនធានរួចរាល់ មុនពេលនរណាម្នាក់ត្រូវការវា។ |
+| I enjoy researching a question. | ខ្ញុំចូលចិត្តស្រាវជ្រាវសំណួរមួយ។ |
+| People ask me where to find things. | មនុស្សសួរខ្ញុំថាត្រូវរករបស់នៅឯណា។ |
+| I keep things that might be useful one day. | ខ្ញុំរក្សាទុករបស់ដែលអាចមានប្រយោជន៍នៅថ្ងៃណាមួយ។ |
+| Deep Thinker | អ្នកគិតជ្រៅ |
+| Loves time to think. | ស្រឡាញ់ពេលវេលាសម្រាប់គិត។ |
+| Deep thinkers enjoy the work of thinking itself. They need quiet time to reflect, ask big questions, and turn ideas over until they are clear, and they bring depth and wisdom to a team’s conversations. | អ្នកគិតជ្រៅ ចូលចិត្តការគិតដោយខ្លួនវាផ្ទាល់។ ពួកគេត្រូវការពេលស្ងាត់ដើម្បីពិចារណា សួរសំណួរធំៗ ហើយគិតពីគំនិតម្តងហើយម្តងទៀត រហូតដល់វាច្បាស់ ហើយពួកគេនាំមកនូវភាពជ្រាលជ្រៅ និងប្រាជ្ញាក្នុងការសន្ទនារបស់ក្រុម។ |
+| Brings depth and wisdom | នាំមកនូវភាពជ្រាលជ្រៅ និងប្រាជ្ញា |
+| Thinks hard questions through clearly | គិតពីសំណួរពិបាកៗបានយ៉ាងច្បាស់ |
+| Can seem distant while thinking | អាចមើលទៅដូចជានៅឆ្ងាយ ពេលកំពុងគិត |
+| May need time before sharing an opinion | អាចត្រូវការពេល មុនពេលចែករំលែកយោបល់ |
+| Give them the question in advance, and time alone to think. | ផ្តល់សំណួរឱ្យពួកគេជាមុន និងពេលវេលានៅម្នាក់ឯងដើម្បីគិត។ |
+| I enjoy time alone to think. | ខ្ញុំចូលចិត្តពេលវេលានៅម្នាក់ឯងដើម្បីគិត។ |
+| I like big questions about life and faith. | ខ្ញុំចូលចិត្តសំណួរធំៗអំពីជីវិត និងជំនឿ។ |
+| I think things over for a long time. | ខ្ញុំគិតពីអ្វីៗអស់រយៈពេលយូរ។ |
+| I enjoy deep conversations more than small talk. | ខ្ញុំចូលចិត្តការសន្ទនាជ្រាលជ្រៅ ជាងការនិយាយលេងតិចតួច។ |
+| I need time to think before I answer a hard question. | ខ្ញុំត្រូវការពេលគិត មុនពេលឆ្លើយសំណួរពិបាក។ |
+| Writing or journaling helps me think. | ការសរសេរ ឬកត់ត្រាប្រចាំថ្ងៃ ជួយខ្ញុំឱ្យគិត។ |
+| Curious | អ្នកចង់ដឹង |
+| Always wants to know more. | តែងតែចង់ដឹងបន្ថែម។ |
+| Curious people love to learn. They ask questions, read, try things out and collect ideas, and they bring fresh knowledge into a team that keeps everyone growing. | អ្នកចង់ដឹង ស្រឡាញ់ការរៀន។ ពួកគេសួរសំណួរ អាន សាកល្បងអ្វីៗ និងប្រមូលគំនិត ហើយពួកគេនាំចំណេះដឹងថ្មីៗចូលក្នុងក្រុម ដែលធ្វើឱ្យមនុស្សគ្រប់គ្នាបន្តលូតលាស់។ |
+| Learns quickly and loves new knowledge | រៀនបានលឿន ហើយស្រឡាញ់ចំណេះដឹងថ្មី |
+| Brings fresh ideas and information | នាំមកនូវគំនិត និងព័ត៌មានថ្មីៗ |
+| Can learn things without using them | អាចរៀនអ្វីៗ ដោយមិនយកវាទៅប្រើ |
+| May get pulled away by the next interesting thing | អាចត្រូវបានទាញចេញដោយរឿងគួរឱ្យចាប់អារម្មណ៍បន្ទាប់ |
+| Give them something new to learn about — and ask them to teach it back. | ផ្តល់ឱ្យពួកគេនូវអ្វីថ្មីដើម្បីរៀន — ហើយសុំឱ្យពួកគេបង្រៀនវាត្រឡប់មកវិញ។ |
+| I love learning new things. | ខ្ញុំស្រឡាញ់ការរៀនអ្វីថ្មីៗ។ |
+| I ask a lot of questions. | ខ្ញុំសួរសំណួរច្រើន។ |
+| I read or look things up just because I want to know. | ខ្ញុំអាន ឬស្វែងរកព័ត៌មាន ដោយគ្រាន់តែចង់ដឹង។ |
+| I enjoy learning a new skill. | ខ្ញុំចូលចិត្តរៀនជំនាញថ្មី។ |
+| I enjoy taking a class or a training. | ខ្ញុំចូលចិត្តចូលរៀនថ្នាក់ ឬវគ្គបណ្តុះបណ្តាល។ |
+| I like to learn from people who know more than me. | ខ្ញុំចូលចិត្តរៀនពីមនុស្សដែលចេះច្រើនជាងខ្ញុំ។ |
+| Pathfinder | អ្នករកផ្លូវ |
+| Finds the best way forward. | រកឃើញផ្លូវល្អបំផុតទៅមុខ។ |
+| Pathfinders see many possible routes and quickly pick the best one. When a team is stuck, they see the options, think through where each leads, and find a way through that others missed. | អ្នករកផ្លូវ មើលឃើញផ្លូវជាច្រើនដែលអាចទៅបាន ហើយជ្រើសរើសផ្លូវល្អបំផុតយ៉ាងរហ័ស។ នៅពេលក្រុមជាប់គាំង ពួកគេឃើញជម្រើសនានា គិតពីកន្លែងដែលជម្រើសនីមួយៗនាំទៅ ហើយរកឃើញផ្លូវឆ្លងកាត់ដែលអ្នកដទៃមើលរំលង។ |
+| Sees options others miss | ឃើញជម្រើសដែលអ្នកដទៃមើលរំលង |
+| Finds a way through when the team is stuck | រកឃើញផ្លូវឆ្លងកាត់ នៅពេលក្រុមជាប់គាំង |
+| Can move on before others see the path | អាចបន្តទៅមុខ មុនពេលអ្នកដទៃឃើញផ្លូវ |
+| May seem to skip steps when explaining | អាចមើលទៅដូចជារំលងជំហាន ពេលពន្យល់ |
+| Bring them in when the team cannot see a way forward. | ហៅពួកគេចូលមក នៅពេលក្រុមមើលមិនឃើញផ្លូវទៅមុខ។ |
+| I can quickly see different ways to reach a goal. | ខ្ញុំអាចឃើញវិធីផ្សេងៗដើម្បីទៅដល់គោលដៅបានយ៉ាងរហ័ស។ |
+| When one way is blocked, I find another. | នៅពេលផ្លូវមួយត្រូវបានបិទ ខ្ញុំរកឃើញផ្លូវមួយទៀត។ |
+| I think about where each choice will lead. | ខ្ញុំគិតពីកន្លែងដែលជម្រើសនីមួយៗនឹងនាំទៅ។ |
+| I can see the best path when others are confused. | ខ្ញុំអាចឃើញផ្លូវល្អបំផុត នៅពេលអ្នកដទៃភាន់ច្រឡំ។ |
+| I like to think a few steps ahead. | ខ្ញុំចូលចិត្តគិតទុកជាមុនពីរបីជំហាន។ |
+| I quickly spot the options in a situation. | ខ្ញុំឆាប់រកឃើញជម្រើសនានាក្នុងស្ថានភាពមួយ។ |

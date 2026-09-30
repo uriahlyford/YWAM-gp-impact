@@ -398,6 +398,190 @@ function cleanPScores_(scores, type) {
   return out;
 }
 
+/* ==================== CliftonStrengths (recorded, not assessed) ====================
+   Someone's Top 5 (up to 10) themes AS GALLUP GAVE THEM, plus a line in their own
+   words for each. This app never gives the assessment and never carries Gallup's
+   descriptions — see public/strengths.js for why that line is drawn where it is.
+
+     strengths: { top: ['Learner', 'Achiever', …], notes: { Learner: '…' }, share, updated }
+
+   Same visibility as a personality type: nothing on the public roster, teammates
+   see it while it is shared (the default), and the notes travel with the themes
+   because they are what the person chose to say about them. The list mirrors
+   strengths.js; tests/test-strengths.mjs fails if they drift. */
+const STHEME_LIST = ['Achiever', 'Arranger', 'Belief', 'Consistency', 'Deliberative', 'Discipline', 'Focus',
+  'Responsibility', 'Restorative', 'Activator', 'Command', 'Communication', 'Competition', 'Maximizer',
+  'Self-Assurance', 'Significance', 'Woo', 'Adaptability', 'Connectedness', 'Developer', 'Empathy', 'Harmony',
+  'Includer', 'Individualization', 'Positivity', 'Relator', 'Analytical', 'Context', 'Futuristic', 'Ideation',
+  'Input', 'Intellection', 'Learner', 'Strategic'];
+const SMAX = 10, SNOTE_MAX = 300;
+
+function sharedStrengths_(s) {
+  const st = s && s.strengths;
+  if (!st || !Array.isArray(st.top) || !st.top.length || st.share === false) return null;
+  return { top: st.top.slice(), notes: Object.assign({}, st.notes || {}) };
+}
+function ownStrengths_(s) {
+  const st = s && s.strengths;
+  if (!st || !Array.isArray(st.top) || !st.top.length) return null;
+  return { top: st.top.slice(), notes: Object.assign({}, st.notes || {}), share: st.share !== false, updated: st.updated || '' };
+}
+
+async function saveMyStrengths(username, pin, payload) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const p = payload || {};
+  let top = null, notes = null;
+  if (p.top !== undefined) {
+    if (!Array.isArray(p.top) || !p.top.length || p.top.length > SMAX) return { ok: false, err: 'bad_count' };
+    const seen = {};
+    for (let i = 0; i < p.top.length; i++) {
+      const th = p.top[i];
+      if (STHEME_LIST.indexOf(th) === -1) return { ok: false, err: 'bad_theme' };
+      if (seen[th]) return { ok: false, err: 'duplicate' };
+      seen[th] = 1;
+    }
+    top = p.top.slice();
+  }
+  if (p.notes !== undefined) {
+    if (!p.notes || typeof p.notes !== 'object') return { ok: false, err: 'bad_notes' };
+    notes = {};
+    Object.keys(p.notes).forEach(function (k) {
+      if (STHEME_LIST.indexOf(k) === -1) return;
+      const v = str_(p.notes[k], SNOTE_MAX);
+      if (v) notes[k] = v;
+    });
+  }
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === s.id; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const rec = rows[idx];
+    if (p.clear) {
+      delete rec.strengths;
+    } else {
+      const cur = Object.assign({ notes: {} }, rec.strengths || {});
+      if (top) cur.top = top;
+      if (notes) cur.notes = notes;
+      if (p.share !== undefined) cur.share = !!p.share;
+      /* a note only means something beside a theme that is in the list */
+      const keep = {};
+      (cur.top || []).forEach(function (th) { if (cur.notes && cur.notes[th]) keep[th] = cur.notes[th]; });
+      cur.notes = keep;
+      cur.updated = new Date().toISOString();
+      if (cur.top && cur.top.length) rec.strengths = cur;
+    }
+    rec.updated = new Date().toISOString();
+    rows[idx] = rec;
+    return { ok: true, staff: rosterStaff_(rec), strengths: ownStrengths_(rec) };
+  });
+}
+
+/* ==================== GP Strengths (the free one, GP's own) ====================
+   Thirty-four strengths in four groups, found by 102 "which is more like
+   you?" pairs — all GP's own words, see public/gpstrengths.js. The person sends only their answers;
+   the Top 5 is worked out HERE, so what teammates see always follows from the
+   choices that made it.
+
+     gstrengths: { answers: { p0: -2..2, … }, scores: { finisher: n, … },
+                   top: ['listener', …5], takenAt, share }
+
+   Answers stay with the owner (so they can look back at them). Teammates see
+   the Top 5 while it is shared (the default) — never the answers or scores.
+   The ids and the left/right strength of each pair mirror gpstrengths.js;
+   tests/test-gpstrengths.mjs fails if they drift. */
+const GS_IDS = ['hardworker', 'coordinator', 'valuesdriven', 'fairminded', 'careful', 'orderly', 'goalsetter', 'dependable', 'solver', 'starter', 'takecharge', 'voice', 'pacesetter', 'improver', 'confident', 'differencemaker', 'friendmaker', 'flexible', 'weaver', 'mentor', 'comforter', 'peacemaker', 'welcomer', 'noticer', 'optimist', 'loyalfriend', 'factfinder', 'historian', 'visionary', 'inventor', 'collector', 'deepthinker', 'curious', 'pathfinder'];
+const GS_PAIRS = [
+  ['mentor', 'friendmaker'], ['comforter', 'historian'], ['visionary', 'flexible'], ['curious', 'valuesdriven'],
+  ['pathfinder', 'voice'], ['friendmaker', 'historian'], ['coordinator', 'starter'], ['improver', 'curious'],
+  ['goalsetter', 'noticer'], ['collector', 'pacesetter'], ['takecharge', 'fairminded'], ['improver', 'peacemaker'],
+  ['inventor', 'pacesetter'], ['fairminded', 'factfinder'], ['weaver', 'hardworker'], ['dependable', 'takecharge'],
+  ['loyalfriend', 'improver'], ['differencemaker', 'fairminded'], ['flexible', 'coordinator'], ['inventor', 'optimist'],
+  ['loyalfriend', 'voice'], ['dependable', 'comforter'], ['noticer', 'visionary'], ['goalsetter', 'pathfinder'],
+  ['weaver', 'factfinder'], ['coordinator', 'comforter'], ['welcomer', 'orderly'], ['deepthinker', 'peacemaker'],
+  ['confident', 'goalsetter'], ['comforter', 'takecharge'], ['welcomer', 'improver'], ['curious', 'weaver'],
+  ['deepthinker', 'noticer'], ['visionary', 'confident'], ['fairminded', 'mentor'], ['starter', 'collector'],
+  ['pathfinder', 'mentor'], ['friendmaker', 'careful'], ['voice', 'welcomer'], ['starter', 'goalsetter'],
+  ['hardworker', 'flexible'], ['noticer', 'confident'], ['comforter', 'careful'], ['orderly', 'pacesetter'],
+  ['collector', 'mentor'], ['hardworker', 'curious'], ['solver', 'inventor'], ['takecharge', 'deepthinker'],
+  ['mentor', 'dependable'], ['noticer', 'collector'], ['welcomer', 'starter'], ['takecharge', 'noticer'],
+  ['differencemaker', 'weaver'], ['orderly', 'pathfinder'], ['weaver', 'dependable'], ['goalsetter', 'inventor'],
+  ['orderly', 'optimist'], ['flexible', 'friendmaker'], ['careful', 'confident'], ['historian', 'valuesdriven'],
+  ['optimist', 'differencemaker'], ['confident', 'solver'], ['peacemaker', 'historian'], ['friendmaker', 'hardworker'],
+  ['improver', 'deepthinker'], ['factfinder', 'differencemaker'], ['pacesetter', 'valuesdriven'], ['fairminded', 'peacemaker'],
+  ['careful', 'pathfinder'], ['visionary', 'orderly'], ['solver', 'friendmaker'], ['confident', 'inventor'],
+  ['historian', 'dependable'], ['loyalfriend', 'solver'], ['pacesetter', 'comforter'], ['differencemaker', 'coordinator'],
+  ['valuesdriven', 'improver'], ['pacesetter', 'visionary'], ['optimist', 'goalsetter'], ['peacemaker', 'takecharge'],
+  ['collector', 'flexible'], ['careful', 'loyalfriend'], ['flexible', 'differencemaker'], ['solver', 'factfinder'],
+  ['optimist', 'voice'], ['mentor', 'curious'], ['starter', 'weaver'], ['factfinder', 'coordinator'],
+  ['voice', 'hardworker'], ['valuesdriven', 'welcomer'], ['hardworker', 'collector'], ['curious', 'fairminded'],
+  ['deepthinker', 'starter'], ['valuesdriven', 'loyalfriend'], ['factfinder', 'optimist'], ['coordinator', 'deepthinker'],
+  ['voice', 'orderly'], ['pathfinder', 'loyalfriend'], ['inventor', 'welcomer'], ['historian', 'careful'],
+  ['peacemaker', 'solver'], ['dependable', 'visionary']
+];
+
+/* the same sum and tie-break as gpGSScore in gpstrengths.js */
+function gpStrengthsScore_(answers) {
+  if (!answers || typeof answers !== 'object') return null;
+  const score = {}, strong = {}, clean = {};
+  GS_IDS.forEach(function (id) { score[id] = 0; strong[id] = 0; });
+  for (let i = 0; i < GS_PAIRS.length; i++) {
+    const raw = answers['p' + i];
+    const v = Number(raw);
+    if (raw === null || raw === undefined || raw === '' || [-2, -1, 0, 1, 2].indexOf(v) === -1) return null;
+    clean['p' + i] = v;
+    const a = GS_PAIRS[i][0], b = GS_PAIRS[i][1];
+    score[a] -= v; score[b] += v;
+    if (v === -2) strong[a]++;
+    if (v === 2) strong[b]++;
+  }
+  const ranked = GS_IDS.slice().sort(function (x, y) {
+    return (score[y] - score[x]) || (strong[y] - strong[x]) || (GS_IDS.indexOf(x) - GS_IDS.indexOf(y));
+  });
+  return { answers: clean, scores: score, top: ranked.slice(0, 5) };
+}
+function sharedGStrengths_(s) {
+  const g = s && s.gstrengths;
+  if (!g || !Array.isArray(g.top) || !g.top.length || g.share === false) return null;
+  return g.top.slice();
+}
+function ownGStrengths_(s) {
+  const g = s && s.gstrengths;
+  if (!g || !Array.isArray(g.top) || !g.top.length) return null;
+  return { top: g.top.slice(), scores: Object.assign({}, g.scores || {}), answers: Object.assign({}, g.answers || {}),
+    takenAt: g.takenAt || '', share: g.share !== false };
+}
+
+async function saveMyGStrengths(username, pin, payload) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const p = payload || {};
+  let result = null;
+  if (p.answers !== undefined) {
+    result = gpStrengthsScore_(p.answers);
+    if (!result) return { ok: false, err: 'incomplete' };
+  }
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === s.id; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const rec = rows[idx];
+    if (p.clear) {
+      delete rec.gstrengths;
+    } else {
+      if (!result && !rec.gstrengths) return { abort: true, ok: false, err: 'no_result' };
+      const cur = Object.assign({}, rec.gstrengths || {});
+      if (result) {
+        cur.answers = result.answers; cur.scores = result.scores; cur.top = result.top;
+        cur.takenAt = new Date().toISOString();
+      }
+      if (p.share !== undefined) cur.share = !!p.share;
+      rec.gstrengths = cur;
+    }
+    rec.updated = new Date().toISOString();
+    rows[idx] = rec;
+    return { ok: true, staff: rosterStaff_(rec), gstrengths: ownGStrengths_(rec) };
+  });
+}
+
 /* What a teammate may see: the type and its avatar, or nothing. */
 function sharedAvatar_(s) {
   const p = s && s.personality;
@@ -409,6 +593,11 @@ function rosterStaff_(s) {
   const out = publicStaff_(s);
   const av = sharedAvatar_(s);
   if (av) out.avatar = av;
+  /* the directory and the team map only need the names/ids, in order */
+  const st = sharedStrengths_(s);
+  if (st) out.strengths = st.top;
+  const gs = sharedGStrengths_(s);
+  if (gs) out.gstrengths = gs;
   return out;
 }
 /* The owner's own copy: everything, including season. */
@@ -951,7 +1140,8 @@ async function updateProfile(username, pin, payload) {
     profile: {
       phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '',
       dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || '', email: rec.email || '',
-      sex: cleanSex_(rec.sex), personality: ownPersonality_(rec)
+      sex: cleanSex_(rec.sex), personality: ownPersonality_(rec), strengths: ownStrengths_(rec),
+      gstrengths: ownGStrengths_(rec)
     }
   };
 }
@@ -2595,6 +2785,8 @@ async function staffProfile(username, pin, staffId) {
     staff: rosterStaff_(p),
     personality: shared ? { type: p.personality.type, scores: p.personality.scores || null,
       source: p.personality.source || 'test' } : null,
+    strengths: sharedStrengths_(p),
+    gstrengths: sharedGStrengths_(p),
     goals: goals,
     activity: {
       weeksTracked: Object.keys(weeks).length,
@@ -2656,7 +2848,8 @@ async function getMyBoot(username, pin) {
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || '',
-      sex: cleanSex_(s.sex), personality: ownPersonality_(s)
+      sex: cleanSex_(s.sex), personality: ownPersonality_(s), strengths: ownStrengths_(s),
+      gstrengths: ownGStrengths_(s)
     },
     roster: (staffRows || []).filter(function (r) { return r.active && !isApplicant_(r); }).map(rosterStaff_),
     logs: (logs && logs.logs) || [],
@@ -4244,6 +4437,8 @@ const HANDLERS = {
   deleteObjective: function (a) { return deleteObjective(a[0], a[1], a[2], a[3]); },
   teamRoster: function (a) { return teamRoster(a[0], a[1]); },
   saveMyPersonality: function (a) { return saveMyPersonality(a[0], a[1], a[2]); },
+  saveMyStrengths: function (a) { return saveMyStrengths(a[0], a[1], a[2]); },
+  saveMyGStrengths: function (a) { return saveMyGStrengths(a[0], a[1], a[2]); },
   staffRegister: function (a) { return staffRegister(a[0]); },
   staffLogin: function (a) { return staffLogin(a[0], a[1]); },
   grantAdmin: function (a) { return grantAdmin(a[0], a[1], a[2]); },

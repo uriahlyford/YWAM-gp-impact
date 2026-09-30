@@ -1225,6 +1225,54 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 .pSexRow button svg { width:56px; height:56px; display:block; margin:0 auto 4px; }
 .avatar.pav { padding:0; overflow:hidden; background:transparent; }
 .avatar.pav svg { width:100%; height:100%; display:block; }
+.sChips { display:flex; flex-wrap:wrap; gap:6px; }
+.sChip { display:inline-block; font-size:13px; font-weight:700; padding:4px 10px; border-radius:999px; }
+.sChip b { font-weight:900; margin-right:2px; }
+.sNote { font-size:14px; color:var(--muted); margin:6px 0 2px; line-height:1.4; }
+.sRow { padding:10px 0; border-top:1px solid var(--line); }
+.sRow:first-child { border-top:0; padding-top:2px; }
+.sRowTop { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.sBtns { display:flex; gap:6px; flex:0 0 auto; }
+.sMini { width:32px; height:32px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface);
+  color:var(--ink); font-size:15px; cursor:pointer; padding:0; }
+.sMini:disabled { opacity:.35; cursor:default; }
+.sNoteIn { width:100%; margin-top:8px; font:inherit; font-size:14px; padding:8px 10px; border-radius:10px;
+  border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); resize:vertical; }
+.sDomHead { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin:14px 0 6px; }
+.sPick { display:flex; flex-wrap:wrap; gap:7px; }
+.sPickBtn { border:1.5px solid; background:var(--surface); border-radius:999px; padding:7px 12px;
+  font-size:13px; font-weight:700; cursor:pointer; }
+.sPickBtn:disabled { opacity:.4; cursor:default; }
+.sMatch { font-size:12px; color:var(--muted); margin-left:6px; white-space:nowrap; }
+.sCmpRow { display:flex; align-items:center; gap:6px; }
+.sCmpRow .sMatch { margin:0; }
+.sMapRow { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+.sMapRow:first-child { border-top:0; padding-top:2px; }
+.sMapRow .sChip { flex:0 0 auto; }
+.sWho { display:flex; flex-wrap:wrap; gap:4px 8px; padding-top:3px; }
+.sWhoBtn { border:0; background:none; padding:0; color:var(--accent); font-size:14px; font-weight:600; cursor:pointer; }
+.gsAsk { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); text-align:center; margin-bottom:10px; }
+.gsOpts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.gsOpt { border:2px solid var(--border); background:var(--surface); border-radius:14px; padding:12px 10px;
+  font-size:14px; font-weight:700; line-height:1.4; text-align:center; display:flex; align-items:center; justify-content:center; }
+.gsOpt.lean.l { border-color:var(--pAgree); } .gsOpt.lean.r { border-color:var(--pDisagree); }
+.gsScale { max-width:240px; }
+.gsEnds { max-width:260px; font-size:12px; }
+.gsHeroList { display:flex; flex-direction:column; gap:8px; max-width:340px; margin:8px auto 0; }
+.gsHeroRow { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.72); border-radius:12px; padding:8px 10px; }
+.gsHeroRow b { display:block; font-size:16px; font-weight:800; }
+.gsHeroTag { display:block; font-size:13px; color:var(--pInk2); }
+.gsRank { flex:0 0 auto; width:28px; height:28px; border-radius:50%; color:var(--pOnMark); font-weight:900; font-size:14px;
+  display:flex; align-items:center; justify-content:center; }
+.gsCard { border-left:5px solid; }
+.gsCardTop { display:flex; align-items:center; gap:10px; }
+.gsName { font-size:18px; font-weight:800; }
+.gsGroup { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.gsAllRow { display:flex; align-items:center; gap:8px; padding:5px 0; }
+.gsAllN { width:18px; font-size:12px; color:var(--muted); text-align:right; flex:0 0 auto; }
+.gsAllRow .sChip { flex:0 0 118px; text-align:center; }
+.gsAllTrack { position:relative; flex:1; height:8px; border-radius:6px; background:var(--surface2); display:block; }
+.gsAllTrack .pFill { position:absolute; top:0; bottom:0; border-radius:6px; }
 .ptChip { display:inline-block; margin-top:4px; font-size:11px; font-weight:800; letter-spacing:.06em;
   padding:2px 7px; border-radius:999px; color:var(--pInk); }
 </style>
@@ -1418,6 +1466,8 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 <script src="km.js" data-optional></script>
 <script src="jobfocus.js" data-optional></script>
 <script src="personality.js" data-optional></script>
+<script src="strengths.js" data-optional></script>
+<script src="gpstrengths.js" data-optional></script>
 <script src="sr-checkin-history.js" data-optional></script>
 <script src="taxonomy.js"></script>
 <script src="rollup.js"></script>
@@ -2061,6 +2111,9 @@ function render(){
   else if(S.view==='admin') m.innerHTML=adminHtml();
   else if(S.view==='ptest') m.innerHTML=ptestHtml();
   else if(S.view==='ptype') m.innerHTML=ptypeHtml();
+  else if(S.view==='strengths') m.innerHTML=strengthsEditHtml();
+  else if(S.view==='gtest') m.innerHTML=gtestHtml();
+  else if(S.view==='gstr') m.innerHTML=gstrHtml();
   else m.innerHTML=profileHtml();
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
@@ -4017,6 +4070,495 @@ function bindPersonality(){
   if(ch) ch.onclick=function(){ S.ptest={stage:'pick', answers:{}, page:0, sex:mySex()}; S.view='ptest'; render(); window.scrollTo(0,0); };
 }
 
+/* ==================== CliftonStrengths (recorded from Gallup) ====================
+   A place to put the Top 5 someone already got from Gallup, say in their own
+   words how each shows up in them, and see the team's strengths side by side.
+   This app does not give the assessment and carries none of Gallup's theme
+   descriptions — public/strengths.js says why. Theme names are never passed
+   through t(): they are product names and must match the report in someone's
+   hand, in either language.
+
+   Screens: a line on the My Home Strengths card (below GP Strengths), the editor
+   (S.view 'strengths') and a card on a teammate's profile. The Team tab's map
+   adds up the free GP Strengths instead, which everyone can take. */
+function sOK(){ return typeof GP_STHEME_LIST!=='undefined' && typeof gpSDomainOf==='function'; }
+function myStrengths(){ return (S.profile && S.profile.strengths) || null; }
+
+function sChipHtml(theme, rank){
+  var d=gpSDomainOf(theme); if(!d) return '';
+  return '<span class="sChip" style="background:'+d.tint+';color:'+d.ink+'">'+
+    (rank?'<b>'+rank+'</b> ':'')+esc(theme)+'</span>';
+}
+/* "≈ Hard Worker" — the GP strength that covers the same ground as a Gallup theme */
+function sMatchHtml(theme){
+  if(typeof GP_SGP_MATCH==='undefined' || typeof gsOK!=='function' || !gsOK()) return '';
+  var s=gpGSById(GP_SGP_MATCH[theme]); if(!s) return '';
+  return '<span class="sMatch">≈ '+esc(gpT('GP: {name}',{name:t(s.name)}))+'</span>';
+}
+function sFineHtml(){
+  return '<p class="pFine">'+esc(t('CliftonStrengths® and its theme names are trademarks of Gallup, Inc. GP records the results you got from Gallup — it does not give the assessment.'))+
+    ' <a href="'+GP_SGALLUP_URL+'" target="_blank" rel="noopener">'+esc(t('Take CliftonStrengths at gallup.com'))+' ↗</a></p>';
+}
+
+/* On a teammate's profile: their themes, in order, with what they said about them. */
+function personStrengthsCardHtml(d){
+  if(!sOK() || !d || !d.strengths || !d.strengths.top || !d.strengths.top.length) return '';
+  var notes=d.strengths.notes||{};
+  var h='<h3>'+esc(t('CliftonStrengths (from Gallup)'))+'</h3><div class="card"><ul class="pList">';
+  d.strengths.top.forEach(function(th,i){
+    h+='<li style="padding-left:0">'+sChipHtml(th,i+1)+sMatchHtml(th)+
+      (notes[th]?'<div class="sNote">'+esc(notes[th])+'</div>':'')+'</li>';
+  });
+  return h+'</ul></div>';
+}
+
+/* ---------- the editor ---------- */
+function strengthsEditHtml(){
+  if(!sOK()) return '<p class="sub">'+esc(t('Strengths could not load. Pull down to refresh.'))+'</p>';
+  var st=myStrengths();
+  var D=S.sdraft||(S.sdraft={ top:(st?st.top.slice():[]), notes:Object.assign({}, st?st.notes:{}) });
+  var h='<button class="linkbtn" id="sBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+  h+='<h2>'+esc(t('My CliftonStrengths'))+'</h2>'+
+    '<p class="sub">'+esc(t('Add your themes in the order your Gallup report gives them. Most reports list a Top 5; you can add up to 10.'))+'</p>';
+
+  h+='<div class="card">';
+  if(!D.top.length){
+    h+='<p class="sub" style="margin:4px 0">'+esc(t('None added yet — tap your themes below.'))+'</p>';
+  }
+  D.top.forEach(function(th,i){
+    h+='<div class="sRow">'+
+      '<div class="sRowTop"><span>'+sChipHtml(th,i+1)+sMatchHtml(th)+'</span>'+
+        '<span class="sBtns">'+
+        '<button class="sMini" data-sup="'+i+'"'+(i===0?' disabled':'')+' aria-label="'+esc(t('Move up'))+'">↑</button>'+
+        '<button class="sMini" data-sdown="'+i+'"'+(i===D.top.length-1?' disabled':'')+' aria-label="'+esc(t('Move down'))+'">↓</button>'+
+        '<button class="sMini" data-sdel="'+esc(th)+'" aria-label="'+esc(t('Remove'))+'">✕</button></span></div>'+
+      '<textarea class="sNoteIn" data-snote="'+esc(th)+'" maxlength="'+GP_SNOTE_MAX+'" rows="2" placeholder="'+
+        esc(t('How this shows up in me (optional)'))+'">'+esc(D.notes[th]||'')+'</textarea></div>';
+  });
+  h+='</div>';
+
+  var full = D.top.length>=GP_SMAX;
+  h+='<h3>'+esc(full?t('That’s ten — remove one to add another.'):t('Add a theme'))+'</h3>';
+  GP_SDOMAINS.forEach(function(dom){
+    h+='<div class="sDomHead" style="color:'+dom.ink+'">'+esc(dom.name)+'</div><div class="sPick">';
+    GP_STHEMES[dom.id].forEach(function(th){
+      var on = D.top.indexOf(th)>-1;
+      h+='<button class="sPickBtn'+(on?' on':'')+'" data-spick="'+esc(th)+'"'+(!on&&full?' disabled':'')+
+        ' style="'+(on?'background:'+dom.ink+';color:var(--pOnMark);border-color:'+dom.ink:'border-color:'+dom.color+';color:'+dom.ink)+'">'+
+        esc(th)+'</button>';
+    });
+    h+='</div>';
+  });
+
+  var share = !st || st.share!==false;
+  h+='<div class="card" style="margin-top:14px">'+
+    '<label class="f">'+esc(t('Show my strengths to the team'))+'</label>'+
+    '<div class="seg" style="max-width:220px">'+
+      '<button id="sShareOn" class="'+(share?'on':'')+'">'+esc(t('Yes'))+'</button>'+
+      '<button id="sShareOff" class="'+(!share?'on':'')+'">'+esc(t('No'))+'</button></div>'+
+    '<button class="btn" id="sSave"'+(D.top.length?'':' disabled')+'>'+esc(t('Save my strengths'))+'</button>'+
+    (st?'<button class="linkbtn" id="sClear">'+esc(t('Remove my strengths'))+'</button>':'')+
+    '</div>';
+  return h+sFineHtml();
+}
+
+/* ---------- the team map (Team tab → Strengths) ---------- */
+/* Adds up the GP Strengths Top 5 of everyone on this campus who shares it. */
+function teamStrengthsHtml_(campus){
+  if(!gsOK()) return '<p class="sub">'+esc(t('Strengths could not load. Pull down to refresh.'))+'</p>';
+  var people=S.roster.filter(function(p){ return p.campus===campus && p.gstrengths && p.gstrengths.length; });
+  if(!people.length){
+    return '<div class="card"><p class="sub" style="margin:4px 0">'+
+      esc(t('Nobody here has found their strengths yet. Take the free test from My Home.'))+'</p></div>'+gsFineHtml();
+  }
+  var byId={}, byGroup={}, total=0;
+  GP_GSGROUPS.forEach(function(g){ byGroup[g.id]=0; });
+  people.forEach(function(p){
+    p.gstrengths.slice(0,5).forEach(function(id){
+      var g=gpGSGroup(id); if(!g) return;
+      (byId[id]=byId[id]||[]).push(p);
+      byGroup[g.id]++; total++;
+    });
+  });
+  var h='<div class="card"><div class="pmeta" style="margin-bottom:8px">'+
+    esc(gpT('{n} people have shared their Top 5',{n:people.length}))+'</div>';
+  GP_GSGROUPS.forEach(function(g){
+    var pct = total ? Math.round(byGroup[g.id]/total*100) : 0;
+    h+='<div class="pBar"><div class="pBarTop"><span style="color:'+g.ink+';font-weight:800">'+esc(t(g.name))+'</span><span><b>'+pct+'%</b></span></div>'+
+      '<div class="pTrack"><div class="pFill" style="left:0;width:'+pct+'%;background:'+g.color+'"></div></div></div>';
+  });
+  h+='<div class="hint">'+esc(t('Share of the team’s Top 5 strengths in each group.'))+'</div></div>';
+
+  GP_GSGROUPS.forEach(function(g){
+    var ids=GP_GS_IDS.filter(function(id){ return gpGSById(id).group===g.id; })
+      .sort(function(a,b){ return (byId[b]||[]).length-(byId[a]||[]).length; });
+    var had=ids.filter(function(id){ return byId[id]; });
+    var none=ids.filter(function(id){ return !byId[id]; });
+    h+='<h3 style="color:'+g.ink+'">'+esc(t(g.name))+'</h3><div class="card">'+
+      '<div class="hint" style="margin:0 0 6px">'+esc(t(g.blurb))+'</div>';
+    had.forEach(function(id){
+      h+='<div class="sMapRow">'+gsChipHtml(id)+'<span class="sWho">'+
+        byId[id].map(function(p){
+          return '<button class="sWhoBtn" data-person="'+esc(p.id)+'">'+esc(firstName_(p.name))+'</button>';
+        }).join('')+'</span></div>';
+    });
+    if(none.length) h+='<div class="hint" style="margin-top:6px">'+esc(t('Not in anyone’s Top 5 yet:'))+' '+
+      esc(none.map(function(id){ return t(gpGSById(id).name); }).join(', '))+'</div>';
+    h+='</div>';
+  });
+  return h+gsFineHtml();
+}
+
+function bindStrengths(){
+  var ed=document.getElementById('sEdit');
+  if(ed) ed.onclick=function(){ S.sdraft=null; S.view='strengths'; render(); };
+  var bk=document.getElementById('sBack');
+  if(bk) bk.onclick=function(){ S.sdraft=null; S.view='week'; render(); };
+  if(S.view!=='strengths') return;
+  var D=S.sdraft; if(!D) return;
+  /* a note is kept in the draft as it is typed, so a re-render never loses it */
+  document.querySelectorAll('[data-snote]').forEach(function(ta){
+    ta.oninput=function(){ D.notes[ta.getAttribute('data-snote')]=ta.value; };
+  });
+  document.querySelectorAll('[data-spick]').forEach(function(b){
+    b.onclick=function(){
+      var th=b.getAttribute('data-spick'), at=D.top.indexOf(th);
+      if(at>-1) D.top.splice(at,1);
+      else if(D.top.length<GP_SMAX) D.top.push(th);
+      gpTap(); render();
+    };
+  });
+  document.querySelectorAll('[data-sdel]').forEach(function(b){
+    b.onclick=function(){ var at=D.top.indexOf(b.getAttribute('data-sdel')); if(at>-1) D.top.splice(at,1); render(); };
+  });
+  document.querySelectorAll('[data-sup],[data-sdown]').forEach(function(b){
+    b.onclick=function(){
+      var i=Number(b.getAttribute('data-sup')!==null?b.getAttribute('data-sup'):b.getAttribute('data-sdown'));
+      var j = b.getAttribute('data-sup')!==null ? i-1 : i+1;
+      if(j<0 || j>=D.top.length) return;
+      var x=D.top[i]; D.top[i]=D.top[j]; D.top[j]=x; render();
+    };
+  });
+  function save(payload, after){
+    if(S.busy) return; S.busy=true;
+    run('saveMyStrengths',[S.auth.user,S.auth.pin,payload],function(d){
+      S.busy=false;
+      if(!d || !d.ok){ showMsg(t('Could not save — check your connection and try again.')); render(); return; }
+      S.profile=Object.assign({}, S.profile||{}, { strengths:d.strengths });
+      (S.roster||[]).forEach(function(r){ if(r.id===S.me.id){ if(d.staff && d.staff.strengths) r.strengths=d.staff.strengths; else delete r.strengths; } });
+      if(after) after(); else render();
+    });
+  }
+  var sv=document.getElementById('sSave');
+  if(sv) sv.onclick=function(){
+    if(!D.top.length) return;
+    sv.disabled=true; sv.textContent=t('Saving…');
+    var notes={}; D.top.forEach(function(th){ if(D.notes[th] && D.notes[th].trim()) notes[th]=D.notes[th].trim(); });
+    save({ top:D.top.slice(), notes:notes }, function(){ S.sdraft=null; S.view='week'; showMsg(t('Strengths saved')); render(); });
+  };
+  var on=document.getElementById('sShareOn'), off=document.getElementById('sShareOff');
+  if(on) on.onclick=function(){ if(myStrengths()) save({ share:true }); };
+  if(off) off.onclick=function(){ if(myStrengths()) save({ share:false }); };
+  var cl=document.getElementById('sClear');
+  if(cl) cl.onclick=function(){ save({ clear:true }, function(){ S.sdraft=null; S.view='week'; render(); }); };
+}
+
+/* ==================== GP Strengths (the free test) ====================
+   GP's own strengths finder — thirty-four strengths in four groups, found
+   through 102 "which is more like you?" pairs (public/gpstrengths.js has the words
+   and says why it is pairs). The server works out the Top 5 from the answers.
+
+   Screens: the Strengths card on My Home, the test (S.view 'gtest'), and the
+   results page (S.view 'gstr') — yours in full, or a teammate's Top 5 when
+   opened from their profile. The Team tab's Strengths map adds up GP Top 5s.
+   Every word is GP's own, so it all goes through t() like everything else —
+   unlike the Gallup theme names above, which never do. */
+var GS_PAGE = 5;
+var GS_DRAFT_KEY = 'gp_gstr_draft';
+function gsOK(){ return typeof GP_GSTRENGTHS!=='undefined' && typeof gpGSScore==='function'; }
+function myGS(){ return (S.profile && S.profile.gstrengths) || null; }
+function gsDraftLoad(){
+  try { var d=JSON.parse(localStorage.getItem(GS_DRAFT_KEY)||'null'); return (d && typeof d==='object') ? d : {}; }
+  catch(e){ return {}; }
+}
+function gsDraftSave(a){ try { localStorage.setItem(GS_DRAFT_KEY, JSON.stringify(a||{})); } catch(e){} }
+function gsDraftClear(){ try { localStorage.removeItem(GS_DRAFT_KEY); } catch(e){} }
+
+function gsChipHtml(id, rank){
+  var s=gpGSById(id), g=gpGSGroup(id); if(!s || !g) return '';
+  return '<span class="sChip" style="background:'+g.tint+';color:'+g.ink+'">'+
+    (rank?'<b>'+rank+'</b> ':'')+esc(t(s.name))+'</span>';
+}
+/* the group that holds most of a Top 5, when one clearly does */
+function gsLean(top){
+  var n={}; (top||[]).forEach(function(id){ var g=gpGSGroup(id); if(g) n[g.id]=(n[g.id]||0)+1; });
+  var best=null, tie=false;
+  Object.keys(n).forEach(function(k){
+    if(!best || n[k]>n[best]){ best=k; tie=false; } else if(n[k]===n[best]) tie=true;
+  });
+  if(!best || tie || n[best]<3) return null;   // five across four groups always puts two somewhere
+  return GP_GSGROUPS.filter(function(g){ return g.id===best; })[0];
+}
+function gsFineHtml(){
+  return '<p class="pFine">'+esc(t('GP Strengths is GP’s own free questionnaire. It is not CliftonStrengths® and is not connected with Gallup.'))+' '+
+    esc(gpT('A strength is what comes naturally to you — everyone can grow in all {n}.',{n:GP_GS_IDS.length}))+'</p>';
+}
+
+/* ---------- My Home ---------- */
+function strengthsCardHtml(){
+  if(!gsOK() && !sOK()) return '';
+  var h='<h3 id="sec-strengths">💪 '+esc(t('Strengths'))+'</h3>';
+  if(gsOK()){
+    var g=myGS();
+    if(!g){
+      h+='<button class="card pEntry" id="gsStart">'+
+        '<span class="pEntryArt"><span class="pQ">5</span></span>'+
+        '<span style="flex:1"><div style="font-size:15px;font-weight:800">'+esc(t('Find your top 5 strengths'))+'</div>'+
+        '<div class="pmeta">'+esc(gpT('{n} quick choices · free · about 15 minutes',{n:GP_GSPAIRS.length}))+'</div></span>'+PCHEV+'</button>';
+    } else {
+      h+='<button class="card pEntry" id="gsSeeMine" style="align-items:flex-start">'+
+        '<span style="flex:1"><div class="sChips">'+g.top.map(function(id,i){ return gsChipHtml(id,i+1); }).join('')+'</div>'+
+        '<div class="pmeta" style="margin-top:6px">'+esc(t('Tap to see what your strengths mean for your work.'))+'</div></span>'+PCHEV+'</button>';
+    }
+  }
+  /* people who took the real CliftonStrengths can put their Gallup Top 5 here too */
+  if(sOK()){
+    var st=myStrengths();
+    if(st){
+      h+='<button class="card pEntry" id="sEdit" style="align-items:flex-start">'+
+        '<span style="flex:1"><div class="pmeta" style="margin-bottom:6px;font-weight:700">'+esc(t('CliftonStrengths (from Gallup)'))+'</div>'+
+        '<div class="sChips">'+st.top.slice(0,5).map(function(th,i){ return sChipHtml(th,i+1); }).join('')+'</div></span>'+PCHEV+'</button>';
+    } else {
+      h+='<button class="linkbtn" id="sEdit" style="margin:-4px 0 8px">'+esc(t('Have CliftonStrengths results from Gallup? Add them'))+'</button>';
+    }
+  }
+  return h;
+}
+
+/* On a teammate's profile: their GP Top 5, and a way into what it means. */
+function personGSCardHtml(d){
+  if(!gsOK() || !d || !d.gstrengths || !d.gstrengths.length) return '';
+  return '<h3>💪 '+esc(t('Strengths'))+'</h3>'+
+    '<button class="card pEntry" id="gsSeePerson" style="align-items:flex-start">'+
+    '<span style="flex:1"><div class="sChips">'+d.gstrengths.map(function(id,i){ return gsChipHtml(id,i+1); }).join('')+'</div>'+
+    '<div class="pmeta" style="margin-top:6px">'+esc(gpT('How to make the most of {name}’s strengths',{name:firstName_(d.staff.name)}))+'</div></span>'+PCHEV+'</button>';
+}
+
+/* ---------- the test ---------- */
+function gtestHtml(){
+  if(!gsOK()) return '<p class="sub">'+esc(t('Strengths could not load. Pull down to refresh.'))+'</p>';
+  var T=S.gtest||(S.gtest={stage:'intro', answers:gsDraftLoad(), page:0});
+  var total=GP_GSPAIRS.length;
+  var h='<button class="linkbtn" id="gsBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+
+  if(T.stage==='intro'){
+    var started=Object.keys(T.answers||{}).length;
+    h+='<h2>'+esc(t('GP Strengths'))+'</h2>'+
+      '<div class="card">'+
+      '<p style="margin:2px 0 10px;font-size:15px;line-height:1.5">'+
+        esc(gpT('{n} pairs of statements. For each pair, choose which one is more like you — even when both are.',{n:total}))+'</p>'+
+      '<p class="sub" style="margin:0 0 10px">'+esc(t('Go with your first answer. Think about what you enjoy and what comes easily, not what your job needs.'))+'</p>'+
+      '<p class="sub" style="margin:0 0 12px">'+esc(gpT('At the end you get your top 5 of {n} strengths, and what they mean for your work.',{n:GP_GS_IDS.length}))+'</p>'+
+      '<button class="btn" id="gsBegin">'+esc(started? gpT('Carry on — {n} of {total} answered',{n:started,total:total}) : t('Start'))+'</button>'+
+      '</div>'+gsFineHtml();
+    return h;
+  }
+
+  var pages=Math.ceil(total/GS_PAGE);
+  var page=Math.max(0, Math.min(pages-1, T.page||0));
+  var answered=GP_GSPAIRS.filter(function(p,i){ return T.answers['p'+i]!==undefined; }).length;
+  h+='<div class="pProg"><div class="pTrack"><div style="width:'+Math.round(answered/total*100)+'%"></div></div>'+
+    '<div class="pProgTxt">'+esc(gpT('{n} of {total}',{n:answered,total:total}))+'</div></div>';
+  var from=page*GS_PAGE, pageDone=true;
+  for(var i=from; i<Math.min(total, from+GS_PAGE); i++){
+    var p=GP_GSPAIRS[i], v=T.answers['p'+i];
+    if(v===undefined) pageDone=false;
+    var a=gpGSById(p[0]).statements[p[1]], b=gpGSById(p[2]).statements[p[3]];
+    h+='<div class="pStmt gsPair'+(v!==undefined?' done':'')+'" id="gq_'+i+'">'+
+      '<div class="gsAsk">'+esc(t('Which is more like you?'))+'</div>'+
+      '<div class="gsOpts">'+
+        '<div class="gsOpt'+(v<0?' lean l':'')+'">'+esc(t(a))+'</div>'+
+        '<div class="gsOpt'+(v>0?' lean r':'')+'">'+esc(t(b))+'</div></div>'+
+      '<div class="pScale gsScale" role="radiogroup" aria-label="'+esc(t('Which is more like you?'))+'">';
+    [-2,-1,0,1,2].forEach(function(n){
+      var side = n<0?'ag':(n>0?'dis':'mid');
+      h+='<button class="pDot s'+(n===0?0:Math.abs(n)+1)+' '+side+(v===n?' on':'')+'" data-gsans="'+i+'|'+n+'"'+
+        ' role="radio" aria-checked="'+(v===n?'true':'false')+'" aria-label="'+esc(gsScaleWord(n))+'"></button>';
+    });
+    h+='</div><div class="pScaleEnds gsEnds"><span class="ag">← '+esc(t('More like me'))+'</span><span class="dis">'+esc(t('More like me'))+' →</span></div></div>';
+  }
+  var last = page===pages-1;
+  h+='<div style="display:flex;gap:10px;margin:18px 0 6px">'+
+    (page>0?'<button class="btn ghost" id="gsPrev" style="flex:1">'+esc(t('Back'))+'</button>':'')+
+    (last
+      ? '<button class="btn" id="gsFinish" style="flex:2"'+(answered===total?'':' disabled')+'>'+esc(t('See my strengths'))+'</button>'
+      : '<button class="btn" id="gsNext" style="flex:2"'+(pageDone?'':' disabled')+'>'+esc(t('Next'))+'</button>')+
+    '</div>';
+  return h;
+}
+function gsScaleWord(n){
+  return t(['Much more like the first','A little more like the first','Both equally','A little more like the second','Much more like the second'][n+2]);
+}
+
+/* ---------- the results page ---------- */
+function gstrHtml(){
+  if(!gsOK()) return '<p class="sub">'+esc(t('Strengths could not load. Pull down to refresh.'))+'</p>';
+  var other=S.gsOther, mine=!other;
+  var G = mine ? myGS() : other;
+  var back='<button class="linkbtn" id="gstrBack" style="text-align:left;text-decoration:none;padding-left:0">← '+
+    esc(mine?t('My Home'):firstName_(other.name))+'</button>';
+  if(!G || !G.top || !G.top.length) return back+'<p class="sub">'+esc(t('No strengths yet.'))+'</p>';
+  var g1=gpGSGroup(G.top[0]), lean=gsLean(G.top);
+  var h=back;
+  h+='<div class="pHero gsHero" style="background:'+g1.tint+'">'+
+    '<div class="pWho">'+esc(mine?t('Your top 5 strengths'):gpT('{name}’s top 5 strengths',{name:firstName_(other.name)}))+'</div>'+
+    '<div class="gsHeroList">'+G.top.map(function(id,i){
+      var s=gpGSById(id), g=gpGSGroup(id);
+      return '<div class="gsHeroRow"><span class="gsRank" style="background:'+g.ink+'">'+(i+1)+'</span>'+
+        '<span style="flex:1;text-align:left"><b style="color:'+g.ink+'">'+esc(t(s.name))+'</b>'+
+        '<span class="gsHeroTag">'+esc(t(s.tagline))+'</span></span></div>';
+    }).join('')+'</div>'+
+    (lean?'<div class="pTag" style="margin-top:10px">'+esc(gpT('Mostly {group}: {blurb}',{group:t(lean.name), blurb:t(lean.blurb)}))+'</div>':'')+
+    '</div>';
+
+  G.top.forEach(function(id,i){
+    var s=gpGSById(id), g=gpGSGroup(id);
+    h+='<div class="card gsCard" style="border-left-color:'+g.color+'">'+
+      '<div class="gsCardTop"><span class="gsRank" style="background:'+g.ink+'">'+(i+1)+'</span>'+
+        '<span><div class="gsName">'+esc(t(s.name))+'</div>'+
+        '<div class="gsGroup" style="color:'+g.ink+'">'+esc(t(g.name))+'</div></span></div>'+
+      '<p style="margin:8px 0 6px;font-size:15px;line-height:1.55">'+esc(t(s.about))+'</p>'+
+      '<ul class="pList">'+
+        s.best.map(function(x){ return '<li><span class="pMark" style="background:var(--pGood)">✓</span>'+esc(t(x))+'</li>'; }).join('')+
+        s.watch.map(function(x){ return '<li><span class="pMark" style="background:var(--pBad)">!</span>'+esc(t(x))+'</li>'; }).join('')+
+        '<li><span class="pMark" style="background:'+g.ink+'">→</span><b>'+esc(mine?t('For the team:'):t('Working together:'))+'</b> '+esc(t(s.give))+'</li>'+
+      '</ul></div>';
+  });
+
+  /* yours only: all of them, so the rest are not a mystery */
+  if(mine && G.scores){
+    /* the Top 5 is the server's, tie-break and all, so it leads as saved */
+    var ranked=G.top.concat(GP_GS_IDS.filter(function(id){ return G.top.indexOf(id)===-1; }).sort(function(a,b){
+      return (G.scores[b]-G.scores[a]) || (GP_GS_IDS.indexOf(a)-GP_GS_IDS.indexOf(b));
+    }));
+    /* where the top 10 fall — most people lead from one or two groups */
+    var ten=ranked.slice(0,10), inG={};
+    ten.forEach(function(id){ var gg=gpGSGroup(id); inG[gg.id]=(inG[gg.id]||0)+1; });
+    h+='<h3>'+esc(t('Your top 10, by group'))+'</h3><div class="card">';
+    GP_GSGROUPS.forEach(function(gg){
+      var n=inG[gg.id]||0;
+      h+='<div class="pBar"><div class="pBarTop"><span style="color:'+gg.ink+';font-weight:800">'+esc(t(gg.name))+'</span><span><b>'+n+'</b> / 10</span></div>'+
+        '<div class="pTrack"><div class="pFill" style="left:0;width:'+(n*10)+'%;background:'+gg.color+'"></div></div></div>';
+    });
+    h+='<div class="hint">'+esc(t('Most people lead from one or two groups. No group is better than another.'))+'</div></div>';
+    h+='<h3>'+esc(gpT('All {n}',{n:GP_GS_IDS.length}))+'</h3><div class="card">';
+    ranked.forEach(function(id,i){
+      var g=gpGSGroup(id), sc=Number(G.scores[id])||0;
+      h+='<div class="gsAllRow"><span class="gsAllN">'+(i+1)+'</span>'+gsChipHtml(id)+
+        '<span class="pTrack gsAllTrack"><span class="pFill" style="left:0;width:'+Math.round((sc+GP_GS_MAX)/(2*GP_GS_MAX)*100)+'%;background:'+g.color+'"></span></span></div>';
+    });
+    h+='<div class="hint">'+esc(t('The ones lower down are not weaknesses — just what comes less naturally.'))+'</div></div>';
+
+    /* both results side by side, for anyone who has also recorded Gallup's */
+    var gal = (typeof sOK==='function' && sOK() && typeof GP_SGP_MATCH!=='undefined') ? myStrengths() : null;
+    if(gal && gal.top && gal.top.length){
+      h+='<h3>'+esc(t('Compared with your CliftonStrengths'))+'</h3><div class="card"><ul class="pList">';
+      gal.top.slice(0,5).forEach(function(th,i){
+        var id=GP_SGP_MATCH[th], at=ranked.indexOf(id), gs=gpGSById(id);
+        h+='<li style="padding-left:0" class="sCmpRow">'+sChipHtml(th,i+1)+'<span class="sMatch">≈</span>'+
+          (gs?gsChipHtml(id,at+1):'')+'</li>';
+      });
+      h+='</ul><div class="hint">'+esc(t('Each Gallup theme, beside the GP strength that covers the same ground. The number on the GP strength is where it ranks for you here.'))+'</div></div>';
+    }
+
+    var share = G.share!==false;
+    h+='<div class="card">'+
+      '<label class="f">'+esc(t('Show my top 5 to the team'))+'</label>'+
+      '<div class="seg" style="max-width:220px">'+
+        '<button id="gsShareOn" class="'+(share?'on':'')+'">'+esc(t('Yes'))+'</button>'+
+        '<button id="gsShareOff" class="'+(!share?'on':'')+'">'+esc(t('No'))+'</button></div>'+
+      '<div class="hint">'+esc(t('Your answers and the full list always stay private.'))+'</div>'+
+      '<button class="btn ghost" id="gsRetake">'+esc(t('Retake the test'))+'</button>'+
+      '</div>';
+  }
+  return h+gsFineHtml();
+}
+
+function gsSave(payload, then){
+  run('saveMyGStrengths',[S.auth.user,S.auth.pin,payload],function(d){
+    S.busy=false;
+    if(!d || !d.ok){ showMsg(t('Could not save — check your connection and try again.')); render(); return; }
+    S.profile=Object.assign({}, S.profile||{}, { gstrengths:d.gstrengths });
+    (S.roster||[]).forEach(function(r){ if(r.id===S.me.id){ if(d.staff && d.staff.gstrengths) r.gstrengths=d.staff.gstrengths; else delete r.gstrengths; } });
+    if(then) then(d); else render();
+  });
+}
+
+function bindGStrengths(){
+  var st=document.getElementById('gsStart');
+  if(st) st.onclick=function(){ S.gtest={stage:'intro', answers:gsDraftLoad(), page:0}; S.view='gtest'; render(); window.scrollTo(0,0); };
+  var sm=document.getElementById('gsSeeMine');
+  if(sm) sm.onclick=function(){ S.gsOther=null; S.gsBack='week'; S.view='gstr'; render(); window.scrollTo(0,0); };
+  var sp=document.getElementById('gsSeePerson');
+  if(sp) sp.onclick=function(){
+    var d=S.person; if(!d || !d.gstrengths) return;
+    S.gsOther={ name:d.staff.name, top:d.gstrengths.slice() };
+    S.gsBack='team'; S.view='gstr'; render(); window.scrollTo(0,0);
+  };
+  var bk=document.getElementById('gsBack');
+  if(bk) bk.onclick=function(){
+    var T=S.gtest;
+    if(T && T.stage==='q' && T.page>0){ T.page--; render(); window.scrollTo(0,0); return; }
+    if(T && T.stage!=='intro'){ T.stage='intro'; render(); return; }
+    S.view='week'; render();
+  };
+  var rb=document.getElementById('gstrBack');
+  if(rb) rb.onclick=function(){ S.view=S.gsBack||'week'; S.gsOther=null; render(); };
+
+  var bg=document.getElementById('gsBegin');
+  if(bg) bg.onclick=function(){
+    var T=S.gtest; T.stage='q';
+    var first=-1;
+    for(var i=0;i<GP_GSPAIRS.length;i++){ if(T.answers['p'+i]===undefined){ first=i; break; } }
+    T.page = first<0 ? Math.ceil(GP_GSPAIRS.length/GS_PAGE)-1 : Math.floor(first/GS_PAGE);
+    render(); window.scrollTo(0,0);
+  };
+  document.querySelectorAll('[data-gsans]').forEach(function(b){
+    b.onclick=function(){
+      var parts=b.getAttribute('data-gsans').split('|');
+      var T=S.gtest; T.answers['p'+parts[0]]=Number(parts[1]);
+      gsDraftSave(T.answers);
+      gpTap();
+      render();
+      var from=T.page*GS_PAGE, next=null;
+      for(var i=from;i<Math.min(GP_GSPAIRS.length, from+GS_PAGE);i++){ if(T.answers['p'+i]===undefined){ next=i; break; } }
+      var el = next!==null ? document.getElementById('gq_'+next) : document.getElementById(T.page===Math.ceil(GP_GSPAIRS.length/GS_PAGE)-1?'gsFinish':'gsNext');
+      if(el && el.scrollIntoView) try { el.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e){ el.scrollIntoView(); }
+    };
+  });
+  var nx=document.getElementById('gsNext');
+  if(nx) nx.onclick=function(){ S.gtest.page++; render(); window.scrollTo(0,0); };
+  var pv=document.getElementById('gsPrev');
+  if(pv) pv.onclick=function(){ S.gtest.page--; render(); window.scrollTo(0,0); };
+  var fin=document.getElementById('gsFinish');
+  if(fin) fin.onclick=function(){
+    if(S.busy) return;
+    if(!gpGSScore(S.gtest.answers)){ showMsg(t('Answer every pair first.')); return; }
+    S.busy=true; fin.disabled=true; fin.textContent=t('Saving…');
+    gsSave({ answers:S.gtest.answers }, function(){
+      gsDraftClear(); S.gtest=null; S.gsOther=null; S.gsBack='week'; S.view='gstr'; render(); window.scrollTo(0,0);
+    });
+  };
+  var on=document.getElementById('gsShareOn'), off=document.getElementById('gsShareOff');
+  if(on) on.onclick=function(){ gsSave({ share:true }); };
+  if(off) off.onclick=function(){ gsSave({ share:false }); };
+  var rt=document.getElementById('gsRetake');
+  if(rt) rt.onclick=function(){
+    gsDraftClear();
+    S.gtest={stage:'intro', answers:{}, page:0}; S.view='gtest'; render(); window.scrollTo(0,0);
+  };
+}
+
 function homeHtml(){
   var wk=thisWeek();
   var phase=weekPhase();
@@ -4048,6 +4590,7 @@ function homeHtml(){
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
   h += personalityCardHtml();
+  h += strengthsCardHtml();
   h += weekSummaryHtml(wk);
   h += weekStatsHtml();
   h += leaveEntryHtml();
@@ -8419,20 +8962,24 @@ function teamHtml(){
   var campus = S.teamCampus || (S.me && S.me.campus) || CAMPUSES[0].id;
   var cInfo = CAMPUSES.filter(function(c){ return c.id===campus; })[0];
   var here = S.roster.filter(function(p){ return p.campus===campus; });
-  var mode = S.teamMode==='org' ? 'org' : 'dir';
+  var mode = S.teamMode==='org' ? 'org' : (S.teamMode==='str' && gsOK() ? 'str' : 'dir');
 
   var h='<h2>'+esc(t('Team'))+' <small>· '+S.roster.length+' '+esc(t('staff'))+'</small></h2>'+
     mentorEntryHtml();
   h+='<div class="campusSeg teamModeSeg">'+
     '<button class="campusBtn'+(mode==='dir'?' on':'')+'" data-teammode="dir">👥 '+esc(t('Directory'))+'</button>'+
-    '<button class="campusBtn'+(mode==='org'?' on':'')+'" data-teammode="org">🧭 '+esc(t('Structure'))+'</button></div>';
-  h+='<p class="sub">'+esc(mode==='org' ? t('Departments and ministries, and who is in each this quarter.') : t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
+    '<button class="campusBtn'+(mode==='org'?' on':'')+'" data-teammode="org">🧭 '+esc(t('Structure'))+'</button>'+
+    (gsOK()?'<button class="campusBtn'+(mode==='str'?' on':'')+'" data-teammode="str">💪 '+esc(t('Strengths'))+'</button>':'')+'</div>';
+  h+='<p class="sub">'+esc(mode==='org' ? t('Departments and ministries, and who is in each this quarter.') :
+    mode==='str' ? t('Who on the base has which strengths, from the Top 5s people have shared.') :
+    t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
 
   h+='<div class="campusSeg">'+CAMPUSES.map(function(c){
     return '<button class="campusBtn'+(campus===c.id?' on':'')+'" data-teamcampus="'+esc(c.id)+'">'+esc(t(c.name))+'</button>';
   }).join('')+'</div>';
 
   if(mode==='org') return h+orgStructureHtml_(campus);
+  if(mode==='str') return h+teamStrengthsHtml_(campus);
 
   h+='<h3>'+esc(t(cInfo?cInfo.name:campus))+' <small>· '+here.length+'</small></h3>';
 
@@ -8486,6 +9033,8 @@ function personHtml(){
   }
   h+='</div>';
   h+=personTypeCardHtml(d);
+  h+=personGSCardHtml(d);
+  h+=personStrengthsCardHtml(d);
 
   var withGoals=(d.goals||[]).filter(function(g){ return g.items.some(function(i){return i.text;}); });
   h+='<h3>🗒️ '+esc(t('Weekly goals'))+'</h3>';
@@ -10161,6 +10710,8 @@ function bind(){
   bindAway();
   bindAdmin();
   bindPersonality();
+  bindStrengths();
+  bindGStrengths();
 
   var gpm=document.getElementById('goProfileFromMe');
   if(gpm) gpm.onclick=function(){ S.view='profile'; render(); };
