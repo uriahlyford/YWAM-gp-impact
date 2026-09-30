@@ -280,9 +280,16 @@ One page (`myMinistryHtml`), two tabs — **Numbers** and **OKRs** (`S.mmTab`). 
 built around ONE ministry, picked at the top and named in a banner (`#mmBanner`) so there
 is never a doubt whose boxes these are:
 
-- **Who can pick what** (`mmOptions_`): your own ministry; if you are a Campus Leadership
-  overseer (dept Campus Leadership, ministry = a department name) every ministry in that
-  department; if admin, every ministry on the campus. ≤ 8 options are chips
+- **Who can pick what** (`mmOptions_`, mirroring `canLogFor_`): only the ministries you
+  are part of. That is your **main ministry** (profile dept + ministry), your **other
+  ministries** (`ministries`: "Dept|Ministry" keys, ticked on your own profile under "Other
+  ministries I’m part of" or by an admin on the person page; `cleanMinistries_` drops
+  repeats, malformed keys and the main one), any ministry you **lead**, and for a Campus
+  Leadership overseer (dept Campus Leadership, ministry = a department name) every ministry
+  in that department. **Being an admin no longer adds every ministry.** Uriah asked for
+  that, and it applies to the Teams Database too. Admin → Ministry KPIs still edits what any
+  ministry tracks, and Base still shows the whole base. The banner says which it is: "Your
+  main ministry", "One of your ministries" or "You lead this ministry". ≤ 8 options are chips
   (`[data-mmpick="Dept|Min"]`, split at the LAST `|`), more are two selects
   (`#mmBrowseDeptSel` / `#mmBrowseMinSel`). Selection lives in `S.mmBrowseDept` /
   `S.mmBrowseMinistry` (`mmSelected_`; a department picked with no ministry → its first
@@ -310,8 +317,8 @@ is never a doubt whose boxes these are:
   `"Dept|Ministry"` keys, set only by an admin (Admin → Accounts → Edit profile →
   "Ministry leader of"; `adminUpdateStaff`). `canEditMetrics_` in `api.js` is: admin, or
   the campus leadership department, or that ministry's leader. Logging numbers
-  (`canLogFor_`) is unchanged: anyone on the ministry, its overseer, an admin on that
-  campus. The client mirrors it in `canEditMetricsClient_` to draw "Edit what we track".
+  (`canLogFor_`): anyone in the ministry (main or other), its leader, its overseer. Not
+  an admin as such. The client mirrors it in `canEditMetricsClient_` to draw "Edit what we track".
 - **Renaming a custom metric moves its numbers** (`renameCustomMetric`): weekly
   `entries`, `kpiDaily` rows and any key result's `metricKey` follow the name, scoped to
   that campus/dept/ministry. Baseline metrics can't be renamed — they are the taxonomy.
@@ -366,8 +373,8 @@ show up here too), men/women reached, notes.
   team writes a full row under its id, deleting one writes a tombstone `{id, deleted}`.
   The seed file is data — never rewrite it. Several 2024–25 seeded teams share
   identical totals; that is how the hub held them.
-- **Rights** are `canLogFor_` for Community Service / Outreach Teams — its own staff, its
-  overseer, an admin **on that campus** — echoed back as `canEdit`, which the client
+- **Rights** are `canLogFor_` for Community Service / Outreach Teams — its own staff (main
+  or other ministry), its leader, its overseer — echoed back as `canEdit`, which the client
   obeys (no Add/Edit when false). `saveTeamTrip` cleans the record (`cleanTrip_`: name
   required, ISO dates with `to ≥ from`, `Teams Hosted` and SENSITIVE metrics dropped).
 - **Everything else still reads weekly rows.** `teamEntryRows_` turns the trips into

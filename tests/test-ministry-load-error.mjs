@@ -28,7 +28,7 @@ function ok(name, cond, extra) {
   else { fail++; console.log('FAIL ' + name + (extra !== undefined ? '  → ' + extra : '')); }
 }
 const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [], active: true };
-const ADMIN = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Director', isAdmin: true };
+const ADMIN = { ...base, id: 'st_admin', name: 'Uriah Lyford', username: 'uriah', dept: 'Campus Leadership', ministry: 'Campus Director', role: 'Director', isAdmin: true, ministries: ['Community Service|Cafe'] };   // admins only reach ministries they are part of
 const SOK = { ...base, id: 'st_sok', name: 'Sok Chan', username: 'sok', dept: 'Community Service', ministry: 'Outreach Teams', role: '' };
 
 const browser = await chromium.launch({ executablePath: CHROMIUM });

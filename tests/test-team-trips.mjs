@@ -128,6 +128,10 @@ r = await call('saveTeamTrip', ['sina', '1234', { ...TRIP, id: newId, metrics: {
 ok('the overseer edits it — same id, no second row', r.body.ok === true && r.body.trips.length === seed.length + 1 && mem.teamTrips.length === 1);
 r = await call('getData', ['leadercode', YR]);
 ok('a cancelled team counts nowhere', !(r.body.entries.siemreap['Community Service|Outreach Teams|People Served'] || {})[wk] && r.body.entries.siemreap['Community Service|Outreach Teams|Teams Hosted'][wk] === 7, JSON.stringify(r.body.entries.siemreap['Community Service|Outreach Teams|Teams Hosted']));
+// an admin enters teams only as part of Outreach Teams, like anyone else
+r = await call('saveTeamTrip', ['uriah', '1234', { ...TRIP, id: 'lv_5c43edf9', campus: 'siemreap', name: 'YWAM Ships Kona', from: '2024-10-20', to: '2024-11-30', metrics: {}, status: 'active' }]);
+ok('an admin who is not part of Outreach Teams cannot edit its teams', r.body.ok === false && r.body.err === 'not_authorized', JSON.stringify(r.body));
+mem.staff = mem.staff.map(x => x.id === 'st_admin' ? { ...x, ministries: ['Community Service|Outreach Teams'] } : x);
 r = await call('saveTeamTrip', ['uriah', '1234', { ...TRIP, id: 'lv_5c43edf9', campus: 'siemreap', name: 'YWAM Ships Kona', from: '2024-10-20', to: '2024-11-30', metrics: { 'People Served': 100 }, status: 'active' }]);
 ok('an admin edits a seeded team — the edit is stored under the seed’s id', r.body.ok === true && mem.teamTrips.some(x => x.id === 'lv_5c43edf9'));
 r = await call('getTeamTrips', ['sok', '1234', 'siemreap']);
