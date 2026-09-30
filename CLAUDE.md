@@ -571,7 +571,9 @@ forms, documents and references follow.
   s_ staff edit, r_ reference) after `flushAnswers_`. `tripOf_` gives days in Cambodia (first
   arrival to last departure, inclusive), each place's days, and the first stop (visa); it also
   reads old applications' arrival / departure / arrivalKh / departureKh answers.
-- **Team documents** (`PORTAL_DOC_KINDS.team`: passports + photo required, flights when booked):
+- **Team documents** (`PORTAL_DOC_KINDS.team`: passports, a team photo with names and flights
+  first; then the letter of invitation and supporting documents `from: 'us'` — staff upload
+  them, the team opens them and cannot upload or remove one — and the team's e-visas):
   `portalUploadDoc` (applicant after submitting, or staff in scope with a candidateId; PDF /
   images, ~4 MB, blobs `pdoc:<id>`, the record keeps only the list), `portalGetDoc`,
   `portalDeleteDoc` (own record, or portal staff / HR in scope). Required kinds all present tick
@@ -614,6 +616,41 @@ forms, documents and references follow.
   staff account (a record whose `staffId` is real staff loses only the record). The panel's
   "Delete this account and application" asks for the name to be typed back. Applicant
   accounts are not in Admin → Accounts, so this is their one delete.
+- **A team has its own stages and journey.**
+  - **Stages** (`TEAM_STAGES`): new → applied → call1 (1st call) → docs (awaiting documents)
+    → call2 (2nd call, cultural orientation) → practical → arrived. There is no interview.
+    Older team stages map across on read (`TEAM_STAGE_FROM`: contacted or interview → call1,
+    accepted → docs), and `cleanCandidate_` takes a team's own stages.
+  - **Steps** (`teamSteps_`, used by `portalAppOut_` and `portalCandOut_`), in order:
+    account, form, **call1**, then the documents group (**passports**, **photo**, **flights**),
+    then the visa group (**invitation**: the letter of invitation and supporting documents,
+    uploaded by staff; **evisa**: approved e-visas, uploaded by the team), then **call2**,
+    **practical** and **arrived**. The visa group appears only for a team that needs a visa.
+  - Each step carries `who` ('you' or 'us') and either `auto` (it ticks itself when its
+    document is on the record) or `tick` (a staff checkbox through
+    `portalTeamStep(user, pin, candId, step, done)`, for call1 / call2 / arrived).
+  - **The stage follows the steps forward on its own** (`teamAutoStage_`, run after a tick
+    and after every upload): call1 done → docs; passports + photo + flights in and the
+    e-visas approved → call2; call2 done → practical. It never moves back; unticking Arrived
+    returns the team to practical. Every move is logged.
+  - On the team's side, the visa card and the letter and e-visa uploads stay hidden until
+    passports, photo and flights are in. Portal staff get `teamStages` for the stage picker
+    and for the Teams tab's chips and tiles. The GP app's HR page uses `TEAM_CAND_STAGES`
+    for a team.
+- **A team application is a team in the Teams Database** (`syncTeamTrip_`, linked by
+  `candidateId`, id `ta_<candId>`).
+  - It is made on submit and updated on every answer change, whether the team makes it
+    (`portalUpdateAnswers`) or staff do (`portalStaffSaveAnswers`). Closing the application
+    cancels the team and reopening it restores it.
+  - The name, where the team is from, the Siem Reap dates and the head counts follow the
+    application. Metrics, men and women reached, notes and hosting staff are kept.
+  - The team enters its own Outreach Teams numbers on its dashboard (`#teamNumbers`,
+    `portalSaveTeamNumbers`; shown from Getting ready or once its dates have started). The
+    metric list comes from `taxonomy.js` plus `metricOverrides` in the applicant's
+    `portalBoot`.
+  - Staff still edit everything in the Teams Database; `saveTeamTrip` keeps the link, and
+    the card shows "🛂 From the portal". A team deleted there stays deleted: the tombstone
+    keeps its `candidateId`.
 - **The timeline is derived on the server** (`portalAppOut_` → `portalSteps_` /
   `portalStatus_`): account → form → received → contact → documents & reference →
   interview → accepted → practical → arrived, walked from the CRM stage in

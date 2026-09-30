@@ -32,6 +32,13 @@ const STEPS = (current) => {
   const ci = ids.indexOf(current);
   return ids.map((id, i) => ({ id, state: i < ci ? 'done' : i === ci ? 'current' : 'todo', items: id === 'docs' ? [{ id: 'documents', done: false }, { id: 'reference', done: false }] : undefined }));
 };
+/* a team's own steps, as teamSteps_ in api.js returns them */
+const TEAM_STEPS = (current) => {
+  const defs = [['account', 'you'], ['form', 'you', 'auto'], ['call1', 'us', 'tick'], ['passports', 'you', 'auto', 'docs'], ['photo', 'you', 'auto', 'docs'], ['flights', 'you', 'auto', 'docs'],
+    ['invitation', 'us', 'auto', 'visa'], ['evisa', 'you', 'auto', 'visa'], ['call2', 'us', 'tick'], ['practical', 'you'], ['arrived', 'us', 'tick']];
+  const ci = defs.findIndex(d => d[0] === current);
+  return defs.map(([id, who, kind, group], i) => ({ id, who, group, tick: kind === 'tick' || undefined, auto: kind === 'auto' || undefined, done: i < ci, state: i < ci ? 'done' : i === ci ? 'current' : 'todo' }));
+};
 const FORM = { key: 'dts', title: { en: 'DTS application', km: 'ពាក្យសុំ DTS' }, sections: [
   { id: 'about', title: { en: 'About you', km: 'អំពីអ្នក' }, help: { en: '', km: '' }, questions: [
     { id: 'dob', type: 'date', label: { en: 'Date of birth', km: 'ថ្ងៃខែឆ្នាំកំណើត' }, help: { en: '', km: '' }, required: true, audience: 'all', options: [] },
@@ -57,7 +64,7 @@ const TEAM_FORM = { key: 'team', title: { en: 'Short-term team application', km:
     { id: 'flightsBooked', type: 'yesno', label: { en: 'Have you booked your flights yet?', km: '' }, help: { en: 'If yes, attach your itinerary here.', km: '' }, required: true, options: [{ en: 'Yes', km: '' }, { en: 'No', km: '' }], audience: 'all', attach: 'flights' } ] },
   { id: 'hospitality', title: { en: 'Hospitality', km: '' }, help: { en: '', km: '' }, questions: [
     { id: 'males', type: 'number', label: { en: 'How many males?', km: '' }, help: { en: '', km: '' }, required: true, options: [], audience: 'all' } ] } ] };
-const TEAM_DOCS = [{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: false }];
+const TEAM_DOCS = [{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: true }, { id: 'invitation', required: false, from: 'us' }, { id: 'evisa', required: false }];
 let TEAM_APP = null, NEW_TEAM_APP = null;
 let CANDS0 = null;  // a fresh copy of the sample records, for blocks that run after others changed them
 const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: TEAM_FORM, reference: REF_FORM };
@@ -72,8 +79,8 @@ let CANDS = [
   { id: 'cd_anna', campus: 'siemreap', name: 'Anna Example', type: 'student', school: 'dts', stage: 'applied', status: 'pending', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', source: 'portal', assignedTo: '', nextStep: '', nextDate: '', staffId: 'st_anna', hasAccount: true, refNeeded: true, reference: { status: 'none' }, updated: '2026-09-20T10:00:00Z', log: [{ at: '2026-09-19T09:00:00Z', by: 'st_anna', kind: 'stage', text: 'new' }], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', portal: { createdAt: '2026-09-19', submittedAt: '2026-09-20T10:00:00Z', form: { answers: { dob: '1999-05-05', gender: 'Female', leaderContact: '+46 1', testimony: 'Long story', gifts: ['Music'] } } } },
   { id: 'cd_tom', campus: 'siemreap', name: 'Tom Volunteer', type: 'volunteer', school: '', stage: 'contacted', status: 'in_review', email: 'tom@example.org', phone: '+1 555 000 1111', messenger: 'telegram', country: 'United States', source: 'portal', assignedTo: 'st_dara', nextStep: 'Video call', nextDate: '2026-09-30', staffId: 'st_tom', hasAccount: true, refNeeded: true, reference: { status: 'received', receivedAt: '2026-09-22T10:00:00Z', leaderName: 'Pastor Example', leaderEmail: 'pastor@example.org', answers: { leaderName: 'Pastor Example', leaderEmail: 'pastor@example.org', recommend: 'Highly recommend' } }, updated: '2026-09-21T10:00:00Z', log: [], archived: null, audience: 'international', needsVisa: true, refNeeded: true, formKey: 'volunteer' },
   { id: 'cd_pp', campus: 'poipet', name: 'Poipet Person', type: 'student', school: 'dbs', stage: 'new', status: 'draft', email: '', phone: '+855 11 222 333', messenger: 'telegram', country: 'Cambodia', source: 'portal', assignedTo: '', staffId: 'st_pp', hasAccount: true, updated: '2026-09-18T10:00:00Z', log: [], archived: null },
-  { id: 'cd_team', campus: 'siemreap', name: 'Grace Church Team', type: 'team', school: '', stage: 'new', status: 'draft', email: 'team@example.org', phone: '+61 400 000 000', messenger: 'whatsapp', country: 'Australia', source: 'portal', assignedTo: '', staffId: 'st_team', hasAccount: true, updated: '2026-09-17T10:00:00Z', log: [], archived: null,
-    formKey: 'team', docKinds: [{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: false }],
+  { id: 'cd_team', campus: 'siemreap', name: 'Pat Leader', type: 'team', steps: TEAM_STEPS('call1'), school: '', stage: 'new', status: 'draft', email: 'team@example.org', phone: '+61 400 000 000', messenger: 'whatsapp', country: 'Australia', source: 'portal', assignedTo: '', staffId: 'st_team', hasAccount: true, updated: '2026-09-17T10:00:00Z', log: [], archived: null,
+    formKey: 'team', docKinds: TEAM_DOCS,
     portal: { submittedAt: '2026-09-17T10:00:00Z', form: { answers: { teamName: 'Grace Church Team', location: 'Sydney, Australia', itinerary: [{ place: 'YWAM Siem Reap', from: '2027-01-10', to: '2027-01-20', base: true }, { place: 'Phnom Penh', from: '2027-01-20', to: '2027-01-23' }], males: '6', females: '8', couples: '2', flightsBooked: 'No' } }, docs: [{ id: 'pd_1', kind: 'passports', name: 'passports.pdf', mime: 'application/pdf', size: 1200, added: '2026-09-18T10:00:00Z', by: 'st_team' }] } },
   { id: 'cd_old', campus: 'siemreap', name: 'Closed Case', type: 'staff', school: '', stage: 'new', status: 'closed', email: '', phone: '', messenger: '', country: '', source: 'hr', assignedTo: '', staffId: '', hasAccount: false, updated: '2026-08-01T10:00:00Z', log: [], archived: { at: '2026-08-02', reason: 'Withdrew' } }
 ];
@@ -94,11 +101,11 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'portalBoot') {
       if (u === 'anna.b' && pin === '2468') out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM };
       else if (u === 'srey.k' && pin === '2468') out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Srey Khmer', username: 'srey.k', country: 'Cambodia' }, application: { ...ANNA, name: 'Srey Khmer', stage: 'accepted', status: 'accepted', audience: 'khmer', needsVisa: false, refNeeded: false, steps: STEPS('practical').map(s => s.id === 'docs' ? { ...s, items: [{ id: 'documents', done: true }] } : s), submittedAt: '2026-09-01T00:00:00Z' }, form: FORM };
-      else if (u === 'team.au' && pin === '2468') { TEAM_APP = TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'accepted', status: 'accepted', refNeeded: false, formKey: 'team', steps: STEPS('practical').map(s => s.id === 'docs' ? { ...s, items: [{ id: 'documents', done: false }] } : s), submittedAt: '2026-09-01T00:00:00Z', visa: { flightsConfirmed: true, invitationSent: false }, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM }; }
+      else if (u === 'team.au' && pin === '2468') { TEAM_APP = TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'docs', status: 'docs', refNeeded: false, formKey: 'team', steps: TEAM_STEPS('invitation'), trip: { id: 'ta_cd_team', from: '2026-09-01', to: '2026-09-20', metrics: { 'People Served': 30 }, reached: { male: 5, female: null } }, submittedAt: '2026-09-01T00:00:00Z', visa: { flightsConfirmed: true, invitationSent: false }, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [] }; }
       else if (u === 'team.new' && pin === '2468') { NEW_TEAM_APP = NEW_TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'new', status: 'draft', submittedAt: null, refNeeded: false, formKey: 'team', answers: {}, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'New Team', username: 'team.new', country: 'Australia', type: 'team', school: '' }, application: NEW_TEAM_APP, form: TEAM_FORM }; }
-      else if (u === 'dara' && pin === '1234') out = { ok: true, role: 'portal-staff', me: STAFF[0], applicants: CANDS, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'], forms: FORMS };
-      else if (u === 'rithy' && pin === '1234') out = { ok: true, role: 'portal-staff', me: { id: 'st_teams', name: 'Rithy Team', username: 'rithy', campus: 'siemreap', role: 'portal-staff' }, applicants: CANDS.filter(c => c.type === 'team'), scope: ['team'], staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
-      else if (u === 'sina' && pin === '1234') out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'], forms: FORMS };
+      else if (u === 'dara' && pin === '1234') out = { ok: true, role: 'portal-staff', me: STAFF[0], applicants: CANDS, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], teamStages: ['new', 'applied', 'call1', 'docs', 'call2', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'], forms: FORMS };
+      else if (u === 'rithy' && pin === '1234') out = { ok: true, role: 'portal-staff', me: { id: 'st_teams', name: 'Rithy Team', username: 'rithy', campus: 'siemreap', role: 'portal-staff' }, applicants: CANDS.filter(c => c.type === 'team'), scope: ['team'], staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], teamStages: ['new', 'applied', 'call1', 'docs', 'call2', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
+      else if (u === 'sina' && pin === '1234') out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], teamStages: ['new', 'applied', 'call1', 'docs', 'call2', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'], forms: FORMS };
       else if (u === 'bopha' && pin === '1234') out = { ok: false, err: 'not_authorized' };
       else out = { ok: false, err: 'auth' };
     } else if (b.fn === 'portalUpdateContact') {
@@ -146,6 +153,11 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'portalUpdateAccount') {
       const p = b.args[3]; ACCOUNTS = ACCOUNTS.map(a => a.id === b.args[2] ? { ...a, name: p.name, username: p.username, email: p.email, phone: p.phone, messenger: p.messenger, country: p.country } : a);
       out = { ok: true, account: ACCOUNTS.find(a => a.id === b.args[2]) };
+    } else if (b.fn === 'portalTeamStep') {
+      CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, stage: b.args[3] === 'call1' ? 'docs' : x.stage, steps: TEAM_STEPS(b.args[3] === 'call1' ? 'passports' : 'call1') } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
+    } else if (b.fn === 'portalSaveTeamNumbers') {
+      TEAM_APP = { ...TEAM_APP, trip: { ...TEAM_APP.trip, metrics: b.args[2], reached: b.args[3] } };
+      out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [] };
     } else if (b.fn === 'portalSetVisaFlags') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, portal: { ...(x.portal || {}), visa: { ...((x.portal || {}).visa || {}), ...b.args[3] } } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
     } else if (b.fn === 'portalStaffSaveAnswers') {
@@ -154,7 +166,7 @@ async function open(viewport, query, seed) {
       FORMS[b.args[2]] = { ...b.args[3], key: b.args[2], updated: new Date().toISOString() }; delete FORMS[b.args[2]].isDefault; out = { ok: true, form: FORMS[b.args[2]], forms: FORMS };
     } else if (b.fn === 'portalDeleteApplicant') {
       CANDS = CANDS.filter(x => x.id !== b.args[2]);
-      out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], types: [], schools: [], deleted: b.args[2], accountRemoved: true };
+      out = { ok: true, role: 'portal-admin', me: STAFF[1], applicants: CANDS, scope: null, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], teamStages: ['new', 'applied', 'call1', 'docs', 'call2', 'practical', 'arrived'], types: [], schools: [], deleted: b.args[2], accountRemoved: true };
     } else if (b.fn === 'hrCandidateNote') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, log: x.log.concat([{ at: new Date().toISOString(), by: 'st_dara', kind: 'note', text: b.args[3] }]) } : x);
       out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
@@ -336,10 +348,25 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
   await page.waitForSelector('#statusPill');
   const txt = await page.$eval('#main', e => e.textContent);
-  ok('an accepted team gets the e-visa guide, step by step', /Your e-visa, step by step/.test(txt) && /Visa E/.test(txt) && /e-Arrival/.test(txt) && /white sticker/.test(txt));
-  ok('with the two ticks staff set — flights confirmed done, letter pending', /✓ Flights confirmed/.test(txt) && /○ Letter of invitation sent to you/.test(txt));
-  ok('the documents card lists what a team sends: passport copies and the team photo needed, flights when they have them', /Passport copies/.test(txt) && /team photo/i.test(txt) && /Flight itineraries/.test(txt) && (await page.$$eval('[data-docup]', i => i.map(x => x.getAttribute('data-docup')).join(','))) === 'passports,photo,flights' && /When you have them/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
-  ok('and says flights can come later, for arranging airport transport', /arrange your transport from the airport/.test(txt));
+  ok('with passports, photo and flights in, the team gets the e-visa guide, step by step', /Your e-visa, step by step/.test(txt) && /Visa E/.test(txt) && /e-Arrival/.test(txt) && /white sticker/.test(txt));
+  ok('a team’s visa card leaves the letter and flights to its own steps', !/Flights confirmed/.test(txt) && !/Letter of invitation sent to you/.test(txt));
+  const tl = await page.$$eval('#timeline .step', li => li.map(x => x.getAttribute('data-step') + ':' + x.className.replace('step ', '')));
+  ok('the team follows its own steps, on the letter of invitation now', tl.join(',') === 'account:done,form:done,call1:done,passports:done,photo:done,flights:done,invitation:current,evisa:todo,call2:todo,practical:todo,arrived:todo', tl.join(','));
+  const cur = await page.$eval('#timeline .step.current', e => e.textContent);
+  ok('the step says what it is and who does it', /Letter of invitation & supporting documents/.test(cur) && /Us/.test(cur) && /once your passports, team photo and flights are in/.test(cur), cur);
+  ok('the documents and the visa part are headed as groups', (await page.$$eval('#timeline .stepGroup', g => g.map(x => x.textContent).join(','))) === 'Awaiting documents,Visa');
+  ok('the team’s numbers card shows once their dates have started, with what is saved', /Your team’s numbers/.test(await page.$eval('#teamNumbers', e => e.textContent)) && (await page.$eval('[data-tnum="People Served"]', i => i.value)) === '30' && !(await page.$('[data-tnum="Teams Hosted"]')));
+  await page.fill('[data-tnum="Salvations"]', '3');
+  await page.fill('[data-treach="female"]', '7');
+  await page.click('#saveTeamNums');
+  await page.waitForTimeout(400);
+  const tn = sent.filter(b => b.fn === 'portalSaveTeamNumbers').pop();
+  ok('saving sends the numbers into the Teams Database', tn && tn.args[2]['People Served'] === 30 && tn.args[2]['Salvations'] === 3 && tn.args[3].female === 7 && tn.args[3].male === 5, JSON.stringify(tn && tn.args.slice(2)));
+  ok('the steps still ahead that are theirs are marked You', /You/.test(await page.$eval('#timeline [data-step="evisa"]', e => e.textContent)));
+  ok('the letter of invitation is listed as coming from us, with no upload for them', /Coming from us/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !(await page.$('[data-docup="invitation"]')) && !!(await page.$('[data-docup="evisa"]')));
+  ok('the team is told passports are needed as soon as possible', /as soon as possible/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
+  ok('the documents card lists what a team sends: passport copies, a team photo and flights needed; with those in, the e-visas — the letter comes from us', /Passport copies/.test(txt) && /team photo/i.test(txt) && /Flight itineraries/.test(txt) && (await page.$$eval('[data-docup]', i => i.map(x => x.getAttribute('data-docup')).join(','))) === 'passports,photo,flights,evisa' && /Needed/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
+  ok('and says flights are needed to start the visa process, and can come once booked', /start your visa process/.test(txt) && /Upload them once you have them/.test(txt));
   await page.setInputFiles('[data-docup="passports"]', [{ name: 'passports.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 fake') }, { name: 'more.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 two') }]);
   await page.waitForFunction(() => document.querySelectorAll('[data-dockind="passports"] .docList li').length === 2, null, { timeout: 5000 });
   const ups = sent.filter(b => b.fn === 'portalUploadDoc');
@@ -656,6 +683,8 @@ async function open(viewport, query, seed) {
   await page.click('[data-whatfilter="team"]');
   await page.waitForTimeout(150);
   ok('the team row says how long they are in Cambodia', /14 days in Cambodia/.test(await page.$eval('.trow[data-open="cd_team"]', e => e.textContent)));
+  ok('a team is listed by its sending church, not the leader’s name', /Grace Church Team/.test(await page.$eval('.trow[data-open="cd_team"] .who', e => e.textContent)) && !/Pat Leader/.test(await page.$eval('.trow[data-open="cd_team"] .who', e => e.textContent)));
+  ok('and the row says what is next for them', /→ 1st call — getting to know each other/.test(await page.$eval('.trow[data-open="cd_team"]', e => e.textContent)));
   await page.click('[data-open="cd_team"]');
   await page.waitForSelector('#panel');
   const pan = await page.$eval('#panel', e => e.textContent);
@@ -664,7 +693,19 @@ async function open(viewport, query, seed) {
   ok('and a ready-to-paste note for hospitality: name and where from, Siem Reap dates with days and nights, males, females, couples/families', hosp.split('\n').length === 5 && hosp.split('\n')[0] === 'Grace Church Team — Sydney, Australia' && /^Siem Reap: \w{3},? 10 Jan 2027 – \w{3},? 20 Jan 2027 \(11 days, 10 nights\)$/.test(hosp.split('\n')[1]) && hosp.split('\n').slice(2).join('|') === 'Males: 6|Females: 8|Couples / families: 2', JSON.stringify(hosp));
   ok('with a Copy button', !!(await page.$('#copyHosp')));
   ok('the trip block says whether flights are booked', /Flights booked\s*Not yet/.test(await page.$eval('#tripFlights', e => e.textContent)));
-  ok('the record lists the team’s documents with what is still needed', /passports\.pdf/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)));
+  ok('the record is headed by the sending church, with the leader named under it', /Grace Church Team/.test(await page.$eval('#panel h2', e => e.textContent)) && /Leader: Pat Leader/.test(pan));
+  ok('the record lists the team’s documents, with what is still needed', /passports\.pdf/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)));
+  ok('the stage picker has the team stages', (await page.$$eval('#p_stage option', o => o.map(x => x.value).join(','))) === 'new,applied,call1,docs,call2,practical,arrived');
+  ok('and the Teams tab counts by them', /1st call/.test(await page.$eval('.tiles', e => e.textContent)) && /Awaiting documents/.test(await page.$eval('.tiles', e => e.textContent)) && !/Interview/.test(await page.$eval('.tiles', e => e.textContent)));
+  ok('staff upload the letter of invitation themselves', /You send this/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !!(await page.$('[data-docup="invitation"]')));
+  ok('the record shows the team’s steps with what is next', /Next: 1st call — getting to know each other · on us/.test(await page.$eval('#teamNext', e => e.textContent)));
+  ok('staff tick the steps done outside the portal; the ones the portal sees tick themselves', (await page.$$eval('[data-teamstep]', c => c.map(x => x.getAttribute('data-teamstep')).join(','))) === 'call1,call2,arrived' && /ticks when they upload it/.test(await page.$eval('.flowList', e => e.textContent)));
+  ok('no separate visa ticks for a team', !(await page.$('[data-visaflag]')));
+  await page.check('[data-teamstep="call1"]');
+  await page.waitForTimeout(400);
+  const ts = sent.filter(b => b.fn === 'portalTeamStep').pop();
+  ok('ticking the 1st call goes through portalTeamStep', ts && ts.args[2] === 'cd_team' && ts.args[3] === 'call1' && ts.args[4] === true, JSON.stringify(ts && ts.args.slice(2)));
+  ok('and the record moves on to the documents', /Next: Passport copies for the whole team · waiting on the team/.test(await page.$eval('#teamNext', e => e.textContent)));
   await page.setInputFiles('[data-docup="photo"]', [{ name: 'team.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF team') }]);
   await page.waitForFunction(() => /team\.pdf/.test((document.querySelector('[data-dockind="photo"]') || {}).textContent || ''), null, { timeout: 5000 });
   const su = sent.filter(b => b.fn === 'portalUploadDoc').pop();

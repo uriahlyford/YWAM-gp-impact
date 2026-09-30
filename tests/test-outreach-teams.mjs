@@ -48,7 +48,7 @@ const TRIPS = [
   trip({ id: 't2', name: 'Bravo Church', org: 'Four Square', country: 'United States', from: Y + '-02-01', to: Y + '-02-20', size: 12, metrics: { 'People Served': 50, 'Healings': 1 } }),
   trip({ id: 't3', name: 'Charlie DTS', from: Y + '-04-20', to: Y + '-05-10', size: 6, metrics: { 'People Served': 30 } }),
   trip({ id: 't4', name: 'Delta DTS', from: Y + '-02-05', to: Y + '-02-25', size: 5, status: 'cancelled' }),
-  trip({ id: 't5', name: 'Echo Team', from: (Y + 1) + '-01-05', to: (Y + 1) + '-01-25', size: 9 }),
+  { ...trip({ id: 't5', name: 'Echo Team', from: (Y + 1) + '-01-05', to: (Y + 1) + '-01-25', size: 9 }), candidateId: 'cd_echo' },   // applied on the portal
 ];
 const WK = weekOf(NOW);
 /* Two weeks inside the page's current quarter (this week and a neighbour in the
@@ -119,6 +119,7 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   ok('the Teams Database page shows the teams', s.teamsPage && await page.evaluate(() => /Teams Database/.test(document.querySelector('h2').textContent)));
   ok('the teams came with boot — no second request', !sent.some(x => x.fn === 'getTeamTrips'));
   ok('the personal numbers are off the page', !s.personalFold && s.personalOpen === 0);
+  ok('a team that applied on the portal says so; the others do not', await page.evaluate(() => { const c = document.querySelector('[data-teamcard="t5"]'); return !!(c && c.querySelector('[data-fromportal]')) && document.querySelectorAll('[data-fromportal]').length === document.querySelectorAll('[data-teamcard="t5"]').length; }));
   // the quarter view defaults to this quarter; pick the year view to see everything finished this year
   await page.click('[data-teamperiod="year"]');
   await page.waitForTimeout(400);

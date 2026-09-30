@@ -6353,6 +6353,7 @@ function teamCardHtml_(tr, canEdit, campus){
   if(tr.country) bits.push(tr.country);
   var h='<div class="card slim teamCard'+(tr.status==='cancelled'?' cancelled':'')+'" data-teamcard="'+esc(tr.id)+'">';
   h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(tr.name)+'</b>'+
+      (tr.candidateId?' <span class="teamStat portal" data-fromportal>🛂 '+esc(t('From the portal'))+'</span>':'')+
       (tr.status==='cancelled'?' <span class="teamStat">'+esc(t('Cancelled'))+'</span>':'')+'</div>'+
       (bits.length?'<div class="rowSub">'+esc(bits.join(' · '))+'</div>':'')+
       '<div class="rowSub">📅 '+esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+'</div></div>'+
@@ -6387,6 +6388,7 @@ function teamFormHtml_(campus){
       ' data-tf="'+key+'" value="'+esc(String(v))+'"'+(extra||'')+'></div>';
   };
   var h='<div class="card" id="teamFormCard"><h3 style="margin-top:0">'+esc(isNew?t('Add a team'):t('Edit team'))+'</h3>';
+  if(f.candidateId) h+='<p class="hint" style="margin:0 0 8px">🛂 '+esc(t('This team applied on the portal. Its name, dates and head counts follow the application, and the team enters its own numbers there — you can still change them here.'))+'</p>';
   h+=inp('name', t('Team name'), 'text', ' maxlength="120" placeholder="'+esc(t('e.g. Endeavor DTS'))+'"');
   h+='<div class="teamGrid2">'+inp('org', t('Sending base / church'), 'text', ' maxlength="120"')+inp('country', t('Country'), 'text', ' maxlength="60"')+'</div>';
   h+='<div class="teamGrid2">'+inp('from', t('Arrived'), 'date')+inp('to', t('Left'), 'date')+'</div>';
@@ -6691,9 +6693,13 @@ function hrTabsHtml_(){
    for a no. Kept deliberately plain — a list you can search and filter,
    one page per person — rather than columns to drag between. */
 var CAND_STAGES=[['new','New inquiry'],['contacted','Contacted'],['applied','Applied'],['interview','Interview'],['accepted','Accepted'],['practical','Getting ready'],['arrived','Arrived']];
+/* A short-term team has its own stages — two calls instead of an interview,
+   and the documents and visa between them (TEAM_STAGES in api.js). */
+var TEAM_CAND_STAGES=[['new','New inquiry'],['applied','Applied'],['call1','1st call'],['docs','Awaiting documents'],['call2','2nd call — orientation'],['practical','Getting ready'],['arrived','Arrived']];
+function candStagesFor_(type){ return type==='team' ? TEAM_CAND_STAGES : CAND_STAGES; }
 var CAND_TYPES=[['staff','Staff'],['volunteer','Volunteer'],['student','Student'],['team','Team']];
 var CAND_FOLLOWUP_DAYS=7;
-function candStageLabel_(k){ for(var i=0;i<CAND_STAGES.length;i++) if(CAND_STAGES[i][0]===k) return t(CAND_STAGES[i][1]); return k; }
+function candStageLabel_(k){ var all=CAND_STAGES.concat(TEAM_CAND_STAGES); for(var i=0;i<all.length;i++) if(all[i][0]===k) return t(all[i][1]); return k; }
 function candTypeLabel_(k){ for(var i=0;i<CAND_TYPES.length;i++) if(CAND_TYPES[i][0]===k) return t(CAND_TYPES[i][1]); return k; }
 function candDaysUntil_(iso){ if(!iso) return null; var a=new Date(iso+'T00:00:00'), b=new Date(); b.setHours(0,0,0,0); return Math.round((a-b)/86400000); }
 function candDue_(c){ if(c.archived || !c.nextDate) return ''; var d=candDaysUntil_(c.nextDate); return d<0 ? 'overdue' : d<=CAND_FOLLOWUP_DAYS ? 'soon' : ''; }
@@ -6791,8 +6797,9 @@ function candPersonHtml_(c){
   h+='<button class="linkbtn" id="candEdit" style="margin-top:6px">✏️ '+esc(t('Edit details'))+'</button></div>';
 
   // the stage, as a row of steps — tap one to move them
-  h+='<h3>🪜 '+esc(t('Stage'))+'</h3><div class="card slim"><div class="candSteps">'+CAND_STAGES.map(function(x,i){
-    var cur=CAND_STAGES.map(function(y){ return y[0]; }).indexOf(c.stage);
+  var stagesHere=candStagesFor_(c.type);
+  h+='<h3>🪜 '+esc(t('Stage'))+'</h3><div class="card slim"><div class="candSteps">'+stagesHere.map(function(x,i){
+    var cur=stagesHere.map(function(y){ return y[0]; }).indexOf(c.stage);
     return '<button class="candStep'+(x[0]===c.stage?' on':i<cur?' done':'')+'" data-candmove="'+x[0]+'"'+(c.archived?' disabled':'')+'>'+(i<cur?'✓ ':'')+esc(t(x[1]))+'</button>'; }).join('')+'</div>';
   if(c.stage==='arrived'){
     var linked=c.staffId ? personOf(c.staffId) : null;
