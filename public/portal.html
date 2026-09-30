@@ -733,6 +733,7 @@ function panelHtml_(c, byId){
   h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
   h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
   h+=panelTeamFlowHtml_(c);
+  h+=panelTeamNumbersHtml_(c);
   h+=panelTripHtml_(c);
   h+=panelVisaHtml_(c);
   h+=panelDocsHtml_(c);
@@ -1078,23 +1079,41 @@ var VISA_PREP = [
 ];
 /* A team's visa part opens once its passports, team photo and flights are in. */
 function teamDocsIn_(app){ var st=app.steps||[]; return ['passports','photo','flights'].every(function(id){ var x=st.filter(function(y){ return y.id===id; })[0]; return !x || x.done; }); }
-/* The team's own numbers — the Outreach Teams metrics the Teams Database asks
-   for — saved onto their team there (portalSaveTeamNumbers). Shown once they
-   are getting ready or their dates have started. */
-function teamNumbersHtml_(app){
-  if(app.type!=='team' || !app.trip) return '';
-  var started = ['practical','arrived'].indexOf(app.stage)>-1 || (app.trip.from && app.trip.from <= new Date().toISOString().slice(0,10));
-  if(!started) return '';
+/* A team's numbers — the Outreach Teams metrics the Teams Database asks for,
+   and men / women reached — saved onto its team there. The team fills them
+   in on its dashboard (portalSaveTeamNumbers, prefix 't'); staff see and
+   edit the same boxes on the record (portalStaffSaveTeamNumbers, prefix 's'). */
+function teamMetricList_(campus){
   if(typeof setMetricOverrides==='function') setMetricOverrides(P.boot.metricOverrides||[]);
-  var deps=(typeof getDepartments==='function') ? getDepartments(app.campus||DEFAULT_CAMPUS) : {};
-  var list=(((deps['Community Service']||{})['Outreach Teams'])||[]).filter(function(m){ return m!=='Teams Hosted'; });
-  var m=app.trip.metrics||{}, r=app.trip.reached||{};
+  var deps=(typeof getDepartments==='function') ? getDepartments(campus||DEFAULT_CAMPUS) : {};
+  return (((deps['Community Service']||{})['Outreach Teams'])||[]).filter(function(m){ return m!=='Teams Hosted'; });
+}
+function teamNumberRowsHtml_(trip, campus, pre){
+  var m=(trip && trip.metrics)||{}, r=(trip && trip.reached)||{};
   var row=function(label, attr, v){ return '<div class="numRow"><span>'+esc(label)+'</span><input type="number" inputmode="numeric" min="0" '+attr+' value="'+esc(v==null?'':String(v))+'"></div>'; };
+  return teamMetricList_(campus).map(function(x){ return row(t(x), 'data-'+pre+'num="'+esc(x)+'"', m[x]); }).join('')+
+    row(t('Men reached'), 'data-'+pre+'reach="male"', r.male)+row(t('Women reached'), 'data-'+pre+'reach="female"', r.female);
+}
+function readTeamNumbers_(pre){
+  var metrics={}, reached={};
+  document.querySelectorAll('[data-'+pre+'num]').forEach(function(i){ if(i.value!=='') metrics[i.getAttribute('data-'+pre+'num')]=Number(i.value); });
+  document.querySelectorAll('[data-'+pre+'reach]').forEach(function(i){ reached[i.getAttribute('data-'+pre+'reach')]= i.value==='' ? null : Number(i.value); });
+  return { metrics:metrics, reached:reached };
+}
+function teamNumbersHtml_(app){
+  if(app.type!=='team' || !app.submittedAt) return '';
   return '<div class="card" id="teamNumbers"><h3 style="margin-top:0">📊 '+esc(t('Your team’s numbers'))+'</h3>'+
     '<p class="sub" style="margin:0 0 8px">'+esc(t('Totals for your whole time with us — fill them in as you go. They go straight into our Outreach Teams figures.'))+'</p>'+
-    list.map(function(x){ return row(t(x), 'data-tnum="'+esc(x)+'"', m[x]); }).join('')+
-    row(t('Men reached'), 'data-treach="male"', r.male)+row(t('Women reached'), 'data-treach="female"', r.female)+
+    teamNumberRowsHtml_(app.trip, app.campus, 't')+
     '<button class="btn small" id="saveTeamNums"'+(P.busy?' disabled':'')+'>'+esc(t('Save our numbers'))+'</button></div>';
+}
+function panelTeamNumbersHtml_(c){
+  if(c.type!=='team') return '';
+  var h='<h3>📊 '+esc(t('Team numbers'))+'</h3>';
+  if(!(c.portal && c.portal.submittedAt)) return h+'<p class="sub" style="margin:0">'+esc(t('Once they submit, their team is in the Teams Database and its numbers can go in here.'))+'</p>';
+  return h+'<p class="hint" style="margin:0 0 6px">'+esc(t('The team fills these in on their dashboard; you can too. They are the same numbers as in the Teams Database, and count on the dashboards once the team has arrived.'))+'</p>'+
+    teamNumberRowsHtml_(c.teamTrip, c.campus, 's')+
+    '<button class="btn small ghost" id="saveStaffNums"'+(P.busy?' disabled':'')+'>'+esc(t('Save numbers'))+'</button>';
 }
 function visaCardHtml_(app){
   if(!app.needsVisa) return '';
@@ -1567,6 +1586,10 @@ function bindPanelExtras_(){
   document.querySelectorAll('[data-visaflag]').forEach(function(cb){ cb.onchange=function(){ var flags={}; flags[cb.getAttribute('data-visaflag')]=cb.checked; cb.disabled=true;
     run('portalSetVisaFlags', [P.auth.user, P.auth.pin, c.id, flags], function(d){ if(putCand_(d)) showMsg(t('Saved')); render(); }); }; });
   on_('showRef', function(){ P.showRef=!P.showRef; render(); });
+  on_('saveStaffNums', function(){
+    var n=readTeamNumbers_('s'); P.busy=true; render();
+    run('portalStaffSaveTeamNumbers', [P.auth.user, P.auth.pin, c.id, n.metrics, n.reached], function(d){ P.busy=false; if(putCand_(d)) showMsg(t('Saved')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
   on_('copyHosp', function(){ var el=document.getElementById('hospText'); if(el) copyText_(el.value); });
   on_('refLinkStaff', function(){ makeRefLink_(c.id, function(link){ P.refLink=link; P.refLinkFor=c.id; var cur=selected_(); if(cur) cur.reference={ status:'pending' }; render(); }); });
   on_('refCopy', function(){ copyText_(P.refLink); });
@@ -1600,11 +1623,9 @@ function bind_(){
   var lp=document.getElementById('l_pin'); if(lp) lp.onkeydown=function(e){ if(e.key==='Enter') login_(); };
   // applicant
   on_('saveTeamNums', function(){
-    var metrics={}, reached={};
-    document.querySelectorAll('[data-tnum]').forEach(function(i){ if(i.value!=='') metrics[i.getAttribute('data-tnum')]=Number(i.value); });
-    document.querySelectorAll('[data-treach]').forEach(function(i){ reached[i.getAttribute('data-treach')]= i.value==='' ? null : Number(i.value); });
+    var n=readTeamNumbers_('t');
     P.busy=true; render();
-    run('portalSaveTeamNumbers', [P.auth.user, P.auth.pin, metrics, reached], function(d){ P.busy=false; if(d && d.ok){ P.boot=d; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+    run('portalSaveTeamNumbers', [P.auth.user, P.auth.pin, n.metrics, n.reached], function(d){ P.busy=false; if(d && d.ok){ P.boot=d; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
   });
   on_('editContact', function(){ P.editContact=true; P.contact={ phone:P.boot.me.phone, messenger:P.boot.me.messenger, country:P.boot.me.country }; render(); });
   on_('cancelContact', function(){ P.editContact=false; P.contact=null; render(); });

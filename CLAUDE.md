@@ -651,6 +651,18 @@ forms, documents and references follow.
   - Staff still edit everything in the Teams Database; `saveTeamTrip` keeps the link, and
     the card shows "🛂 From the portal". A team deleted there stays deleted: the tombstone
     keeps its `candidateId`.
+  - **Pending until arrived**: a linked team whose application is open and not at `arrived`
+    comes back from `getTeamTrips` with `pending: true` and its `portalStage`, and
+    `withTeamRows_` leaves it out of the dashboards (`pendingTeamIds_`). The Teams Database
+    shows "⏳ Pending · <stage>", keeps it under "Here now or coming" even once its dates
+    have passed, and its own tiles skip it (`tripFinished_`).
+  - **Calendar** (`teamCalHtml_`, `S.teamView='cal'`, `S.teamCalYm`, `S.teamCalSel`) is a
+    month grid with weeks starting on Monday. Each team is a bar across its days, split at
+    the week edge (`.cont` / `.more`) and laned when teams overlap. Bars are coloured pending,
+    coming, here or been, and tapping one opens its card. The month's teams are listed underneath.
+  - **Numbers from the portal, both sides**: the team's dashboard card shows as soon as it
+    has applied (a missing link is made on its `portalBoot`), and the staff record has the
+    same boxes (`portalStaffSaveTeamNumbers`, `teamTrip` on each team in the staff boot).
   - Applications submitted before the link existed, or whose sync was missed, are filled in
     by `backfillTeamTrips_` every time the Teams Database is read (`getTeamTrips`, and so
     `getMyBoot` for Outreach Teams staff). It covers submitted, open team applications with

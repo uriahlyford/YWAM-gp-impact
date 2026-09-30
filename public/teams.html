@@ -636,6 +636,34 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .teamPickRow { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
 .teamPickRow .pick { max-width:160px; flex:1; }
 .teamCard.cancelled { opacity:.6; }
+.teamStat.pending { background:var(--banner); border-color:var(--bannerBorder); color:var(--bannerInk); }
+.calCard { padding:12px 10px; }
+.calNav { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.calTitle { flex:1; text-align:center; font-weight:800; font-size:16px; }
+.calHead, .calWeek { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); }
+.calHead span { font-size:10.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); text-align:center; padding-bottom:4px; }
+.calWeek { border-top:1px solid var(--line); column-gap:0; row-gap:2px; padding-bottom:4px; }
+.calDay { border-left:1px solid var(--line); min-height:64px; }
+.calDay:first-child { border-left:0; }
+.calDay.out { background:var(--surface2); }
+.calDay.out .calNum { color:var(--faint); }
+.calNum { display:inline-block; font-size:11.5px; font-weight:600; padding:3px 5px; color:var(--muted); }
+.calDay.today .calNum { background:var(--accent); color:var(--accentInk); border-radius:999px; min-width:20px; text-align:center; }
+.calBar { position:relative; z-index:1; margin:0 2px; border:0; border-radius:6px; font:inherit; font-size:11px; font-weight:700; line-height:20px; height:20px;
+  padding:0 6px; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; color:var(--onDark); min-width:0; }
+.calBar.cont { border-top-left-radius:0; border-bottom-left-radius:0; margin-left:0; }
+.calBar.more { border-top-right-radius:0; border-bottom-right-radius:0; margin-right:0; }
+.calBar.sel { outline:2px solid var(--ink); outline-offset:1px; }
+.calBar.pend, .calDot.pend { background:var(--amber); }
+.calBar.pend { color:var(--amberInk); }
+.calBar.coming, .calDot.coming { background:var(--accent); }
+.calBar.here, .calDot.here { background:var(--good); }
+.calBar.past, .calDot.past { background:var(--faint); }
+.calLegend { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; font-size:12px; color:var(--muted); margin-top:8px; }
+.calDot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:-6px; flex:0 0 auto; }
+.calRow { display:flex; gap:10px; align-items:flex-start; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--line); padding:10px 12px; font:inherit; color:inherit; cursor:pointer; }
+.calRow:last-child { border-bottom:0; }
+.calRow .calDot { margin:4px 0 0; }
 .teamHead { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
 .teamStats { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
 .teamStat { font-size:12px; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:3px 9px; }
@@ -6832,7 +6860,10 @@ function teamYear_(){ return S.teamYear || new Date().getFullYear(); }
 function teamQ_(){ return S.teamQ || (Math.floor(new Date().getMonth()/3)+1); }
 function teamMonth_(){ return S.teamMonth || (new Date().getMonth()+1); }
 function teamDate_(iso){ if(!iso) return ''; var m=Number(iso.slice(5,7)), d=Number(iso.slice(8,10)); return t(MONTH_SHORT[m-1]||'')+' '+d+', '+iso.slice(0,4); }
-function tripFinished_(tr){ return tr && tr.status!=='cancelled' && !!tr.to && tr.to<=todayStr(); }
+/* A team that applied on the portal is pending (tr.pending, from the server)
+   until it is marked arrived — it is listed and on the calendar, but not
+   counted until then. */
+function tripFinished_(tr){ return tr && tr.status!=='cancelled' && !tr.pending && !!tr.to && tr.to<=todayStr(); }
 function tripInPeriod_(tr, year, period, n){
   if(!tripFinished_(tr)) return false;
   var y=Number(tr.to.slice(0,4)), mo=Number(tr.to.slice(5,7));
@@ -6896,7 +6927,8 @@ function teamCardHtml_(tr, canEdit, campus){
   if(tr.country) bits.push(tr.country);
   var h='<div class="card slim teamCard'+(tr.status==='cancelled'?' cancelled':'')+'" data-teamcard="'+esc(tr.id)+'">';
   h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(tr.name)+'</b>'+
-      (tr.candidateId?' <span class="teamStat portal" data-fromportal>🛂 '+esc(t('From the portal'))+'</span>':'')+
+      (tr.pending ? ' <span class="teamStat pending" data-fromportal data-pending>⏳ '+esc(t('Pending'))+' · '+esc(candStageLabel_(tr.portalStage))+'</span>'
+        : tr.candidateId ? ' <span class="teamStat portal" data-fromportal>🛂 '+esc(t('From the portal'))+'</span>' : '')+
       (tr.status==='cancelled'?' <span class="teamStat">'+esc(t('Cancelled'))+'</span>':'')+'</div>'+
       (bits.length?'<div class="rowSub">'+esc(bits.join(' · '))+'</div>':'')+
       '<div class="rowSub">📅 '+esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+'</div></div>'+
@@ -6917,7 +6949,71 @@ function teamCardHtml_(tr, canEdit, campus){
   h+= chips ? '<div class="teamStats">'+chips+'</div>'
     : (tr.status==='cancelled' ? '' : '<div class="rowSub" style="margin-top:6px">⚠️ '+esc(t('No numbers entered for this team yet'))+'</div>');
   if(tr.notes) h+='<div class="rowSub" style="margin-top:6px">'+esc(tr.notes)+'</div>';
+  if(tr.pending) h+='<div class="rowSub" style="margin-top:6px">'+esc(t('Counts on the dashboards once the team is marked arrived on the portal.'))+'</div>';
   return h+'</div>';
+}
+
+/* ---------- the teams calendar ----------
+   A month at a time, like Google Calendar: weeks start on Monday, each team
+   is a bar across the days it is here (split at the week's edge and carried
+   on the next row), stacked in lanes when teams overlap. Colour says where it
+   stands — pending (applied on the portal, not arrived yet), coming, here now,
+   been. Tap a bar for the team's card. Under the grid, the month's teams as a
+   list, which is what a phone reads best. */
+function calIso_(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function calKind_(tr, today){ return tr.pending ? 'pend' : tr.from<=today && tr.to>=today ? 'here' : tr.to<today ? 'past' : 'coming'; }
+function teamCalHtml_(campus, trips){
+  var today=todayStr(), ym=S.teamCalYm || today.slice(0,7);
+  var y=Number(ym.slice(0,4)), m=Number(ym.slice(5,7));
+  var first=new Date(y, m-1, 1), last=new Date(y, m, 0);
+  var start=new Date(first); start.setDate(1-((first.getDay()+6)%7));
+  var end=new Date(last); end.setDate(last.getDate()+(6-((last.getDay()+6)%7)));
+  var mStart=calIso_(first), mEnd=calIso_(last);
+  var live=trips.filter(function(tr){ return tr.status!=='cancelled' && tr.from && tr.to; })
+    .sort(function(a,b){ return a.from<b.from?-1:a.from>b.from?1:(a.to<b.to?1:-1); });
+  var h='<div class="card calCard" id="teamCal"><div class="calNav">'+
+    '<button class="weekArrow" id="calPrev" aria-label="'+esc(t('Previous month'))+'">‹</button>'+
+    '<div class="calTitle">'+esc(t(MONTH_SHORT[m-1]))+' '+y+'</div>'+
+    '<button class="weekArrow" id="calNext" aria-label="'+esc(t('Next month'))+'">›</button>'+
+    (ym!==today.slice(0,7) ? '<button class="linkbtn inline" id="calToday">'+esc(t('Today'))+'</button>' : '')+'</div>';
+  h+='<div class="calHead">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(d){ return '<span>'+esc(t(d))+'</span>'; }).join('')+'</div>';
+  for(var ws=new Date(start); ws<=end; ws.setDate(ws.getDate()+7)){
+    var days=[]; for(var i=0;i<7;i++){ var d=new Date(ws); d.setDate(ws.getDate()+i); days.push(calIso_(d)); }
+    var segs=[], lanes=[];
+    live.forEach(function(tr){
+      if(tr.to<days[0] || tr.from>days[6]) return;
+      var a=Math.max(0, days.indexOf(tr.from<days[0]?days[0]:tr.from)), b=days.indexOf(tr.to>days[6]?days[6]:tr.to);
+      var lane=0; while(lanes[lane]!==undefined && lanes[lane]>=a) lane++;
+      lanes[lane]=b;
+      segs.push({ tr:tr, a:a, b:b, lane:lane, cont:tr.from<days[0], more:tr.to>days[6] });
+    });
+    var rows=Math.max(2, lanes.length);
+    h+='<div class="calWeek" style="grid-template-rows:22px repeat('+rows+',20px)">';
+    days.forEach(function(iso, i){
+      var cls=(iso<mStart||iso>mEnd?' out':'')+(iso===today?' today':'');
+      h+='<div class="calDay'+cls+'" style="grid-column:'+(i+1)+';grid-row:1 / -1"><span class="calNum">'+Number(iso.slice(8,10))+'</span></div>';
+    });
+    segs.forEach(function(sg){
+      var k=calKind_(sg.tr, today);
+      h+='<button class="calBar '+k+(sg.cont?' cont':'')+(sg.more?' more':'')+(S.teamCalSel===sg.tr.id?' sel':'')+'" data-calteam="'+esc(sg.tr.id)+'" style="grid-column:'+(sg.a+1)+' / span '+(sg.b-sg.a+1)+';grid-row:'+(sg.lane+2)+'" title="'+esc(sg.tr.name)+'">'+esc(sg.tr.name)+'</button>';
+    });
+    h+='</div>';
+  }
+  h+='<div class="calLegend"><span class="calDot pend"></span>'+esc(t('Pending'))+'<span class="calDot coming"></span>'+esc(t('Coming'))+
+    '<span class="calDot here"></span>'+esc(t('Here now'))+'<span class="calDot past"></span>'+esc(t('Been'))+'</div></div>';
+  var sel=S.teamCalSel && live.filter(function(tr){ return tr.id===S.teamCalSel; })[0];
+  if(sel) h+=teamCardHtml_(sel, (S.teamTrips[campus]||{}).canEdit, campus);
+  var inMonth=live.filter(function(tr){ return tr.to>=mStart && tr.from<=mEnd; });
+  var people=0; inMonth.forEach(function(tr){ people+=Number(tr.size)||0; });
+  h+='<h3>'+esc(gpT('Teams in {month}',{month:t(MONTH_SHORT[m-1])+' '+y}))+' <small>· '+inMonth.length+(people?' · '+esc(gpT('{n} people',{n:people})):'')+'</small></h3>';
+  if(!inMonth.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No teams this month.'))+'</p></div>';
+  else h+='<div class="accCard">'+inMonth.map(function(tr){
+    var k=calKind_(tr, today);
+    return '<button class="calRow" data-calteam="'+esc(tr.id)+'"><span class="calDot '+k+'"></span><span style="flex:1;min-width:0"><b>'+esc(tr.name)+'</b>'+
+      '<span class="rowSub" style="display:block">'+esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+(tr.size?' · '+esc(gpT('{n} people',{n:tr.size})):'')+
+      (tr.pending?' · ⏳ '+esc(candStageLabel_(tr.portalStage)):'')+'</span></span></button>';
+  }).join('')+'</div>';
+  return h;
 }
 function teamBlank_(campus){
   return { id:'', campus:campus, name:'', org:'', country:'', from:'', to:'', size:'', males:'', females:'', couples:'', families:'',
@@ -6965,6 +7061,11 @@ function teamsMinistryHtml_(campus){
     '<p class="hint" style="margin:0 0 8px;overflow-wrap:anywhere">'+esc(S.teamError[campus])+'</p>'+
     '<button class="btn ghost" id="teamRetry" style="margin-top:0">'+esc(t('Try again'))+'</button></div></div>';
   if(!c) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  var view=S.teamView==='cal' ? 'cal' : 'list';
+  h+='<div class="campusSeg" style="max-width:none;margin-bottom:10px">'+
+    '<button class="campusBtn'+(view==='list'?' on':'')+'" data-teamview="list">📋 '+esc(t('Teams'))+'</button>'+
+    '<button class="campusBtn'+(view==='cal'?' on':'')+'" data-teamview="cal">📅 '+esc(t('Calendar'))+'</button></div>';
+  if(view==='cal') return h+teamCalHtml_(campus, c.trips)+'</div>';
   h+=teamPeriodBarHtml_();
   h+=teamsDashboardHtml_(campus, c.trips);
   if(c.canEdit){
@@ -6975,11 +7076,12 @@ function teamsMinistryHtml_(campus){
   h+='<h3>'+esc(gpT('Teams · {period}',{period:teamPeriodLabel_()}))+' <small>· '+shown.length+'</small></h3>';
   if(!shown.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No teams finished in this period.'))+'</p></div>';
   shown.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
-  var now=todayStr(), coming=c.trips.filter(function(tr){ return tr.status!=='cancelled' && tr.to>=now; })
+  var now=todayStr(), coming=c.trips.filter(function(tr){ return tr.status!=='cancelled' && (tr.to>=now || tr.pending); })
     .sort(function(a,b){ return a.from<b.from?-1:1; });
   if(coming.length){
-    h+='<h3>'+esc(t('Here now or coming'))+' <small>· '+coming.length+'</small></h3>';
-    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Enter their numbers once they leave — they join the dashboard then.'))+'</p>';
+    var comingPeople=0, pendN=0; coming.forEach(function(tr){ comingPeople+=Number(tr.size)||0; if(tr.pending) pendN++; });
+    h+='<h3 id="teamsComing">'+esc(t('Here now or coming'))+' <small>· '+coming.length+(comingPeople?' · '+esc(gpT('{n} people',{n:comingPeople})):'')+(pendN?' · '+esc(gpT('{n} pending',{n:pendN})):'')+'</small></h3>';
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Teams that applied on the portal stay pending until they have arrived. Enter their numbers once they leave — they join the dashboard then.'))+'</p>';
     coming.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
   }
   return h+'</div>';
@@ -9694,6 +9796,17 @@ function bindAway(){
     var toForm=function(){ var el=document.getElementById('teamFormCard'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
     document.querySelectorAll('[data-teamperiod]').forEach(function(b){
       b.onclick=function(){ gpTap(); S.teamPeriod=b.getAttribute('data-teamperiod'); render(); };
+    });
+    document.querySelectorAll('[data-teamview]').forEach(function(b){
+      b.onclick=function(){ gpTap(); S.teamView=b.getAttribute('data-teamview'); render(); };
+    });
+    var calShift=function(n){ var ym=S.teamCalYm||todayStr().slice(0,7), d=new Date(Number(ym.slice(0,4)), Number(ym.slice(5,7))-1+n, 1); S.teamCalYm=calIso_(d).slice(0,7); S.teamCalSel=null; render(); };
+    var cpv=document.getElementById('calPrev'); if(cpv) cpv.onclick=function(){ gpTap(); calShift(-1); };
+    var cnx=document.getElementById('calNext'); if(cnx) cnx.onclick=function(){ gpTap(); calShift(1); };
+    var ctd=document.getElementById('calToday'); if(ctd) ctd.onclick=function(){ gpTap(); S.teamCalYm=null; S.teamCalSel=null; render(); };
+    document.querySelectorAll('[data-calteam]').forEach(function(b){
+      b.onclick=function(){ gpTap(); var id=b.getAttribute('data-calteam'); S.teamCalSel = S.teamCalSel===id ? null : id; render();
+        var el=document.querySelector('[data-teamcard="'+id+'"]'); if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'}); };
     });
     var tys=document.getElementById('teamYearSel');
     if(tys) tys.onchange=function(){ S.teamYear=Number(tys.value); render(); };
