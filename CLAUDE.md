@@ -651,6 +651,11 @@ forms, documents and references follow.
   - Staff still edit everything in the Teams Database; `saveTeamTrip` keeps the link, and
     the card shows "🛂 From the portal". A team deleted there stays deleted: the tombstone
     keeps its `candidateId`.
+  - Applications submitted before the link existed, or whose sync was missed, are filled in
+    by `backfillTeamTrips_` every time the Teams Database is read (`getTeamTrips`, and so
+    `getMyBoot` for Outreach Teams staff). It covers submitted, open team applications with
+    no linked row at all, so a deleted team is never brought back. An application from before
+    the trip question takes its earliest and latest date answers.
 - **The timeline is derived on the server** (`portalAppOut_` → `portalSteps_` /
   `portalStatus_`): account → form → received → contact → documents & reference →
   interview → accepted → practical → arrived, walked from the CRM stage in

@@ -3072,7 +3072,12 @@ function teamAnswers_(c) { return (c && c.portal && ((c.portal.form && c.portal.
 function tripFromApp_(c, prev) {
   const a = teamAnswers_(c);
   const it = Array.isArray(a.itinerary) ? a.itinerary : [];
-  const base = it.filter(function (r) { return r && r.base; })[0] || it[0] || {};
+  let base = it.filter(function (r) { return r && r.base; })[0] || it[0] || {};
+  if (!isoDate_(base.from) || !isoDate_(base.to)) {
+    // an application from before the trip question: take its earliest and latest dates
+    const dates = Object.keys(a).map(function (k) { return isoDate_(a[k]); }).filter(Boolean).sort();
+    if (dates.length >= 2) base = { from: dates[0], to: dates[dates.length - 1] };
+  }
   const cut = function (v, n) { return v == null ? '' : String(v).trim().slice(0, n); };
   const merged = Object.assign({ metrics: {}, reached: {} }, prev || {}, {
     id: prev ? prev.id : 'ta_' + c.id,
@@ -3130,10 +3135,34 @@ async function withTeamRows_(rows) {
   derived.forEach(function (r) { dk[keyOf(r)] = 1; });
   return rows.filter(function (r) { return !(r.dept === TEAM_DEPT && r.ministry === TEAM_MIN && dk[keyOf(r)]); }).concat(derived);
 }
+/* Team applications submitted before the Teams Database link existed — or
+   whose sync was missed — get their team the next time the Teams Database is
+   read. Only submitted, open applications with no linked row at all: a team
+   deleted there keeps its tombstone (with its candidateId), so it is not
+   brought back. */
+async function backfillTeamTrips_() {
+  const cands = (await getCandidates_()).filter(function (c) { return c && c.type === 'team' && !c.archived && c.portal && c.portal.submittedAt; });
+  if (!cands.length) return 0;
+  const rows = await getTeamTripsRaw_();
+  const have = {};
+  rows.forEach(function (r) { if (r && r.candidateId) have[r.candidateId] = 1; });
+  const now = new Date().toISOString();
+  let added = 0;
+  cands.forEach(function (c) {
+    if (have[c.id]) return;
+    const rec = tripFromApp_(c, null);
+    if (!rec) return;   // no dates to put it on yet
+    rec.updated = now; rec.updatedBy = 'portal';
+    rows.push(rec); added++;
+  });
+  if (added) await writeJSON('teamTrips', rows);
+  return added;
+}
 async function getTeamTrips(username, pin, campus) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   campus = str_(campus, 40) || s.campus;
+  await backfillTeamTrips_();
   const trips = (await getTeamTrips_()).filter(function (t) { return t.campus === campus; })
     .sort(function (a, b) { return a.from < b.from ? 1 : a.from > b.from ? -1 : 0; });
   return { ok: true, campus: campus, trips: trips, canEdit: canLogFor_(s, campus, TEAM_DEPT, TEAM_MIN) };
