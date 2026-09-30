@@ -2867,6 +2867,68 @@ function teamEntryRows_(trips) {
   });
   return Object.keys(acc).map(function (k) { return acc[k]; });
 }
+/* ==================== a team application → the Teams Database ====================
+   Every submitted team application IS a team in the Teams Database (the
+   'teamTrips' blob, linked by candidateId), so Outreach Teams sees it the
+   day it comes in. Its name, where it is from, its Siem Reap dates and head
+   counts follow the application (syncTeamTrip_ on submit, on every answer
+   change, and on close / reopen); its numbers — the Outreach Teams metrics —
+   the team enters on the portal (portalSaveTeamNumbers) and staff can edit
+   in the Teams Database as ever. Deleting it there keeps it deleted. */
+function teamAnswers_(c) { return (c && c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}; }
+function tripFromApp_(c, prev) {
+  const a = teamAnswers_(c);
+  const it = Array.isArray(a.itinerary) ? a.itinerary : [];
+  const base = it.filter(function (r) { return r && r.base; })[0] || it[0] || {};
+  const cut = function (v, n) { return v == null ? '' : String(v).trim().slice(0, n); };
+  const merged = Object.assign({ metrics: {}, reached: {} }, prev || {}, {
+    id: prev ? prev.id : 'ta_' + c.id,
+    name: cut(a.teamName, 120) || c.name, org: cut(a.teamName, 120),
+    country: cut(a.location, 60) || (prev && prev.country) || c.country || '',
+    from: base.from, to: base.to, size: a.size, males: a.males, females: a.females, couples: a.couples,
+    focus: cut(a.focus, 200) || (prev && prev.focus) || '',
+    status: c.archived ? 'cancelled' : (prev && prev.status) || 'active'
+  });
+  const rec = cleanTrip_(merged, c.campus || PORTAL_DEFAULT_CAMPUS);
+  if (!rec) return null;
+  rec.candidateId = c.id;
+  return rec;
+}
+async function syncTeamTrip_(c, by, status) {
+  if (!c || c.type !== 'team' || !(c.portal && c.portal.submittedAt)) return null;
+  const rows = await getTeamTripsRaw_();
+  const idx = rows.findIndex(function (r) { return r && r.candidateId === c.id; });
+  if (idx > -1 && rows[idx].deleted) return null;
+  const rec = tripFromApp_(c, idx > -1 ? rows[idx] : null);
+  if (!rec) return null;   // no Siem Reap dates yet
+  if (status) rec.status = status;
+  rec.updated = new Date().toISOString(); rec.updatedBy = by;
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('teamTrips', rows);
+  return rec;
+}
+async function linkedTrip_(c) {
+  if (!c || c.type !== 'team') return null;
+  return (await getTeamTripsRaw_()).find(function (r) { return r && r.candidateId === c.id && !r.deleted; }) || null;
+}
+/* The team's own numbers, from the portal: the same metrics the Teams
+   Database form asks for, and men / women reached. */
+async function portalSaveTeamNumbers(username, pin, metrics, reached) {
+  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  const c = a.cand;
+  if (c.type !== 'team') return { ok: false, err: 'not_team' };
+  let trip = await linkedTrip_(c);
+  if (!trip) trip = await syncTeamTrip_(c, a.s.id);
+  if (!trip) return { ok: false, err: 'no_trip' };
+  const rec = cleanTrip_(Object.assign({}, trip, { metrics: metrics && typeof metrics === 'object' ? metrics : {}, reached: reached && typeof reached === 'object' ? reached : {} }), trip.campus);
+  if (!rec) return { ok: false, err: 'no_trip' };
+  rec.candidateId = c.id; rec.updated = new Date().toISOString(); rec.updatedBy = a.s.id;
+  const rows = await getTeamTripsRaw_();
+  const idx = rows.findIndex(function (r) { return r && r.id === rec.id; });
+  if (idx > -1) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('teamTrips', rows);
+  return portalBoot(username, pin);
+}
 async function withTeamRows_(rows) {
   const derived = teamEntryRows_(await getTeamTrips_());
   if (!derived.length) return rows;
@@ -2894,6 +2956,7 @@ async function saveTeamTrip(username, pin, trip) {
   rec.updated = new Date().toISOString(); rec.updatedBy = s.id;
   const rows = await getTeamTripsRaw_();
   const idx = rows.findIndex(function (r) { return r && r.id === rec.id; });
+  if (idx > -1 && rows[idx].candidateId) rec.candidateId = rows[idx].candidateId;   // still the portal application's team
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('teamTrips', rows);
   return getTeamTrips(username, pin, campus);
@@ -2908,6 +2971,7 @@ async function deleteTeamTrip(username, pin, id) {
   const rows = await getTeamTripsRaw_();
   const idx = rows.findIndex(function (r) { return r && r.id === id; });
   const tomb = { id: id, campus: cur.campus, deleted: true, updated: new Date().toISOString(), updatedBy: s.id };
+  if (cur.candidateId) tomb.candidateId = cur.candidateId;   // so the application does not bring it back
   if (idx > -1) rows[idx] = tomb; else rows.push(tomb);
   await writeJSON('teamTrips', rows);
   return getTeamTrips(username, pin, cur.campus);
@@ -3108,14 +3172,28 @@ async function hrUnarchive(username, pin, staffId) {
    record can point at it (staffId). Same gate as the rest of HR. */
 const CAND_TYPES = ['staff', 'volunteer', 'student', 'team'];
 const CAND_STAGES = ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'];
+/* A short-term team moves through its own stages — there is no interview,
+   only calls: a 1st call to get to know each other and go over logistics,
+   then the documents and the visa, then a 2nd call for cultural orientation
+   with the whole team. Team records from before this map across on read. */
+const TEAM_STAGES = ['new', 'applied', 'call1', 'docs', 'call2', 'practical', 'arrived'];
+const TEAM_STAGE_FROM = { contacted: 'call1', interview: 'call1', accepted: 'docs' };
+function stagesFor_(type) { return type === 'team' ? TEAM_STAGES : CAND_STAGES; }
+function teamStage_(stage) { return TEAM_STAGE_FROM[stage] || stage; }
 const CAND_FOLLOWUP_DAYS = 7, CAND_MAX = 2000, CAND_LOG_MAX = 300;
-async function getCandidates_() { return readJSON('candidates', []); }
+async function getCandidates_() {
+  return (await readJSON('candidates', [])).map(function (c) {
+    if (c && c.type === 'team' && TEAM_STAGE_FROM[c.stage]) c.stage = TEAM_STAGE_FROM[c.stage];
+    return c;
+  });
+}
 function cleanCandidate_(c, prev, me) {
   if (!c || typeof c !== 'object') return null;
   const name = str_(c.name, 120);
   if (!name) return null;
   const type = CAND_TYPES.indexOf(c.type) > -1 ? c.type : (prev ? prev.type : 'staff');
-  const stage = CAND_STAGES.indexOf(c.stage) > -1 ? c.stage : (prev ? prev.stage : 'new');
+  const wanted = type === 'team' ? teamStage_(c.stage) : c.stage;
+  const stage = stagesFor_(type).indexOf(wanted) > -1 ? wanted : (prev ? (type === 'team' ? teamStage_(prev.stage) : prev.stage) : 'new');
   const now = new Date().toISOString();
   return {
     id: prev ? prev.id : hrId_('cd'), campus: str_(c.campus, 40) || (prev ? prev.campus : me.campus),
@@ -3190,6 +3268,7 @@ async function hrArchiveCandidate(username, pin, id, info) {
   else rows[idx].archived = { at: now.slice(0, 10), reason: str_(info && info.reason, 300), by: g.s.id };
   rows[idx].updated = now; rows[idx].updatedBy = g.s.id;
   await writeJSON('candidates', rows);
+  await syncTeamTrip_(rows[idx], g.s.id, info === null ? 'active' : 'cancelled');   // a closed team application is a cancelled team
   return { ok: true, candidate: rows[idx] };
 }
 
@@ -3269,48 +3348,58 @@ function audienceOf_(c) { return cleanCountry_(c && c.country) === 'Cambodia' ? 
 function needsVisa_(c) { return audienceOf_(c) === 'international'; }
 function refNeeded_(c) { return !(c && (c.type === 'team' || (c.type === 'student' && audienceOf_(c) === 'khmer'))); }
 function formKeyOf_(c) { return c.type === 'student' ? (PORTAL_SCHOOLS.indexOf(c.school) > -1 ? c.school : 'dts') : (PORTAL_FORMS_DEFAULT[c.type] ? c.type : 'staff'); }
-function portalStageIdx_(stage) { const i = PORTAL_STAGE_ORDER.indexOf(stage); return i === -1 ? 0 : i; }
+function portalStageIdx_(stage, type) { const i = (type === 'team' ? TEAM_STAGES : PORTAL_STAGE_ORDER).indexOf(stage); return i === -1 ? 0 : i; }
 /* What the applicant is told, derived on the server from the record so the
    dashboard and the staff view can never disagree about where someone is. */
 function portalStatus_(c) {
   if (c.archived) return 'closed';
   const submitted = !!(c.portal && c.portal.submittedAt);
+  if (c.type === 'team') return c.stage === 'new' ? (submitted ? 'pending' : 'draft') : c.stage === 'applied' ? 'pending' : c.stage;   // call1 | docs | call2 | practical | arrived
   if (c.stage === 'new') return submitted ? 'pending' : 'draft';
   if (c.stage === 'applied') return 'pending';
   if (c.stage === 'contacted') return 'in_review';
   return c.stage;   // interview | accepted | practical | arrived
 }
 /* ==================== a team's journey ====================
-   A short-term team runs differently from a student: no reference, and the
-   practical part — passports, the letter of invitation, flights, e-visas,
-   orientation — is most of it. Each step is done AUTOMATICALLY when the
-   portal can see it happen (a document uploaded, a stage reached) and by a
-   STAFF TICK when it happens outside the portal (the video call, the
-   orientation, the last check-in). A tick moves the CRM stage along with it
-   (portalTeamStep), so the staff list and the team's status keep telling the
-   same story. Passport copies, the letter of invitation and the e-visa are
-   only asked of a team that needs a visa (not one from Cambodia). */
-const TEAM_TICKS = ['call', 'accepted', 'orientation', 'checkin', 'arrived'];
+   A short-term team runs differently from a student: no reference and no
+   interview. Its stages (TEAM_STAGES) are New → Applied → 1st call →
+   Awaiting documents → 2nd call (cultural orientation) → Getting ready →
+   Arrived, and inside Awaiting documents the order matters:
+     1. the team uploads passport copies for everyone, a team photo with
+        names, and the flight itineraries (the visa process can't start
+        without flights);
+     2. then the visa part opens — we send the letter of invitation and its
+        supporting documents (uploaded by staff, from: 'us');
+     3. the team applies, and uploads the approved e-visas.
+   A team that needs no visa (from Cambodia) skips 2 and 3.
+   Each step ticks itself when the portal can see it happen (a document
+   uploaded, a stage reached), and by a STAFF TICK when it happens outside
+   the portal (the two calls, arrival). The stage follows the steps
+   forward on its own (teamAutoStage_): the 1st call done → Awaiting
+   documents; everything in → 2nd call; the 2nd call done → Getting ready. */
+const TEAM_TICKS = ['call1', 'call2', 'arrived'];
 function teamFlags_(c) { return (c && c.portal && c.portal.team) || {}; }
 function hasDoc_(c, kind) { return docsOf_(c).some(function (d) { return d && d.kind === kind; }); }
+function teamDocsIn_(c) { return hasDoc_(c, 'passports') && hasDoc_(c, 'photo') && (hasDoc_(c, 'flights') || !!((c.portal && c.portal.visa) || {}).flightsConfirmed); }
+function teamVisaDone_(c) { return !needsVisa_(c) || hasDoc_(c, 'evisa'); }
 function teamSteps_(c) {
-  const idx = portalStageIdx_(c.stage);
-  const at = function (stage) { return idx >= portalStageIdx_(stage); };
+  const idx = portalStageIdx_(c.stage, 'team');
+  const at = function (stage) { return idx >= portalStageIdx_(stage, 'team'); };
   const f = teamFlags_(c), visa = (c.portal && c.portal.visa) || {}, intl = needsVisa_(c);
   const submitted = !!(c.portal && c.portal.submittedAt) || at('applied');
-  const all = at('arrived');
+  const past = at('call2');   // the documents are behind them
   const steps = [
     { id: 'account', done: true, who: 'you' },
-    { id: 'form', done: submitted, who: 'you' },
-    { id: 'call', done: all || !!f.call || at('accepted'), who: 'us', tick: true },
-    { id: 'accepted', done: at('accepted'), who: 'us', tick: true },
-    intl && { id: 'passports', done: all || hasDoc_(c, 'passports'), who: 'you', auto: true },
-    intl && { id: 'invitation', done: all || hasDoc_(c, 'invitation') || !!visa.invitationSent, who: 'us', auto: true },
-    { id: 'flights', done: all || hasDoc_(c, 'flights') || !!visa.flightsConfirmed, who: 'you', auto: true },
-    intl && { id: 'evisa', done: all || hasDoc_(c, 'evisa'), who: 'you', auto: true },
-    { id: 'orientation', done: all || !!f.orientation, who: 'us', tick: true },
-    { id: 'checkin', done: all || !!f.checkin, who: 'us', tick: true },
-    { id: 'arrived', done: all, who: 'us', tick: true }
+    { id: 'form', done: submitted, who: 'you', auto: true },
+    { id: 'call1', done: !!f.call1 || at('docs'), who: 'us', tick: true },
+    { id: 'passports', done: past || hasDoc_(c, 'passports'), who: 'you', auto: true, group: 'docs' },
+    { id: 'photo', done: past || hasDoc_(c, 'photo'), who: 'you', auto: true, group: 'docs' },
+    { id: 'flights', done: past || hasDoc_(c, 'flights') || !!visa.flightsConfirmed, who: 'you', auto: true, group: 'docs' },
+    intl && { id: 'invitation', done: past || hasDoc_(c, 'invitation') || !!visa.invitationSent, who: 'us', auto: true, group: 'visa' },
+    intl && { id: 'evisa', done: past || hasDoc_(c, 'evisa'), who: 'you', auto: true, group: 'visa' },
+    { id: 'call2', done: !!f.call2 || at('practical'), who: 'us', tick: true },
+    { id: 'practical', done: at('arrived'), who: 'you' },
+    { id: 'arrived', done: at('arrived'), who: 'us', tick: true }
   ].filter(Boolean);
   let current = -1;
   steps.forEach(function (st, i) { if (current === -1 && !st.done) current = i; });
@@ -3318,6 +3407,24 @@ function teamSteps_(c) {
   steps.forEach(function (st, i) { st.state = st.done ? 'done' : (i === current ? 'current' : 'todo'); });
   if (c.archived) steps.forEach(function (st) { if (st.state === 'current') st.state = 'todo'; });
   return steps;
+}
+/* Moves a team's stage forward to where its steps say it is — never back.
+   Returns true when it moved, and logs the move as `by`. */
+function teamAutoStage_(c, by) {
+  if (!c || c.type !== 'team' || c.archived) return false;
+  const f = teamFlags_(c);
+  const idx = function (st) { return portalStageIdx_(st, 'team'); };
+  let target = c.stage;
+  const forward = function (st) { if (idx(st) > idx(target)) target = st; };
+  if (c.portal && c.portal.submittedAt) forward('applied');
+  if (f.call1) forward('docs');
+  if (idx(target) >= idx('docs') && teamDocsIn_(c) && teamVisaDone_(c)) forward('call2');
+  if (f.call2) forward('practical');
+  if (target === c.stage) return false;
+  const now = new Date().toISOString();
+  c.stage = target;
+  c.log = (Array.isArray(c.log) ? c.log : []).concat([{ at: now, by: by, kind: 'stage', text: target }]).slice(-CAND_LOG_MAX);
+  return true;
 }
 function portalSteps_(c) {
   if (c && c.type === 'team') return teamSteps_(c);
@@ -3543,7 +3650,13 @@ async function portalBoot(username, pin) {
   if (isApplicant_(s)) {
     const cand = await candidateFor_(cands, s);
     if (!cand) return { ok: false, err: 'no_application' };
-    return { ok: true, role: 'applicant', me: portalMeOut_(s), application: portalAppOut_(cand), form: (await getForms_())[formKeyOf_(cand)] };
+    const out = { ok: true, role: 'applicant', me: portalMeOut_(s), application: portalAppOut_(cand), form: (await getForms_())[formKeyOf_(cand)] };
+    if (cand.type === 'team') {
+      const trip = await linkedTrip_(cand);
+      out.application.trip = trip ? { id: trip.id, from: trip.from, to: trip.to, metrics: trip.metrics || {}, reached: trip.reached || {} } : null;
+      out.metricOverrides = (await getMetricOverrides_()).filter(function (o) { return o.dept === TEAM_DEPT && o.ministry === TEAM_MIN; });
+    }
+    return out;
   }
   if (!canPortal_(s)) return { ok: false, err: 'not_authorized' };
   const rows = await getStaff_();
@@ -3553,7 +3666,7 @@ async function portalBoot(username, pin) {
     applicants: cands.filter(function (c) { return portalMaySee_(s, c); }).map(function (c) { return portalCandOut_(c, byId); }),
     scope: portalTypes_(s),
     staff: rows.filter(function (r) { return canPortal_(r); }).map(portalStaffOut_),
-    stages: CAND_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS, campuses: PORTAL_CAMPUSES,
+    stages: CAND_STAGES, teamStages: TEAM_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS, campuses: PORTAL_CAMPUSES,
     forms: await getForms_()
   };
 }
@@ -3754,6 +3867,7 @@ async function portalSubmit(username, pin, answers) {
   }
   cand.updated = now; cand.updatedBy = a.s.id;
   await writeJSON('candidates', a.rows);
+  await syncTeamTrip_(cand, a.s.id);   // a team shows up in the Teams Database the day it applies
   return portalBoot(username, pin);
 }
 /* After submitting, the applicant may still correct their answers — teams in
@@ -3775,6 +3889,7 @@ async function portalUpdateAnswers(username, pin, answers) {
   cand.log = (Array.isArray(cand.log) ? cand.log : []).concat([{ at: now, by: a.s.id, kind: 'note', text: 'Updated their application answers' }]).slice(-CAND_LOG_MAX);
   cand.updated = now; cand.updatedBy = a.s.id;
   await writeJSON('candidates', a.rows);
+  await syncTeamTrip_(cand, a.s.id);
   return portalBoot(username, pin);
 }
 /* ==================== applicant documents ====================
@@ -3785,13 +3900,13 @@ async function portalUpdateAnswers(username, pin, answers) {
    Each file is its own blob ('pdoc:<id>'); the record keeps only the list.
    Readable by the applicant themself and by portal staff who may see that
    record — nobody else. */
-/* `from: 'us'` is a document the base sends the team (the letter of
-   invitation): staff upload it, the team opens it, and only staff can remove
-   it. The team photo is optional now — the passports are what the letter of
-   invitation needs. */
+/* A team sends passport copies for everyone, a team photo with names and the
+   flight itineraries first; then comes the visa part — the letter of
+   invitation and its supporting documents, `from: 'us'` (staff upload them,
+   the team opens them, only staff can remove them), and the team's e-visas. */
 const PORTAL_DOC_KINDS = {
-  team: [{ id: 'passports', required: true }, { id: 'invitation', required: false, from: 'us' }, { id: 'flights', required: false },
-    { id: 'evisa', required: false }, { id: 'photo', required: false }]
+  team: [{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: true },
+    { id: 'invitation', required: false, from: 'us' }, { id: 'evisa', required: false }]
 };
 const PORTAL_DOCS_MAX = 40;
 function docKindsFor_(c) { return PORTAL_DOC_KINDS[c && c.type] || []; }
@@ -3832,6 +3947,7 @@ async function portalUploadDoc(username, pin, kind, name, mime, base64, candidat
   await writeJSON('pdoc:' + meta.id, { id: meta.id, candidateId: cand.id, kind: kind, name: meta.name, mime: mime, data: base64, added: meta.added, by: a.s.id });
   cand.portal.docs = list.concat([meta]);
   cand.updated = meta.added; cand.updatedBy = a.s.id;
+  teamAutoStage_(cand, a.s.id);   // the last document in moves a team on to its 2nd call
   await writeJSON('candidates', a.rows);
   return { ok: true, doc: docMeta_(meta), docs: cand.portal.docs.map(docMeta_), application: portalAppOut_(cand) };
 }
@@ -3888,16 +4004,18 @@ async function portalViewAs(username, pin, opts) {
   const g = await hrGate_(username, pin); if (g.out) return g.out;
   const type = PORTAL_TYPES.indexOf(opts.type) > -1 ? opts.type : 'student';
   const school = type === 'student' ? (PORTAL_SCHOOLS.indexOf(opts.school) > -1 ? opts.school : 'dts') : '';
-  const stage = PREVIEW_STAGES.indexOf(opts.stage) > -1 ? opts.stage : 'new';
+  const stage = (type === 'team' ? TEAM_STAGES : PREVIEW_STAGES).indexOf(opts.stage) > -1 ? opts.stage : 'new';
   const khmer = opts.audience === 'khmer';
   const campus = PORTAL_CAMPUSES[opts.campus] ? opts.campus : 'siemreap';
   if (school && PORTAL_CAMPUSES[campus].indexOf(school) === -1) return { ok: false, err: 'school_not_at_campus' };
-  const idx = portalStageIdx_(stage), now = new Date().toISOString();
+  const idx = portalStageIdx_(stage, type), now = new Date().toISOString();
+  const tIdx = function (st) { return portalStageIdx_(st, 'team'); };
   const cand = { id: 'preview', campus: campus, name: type === 'team' ? 'Sample Team' : 'Sample Applicant', type: type, school: school, stage: stage,
     country: khmer ? 'Cambodia' : 'Australia', email: 'sample@example.org', phone: khmer ? '+855 12 345 678' : '+61 400 000 000', messenger: 'whatsapp', source: 'portal',
-    portal: { createdAt: now, submittedAt: idx >= portalStageIdx_('applied') ? now : null, form: idx >= portalStageIdx_('applied') ? { answers: {}, submittedAt: now } : null, draft: null,
-      visa: { flightsConfirmed: idx >= portalStageIdx_('practical'), invitationSent: idx >= portalStageIdx_('practical') },
-      team: { call: idx >= portalStageIdx_('interview') ? now : null, orientation: idx >= portalStageIdx_('practical') ? now : null },
+    portal: { createdAt: now, submittedAt: idx >= portalStageIdx_('applied', type) ? now : null, form: idx >= portalStageIdx_('applied', type) ? { answers: {}, submittedAt: now } : null, draft: null,
+      visa: type === 'team' ? { flightsConfirmed: idx >= tIdx('call2'), invitationSent: idx >= tIdx('call2') }
+        : { flightsConfirmed: idx >= portalStageIdx_('practical'), invitationSent: idx >= portalStageIdx_('practical') },
+      team: { call1: idx >= tIdx('docs') ? now : null, call2: idx >= tIdx('practical') ? now : null },
       referenceDone: idx >= portalStageIdx_('interview'), references: idx >= portalStageIdx_('interview') ? [{ id: 'ref_sample', usedAt: now, leaderName: 'Sample Leader', createdAt: now }] : [] },
     log: [], archived: null, created: now, updated: now };
   const me = { id: 'preview', name: cand.name, username: 'sample', email: cand.email, phone: cand.phone, messenger: 'whatsapp', country: cand.country, campus: campus, type: type, school: school };
@@ -4013,11 +4131,11 @@ async function portalSetVisaFlags(username, pin, candidateId, flags) {
   const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
   return { ok: true, candidate: portalCandOut_(a.cand, byId) };
 }
-/* A staff tick on a team's journey (teamSteps_). The video call, the
-   orientation and the last check-in are dated flags on the record; Accepted
-   and Arrived ARE stages. A tick only ever moves the stage forward (call →
-   interview, orientation / check-in → getting ready); unticking Accepted or
-   Arrived steps the stage back one. Every change is logged. */
+/* A staff tick on a team's journey (teamSteps_): the 1st call, the 2nd call
+   (cultural orientation) and arrival. The calls are dated flags on the
+   record and move the stage forward through teamAutoStage_; Arrived is the
+   stage itself, and unticking it steps back to Getting ready. Every change
+   is logged. */
 async function portalTeamStep(username, pin, candidateId, step, done) {
   const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
   const c = a.cand;
@@ -4026,20 +4144,18 @@ async function portalTeamStep(username, pin, candidateId, step, done) {
   done = !!done;
   const now = new Date().toISOString();
   c.portal = c.portal || {};
-  const before = c.stage;
-  const forward = function (stage) { if (portalStageIdx_(stage) > portalStageIdx_(c.stage)) c.stage = stage; };
-  if (step === 'accepted') { if (done) forward('accepted'); else if (portalStageIdx_(c.stage) >= portalStageIdx_('accepted')) c.stage = 'interview'; }
-  else if (step === 'arrived') { if (done) c.stage = 'arrived'; else if (c.stage === 'arrived') c.stage = 'practical'; }
-  else {
+  const label = { call1: '1st call', call2: '2nd call — cultural orientation', arrived: 'Arrived' }[step];
+  c.log = (Array.isArray(c.log) ? c.log : []).concat([{ at: now, by: a.s.id, kind: 'note', text: (done ? '✓ ' : '✗ ') + label }]).slice(-CAND_LOG_MAX);
+  if (step === 'arrived') {
+    const before = c.stage;
+    if (done) c.stage = 'arrived'; else if (c.stage === 'arrived') c.stage = 'practical';
+    if (c.stage !== before) c.log = c.log.concat([{ at: now, by: a.s.id, kind: 'stage', text: c.stage }]).slice(-CAND_LOG_MAX);
+  } else {
     const flags = Object.assign({}, teamFlags_(c));
     flags[step] = done ? now : null;
     c.portal.team = flags;
-    if (done) forward(step === 'call' ? 'interview' : 'practical');
+    teamAutoStage_(c, a.s.id);
   }
-  const label = { call: 'Video call', accepted: 'Accepted', orientation: 'Cultural orientation', checkin: 'Last check-in', arrived: 'Arrived' }[step];
-  let log = (Array.isArray(c.log) ? c.log : []).concat([{ at: now, by: a.s.id, kind: 'note', text: (done ? '✓ ' : '✗ ') + label }]);
-  if (c.stage !== before) log = log.concat([{ at: now, by: a.s.id, kind: 'stage', text: c.stage }]);
-  c.log = log.slice(-CAND_LOG_MAX);
   c.updated = now; c.updatedBy = a.s.id;
   await writeJSON('candidates', a.rows);
   const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
@@ -4057,6 +4173,7 @@ async function portalStaffSaveAnswers(username, pin, candidateId, answers) {
   cand.log = (Array.isArray(cand.log) ? cand.log : []).concat([{ at: now, by: a.s.id, kind: 'note', text: 'Edited the application answers' }]).slice(-CAND_LOG_MAX);
   cand.updated = now; cand.updatedBy = a.s.id;
   await writeJSON('candidates', a.rows);
+  await syncTeamTrip_(cand, a.s.id);
   const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
   return { ok: true, candidate: portalCandOut_(cand, byId) };
 }
@@ -4217,6 +4334,7 @@ const HANDLERS = {
   portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
   portalTeamStep: function (a) { return portalTeamStep(a[0], a[1], a[2], a[3], a[4]); },
+  portalSaveTeamNumbers: function (a) { return portalSaveTeamNumbers(a[0], a[1], a[2], a[3]); },
   portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); },
   portalListAccounts: function (a) { return portalListAccounts(a[0], a[1]); },
   portalCreateApplicant: function (a) { return portalCreateApplicant(a[0], a[1], a[2]); },

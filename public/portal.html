@@ -125,6 +125,9 @@ textarea { min-height:80px; resize:vertical; }
 .whoTag { font-size:10.5px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; border-radius:999px; padding:1px 7px; margin-left:4px; vertical-align:2px; border:1px solid var(--border2); color:var(--muted); }
 .whoTag.you { color:var(--ink); border-color:var(--ink); }
 .flowList { list-style:none; margin:0; padding:0; font-size:14px; }
+.stepGroup { font-size:10.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin:0 0 2px; }
+.numRow { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.numRow input { width:96px; text-align:right; }
 .flowList li { padding:5px 8px; border-radius:8px; }
 .flowList li.cur { background:var(--surface2); font-weight:600; }
 .flowList li.auto { color:var(--muted); } .flowList li.auto.done { color:var(--ink); }
@@ -346,7 +349,7 @@ function applyLabel_(type, school){
   if(type==='staff') return t('Staff'); if(type==='volunteer') return t('Volunteer'); if(type==='team') return t('Short-term team');
   return type||'—';
 }
-var STATUS_LABEL = { draft:'Not submitted yet', pending:'Application pending', in_review:'In review — we’ll be in touch', interview:'Interview stage', accepted:'Accepted!', practical:'Getting ready', arrived:'Arrived', closed:'Closed' };
+var STATUS_LABEL = { call1:'1st call', docs:'Awaiting documents', call2:'2nd call — cultural orientation', draft:'Not submitted yet', pending:'Application pending', in_review:'In review — we’ll be in touch', interview:'Interview stage', accepted:'Accepted!', practical:'Getting ready', arrived:'Arrived', closed:'Closed' };
 var STATUS_NOTE = {
   draft:'Fill out your application when you are ready — it saves as you go.',
   pending:'We have your application. One of our team will message you on {app} soon.',
@@ -362,25 +365,29 @@ var STEP_NOTE = { form:'Your answers save as a draft — come back any time.', c
 var SUBITEM_LABEL = { documents:'Documents', reference:'Leader reference' };
 /* A team's own journey (teamSteps_ in api.js): what each step is called, a
    line on what it means while it is still ahead, and who does it. */
-var TEAM_STEP_LABEL = { account:'Create your account', form:'Send your application', call:'Video call with our team', accepted:'Your team is accepted',
-  passports:'Passport copies', invitation:'Letter of invitation', flights:'Flight itineraries', evisa:'E-visas', orientation:'Cultural orientation',
-  checkin:'Last check-in before you travel', arrived:'Arrival at the base' };
+var TEAM_STEP_LABEL = { account:'Create your account', form:'Send your application', call1:'1st call — getting to know each other',
+  passports:'Passport copies for the whole team', photo:'A team photo with everyone’s names', flights:'Flight itineraries',
+  invitation:'Letter of invitation & supporting documents', evisa:'E-visas approved', call2:'2nd call — cultural orientation with your team',
+  practical:'Getting ready to travel', arrived:'Arrival at the base' };
 var TEAM_STEP_NOTE = {
   form:'Your answers save as a draft — come back any time.',
-  call:'A video call between your team leader and ours. We message you to find a time.',
-  accepted:'We let you know as soon as your team is confirmed.',
-  passports:'Needed as soon as possible — we write your letter of invitation from them. Upload them under Documents.',
-  invitation:'We send it once we have your passport copies. It appears under Documents for you to download.',
-  flights:'Upload your itineraries once they are booked — we arrange your airport pick-up from them.',
-  evisa:'Apply at evisa.gov.kh with your letter of invitation, then upload each person’s e-visa under Documents.',
-  orientation:'Time with us to prepare for Cambodian culture and serving here.',
-  checkin:'A last call to go over the details before you fly.'
+  call1:'A video call to get to know each other and go over the logistics. We message you to find a time.',
+  passports:'A copy of the photo page of every team member’s passport. Upload them under Documents.',
+  photo:'Write each person’s name on it, or send a list of names with it.',
+  flights:'Important — we need them to start your visa process, and we arrange your airport pick-up from them.',
+  invitation:'We send these once your passports, team photo and flights are in. They appear under Documents for you to download.',
+  evisa:'Apply at evisa.gov.kh with the letter of invitation. Once the e-visas are approved, upload them under Documents.',
+  call2:'A call with your whole team to prepare for Cambodian culture and serving here.',
+  practical:'Pack, pray and get ready. Message us with any last questions.'
 };
+var TEAM_GROUP_LABEL = { docs:'Awaiting documents', visa:'Visa' };
 var TEAM_STATUS_NOTE = {
-  accepted:'Welcome! Next come your passport copies, the letter of invitation, flights and e-visas — each step is below.',
-  practical:'Nearly there — orientation and a last check-in before you travel.'
+  call1:'We will set up a first video call to get to know each other and go over the logistics — watch for a message on {app}.',
+  docs:'Next: passport copies, a team photo and your flight itineraries. Once they are in, the visa steps open.',
+  call2:'Your documents and visas are in. Next is a call with your whole team for cultural orientation.',
+  practical:'Nearly there — get ready to travel. Add your team’s numbers below as you go.'
 };
-var STAGE_LABEL = { 'new':'New', contacted:'Contacted', applied:'Applied', interview:'Interview', accepted:'Accepted', practical:'Getting ready', arrived:'Arrived' };
+var STAGE_LABEL = { call1:'1st call', docs:'Awaiting documents', call2:'2nd call — orientation', 'new':'New', contacted:'Contacted', applied:'Applied', interview:'Interview', accepted:'Accepted', practical:'Getting ready', arrived:'Arrived' };
 var MESSENGER_LABEL = { whatsapp:'WhatsApp', telegram:'Telegram' };
 function chatHref_(messenger, phone){
   var digits=String(phone||'').replace(/\D/g,''); if(!digits) return '';
@@ -611,7 +618,8 @@ function meHtml_(){
     '<p class="sub" style="margin:12px 0 0">'+esc(gpT(statusNote_(app), {app:appName, campus:campusName_(app.campus||DEFAULT_CAMPUS)}))+'</p></div>';
   var isTeam=app.type==='team', LBL=isTeam?TEAM_STEP_LABEL:STEP_LABEL, NOTE=isTeam?TEAM_STEP_NOTE:STEP_NOTE;
   h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Where you are'))+'</h3><ol class="timeline" id="timeline">'+app.steps.map(function(st, i){
-    return '<li class="step '+st.state+'" data-step="'+st.id+'"><span class="dot">'+(st.state==='done'?'✓':(i+1))+'</span><div>'+
+    var grp = isTeam && st.group && (!app.steps[i-1] || app.steps[i-1].group!==st.group) ? '<div class="stepGroup">'+esc(t(TEAM_GROUP_LABEL[st.group]||''))+'</div>' : '';
+    return '<li class="step '+st.state+'" data-step="'+st.id+'"><span class="dot">'+(st.state==='done'?'✓':(i+1))+'</span><div>'+grp+
       '<div class="stepName">'+esc(t(LBL[st.id]||st.id))+(isTeam && st.state!=='done' && st.who ? ' <span class="whoTag '+esc(st.who)+'">'+esc(st.who==='you' ? t('You') : t('Us'))+'</span>' : '')+'</div>'+
       (NOTE[st.id] && st.state!=='done' ? '<div class="stepNote">'+esc(t(NOTE[st.id]))+'</div>' : '')+
       (st.items ? '<ul class="subItems">'+st.items.map(function(it){ return '<li class="'+(it.done?'done':'')+'">'+(it.done?'✓':'○')+' '+esc(t(SUBITEM_LABEL[it.id]||it.id))+(it.done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; }).join('')+'</ul>' : '')+
@@ -627,9 +635,10 @@ function meHtml_(){
         (P.showAnswers ? answersHtml_(d.form, P.answers, app.audience) : '')
       : '<p class="sub" style="margin:0 0 8px">'+esc(done ? gpT('{done} of {total} answered — pick up where you left off.',{done:done,total:total}) : t('A few sections about you, your faith and what you are applying for. Your answers save as you go.'))+'</p>'+
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
+  h+=teamNumbersHtml_(app);
   h+=visaCardHtml_(app);
   h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
-    ((app.docKinds||[]).length ? docsBodyHtml_(app.docKinds, app.docs||[], app.submittedAt ? 'me' : 'before', '')
+    ((app.docKinds||[]).length ? docsBodyHtml_((app.docKinds||[]).filter(function(k){ return app.type!=='team' || teamDocsIn_(app) || (k.id!=='invitation' && k.id!=='evisa'); }), app.docs||[], app.submittedAt ? 'me' : 'before', '')
       : '<p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+'</p>'+(app.refNeeded ? refCardHtml_(app) : ''))+'</div>';
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📱 '+esc(t('How we reach you'))+'</h3>'+(P.editContact?'':'<button class="linkbtn inline" id="editContact">'+esc(t('Edit'))+'</button>')+'</div>';
   if(P.editContact){
@@ -679,11 +688,12 @@ function crmHtml_(){
       return '<button class="whatTab'+(P.what===k?' on':'')+'" data-whatfilter="'+k+'" role="tab">'+esc(k==='team' ? t('Teams') : a.label)+' <span class="n">'+n+'</span></button>'; }).join('')+'</div>';
   h+='<div class="chips" style="margin:-6px 0 12px">'+[['',t('Khmer and international')],['khmer',t('Khmer')],['international',t('International')]].map(function(x){
     return '<button class="chip'+(P.audFilter===x[0]?' on':'')+'" data-audfilter="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('')+'</div>';
-  h+='<div class="tiles">'+[['new',t('New')],['applied',t('Applied')],['contacted',t('Contacted')],['interview',t('Interview')],['accepted',t('Accepted')],['practical',t('Getting ready')]].map(function(x){
+  var tileStages = P.what==='team' ? stagesOf_('team').filter(function(s){ return s!=='arrived'; }) : ['new','applied','contacted','interview','accepted','practical'];
+  h+='<div class="tiles">'+tileStages.map(function(s){ return [s, t(STAGE_LABEL[s]||s)]; }).map(function(x){
     return '<div class="tile"><div class="tileNum">'+(counts[x[0]]||0)+'</div><div class="tileLbl">'+esc(x[1])+'</div></div>'; }).join('')+'</div>';
   h+='<div class="crm'+(P.sel?' open':'')+'"><div>';
   h+='<div class="tools"><input type="text" id="q" placeholder="'+esc(t('Search by name, email or phone'))+'" value="'+esc(P.q)+'"></div>';
-  h+='<div class="chips">'+[['',t('All')]].concat(d.stages.map(function(s){ return [s, t(STAGE_LABEL[s]||s)]; })).concat([['archived',t('Archived')]]).map(function(x){
+  h+='<div class="chips">'+[['',t('All')]].concat((P.what==='team' ? stagesOf_('team') : d.stages).map(function(s){ return [s, t(STAGE_LABEL[s]||s)]; })).concat([['archived',t('Archived')]]).map(function(x){
     return '<button class="chip'+(P.filter===x[0]?' on':'')+'" data-filter="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('')+'</div>';
   var q=P.q.trim().toLowerCase();
   var rows=list.filter(function(c){
@@ -718,7 +728,7 @@ function panelHtml_(c, byId){
     (c.email?'<a class="chatBtn" href="mailto:'+esc(c.email)+'">✉️ '+esc(t('Email'))+'</a>':'')+'</div>';
   h+='<div class="kv"><b>'+esc(t('Phone'))+'</b><span>'+esc(c.phone||'—')+'</span></div><div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(c.email||'—')+'</span></div>'+
     '<div class="kv"><b>'+esc(t('Status shown to them'))+'</b><span>'+esc(t(STATUS_LABEL[c.status]||c.status))+'</span></div>';
-  h+='<label class="f">'+esc(t('Stage'))+'</label><select id="p_stage">'+P.boot.stages.map(function(s){ return '<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+esc(t(STAGE_LABEL[s]||s))+'</option>'; }).join('')+'</select>';
+  h+='<label class="f">'+esc(t('Stage'))+'</label><select id="p_stage">'+stagesOf_(c.type).map(function(s){ return '<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+esc(t(STAGE_LABEL[s]||s))+'</option>'; }).join('')+'</select>';
   h+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
   h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
   h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
@@ -1066,10 +1076,31 @@ var VISA_PREP = [
   'Download the Cambodia e-Arrival app and complete the arrival form up to 3 days before you land. A team can do everyone on one phone.',
   'At the airport, go to the immigration officers in person, not the machines — show your e-visa. Check your passport has the white sticker.'
 ];
+/* A team's visa part opens once its passports, team photo and flights are in. */
+function teamDocsIn_(app){ var st=app.steps||[]; return ['passports','photo','flights'].every(function(id){ var x=st.filter(function(y){ return y.id===id; })[0]; return !x || x.done; }); }
+/* The team's own numbers — the Outreach Teams metrics the Teams Database asks
+   for — saved onto their team there (portalSaveTeamNumbers). Shown once they
+   are getting ready or their dates have started. */
+function teamNumbersHtml_(app){
+  if(app.type!=='team' || !app.trip) return '';
+  var started = ['practical','arrived'].indexOf(app.stage)>-1 || (app.trip.from && app.trip.from <= new Date().toISOString().slice(0,10));
+  if(!started) return '';
+  if(typeof setMetricOverrides==='function') setMetricOverrides(P.boot.metricOverrides||[]);
+  var deps=(typeof getDepartments==='function') ? getDepartments(app.campus||DEFAULT_CAMPUS) : {};
+  var list=(((deps['Community Service']||{})['Outreach Teams'])||[]).filter(function(m){ return m!=='Teams Hosted'; });
+  var m=app.trip.metrics||{}, r=app.trip.reached||{};
+  var row=function(label, attr, v){ return '<div class="numRow"><span>'+esc(label)+'</span><input type="number" inputmode="numeric" min="0" '+attr+' value="'+esc(v==null?'':String(v))+'"></div>'; };
+  return '<div class="card" id="teamNumbers"><h3 style="margin-top:0">📊 '+esc(t('Your team’s numbers'))+'</h3>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('Totals for your whole time with us — fill them in as you go. They go straight into our Outreach Teams figures.'))+'</p>'+
+    list.map(function(x){ return row(t(x), 'data-tnum="'+esc(x)+'"', m[x]); }).join('')+
+    row(t('Men reached'), 'data-treach="male"', r.male)+row(t('Women reached'), 'data-treach="female"', r.female)+
+    '<button class="btn small" id="saveTeamNums"'+(P.busy?' disabled':'')+'>'+esc(t('Save our numbers'))+'</button></div>';
+}
 function visaCardHtml_(app){
   if(!app.needsVisa) return '';
+  if(app.type==='team' && !teamDocsIn_(app)) return '<div class="card" id="visaCard"><h3 style="margin-top:0">🛂 '+esc(t('Visa'))+'</h3><p class="sub" style="margin:0">'+esc(t('The visa steps open here once your passport copies, team photo and flight itineraries are in.'))+'</p></div>';
   var idx=['new','applied','contacted','interview','accepted','practical','arrived'].indexOf(app.stage);
-  if(idx<4) return '<div class="card"><h3 style="margin-top:0">🛂 '+esc(t('Visa'))+'</h3><p class="sub" style="margin:0">'+esc(t('You will need a visa for Cambodia. The step-by-step e-visa guide appears here once you are accepted.'))+'</p></div>';
+  if(idx<4 && app.type!=='team') return '<div class="card"><h3 style="margin-top:0">🛂 '+esc(t('Visa'))+'</h3><p class="sub" style="margin:0">'+esc(t('You will need a visa for Cambodia. The step-by-step e-visa guide appears here once you are accepted.'))+'</p></div>';
   var v=app.visa||{};
   var tick=function(done, label){ return '<li class="'+(done?'done':'')+'">'+(done?'✓':'○')+' '+esc(label)+(done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; };
   return '<div class="card"><h3 style="margin-top:0">🛂 '+esc(t('Your e-visa, step by step'))+'</h3>'+
@@ -1085,11 +1116,11 @@ function visaCardHtml_(app){
    (teams for now). The applicant uploads once their application is in;
    staff see the same list on the record, open files and can add one a team
    emailed them. Pictures are shrunk on the phone before they go up. */
-var DOC_LABEL = { passports:'Passport copies — one for each team member', photo:'A team photo with each member’s name (optional)', flights:'Flight itineraries',
-  evisa:'E-visas — one for each team member', invitation:'Letter of invitation — from us' };
+var DOC_LABEL = { passports:'Passport copies — one for each team member', photo:'A team photo with each member’s name', flights:'Flight itineraries',
+  evisa:'E-visas — one for each team member', invitation:'Letter of invitation & supporting documents — from us' };
 var DOC_HINT = { passports:'A clear photo or scan of the photo page of each passport. We need these as soon as possible for your letter of invitation.', photo:'Write the names on the photo, or send a list of names with it.',
-  evisa:'Apply at evisa.gov.kh with your letter of invitation, then upload each e-visa here.', invitation:'We add it here once we have your passport copies. Open it to download.',
-  flights:'Not booked yet? That is fine — upload them once you have them. We use them to arrange your transport from the airport.' };
+  evisa:'Apply at evisa.gov.kh with your letter of invitation, then upload each approved e-visa here.', invitation:'We add these here once your passports, team photo and flights are in. Open them to download.',
+  flights:'Important — we need them to start your visa process. Not booked yet? Upload them once you have them.' };
 function docsBodyHtml_(kinds, docs, mode, candId){
   if(mode==='before'){
     return '<p class="sub">'+esc(t('Once your application is in, you upload these here:'))+'</p><ul class="subItems">'+kinds.filter(function(k){ return k.from!=='us'; }).map(function(k){ var n=docs.filter(function(d){ return d.kind===k.id; }).length; return '<li class="'+(n?'done':'')+'">'+(n?'✓':'○')+' '+esc(t(DOC_LABEL[k.id]||k.id))+(n ? ' · '+esc(n===1 ? t('1 file') : gpT('{n} files',{n:n})) : k.required?'':' · <i>'+esc(t('when you have them'))+'</i>')+'</li>'; }).join('')+'</ul>';
@@ -1440,6 +1471,7 @@ function panelAnswersHtml_(c){
 }
 /* For a team: how long they are in Cambodia, each place with its dates,
    who handles the visa — and a ready-to-paste note for hospitality. */
+function stagesOf_(type){ return type==='team' && P.boot.teamStages ? P.boot.teamStages : P.boot.stages; }
 /* A team is listed by who sends it — its "Sending church, base or organization"
    answer (id teamName) — not by the leader whose name is on the account. */
 function candName_(c){
@@ -1517,8 +1549,8 @@ function panelTeamFlowHtml_(c){
     var name=esc(t(TEAM_STEP_LABEL[st.id]||st.id));
     if(st.tick) return '<li class="'+(st.state==='current'?'cur':'')+'"><label class="portalTick"><input type="checkbox" data-teamstep="'+esc(st.id)+'"'+(st.done?' checked':'')+(P.busy?' disabled':'')+'> '+name+'</label></li>';
     return '<li class="auto'+(st.done?' done':'')+(st.state==='current'?' cur':'')+'"><span class="flowMark">'+(st.done?'✓':'○')+'</span> '+name+
-      ' <span class="hint">'+esc(st.id==='form' ? t('when they submit') : st.id==='invitation' ? t('ticks when you upload it below') : t('ticks when they upload it'))+'</span></li>';
-  }).join('')+'</ul><p class="hint">'+esc(t('Ticking moves the stage along with it. The team sees the same steps on their dashboard.'))+'</p>';
+      ' <span class="hint">'+esc(st.id==='form' ? t('when they submit') : st.id==='invitation' ? t('ticks when you upload it below') : st.id==='practical' ? t('until they arrive') : t('ticks when they upload it'))+'</span></li>';
+  }).join('')+'</ul><p class="hint">'+esc(t('The stage follows the steps: the 1st call moves them to Awaiting documents, the last e-visa to the 2nd call, and the 2nd call to Getting ready. The team sees the same steps on their dashboard, and is in the Teams Database from the day it applies.'))+'</p>';
   return h;
 }
 function panelVisaHtml_(c){
@@ -1567,6 +1599,13 @@ function bind_(){
   on_('loginBtn', login_);
   var lp=document.getElementById('l_pin'); if(lp) lp.onkeydown=function(e){ if(e.key==='Enter') login_(); };
   // applicant
+  on_('saveTeamNums', function(){
+    var metrics={}, reached={};
+    document.querySelectorAll('[data-tnum]').forEach(function(i){ if(i.value!=='') metrics[i.getAttribute('data-tnum')]=Number(i.value); });
+    document.querySelectorAll('[data-treach]').forEach(function(i){ reached[i.getAttribute('data-treach')]= i.value==='' ? null : Number(i.value); });
+    P.busy=true; render();
+    run('portalSaveTeamNumbers', [P.auth.user, P.auth.pin, metrics, reached], function(d){ P.busy=false; if(d && d.ok){ P.boot=d; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
   on_('editContact', function(){ P.editContact=true; P.contact={ phone:P.boot.me.phone, messenger:P.boot.me.messenger, country:P.boot.me.country }; render(); });
   on_('cancelContact', function(){ P.editContact=false; P.contact=null; render(); });
   document.querySelectorAll('[data-cmsgr]').forEach(function(b){ b.onclick=function(){ keepContact_(); P.contact.messenger=b.getAttribute('data-cmsgr'); render(); }; });
