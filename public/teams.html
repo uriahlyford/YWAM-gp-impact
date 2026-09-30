@@ -5274,13 +5274,15 @@ function adminAccountsHtml_(){
 /* Every real ministry on a campus as a checkbox — Campus Leadership's
    "ministries" are department names, not places anyone leads, so they're
    left out. */
-function leadsPickHtml_(campus, selected){
+function leadsPickHtml_(campus, selected, attr, skipKey){
+  attr = attr || 'data-admlead';
   var deps=getDepartments(campus||CAMPUSES[0].id), h='';
   Object.keys(deps).forEach(function(dept){
     if(dept==='Campus Leadership') return;
     Object.keys(deps[dept]).forEach(function(min){
       var key=dept+'|'+min;
-      h+='<label class="leadOpt"><input type="checkbox" data-admlead="'+esc(key)+'"'+(selected.indexOf(key)>-1?' checked':'')+'> '+
+      if(key===skipKey) return;   // the main ministry is not also an "other" one
+      h+='<label class="leadOpt"><input type="checkbox" '+attr+'="'+esc(key)+'"'+(selected.indexOf(key)>-1?' checked':'')+'> '+
         (MIN_EMOJI[min]?MIN_EMOJI[min]+' ':'')+esc(t(min))+'<span class="pmeta">'+esc(t(dept))+'</span></label>';
     });
   });
@@ -5327,7 +5329,10 @@ function adminRowBodyHtml_(s){
       CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(dCampus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
       '<label class="f">'+esc(t('Department'))+'</label><select id="adm_dept">'+
       deptsFor(dCampus).map(function(dp){return '<option value="'+esc(dp)+'"'+(dDept===dp?' selected':'')+'>'+esc(t(dp))+'</option>';}).join('')+'</select>'+
-      '<label class="f">'+esc(t('Ministry'))+'</label><select id="adm_ministry"></select>'+
+      '<label class="f">'+esc(t('Main ministry'))+'</label><select id="adm_ministry"></select>'+
+      '<label class="f">'+esc(t('Other ministries'))+'</label>'+
+      '<p class="hint" style="margin:0 0 6px">'+esc(t('The other ministries they serve in. They see and enter numbers for their main ministry and these.'))+'</p>'+
+      '<div class="leadsPick" id="adm_ministries">'+leadsPickHtml_(dCampus, d.ministries!==undefined?d.ministries:(s.ministries||[]), 'data-admmin', (s.dept||'')+'|'+(s.ministry||''))+'</div>'+
       '<label class="f">'+esc(t('Role / team'))+'</label><input type="text" id="adm_role" value="'+esc(d.role!==undefined?d.role:(s.role||''))+'">'+
       staffTypeFieldHtml('adm_type', d.staffType!==undefined?d.staffType:(s.staffType||''))+
       countryFieldHtml('adm_country', d.country!==undefined?d.country:(s.country||''))+
@@ -5374,12 +5379,14 @@ function adminRowBodyHtml_(s){
 }
 
 function bindAdmLeads_(admD){
-  document.querySelectorAll('[data-admlead]').forEach(function(c){
-    c.onchange=function(){
-      var key=c.getAttribute('data-admlead');
-      admD.leads=(admD.leads||[]).filter(function(k){ return k!==key; });
-      if(c.checked) admD.leads.push(key);
-    };
+  [['data-admlead','leads'],['data-admmin','ministries']].forEach(function(pair){
+    document.querySelectorAll('['+pair[0]+']').forEach(function(c){
+      c.onchange=function(){
+        var key=c.getAttribute(pair[0]);
+        admD[pair[1]]=(admD[pair[1]]||[]).filter(function(k){ return k!==key; });
+        if(c.checked) admD[pair[1]].push(key);
+      };
+    });
   });
 }
 function adminRefresh_(){ S.adminStaff=null; render(); }
@@ -5868,7 +5875,7 @@ function bindAdmin(){
       var s=(S.adminStaff||[]).find(function(x){ return x.id===id; })||{};
       S.adminEditId=id;
       S.adminEditDraft={ name:s.name||'', username:s.username||'', campus:s.campus||'', dept:s.dept||'', ministry:s.ministry||'',
-        role:s.role||'', staffType:s.staffType||'', country:s.country||'', leads:(s.leads||[]).slice() };
+        role:s.role||'', staffType:s.staffType||'', country:s.country||'', leads:(s.leads||[]).slice(), ministries:(s.ministries||[]).slice() };
       render();
     };
   });
@@ -5907,7 +5914,10 @@ function bindAdmin(){
       admD.ministry='';
       // The ministries someone can lead belong to the campus too.
       var lp=document.getElementById('adm_leads');
-      if(lp){ admD.leads=[]; lp.innerHTML=leadsPickHtml_(admCampus.value, []); bindAdmLeads_(admD); }
+      if(lp){ admD.leads=[]; lp.innerHTML=leadsPickHtml_(admCampus.value, []); }
+      var mp=document.getElementById('adm_ministries');
+      if(mp){ admD.ministries=[]; mp.innerHTML=leadsPickHtml_(admCampus.value, [], 'data-admmin'); }
+      bindAdmLeads_(admD);
     };
     bindAdmLeads_(admD);
     var admDept=document.getElementById('adm_dept');
@@ -5934,6 +5944,7 @@ function bindAdmin(){
         staffType:document.getElementById('adm_type').value,
         country:countryValue('adm_country'),
         leads:[].map.call(document.querySelectorAll('[data-admlead]:checked'), function(c){ return c.getAttribute('data-admlead'); }),
+        ministries:[].map.call(document.querySelectorAll('[data-admmin]:checked'), function(c){ return c.getAttribute('data-admmin'); }),
         hr:!!(document.getElementById('adm_hr')||{}).checked,
         portalStaff:!!(document.getElementById('adm_portalstaff')||{}).checked,
         portalAdmin:!!(document.getElementById('adm_portaladmin')||{}).checked
@@ -6444,14 +6455,20 @@ function teamsMinistryHtml_(campus){
    sits last in the picker as "Campus Leadership figures", so the page opens
    on a real ministry. The person's own four personal numbers are off the
    page altogether for now (personalCardHtml_ is kept for when they return). */
+/* Only the ministries you are part of (same rule as canLogFor_ in api.js):
+   your main one, the others on your profile, any you lead, and — for a
+   department's Campus Leadership overseer — that department's ministries.
+   An admin gets no more than anyone else here. */
 function mmOptions_(){
   var deps=getDepartments(S.me.campus), out=[];
   var oversees=myOversightDept_(), isBL = S.me.dept===BL_DEPT;
-  var push=function(d,m){ if(!out.some(function(o){ return o.dept===d && o.min===m; })) out.push({ dept:d, min:m }); };
-  if(S.me.ministry && !isBL) push(S.me.dept, S.me.ministry);
-  if(oversees) Object.keys(deps[oversees]||{}).forEach(function(m){ push(oversees, m); });
-  if(S.me.isAdmin) Object.keys(deps).forEach(function(d){ if(d===BL_DEPT) return; Object.keys(deps[d]).forEach(function(m){ push(d, m); }); });
-  if(S.me.ministry && isBL) push(S.me.dept, S.me.ministry);   // last, never the default
+  var push=function(d,m,role){ if(!out.some(function(o){ return o.dept===d && o.min===m; })) out.push({ dept:d, min:m, role:role }); };
+  var pushKey=function(k,role){ var p=String(k||'').split('|'); if(p.length===2 && deps[p[0]] && deps[p[0]][p[1]]!==undefined && p[0]!==BL_DEPT) push(p[0], p[1], role); };
+  if(S.me.ministry && !isBL) push(S.me.dept, S.me.ministry, 'main');
+  (S.me.ministries||[]).forEach(function(k){ pushKey(k, 'member'); });
+  (S.me.leads||[]).forEach(function(k){ pushKey(k, 'leader'); });
+  if(oversees) Object.keys(deps[oversees]||{}).forEach(function(m){ push(oversees, m, 'oversee'); });
+  if(S.me.ministry && isBL) push(S.me.dept, S.me.ministry, 'main');   // last, never the default
   return out;
 }
 function mmSelected_(opts){
@@ -6498,7 +6515,11 @@ function mmBannerHtml_(sel, mine){
     '<div class="rowSub">'+esc(isBL ? gpT('Your own figures as {dept}',{dept:t(sel.min)}) : t(sel.dept))+' · '+esc(campusName(S.me.campus))+'</div>';
   var leaders = isBL ? [] : ministryLeaders_(S.me.campus, sel.dept, sel.min);
   if(leaders.length) h+='<div class="rowSub">👑 '+esc(t('Led by'))+' '+leaders.map(function(p){ return esc(p.name); }).join(', ')+'</div>';
-  h+='<div class="mmBannerNote">'+esc(mine ? t('Your ministry — you are entering its numbers.') : t('You are entering numbers for this ministry.'))+'</div>';
+  var note = mine ? 'Your main ministry — you are entering its numbers.'
+    : sel.role==='member' ? 'One of your ministries — you are entering its numbers.'
+    : sel.role==='leader' ? 'You lead this ministry — you are entering its numbers.'
+    : 'You are entering numbers for this ministry.';
+  h+='<div class="mmBannerNote">'+esc(t(note))+'</div>';
   return h+'</div></div>';
 }
 function myMinistryHtml(){
@@ -8758,8 +8779,11 @@ function profileHtml(){
     '<label class="f">Email</label><input type="email" id="p_email" value="'+esc(p.email||'')+'" placeholder="you@example.com">'+
     '<div class="hint">One profile per email — this is what stops a duplicate sign-up.</div>'+
     '<label class="f">Campus</label><select id="p_campus">'+CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(S.me.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
-    '<label class="f">Department</label><select id="p_dept">'+deptsFor(S.me.campus).map(function(d){return '<option value="'+esc(d)+'"'+(S.me.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
-    '<label class="f">Ministry</label><select id="p_ministry"></select><div class="hint">Sets which KPIs show on your home page.</div>'+
+    '<label class="f">'+esc(t('Main department'))+'</label><select id="p_dept">'+deptsFor(S.me.campus).map(function(d){return '<option value="'+esc(d)+'"'+(S.me.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
+    '<label class="f">'+esc(t('Main ministry'))+'</label><select id="p_ministry"></select><div class="hint">'+esc(t('The one My Ministry opens on.'))+'</div>'+
+    '<label class="f">'+esc(t('Other ministries I’m part of'))+'</label>'+
+    '<div class="hint" style="margin:0 0 6px">'+esc(t('Tick every other ministry you serve in. You see and enter numbers for your main ministry and these.'))+'</div>'+
+    '<div class="leadsPick" id="p_ministries">'+leadsPickHtml_(S.me.campus, S.me.ministries||[], 'data-pmin', S.me.dept+'|'+(S.me.ministry||''))+'</div>'+
     '<label class="f">Role / team</label><input type="text" id="p_role" value="'+esc(S.me.role)+'">'+
     staffTypeFieldHtml('p_type', S.me.staffType||'')+
     '<label class="f">'+esc(t('Male or female'))+'</label><select id="p_sex">'+
@@ -10361,6 +10385,7 @@ function bind(){
       campus:document.getElementById('p_campus').value,
       dept:document.getElementById('p_dept').value,
       ministry:(document.getElementById('p_ministry')||{}).value||'',
+      ministries:[].map.call(document.querySelectorAll('[data-pmin]:checked'), function(c){ return c.getAttribute('data-pmin'); }),
       role:document.getElementById('p_role').value.trim(),
       staffType:document.getElementById('p_type').value,
       sex:(document.getElementById('p_sex')||{}).value||'',
@@ -10373,7 +10398,9 @@ function bind(){
     sp.disabled=true; sp.textContent='Saving…';
     run('updateProfile',[S.auth.user,S.auth.pin,payload],function(d){
       if(d.ok){
-        S.me=d.staff; S.profile=d.profile; saveStaffCard(); showMsg('Profile saved');
+        // merged, not replaced: updateProfile sends the public card, which has no
+        // isAdmin / hr / portal flags — replacing S.me dropped the Admin menu until a reload
+        S.me=Object.assign({}, S.me, d.staff); S.profile=d.profile; saveStaffCard(); showMsg('Profile saved');
         // Ministry may have changed, so re-pull the KPI set for the new one.
         run('getMyMinistry',[S.auth.user,S.auth.pin],function(mn){ if(mn.ok) S.ministry=mn; render(); });
         run('teamRoster',[S.auth.user,S.auth.pin],function(r){S.roster=Array.isArray(r)?r:[];render();});

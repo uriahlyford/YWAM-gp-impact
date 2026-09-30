@@ -232,6 +232,7 @@ function normRow_(r) {
   // an OKR row is one key result: its metricKey is dept|ministry|metric
   if (typeof r.metricKey === 'string' && r.metricKey) r.metricKey = normKey_(r.metricKey, 3);
   if (Array.isArray(r.leads)) r.leads = r.leads.map(function (k) { return normKey_(k, 2); });
+  if (Array.isArray(r.ministries)) r.ministries = r.ministries.map(function (k) { return normKey_(k, 2); });
   return r;
 }
 function normRows_(rows) { return Array.isArray(rows) ? rows.map(normRow_) : rows; }
@@ -431,7 +432,7 @@ function publicStaff_(s) {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
     ministry: s.ministry || '', role: s.role, photo: s.photo || '', mentorId: s.mentorId || '',
     staffType: cleanStaffType_(s.staffType), country: s.country || '',
-    leads: leadsOf_(s)
+    leads: leadsOf_(s), ministries: ministriesOf_(s)
   };
 }
 
@@ -455,6 +456,29 @@ function cleanLeads_(list) {
     out.push(key);
   });
   return out.slice(0, MAX_LEADS);
+}
+
+/* The other ministries someone serves in. Staff here are usually part of more
+   than one: the profile's department + ministry is their MAIN one (home page,
+   the one My Ministry opens on), and these are the rest, as "Dept|Ministry"
+   keys. They set them on their own profile (or an admin does), and they enter
+   numbers for every one of them — see canLogFor_. */
+const MAX_MINISTRIES = 10;
+function ministriesOf_(s) { return Array.isArray(s && s.ministries) ? s.ministries : []; }
+function cleanMinistries_(list, rec) {
+  const main = rec.dept + '|' + (rec.ministry || '');
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(function (k) {
+    const raw = str_(k, 160);
+    if (!raw || raw.split('|').length !== 2) return;
+    const key = normKey_(raw, 2);
+    if (key === main || out.indexOf(key) > -1) return;
+    out.push(key);
+  });
+  return out.slice(0, MAX_MINISTRIES);
+}
+function memberOf_(s, dept, ministry) {
+  return (s.dept === dept && s.ministry === ministry) || ministriesOf_(s).indexOf(dept + '|' + ministry) > -1;
 }
 
 /* Public to the internet when called with no PIN, so it answers with
@@ -566,7 +590,7 @@ function adminStaffOut_(s) {
     kind: s.kind || 'staff', portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin,
     staffType: s.staffType || '', country: s.country || '', email: s.email || '',
     mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
-    leads: leadsOf_(s),
+    leads: leadsOf_(s), ministries: ministriesOf_(s),
     archived: archivedOf_(s),
     created: s.created || ''
   };
@@ -753,6 +777,8 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
       }
       rec.email = email;
     }
+    if (payload.ministries !== undefined) rec.ministries = cleanMinistries_(payload.ministries, rec);
+    else if (rec.ministries) rec.ministries = cleanMinistries_(rec.ministries, rec);
     // Which ministries this person leads — admin-assigned only; see leadsOf_.
     if (payload.leads !== undefined) rec.leads = cleanLeads_(payload.leads);
     // HR access — the Human Resources page (staff contracts, archiving). Admin-assigned.
@@ -892,6 +918,8 @@ async function updateProfile(username, pin, payload) {
   if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
   if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
   if (payload.sex !== undefined) rec.sex = cleanSex_(payload.sex);
+  if (payload.ministries !== undefined) rec.ministries = cleanMinistries_(payload.ministries, rec);
+  else if (rec.ministries) rec.ministries = cleanMinistries_(rec.ministries, rec);   // a new main one drops out of the rest
   if (payload.mentorId !== undefined) {
     const newMentorId = payload.mentorId || '';
     // Picking a new/different mentor always resets to pending — the mentor
@@ -1846,17 +1874,18 @@ async function getMyMinistry(username, pin) {
   return ministryDataFor_(s);
 }
 
-/* A department's own "Campus Leadership" ministry oversees every ministry
-   under that real department — the same relationship getDepartments()
-   encodes on the client (dept:'Campus Leadership', ministry: e.g. 'Community
-   Service'). That overseer can log on behalf of any ministry in their own
-   department; nobody else gets to log outside their own ministry — except
-   an admin, who can jump to and log any ministry on their own campus (the
-   "YWAM {campus} Ministries" picker on My Ministry). */
+/* Who sees and enters a ministry's numbers on My Ministry: the people IN it.
+   That is your main ministry, the other ministries on your profile
+   (ministriesOf_), a ministry you lead, and — for a department's own
+   "Campus Leadership" overseer (dept:'Campus Leadership', ministry: e.g.
+   'Community Service') — every ministry under that department. Being an
+   admin no longer opens every ministry: Uriah asked that only the ministries
+   you are part of show there. (Admin → Ministry KPIs still edits what any
+   ministry tracks, and the Base tab still shows the whole base.) */
 function canLogFor_(s, campus, dept, ministry) {
   if (campus !== s.campus) return false;
-  if (s.isAdmin) return true;
-  if (dept === s.dept && ministry === s.ministry) return true;
+  if (memberOf_(s, dept, ministry)) return true;
+  if (isLeaderOf_(s, dept, ministry)) return true;
   return s.dept === 'Campus Leadership' && s.ministry === dept;
 }
 

@@ -1,14 +1,11 @@
-/* My Ministry's "YWAM {campus} Ministries" picker — jump to any department
-   and ministry without needing to oversee it. An admin can reach anything on
-   their own campus; everyone else's picker resolves to just the ministry
-   they already work in. Two things matter beyond the picker rendering at
-   all: an admin is actually authorized server-side to read/save a ministry
-   outside their own chain (canLogFor_), and the Save Week button on a
-   browsed ministry reports the RIGHT department — oversightKpiCardHtml_ is
-   shared with the "Ministries You Oversee" loop, which used to assume
-   myOversightDept_() for every Save Week click; a browsed ministry in some
-   other department needs its own dept remembered (S.ovDeptOf), not the
-   overseer's. */
+/* My Ministry's picker shows only the ministries you are part of: your main
+   one plus the other ministries on your profile (staff here usually serve in
+   more than one). Being an admin no longer opens every ministry — Uriah asked
+   for that. Checked server-side (canLogFor_ refuses anything else, admin or
+   not; updateProfile keeps the list clean) and in the browser: the picker,
+   the banner, the profile's tick boxes, and that Save Week on another of
+   your ministries names THAT ministry's own department, not your main one's
+   (the dept-mixup regression this file started with). */
 import { REPO, PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
 import { chromium } from 'playwright';
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
@@ -67,12 +64,28 @@ function seed() {
 
 seed();
 let r = await call('getMinistryFor', ['uriah', '1234', 'Community Service', 'Outreach Teams']);
-ok('an admin can read a ministry outside their own department', r.body && r.body.ok === true, JSON.stringify(r.body));
+ok('an admin is refused a ministry they are not part of', r.body && r.body.ok === false && r.body.err === 'not_authorized', JSON.stringify(r.body));
+r = await call('saveMinistryFor', ['uriah', '1234', 'Community Service', 'Cafe', 34, [{ metric: 'Total in Bank Account ($)', value: 900 }]]);
+ok('and cannot save its numbers', r.body && r.body.ok === false && !(mem.entries || []).length);
 
-r = await call('saveMinistryFor', ['uriah', '1234', 'Community Service', 'Cafe', 34,
-  [{ metric: 'Total in Bank Account ($)', value: 900 }]]);
-ok('an admin can save a week-level figure for a ministry they neither work in nor oversee',
+r = await call('updateProfile', ['uriah', '1234', { ministries: ['Community Service|Cafe', 'Youth Education|Sports', 'Community Service|Cafe', 'nonsense', 'A|B|C'] }]);
+ok('the profile keeps the other ministries — no repeats, not the main one, nothing malformed', r.body.ok === true && JSON.stringify(r.body.staff.ministries) === '["Community Service|Cafe"]', JSON.stringify(r.body.staff && r.body.staff.ministries));
+r = await call('saveMinistryFor', ['uriah', '1234', 'Community Service', 'Cafe', 34, [{ metric: 'Total in Bank Account ($)', value: 900 }]]);
+ok('with Cafe on their profile they save its numbers',
   r.body && r.body.ok === true && r.body.entries['Total in Bank Account ($)']['34'] === 900, JSON.stringify(r.body));
+r = await call('saveKpiDayFor', ['uriah', '1234', 'Community Service', 'Cafe', '2026-08-20', [{ metric: 'Days Open', value: 1 }]]);
+ok('daily figures too', r.body && r.body.ok === true);
+r = await call('getMinistryFor', ['uriah', '1234', 'Community Service', 'Outreach Teams']);
+ok('but still not a ministry that isn’t on it', r.body && r.body.ok === false);
+r = await call('updateProfile', ['uriah', '1234', { dept: 'Community Service', ministry: 'Cafe' }]);
+ok('making an other ministry the main one takes it off the other list', r.body.ok === true && r.body.staff.ministry === 'Cafe' && r.body.staff.ministries.length === 0, JSON.stringify(r.body.staff.ministries));
+mem.staff = mem.staff.map(x => x.id === 'st_member' ? { ...x, leads: ['Youth Education|Sports'] } : x);
+r = await call('getMinistryFor', ['sokha', '1234', 'Youth Education', 'Sports']);
+ok('leading a ministry lets you enter its numbers', r.body && r.body.ok === true, JSON.stringify(r.body));
+r = await call('adminUpdateStaff', ['uriah', '1234', 'st_member', { ministries: ['Youth Education|YDC'] }]);
+ok('an admin can set someone’s other ministries', r.body.ok === true && JSON.stringify(r.body.staff.ministries) === '["Youth Education|YDC"]', JSON.stringify(r.body));
+r = await call('getMinistryFor', ['sokha', '1234', 'Youth Education', 'YDC']);
+ok('and that person can then enter them', r.body && r.body.ok === true);
 
 seed();
 r = await call('getMinistryFor', ['sokha', '1234', 'Youth Education', 'Sports']);
@@ -92,7 +105,9 @@ const srv = http.createServer((q, res) => {
 });
 await new Promise(res => srv.listen(4416, res));
 
-const BOOT_ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Youth Education', ministry: 'Sports', role: '', photo: '', mentorId: '', isAdmin: true };
+const BOOT_ADMIN = { id: 'st_admin', name: 'Uriah', username: 'uriah', campus: 'poipet', dept: 'Youth Education', ministry: 'Sports', role: '', photo: '', mentorId: '', isAdmin: true,
+  ministries: ['Community Service|Cafe'] };
+const profileSaves = [];
 const CAFE_DATA = { ok: true, entries: { 'Days Open': { '34': 5 } }, prev: {}, daily: {} };
 const savedCalls = [];
 
@@ -113,6 +128,7 @@ await p.route('**/.netlify/functions/api', r => {
   else if (q.fn === 'staffLogin') o = { ok: true, staff: BOOT_ADMIN, profile: {} };
   else if (q.fn === 'getMinistryFor') o = CAFE_DATA;
   else if (q.fn === 'saveMinistryFor') { savedCalls.push(q.args); o = CAFE_DATA; }
+  else if (q.fn === 'updateProfile') { profileSaves.push(q.args[2]); o = { ok: true, staff: { ...BOOT_ADMIN, isAdmin: undefined, ministries: q.args[2].ministries }, profile: {} }; }
   else if (/^getMy/.test(q.fn)) o = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
   r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
 });
@@ -124,16 +140,13 @@ await p.waitForTimeout(600);
 await p.click('#goMinistryFromMe');
 await p.waitForTimeout(700);
 
-const hasPicker = await p.evaluate(() => document.querySelector('#main').innerText.includes('YWAM'));
-ok('the picker shows on My Ministry', hasPicker);
+const chips = await p.$$eval('[data-mmpick]', b => b.map(x => x.getAttribute('data-mmpick')));
+ok('the picker holds only my ministries: the main one and Cafe, admin or not', JSON.stringify(chips) === '["Youth Education|Sports","Community Service|Cafe"]', JSON.stringify(chips));
+ok('it opens on the main one, and says so', /Your main ministry/.test(await p.$eval('#mmBanner', e => e.textContent)));
 
-const deptOptions = await p.$$eval('#mmBrowseDeptSel option', os => os.map(o => o.value));
-ok('an admin sees more than one department in the picker', deptOptions.length > 1, deptOptions.join(', '));
-
-await p.selectOption('#mmBrowseDeptSel', 'Community Service');
-await p.waitForTimeout(400);
-await p.selectOption('#mmBrowseMinSel', 'Cafe').catch(() => {});
+await p.click('[data-mmpick="Community Service|Cafe"]');
 await p.waitForTimeout(600);
+ok('another of my ministries says it is one of mine', /One of your ministries/.test(await p.$eval('#mmBanner', e => e.textContent)));
 // the browsed ministry gets the same status card as your own: its strip, and one button that unfolds its weekly rows
 const browsedStrip = await p.$('#mmWeekCard .wkStrip');
 ok('the browsed ministry has a week strip too', !!browsedStrip);
@@ -155,6 +168,20 @@ if (savedCalls.length) {
   ok('and it named the browsed ministry’s OWN department, not the admin’s (dept-mixup regression)',
     savedCalls[0][2] === 'Community Service' && savedCalls[0][3] === 'Cafe', JSON.stringify(savedCalls[0]));
 }
+
+// the profile: main ministry, then tick boxes for the others
+await p.evaluate(() => { S.view = 'profile'; render(); });
+await p.waitForTimeout(300);
+ok('the profile asks for a main ministry and the other ministries', /Main ministry/.test(await p.$eval('#main', e => e.textContent)) && !!(await p.$('#p_ministries')));
+ok('Cafe is ticked, and the main ministry is not offered again', await p.$eval('[data-pmin="Community Service|Cafe"]', c => c.checked) && !(await p.$('[data-pmin="Youth Education|Sports"]')));
+await p.check('[data-pmin="Community Service|Outreach Teams"]');
+await p.click('#saveProfBtn');
+await p.waitForTimeout(600);
+ok('saving sends the ticked ministries', profileSaves.length === 1 && JSON.stringify(profileSaves[0].ministries.sort()) === '["Community Service|Cafe","Community Service|Outreach Teams"]', JSON.stringify(profileSaves));
+ok('and keeps the Admin menu (the admin flag is not lost with the public card)', await p.evaluate(() => S.me.isAdmin === true));
+await p.evaluate(() => { S.view = 'ministry'; S.mmBrowseDept = null; S.mmBrowseMinistry = null; render(); });
+await p.waitForTimeout(300);
+ok('the new ministry shows in My Ministry straight away', (await p.$$eval('[data-mmpick]', b => b.map(x => x.getAttribute('data-mmpick')))).includes('Community Service|Outreach Teams'));
 ok('no console/page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 
 await b.close(); srv.close();
