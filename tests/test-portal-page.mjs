@@ -709,7 +709,7 @@ async function open(viewport, query, seed) {
   await page.click('#syncTeamBtn');
   await page.waitForSelector('[data-snum]');
   ok('Add to the Teams Database puts it in and says so', sent.some(b => b.fn === 'portalStaffSyncTeam' && b.args[2] === 'cd_team') && /In the Teams Database/.test(await page.$eval('#teamDbState', e => e.textContent)));
-  ok('the record has the team’s numbers to fill in, like the Teams Database', !!(await page.$('[data-snum="People Served"]')) && !(await page.$('[data-snum="Teams Hosted"]')) && !!(await page.$('#saveStaffNums')));
+  ok('the record has the team’s numbers to fill in, like the Teams Database', !!(await page.$('[data-snum="People Served"]')) && !(await page.$('[data-snum="Teams Hosted"]')) && !(await page.$('[data-snum="Volunteers Mobilized"]')) && !!(await page.$('#saveStaffNums')));
   await page.fill('[data-snum="People Served"]', '42');
   await page.fill('[data-sreach="male"]', '8');
   await page.click('#saveStaffNums');

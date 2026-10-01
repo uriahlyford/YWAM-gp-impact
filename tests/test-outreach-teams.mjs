@@ -152,6 +152,7 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   await page.click('#teamAddBtn');
   await page.waitForTimeout(400);
   ok('Add a team opens one form', await page.$('#teamFormCard') !== null && await page.$('#teamAddBtn') === null);
+  ok('the form has no Volunteers Mobilized box — it is the team’s own head count', !(await page.$('[data-tfm="Volunteers Mobilized"]')) && !!(await page.$('[data-tfm="People Served"]')));
   await page.click('#teamSaveBtn');
   await page.waitForTimeout(300);
   ok('saving with no name is stopped on the page', !sent.some(x => x.fn === 'saveTeamTrip'));

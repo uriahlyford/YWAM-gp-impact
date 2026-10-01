@@ -3049,6 +3049,20 @@ function cleanTrip_(t, campus) {
   rec.reached = { male: finiteNum_(r.male, 0, 1e9), female: finiteNum_(r.female, 0, 1e9) };
   return rec;
 }
+/* Volunteers Mobilized for a team is the team itself — everyone who came —
+   so it is no longer typed in: for a team that leaves on or after
+   TEAM_AUTO_FROM the figure is its head count (size), whatever was entered.
+   Earlier teams keep the number logged for them. */
+const TEAM_AUTO_FROM = '2026-10-01';
+const TEAM_AUTO_METRIC = 'Volunteers Mobilized';
+function tripMetrics_(t) {
+  const m = Object.assign({}, (t && t.metrics) || {});
+  if (t && t.to && t.to >= TEAM_AUTO_FROM) {
+    if (t.size != null && t.size !== '' && !isNaN(Number(t.size))) m[TEAM_AUTO_METRIC] = Number(t.size);
+    else delete m[TEAM_AUTO_METRIC];
+  }
+  return m;
+}
 function teamEntryRows_(trips) {
   const acc = {};
   trips.forEach(function (t) {
@@ -3060,7 +3074,8 @@ function teamEntryRows_(trips) {
       acc[k].value += Number(v) || 0;
     };
     add('Teams Hosted', 1);
-    Object.keys(t.metrics || {}).forEach(function (m) { add(m, t.metrics[m]); });
+    const tm = tripMetrics_(t);
+    Object.keys(tm).forEach(function (m) { add(m, tm[m]); });
   });
   return Object.keys(acc).map(function (k) { return acc[k]; });
 }

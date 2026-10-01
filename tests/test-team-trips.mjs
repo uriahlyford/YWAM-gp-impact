@@ -107,6 +107,15 @@ ok('the imported 2024 teams show in 2024', sr24['Community Service|Outreach Team
 ok('a team that left in January counts in the new year, not the year it arrived', (() => { const t = seed.find(s => s.id === 'lv_cf50a2eb'); return t.from.startsWith('2024') && t.to.startsWith('2025'); })() &&
   !(sr24['Community Service|Outreach Teams|Teams Hosted'][wkOf('2025-01-13')]));
 
+// Volunteers Mobilized: from 1 Oct 2026 it is the team's own head count, not a typed number
+r = await call('saveTeamTrip', ['sok', '1234', { ...TRIP, id: 'tt_vm_new', name: 'October Team', from: '2026-10-05', to: '2026-10-16', size: 14, metrics: { 'Volunteers Mobilized': 99, 'People Served': 5 } }]);
+r = await call('saveTeamTrip', ['sok', '1234', { ...TRIP, id: 'tt_vm_old', name: 'August Team', from: '2026-08-03', to: '2026-08-14', size: 14, metrics: { 'Volunteers Mobilized': 9 } }]);
+{ const d = (await call('getData', ['leadercode', 2026])).body.entries.siemreap || {};
+  const vm = d['Community Service|Outreach Teams|Volunteers Mobilized'] || {};
+  ok('a team leaving from October counts its head count as Volunteers Mobilized, whatever was typed', vm[wkOf('2026-10-16')] === 14, JSON.stringify(vm));
+  ok('an earlier team keeps the number logged for it', vm[wkOf('2026-08-14')] === 9, JSON.stringify(vm)); }
+mem.teamTrips = mem.teamTrips.filter(t => t.id !== 'tt_vm_new' && t.id !== 'tt_vm_old');
+
 // a hand-logged row for the same week is replaced, not added to
 mem.entries = [{ campus: 'siemreap', dept: 'Community Service', ministry: 'Outreach Teams', metric: 'Teams Hosted', week: wk, year: YR, value: 7 },
   { campus: 'siemreap', dept: 'Community Service', ministry: 'Outreach Teams', metric: 'Baptisms', week: wk, year: YR, value: 2 },

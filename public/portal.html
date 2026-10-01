@@ -1119,7 +1119,8 @@ function teamDocsIn_(app){ var st=app.steps||[]; return ['passports','photo','fl
 function teamMetricList_(campus){
   if(typeof setMetricOverrides==='function') setMetricOverrides(P.boot.metricOverrides||[]);
   var deps=(typeof getDepartments==='function') ? getDepartments(campus||DEFAULT_CAMPUS) : {};
-  return (((deps['Community Service']||{})['Outreach Teams'])||[]).filter(function(m){ return m!=='Teams Hosted'; });
+  // Teams Hosted is counted by the app, and Volunteers Mobilized is the team's own head count
+  return (((deps['Community Service']||{})['Outreach Teams'])||[]).filter(function(m){ return m!=='Teams Hosted' && m!=='Volunteers Mobilized'; });
 }
 function teamNumberRowsHtml_(trip, campus, pre){
   var m=(trip && trip.metrics)||{}, r=(trip && trip.reached)||{};
