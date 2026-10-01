@@ -392,10 +392,10 @@ show up here too), men/women reached, notes.
 ## SR Hospitality — rooms, beds and bookings
 The Hospitality team's booking book (`S.view='hosp'`, `hospHtml` / `bindHosp` in
 teams.html), reached from the menu (`canHospClient_()`) and from a button on My Ministry
-when Skills Training › Hospitality is picked (`#goHosp`). Four tabs, phone first:
+when Skills Training › Hospitality is picked (`#goHosp`). Five tabs, phone first:
 Dashboard (tonight's tiles; how full each week / month / quarter is, as bars coloured
 quiet / busy / full with unbooked team requests striped on top, and the busiest and
-quietest bucket named), Requests, Bookings, Rooms.
+quietest bucket named), Requests, Calendar, Bookings, Rooms.
 
 - **Store**: one blob per campus, `hosp:<campus>` = `{buildings:[{id,name}], rooms:[{id,
   buildingId, name, style, notes, beds:[{id,label,out}]}], bookings:[{id, category, name,
@@ -419,7 +419,18 @@ quietest bucket named), Requests, Bookings, Rooms.
   accounts. `getMyBoot`'s staff carries `hospitality`. Handlers: `getHospitality`,
   `hospSave(kind, rec)`, `hospDelete(kind, id)` with kind building | room | booking.
 - `test-hospitality.mjs` (server) and `test-hospitality-page.mjs` (browser) cover it.
-  Part 2 (not built yet): a room-by-day calendar and drag-and-drop between beds.
+- **Calendar tab** has two views. *Calendar* (`hospCalHtml_`): one row per bed grouped by
+  room, 14 days from a Monday (‹ › a week), each booking a bar over the nights it holds that
+  bed (`cont` / `more` when it runs off the edge), bookings with beds still to pick stacked
+  in "No bed yet" lanes, each day's % full in the header. It scrolls sideways inside
+  `.hospCalScroll` with the bed column sticky. Tap a bar → the booking form.
+  *Bed board* (`hospBoardHtml_`): the rooms on one night (‹ › a day, a date box), each bed
+  with who is in it, and "No bed yet" chips for people without one. Tap a person, then a
+  bed (or drag on a computer): `hospMoveBed(bookingId, fromBed, toBed)` moves them for the
+  whole stay; onto someone sharing a night it **swaps** the two, refused (`bed_taken` +
+  `with`) if that would put the other one in a third booking's bed; `fromBed` '' places
+  someone waiting (`all_placed` when they all have beds); `toBed` '' takes them off.
+  One write, so a swap can't half-happen.
 
 ## Admin — a home menu, one page per tool, one page per person
 `adminHtml` routes on `S.adminSub`: `home` (a card per tool, `ADMIN_SUBS`, with counts on
