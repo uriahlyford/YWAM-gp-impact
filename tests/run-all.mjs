@@ -30,6 +30,7 @@ const SERVER = [
   'test-ministry-leader.mjs', // ministry leaders (admin-assigned) own the metric list; personal numbers; renaming a custom metric moves its history
   'test-leadership-rename.mjs', // Base Leadership → Campus Leadership (and its director row → Campus Director): old-name rows read back new, old-name accounts keep every right
   'test-team-trips.mjs', // Outreach Teams: one record per team (seeded from the Lovable hub), campus-bound add/edit/delete, teams become weekly rows in the week they leave and replace hand-logged ones
+  'test-hospitality.mjs', // SR Hospitality: Hospitality ministry + admins only; buildings, rooms, beds; bookings cleaned, no bed in two bookings a night, maintenance beds out; upcoming Teams Database teams are bed requests until booked
   'test-structure.mjs', // quarterly org-structure snapshots: admin-only save built on the server from active staff, read exact / latest-earlier (copied) / none, per campus, replace on re-save
   'test-admin-leave.mjs', // Admin → Leave: only an admin reads everyone's requests (who, campus, dept, mentor, reason) and year totals; admin decides waiting/noted ones, not decided ones
   'test-staff-ids.mjs', // every staff record gets its own id on read: a missing one is minted, a duplicate re-minted for the later row, the repaired list written back once; repaired accounts work by their new id
@@ -68,6 +69,7 @@ const BROWSER = [
   'test-ministry-redesign.mjs', // My Ministry: Numbers/OKRs tabs, dashboard tiles, the logged-weeks strip, one button unfolds the form, personal numbers, leader-only editor
   'test-org-chart.mjs', // Team → Structure: the campus as levels — Campus Leadership, a connector, one box per department with its ministries — built from profiles, nothing to edit or fetch
   'test-outreach-teams.mjs', // Teams Database: month/quarter/year dashboard over finished teams, one form to add/edit/delete a team; My Ministry picker + banner, period toggle, personal numbers off the page
+  'test-hospitality-page.mjs', // SR Hospitality page: menu + My Ministry door for Hospitality and admins only, tonight tiles, week/month/quarter bars, team requests fit / short, Book beds + Pick beds for me, bed clashes, rooms; phone and desktop
   'test-admin-select.mjs', // Admin: home menu → Accounts (campus chips, search) → a row opens that person's page → Back keeps the search and the narrowed list
   'test-admin-mentors.mjs', // Admin → Mentors: one card per mentor with their people (Waiting when not yet accepted), everyone with no mentor, the home card's count, a person's header names their mentor
   'test-admin-leave-page.mjs', // Admin → Leave page: campus chips + year, tiles, waiting with Approve/Decline, away/coming up, days used vs cap, earlier folded, names open the person

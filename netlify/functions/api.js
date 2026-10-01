@@ -2844,7 +2844,7 @@ async function getMyBoot(username, pin) {
 
   return {
     ok: true,
-    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s) }),
+    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s), hospitality: canHosp_(s) }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || '',
@@ -3273,6 +3273,185 @@ async function deleteTeamTrip(username, pin, id) {
   if (idx > -1) rows[idx] = tomb; else rows.push(tomb);
   await writeJSON('teamTrips', rows);
   return getTeamTrips(username, pin, cur.campus);
+}
+
+/* ==================== SR Hospitality ====================
+   The hospitality team's booking book: the base's buildings, rooms and beds,
+   and who sleeps in them when — guests, speakers, teams, students,
+   volunteers, staff. One blob per campus ('hosp:<campus>') holds all of it:
+     buildings [{id, name}]
+     rooms     [{id, buildingId, name, style, notes, beds:[{id, label, out}]}]
+     bookings  [{id, category, name, from, to, males, females, count, family,
+                 bedIds, notes, tripId, permanent}]
+   A booking holds `count` beds from `from` (first night) to `to` (the
+   morning they leave — that night is free again); a staff booking can be
+   permanent (no `to`). It may name its beds (bedIds) or just hold the
+   number until they are picked; a named bed can't be in two bookings on the
+   same night, and a bed marked `out` (maintenance) takes nobody.
+
+   Teams are not typed in twice: every team in the Teams Database with dates
+   is a REQUEST here (getHospitality's `requests`) — the team, its dates and
+   head counts, pending or not — until a booking is made for it (tripId).
+
+   Who may open it: the Hospitality ministry (Skills Training) — its members,
+   its leaders, the Skills Training overseer — and admins. Nobody else sees a
+   name in it. */
+const HOSP_DEPT = 'Skills Training', HOSP_MIN = 'Hospitality';
+const HOSP_CATS = ['guest', 'speaker', 'team', 'student', 'volunteer', 'staff'];
+const HOSP_STYLES = ['male', 'female', 'mixed', 'couple', 'family', 'guest', 'staff'];
+const HOSP_MAX = { buildings: 50, rooms: 500, beds: 60, bookings: 5000 };
+function canHosp_(s) {
+  if (!s || isApplicant_(s) || s.active === false) return false;
+  if (s.isAdmin) return true;
+  return memberOf_(s, HOSP_DEPT, HOSP_MIN) || isLeaderOf_(s, HOSP_DEPT, HOSP_MIN) ||
+    (deptOf_(s) === 'Campus Leadership' && s.ministry === HOSP_DEPT);
+}
+function hospKey_(campus) { return 'hosp:' + campus; }
+async function getHosp_(campus) {
+  const d = await readJSON(hospKey_(campus), {});
+  return {
+    buildings: Array.isArray(d.buildings) ? d.buildings : [],
+    rooms: Array.isArray(d.rooms) ? d.rooms : [],
+    bookings: Array.isArray(d.bookings) ? d.bookings : []
+  };
+}
+function hospId_(p) { return p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function hospCount_(v) { const n = finiteNum_(v, 0, 10000); return n == null ? 0 : Math.round(n); }
+/* Two stays share a night when one starts before the other ends; a
+   permanent one never ends. */
+function hospOverlap_(a, b) {
+  const aEnd = a.permanent ? '9999-12-31' : a.to, bEnd = b.permanent ? '9999-12-31' : b.to;
+  return a.from < bEnd && b.from < aEnd;
+}
+function cleanHospBuilding_(b) {
+  const name = str_(b && b.name, 80);
+  if (!name) return null;
+  return { id: str_(b.id, 60) || hospId_('hb'), name: name };
+}
+function cleanHospRoom_(r, d) {
+  const name = str_(r && r.name, 60);
+  const buildingId = str_(r && r.buildingId, 60);
+  if (!name || !buildingId || !d.buildings.some(function (b) { return b.id === buildingId; })) return null;
+  const seen = {};
+  const beds = (Array.isArray(r.beds) ? r.beds : []).slice(0, HOSP_MAX.beds).map(function (b) {
+    const label = str_(b && b.label, 20);
+    if (!label) return null;
+    let id = str_(b.id, 60) || hospId_('bd');
+    if (seen[id]) id = hospId_('bd');
+    seen[id] = 1;
+    return { id: id, label: label, out: !!b.out };
+  }).filter(Boolean);
+  return {
+    id: str_(r.id, 60) || hospId_('hr'), buildingId: buildingId, name: name,
+    style: HOSP_STYLES.indexOf(r.style) > -1 ? r.style : 'mixed', notes: str_(r.notes, 300) || '', beds: beds
+  };
+}
+function cleanHospBooking_(k) {
+  const name = str_(k && k.name, 120);
+  const category = HOSP_CATS.indexOf(k && k.category) > -1 ? k.category : null;
+  const from = isoDate_(k && k.from);
+  const permanent = !!(k && k.permanent) && category === 'staff';
+  const to = permanent ? '' : isoDate_(k && k.to);
+  if (!name || !category || !from || (!permanent && (!to || to <= from))) return null;
+  const males = hospCount_(k.males), females = hospCount_(k.females);
+  const bedIds = [];
+  (Array.isArray(k.bedIds) ? k.bedIds : []).forEach(function (b) { const id = str_(b, 60); if (id && bedIds.indexOf(id) === -1) bedIds.push(id); });
+  const count = Math.max(hospCount_(k.count), males + females, bedIds.length, 1);
+  return {
+    id: str_(k.id, 60) || hospId_('hk'), category: category, name: name, from: from, to: to, permanent: permanent,
+    males: males, females: females, count: count, family: !!k.family, bedIds: bedIds.slice(0, count),
+    notes: str_(k.notes, 1000) || '', tripId: str_(k.tripId, 60) || ''
+  };
+}
+/* Every team in the Teams Database with dates that hasn't left yet is a bed
+   request until a booking points at it. */
+async function hospRequests_(campus, bookings) {
+  const today = new Date().toISOString().slice(0, 10);
+  const pend = await pendingTeamIds_();
+  const booked = {};
+  bookings.forEach(function (k) { if (k.tripId) booked[k.tripId] = k.id; });
+  return (await getTeamTrips_()).filter(function (t) {
+    return t.campus === campus && t.status !== 'cancelled' && t.from && t.to && t.to >= today;
+  }).map(function (t) {
+    return {
+      tripId: t.id, name: t.name, country: t.country || '', from: t.from, to: t.to,
+      size: t.size == null ? null : t.size, males: t.males == null ? null : t.males, females: t.females == null ? null : t.females,
+      couples: t.couples == null ? null : t.couples,
+      pending: !!(t.candidateId && pend[t.candidateId]), portalStage: (t.candidateId && pend[t.candidateId]) || '',
+      candidateId: t.candidateId || '', bookingId: booked[t.id] || ''
+    };
+  }).sort(function (a, b) { return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; });
+}
+async function hospAuth_(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { out: { ok: false } };
+  if (!canHosp_(s)) return { out: { ok: false, err: 'not_authorized' } };
+  return { s: s };
+}
+async function getHospitality(username, pin) {
+  const a = await hospAuth_(username, pin); if (a.out) return a.out;
+  const campus = a.s.campus;
+  await backfillTeamTrips_();
+  const d = await getHosp_(campus);
+  return { ok: true, campus: campus, buildings: d.buildings, rooms: d.rooms, bookings: d.bookings, requests: await hospRequests_(campus, d.bookings) };
+}
+/* One save for all three kinds — a building, a room (with its beds), a
+   booking — so the page has one call to make and one answer to read. */
+async function hospSave(username, pin, kind, rec) {
+  const a = await hospAuth_(username, pin); if (a.out) return a.out;
+  if (!rec || typeof rec !== 'object') return { ok: false, err: 'bad_record' };
+  const campus = a.s.campus;
+  const d = await getHosp_(campus);
+  const list = kind === 'building' ? d.buildings : kind === 'room' ? d.rooms : kind === 'booking' ? d.bookings : null;
+  if (!list) return { ok: false, err: 'bad_kind' };
+  const clean = kind === 'building' ? cleanHospBuilding_(rec) : kind === 'room' ? cleanHospRoom_(rec, d) : cleanHospBooking_(rec);
+  if (!clean) return { ok: false, err: 'bad_record' };
+  const idx = list.findIndex(function (x) { return x.id === clean.id; });
+  if (idx === -1 && list.length >= HOSP_MAX[kind + 's']) return { ok: false, err: 'too_many' };
+  if (kind === 'booking') {
+    const beds = {};
+    d.rooms.forEach(function (r) { r.beds.forEach(function (b) { beds[b.id] = b; }); });
+    if (clean.bedIds.some(function (id) { return !beds[id]; })) return { ok: false, err: 'no_such_bed' };
+    if (clean.bedIds.some(function (id) { return beds[id].out; })) return { ok: false, err: 'bed_out' };
+    const clash = d.bookings.find(function (o) {
+      return o.id !== clean.id && hospOverlap_(o, clean) && (o.bedIds || []).some(function (id) { return clean.bedIds.indexOf(id) > -1; });
+    });
+    if (clash) return { ok: false, err: 'bed_taken', with: clash.name };
+    if (clean.tripId && d.bookings.some(function (o) { return o.id !== clean.id && o.tripId === clean.tripId; })) return { ok: false, err: 'already_booked' };
+  }
+  clean.updated = new Date().toISOString(); clean.updatedBy = a.s.id;
+  if (idx > -1) list[idx] = clean; else list.push(clean);
+  if (kind === 'room') {
+    // a bed taken out of the room comes out of every booking that held it
+    const ids = {};
+    d.rooms.forEach(function (r) { r.beds.forEach(function (b) { ids[b.id] = 1; }); });
+    d.bookings.forEach(function (k) { k.bedIds = (k.bedIds || []).filter(function (id) { return ids[id]; }); });
+  }
+  await writeJSON(hospKey_(campus), d);
+  const out = await getHospitality(username, pin);
+  out.saved = clean;
+  return out;
+}
+async function hospDelete(username, pin, kind, id) {
+  const a = await hospAuth_(username, pin); if (a.out) return a.out;
+  id = str_(id, 60);
+  const campus = a.s.campus;
+  const d = await getHosp_(campus);
+  const list = kind === 'building' ? d.buildings : kind === 'room' ? d.rooms : kind === 'booking' ? d.bookings : null;
+  if (!list) return { ok: false, err: 'bad_kind' };
+  const idx = list.findIndex(function (x) { return x.id === id; });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  if (kind === 'building' && d.rooms.some(function (r) { return r.buildingId === id; })) return { ok: false, err: 'not_empty' };
+  if (kind === 'room') {
+    const gone = {};
+    list[idx].beds.forEach(function (b) { gone[b.id] = 1; });
+    const today = new Date().toISOString().slice(0, 10);
+    if (d.bookings.some(function (k) { return (k.permanent || k.to > today) && (k.bedIds || []).some(function (b) { return gone[b]; }); })) return { ok: false, err: 'in_use' };
+    d.bookings.forEach(function (k) { k.bedIds = (k.bedIds || []).filter(function (b) { return !gone[b]; }); });
+  }
+  list.splice(idx, 1);
+  await writeJSON(hospKey_(campus), d);
+  return getHospitality(username, pin);
 }
 
 /* ==================== human resources ====================
@@ -4649,7 +4828,10 @@ const HANDLERS = {
   portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); },
   portalListAccounts: function (a) { return portalListAccounts(a[0], a[1]); },
   portalCreateApplicant: function (a) { return portalCreateApplicant(a[0], a[1], a[2]); },
-  portalUpdateAccount: function (a) { return portalUpdateAccount(a[0], a[1], a[2], a[3]); }
+  portalUpdateAccount: function (a) { return portalUpdateAccount(a[0], a[1], a[2], a[3]); },
+  getHospitality: function (a) { return getHospitality(a[0], a[1]); },
+  hospSave: function (a) { return hospSave(a[0], a[1], a[2], a[3]); },
+  hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); }
 };
 
 export default async (req) => {
