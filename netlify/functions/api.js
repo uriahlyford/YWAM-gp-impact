@@ -3025,8 +3025,12 @@ async function getTeamTrips_() {
 function isoDate_(v) { const s = str_(v, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
 function cleanTrip_(t, campus) {
   const name = str_(t.name, 120);
-  const from = isoDate_(t.from), to = isoDate_(t.to);
-  if (!name || !from || !to || to < from) return null;
+  let from = isoDate_(t.from), to = isoDate_(t.to);
+  if (!name) return null;
+  /* A team that applied on the portal goes in at any stage, dates or not
+     (candidateId); one added by hand still needs both, the right way round. */
+  if (!t.candidateId && (!from || !to || to < from)) return null;
+  if (from && to && to < from) { const x = from; from = to; to = x; }
   const rec = {
     id: str_(t.id, 60) || ('tt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)),
     campus: campus, name: name, org: str_(t.org, 120), country: str_(t.country, 60), from: from, to: to,
@@ -3061,7 +3065,8 @@ function teamEntryRows_(trips) {
   return Object.keys(acc).map(function (k) { return acc[k]; });
 }
 /* ==================== a team application → the Teams Database ====================
-   Every submitted team application IS a team in the Teams Database (the
+   Every team application — at any stage, submitted or not, dates or not —
+   IS a team in the Teams Database (the
    'teamTrips' blob, linked by candidateId), so Outreach Teams sees it the
    day it comes in. Its name, where it is from, its Siem Reap dates and head
    counts follow the application (syncTeamTrip_ on submit, on every answer
@@ -3079,11 +3084,15 @@ function tripFromApp_(c, prev) {
     if (dates.length >= 2) base = { from: dates[0], to: dates[dates.length - 1] };
   }
   const cut = function (v, n) { return v == null ? '' : String(v).trim().slice(0, n); };
+  // the application's answer when it has one, else what is already there (staff may have filled it in)
+  const pick = function (v, was) { return v === undefined || v === null || v === '' ? (was === undefined ? null : was) : v; };
   const merged = Object.assign({ metrics: {}, reached: {} }, prev || {}, {
-    id: prev ? prev.id : 'ta_' + c.id,
-    name: cut(a.teamName, 120) || c.name, org: cut(a.teamName, 120),
+    id: prev ? prev.id : 'ta_' + c.id, candidateId: c.id,
+    name: cut(a.teamName, 120) || c.name, org: cut(a.teamName, 120) || (prev && prev.org) || '',
     country: cut(a.location, 60) || (prev && prev.country) || c.country || '',
-    from: base.from, to: base.to, size: a.size, males: a.males, females: a.females, couples: a.couples,
+    from: isoDate_(base.from) || (prev && prev.from) || '', to: isoDate_(base.to) || (prev && prev.to) || '',
+    size: pick(a.size, prev && prev.size), males: pick(a.males, prev && prev.males), females: pick(a.females, prev && prev.females),
+    couples: pick(a.couples, prev && prev.couples),
     focus: cut(a.focus, 200) || (prev && prev.focus) || '',
     status: c.archived ? 'cancelled' : (prev && prev.status) || 'active'
   });
@@ -3092,12 +3101,12 @@ function tripFromApp_(c, prev) {
   rec.candidateId = c.id;
   return rec;
 }
-/* A team goes in as soon as its application has Siem Reap dates — submitted
-   or still a draft — so a team part-way through its form is already on the
-   calendar (pending). Nothing is written when nothing changed, which keeps
-   the draft autosave from rewriting the blob on every keystroke. */
+/* A team goes in the day its application exists — even one staff added in
+   the CRM, or a draft with no dates yet (it waits off the calendar until it
+   has them). Nothing is written when nothing changed, which keeps the draft
+   autosave from rewriting the blob on every keystroke. */
 async function syncTeamTrip_(c, by, status) {
-  if (!c || c.type !== 'team' || !c.portal) return null;
+  if (!c || c.type !== 'team') return null;
   const rows = await getTeamTripsRaw_();
   const idx = rows.findIndex(function (r) { return r && r.candidateId === c.id; });
   if (idx > -1 && rows[idx].deleted) return null;
@@ -3162,12 +3171,17 @@ async function portalStaffSaveTeamNumbers(username, pin, candidateId, metrics, r
   const out = portalCandOut_(a.cand, byId); out.teamTrip = teamTripOut_(rec);
   return { ok: true, candidate: out };
 }
-/* A team that applied on the portal is PENDING until staff mark it arrived:
-   it shows in the Teams Database (and its calendar) from the day it applies,
-   but its numbers only count on the dashboards once it has come. */
+/* A team that applied on the portal is PENDING until its flights are
+   confirmed — the itinerary uploaded, "flights confirmed" ticked, or the
+   team past the documents stage. It shows in the Teams Database (and its
+   calendar) from the day it applies, but its numbers only count on the
+   dashboards once it is no longer pending. */
+function teamFlightsIn_(c) {
+  return hasDoc_(c, 'flights') || !!((c.portal && c.portal.visa) || {}).flightsConfirmed || portalStageIdx_(c.stage, 'team') >= portalStageIdx_('call2', 'team');
+}
 async function pendingTeamIds_() {
   const out = {};
-  (await getCandidates_()).forEach(function (c) { if (c && c.type === 'team' && !c.archived && c.stage !== 'arrived') out[c.id] = c.stage; });
+  (await getCandidates_()).forEach(function (c) { if (c && c.type === 'team' && !c.archived && !teamFlightsIn_(c)) out[c.id] = c.stage; });
   return out;
 }
 async function withTeamRows_(rows) {
@@ -3186,7 +3200,7 @@ async function withTeamRows_(rows) {
    deleted there keeps its tombstone (with its candidateId), so it is not
    brought back. */
 async function backfillTeamTrips_() {
-  const cands = (await getCandidates_()).filter(function (c) { return c && c.type === 'team' && !c.archived && c.portal; });
+  const cands = (await getCandidates_()).filter(function (c) { return c && c.type === 'team' && !c.archived; });
   if (!cands.length) return 0;
   const rows = await getTeamTripsRaw_();
   const have = {};
@@ -3510,6 +3524,7 @@ async function hrSaveCandidate(username, pin, cand) {
   if (prev && prev.stage !== rec.stage) rec.log = rec.log.concat([{ at: rec.updated, by: g.s.id, kind: 'stage', text: rec.stage }]).slice(-CAND_LOG_MAX);
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('candidates', rows);
+  if (rec.type === 'team') await syncTeamTrip_(rec, g.s.id);   // every team application is a team in the Teams Database
   return { ok: true, candidate: rec };
 }
 async function hrCandidateNote(username, pin, id, text) {

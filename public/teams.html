@@ -636,6 +636,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .teamPickRow { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
 .teamPickRow .pick { max-width:160px; flex:1; }
 .teamCard.cancelled { opacity:.6; }
+.teamOpenApp { display:inline-block; width:auto; margin:8px 0 0; padding:7px 12px; text-decoration:none; }
 .teamStat.pending { background:var(--banner); border-color:var(--bannerBorder); color:var(--bannerInk); }
 .calCard { padding:12px 10px; }
 .calNav { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -6921,35 +6922,35 @@ function teamsDashboardHtml_(campus, trips){
     esc(S.mmDashAll ? t('Show fewer') : gpT('Show all {n} metrics',{n:tiles.length}))+'</button>';
   return h;
 }
+/* One team, kept short on purpose — the dates, and how many people (all,
+   men, women). Everything else lives in Edit, or for a team that applied on
+   the portal, in its application: "Open application" goes straight to it on
+   the staff side of the portal (for anyone with portal access). */
+function canPortalClient_(){ return !!(S.me && (S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal)); }
+function tripDays_(tr){ return tr.from && tr.to ? Math.round((new Date(tr.to+'T00:00:00')-new Date(tr.from+'T00:00:00'))/86400000)+1 : 0; }
+function teamPeopleLine_(tr){
+  var bits=[];
+  if(tr.size!=null && tr.size!=='') bits.push(gpT('{n} people',{n:tr.size}));
+  if(tr.males!=null && tr.males!=='') bits.push(tr.males+' '+t('men'));
+  if(tr.females!=null && tr.females!=='') bits.push(tr.females+' '+t('women'));
+  return bits.length ? bits.join(' · ') : t('Head count not in yet');
+}
 function teamCardHtml_(tr, canEdit, campus){
-  var metrics=teamMetrics_(campus), bits=[];
-  if(tr.org && tr.org!==tr.name) bits.push(tr.org);
-  if(tr.country) bits.push(tr.country);
+  var n=tripDays_(tr);
   var h='<div class="card slim teamCard'+(tr.status==='cancelled'?' cancelled':'')+'" data-teamcard="'+esc(tr.id)+'">';
   h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(tr.name)+'</b>'+
-      (tr.pending ? ' <span class="teamStat pending" data-fromportal data-pending>⏳ '+esc(t('Pending'))+' · '+esc(candStageLabel_(tr.portalStage))+'</span>'
-        : tr.candidateId ? ' <span class="teamStat portal" data-fromportal>🛂 '+esc(t('From the portal'))+'</span>' : '')+
+      (tr.pending ? ' <span class="teamStat pending" data-fromportal data-pending title="'+esc(candStageLabel_(tr.portalStage))+'">⏳ '+esc(t('Pending'))+'</span>' : '')+
       (tr.status==='cancelled'?' <span class="teamStat">'+esc(t('Cancelled'))+'</span>':'')+'</div>'+
-      (bits.length?'<div class="rowSub">'+esc(bits.join(' · '))+'</div>':'')+
-      '<div class="rowSub">📅 '+esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+'</div></div>'+
+      '<div class="rowSub">📅 '+(tr.from && tr.to ? esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+' · '+esc(gpT('{n} days',{n:n})) : esc(t('Dates not set yet')))+'</div>'+
+      '<div class="rowSub">👥 '+esc(teamPeopleLine_(tr))+'</div></div>'+
     (canEdit?'<button class="linkbtn inline" data-teamedit="'+esc(tr.id)+'">'+esc(t('Edit'))+'</button>':'')+'</div>';
-  var comp=[];
-  if(tr.size!=null) comp.push(gpT('{n} people',{n:tr.size}));
-  if(tr.males!=null) comp.push(tr.males+' '+t('men'));
-  if(tr.females!=null) comp.push(tr.females+' '+t('women'));
-  if(tr.couples!=null) comp.push(tr.couples+' '+t('couples'));
-  if(tr.families!=null) comp.push(tr.families+' '+t('families'));
-  if(comp.length) h+='<div class="rowSub" style="margin-top:4px">👥 '+esc(comp.join(' · '))+'</div>';
-  if(tr.staff) h+='<div class="rowSub">🤝 '+esc(t('Hosted by'))+' '+esc(tr.staff)+'</div>';
-  if(tr.focus) h+='<div class="rowSub">🎯 '+esc(tr.focus)+'</div>';
-  var chips='';
-  metrics.forEach(function(m){ var v=tr.metrics&&tr.metrics[m]; if(v!=null) chips+='<span class="teamStat"><b>'+fmt(Number(v),m)+'</b> '+esc(t(m))+'</span>'; });
-  var r=tr.reached||{};
-  if(r.male!=null||r.female!=null) chips+='<span class="teamStat"><b>'+fmt(r.male==null?null:Number(r.male),'')+' / '+fmt(r.female==null?null:Number(r.female),'')+'</b> '+esc(t('men / women reached'))+'</span>';
-  h+= chips ? '<div class="teamStats">'+chips+'</div>'
-    : (tr.status==='cancelled' ? '' : '<div class="rowSub" style="margin-top:6px">⚠️ '+esc(t('No numbers entered for this team yet'))+'</div>');
-  if(tr.notes) h+='<div class="rowSub" style="margin-top:6px">'+esc(tr.notes)+'</div>';
-  if(tr.pending) h+='<div class="rowSub" style="margin-top:6px">'+esc(t('Counts on the dashboards once the team is marked arrived on the portal.'))+'</div>';
+  if(tripFinished_(tr)){
+    var any=Object.keys(tr.metrics||{}).some(function(m){ return tr.metrics[m]!=null; });
+    h+='<div class="rowSub" style="margin-top:4px">'+(any ? '📊 '+esc(t('Numbers entered')) : '⚠️ '+esc(t('No numbers entered for this team yet')))+'</div>';
+  }
+  if(tr.candidateId && canPortalClient_()){
+    h+='<a class="btn ghost small teamOpenApp" data-openapp="'+esc(tr.candidateId)+'" href="portal.html?open='+encodeURIComponent(tr.candidateId)+'" target="_blank" rel="noopener">🛂 '+esc(t('Open application'))+'</a>';
+  }
   return h+'</div>';
 }
 
@@ -7010,8 +7011,8 @@ function teamCalHtml_(campus, trips){
   else h+='<div class="accCard">'+inMonth.map(function(tr){
     var k=calKind_(tr, today);
     return '<button class="calRow" data-calteam="'+esc(tr.id)+'"><span class="calDot '+k+'"></span><span style="flex:1;min-width:0"><b>'+esc(tr.name)+'</b>'+
-      '<span class="rowSub" style="display:block">'+esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+(tr.size?' · '+esc(gpT('{n} people',{n:tr.size})):'')+
-      (tr.pending?' · ⏳ '+esc(candStageLabel_(tr.portalStage)):'')+'</span></span></button>';
+      '<span class="rowSub" style="display:block">'+esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+' · '+esc(teamPeopleLine_(tr))+
+      (tr.pending?' · ⏳ '+esc(t('Pending')):'')+'</span></span></button>';
   }).join('')+'</div>';
   return h;
 }
@@ -7076,12 +7077,12 @@ function teamsMinistryHtml_(campus){
   h+='<h3>'+esc(gpT('Teams · {period}',{period:teamPeriodLabel_()}))+' <small>· '+shown.length+'</small></h3>';
   if(!shown.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No teams finished in this period.'))+'</p></div>';
   shown.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
-  var now=todayStr(), coming=c.trips.filter(function(tr){ return tr.status!=='cancelled' && (tr.to>=now || tr.pending); })
-    .sort(function(a,b){ return a.from<b.from?-1:1; });
+  var now=todayStr(), coming=c.trips.filter(function(tr){ return tr.status!=='cancelled' && (tr.to>=now || tr.pending || !tr.to); })
+    .sort(function(a,b){ if(!a.from) return 1; if(!b.from) return -1; return a.from<b.from?-1:1; });
   if(coming.length){
     var comingPeople=0, pendN=0; coming.forEach(function(tr){ comingPeople+=Number(tr.size)||0; if(tr.pending) pendN++; });
     h+='<h3 id="teamsComing">'+esc(t('Here now or coming'))+' <small>· '+coming.length+(comingPeople?' · '+esc(gpT('{n} people',{n:comingPeople})):'')+(pendN?' · '+esc(gpT('{n} pending',{n:pendN})):'')+'</small></h3>';
-    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Teams that applied on the portal stay pending until they have arrived. Enter their numbers once they leave — they join the dashboard then.'))+'</p>';
+    h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Every team application is here from the day it comes in, and stays pending until its flights are confirmed. Enter their numbers once they leave — they join the dashboard then.'))+'</p>';
     coming.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
   }
   return h+'</div>';
