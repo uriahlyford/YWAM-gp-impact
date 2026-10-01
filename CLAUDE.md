@@ -389,6 +389,38 @@ show up here too), men/women reached, notes.
   new server test needs that line too.
 - `test-team-trips.mjs` (server) and `test-outreach-teams.mjs` (browser) cover it.
 
+## SR Hospitality — rooms, beds and bookings
+The Hospitality team's booking book (`S.view='hosp'`, `hospHtml` / `bindHosp` in
+teams.html), reached from the menu (`canHospClient_()`) and from a button on My Ministry
+when Skills Training › Hospitality is picked (`#goHosp`). Four tabs, phone first:
+Dashboard (tonight's tiles; how full each week / month / quarter is, as bars coloured
+quiet / busy / full with unbooked team requests striped on top, and the busiest and
+quietest bucket named), Requests, Bookings, Rooms.
+
+- **Store**: one blob per campus, `hosp:<campus>` = `{buildings:[{id,name}], rooms:[{id,
+  buildingId, name, style, notes, beds:[{id,label,out}]}], bookings:[{id, category, name,
+  from, to, permanent, males, females, count, family, bedIds, notes, tripId}]}`. Starts
+  empty — the team sets its rooms up in the app. Room styles: mixed, male, female,
+  couple, family, guest, staff. Categories: guest, speaker, team, student, volunteer, staff.
+- **A booking** holds `count` beds from `from` (first night) to `to` (the morning they
+  leave — that night is free); a staff booking can be `permanent` (no `to`). `bedIds` may
+  name fewer beds than `count`: capacity counts people, the picker only the named beds.
+  `hospSave` refuses a named bed another booking holds on any shared night (`bed_taken`
+  + `with`), a bed `out` of use, an unknown bed, and a second booking for the same team.
+  Removing a bed from a room takes it out of every booking; a building with rooms, or a
+  room someone is still booked into, can't be deleted.
+- **Team requests** are not stored: `getHospitality` lists every team in the Teams
+  Database (`getTeamTrips_`) on the campus, not cancelled, with dates, not left yet —
+  with `pending` from `pendingTeamIds_` and `bookingId` when a booking has its `tripId`.
+  "Fits / Short by N" is worked out in the page (`hospFit_`: the tightest night of the
+  stay against beds in use). Students aren't requests yet (no dates on the portal).
+- **Rights**: `canHosp_` — admins, and the Hospitality ministry: members (main or other
+  ministry), its leaders, the Skills Training overseer. Not applicants, not inactive
+  accounts. `getMyBoot`'s staff carries `hospitality`. Handlers: `getHospitality`,
+  `hospSave(kind, rec)`, `hospDelete(kind, id)` with kind building | room | booking.
+- `test-hospitality.mjs` (server) and `test-hospitality-page.mjs` (browser) cover it.
+  Part 2 (not built yet): a room-by-day calendar and drag-and-drop between beds.
+
 ## Admin — a home menu, one page per tool, one page per person
 `adminHtml` routes on `S.adminSub`: `home` (a card per tool, `ADMIN_SUBS`, with counts on
 Accounts, Approvals and Mentors), `accounts`, `approvals`, `mentors` (`adminMentorsHtml_`:

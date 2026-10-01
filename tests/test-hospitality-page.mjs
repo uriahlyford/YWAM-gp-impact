@@ -1,0 +1,217 @@
+/* SR Hospitality in the browser, on a phone and a desktop.
+
+   Drives the real teams.html against a small stand-in for the three
+   hospitality calls: who gets the menu item and the My Ministry button (the
+   Hospitality ministry and admins, not another ministry); the dashboard's
+   tiles for tonight and its week / month / quarter bars with the busy and
+   quiet seasons; team requests from the Teams Database with whether they fit
+   ("Fits" / "Short by"), pending ones marked; "Book beds" opens a booking
+   filled in from the team, "Pick beds for me" puts men in the men's room
+   and women in the women's, and the saved booking marks the request booked;
+   a bed someone else has those nights can't be picked; rooms and buildings
+   are added from the Rooms tab. Nothing scrolls sideways. Made-up people. */
+import { PUBLIC, CHROMIUM } from './env.mjs';
+import { testNow, pinClock } from './clock.mjs';
+import { chromium } from 'playwright';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const NOW = testNow('2026-10-12');
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json' };
+const server = http.createServer((req, res) => {
+  let p = req.url.split('?')[0]; if (p === '/') p = '/index.html';
+  const f = path.join(PUBLIC, p);
+  if (!fs.existsSync(f)) { res.writeHead(404); res.end(); return; }
+  res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
+  res.end(fs.readFileSync(f));
+});
+await new Promise(r => server.listen(4497, r));
+
+let pass = 0, fail = 0;
+function ok(name, cond, extra) {
+  if (cond) { pass++; console.log('ok   ' + name + (extra !== undefined ? '  → ' + extra : '')); }
+  else { fail++; console.log('FAIL ' + name + (extra !== undefined ? '  → ' + extra : '')); }
+}
+const base = { campus: 'siemreap', photo: '', mentorId: '', isAdmin: false, leads: [] };
+const HANA = { ...base, id: 'st_h', name: 'Hana Example', username: 'hana', dept: 'Skills Training', ministry: 'Hospitality', role: 'Host', hospitality: true };
+const ADMIN = { ...base, id: 'st_a', name: 'Adam Example', username: 'adam', dept: 'Campus Leadership', ministry: 'Campus Director', role: '', isAdmin: true, hospitality: true };
+const KIM = { ...base, id: 'st_k', name: 'Kim Example', username: 'kim', dept: 'Community Service', ministry: 'Cafe', role: '', hospitality: false };
+const day = (n) => { const d = new Date(NOW); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const beds = (p, n, out) => Array.from({ length: n }, (_, i) => ({ id: p + i, label: String.fromCharCode(65 + i), out: out === i }));
+const FIXTURE = () => ({
+  buildings: [{ id: 'b1', name: 'Main House' }],
+  rooms: [
+    { id: 'r1', buildingId: 'b1', name: '101', style: 'male', notes: '', beds: beds('m', 4) },
+    { id: 'r2', buildingId: 'b1', name: '102', style: 'female', notes: '', beds: beds('f', 4, 3) },   // bed D out of use
+  ],
+  bookings: [
+    { id: 'k1', category: 'speaker', name: 'Pastor Example', from: day(-1), to: day(3), males: 1, females: 0, count: 1, family: false, bedIds: ['m0'], notes: '', tripId: '', permanent: false },
+  ],
+  trips: [
+    { tripId: 'tt1', name: 'Example Church', country: 'Nowhere', from: day(1), to: day(6), size: 4, males: 2, females: 2, pending: true, portalStage: 'docs', candidateId: 'cd1' },
+    { tripId: 'tt2', name: 'Huge Example Base', country: '', from: day(20), to: day(30), size: 30, males: 15, females: 15, pending: false, portalStage: '', candidateId: '' },
+  ],
+});
+
+const browser = await chromium.launch({ executablePath: CHROMIUM });
+async function open(who, opts) {
+  opts = opts || {};
+  const ctx = await browser.newContext({ viewport: opts.viewport || { width: 390, height: 900 } });
+  await pinClock(ctx, NOW);
+  const page = await ctx.newPage();
+  const errors = [], sent = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION/.test(m.text())) errors.push('console: ' + m.text()); });
+  const H = FIXTURE(); let n = 0;
+  const hospOut = () => ({ ok: true, campus: 'siemreap', buildings: H.buildings, rooms: H.rooms, bookings: H.bookings,
+    requests: H.trips.map(q => ({ ...q, bookingId: (H.bookings.find(k => k.tripId === q.tripId) || {}).id || '' })) });
+  await ctx.route('**/.netlify/functions/api', r => {
+    const b = JSON.parse(r.request().postData() || '{}'); sent.push(b);
+    let out = { ok: true };
+    if (b.fn === 'getMyBoot') out = { ok: true, staff: who, profile: {}, roster: [HANA, ADMIN, KIM], logs: [], habits: null, mentees: [], mentorRequests: [],
+      goals: [], checkins: [], ministry: { ok: true, campus: 'siemreap', dept: who.dept, ministry: who.ministry, entries: {}, daily: {}, prev: {}, pins: [] }, personal: { ok: true, entries: {} },
+      trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [],
+      base: { leader: false, entries: { siemreap: {} }, okrs: [], survey: [], metricOverrides: [] } };
+    else if (b.fn === 'getData') out = { entries: {}, okrs: [], survey: [] };
+    else if (b.fn === 'getHospitality') out = who.hospitality ? hospOut() : { ok: false, err: 'not_authorized' };
+    else if (b.fn === 'hospSave') {
+      const kind = b.args[2], rec = { ...b.args[3] };
+      const list = kind === 'building' ? H.buildings : kind === 'room' ? H.rooms : H.bookings;
+      if (!rec.id) rec.id = kind[0] + 'new' + (++n);
+      if (kind === 'room') rec.beds = rec.beds.map((x, i) => ({ ...x, id: x.id || rec.id + '_' + i }));
+      const i = list.findIndex(x => x.id === rec.id); if (i > -1) list[i] = rec; else list.push(rec);
+      out = { ...hospOut(), saved: rec };
+    }
+    else if (b.fn === 'hospDelete') { const kind = b.args[2]; const key = kind + 's'; H[key] = H[key].filter(x => x.id !== b.args[3]); out = hospOut(); }
+    else if (b.fn === 'getMinistryFor') out = { ok: true, campus: 'siemreap', dept: b.args[2], ministry: b.args[3], entries: {}, daily: {}, prev: {}, pins: [] };
+    else if (/^getMy/.test(b.fn)) out = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
+  });
+  await page.addInitScript(u => localStorage.setItem('gp-staff', JSON.stringify({ user: u, pin: '1234' })), who.username);
+  await page.goto('http://localhost:4497/teams.html', { waitUntil: 'load' });
+  await page.waitForSelector('.hero', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  return { ctx, page, errors, sent, H };
+}
+const menuItems = async (page) => { await page.click('#menuBtn'); await page.waitForTimeout(200);
+  const ids = await page.$$eval('[data-menu-item]', bs => bs.map(b => b.getAttribute('data-menu-item'))); await page.click('#menuCloseBtn'); await page.waitForTimeout(150); return ids; };
+const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+const tile = (page, id) => page.$eval('[data-hosptile="' + id + '"] .mmTileNum', e => e.textContent.trim());
+
+console.log('=== who gets in ===');
+{
+  const { ctx, page } = await open(KIM);
+  ok('another ministry has no SR Hospitality in the menu', !(await menuItems(page)).includes('hosp'));
+  await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
+  ok('… nor a button on My Ministry', !(await page.$('#goHosp')));
+  await ctx.close();
+}
+{
+  const { ctx, page, errors } = await open(ADMIN);
+  ok('an admin has SR Hospitality in the menu', (await menuItems(page)).includes('hosp'));
+  await page.click('#menuBtn'); await page.waitForTimeout(150);
+  await page.click('[data-menu-item="hosp"]'); await page.waitForTimeout(500);
+  ok('… and it opens the page', !!(await page.$('#hospPage .hospTabs')));
+  ok('no errors (admin)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+console.log('=== a Hospitality member, on a phone ===');
+const { ctx, page, errors, sent, H } = await open(HANA);
+ok('the menu has SR Hospitality', (await menuItems(page)).includes('hosp'));
+await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
+ok('My Ministry has the button', !!(await page.$('#goHosp')));
+await page.click('#goHosp'); await page.waitForTimeout(500);
+ok('it loads the book once', sent.filter(b => b.fn === 'getHospitality').length === 1);
+ok('tonight: one here, of seven beds in use (one is out)', await tile(page, 'tonight') === '1' && await tile(page, 'free') === '6', [await tile(page, 'tonight'), await tile(page, 'free')].join());
+ok('two team requests waiting', await tile(page, 'requests') === '2');
+ok('the Requests tab carries the count', /2/.test(await page.$eval('[data-hosptab="req"]', b => b.textContent)));
+let rows = await page.$$eval('[data-hospbucket]', rs => rs.length);
+ok('months: twelve bars for the year', rows === 12, rows);
+await page.click('[data-hospperiod="week"]'); await page.waitForTimeout(200);
+rows = await page.$$eval('[data-hospbucket]', rs => rs.map(r => ({ pct: +r.dataset.pct, req: +r.dataset.req, now: r.classList.contains('now') })));
+ok('weeks: twelve, this one first and marked', rows.length === 12 && rows[0].now, JSON.stringify(rows.slice(0, 2)));
+ok('this week shows the speaker and the requested team on top', rows[0].pct > 0 && rows[0].req > 0, JSON.stringify(rows[0]));
+await page.click('[data-hospperiod="quarter"]'); await page.waitForTimeout(200);
+ok('quarters: four', (await page.$$('[data-hospbucket]')).length === 4);
+ok('the busiest and quietest season are named', /Busiest: Q4/.test(await page.$eval('#hospSeason', e => e.textContent)), await page.$eval('#hospSeason', e => e.textContent));
+ok('no sideways scroll on the dashboard', !(await overflow(page)));
+
+await page.click('[data-hosptab="req"]'); await page.waitForTimeout(200);
+const fits = await page.$$eval('[data-hospreq]', cs => cs.map(c => ({ id: c.dataset.hospreq, fit: (c.querySelector('[data-fit]') || {}).dataset?.fit, pending: !!c.querySelector('[data-pending]') })));
+ok('the small team fits and is pending; the big one is short', fits[0].id === 'tt1' && fits[0].fit === 'yes' && fits[0].pending && fits[1].fit === 'no' && !fits[1].pending, JSON.stringify(fits));
+ok('the short one says by how much', /Short by 23 beds/.test(await page.$eval('[data-hospreq="tt2"]', c => c.textContent)), await page.$eval('[data-hospreq="tt2"] [data-fit]', c => c.textContent));
+await page.click('[data-hospbookreq="tt1"]'); await page.waitForTimeout(300);
+const form = await page.evaluate(() => ({ name: document.querySelector('[data-hf="name"]').value, from: document.querySelector('[data-hf="from"]').value,
+  to: document.querySelector('[data-hf="to"]').value, males: document.querySelector('[data-hf="males"]').value, cat: document.querySelector('[data-hfcat].on').dataset.hfcat }));
+ok('Book beds fills the booking from the team', form.name === 'Example Church' && form.from === day(1) && form.to === day(6) && form.males === '2' && form.cat === 'team', JSON.stringify(form));
+ok('the speaker’s bed is taken those nights', await page.$eval('[data-hbed="m0"]', b => b.disabled && b.classList.contains('taken')));
+ok('the bed out of use can’t be picked', await page.$eval('[data-hbed="f3"]', b => b.disabled && b.classList.contains('out')));
+await page.click('#hospAutoBtn'); await page.waitForTimeout(200);
+const picked = await page.$$eval('.hospBed.sel', bs => bs.map(b => b.dataset.hbed));
+ok('Pick beds for me: two men in 101, two women in 102', picked.length === 4 && picked.filter(id => id[0] === 'm').length === 2 && picked.filter(id => id[0] === 'f').length === 2 && !picked.includes('m0'), picked.join());
+ok('no gender warning', !(await page.$('#hospWarn')));
+ok('no sideways scroll on the booking form', !(await overflow(page)));
+await page.click('#hospSaveBtn'); await page.waitForTimeout(400);
+const save = sent.filter(b => b.fn === 'hospSave').pop();
+ok('it saves a team booking linked to the request', save && save.args[2] === 'booking' && save.args[3].tripId === 'tt1' && save.args[3].bedIds.length === 4 && save.args[3].count === 4, JSON.stringify(save && save.args[3]));
+ok('the request now says booked', !!(await page.$('[data-hospreq="tt1"] [data-booked]')));
+ok('one request left waiting', /1/.test(await page.$eval('[data-hosptab="req"]', b => b.textContent)));
+
+console.log('=== a new booking by hand ===');
+await page.click('[data-hosptab="book"]'); await page.waitForTimeout(200);
+ok('the bookings list shows here-and-coming', (await page.$$('[data-hospedit]')).length === 2);
+await page.click('#hospNewBtn'); await page.waitForTimeout(200);
+await page.click('[data-hfcat="guest"]'); await page.waitForTimeout(100);
+await page.fill('[data-hf="name"]', 'Guest Example');
+await page.fill('[data-hf="from"]', day(2)); await page.dispatchEvent('[data-hf="from"]', 'change'); await page.waitForTimeout(100);
+await page.fill('[data-hf="to"]', day(4)); await page.dispatchEvent('[data-hf="to"]', 'change'); await page.waitForTimeout(100);
+await page.fill('[data-hf="females"]', '1'); await page.dispatchEvent('[data-hf="females"]', 'change'); await page.waitForTimeout(150);
+ok('the team’s beds are taken those nights now', await page.$eval('[data-hbed="f0"]', b => b.disabled));
+await page.click('[data-hbed="m3"]'); await page.waitForTimeout(100);
+ok('a woman in the men’s room gets a warning', !!(await page.$('#hospWarn')));
+await page.click('[data-hbed="m3"]'); await page.click('[data-hbed="f2"]'); await page.waitForTimeout(100);
+ok('… which goes when she’s moved', !(await page.$('#hospWarn')));
+await page.click('#hospSaveBtn'); await page.waitForTimeout(300);
+const g = sent.filter(b => b.fn === 'hospSave').pop().args[3];
+ok('the guest is saved with her bed', g.category === 'guest' && g.name === 'Guest Example' && g.bedIds.join() === 'f2' && g.count === 1, JSON.stringify(g));
+await page.click('[data-hospcat="speaker"]'); await page.waitForTimeout(150);
+ok('the category filter narrows the list', (await page.$$eval('[data-hospedit]', bs => bs.map(b => b.textContent))).every(t => /Pastor Example/.test(t)));
+
+console.log('=== rooms ===');
+await page.click('[data-hosptab="rooms"]'); await page.waitForTimeout(200);
+ok('the building and its rooms are listed', /Main House/.test(await page.$eval('[data-hospbld="b1"]', e => e.textContent)) && (await page.$$('[data-hosproom]')).length === 2);
+await page.click('#hospAddBld'); await page.fill('#hospBldName', 'Guest House'); await page.click('#hospBldSave'); await page.waitForTimeout(300);
+ok('a building is added', H.buildings.some(b => b.name === 'Guest House'));
+const nb = H.buildings.find(b => b.name === 'Guest House').id;
+await page.click('[data-hospaddroom="' + nb + '"]'); await page.waitForTimeout(200);
+await page.fill('[data-hrf="name"]', '201'); await page.selectOption('[data-hrf="style"]', 'couple');
+await page.click('#hospAddBed'); await page.waitForTimeout(100);
+ok('a new room starts with two beds and Add a bed adds C', (await page.$$('[data-hrbed]')).length === 3 && await page.$eval('[data-hrbed="2"]', i => i.value) === 'C');
+await page.click('[data-hrdel="2"]'); await page.waitForTimeout(100);
+await page.click('#hospRoomSave'); await page.waitForTimeout(300);
+const room = sent.filter(b => b.fn === 'hospSave').pop().args;
+ok('the room is saved with its building, style and beds', room[2] === 'room' && room[3].buildingId === nb && room[3].style === 'couple' && room[3].beds.map(b => b.label).join() === 'A,B', JSON.stringify(room[3]));
+ok('the new building can’t be deleted now it has a room', !(await page.$('[data-hospbldel="' + nb + '"]')));
+ok('no sideways scroll on Rooms', !(await overflow(page)));
+ok('no errors (phone)', errors.length === 0, errors.join(' | '));
+await ctx.close();
+
+console.log('=== desktop ===');
+{
+  const { ctx, page, errors } = await open(HANA, { viewport: { width: 1280, height: 900 } });
+  await page.click('#menuBtn'); await page.waitForTimeout(150);
+  await page.click('[data-menu-item="hosp"]'); await page.waitForTimeout(500);
+  ok('desktop: dashboard renders without sideways scroll', !!(await page.$('#hospChart')) && !(await overflow(page)));
+  await page.click('[data-hosptab="req"]'); await page.waitForTimeout(150);
+  await page.click('[data-hospbookreq="tt1"]'); await page.waitForTimeout(200);
+  ok('desktop: the bed picker fits', !(await overflow(page)) && (await page.$$('[data-hbed]')).length === 8);
+  ok('no errors (desktop)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+await browser.close();
+server.close();
+console.log('\n' + pass + ' passed, ' + fail + ' failed');
+process.exit(fail ? 1 : 0);
