@@ -222,6 +222,9 @@ textarea { min-height:80px; resize:vertical; }
 .staffNavBtn.on { background:var(--ink); color:var(--accentInk); }
 a.staffNavBtn { text-decoration:none; text-align:center; }
 .staffNavBtn.home { border:1px solid var(--border2); }
+.linkCard { margin:-4px 0 14px; }
+.linkRow { display:flex; gap:8px; align-items:center; }
+.linkRow input { flex:1; min-width:0; }
 .pvBar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 10px; }
 .pvWho { font-size:13px; color:var(--muted); }
 .pvFrame { border:2px dashed var(--border2); border-radius:var(--r); padding:14px; pointer-events:none; user-select:none; opacity:.96; }
@@ -464,7 +467,26 @@ function staffNavHtml_(v){
   items.push(['preview','toPreview','👁 '+t('View as applicant')]);
   /* Staff come here from the GP app; this takes them back to its home. */
   return '<nav class="staffNav" id="staffNav"><a class="staffNavBtn home" id="toGpApp" href="teams.html">🏠 '+esc(t('GP app home'))+'</a>'+
-    items.map(function(x){ return '<button class="staffNavBtn'+(v===x[0]?' on':'')+'" id="'+x[1]+'">'+esc(x[2])+'</button>'; }).join('')+'</nav>';
+    items.map(function(x){ return '<button class="staffNavBtn'+(v===x[0]?' on':'')+'" id="'+x[1]+'">'+esc(x[2])+'</button>'; }).join('')+
+    '<button class="staffNavBtn link'+(P.linkOpen?' on':'')+'" id="toLink">🔗 '+esc(t('Link for applicants'))+'</button></nav>'+
+    (P.linkOpen ? applyLinkHtml_() : '');
+}
+/* The link staff send to someone who should apply: the portal itself, or —
+   picked from the chips — the portal opened straight on one kind of
+   application (portal.html?apply=<key>, which opens sign-up for it). A
+   scoped staff member (Outreach Teams) gets the kinds they work. */
+function applyLinkUrl_(key){ return location.origin + location.pathname + (key ? '?apply='+encodeURIComponent(key) : ''); }
+function applyLinkHtml_(){
+  var scope=Array.isArray(P.boot.scope) ? P.boot.scope : null;
+  var kinds=APPLY.filter(function(a){ return (!scope || scope.indexOf(a.type)>-1) && openCampuses_().some(function(c){ return offeredAt_(a, c[0]); }); });
+  var key=P.linkKind||'';
+  if(key && !kinds.some(function(a){ return a.key===key; })) key='';
+  return '<div class="card linkCard" id="applyLinkCard"><div class="panelHead"><b>🔗 '+esc(t('Send someone the portal'))+'</b><button class="hbtn" id="closeLink" aria-label="'+esc(t('Close'))+'">✕</button></div>'+
+    '<p class="sub" style="margin:4px 0 8px">'+esc(t('Copy the link and send it on WhatsApp, Telegram or email. Pick a kind to open the portal straight on that application.'))+'</p>'+
+    '<div class="chips" style="margin-bottom:8px">'+[{ key:'', label:t('Any application') }].concat(kinds.map(function(a){ return { key:a.key, label:a.key==='team' ? t('Teams') : t(a.label) }; })).map(function(a){
+      return '<button class="chip'+(key===a.key?' on':'')+'" data-linkkind="'+esc(a.key)+'">'+esc(a.label)+'</button>'; }).join('')+'</div>'+
+    '<div class="linkRow"><input type="text" id="applyLinkBox" readonly value="'+esc(applyLinkUrl_(key))+'" onclick="this.select()">'+
+    '<button class="btn small" id="copyApplyLink">'+esc(t('Copy link'))+'</button></div></div>';
 }
 function langRowHtml_(){
   return '<div class="langRow"><button id="langBtn2">'+(LANG==='km' ? 'English' : 'ភាសាខ្មែរ')+'</button></div>';
@@ -1654,6 +1676,10 @@ function bind_(){
   on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('toForms', function(){ if(P.view==='forms') return; P.view='forms'; render(); });
   on_('navCrm', function(){ if(P.view==='crm') return; P.view='crm'; render(); });
+  on_('toLink', function(){ P.linkOpen=!P.linkOpen; render(); });
+  on_('closeLink', function(){ P.linkOpen=false; render(); });
+  on_('copyApplyLink', function(){ var el=document.getElementById('applyLinkBox'); if(el) copyText_(el.value); });
+  document.querySelectorAll('[data-linkkind]').forEach(function(b){ b.onclick=function(){ P.linkKind=b.getAttribute('data-linkkind'); render(); copyText_(applyLinkUrl_(P.linkKind)); }; });
   on_('toPreview', function(){ if(P.view==='preview') return; P.view='preview'; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; render(); });
   on_('toAccounts', function(){ if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
   bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); bindStays_(); bindPeople_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();

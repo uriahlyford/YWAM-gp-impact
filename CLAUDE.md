@@ -590,6 +590,11 @@ forms, documents and references follow.
   Forms `#toForms` and Accounts `#toAccounts` for portal admins, View as applicant `#toPreview`).
   The header keeps only language and Sign out: on a phone, four more buttons in it overflowed
   over the title and pushed Sign out off screen. The bar wraps rather than scrolls.
+  The bar ends with **🔗 Link for applicants** (`#toLink`, `P.linkOpen`, `applyLinkHtml_`). It
+  opens a panel holding the portal link to copy (`#applyLinkBox`, `#copyApplyLink`) and a chip
+  for each kind of application (`[data-linkkind]`). Picking a kind copies `portal.html?apply=<key>`,
+  which opens sign-up straight on that application. A scoped staff member only gets the kinds
+  they work.
 - **View as applicant** (staff side, anyone with portal access; `previewHtml_`, view `preview`,
   staff-bar button, and "View as this applicant" on the record panel): `portalViewAs(username, pin,
   {candidateId})` returns one record's own boot (scope applies, no PIN material) and
