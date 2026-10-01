@@ -671,6 +671,12 @@ forms, documents and references follow.
     rest is in Edit. **🛂 Open application** (`[data-openapp]`, for anyone with portal access)
     links to `portal.html?open=<candidateId>`, which opens that record on the staff side of the
     portal (`openFromLink_`) and tidies the address.
+  - **Volunteers Mobilized is the team's head count** for a team leaving on or after
+    `TEAM_AUTO_FROM` (2026-10-01). `tripMetrics_` in api.js gives the dashboards `size` in its
+    place, and `tripMetric_` in teams.html does the same for the Teams Database tiles. Neither the
+    Teams Database form (`teamInputMetrics_`) nor the portal's numbers boxes have an input for it.
+    Earlier teams keep the number logged for them. YWAM Nelson is in `team-seed.js` (Alexis's
+    week-37 entries, 17 people), so it keeps its 29.
   - **Calendar** (`teamCalHtml_`, `S.teamView='cal'`, `S.teamCalYm`, `S.teamCalSel`) is a
     month grid with weeks starting on Monday. Each team is a bar across its days, split at
     the week edge (`.cont` / `.more`) and laned when teams overlap. Bars are coloured pending,

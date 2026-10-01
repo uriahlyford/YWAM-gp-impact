@@ -6,7 +6,10 @@
    had week-by-week rows for a team those are summed; otherwise the team's
    recorded totals are taken as they were. Several 2024–25 teams share
    identical totals (304/177/127/3896, 76/39/37/1639) — that is how the hub
-   held them, they were not invented here; edit them in the app. */
+   held them, they were not invented here; edit them in the app.
+   YWAM Nelson (29 Aug – 13 Sep 2026, 17 people) was added on 2026-10-01: its
+   numbers are the Outreach Teams figures Alexis logged for the week of 11 Sep,
+   before the Teams Database existed, which had no team of their own. */
 export default [
  {
   "id": "lv_5c43edf9",
@@ -877,5 +880,42 @@ export default [
   "notes": "",
   "src": "lovable",
   "updated": "2026-09-20T00:00:00.000Z"
+ },
+ {
+  "id": "sd_ywam_nelson_2026",
+  "campus": "siemreap",
+  "name": "YWAM Nelson",
+  "org": "YWAM Nelson",
+  "country": "",
+  "from": "2026-08-29",
+  "to": "2026-09-13",
+  "size": 17,
+  "males": null,
+  "females": null,
+  "couples": null,
+  "families": null,
+  "staff": "",
+  "focus": "",
+  "status": "active",
+  "metrics": {
+   "Gospel Presentations Given": 12,
+   "People Heard the Gospel": 620,
+   "People Served": 760,
+   "Volunteers Mobilized": 29,
+   "Community Service Hours": 35,
+   "Healings": 39,
+   "Kids Classes Run": 133,
+   "Total Kids": 305,
+   "Salvations": 15,
+   "Baptisms": 0,
+   "People Connected to Local Church": 32
+  },
+  "reached": {
+   "male": null,
+   "female": null
+  },
+  "notes": "",
+  "src": "week-37-entries",
+  "updated": "2026-10-01T00:00:00.000Z"
  }
 ];

@@ -6857,6 +6857,15 @@ var TEAM_DEPT='Community Service', TEAM_MIN='Outreach Teams';
 var MONTH_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function isTeamsMinistry_(dept, min){ return dept===TEAM_DEPT && min===TEAM_MIN; }
 function teamMetrics_(campus){ return metricsFor(campus, TEAM_DEPT, TEAM_MIN).filter(function(m){ return m!=='Teams Hosted'; }); }
+/* Volunteers Mobilized is the team's own head count for a team leaving on or
+   after TEAM_AUTO_FROM (tripMetrics_ in api.js does the same for the
+   dashboards), so the form has no box for it; earlier teams keep theirs. */
+var TEAM_AUTO_FROM='2026-10-01', TEAM_AUTO_METRIC='Volunteers Mobilized';
+function teamInputMetrics_(campus){ return teamMetrics_(campus).filter(function(m){ return m!==TEAM_AUTO_METRIC; }); }
+function tripMetric_(tr, m){
+  if(m===TEAM_AUTO_METRIC && tr && tr.to && tr.to>=TEAM_AUTO_FROM) return (tr.size!=null && tr.size!=='') ? Number(tr.size) : null;
+  return tr && tr.metrics ? tr.metrics[m] : null;
+}
 function teamYear_(){ return S.teamYear || new Date().getFullYear(); }
 function teamQ_(){ return S.teamQ || (Math.floor(new Date().getMonth()/3)+1); }
 function teamMonth_(){ return S.teamMonth || (new Date().getMonth()+1); }
@@ -6905,7 +6914,7 @@ function teamsDashboardHtml_(campus, trips){
   var tiles=[{ name:t('Teams Hosted'), text:fmt(shown.length,''), has:shown.length>0 }];
   var members=sum(function(tr){ return tr.size; });
   tiles.push({ name:t('Team Members'), text:fmt(members,''), has:members!==null });
-  metrics.forEach(function(m){ var v=sum(function(tr){ return tr.metrics&&tr.metrics[m]; }); tiles.push({ name:t(m), text:fmt(v,m), has:v!==null }); });
+  metrics.forEach(function(m){ var v=sum(function(tr){ return tripMetric_(tr, m); }); tiles.push({ name:t(m), text:fmt(v,m), has:v!==null }); });
   var rm=sum(function(tr){ return tr.reached&&tr.reached.male; }), rf=sum(function(tr){ return tr.reached&&tr.reached.female; });
   tiles.push({ name:t('Men / Women Reached'), text:fmt(rm,'')+' / '+fmt(rf,''), has:rm!==null||rf!==null });
   // figures with numbers in first, so the six on show aren't dashes
@@ -7021,7 +7030,7 @@ function teamBlank_(campus){
     staff:'', focus:'', status:'active', notes:'', metrics:{}, reached:{ male:'', female:'' } };
 }
 function teamFormHtml_(campus){
-  var f=S.teamForm, metrics=teamMetrics_(campus), isNew=!f.id;
+  var f=S.teamForm, metrics=teamInputMetrics_(campus), isNew=!f.id;
   var inp=function(key, label, type, extra){
     var v=f[key]; if(v==null) v='';
     return '<div><label class="f">'+esc(label)+'</label><input type="'+type+'"'+(type==='number'?' inputmode="numeric" min="0"':'')+
