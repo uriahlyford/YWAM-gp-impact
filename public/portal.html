@@ -406,12 +406,23 @@ var P = { auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPU
   if(qs.campus && CAMPUS_SCHOOLS[qs.campus] && isOpenCampus_(qs.campus)) P.campus=qs.campus;
   if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
   if(qs.ref){ P.view='ref'; P.refToken=String(qs.ref); }
+  if(qs.open) P.openCand=String(qs.open);   // portal.html?open=<candidateId> — the GP app's Teams Database links here
   var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
   if(saved && saved.user && saved.pin){ P.auth=saved; P.view='booting'; boot_(); }
 })();
+/* Opened from a link to one record (?open=<id>): once the staff boot is in,
+   show that record — on its own tab and campus, nothing filtered away. */
+function openFromLink_(d){
+  if(!P.openCand || !d || d.role==='applicant') return;
+  var c=(d.applicants||[]).filter(function(x){ return x.id===P.openCand; })[0];
+  P.openCand=null;
+  if(!c){ showMsg(t('That application isn’t one you can see.')); return; }
+  P.sel=c.id; P.what = c.type==='student' ? (c.school||'') : c.type; P.campusFilter=''; P.filter = c.archived ? 'archived' : ''; P.q=''; P.audFilter='';
+  try { history.replaceState(null, '', location.pathname); } catch(e){}
+}
 function boot_(){
   run('portalBoot', [P.auth.user, P.auth.pin], function(d){
-    if(d && d.ok){ P.boot=d; if(d.role==='applicant') P.answers=(d.application && d.application.answers)||{}; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
+    if(d && d.ok){ P.boot=d; if(d.role==='applicant') P.answers=(d.application && d.application.answers)||{}; P.view = d.role==='applicant' ? 'me' : 'crm'; openFromLink_(d); lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
     if(d && d.err==='auth'){ lsDel('gp-portal'); P.auth=null; P.view='login'; showMsg(t('Your PIN didn’t work — please sign in again.')); render(); return; }
     if(d && d.err==='not_authorized'){ P.view='noaccess'; render(); return; }
     if(d && d.err==='no_application'){ P.view='noaccess'; P.err='no_application'; render(); return; }
@@ -1134,7 +1145,7 @@ function panelTeamNumbersHtml_(c){
   var h='<h3>📊 '+esc(t('Team numbers'))+'</h3>';
   /* Is this team in the GP app's Teams Database? If not, say why and offer to put it in. */
   if(!c.teamTrip){
-    return h+'<p class="sub" style="margin:0 0 8px" id="teamDbState">⚠️ '+esc(t('Not in the Teams Database yet. It goes in once the application has Siem Reap arrival and departure dates.'))+'</p>'+
+    return h+'<p class="sub" style="margin:0 0 8px" id="teamDbState">⚠️ '+esc(t('Not in the Teams Database yet.'))+'</p>'+
       '<button class="btn small ghost" id="syncTeamBtn"'+(P.busy?' disabled':'')+'>🗂️ '+esc(t('Add to the Teams Database'))+'</button>';
   }
   h+='<p class="sub" style="margin:0 0 6px" id="teamDbState">✓ '+esc(gpT('In the Teams Database · {from} → {to}',{from:fmtDate_(c.teamTrip.from), to:fmtDate_(c.teamTrip.to)}))+'</p>';
@@ -1819,7 +1830,7 @@ function login_(){
   P.auth={ user:u, pin:pin };
   run('portalBoot', [u, pin], function(d){
     P.busy=false;
-    if(d && d.ok){ P.boot=d; if(d.role==='applicant') P.answers=(d.application && d.application.answers)||{}; P.view = d.role==='applicant' ? 'me' : 'crm'; lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
+    if(d && d.ok){ P.boot=d; if(d.role==='applicant') P.answers=(d.application && d.application.answers)||{}; P.view = d.role==='applicant' ? 'me' : 'crm'; openFromLink_(d); lsSet('gp-portal', JSON.stringify(P.auth)); render(); return; }
     if(d && d.err==='not_authorized'){ P.view='noaccess'; render(); return; }
     if(d && d.err==='no_application'){ P.view='noaccess'; P.err='no_application'; render(); return; }
     P.auth=null; showMsg(t('Wrong username or PIN.')); render();

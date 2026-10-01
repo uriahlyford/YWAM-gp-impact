@@ -729,6 +729,16 @@ async function open(viewport, query, seed) {
   await ctx.close();
 }
 
+/* ---------- opened from the Teams Database: one record ---------- */
+{
+  CANDS = JSON.parse(JSON.stringify(CANDS0));
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '?open=cd_team', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
+  await page.waitForSelector('#panel');
+  ok('portal.html?open=<id> opens that team’s application on the staff side', /Grace Church Team/.test(await page.$eval('#panel h2', e => e.textContent)) && await page.$eval('[data-whatfilter="team"]', b => b.classList.contains('on')));
+  ok('and tidies the address so a reload does not reopen it', await page.evaluate(() => !/open=/.test(location.search)));
+  await ctx.close();
+}
+
 /* ---------- staff tools bar on a phone ---------- */
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));

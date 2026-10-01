@@ -656,11 +656,21 @@ forms, documents and references follow.
   - Staff still edit everything in the Teams Database; `saveTeamTrip` keeps the link, and
     the card shows "🛂 From the portal". A team deleted there stays deleted: the tombstone
     keeps its `candidateId`.
-  - **Pending until arrived**: a linked team whose application is open and not at `arrived`
+  - **Every team application is in, at any stage** — submitted or not, dates or not, even one
+    added in the CRM (`hrSaveCandidate` syncs it). `cleanTrip_` lets a linked team (`candidateId`)
+    have no dates yet; it is listed with "Dates not set yet", not on the calendar, and `tripFromApp_`
+    keeps what staff filled in when the application has nothing for a field.
+  - **Pending until its flights are confirmed** (`teamFlightsIn_`: flight itinerary uploaded,
+    `visa.flightsConfirmed`, or the team past the documents stage): a linked team still waiting
     comes back from `getTeamTrips` with `pending: true` and its `portalStage`, and
     `withTeamRows_` leaves it out of the dashboards (`pendingTeamIds_`). The Teams Database
-    shows "⏳ Pending · <stage>", keeps it under "Here now or coming" even once its dates
+    shows "⏳ Pending", keeps it under "Here now or coming" even once its dates
     have passed, and its own tiles skip it (`tripFinished_`).
+  - **The team card is short** (`teamCardHtml_`): name, "⏳ Pending", the dates and number of
+    days, and people (total, men, women); a finished team says whether its numbers are in. The
+    rest is in Edit. **🛂 Open application** (`[data-openapp]`, for anyone with portal access)
+    links to `portal.html?open=<candidateId>`, which opens that record on the staff side of the
+    portal (`openFromLink_`) and tidies the address.
   - **Calendar** (`teamCalHtml_`, `S.teamView='cal'`, `S.teamCalYm`, `S.teamCalSel`) is a
     month grid with weeks starting on Monday. Each team is a bar across its days, split at
     the week edge (`.cont` / `.more`) and laned when teams overlap. Bars are coloured pending,
