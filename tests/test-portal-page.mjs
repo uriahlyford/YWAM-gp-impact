@@ -734,7 +734,7 @@ async function open(viewport, query, seed) {
     noScroll: document.documentElement.scrollWidth <= innerWidth + 1
   }));
   ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
-  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, View as applicant', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toPreview']), JSON.stringify(bar.nav));
+  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, View as applicant, Link for applicants', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toPreview', 'toLink']), JSON.stringify(bar.nav));
   ok('and the bar starts with a way back to the GP app home', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent)));
   ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll && await page.$eval('#toGpApp', a => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }));
   await page.click('#toPreview');
@@ -743,6 +743,19 @@ async function open(viewport, query, seed) {
   await page.click('#navCrm');
   await page.waitForSelector('.trow');
   ok('Applications in the bar returns to the list', await page.$eval('#navCrm', b => b.classList.contains('on')));
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  await page.click('#toLink');
+  await page.waitForSelector('#applyLinkCard');
+  ok('Link for applicants opens the portal link, ready to copy', /\/portal\.html$/.test(await page.$eval('#applyLinkBox', i => i.value)) && !!(await page.$('#copyApplyLink')), await page.$eval('#applyLinkBox', i => i.value));
+  ok('with a chip for each kind of application', (await page.$$eval('[data-linkkind]', c => c.map(x => x.getAttribute('data-linkkind')).join(','))) === ',dts,dbs,bcs,sms,staff,volunteer,team', await page.$$eval('[data-linkkind]', c => c.map(x => x.getAttribute('data-linkkind')).join(',')));
+  await page.click('[data-linkkind="team"]');
+  await page.waitForTimeout(200);
+  ok('picking Teams gives the link straight to the team application', /\/portal\.html\?apply=team$/.test(await page.$eval('#applyLinkBox', i => i.value)));
+  const copied = await page.evaluate(() => navigator.clipboard.readText().catch(() => ''));
+  ok('and copies it', copied === '' || /\?apply=team$/.test(copied), copied);
+  ok('the link panel fits a phone', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await page.click('#closeLink');
+  ok('✕ closes it', !(await page.$('#applyLinkCard')));
   await ctx.close();
 }
 
