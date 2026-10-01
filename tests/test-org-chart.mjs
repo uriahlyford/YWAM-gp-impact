@@ -55,8 +55,9 @@ await ctx.route('**/.netlify/functions/api', r => {
   else if (b.fn === 'staffProfile') out = { ok: true, staff: ROSTER.find(p => p.id === b.args[2]) || ROSTER[0], goals: [], activity: {}, awayWork: {}, isMe: false };
   else if (b.fn === 'getStructure') {
     const [, , campus, year, quarter] = b.args;
-    // Q1 of this year was saved when Dara was still in the Cafe and a since-departed Kiri led it; Q2 was never saved
-    if (quarter === 1) out = { ok: true, campus, year, quarter, source: 'saved', doc: { campus, year, quarter: 1, savedAt: year + '-03-30T00:00:00Z', savedBy: 'st_uriah', people: [
+    // Q1 of THIS year was saved when Dara was still in the Cafe and a since-departed Kiri led it; Q2 was never saved,
+    // and nor was next year's Q1 — which is the next quarter whenever this runs in Q4
+    if (quarter === 1 && Number(year) === new Date().getFullYear()) out = { ok: true, campus, year, quarter, source: 'saved', doc: { campus, year, quarter: 1, savedAt: year + '-03-30T00:00:00Z', savedBy: 'st_uriah', people: [
       { id: 'st_uriah', name: 'Uriah Lyford', dept: 'Campus Leadership', ministry: 'Campus Director', role: '', leads: [] },
       { id: 'st_kiri', name: 'Kiri Left', dept: 'Community Service', ministry: 'Cafe', role: '', leads: ['Community Service|Cafe'] },
       { id: 'st_dara', name: 'Dara Pen', dept: 'Community Service', ministry: 'Cafe', role: '', leads: [] } ] } };

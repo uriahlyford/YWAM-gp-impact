@@ -555,7 +555,7 @@ r = await call('portalUpdateAnswers', ['team.au', '2468', { ...teamFull, size: '
 ok('a team deleted in the Teams Database stays deleted', !(mem.teamTrips || []).some(t => t.candidateId === teamRec.id && !t.deleted));
 
 // applications that came in before the link — they appear the next time the Teams Database is opened
-{ const old = (id, extra) => ({ id, campus: 'siemreap', name: 'Leader ' + id, type: 'team', stage: 'applied', country: 'United States', log: [], archived: null, ...extra });
+{ var old = (id, extra) => ({ id, campus: 'siemreap', name: 'Leader ' + id, type: 'team', stage: 'applied', country: 'United States', log: [], archived: null, ...extra });
   mem.candidates = mem.candidates.concat([
     old('cd_old1', { portal: { submittedAt: '2026-09-20T10:00:00Z', form: { answers: { teamName: 'Example Cascades Team', location: 'Oregon, USA', size: '10', itinerary: [{ place: 'YWAM Siem Reap', from: '2027-02-01', to: '2027-02-14', base: true }] } } } }),
     old('cd_old2', { portal: { submittedAt: '2026-06-01T10:00:00Z', form: { answers: { teamName: 'Older Form Team', arrival: '2027-03-10', departure: '2027-03-01' } } } }),
@@ -565,7 +565,20 @@ ok('a team deleted in the Teams Database stays deleted', !(mem.teamTrips || []).
 r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);
 ok('an application submitted before the link shows up when the Teams Database opens', r.body.ok === true && r.body.trips.some(t => t.candidateId === 'cd_old1' && t.name === 'Example Cascades Team' && t.from === '2027-02-01' && t.size === 10), JSON.stringify(r.body.trips.map(t => t.name)));
 ok('one from the older form takes its earliest and latest dates', r.body.trips.some(t => t.candidateId === 'cd_old2' && t.from === '2027-03-01' && t.to === '2027-03-10'));
-ok('not a draft, not a closed application', !r.body.trips.some(t => t.candidateId === 'cd_draft' || t.candidateId === 'cd_closed'));
+ok('a draft with Siem Reap dates goes in too, pending at New', r.body.trips.some(t => t.candidateId === 'cd_draft' && t.pending && t.portalStage === 'new' && t.from === '2027-04-01'));
+ok('not a closed application', !r.body.trips.some(t => t.candidateId === 'cd_closed'));
+mem.candidates = mem.candidates.concat([old('cd_nodates', { stage: 'applied', portal: { submittedAt: '2026-09-25T10:00:00Z', form: { answers: { teamName: 'No Dates Team' } } } })]);
+r = await call('portalStaffSyncTeam', ['rithy', '1234', 'cd_nodates']);
+ok('staff adding a team with no dates are told it needs them', r.body.ok === false && r.body.err === 'no_dates');
+mem.candidates = mem.candidates.map(c => c.id === 'cd_nodates' ? { ...c, portal: { ...c.portal, form: { answers: { teamName: 'No Dates Team', itinerary: [{ place: 'YWAM Siem Reap', from: '2027-06-01', to: '2027-06-09', base: true }] } } } } : c);
+r = await call('portalStaffSyncTeam', ['rithy', '1234', 'cd_nodates']);
+ok('with dates, Add to the Teams Database puts it in', r.body.ok === true && r.body.candidate.teamTrip.from === '2027-06-01' && (mem.teamTrips || []).some(t => t.candidateId === 'cd_nodates'));
+r = await call('portalStaffSyncTeam', ['rithy', '1234', teamRec.id]);
+ok('a team deleted in the Teams Database is not put back by it', r.body.ok === false && r.body.err === 'deleted');
+r = await call('portalStaffSyncTeam', ['rithy', '1234', cand.id]);
+ok('nor is a student', r.body.ok === false);
+mem.candidates = mem.candidates.filter(c => c.id !== 'cd_nodates');
+r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);
 ok('and the team deleted there stays deleted', !r.body.trips.some(t => t.candidateId === teamRec.id));
 r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);
 ok('opening it again adds nothing twice', (mem.teamTrips || []).filter(t => t.candidateId === 'cd_old1').length === 1);

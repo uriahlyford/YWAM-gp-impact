@@ -668,7 +668,12 @@ forms, documents and references follow.
   - **Numbers from the portal, both sides**: the team's dashboard card shows as soon as it
     has applied (a missing link is made on its `portalBoot`), and the staff record has the
     same boxes (`portalStaffSaveTeamNumbers`, `teamTrip` on each team in the staff boot).
-  - Applications submitted before the link existed, or whose sync was missed, are filled in
+  - **Drafts count too.** A team goes in as soon as its application has Siem Reap dates,
+    whether submitted or still a draft. `portalSaveDraft` syncs it, and nothing is written
+    when nothing changed. On the staff record, `#teamDbState` says whether the team is in the
+    Teams Database. If it isn't, **Add to the Teams Database** (`portalStaffSyncTeam`) puts it in,
+    or explains why it can't: `no_dates` or `deleted`.
+  - Applications from before the link existed, or whose sync was missed, are filled in
     by `backfillTeamTrips_` every time the Teams Database is read (`getTeamTrips`, and so
     `getMyBoot` for Outreach Teams staff). It covers submitted, open team applications with
     no linked row at all, so a deleted team is never brought back. An application from before
