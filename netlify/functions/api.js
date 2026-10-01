@@ -3092,14 +3092,21 @@ function tripFromApp_(c, prev) {
   rec.candidateId = c.id;
   return rec;
 }
+/* A team goes in as soon as its application has Siem Reap dates — submitted
+   or still a draft — so a team part-way through its form is already on the
+   calendar (pending). Nothing is written when nothing changed, which keeps
+   the draft autosave from rewriting the blob on every keystroke. */
 async function syncTeamTrip_(c, by, status) {
-  if (!c || c.type !== 'team' || !(c.portal && c.portal.submittedAt)) return null;
+  if (!c || c.type !== 'team' || !c.portal) return null;
   const rows = await getTeamTripsRaw_();
   const idx = rows.findIndex(function (r) { return r && r.candidateId === c.id; });
   if (idx > -1 && rows[idx].deleted) return null;
-  const rec = tripFromApp_(c, idx > -1 ? rows[idx] : null);
+  const prev = idx > -1 ? rows[idx] : null;
+  const rec = tripFromApp_(c, prev);
   if (!rec) return null;   // no Siem Reap dates yet
   if (status) rec.status = status;
+  const same = function (a, b) { const k = function (x) { const o = Object.assign({}, x); delete o.updated; delete o.updatedBy; return JSON.stringify(o); }; return k(a) === k(b); };
+  if (prev && same(prev, rec)) return prev;
   rec.updated = new Date().toISOString(); rec.updatedBy = by;
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('teamTrips', rows);
@@ -3132,6 +3139,19 @@ async function portalSaveTeamNumbers(username, pin, metrics, reached) {
   if (!(await saveTeamNumbers_(a.cand, metrics, reached, a.s.id))) return { ok: false, err: 'no_trip' };
   return portalBoot(username, pin);
 }
+/* Staff put a team into the Teams Database from its record — the same sync,
+   answered with why when it can't (no Siem Reap dates yet, or deleted there). */
+async function portalStaffSyncTeam(username, pin, candidateId) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
+  const linked = (await getTeamTripsRaw_()).find(function (r) { return r && r.candidateId === a.cand.id; });
+  if (linked && linked.deleted) return { ok: false, err: 'deleted' };
+  const rec = await syncTeamTrip_(a.cand, a.s.id);
+  if (!rec) return { ok: false, err: 'no_dates' };
+  const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
+  const out = portalCandOut_(a.cand, byId); out.teamTrip = teamTripOut_(rec);
+  return { ok: true, candidate: out };
+}
 /* The same numbers from the staff side of the portal, for a team in scope. */
 async function portalStaffSaveTeamNumbers(username, pin, candidateId, metrics, reached) {
   const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
@@ -3159,13 +3179,14 @@ async function withTeamRows_(rows) {
   derived.forEach(function (r) { dk[keyOf(r)] = 1; });
   return rows.filter(function (r) { return !(r.dept === TEAM_DEPT && r.ministry === TEAM_MIN && dk[keyOf(r)]); }).concat(derived);
 }
-/* Team applications submitted before the Teams Database link existed — or
-   whose sync was missed — get their team the next time the Teams Database is
-   read. Only submitted, open applications with no linked row at all: a team
+/* Team applications from before the Teams Database link existed — or whose
+   sync was missed — get their team the next time the Teams Database is read.
+   Every open application with Siem Reap dates (submitted or still a draft)
+   and no linked row at all: a team
    deleted there keeps its tombstone (with its candidateId), so it is not
    brought back. */
 async function backfillTeamTrips_() {
-  const cands = (await getCandidates_()).filter(function (c) { return c && c.type === 'team' && !c.archived && c.portal && c.portal.submittedAt; });
+  const cands = (await getCandidates_()).filter(function (c) { return c && c.type === 'team' && !c.archived && c.portal; });
   if (!cands.length) return 0;
   const rows = await getTeamTripsRaw_();
   const have = {};
@@ -4102,6 +4123,7 @@ async function portalSaveDraft(username, pin, answers) {
   cand.portal.draft = cleanAnswers_(answers, form, audienceOf_(cand));
   cand.portal.draftAt = new Date().toISOString();
   await writeJSON('candidates', a.rows);
+  if (cand.type === 'team') await syncTeamTrip_(cand, a.s.id);
   return { ok: true, savedAt: cand.portal.draftAt, answers: cand.portal.draft };
 }
 async function portalSubmit(username, pin, answers) {
@@ -4592,6 +4614,7 @@ const HANDLERS = {
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
   portalTeamStep: function (a) { return portalTeamStep(a[0], a[1], a[2], a[3], a[4]); },
   portalSaveTeamNumbers: function (a) { return portalSaveTeamNumbers(a[0], a[1], a[2], a[3]); },
+  portalStaffSyncTeam: function (a) { return portalStaffSyncTeam(a[0], a[1], a[2]); },
   portalStaffSaveTeamNumbers: function (a) { return portalStaffSaveTeamNumbers(a[0], a[1], a[2], a[3], a[4]); },
   portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); },
   portalListAccounts: function (a) { return portalListAccounts(a[0], a[1]); },

@@ -1132,7 +1132,12 @@ function teamNumbersHtml_(app){
 function panelTeamNumbersHtml_(c){
   if(c.type!=='team') return '';
   var h='<h3>📊 '+esc(t('Team numbers'))+'</h3>';
-  if(!(c.portal && c.portal.submittedAt)) return h+'<p class="sub" style="margin:0">'+esc(t('Once they submit, their team is in the Teams Database and its numbers can go in here.'))+'</p>';
+  /* Is this team in the GP app's Teams Database? If not, say why and offer to put it in. */
+  if(!c.teamTrip){
+    return h+'<p class="sub" style="margin:0 0 8px" id="teamDbState">⚠️ '+esc(t('Not in the Teams Database yet. It goes in once the application has Siem Reap arrival and departure dates.'))+'</p>'+
+      '<button class="btn small ghost" id="syncTeamBtn"'+(P.busy?' disabled':'')+'>🗂️ '+esc(t('Add to the Teams Database'))+'</button>';
+  }
+  h+='<p class="sub" style="margin:0 0 6px" id="teamDbState">✓ '+esc(gpT('In the Teams Database · {from} → {to}',{from:fmtDate_(c.teamTrip.from), to:fmtDate_(c.teamTrip.to)}))+'</p>';
   return h+'<p class="hint" style="margin:0 0 6px">'+esc(t('The team fills these in on their dashboard; you can too. They are the same numbers as in the Teams Database, and count on the dashboards once the team has arrived.'))+'</p>'+
     teamNumberRowsHtml_(c.teamTrip, c.campus, 's')+
     '<button class="btn small ghost" id="saveStaffNums"'+(P.busy?' disabled':'')+'>'+esc(t('Save numbers'))+'</button>';
@@ -1608,6 +1613,15 @@ function bindPanelExtras_(){
   document.querySelectorAll('[data-visaflag]').forEach(function(cb){ cb.onchange=function(){ var flags={}; flags[cb.getAttribute('data-visaflag')]=cb.checked; cb.disabled=true;
     run('portalSetVisaFlags', [P.auth.user, P.auth.pin, c.id, flags], function(d){ if(putCand_(d)) showMsg(t('Saved')); render(); }); }; });
   on_('showRef', function(){ P.showRef=!P.showRef; render(); });
+  on_('syncTeamBtn', function(){
+    P.busy=true; render();
+    run('portalStaffSyncTeam', [P.auth.user, P.auth.pin, c.id], function(d){
+      P.busy=false;
+      if(d && d.ok){ putCand_(d); showMsg(t('Added to the Teams Database')); }
+      else showMsg(d && d.err==='no_dates' ? t('It needs their Siem Reap dates first — use Edit on their answers to add them.') : d && d.err==='deleted' ? t('This team was deleted in the Teams Database. Add it there again if it is coming after all.') : t('Could not save — try again.'));
+      render();
+    }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
   on_('saveStaffNums', function(){
     var n=readTeamNumbers_('s'); P.busy=true; render();
     run('portalStaffSaveTeamNumbers', [P.auth.user, P.auth.pin, c.id, n.metrics, n.reached], function(d){ P.busy=false; if(putCand_(d)) showMsg(t('Saved')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
