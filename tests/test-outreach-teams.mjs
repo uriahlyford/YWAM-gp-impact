@@ -48,6 +48,9 @@ const TRIPS = [
   trip({ id: 't2', name: 'Bravo Church', org: 'Four Square', country: 'United States', from: Y + '-02-01', to: Y + '-02-20', size: 12, metrics: { 'People Served': 50, 'Healings': 1 } }),
   trip({ id: 't3', name: 'Charlie DTS', from: Y + '-04-20', to: Y + '-05-10', size: 6, metrics: { 'People Served': 30 } }),
   trip({ id: 't4', name: 'Delta DTS', from: Y + '-02-05', to: Y + '-02-25', size: 5, status: 'cancelled' }),
+  // applied on the portal and not arrived yet: pending — one still coming, one whose dates have passed
+  { ...trip({ id: 't6', name: 'Foxtrot Team', from: Y + '-08-20', to: Y + '-09-02', size: 15 }), candidateId: 'cd_six', pending: true, portalStage: 'docs' },
+  { ...trip({ id: 't7', name: 'Golf Team', from: Y + '-07-01', to: Y + '-07-10', size: 4, metrics: { 'People Served': 999 } }), candidateId: 'cd_seven', pending: true, portalStage: 'call2' },
   { ...trip({ id: 't5', name: 'Echo Team', from: (Y + 1) + '-01-05', to: (Y + 1) + '-01-25', size: 9 }), candidateId: 'cd_echo' },   // applied on the portal
 ];
 const WK = weekOf(NOW);
@@ -119,7 +122,7 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   ok('the Teams Database page shows the teams', s.teamsPage && await page.evaluate(() => /Teams Database/.test(document.querySelector('h2').textContent)));
   ok('the teams came with boot — no second request', !sent.some(x => x.fn === 'getTeamTrips'));
   ok('the personal numbers are off the page', !s.personalFold && s.personalOpen === 0);
-  ok('a team that applied on the portal says so; the others do not', await page.evaluate(() => { const c = document.querySelector('[data-teamcard="t5"]'); return !!(c && c.querySelector('[data-fromportal]')) && document.querySelectorAll('[data-fromportal]').length === document.querySelectorAll('[data-teamcard="t5"]').length; }));
+  ok('a team that applied on the portal says so; the others do not', await page.evaluate(() => { const c = document.querySelector('[data-teamcard="t5"]'); return !!(c && c.querySelector('[data-fromportal]')) && !['t1','t2','t3','t4'].some(id => [].some.call(document.querySelectorAll('[data-teamcard="' + id + '"]'), x => x.querySelector('[data-fromportal]'))); }));
   // the quarter view defaults to this quarter; pick the year view to see everything finished this year
   await page.click('[data-teamperiod="year"]');
   await page.waitForTimeout(400);
@@ -241,6 +244,38 @@ console.log('\n=== the department’s overseer: the teams page among the ministr
   await page.click('#teamsDbBack');
   await page.waitForTimeout(400);
   ok('Back returns to My Ministry on Outreach Teams', await page.$('#goTeamsDb') !== null);
+  ok('no page errors', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+console.log('\n=== pending teams and the calendar ===');
+{
+  const { ctx, page, errors } = await open(SOK, { stayOnMinistry: true });
+  await page.click('#goTeamsDb');
+  await page.waitForTimeout(600);
+  ok('a team that applied on the portal shows as pending, with its stage', /Pending · Awaiting documents/.test(await page.$eval('[data-teamcard="t6"]', e => e.textContent)));
+  ok('a pending team whose dates have passed is still listed as coming, not counted', await page.evaluate(() => { const h = document.getElementById('teamsComing'); return !!h && /pending/.test(h.textContent) && !!document.querySelector('[data-teamcard="t7"]'); }) && !/999/.test(await page.$eval('.mmGrid', e => e.textContent)));
+  await page.click('[data-teamperiod="year"]');
+  await page.waitForTimeout(300);
+  ok('and its numbers stay off the dashboard until it arrives', !/999/.test(await page.$eval('.mmGrid', e => e.textContent)));
+  await page.click('[data-teamview="cal"]');
+  await page.waitForTimeout(300);
+  ok('the calendar opens on this month', /Aug/.test(await page.$eval('.calTitle', e => e.textContent)) && /2026/.test(await page.$eval('.calTitle', e => e.textContent)));
+  const bars = await page.$$eval('.calBar', b => b.map(x => x.getAttribute('data-calteam') + ':' + x.className.replace('calBar ', '')));
+  ok('a pending team is a bar across its days, split where the week ends', bars.filter(b => b.startsWith('t6:pend')).length === 3 && bars.some(b => b === 't6:pend more') && bars.some(b => b === 't6:pend cont'), bars.join(', '));
+  ok('today is marked', !!(await page.$('.calDay.today')));
+  ok('the month’s teams are listed under it, with people and stage', /Teams in Aug 2026/.test(await page.$eval('#main', e => e.textContent)) && /15 people/.test(await page.$eval('.calRow[data-calteam="t6"]', e => e.textContent)) && /Awaiting documents/.test(await page.$eval('.calRow[data-calteam="t6"]', e => e.textContent)));
+  await page.screenshot({ path: '/tmp/claude-0/-home-user-YWAM-GP-App/049e081b-2b7b-5a4f-8de8-03dd6a8372e6/scratchpad/cal-aug.png', fullPage: true }).catch(() => {});
+  await page.click('.calBar[data-calteam="t6"]');
+  await page.waitForTimeout(300);
+  ok('tapping a bar opens that team’s card', !!(await page.$('#main [data-teamcard="t6"]')));
+  await page.click('#calPrev');
+  await page.waitForTimeout(300);
+  ok('‹ goes back a month', /Jul/.test(await page.$eval('.calTitle', e => e.textContent)) && (await page.$$eval('.calBar', b => b.map(x => x.getAttribute('data-calteam')))).includes('t7'));
+  await page.click('#calToday');
+  await page.waitForTimeout(300);
+  ok('Today comes back', /Aug/.test(await page.$eval('.calTitle', e => e.textContent)));
+  ok('the calendar fits a phone', !(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)));
   ok('no page errors', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

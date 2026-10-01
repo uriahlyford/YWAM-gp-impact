@@ -155,6 +155,8 @@ async function open(viewport, query, seed) {
       out = { ok: true, account: ACCOUNTS.find(a => a.id === b.args[2]) };
     } else if (b.fn === 'portalTeamStep') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, stage: b.args[3] === 'call1' ? 'docs' : x.stage, steps: TEAM_STEPS(b.args[3] === 'call1' ? 'passports' : 'call1') } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
+    } else if (b.fn === 'portalStaffSaveTeamNumbers') {
+      CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, teamTrip: { id: 'ta_' + x.id, metrics: b.args[3], reached: b.args[4] } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
     } else if (b.fn === 'portalSaveTeamNumbers') {
       TEAM_APP = { ...TEAM_APP, trip: { ...TEAM_APP.trip, metrics: b.args[2], reached: b.args[3] } };
       out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [] };
@@ -701,6 +703,14 @@ async function open(viewport, query, seed) {
   ok('the record shows the team’s steps with what is next', /Next: 1st call — getting to know each other · on us/.test(await page.$eval('#teamNext', e => e.textContent)));
   ok('staff tick the steps done outside the portal; the ones the portal sees tick themselves', (await page.$$eval('[data-teamstep]', c => c.map(x => x.getAttribute('data-teamstep')).join(','))) === 'call1,call2,arrived' && /ticks when they upload it/.test(await page.$eval('.flowList', e => e.textContent)));
   ok('no separate visa ticks for a team', !(await page.$('[data-visaflag]')));
+  ok('the record has the team’s numbers to fill in, like the Teams Database', !!(await page.$('[data-snum="People Served"]')) && !(await page.$('[data-snum="Teams Hosted"]')) && !!(await page.$('#saveStaffNums')));
+  await page.fill('[data-snum="People Served"]', '42');
+  await page.fill('[data-sreach="male"]', '8');
+  await page.click('#saveStaffNums');
+  await page.waitForTimeout(400);
+  const sn = sent.filter(b => b.fn === 'portalStaffSaveTeamNumbers').pop();
+  ok('staff save them for that team', sn && sn.args[2] === 'cd_team' && sn.args[3]['People Served'] === 42 && sn.args[4].male === 8, JSON.stringify(sn && sn.args.slice(2)));
+  ok('and they stay in the boxes', (await page.$eval('[data-snum="People Served"]', i => i.value)) === '42');
   await page.check('[data-teamstep="call1"]');
   await page.waitForTimeout(400);
   const ts = sent.filter(b => b.fn === 'portalTeamStep').pop();

@@ -553,6 +553,41 @@ ok('reopening it brings it back', linked()[0].status === 'active');
 r = await call('deleteTeamTrip', ['rithy', '1234', 'ta_' + teamRec.id]);
 r = await call('portalUpdateAnswers', ['team.au', '2468', { ...teamFull, size: '15', itinerary: [{ place: 'YWAM Siem Reap', from: '2027-01-12', to: '2027-01-22' }] }]);
 ok('a team deleted in the Teams Database stays deleted', !(mem.teamTrips || []).some(t => t.candidateId === teamRec.id && !t.deleted));
+
+// applications that came in before the link — they appear the next time the Teams Database is opened
+{ const old = (id, extra) => ({ id, campus: 'siemreap', name: 'Leader ' + id, type: 'team', stage: 'applied', country: 'United States', log: [], archived: null, ...extra });
+  mem.candidates = mem.candidates.concat([
+    old('cd_old1', { portal: { submittedAt: '2026-09-20T10:00:00Z', form: { answers: { teamName: 'Example Cascades Team', location: 'Oregon, USA', size: '10', itinerary: [{ place: 'YWAM Siem Reap', from: '2027-02-01', to: '2027-02-14', base: true }] } } } }),
+    old('cd_old2', { portal: { submittedAt: '2026-06-01T10:00:00Z', form: { answers: { teamName: 'Older Form Team', arrival: '2027-03-10', departure: '2027-03-01' } } } }),
+    old('cd_draft', { stage: 'new', portal: { draft: { teamName: 'Draft Team', itinerary: [{ place: 'YWAM Siem Reap', from: '2027-04-01', to: '2027-04-05', base: true }] } } }),
+    old('cd_closed', { archived: { at: '2026-09-01' }, portal: { submittedAt: '2026-08-01T10:00:00Z', form: { answers: { teamName: 'Closed Team', itinerary: [{ place: 'YWAM Siem Reap', from: '2027-05-01', to: '2027-05-05', base: true }] } } } })
+  ]); }
+r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);
+ok('an application submitted before the link shows up when the Teams Database opens', r.body.ok === true && r.body.trips.some(t => t.candidateId === 'cd_old1' && t.name === 'Example Cascades Team' && t.from === '2027-02-01' && t.size === 10), JSON.stringify(r.body.trips.map(t => t.name)));
+ok('one from the older form takes its earliest and latest dates', r.body.trips.some(t => t.candidateId === 'cd_old2' && t.from === '2027-03-01' && t.to === '2027-03-10'));
+ok('not a draft, not a closed application', !r.body.trips.some(t => t.candidateId === 'cd_draft' || t.candidateId === 'cd_closed'));
+ok('and the team deleted there stays deleted', !r.body.trips.some(t => t.candidateId === teamRec.id));
+r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);
+ok('opening it again adds nothing twice', (mem.teamTrips || []).filter(t => t.candidateId === 'cd_old1').length === 1);
+r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);
+{ const t = r.body.trips.find(x => x.candidateId === 'cd_old1');
+  ok('a team still going through the portal is pending, with its stage', t && t.pending === true && t.portalStage === 'applied', JSON.stringify(t && [t.pending, t.portalStage])); }
+r = await call('portalStaffSaveTeamNumbers', ['rithy', '1234', 'cd_old1', { 'People Served': 77 }, { male: 3, female: 4 }]);
+ok('staff enter a team’s numbers from the portal record', r.body.ok === true && r.body.candidate.teamTrip.metrics['People Served'] === 77 && (mem.teamTrips || []).find(t => t.candidateId === 'cd_old1').metrics['People Served'] === 77);
+r = await call('portalStaffSaveTeamNumbers', ['rithy', '1234', cand.id, { 'People Served': 1 }, {}]);
+ok('not on a student', r.body.ok === false);
+r = await call('portalBoot', ['sina', '1234']);
+ok('the staff side gets each team’s numbers and the metric overrides', r.body.applicants.find(a => a.id === 'cd_old1').teamTrip.metrics['People Served'] === 77 && Array.isArray(r.body.metricOverrides));
+mem.candidates = mem.candidates.map(c => c.id === 'cd_old1' ? { ...c, portal: { ...c.portal, form: { answers: { ...c.portal.form.answers, itinerary: [{ place: 'YWAM Siem Reap', from: '2026-01-05', to: '2026-01-10', base: true }] } } } } : c);
+mem.teamTrips = mem.teamTrips.map(t => t.candidateId === 'cd_old1' ? { ...t, from: '2026-01-05', to: '2026-01-10' } : t);
+const hostedWk2 = async () => { const d = (await call('getData', [''])).body; return ((d.entries.siemreap || {})['Community Service|Outreach Teams|People Served'] || {})['2'] || 0; };
+const whilePending = await hostedWk2();
+mem.candidates = mem.candidates.map(c => c.id === 'cd_old1' ? { ...c, stage: 'arrived' } : c);
+const onceArrived = await hostedWk2();
+ok('a pending team’s numbers stay off the dashboards, and count once it has arrived', onceArrived - whilePending === 77, whilePending + ' → ' + onceArrived);
+r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);
+ok('an arrived team is no longer pending', !r.body.trips.find(x => x.candidateId === 'cd_old1').pending);
+mem.candidates = mem.candidates.filter(c => !['cd_old1', 'cd_old2', 'cd_draft', 'cd_closed'].includes(c.id));
 r = await call('portalRegister', [{ ...APP, username: 'nocountry', email: 'nc@example.org', country: '' }]);
 ok('country is required at sign-up — it decides Khmer or international', r.body.ok === false && r.body.err === 'country_required');
 r = await call('portalResetForm', ['dara', '1234', 'dts']);

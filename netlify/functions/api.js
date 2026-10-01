@@ -3072,7 +3072,12 @@ function teamAnswers_(c) { return (c && c.portal && ((c.portal.form && c.portal.
 function tripFromApp_(c, prev) {
   const a = teamAnswers_(c);
   const it = Array.isArray(a.itinerary) ? a.itinerary : [];
-  const base = it.filter(function (r) { return r && r.base; })[0] || it[0] || {};
+  let base = it.filter(function (r) { return r && r.base; })[0] || it[0] || {};
+  if (!isoDate_(base.from) || !isoDate_(base.to)) {
+    // an application from before the trip question: take its earliest and latest dates
+    const dates = Object.keys(a).map(function (k) { return isoDate_(a[k]); }).filter(Boolean).sort();
+    if (dates.length >= 2) base = { from: dates[0], to: dates[dates.length - 1] };
+  }
   const cut = function (v, n) { return v == null ? '' : String(v).trim().slice(0, n); };
   const merged = Object.assign({ metrics: {}, reached: {} }, prev || {}, {
     id: prev ? prev.id : 'ta_' + c.id,
@@ -3104,37 +3109,87 @@ async function linkedTrip_(c) {
   if (!c || c.type !== 'team') return null;
   return (await getTeamTripsRaw_()).find(function (r) { return r && r.candidateId === c.id && !r.deleted; }) || null;
 }
-/* The team's own numbers, from the portal: the same metrics the Teams
-   Database form asks for, and men / women reached. */
-async function portalSaveTeamNumbers(username, pin, metrics, reached) {
-  const a = await applicantCand_(username, pin); if (a.out) return a.out;
-  const c = a.cand;
-  if (c.type !== 'team') return { ok: false, err: 'not_team' };
+function teamTripOut_(t) { return t ? { id: t.id, from: t.from, to: t.to, metrics: t.metrics || {}, reached: t.reached || {} } : null; }
+/* Writes a team's numbers onto its linked team (made first if it is missing). */
+async function saveTeamNumbers_(c, metrics, reached, by) {
   let trip = await linkedTrip_(c);
-  if (!trip) trip = await syncTeamTrip_(c, a.s.id);
-  if (!trip) return { ok: false, err: 'no_trip' };
+  if (!trip) trip = await syncTeamTrip_(c, by);
+  if (!trip) return null;
   const rec = cleanTrip_(Object.assign({}, trip, { metrics: metrics && typeof metrics === 'object' ? metrics : {}, reached: reached && typeof reached === 'object' ? reached : {} }), trip.campus);
-  if (!rec) return { ok: false, err: 'no_trip' };
-  rec.candidateId = c.id; rec.updated = new Date().toISOString(); rec.updatedBy = a.s.id;
+  if (!rec) return null;
+  rec.candidateId = c.id; rec.updated = new Date().toISOString(); rec.updatedBy = by;
   const rows = await getTeamTripsRaw_();
   const idx = rows.findIndex(function (r) { return r && r.id === rec.id; });
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('teamTrips', rows);
+  return rec;
+}
+/* The team's own numbers, from the portal: the same metrics the Teams
+   Database form asks for, and men / women reached. */
+async function portalSaveTeamNumbers(username, pin, metrics, reached) {
+  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
+  if (!(await saveTeamNumbers_(a.cand, metrics, reached, a.s.id))) return { ok: false, err: 'no_trip' };
   return portalBoot(username, pin);
 }
+/* The same numbers from the staff side of the portal, for a team in scope. */
+async function portalStaffSaveTeamNumbers(username, pin, candidateId, metrics, reached) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
+  const rec = await saveTeamNumbers_(a.cand, metrics, reached, a.s.id);
+  if (!rec) return { ok: false, err: 'no_trip' };
+  const staffRows = await getStaff_(); const byId = {}; staffRows.forEach(function (r) { byId[r.id] = r; });
+  const out = portalCandOut_(a.cand, byId); out.teamTrip = teamTripOut_(rec);
+  return { ok: true, candidate: out };
+}
+/* A team that applied on the portal is PENDING until staff mark it arrived:
+   it shows in the Teams Database (and its calendar) from the day it applies,
+   but its numbers only count on the dashboards once it has come. */
+async function pendingTeamIds_() {
+  const out = {};
+  (await getCandidates_()).forEach(function (c) { if (c && c.type === 'team' && !c.archived && c.stage !== 'arrived') out[c.id] = c.stage; });
+  return out;
+}
 async function withTeamRows_(rows) {
-  const derived = teamEntryRows_(await getTeamTrips_());
+  const pend = await pendingTeamIds_();
+  const derived = teamEntryRows_((await getTeamTrips_()).filter(function (t) { return !(t.candidateId && pend[t.candidateId]); }));
   if (!derived.length) return rows;
   const keyOf = function (r) { return r.campus + '|' + yearOf_(r) + '|' + Number(r.week) + '|' + r.metric; };
   const dk = {};
   derived.forEach(function (r) { dk[keyOf(r)] = 1; });
   return rows.filter(function (r) { return !(r.dept === TEAM_DEPT && r.ministry === TEAM_MIN && dk[keyOf(r)]); }).concat(derived);
 }
+/* Team applications submitted before the Teams Database link existed — or
+   whose sync was missed — get their team the next time the Teams Database is
+   read. Only submitted, open applications with no linked row at all: a team
+   deleted there keeps its tombstone (with its candidateId), so it is not
+   brought back. */
+async function backfillTeamTrips_() {
+  const cands = (await getCandidates_()).filter(function (c) { return c && c.type === 'team' && !c.archived && c.portal && c.portal.submittedAt; });
+  if (!cands.length) return 0;
+  const rows = await getTeamTripsRaw_();
+  const have = {};
+  rows.forEach(function (r) { if (r && r.candidateId) have[r.candidateId] = 1; });
+  const now = new Date().toISOString();
+  let added = 0;
+  cands.forEach(function (c) {
+    if (have[c.id]) return;
+    const rec = tripFromApp_(c, null);
+    if (!rec) return;   // no dates to put it on yet
+    rec.updated = now; rec.updatedBy = 'portal';
+    rows.push(rec); added++;
+  });
+  if (added) await writeJSON('teamTrips', rows);
+  return added;
+}
 async function getTeamTrips(username, pin, campus) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   campus = str_(campus, 40) || s.campus;
+  await backfillTeamTrips_();
+  const pend = await pendingTeamIds_();
   const trips = (await getTeamTrips_()).filter(function (t) { return t.campus === campus; })
+    .map(function (t) { return t.candidateId && pend[t.candidateId] ? Object.assign({}, t, { pending: true, portalStage: pend[t.candidateId] }) : t; })
     .sort(function (a, b) { return a.from < b.from ? 1 : a.from > b.from ? -1 : 0; });
   return { ok: true, campus: campus, trips: trips, canEdit: canLogFor_(s, campus, TEAM_DEPT, TEAM_MIN) };
 }
@@ -3845,8 +3900,8 @@ async function portalBoot(username, pin) {
     if (!cand) return { ok: false, err: 'no_application' };
     const out = { ok: true, role: 'applicant', me: portalMeOut_(s), application: portalAppOut_(cand), form: (await getForms_())[formKeyOf_(cand)] };
     if (cand.type === 'team') {
-      const trip = await linkedTrip_(cand);
-      out.application.trip = trip ? { id: trip.id, from: trip.from, to: trip.to, metrics: trip.metrics || {}, reached: trip.reached || {} } : null;
+      const trip = (await linkedTrip_(cand)) || (!cand.archived ? await syncTeamTrip_(cand, s.id) : null);
+      out.application.trip = teamTripOut_(trip);
       out.metricOverrides = (await getMetricOverrides_()).filter(function (o) { return o.dept === TEAM_DEPT && o.ministry === TEAM_MIN; });
     }
     return out;
@@ -3854,9 +3909,16 @@ async function portalBoot(username, pin) {
   if (!canPortal_(s)) return { ok: false, err: 'not_authorized' };
   const rows = await getStaff_();
   const byId = {}; rows.forEach(function (r) { byId[r.id] = r; });
+  const tripOf = {};
+  (await getTeamTripsRaw_()).forEach(function (t) { if (t && t.candidateId && !t.deleted) tripOf[t.candidateId] = t; });
   return {
     ok: true, role: portalRole_(s), me: portalStaffOut_(s),
-    applicants: cands.filter(function (c) { return portalMaySee_(s, c); }).map(function (c) { return portalCandOut_(c, byId); }),
+    applicants: cands.filter(function (c) { return portalMaySee_(s, c); }).map(function (c) {
+      const o = portalCandOut_(c, byId);
+      if (c.type === 'team') o.teamTrip = teamTripOut_(tripOf[c.id]);
+      return o;
+    }),
+    metricOverrides: (await getMetricOverrides_()).filter(function (o) { return o.dept === TEAM_DEPT && o.ministry === TEAM_MIN; }),
     scope: portalTypes_(s),
     staff: rows.filter(function (r) { return canPortal_(r); }).map(portalStaffOut_),
     stages: CAND_STAGES, teamStages: TEAM_STAGES, types: PORTAL_TYPES, schools: PORTAL_SCHOOLS, campuses: PORTAL_CAMPUSES,
@@ -4530,6 +4592,7 @@ const HANDLERS = {
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
   portalTeamStep: function (a) { return portalTeamStep(a[0], a[1], a[2], a[3], a[4]); },
   portalSaveTeamNumbers: function (a) { return portalSaveTeamNumbers(a[0], a[1], a[2], a[3]); },
+  portalStaffSaveTeamNumbers: function (a) { return portalStaffSaveTeamNumbers(a[0], a[1], a[2], a[3], a[4]); },
   portalStaffSaveAnswers: function (a) { return portalStaffSaveAnswers(a[0], a[1], a[2], a[3]); },
   portalListAccounts: function (a) { return portalListAccounts(a[0], a[1]); },
   portalCreateApplicant: function (a) { return portalCreateApplicant(a[0], a[1], a[2]); },
