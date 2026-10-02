@@ -325,6 +325,7 @@ async function open(viewport, query, seed) {
   const sub = sent.find(b => b.fn === 'portalSubmit');
   ok('Submit sends every answer to portalSubmit', sub && sub.args[2].testimony === 'I met Jesus at a youth camp.' && JSON.stringify(sub.args[2].gifts) === '["Music"]' && sub.args[2].leaderContact === '+46 70 111 2222');
   ok('and the dashboard now reads Application pending with the form submitted', /Application pending/.test(await page.$eval('#statusPill', e => e.textContent)) && /Submitted/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('#openForm')));
+  ok('with the leader reference not in yet, it says we get in touch once both are in', /once we have also received your leader reference/.test(await page.$eval('.hero', e => e.textContent)), await page.$eval('.hero', e => e.textContent));
   await page.click('#viewAnswers');
   await page.waitForTimeout(150);
   ok('View my answers shows them read-only', /I met Jesus at a youth camp/.test(await page.$eval('#main', e => e.textContent)) && /Music/.test(await page.$eval('#main', e => e.textContent)));

@@ -358,6 +358,7 @@ var STATUS_LABEL = { call1:'1st call', docs:'Awaiting documents', call2:'2nd cal
 var STATUS_NOTE = {
   draft:'Fill out your application when you are ready — it saves as you go.',
   pending:'We have your application. One of our team will message you on {app} soon.',
+  pending_ref:'We have your application. We will get in touch with you on {app} once we have also received your leader reference.',
   in_review:'Our team has reached out. Keep an eye on {app} and send anything we ask for.',
   interview:'We will arrange a video call with you — watch for a message on {app}.',
   accepted:'Welcome! Next comes the practical part: fees, packing list, visa and travel.',
@@ -366,7 +367,7 @@ var STATUS_NOTE = {
   closed:'This application is closed. Message us if you think that is a mistake.'
 };
 var STEP_LABEL = { account:'Create your account', form:'Fill out the application', reference:'Send your leader reference', received:'Application received', received2:'Application & reference received', contact:'We get in touch', docs:'Documents', interview:'Video interview', accepted:'Accepted', practical:'Getting ready — fees, packing, visa, travel', arrived:'Arrival at the base' };
-var STEP_NOTE = { form:'Your answers save as a draft — come back any time.', reference:'Make a link below and send it to your pastor or a leader who knows you well — you can do this before or after you apply.', received:'Once both are in, we get in touch.', contact:'On WhatsApp or Telegram, whichever you chose.', docs:'What to send depends on what you are applying for.', interview:'A video call with someone from the school or the team.' };
+var STEP_NOTE = { form:'Your answers save as a draft — come back any time.', reference:'Make a link below and send it to your pastor or a leader who knows you well — you can do this before or after you apply.', received:'We will get in touch with you once we have received your application.', received2:'We will get in touch with you once we have received your application and the reference.', contact:'On WhatsApp or Telegram, whichever you chose.', docs:'What to send depends on what you are applying for.', interview:'A video call with someone from the school or the team.' };
 var SUBITEM_LABEL = { documents:'Documents', reference:'Leader reference' };
 /* A team's own journey (teamSteps_ in api.js): what each step is called, a
    line on what it means while it is still ahead, and who does it. */
@@ -644,7 +645,11 @@ function registerHtml_(){
 }
 /* "Application received" reads "Application & reference received" for anyone a reference is asked of. */
 function stepKey_(st, isTeam, app){ return !isTeam && st.id==='received' && app.refNeeded ? 'received2' : st.id; }
-function statusNote_(app){ return (app.type===TEAM_TYPE && TEAM_STATUS_NOTE[app.status]) || STATUS_NOTE[app.status] || ''; }
+function statusNote_(app){
+  // still waiting for the leader reference: say we get in touch once it is in too
+  if(app.type!==TEAM_TYPE && app.status==='pending' && app.refNeeded && (app.reference||{}).status!=='received') return STATUS_NOTE.pending_ref;
+  return (app.type===TEAM_TYPE && TEAM_STATUS_NOTE[app.status]) || STATUS_NOTE[app.status] || '';
+}
 var TEAM_TYPE='team';
 /* ---- the applicant's dashboard ---- */
 function meHtml_(){
@@ -662,7 +667,7 @@ function meHtml_(){
     var grp = isTeam && st.group && (!app.steps[i-1] || app.steps[i-1].group!==st.group) ? '<div class="stepGroup">'+esc(t(TEAM_GROUP_LABEL[st.group]||''))+'</div>' : '';
     return '<li class="step '+st.state+'" data-step="'+st.id+'"><span class="dot">'+(st.state==='done'?'✓':(i+1))+'</span><div>'+grp+
       '<div class="stepName">'+esc(t(LBL[stepKey_(st, isTeam, app)]||st.id))+(isTeam && st.state!=='done' && st.who ? ' <span class="whoTag '+esc(st.who)+'">'+esc(st.who==='you' ? t('You') : t('Us'))+'</span>' : '')+'</div>'+
-      (NOTE[st.id] && st.state!=='done' ? '<div class="stepNote">'+esc(t(NOTE[st.id]))+'</div>' : '')+
+      (NOTE[stepKey_(st, isTeam, app)] && st.state!=='done' ? '<div class="stepNote">'+esc(t(NOTE[stepKey_(st, isTeam, app)]))+'</div>' : '')+
       (st.items ? '<ul class="subItems">'+st.items.map(function(it){ return '<li class="'+(it.done?'done':'')+'">'+(it.done?'✓':'○')+' '+esc(t(SUBITEM_LABEL[it.id]||it.id))+(it.done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; }).join('')+'</ul>' : '')+
       '</div></li>';
   }).join('')+'</ol></div>';
