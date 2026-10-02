@@ -3157,10 +3157,12 @@ async function saveTeamNumbers_(c, metrics, reached, by) {
   return rec;
 }
 /* The team's own numbers, from the portal: the same metrics the Teams
-   Database form asks for, and men / women reached. */
+   Database form asks for, and men / women reached — once staff have ticked
+   Arrived (the card is hidden before that, so it doesn't confuse them). */
 async function portalSaveTeamNumbers(username, pin, metrics, reached) {
   const a = await applicantCand_(username, pin); if (a.out) return a.out;
   if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
+  if (a.cand.stage !== 'arrived') return { ok: false, err: 'not_arrived' };
   if (!(await saveTeamNumbers_(a.cand, metrics, reached, a.s.id))) return { ok: false, err: 'no_trip' };
   return portalBoot(username, pin);
 }
@@ -3954,19 +3956,22 @@ function portalSteps_(c) {
   const refNeeded = refNeeded_(c);
   const refDone = !refNeeded || !!(c.portal && c.portal.referenceDone);
   const at = function (stage) { return idx >= portalStageIdx_(stage); };
-  const docItems = [{ id: 'documents', done: docsDone || docsRequiredIn_(c) || at('interview') }];
-  if (refNeeded) docItems.push({ id: 'reference', done: refDone || at('interview') });
+  /* The application and the leader reference go in first, side by side —
+     both are the applicant's to do — and only once BOTH are in is it
+     "received" and do we get in touch. A Khmer applicant has no reference. */
+  const refIn = refDone || at('contacted');
   const steps = [
     { id: 'account', done: true },
-    { id: 'form', done: submitted },
-    { id: 'received', done: submitted },
+    { id: 'form', done: submitted }
+  ].concat(refNeeded ? [{ id: 'reference', done: refIn }] : []).concat([
+    { id: 'received', done: submitted && refIn },
     { id: 'contact', done: at('contacted') },
-    { id: 'docs', done: at('interview') || ((docsDone || docsRequiredIn_(c)) && refDone), items: docItems },
+    { id: 'docs', done: at('interview') || docsDone || docsRequiredIn_(c) },
     { id: 'interview', done: at('accepted') },
     { id: 'accepted', done: at('practical') },
     { id: 'practical', done: at('arrived') },
     { id: 'arrived', done: at('arrived') }
-  ];
+  ]);
   let current = -1;
   steps.forEach(function (st, i) { if (current === -1 && !st.done) current = i; });
   if (current === -1) current = steps.length - 1;
@@ -4036,6 +4041,10 @@ async function createApplicant_(payload, by) {
   if (school && PORTAL_CAMPUSES[campus].indexOf(school) === -1) return { ok: false, err: 'school_not_at_campus' };
   const country = cleanCountry_(payload.country);
   if (!country) return { ok: false, err: 'country_required' };
+  /* A team names its sending church, base or organization at sign-up, so the
+     staff side shows the team — not the person — from the first day, and
+     the form opens with it filled in (it is the form's first question). */
+  const teamName = type === 'team' ? (str_(payload.teamName, 120) || '') : '';
   const rows = await getStaff_();
   if (findStaff_(rows, u)) return { ok: false, err: 'taken' };
   if (rows.some(function (r) { return r.email && r.email === email; })) return { ok: false, err: 'email_taken' };
@@ -4055,7 +4064,7 @@ async function createApplicant_(payload, by) {
     subtype: school ? school.toUpperCase() : '', school: school,
     email: email, phone: phone, messenger: messenger, country: country, source: 'portal',
     assignedTo: '', nextStep: '', nextDate: '', expected: '', notes: '', staffId: id,
-    portal: { createdAt: now, submittedAt: null, form: null, docs: [], references: [] },
+    portal: { createdAt: now, submittedAt: null, form: null, docs: [], references: [], draft: teamName ? { teamName: teamName } : null, draftAt: teamName ? now : null },
     log: [{ at: now, by: by || id, kind: 'stage', text: 'new' }], archived: null,
     created: now, createdBy: by || id, updated: now, updatedBy: by || id
   };

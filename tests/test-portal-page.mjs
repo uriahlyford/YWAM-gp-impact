@@ -97,7 +97,7 @@ async function open(viewport, query, seed) {
     const [u, pin] = b.args || [];
     if (b.fn === 'portalRegister') {
       const p = b.args[0];
-      out = p.username === 'taken' ? { ok: false, err: 'taken' } : { ok: true, role: 'applicant', me: { ...ME_APP, name: p.name, username: p.username, phone: p.phone, messenger: p.messenger, type: p.type, school: p.school }, application: { ...ANNA, type: p.type, school: p.school } };
+      out = p.username === 'taken' ? { ok: false, err: 'taken' } : { ok: true, role: 'applicant', me: { ...ME_APP, name: p.name, username: p.username, phone: p.phone, messenger: p.messenger, type: p.type, school: p.school }, application: { ...ANNA, type: p.type, school: p.school, answers: p.teamName ? { teamName: p.teamName } : {} }, form: p.type === 'team' ? TEAM_FORM : undefined };   // a team reply carries its form, as the server does now
     } else if (b.fn === 'portalBoot') {
       if (u === 'anna.b' && pin === '2468') out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM };
       else if (u === 'srey.k' && pin === '2468') out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Srey Khmer', username: 'srey.k', country: 'Cambodia' }, application: { ...ANNA, name: 'Srey Khmer', stage: 'accepted', status: 'accepted', audience: 'khmer', needsVisa: false, refNeeded: false, steps: STEPS('practical').map(s => s.id === 'docs' ? { ...s, items: [{ id: 'documents', done: true }] } : s), submittedAt: '2026-09-01T00:00:00Z' }, form: FORM };
@@ -225,20 +225,24 @@ async function open(viewport, query, seed) {
   ok('mismatched PINs are stopped', /match/.test(await page.$eval('#msg', e => e.textContent)) && !sent.some(b => b.fn === 'portalRegister'));
   await page.fill('#r_pin2', '2468');
   await page.click('#regBtn');
-  await page.waitForSelector('#statusPill', { timeout: 10000 });
+  // straight into the application — the sign-up mock answers without a form, as the server did before, so the page fetches it
+  await page.waitForSelector('#formSubmit, #formNext', { timeout: 10000 });
   const reg = sent.find(b => b.fn === 'portalRegister');
-  ok('sign-up sends what the server needs — campus, type, school, phone, messenger', reg && reg.args[0].campus === 'siemreap' && reg.args[0].type === 'student' && reg.args[0].school === 'dts' && reg.args[0].messenger === 'whatsapp' && reg.args[0].phone === '+46 70 000 0000' && reg.args[0].username === 'anna.b');
-  ok('and lands on the dashboard: draft, applying for DTS', /Not submitted yet/.test(await page.$eval('#statusPill', e => e.textContent)) && /DTS/.test(await page.$eval('#main', e => e.textContent)));
+  ok('sign-up sends what the server needs — campus, type, school, phone, messenger', reg && reg.args[0].campus === 'siemreap' && reg.args[0].type === 'student' && reg.args[0].school === 'dts' && reg.args[0].messenger === 'whatsapp' && reg.args[0].phone === '+46 70 000 0000' && reg.args[0].username === 'anna.b' && reg.args[0].teamName === undefined);
+  ok('and opens the application straight away (fetching the form when the sign-up reply had none)', /Section 1 of/.test(await page.$eval('#main', e => e.textContent)) && !/Something went wrong/.test(await page.$eval('#main', e => e.textContent)) && sent.some(b => b.fn === 'portalBoot'));
+  await page.click('#formClose');
+  await page.waitForSelector('#statusPill');
+  ok('closing it lands on the dashboard: draft, applying for DTS', /Not submitted yet/.test(await page.$eval('#statusPill', e => e.textContent)) && /DTS/.test(await page.$eval('#main', e => e.textContent)));
   ok('the session is remembered under the portal’s own key, not the staff app’s', await page.evaluate(() => !!localStorage.getItem('gp-portal') && !localStorage.getItem('gp-staff')));
   const steps = await page.$$eval('#timeline .step', s => s.map(x => x.getAttribute('data-step') + ':' + (x.classList.contains('done') ? 'done' : x.classList.contains('current') ? 'current' : 'todo')));
   ok('the timeline has nine steps, account done and "fill out" current', steps.length === 9 && steps[0] === 'account:done' && steps[1] === 'form:current' && steps.slice(2).every(s => /todo$/.test(s)), steps.join(' '));
   ok('documents & reference show as pending sub-items', (await page.$$eval('#timeline .subItems li', li => li.length)) === 2);
   ok('the form card invites them to fill out the application', !!(await page.$('#openForm')) && /Fill out my application/.test(await page.$eval('#openForm', e => e.textContent)));
+  ok('and the top of the dashboard says the next step is sending it in', /Next: send in your application/.test(await page.$eval('#applyNext', e => e.textContent)) && !!(await page.$('#openFormTop')));
   ok('an applicant has no staff bar and no link into the GP app', !(await page.$('#staffNav')) && !(await page.$('#toGpApp')));
-  // the sign-up mock answers without a form, as the server did before — the page must fetch it, not die
-  await page.click('#openForm');
+  await page.click('#openFormTop');
   await page.waitForSelector('#formSubmit, #formNext', { timeout: 5000 });
-  ok('Fill out my application straight after sign-up opens the form (fetching it when the sign-up reply had none)', /Section 1 of/.test(await page.$eval('#main', e => e.textContent)) && !/Something went wrong/.test(await page.$eval('#main', e => e.textContent)) && sent.some(b => b.fn === 'portalBoot'));
+  ok('the top button opens the application too', /Section 1 of/.test(await page.$eval('#main', e => e.textContent)));
   await page.click('#formClose');
   await page.waitForSelector('#statusPill');
   ok('contact details are on the page', /\+46 70 000 0000/.test(await page.$eval('#main', e => e.textContent)) && /WhatsApp/.test(await page.$eval('#main', e => e.textContent)));
@@ -285,7 +289,7 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'anna.b', pin: '2468' })));
   await page.waitForSelector('#openForm');
   ok('the dashboard offers "Fill out my application" — no more "opens soon"', /Fill out my application/.test(await page.$eval('#openForm', e => e.textContent)) && !/Opens soon/.test(await page.$eval('#main', e => e.textContent)));
-  ok('an international applicant is told the visa guide comes with acceptance, and about the leader reference', /visa for Cambodia/.test(await page.$eval('#main', e => e.textContent)) && /Leader reference/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#refNew')));
+  ok('an international applicant is told the visa guide comes with acceptance, and has a Leader reference card of its own', /visa for Cambodia/.test(await page.$eval('#main', e => e.textContent)) && /Leader reference/.test(await page.$eval('#refCard h3', e => e.textContent)) && !!(await page.$('#refCard #refNew')));
   await page.click('#refNew');
   await page.waitForSelector('#refLinkBox');
   const rl = sent.find(b => b.fn === 'portalReferenceLink');
@@ -359,13 +363,18 @@ async function open(viewport, query, seed) {
   const cur = await page.$eval('#timeline .step.current', e => e.textContent);
   ok('the step says what it is and who does it', /Letter of invitation & supporting documents/.test(cur) && /Us/.test(cur) && /once your passports, team photo and flights are in/.test(cur), cur);
   ok('the documents and the visa part are headed as groups', (await page.$$eval('#timeline .stepGroup', g => g.map(x => x.textContent).join(','))) === 'Awaiting documents,Visa');
-  ok('the team’s numbers card shows once their dates have started, with what is saved', /Your team’s numbers/.test(await page.$eval('#teamNumbers', e => e.textContent)) && (await page.$eval('[data-tnum="People Served"]', i => i.value)) === '30' && !(await page.$('[data-tnum="Teams Hosted"]')));
+  ok('before they have arrived, the team sees no numbers card', !(await page.$('#teamNumbers')));
+  TEAM_APP.stage = 'arrived';
+  await page.reload(); await page.waitForSelector('#statusPill');
+  ok('once arrived, the team’s numbers card shows, with what is saved', /Your team’s numbers/.test(await page.$eval('#teamNumbers', e => e.textContent)) && (await page.$eval('[data-tnum="People Served"]', i => i.value)) === '30' && !(await page.$('[data-tnum="Teams Hosted"]')));
   await page.fill('[data-tnum="Salvations"]', '3');
   await page.fill('[data-treach="female"]', '7');
   await page.click('#saveTeamNums');
   await page.waitForTimeout(400);
   const tn = sent.filter(b => b.fn === 'portalSaveTeamNumbers').pop();
   ok('saving sends the numbers into the Teams Database', tn && tn.args[2]['People Served'] === 30 && tn.args[2]['Salvations'] === 3 && tn.args[3].female === 7 && tn.args[3].male === 5, JSON.stringify(tn && tn.args.slice(2)));
+  TEAM_APP.stage = 'docs';
+  await page.reload(); await page.waitForSelector('#statusPill');
   ok('the steps still ahead that are theirs are marked You', /You/.test(await page.$eval('#timeline [data-step="evisa"]', e => e.textContent)));
   ok('the letter of invitation is listed as coming from us, with no upload for them', /Coming from us/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !(await page.$('[data-docup="invitation"]')) && !!(await page.$('[data-docup="evisa"]')));
   ok('the team is told passports are needed as soon as possible', /as soon as possible/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
@@ -604,6 +613,25 @@ async function open(viewport, query, seed) {
   await page.waitForSelector('#main h2');
   await page.waitForTimeout(300);
   ok('an unknown link says so and offers the way back', /not valid/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#toLanding')));
+  await ctx.close();
+}
+
+/* ---------- a team signs up: its sending church first ---------- */
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?apply=team&lang=en');
+  ok('team sign-up asks for the sending church, base or organization, and the leader’s own name', /Sending church, base or organization/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#r_team')) && /team leader/.test(await page.$eval('#main', e => e.textContent)));
+  await page.fill('#r_name', 'Pat Leader'); await page.fill('#r_email', 'pat@example.org'); await page.fill('#r_phone', '+61 400 000 001');
+  await page.click('[data-msgr="telegram"]'); await page.waitForTimeout(100);
+  await page.selectOption('#r_country', 'Australia');
+  await page.fill('#r_user', 'pat.team'); await page.fill('#r_pin', '2468'); await page.fill('#r_pin2', '2468');
+  const regsBefore = sent.filter(b => b.fn === 'portalRegister').length;
+  await page.click('#regBtn');
+  ok('a team without its church named is stopped', /sending church/i.test(await page.$eval('#msg', e => e.textContent)) && sent.filter(b => b.fn === 'portalRegister').length === regsBefore, await page.$eval('#msg', e => e.textContent));
+  await page.fill('#r_team', 'Example Church');
+  await page.click('#regBtn');
+  await page.waitForSelector('#formSubmit, #formNext', { timeout: 10000 });
+  const reg = sent.filter(b => b.fn === 'portalRegister').pop();
+  ok('sign-up sends the team name, and opens the application straight away with it filled in', reg && reg.args[0].teamName === 'Example Church' && reg.args[0].name === 'Pat Leader' && /Section 1 of/.test(await page.$eval('#main', e => e.textContent)) && await page.$eval('#a_teamName', i => i.value) === 'Example Church', JSON.stringify(reg && reg.args[0]));
   await ctx.close();
 }
 
