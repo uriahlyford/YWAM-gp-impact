@@ -64,6 +64,7 @@ async function open(who, opts) {
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION/.test(m.text())) errors.push('console: ' + m.text()); });
   const H = FIXTURE(); let n = 0;
+  if (opts.extra) H.bookings.push(...opts.extra);
   const hospOut = () => ({ ok: true, campus: 'siemreap', buildings: H.buildings, rooms: H.rooms, bookings: H.bookings,
     requests: H.trips.map(q => ({ ...q, bookingId: (H.bookings.find(k => k.tripId === q.tripId) || {}).id || '' })) });
   await ctx.route('**/.netlify/functions/api', r => {
@@ -82,6 +83,13 @@ async function open(who, opts) {
       if (kind === 'room') rec.beds = rec.beds.map((x, i) => ({ ...x, id: x.id || rec.id + '_' + i }));
       const i = list.findIndex(x => x.id === rec.id); if (i > -1) list[i] = rec; else list.push(rec);
       out = { ...hospOut(), saved: rec };
+    }
+    else if (b.fn === 'hospMoveBed') {
+      const [id, from, to] = b.args.slice(2), A = H.bookings.find(k => k.id === id);
+      const B = to && H.bookings.find(k => k.id !== id && k.bedIds.includes(to) && k.from < A.to && A.from < k.to);
+      if (B) B.bedIds = B.bedIds.map(x => x === to ? from : x);
+      A.bedIds = from ? A.bedIds.map(x => x === from ? to : x).filter(Boolean) : A.bedIds.concat([to]);
+      out = hospOut();
     }
     else if (b.fn === 'hospDelete') { const kind = b.args[2]; const key = kind + 's'; H[key] = H[key].filter(x => x.id !== b.args[3]); out = hospOut(); }
     else if (b.fn === 'getMinistryFor') out = { ok: true, campus: 'siemreap', dept: b.args[2], ministry: b.args[3], entries: {}, daily: {}, prev: {}, pins: [] };
@@ -198,15 +206,83 @@ ok('no sideways scroll on Rooms', !(await overflow(page)));
 ok('no errors (phone)', errors.length === 0, errors.join(' | '));
 await ctx.close();
 
+console.log('=== the calendar ===');
+const UNPLACED = { id: 'k2', category: 'volunteer', name: 'Volunteer Example', from: day(0), to: day(2), males: 3, females: 0, count: 3, family: false, bedIds: ['m2'], notes: '', tripId: '', permanent: false };
+{
+  const { ctx, page, errors, sent } = await open(HANA, { extra: [UNPLACED] });
+  await page.click('#menuBtn'); await page.waitForTimeout(150);
+  await page.click('[data-menu-item="hosp"]'); await page.waitForTimeout(500);
+  await page.click('[data-hosptab="cal"]'); await page.waitForTimeout(200);
+  const cal = await page.evaluate(() => ({
+    days: [].map.call(document.querySelectorAll('[data-hospday]'), d => d.dataset.hospday),
+    today: (document.querySelector('.hospCalDay.today') || {}).dataset?.hospday,
+    pastor: (document.querySelector('[data-calbar="k1"]') || {}).style?.gridColumn,
+    cont: document.querySelector('[data-calbar="k1"]')?.classList.contains('cont'),
+    bars: document.querySelectorAll('[data-calbar="k2"]').length,
+    waitText: [].map.call(document.querySelectorAll('[data-calbar="k2"]'), b => b.textContent),
+    pct: (document.querySelector('.hospCalDay.today') || {}).dataset?.pct,
+  }));
+  ok('fourteen days from this Monday, today marked', cal.days.length === 14 && cal.days[0] === day(0) && cal.today === day(0), JSON.stringify(cal.days.slice(0, 2)));
+  ok('the speaker is a bar on his bed from before the window to the morning he leaves', cal.pastor === '2 / 5' && cal.cont, cal.pastor);
+  ok('a booking with beds still to pick also sits in “No bed yet”', cal.bars === 2 && cal.waitText.some(x => /×2/.test(x)), JSON.stringify(cal.waitText));
+  ok('each day says how full it is', cal.pct === String(Math.round(4 / 7 * 100)), cal.pct);
+  ok('the calendar scrolls inside its card, not the page', !(await overflow(page)));
+  await page.click('#hospCalNext'); await page.waitForTimeout(150);
+  ok('› moves a week on', await page.$eval('[data-hospday]', d => d.dataset.hospday) === day(7) && !!(await page.$('#hospCalToday')));
+  await page.click('#hospCalToday'); await page.waitForTimeout(150);
+  await page.click('[data-calbar="k1"]'); await page.waitForTimeout(200);
+  ok('tapping a bar opens the booking', await page.$eval('[data-hf="name"]', i => i.value) === 'Pastor Example');
+  await page.click('#hospCancelBtn'); await page.waitForTimeout(150);
+  ok('… and Cancel comes back to the calendar', !!(await page.$('#hospCal')));
+
+  console.log('=== the bed board ===');
+  await page.click('[data-hospcalmode="board"]'); await page.waitForTimeout(200);
+  const occ = () => page.$$eval('[data-hboard]', bs => Object.fromEntries(bs.map(b => [b.dataset.hboard, b.dataset.hmove || ''])));
+  let o = await occ();
+  ok('tonight: who is in which bed', o.m0 === 'k1' && o.m2 === 'k2' && o.m1 === '', JSON.stringify(o));
+  ok('people still without a bed wait at the top', /Volunteer Example ×2/.test(await page.$eval('.hospWait', e => e.textContent)));
+  await page.click('[data-hboard="m0"]'); await page.waitForTimeout(150);
+  ok('tapping a person picks them up', !!(await page.$('#hospMoveBar')) && await page.$eval('[data-hboard="m0"]', b => b.classList.contains('moving')));
+  await page.click('[data-hboard="m1"]'); await page.waitForTimeout(300);
+  let mv = sent.filter(b => b.fn === 'hospMoveBed').pop();
+  ok('… and tapping an empty bed moves them there', mv && mv.args.slice(2).join() === 'k1,m0,m1' && (await occ()).m1 === 'k1', JSON.stringify(mv && mv.args));
+  await page.click('[data-hboard="m1"]'); await page.waitForTimeout(150);
+  await page.click('[data-hboard="m2"]'); await page.waitForTimeout(300);
+  o = await occ();
+  ok('tapping someone else’s bed swaps the two', o.m2 === 'k1' && o.m1 === 'k2', JSON.stringify(o));
+  await page.click('.hospWho[data-hmove="k2"]'); await page.waitForTimeout(150);
+  await page.click('[data-hboard="f0"]'); await page.waitForTimeout(300);
+  mv = sent.filter(b => b.fn === 'hospMoveBed').pop();
+  ok('someone waiting is put in a bed the same way', mv.args.slice(2).join() === 'k2,,f0' && (await occ()).f0 === 'k2');
+  await page.click('[data-hboard="m2"]'); await page.waitForTimeout(150);
+  await page.click('#hospMoveOff'); await page.waitForTimeout(300);
+  mv = sent.filter(b => b.fn === 'hospMoveBed').pop();
+  ok('Take off this bed frees it', mv.args.slice(2).join() === 'k1,m2,' && (await occ()).m2 === '');
+  await page.click('[data-hboard="f0"]'); await page.waitForTimeout(150);
+  await page.click('#hospMoveCancel'); await page.waitForTimeout(150);
+  ok('Cancel puts them down without a move', !(await page.$('#hospMoveBar')) && sent.filter(b => b.fn === 'hospMoveBed').length === 4);
+  await page.click('#hospBoardNext'); await page.waitForTimeout(200);
+  ok('› shows the next night', await page.$eval('#hospBoardDay', i => i.value) === day(1) && !!(await page.$('#hospBoardToday')));
+  ok('no sideways scroll on the bed board', !(await overflow(page)));
+  ok('no errors (calendar + board)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
 console.log('=== desktop ===');
 {
-  const { ctx, page, errors } = await open(HANA, { viewport: { width: 1280, height: 900 } });
+  const { ctx, page, errors, sent } = await open(HANA, { viewport: { width: 1280, height: 900 } });
   await page.click('#menuBtn'); await page.waitForTimeout(150);
   await page.click('[data-menu-item="hosp"]'); await page.waitForTimeout(500);
   ok('desktop: dashboard renders without sideways scroll', !!(await page.$('#hospChart')) && !(await overflow(page)));
   await page.click('[data-hosptab="req"]'); await page.waitForTimeout(150);
   await page.click('[data-hospbookreq="tt1"]'); await page.waitForTimeout(200);
   ok('desktop: the bed picker fits', !(await overflow(page)) && (await page.$$('[data-hbed]')).length === 8);
+  await page.click('#hospCancelBtn'); await page.waitForTimeout(150);
+  await page.click('[data-hosptab="cal"]'); await page.waitForTimeout(150);
+  ok('desktop: the calendar fits the page', !(await overflow(page)) && await page.$eval('.hospCalScroll', e => e.scrollWidth <= e.clientWidth + 1));
+  await page.click('[data-hospcalmode="board"]'); await page.waitForTimeout(150);
+  await page.dragAndDrop('[data-hboard="m0"]', '[data-hboard="m3"]'); await page.waitForTimeout(300);
+  ok('desktop: dragging a person to an empty bed moves them', sent.filter(b => b.fn === 'hospMoveBed').pop()?.args.slice(2).join() === 'k1,m0,m3');
   ok('no errors (desktop)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

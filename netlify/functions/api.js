@@ -3432,6 +3432,47 @@ async function hospSave(username, pin, kind, rec) {
   out.saved = clean;
   return out;
 }
+/* The bed board's one move, done in one write so a swap can't half-happen:
+   booking `bookingId` gives up `fromBed` (or '' — a person not in a bed yet)
+   and takes `toBed` (or '' — just take them off the bed). If someone else
+   holds `toBed` on a night they share, the two swap beds — as long as that
+   leaves nobody in a bed a third booking already has. A move is for the
+   whole stay, not one night. */
+async function hospMoveBed(username, pin, bookingId, fromBed, toBed) {
+  const a = await hospAuth_(username, pin); if (a.out) return a.out;
+  bookingId = str_(bookingId, 60); fromBed = str_(fromBed, 60) || ''; toBed = str_(toBed, 60) || '';
+  const campus = a.s.campus;
+  const d = await getHosp_(campus);
+  const A = d.bookings.find(function (k) { return k.id === bookingId; });
+  if (!A) return { ok: false, err: 'not_found' };
+  A.bedIds = A.bedIds || [];
+  if (fromBed && A.bedIds.indexOf(fromBed) === -1) return { ok: false, err: 'not_in_bed' };
+  if (!fromBed && !toBed) return { ok: false, err: 'bad_move' };
+  const beds = {};
+  d.rooms.forEach(function (r) { r.beds.forEach(function (b) { beds[b.id] = b; }); });
+  const now = new Date().toISOString();
+  if (toBed) {
+    if (!beds[toBed]) return { ok: false, err: 'no_such_bed' };
+    if (beds[toBed].out) return { ok: false, err: 'bed_out' };
+    if (toBed === fromBed || A.bedIds.indexOf(toBed) > -1) return { ok: false, err: 'same_bed' };
+    if (!fromBed && A.bedIds.length >= A.count) return { ok: false, err: 'all_placed' };
+    const holders = d.bookings.filter(function (o) { return o.id !== A.id && hospOverlap_(o, A) && (o.bedIds || []).indexOf(toBed) > -1; });
+    if (holders.length > 1 || (holders.length && !fromBed)) return { ok: false, err: 'bed_taken', with: holders[0].name };
+    if (holders.length) {
+      const B = holders[0];
+      // B moves into A's old bed: nobody else (but A) may hold it on B's nights
+      const third = d.bookings.find(function (o) { return o.id !== A.id && o.id !== B.id && hospOverlap_(o, B) && (o.bedIds || []).indexOf(fromBed) > -1; });
+      if (third) return { ok: false, err: 'bed_taken', with: third.name };
+      if (B.bedIds.indexOf(fromBed) > -1) return { ok: false, err: 'same_bed' };
+      B.bedIds = B.bedIds.map(function (id) { return id === toBed ? fromBed : id; });
+      B.updated = now; B.updatedBy = a.s.id;
+    }
+  }
+  A.bedIds = fromBed ? A.bedIds.map(function (id) { return id === fromBed ? toBed : id; }).filter(Boolean) : A.bedIds.concat([toBed]);
+  A.updated = now; A.updatedBy = a.s.id;
+  await writeJSON(hospKey_(campus), d);
+  return getHospitality(username, pin);
+}
 async function hospDelete(username, pin, kind, id) {
   const a = await hospAuth_(username, pin); if (a.out) return a.out;
   id = str_(id, 60);
@@ -4831,7 +4872,8 @@ const HANDLERS = {
   portalUpdateAccount: function (a) { return portalUpdateAccount(a[0], a[1], a[2], a[3]); },
   getHospitality: function (a) { return getHospitality(a[0], a[1]); },
   hospSave: function (a) { return hospSave(a[0], a[1], a[2], a[3]); },
-  hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); }
+  hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); },
+  hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); }
 };
 
 export default async (req) => {

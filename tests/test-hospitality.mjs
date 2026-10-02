@@ -159,5 +159,46 @@ ok('booking a team links it to its request', r.ok && r.requests.find(q => q.trip
 ok('a team is booked once', (await call('hospSave', [...H, 'booking', { category: 'team', name: 'Again', from: soon.from, to: soon.to, tripId: soon.tripId }])).err === 'already_booked');
 ok('a team request reaches nobody outside Hospitality', (await call('getHospitality', ['tom', '1234'])).requests === undefined);
 
+console.log('=== the bed board: move, swap, place, take off ===');
+mem['hosp:siemreap'] = {
+  buildings: [{ id: 'b1', name: 'House' }],
+  rooms: [{ id: 'r1', buildingId: 'b1', name: '1', style: 'mixed', notes: '', beds: [{ id: 'x1', label: 'A' }, { id: 'x2', label: 'B' }, { id: 'x3', label: 'C' }, { id: 'x4', label: 'D', out: true }] }],
+  bookings: [
+    { id: 'kA', category: 'guest', name: 'Ann', from: day(1), to: day(5), count: 1, males: 0, females: 1, bedIds: ['x1'], tripId: '' },
+    { id: 'kB', category: 'guest', name: 'Ben', from: day(2), to: day(6), count: 1, males: 1, females: 0, bedIds: ['x2'], tripId: '' },
+    { id: 'kC', category: 'guest', name: 'Cat', from: day(5), to: day(9), count: 1, males: 0, females: 1, bedIds: ['x1'], tripId: '' },
+    { id: 'kD', category: 'team', name: 'Dee Team', from: day(1), to: day(3), count: 2, males: 1, females: 1, bedIds: [], tripId: '' },
+    { id: 'kE', category: 'guest', name: 'Eve', from: day(7), to: day(9), count: 1, males: 0, females: 1, bedIds: ['x3'], tripId: '' },
+  ],
+};
+const bedsOf = (r, id) => r.bookings.find(k => k.id === id).bedIds.join();
+r = await call('hospMoveBed', ['kim', '1234', 'kA', 'x1', 'x3']);
+ok('another ministry can’t move anyone', r.ok === false && r.err === 'not_authorized');
+r = await call('hospMoveBed', [...H, 'kA', 'x1', 'x3']);
+ok('a move to a free bed', r.ok && bedsOf(r, 'kA') === 'x3', JSON.stringify(r).slice(0, 120));
+r = await call('hospMoveBed', [...H, 'kA', 'x3', 'x2']);
+ok('a move onto someone sharing nights swaps the two', r.ok && bedsOf(r, 'kA') === 'x2' && bedsOf(r, 'kB') === 'x3');
+r = await call('hospMoveBed', [...H, 'kB', 'x3', 'x1']);
+ok('a swap that would put the other one in a third person’s bed is refused', r.ok === false && r.err === 'bed_taken' && r.with === 'Eve', JSON.stringify(r).slice(0, 120));
+ok('… and nothing moved', bedsOf(await call('getHospitality', H), 'kB') === 'x3' && bedsOf(await call('getHospitality', H), 'kC') === 'x1');
+r = await call('hospMoveBed', [...H, 'kA', 'x2', 'x4']);
+ok('a bed out of use takes nobody', r.ok === false && r.err === 'bed_out');
+r = await call('hospMoveBed', [...H, 'kA', 'x9', 'x1']);
+ok('they have to be in the bed they move from', r.ok === false && r.err === 'not_in_bed');
+r = await call('hospMoveBed', [...H, 'kD', '', 'x1']);
+ok('someone not in a bed yet can be placed', r.ok && bedsOf(r, 'kD') === 'x1', JSON.stringify(r).slice(0, 120));
+r = await call('hospMoveBed', [...H, 'kD', '', 'x2']);
+ok('placing onto a taken bed is refused (no bed to swap back)', r.ok === false && r.err === 'bed_taken' && r.with === 'Ann');
+r = await call('hospMoveBed', [...H, 'kA', 'x2', '']);
+ok('taking someone off their bed', r.ok && bedsOf(r, 'kA') === '');
+r = await call('hospMoveBed', [...H, 'kD', '', 'x2']);
+ok('… frees it for the next', r.ok && bedsOf(r, 'kD') === 'x1,x2');
+r = await call('hospMoveBed', [...H, 'kD', '', 'x3']);
+ok('a booking with all its beds can’t take another', r.ok === false && r.err === 'all_placed');
+r = await call('hospMoveBed', [...H, 'kA', '', '']);
+ok('a move to nowhere from nowhere is refused', r.ok === false && r.err === 'bad_move');
+r = await call('hospMoveBed', [...H, 'nope', '', 'x1']);
+ok('an unknown booking is refused', r.ok === false && r.err === 'not_found');
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
