@@ -2068,12 +2068,13 @@ async function getMyMinistry(username, pin) {
    That is your main ministry, the other ministries on your profile
    (ministriesOf_), a ministry you lead, and — for a department's own
    "Campus Leadership" overseer (dept:'Campus Leadership', ministry: e.g.
-   'Community Service') — every ministry under that department. Being an
-   admin no longer opens every ministry: Uriah asked that only the ministries
-   you are part of show there. (Admin → Ministry KPIs still edits what any
-   ministry tracks, and the Base tab still shows the whole base.) */
+   'Community Service') — every ministry under that department. An admin
+   may open (and enter) any ministry on their own campus: everyone else's
+   picker shows only the ministries they are part of, an admin's has every
+   one, in a Department / Ministry dropdown. */
 function canLogFor_(s, campus, dept, ministry) {
   if (campus !== s.campus) return false;
+  if (s.isAdmin) return true;
   if (memberOf_(s, dept, ministry)) return true;
   if (isLeaderOf_(s, dept, ministry)) return true;
   return s.dept === 'Campus Leadership' && s.ministry === dept;

@@ -286,10 +286,11 @@ is never a doubt whose boxes these are:
   ministries I’m part of" or by an admin on the person page; `cleanMinistries_` drops
   repeats, malformed keys and the main one), any ministry you **lead**, and for a Campus
   Leadership overseer (dept Campus Leadership, ministry = a department name) every ministry
-  in that department. **Being an admin no longer adds every ministry.** Uriah asked for
-  that, and it applies to the Teams Database too. Admin → Ministry KPIs still edits what any
-  ministry tracks, and Base still shows the whole base. The banner says which it is: "Your
-  main ministry", "One of your ministries" or "You lead this ministry". ≤ 8 options are chips
+  in that department. **An admin gets every ministry on their campus** (role `admin`, after
+  their own; `canLogFor_` lets an admin see and enter any ministry on their own campus, the
+  Teams Database included), always as the two dropdowns. Everyone else sees only their own.
+  The banner says which it is: "Your main ministry", "One of your ministries", "You lead this
+  ministry" or "As an admin you can see and enter…". ≤ 8 options are chips (not for admins)
   (`[data-mmpick="Dept|Min"]`, split at the LAST `|`), more are two selects
   (`#mmBrowseDeptSel` / `#mmBrowseMinSel`). Selection lives in `S.mmBrowseDept` /
   `S.mmBrowseMinistry` (`mmSelected_`; a department picked with no ministry → its first

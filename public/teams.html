@@ -7216,7 +7216,8 @@ function teamsMinistryHtml_(campus){
 /* Only the ministries you are part of (same rule as canLogFor_ in api.js):
    your main one, the others on your profile, any you lead, and — for a
    department's Campus Leadership overseer — that department's ministries.
-   An admin gets no more than anyone else here. */
+   An admin gets those first and then every other ministry on the campus
+   (role 'admin'), always as the Department / Ministry dropdowns. */
 function mmOptions_(){
   var deps=getDepartments(S.me.campus), out=[];
   var oversees=myOversightDept_(), isBL = S.me.dept===BL_DEPT;
@@ -7226,6 +7227,7 @@ function mmOptions_(){
   (S.me.ministries||[]).forEach(function(k){ pushKey(k, 'member'); });
   (S.me.leads||[]).forEach(function(k){ pushKey(k, 'leader'); });
   if(oversees) Object.keys(deps[oversees]||{}).forEach(function(m){ push(oversees, m, 'oversee'); });
+  if(S.me.isAdmin) Object.keys(deps).forEach(function(d){ if(d===BL_DEPT) return; Object.keys(deps[d]).forEach(function(m){ push(d, m, 'admin'); }); });
   if(S.me.ministry && isBL) push(S.me.dept, S.me.ministry, 'main');   // last, never the default
   return out;
 }
@@ -7248,7 +7250,7 @@ function mmPickerHtml_(opts, sel){
   if(opts.length<2) return '';
   var depts=[]; opts.forEach(function(o){ if(depts.indexOf(o.dept)===-1) depts.push(o.dept); });
   var h='<div class="mmPick"><div class="weekNavLabel">'+esc(t('Which ministry'))+'</div>';
-  if(opts.length<=8){
+  if(opts.length<=8 && !S.me.isAdmin){
     h+='<div class="deptChips">'+opts.map(function(o){
       var on=o.dept===sel.dept && o.min===sel.min;
       return '<button class="deptChip'+(on?' on':'')+'" data-mmpick="'+esc(o.dept)+'|'+esc(o.min)+'">'+esc(mmOptionLabel_(o))+'</button>'; }).join('')+'</div>';
@@ -7276,6 +7278,7 @@ function mmBannerHtml_(sel, mine){
   var note = mine ? 'Your main ministry — you are entering its numbers.'
     : sel.role==='member' ? 'One of your ministries — you are entering its numbers.'
     : sel.role==='leader' ? 'You lead this ministry — you are entering its numbers.'
+    : sel.role==='admin' ? 'As an admin you can see and enter this ministry’s numbers.'
     : 'You are entering numbers for this ministry.';
   h+='<div class="mmBannerNote">'+esc(t(note))+'</div>';
   return h+'</div></div>';
