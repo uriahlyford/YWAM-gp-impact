@@ -647,15 +647,27 @@ forms, documents and references follow.
   `P.answers` for the preview boot, draws `meHtml_` or `formHtml_` (section chips), restores,
   and puts the result in `#pvFrame` with `inert` + pointer-events none, so nothing inside binds
   or fires.
-- **Sign-up answers like portalBoot, form included** (`portalRegister`): the dashboard opens the
-  form from the sign-up reply with nothing else fetched. The client still copes with a reply
-  that lacks it (`openForm` refetches `portalBoot`; `bindForm_` returns without a form) — the
-  first live team sign-up hit exactly that and got the error screen.
+- **Sign-up answers like portalBoot, form included** (`portalRegister`), and **lands straight in
+  the application** (`openForm_`) — people made the account and forgot to apply. Until it is
+  submitted the dashboard's hero says "Next: send in your application" (`#applyNext`,
+  `#openFormTop`). `openForm_` still copes with a reply that lacks the form (refetches
+  `portalBoot`; `bindForm_` returns without a form) — the first live team sign-up hit exactly
+  that and got the error screen.
+- **A team names its sending church, base or organization at sign-up** (`#r_team` →
+  `teamName`, required on the page, optional for staff-made accounts): `createApplicant_` puts
+  it in the draft as `teamName`, so the staff list (`candName_`) shows the team, not the
+  leader, from day one and the form opens with its first question filled in.
+- **Steps for anyone asked for a reference** (students not from Cambodia, staff, volunteers):
+  Create account → Fill out the application → **Send your leader reference** → "Application &
+  reference received" (done only when both are in) → We get in touch → Documents → … The
+  reference is its own step, no longer a sub-item of Documents, and its own card on the
+  dashboard (`#refCard`, right under the application). Moving the record to contacted counts
+  the reference as in. Without a reference (Khmer students) the step is left out.
 - **A dead screen is the worst failure**: `render()` wraps building and binding in try/catch
   and shows the error with a Back button instead of leaving nothing clickable.
 - **Khmer or international** (`audienceOf_` — country Cambodia at sign-up, which is why
-  country is required there): `refNeeded_` is false for Khmer students and for teams (the
-  docs step then has no reference item); `needsVisa_` is true for everyone not from
+  country is required there): `refNeeded_` is false for Khmer students and for teams (no
+  reference step then); `needsVisa_` is true for everyone not from
   Cambodia, and their dashboard shows the e-visa guide (`visaCardHtml_`, the text in
   `VISA_STEPS` / `VISA_PREP`) from acceptance on, with two ticks staff set on the record
   (`portalSetVisaFlags`: flightsConfirmed, invitationSent). A team's Documents card lists
@@ -694,7 +706,8 @@ forms, documents and references follow.
   - The name, where the team is from, the Siem Reap dates and the head counts follow the
     application. Metrics, men and women reached, notes and hosting staff are kept.
   - The team enters its own Outreach Teams numbers on its dashboard (`#teamNumbers`,
-    `portalSaveTeamNumbers`; shown from Getting ready or once its dates have started). The
+    `portalSaveTeamNumbers`; shown — and accepted, else `not_arrived` — only once staff have
+    ticked Arrived, so it doesn’t confuse a team before it comes). The
     metric list comes from `taxonomy.js` plus `metricOverrides` in the applicant's
     `portalBoot`.
   - Staff still edit everything in the Teams Database; `saveTeamTrip` keeps the link, and

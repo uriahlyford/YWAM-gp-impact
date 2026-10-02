@@ -231,11 +231,12 @@ r = await call('hrSaveCandidate', ['dara', '1234', { ...cand, stage: 'applied' }
 ok('portal staff moves a stage through the CRM handler', r.body.ok === true && r.body.candidate.stage === 'applied');
 ok('the portal fields survive a CRM edit', r.body.candidate.messenger === 'whatsapp' && r.body.candidate.staffId === anna.id && r.body.candidate.portal && r.body.candidate.portal.createdAt);
 r = await call('portalBoot', ['anna.b', '2468']);
-ok('the applicant now sees "pending" with "we get in touch" as the current step', r.body.application.status === 'pending' && r.body.application.steps.find(s => s.state === 'current').id === 'contact');
-ok('received and form are done', r.body.application.steps.filter(s => s.state === 'done').map(s => s.id).join(',') === 'account,form,received');
+ok('the applicant now sees "pending", with the leader reference as the current step — it goes in next to the application', r.body.application.status === 'pending' && r.body.application.steps.find(s => s.state === 'current').id === 'reference');
+ok('the steps run application, reference, received, then we get in touch', r.body.application.steps.map(s => s.id).slice(0, 5).join(',') === 'account,form,reference,received,contact' && r.body.application.steps.filter(s => s.state === 'done').map(s => s.id).join(',') === 'account,form', r.body.application.steps.map(s => s.id + ':' + s.state).join(' '));
+ok('the documents step no longer carries the reference', !r.body.application.steps.find(s => s.id === 'docs').items);
 r = await call('hrSaveCandidate', ['sina', '1234', { ...cand, stage: 'contacted', assignedTo: 'st_pstaff', nextStep: 'Call on WhatsApp' }]);
 r = await call('portalBoot', ['anna.b', '2468']);
-ok('contacted → in review, documents & reference current', r.body.application.status === 'in_review' && r.body.application.steps.find(s => s.state === 'current').id === 'docs');
+ok('contacted → in review (the reference counts as in from here), documents current', r.body.application.status === 'in_review' && r.body.application.steps.find(s => s.state === 'current').id === 'docs');
 ok('the applicant is not shown the staff’s internal next step or owner', !JSON.stringify(r.body).includes('Call on WhatsApp') && !JSON.stringify(r.body).includes('st_pstaff'));
 r = await call('hrSaveCandidate', ['sina', '1234', { ...cand, stage: 'interview' }]);
 r = await call('portalBoot', ['anna.b', '2468']);
@@ -265,7 +266,7 @@ r = await call('portalRegister', [{ ...APP, username: 'fanny.f', email: 'fanny@e
 const fanny = mem.staff.find(s => s.username === 'fanny.f'), fannyCand = mem.candidates.find(c => c.staffId === fanny.id);
 r = await call('portalBoot', ['fanny.f', '2468']);
 ok('an applicant gets only their own form, with its questions in Khmer and English', r.body.form && r.body.form.key === 'dts' && r.body.form.sections[0].questions[0].label.en && r.body.form.sections[0].questions[0].label.km);
-ok('Fanny (Finland) is international: needs a reference and the visa guide', r.body.application.audience === 'international' && r.body.application.refNeeded === true && r.body.application.needsVisa === true && r.body.application.steps.find(s => s.id === 'docs').items.length === 2);
+ok('Fanny (Finland) is international: needs a reference and the visa guide', r.body.application.audience === 'international' && r.body.application.refNeeded === true && r.body.application.needsVisa === true && r.body.application.steps.some(s => s.id === 'reference'));
 const dtsForm = r.body.form;
 r = await call('portalSaveForm', ['dara', '1234', 'dts', dtsForm]);
 ok('portal staff cannot edit a form', r.body.ok === false && r.body.err === 'not_authorized');
@@ -298,7 +299,7 @@ const full = {};
 dtsForm.sections.forEach(s => s.questions.forEach(qq => { if (qq.audience !== 'khmer') full[qq.id] = qq.type === 'multi' ? ['x'] : (qq.options && qq.options.length ? qq.options[0].en : (qq.type === 'date' ? '2000-01-01' : 'answer')); }));
 full.shoe = 'Small';
 r = await call('portalSubmit', ['fanny.f', '2468', full]);
-ok('a complete submission goes through and moves the record to applied', r.body.ok === true && r.body.application.status === 'pending' && r.body.application.stage === 'applied' && r.body.application.submittedAt && r.body.application.steps.find(s => s.state === 'current').id === 'contact');
+ok('a complete submission goes through and moves the record to applied; the reference is what is left', r.body.ok === true && r.body.application.status === 'pending' && r.body.application.stage === 'applied' && r.body.application.submittedAt && r.body.application.steps.find(s => s.state === 'current').id === 'reference');
 ok('the answers are on the record and the stage move is logged', mem.candidates.find(c => c.id === fannyCand.id).portal.form.answers.shoe === 'Small' && mem.candidates.find(c => c.id === fannyCand.id).log.some(l => l.kind === 'stage' && l.text === 'applied'));
 r = await call('portalSaveDraft', ['fanny.f', '2468', { dob: '1980-01-01' }]);
 ok('after submitting, the applicant cannot change answers', r.body.ok === false && r.body.err === 'submitted');
@@ -338,7 +339,7 @@ ok('a sample Khmer DTS student at "new": draft, no reference, no visa, the DTS f
 r = await call('portalViewAs', ['dara', '1234', { type: 'team', stage: 'docs' }]);
 ok('a sample team awaiting documents: submitted, visa guide, no reference, the team form', r.body.ok === true && r.body.application.type === 'team' && r.body.application.submittedAt && r.body.application.needsVisa === true && r.body.application.refNeeded === false && r.body.form.key === 'team' && r.body.application.status === 'docs', JSON.stringify(r.body.application && r.body.application.status));
 r = await call('portalViewAs', ['dara', '1234', { type: 'student', school: 'dts', audience: 'international', stage: 'practical' }]);
-ok('a sample international student at "getting ready": reference received, visa ticks set', r.body.ok === true && r.body.application.reference.status === 'received' && r.body.application.visa.flightsConfirmed === true && r.body.application.steps.find(s => s.id === 'docs').items.find(i => i.id === 'reference').done === true);
+ok('a sample international student at "getting ready": reference received, visa ticks set', r.body.ok === true && r.body.application.reference.status === 'received' && r.body.application.visa.flightsConfirmed === true && r.body.application.steps.find(s => s.id === 'reference').state === 'done');
 r = await call('portalViewAs', ['dara', '1234', { type: 'student', school: 'bcs', campus: 'poipet' }]);
 ok('a school not at that campus is refused', r.body.ok === false && r.body.err === 'school_not_at_campus');
 ok('nothing was written', !mem.candidates.some(c => c.id === 'preview'));
@@ -367,12 +368,17 @@ r = await call('portalReferenceSubmit', [refToken2, refFull]);
 ok('a complete reference is accepted', r.body.ok === true && r.body.applicantName === fannyCand.name);
 const fannyRef = mem.candidates.find(c => c.id === fannyCand.id);
 ok('the record marks the reference done, keeps the answers and the leader, and logs it', fannyRef.portal.referenceDone === true && fannyRef.portal.references.find(x => x.usedAt).answers.rIntegrity === '5 — Excellent' && fannyRef.portal.references.find(x => x.usedAt).leaderName === 'Pastor Example' && fannyRef.log.some(l => /Leader reference received from Pastor Example/.test(l.text)));
+{ const st = (await call('portalBoot', ['fanny.f', '2468'])).body.application.steps, by = Object.fromEntries(st.map(x => [x.id, x.state]));
+  ok('with the reference in, its step is done; received waits for the application too', by.reference === 'done' && (by.received === 'done') === !!fannyRef.portal.submittedAt, JSON.stringify(by)); }
+{ const before = fannyRef.portal.submittedAt;
+  if (!before) { const st = (await call('portalBoot', ['fanny.f', '2468'])).body.application.steps;
+    ok('… the application is now the one thing left before we get in touch', st.find(x => x.state === 'current').id === 'form'); } }
 r = await call('portalReferenceSubmit', [refToken2, refFull]);
 ok('the link is single-use', r.body.ok === false && r.body.err === 'used');
 r = await call('portalReferenceForm', [refToken2]);
 ok('and says so when opened again', r.body.ok === false && r.body.err === 'used');
 r = await call('portalBoot', ['fanny.f', '2468']);
-ok('the applicant sees "received" with the leader’s name and the reference item ticked', r.body.application.reference.status === 'received' && r.body.application.reference.leaderName === 'Pastor Example' && r.body.application.steps.find(s => s.id === 'docs').items.find(i => i.id === 'reference').done === true);
+ok('the applicant sees "received" with the leader’s name and the reference item ticked', r.body.application.reference.status === 'received' && r.body.application.reference.leaderName === 'Pastor Example' && r.body.application.steps.find(s => s.id === 'reference').state === 'done');
 ok('the applicant is not shown what the leader wrote', !JSON.stringify(r.body.application).includes('A thoughtful answer'));
 r = await call('portalReferenceLink', ['fanny.f', '2468']);
 ok('no new link once a reference is in', r.body.ok === false && r.body.err === 'received');
@@ -394,16 +400,22 @@ ok('the applicant sees the link as expired', r.body.application.reference.status
 
 console.log('\n=== Khmer students, teams, visas ===');
 r = await call('portalRegister', [{ ...APP, username: 'srey.k', email: 'srey@example.org', country: 'Cambodia', campus: 'siemreap', school: 'dts' }]);
-ok('a Khmer student needs no leader reference — the docs step has only documents', r.body.ok === true && r.body.application.audience === 'khmer' && r.body.application.refNeeded === false && r.body.application.needsVisa === false && r.body.application.steps.find(s => s.id === 'docs').items.map(i => i.id).join(',') === 'documents');
+ok('a Khmer student needs no leader reference — no reference step', r.body.ok === true && r.body.application.audience === 'khmer' && r.body.application.refNeeded === false && r.body.application.needsVisa === false && !r.body.application.steps.some(s => s.id === 'reference'));
 r = await call('portalBoot', ['srey.k', '2468']);
 const srey = mem.staff.find(s => s.username === 'srey.k');
 r = await call('portalReferenceLink', ['srey.k', '2468']);
 ok('a Khmer student is told no reference is needed', r.body.ok === false && r.body.err === 'not_needed');
 r = await call('portalSubmit', ['srey.k', '2468', {}]);
 ok('a Khmer student is asked the Khmer-only question and not the international one', r.body.missing.includes('english') && !r.body.missing.includes('leaderContact'));
-r = await call('portalRegister', [{ ...APP, username: 'team.au', email: 'team@example.org', type: 'team', school: '', country: 'Australia', campus: 'siemreap' }]);
+r = await call('portalRegister', [{ ...APP, username: 'team.au', email: 'team@example.org', type: 'team', school: '', country: 'Australia', campus: 'siemreap', teamName: '  Grace Church Team  ' }]);
+ok('a team names its sending church at sign-up, and the form starts with it filled in', r.body.ok === true && r.body.application.answers.teamName === 'Grace Church Team', JSON.stringify(r.body.application && r.body.application.answers));
 ok('a team needs no leader reference but does need the visa guide', r.body.ok === true && r.body.application.refNeeded === false && r.body.application.needsVisa === true && r.body.application.formKey === 'team');
 const teamAcct = mem.staff.find(s => s.username === 'team.au'), teamRec = mem.candidates.find(c => c.staffId === teamAcct.id);
+ok('so staff see the team’s name from the first day (it is the draft’s teamName, which the staff list shows)', teamRec.portal.draft && teamRec.portal.draft.teamName === 'Grace Church Team' && (await call('portalBoot', ['sina', '1234'])).body.applicants.find(c => c.id === teamRec.id).portal.draft.teamName === 'Grace Church Team');
+{ const m = await call('portalRegister', [{ ...APP, username: 'stud.x', email: 'studx@example.org', teamName: 'Not A Team' }]);
+  const c = mem.candidates.find(x => x.staffId === (mem.staff.find(s => s.username === 'stud.x') || {}).id);
+  ok('a student’s sign-up ignores a team name', m.body.ok === true && c && !c.portal.draft, JSON.stringify(c && c.portal));
+  await call('portalDeleteApplicant', ['sina', '1234', c.id]); }
 
 console.log('\n=== team co-leaders: add as many ===');
 { const tq = (await call('portalBoot', ['sina', '1234'])).body.forms.team.sections.flatMap(s => s.questions).find(q => q.id === 'coLeaders');
@@ -535,9 +547,15 @@ r = await call('portalUpdateAnswers', ['team.au', '2468', { ...teamFull, size: '
 ok('the team changing its answers updates it', r.body.ok === true && linked().length === 1 && linked()[0].size === 16 && linked()[0].from === '2027-01-12', JSON.stringify(linked()));
 r = await call('portalBoot', ['team.au', '2468']);
 ok('the team’s dashboard knows its team and the Outreach Teams metric overrides', r.body.application.trip && r.body.application.trip.id === 'ta_' + teamRec.id && Array.isArray(r.body.metricOverrides));
+r = await call('portalSaveTeamNumbers', ['team.au', '2468', { 'People Served': 120 }, {}]);
+ok('the team can’t enter numbers before it has arrived', r.body.ok === false && r.body.err === 'not_arrived' && !(linked()[0].metrics || {})['People Served'], JSON.stringify(r.body).slice(0, 100));
+const stageBefore = mem.candidates.find(c => c.id === teamRec.id).stage;
+r = await call('portalTeamStep', ['rithy', '1234', teamRec.id, 'arrived', true]);
 r = await call('portalSaveTeamNumbers', ['team.au', '2468', { 'People Served': 120, 'Salvations': 4, 'Teams Hosted': 9 }, { male: 40, female: 55 }]);
-ok('the team enters its numbers on the portal', r.body.ok === true && linked()[0].metrics['People Served'] === 120 && linked()[0].metrics['Salvations'] === 4 && linked()[0].reached.male === 40 && r.body.application.trip.metrics['People Served'] === 120);
+ok('once arrived, the team enters its numbers on the portal', r.body.ok === true && linked()[0].metrics['People Served'] === 120 && linked()[0].metrics['Salvations'] === 4 && linked()[0].reached.male === 40 && r.body.application.trip.metrics['People Served'] === 120);
 ok('Teams Hosted is counted by the app, never typed', linked()[0].metrics['Teams Hosted'] === undefined);
+r = await call('portalTeamStep', ['rithy', '1234', teamRec.id, 'arrived', false]);
+mem.candidates.find(c => c.id === teamRec.id).stage = stageBefore;
 r = await call('portalSaveTeamNumbers', ['anna.b', '2468', { 'People Served': 1 }, {}]);
 ok('a student has no team numbers', r.body.ok === false);
 r = await call('getTeamTrips', ['rithy', '1234', 'siemreap']);

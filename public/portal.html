@@ -165,6 +165,8 @@ textarea { min-height:80px; resize:vertical; }
 /* the forms editor */
 .two2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .refBox { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+#refCard .refBox { margin-top:0; padding-top:0; border-top:0; }
+#refCard .refBox > .eyebrow { display:none; }
 .stays { display:flex; flex-direction:column; gap:10px; }
 .people { display:flex; flex-direction:column; gap:10px; }
 .people .btn { align-self:flex-start; }
@@ -363,8 +365,8 @@ var STATUS_NOTE = {
   arrived:'You are here. Welcome to {campus}!',
   closed:'This application is closed. Message us if you think that is a mistake.'
 };
-var STEP_LABEL = { account:'Create your account', form:'Fill out the application', received:'Application received', contact:'We get in touch', docs:'Documents & reference', interview:'Video interview', accepted:'Accepted', practical:'Getting ready — fees, packing, visa, travel', arrived:'Arrival at the base' };
-var STEP_NOTE = { form:'Your answers save as a draft — come back any time.', contact:'On WhatsApp or Telegram, whichever you chose.', docs:'What to send depends on what you are applying for.', interview:'A video call with someone from the school or the team.' };
+var STEP_LABEL = { account:'Create your account', form:'Fill out the application', reference:'Send your leader reference', received:'Application received', received2:'Application & reference received', contact:'We get in touch', docs:'Documents', interview:'Video interview', accepted:'Accepted', practical:'Getting ready — fees, packing, visa, travel', arrived:'Arrival at the base' };
+var STEP_NOTE = { form:'Your answers save as a draft — come back any time.', reference:'Make a link below and send it to your pastor or a leader who knows you well — you can do this before or after you apply.', received:'Once both are in, we get in touch.', contact:'On WhatsApp or Telegram, whichever you chose.', docs:'What to send depends on what you are applying for.', interview:'A video call with someone from the school or the team.' };
 var SUBITEM_LABEL = { documents:'Documents', reference:'Leader reference' };
 /* A team's own journey (teamSteps_ in api.js): what each step is called, a
    line on what it means while it is still ahead, and who does it. */
@@ -621,7 +623,9 @@ function registerHtml_(){
     '<label class="f"'+(openCampuses_().length>1?'':' style="margin-top:0"')+'>'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(a&&a.key===x.key?' on':'')+'" data-pick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>'+
     (a ? '<p class="hint">'+esc(t(a.blurb))+(a.secondary?' · '+esc(t('Requires a completed DTS')):'')+'</p>' : '<p class="hint">'+esc(t('Pick one to continue.'))+'</p>')+'</div>';
   h+='<div class="card">'+
-    '<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="r_name" autocomplete="name" value="'+esc(r.name||'')+'">'+
+    (a && a.type==='team' ? '<label class="f" style="margin-top:0">'+esc(t('Sending church, base or organization'))+'</label><input type="text" id="r_team" maxlength="120" value="'+esc(r.team||'')+'">'+
+      '<p class="hint">'+esc(t('This is your team’s name with us.'))+'</p>' : '')+
+    '<label class="f">'+esc(a && a.type==='team' ? t('Your full name (team leader)') : t('Full name'))+'</label><input type="text" id="r_name" autocomplete="name" value="'+esc(r.name||'')+'">'+
     '<label class="f">'+esc(t('Email'))+'</label><input type="email" id="r_email" autocomplete="email" value="'+esc(r.email||'')+'">'+
     '<label class="f">'+esc(t('Phone number (with country code)'))+'</label><input type="tel" id="r_phone" autocomplete="tel" placeholder="+855 …" value="'+esc(r.phone||'')+'">'+
     '<label class="f">'+esc(t('Where can we message you?'))+'</label><div class="seg">'+
@@ -638,6 +642,8 @@ function registerHtml_(){
     '<button class="linkbtn" id="toLogin">'+esc(t('I already have an account'))+'</button></div>'+langRowHtml_()+'</div>';
   return h;
 }
+/* "Application received" reads "Application & reference received" for anyone a reference is asked of. */
+function stepKey_(st, isTeam, app){ return !isTeam && st.id==='received' && app.refNeeded ? 'received2' : st.id; }
 function statusNote_(app){ return (app.type===TEAM_TYPE && TEAM_STATUS_NOTE[app.status]) || STATUS_NOTE[app.status] || ''; }
 var TEAM_TYPE='team';
 /* ---- the applicant's dashboard ---- */
@@ -648,12 +654,14 @@ function meHtml_(){
   h+='<div class="card hero"><div class="eyebrow">'+esc(t('Your application'))+'</div>'+
     '<h1 style="font-size:26px">'+esc(me.name)+'</h1><p class="sub" style="margin:2px 0 12px">'+esc(t('Applying for'))+': <b style="color:var(--ink)">'+esc(applyLabel_(app.type, app.school))+'</b>'+(app.campus?' · '+esc(campusName_(app.campus)):'')+'</p>'+
     '<span class="pill big '+esc(app.status)+'" id="statusPill">'+esc(t(STATUS_LABEL[app.status]||app.status))+'</span>'+
-    '<p class="sub" style="margin:12px 0 0">'+esc(gpT(statusNote_(app), {app:appName, campus:campusName_(app.campus||DEFAULT_CAMPUS)}))+'</p></div>';
+    '<p class="sub" style="margin:12px 0 0">'+esc(gpT(statusNote_(app), {app:appName, campus:campusName_(app.campus||DEFAULT_CAMPUS)}))+'</p>'+
+    (!app.submittedAt && app.status!=='closed' ? '<div class="banner" id="applyNext" style="margin:12px 0 0"><b>'+esc(t('Next: send in your application'))+'</b><br>'+esc(t('Your account is made, but we only see your application once you submit it.'))+
+      '<button class="btn small" id="openFormTop" style="margin-top:8px">'+esc(t('Fill out my application'))+'</button></div>' : '')+'</div>';
   var isTeam=app.type==='team', LBL=isTeam?TEAM_STEP_LABEL:STEP_LABEL, NOTE=isTeam?TEAM_STEP_NOTE:STEP_NOTE;
   h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Where you are'))+'</h3><ol class="timeline" id="timeline">'+app.steps.map(function(st, i){
     var grp = isTeam && st.group && (!app.steps[i-1] || app.steps[i-1].group!==st.group) ? '<div class="stepGroup">'+esc(t(TEAM_GROUP_LABEL[st.group]||''))+'</div>' : '';
     return '<li class="step '+st.state+'" data-step="'+st.id+'"><span class="dot">'+(st.state==='done'?'✓':(i+1))+'</span><div>'+grp+
-      '<div class="stepName">'+esc(t(LBL[st.id]||st.id))+(isTeam && st.state!=='done' && st.who ? ' <span class="whoTag '+esc(st.who)+'">'+esc(st.who==='you' ? t('You') : t('Us'))+'</span>' : '')+'</div>'+
+      '<div class="stepName">'+esc(t(LBL[stepKey_(st, isTeam, app)]||st.id))+(isTeam && st.state!=='done' && st.who ? ' <span class="whoTag '+esc(st.who)+'">'+esc(st.who==='you' ? t('You') : t('Us'))+'</span>' : '')+'</div>'+
       (NOTE[st.id] && st.state!=='done' ? '<div class="stepNote">'+esc(t(NOTE[st.id]))+'</div>' : '')+
       (st.items ? '<ul class="subItems">'+st.items.map(function(it){ return '<li class="'+(it.done?'done':'')+'">'+(it.done?'✓':'○')+' '+esc(t(SUBITEM_LABEL[it.id]||it.id))+(it.done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; }).join('')+'</ul>' : '')+
       '</div></li>';
@@ -668,11 +676,12 @@ function meHtml_(){
         (P.showAnswers ? answersHtml_(d.form, P.answers, app.audience) : '')
       : '<p class="sub" style="margin:0 0 8px">'+esc(done ? gpT('{done} of {total} answered — pick up where you left off.',{done:done,total:total}) : t('A few sections about you, your faith and what you are applying for. Your answers save as you go.'))+'</p>'+
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
+  if(app.refNeeded) h+='<div class="card" id="refCard"><h3 style="margin-top:0">🙏 '+esc(t('Leader reference'))+'</h3>'+refCardHtml_(app)+'</div>';
   h+=teamNumbersHtml_(app);
   h+=visaCardHtml_(app);
   h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
     ((app.docKinds||[]).length ? docsBodyHtml_((app.docKinds||[]).filter(function(k){ return app.type!=='team' || teamDocsIn_(app) || (k.id!=='invitation' && k.id!=='evisa'); }), app.docs||[], app.submittedAt ? 'me' : 'before', '')
-      : '<p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+'</p>'+(app.refNeeded ? refCardHtml_(app) : ''))+'</div>';
+      : '<p class="sub" style="margin:0">'+esc(t('After you apply, the things to attach for your kind of application are listed here, each one checked off as it arrives.'))+'</p>')+'</div>';
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📱 '+esc(t('How we reach you'))+'</h3>'+(P.editContact?'':'<button class="linkbtn inline" id="editContact">'+esc(t('Edit'))+'</button>')+'</div>';
   if(P.editContact){
     var c=P.contact||{ phone:me.phone, messenger:me.messenger, country:me.country };
@@ -1134,8 +1143,10 @@ function readTeamNumbers_(pre){
   document.querySelectorAll('[data-'+pre+'reach]').forEach(function(i){ reached[i.getAttribute('data-'+pre+'reach')]= i.value==='' ? null : Number(i.value); });
   return { metrics:metrics, reached:reached };
 }
+/* Only once the team has arrived (staff tick Arrived): before that the
+   numbers mean nothing to them yet and would only confuse. */
 function teamNumbersHtml_(app){
-  if(app.type!=='team' || !app.submittedAt) return '';
+  if(app.type!=='team' || !app.submittedAt || app.stage!=='arrived') return '';
   return '<div class="card" id="teamNumbers"><h3 style="margin-top:0">📊 '+esc(t('Your team’s numbers'))+'</h3>'+
     '<p class="sub" style="margin:0 0 8px">'+esc(t('Totals for your whole time with us — fill them in as you go. They go straight into our Outreach Teams figures.'))+'</p>'+
     teamNumberRowsHtml_(app.trip, app.campus, 't')+
@@ -1150,7 +1161,7 @@ function panelTeamNumbersHtml_(c){
       '<button class="btn small ghost" id="syncTeamBtn"'+(P.busy?' disabled':'')+'>🗂️ '+esc(t('Add to the Teams Database'))+'</button>';
   }
   h+='<p class="sub" style="margin:0 0 6px" id="teamDbState">✓ '+esc(gpT('In the Teams Database · {from} → {to}',{from:fmtDate_(c.teamTrip.from), to:fmtDate_(c.teamTrip.to)}))+'</p>';
-  return h+'<p class="hint" style="margin:0 0 6px">'+esc(t('The team fills these in on their dashboard; you can too. They are the same numbers as in the Teams Database, and count on the dashboards once the team has arrived.'))+'</p>'+
+  return h+'<p class="hint" style="margin:0 0 6px">'+esc(t('Once you tick Arrived, the team fills these in on their dashboard; you can too. They are the same numbers as in the Teams Database, and count on the dashboards once the team has arrived.'))+'</p>'+
     teamNumberRowsHtml_(c.teamTrip, c.campus, 's')+
     '<button class="btn small ghost" id="saveStaffNums"'+(P.busy?' disabled':'')+'>'+esc(t('Save numbers'))+'</button>';
 }
@@ -1689,13 +1700,8 @@ function bind_(){
   on_('archiveCand', archiveCand_);
   on_('deleteCand', deleteCand_);
   on_('viewAsCand', function(){ var c=selected_(); if(!c) return; P.pv.mode='record'; P.pv.candId=c.id; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; P.view='preview'; render(); window.scrollTo(0,0); });
-  on_('openForm', function(){
-    var go=function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); };
-    if(P.boot.form) return go();
-    // an older sign-up reply had no form — fetch the dashboard again, then open
-    P.busy=true; render();
-    run('portalBoot', [P.auth.user, P.auth.pin], function(d){ P.busy=false; if(d && d.ok && d.form){ P.boot=d; go(); return; } showMsg(t('Could not load the form — try again.')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
-  });
+  on_('openForm', openForm_);
+  on_('openFormTop', openForm_);
   on_('viewAnswers', function(){ P.showAnswers=!P.showAnswers; render(); });
   on_('refNew', function(){ makeRefLink_(null, function(link, d){ P.refLink=link; if(P.boot.application) P.boot.application.reference=d.reference; render(); }); });
   on_('refCopy', function(){ copyText_(P.refLink); });
@@ -1797,7 +1803,15 @@ function archiveCand_(){
 render();
 function keepReg_(){
   var g=function(id){ var el=document.getElementById(id); return el ? el.value : undefined; };
-  ['name','email','phone','username','country'].forEach(function(k){ var v=g('r_'+(k==='username'?'user':k)); if(v!==undefined) P.reg[k]=v; });
+  ['name','email','phone','username','country','team'].forEach(function(k){ var v=g('r_'+(k==='username'?'user':k)); if(v!==undefined) P.reg[k]=v; });
+}
+/* The applicant's form, from the dashboard or straight after sign-up. */
+function openForm_(){
+  var go=function(){ P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); };
+  if(P.boot.form) return go();
+  // an older sign-up reply had no form — fetch the dashboard again, then open
+  P.busy=true; render();
+  run('portalBoot', [P.auth.user, P.auth.pin], function(d){ P.busy=false; if(d && d.ok && d.form){ P.boot=d; go(); return; } P.view='me'; showMsg(t('Could not load the form — try again.')); render(); }, function(){ P.busy=false; P.view='me'; showMsg(t('Connection problem — try again.')); render(); });
 }
 function register_(){
   keepReg_();
@@ -1806,6 +1820,7 @@ function register_(){
   var r=P.reg;
   if(!a){ showMsg(t('Pick what you are applying for.')); return; }
   if(!offeredAt_(a, P.campus||DEFAULT_CAMPUS)){ showMsg(t('That school is not run at this campus — pick another.')); return; }
+  if(a.type==='team' && !String(r.team||'').trim()){ showMsg(t('Add your sending church, base or organization.')); return; }
   if(!String(r.name||'').trim()){ showMsg(t('Add your full name.')); return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r.email||'').trim())){ showMsg(t('Add a real email address.')); return; }
   if(String(r.phone||'').replace(/\D/g,'').length<6){ showMsg(t('Add a phone number with the country code.')); return; }
@@ -1815,9 +1830,12 @@ function register_(){
   if(pin!==pin2){ showMsg(t('The two PINs don’t match.')); return; }
   P.busy=true; render();
   var payload={ username:String(r.username).trim().toLowerCase(), pin:pin, name:String(r.name).trim(), email:String(r.email).trim(), phone:String(r.phone).trim(), messenger:r.messenger, country:r.country||'', type:a.type, school:a.school, campus:P.campus||DEFAULT_CAMPUS };
+  if(a.type==='team') payload.teamName=String(r.team||'').trim();
   run('portalRegister', [payload], function(d){
     P.busy=false;
-    if(d && d.ok){ P.auth={ user:payload.username, pin:pin }; lsSet('gp-portal', JSON.stringify(P.auth)); P.boot=d; P.answers={}; P.view='me'; P.reg={}; showMsg(t('Welcome — your account is ready.')); render(); return; }
+    // straight into the application: people made the account and then forgot to apply
+    if(d && d.ok){ P.auth={ user:payload.username, pin:pin }; lsSet('gp-portal', JSON.stringify(P.auth)); P.boot=d; P.answers=JSON.parse(JSON.stringify((d.application && d.application.answers)||{})); P.reg={};
+      P.view='me'; showMsg(t('Your account is ready — now your application.')); openForm_(); return; }
     var e=d && d.err;
     showMsg(e==='taken' ? t('That username is taken — try another.') : e==='email_taken' ? t('There is already an account with that email. Sign in instead.')
       : e==='bad_email' ? t('Add a real email address.') : e==='phone_required' ? t('Add a phone number with the country code.') : t('Check your details and try again.'));
