@@ -94,7 +94,9 @@ const pick = i => { const p = G.GP_GSPAIRS[i]; const L = LIKES.includes(p[0]), R
   ok('My Home offers the free test', /Find your top 5 strengths/.test(await page.$eval('#gsStart', e => e.innerText)));
   await page.click('#gsStart'); await page.waitForTimeout(250);
   let txt = await page.$eval('#main', e => e.innerText);
-  ok('the start screen says it is GP\'s own, not Gallup\'s', /GP’s own free questionnaire/.test(txt) && /not connected with Gallup/.test(txt));
+  ok('the start screen says it is GP\'s own', /GP’s own free questionnaire/.test(txt));
+  ok('and the app never mentions CliftonStrengths or Gallup', !/Clifton|Gallup/i.test(txt) &&
+    !/Clifton|Gallup/i.test(await page.evaluate(() => document.body.innerText)));
   await page.click('#gsBegin'); await page.waitForTimeout(250);
   ok('five pairs to a screen', (await page.$$('.gsPair')).length === 5);
   ok('each pair shows both statements', (await page.$$eval('.gsPair', p => [].map.call(p[0].querySelectorAll('.gsOpt'), x => x.innerText.length > 10))).join() === 'true,true');

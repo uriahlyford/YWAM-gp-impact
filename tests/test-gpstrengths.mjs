@@ -34,7 +34,8 @@ const mem = blobs.__mem;
 const G = new Function(fs.readFileSync(PUBLIC + '/gpstrengths.js', 'utf8') +
   ';return {GP_GSGROUPS, GP_GSTRENGTHS, GP_GS_IDS, GP_GSPAIRS, gpGSScore, gpGSById, gpGSGroup};')();
 /* Gallup's 34 CliftonStrengths theme names — here only so the test can make
-   sure none of GP's own strengths ever borrows one. The app does not use them. */
+   sure none of GP's own strengths ever borrows one. The app never shows or
+   uses them; GP Strengths is GP's own. */
 const GALLUP_34 = ['Achiever', 'Arranger', 'Belief', 'Consistency', 'Deliberative', 'Discipline', 'Focus',
   'Responsibility', 'Restorative', 'Activator', 'Command', 'Communication', 'Competition', 'Maximizer',
   'Self-Assurance', 'Significance', 'Woo', 'Adaptability', 'Connectedness', 'Developer', 'Empathy', 'Harmony',
@@ -97,19 +98,6 @@ function answersFor(likes, strength) {
   ok('and Gallup\'s four domain names are not the groups',
     G.GP_GSGROUPS.every(g => ['executing', 'influencing', 'relationshipbuilding', 'strategicthinking'].indexOf(low(g.name)) === -1));
   ok('every group has a colour, a tint and an ink', G.GP_GSGROUPS.every(g => /^#[0-9A-F]{6}$/i.test(g.color) && /^#[0-9A-F]{6}$/i.test(g.tint) && /^#[0-9A-F]{6}$/i.test(g.ink)));
-}
-
-/* ---------- 1b. lined up with Gallup's, for people who record both ---------- */
-{
-  const SS = new Function(fs.readFileSync(PUBLIC + '/strengths.js', 'utf8') + ';return {GP_SGP_MATCH, GP_STHEME_LIST, GP_SDOMAINS, gpSDomainOf};')();
-  ok('strengths.js knows the same 34 Gallup themes this test checks against',
-    JSON.stringify(SS.GP_STHEME_LIST.slice().sort()) === JSON.stringify(GALLUP_34.slice().sort()));
-  const to = GALLUP_34.map(g => SS.GP_SGP_MATCH[g]);
-  ok('every Gallup theme points at one GP strength, none twice', to.every(id => G.GP_GS_IDS.indexOf(id) > -1) && new Set(to).size === 34);
-  ok('in the same order as GP\'s list', JSON.stringify(SS.GP_STHEME_LIST.map(g => SS.GP_SGP_MATCH[g])) === JSON.stringify(G.GP_GS_IDS));
-  ok('and in the GP group that lines up with the theme\'s domain',
-    GALLUP_34.every(g => G.gpGSById(SS.GP_SGP_MATCH[g]).group === SS.gpSDomainOf(g).gp));
-  ok('with the same group sizes', JSON.stringify(SS.GP_SDOMAINS.map(d => G.GP_GSTRENGTHS.filter(s => s.group === d.gp).length)) === '[9,8,9,8]');
 }
 
 /* ---------- 2. the pairs are fair ---------- */

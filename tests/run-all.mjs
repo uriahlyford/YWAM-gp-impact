@@ -45,7 +45,6 @@ const SERVER = [
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted
   'test-personality.mjs', // personality types: scoring, and who can see a type, an avatar or a season
-  'test-strengths.mjs', // CliftonStrengths as recorded: validation, and who can see a Top 5
   'test-gpstrengths.mjs', // the free GP Strengths test: content, fair pairs, server scoring, who sees what
   'test-staff-email.mjs', // one profile per email; adminMergeStaff cleans up a real duplicate
   'test-overscroll-behavior.mjs', // none of the three pages' html/body may go back to overscroll-behavior:none (confirmed live: it disabled scrolling entirely on real desktop Chrome)
@@ -86,7 +85,6 @@ const BROWSER = [
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
-  'test-strengths-ui.mjs',  // adding a Gallup Top 5, matches to GP strengths, both compared, 320px, Khmer
   'test-gpstrengths-ui.mjs',  // taking the free test, results, the team strengths map, 320px
   'test-bottom-bar.mjs',  // the bottom bar steps aside for the phone keyboard, and comes back
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes

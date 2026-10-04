@@ -398,84 +398,6 @@ function cleanPScores_(scores, type) {
   return out;
 }
 
-/* ==================== CliftonStrengths (recorded, not assessed) ====================
-   Someone's Top 5 (up to 10) themes AS GALLUP GAVE THEM, plus a line in their own
-   words for each. This app never gives the assessment and never carries Gallup's
-   descriptions — see public/strengths.js for why that line is drawn where it is.
-
-     strengths: { top: ['Learner', 'Achiever', …], notes: { Learner: '…' }, share, updated }
-
-   Same visibility as a personality type: nothing on the public roster, teammates
-   see it while it is shared (the default), and the notes travel with the themes
-   because they are what the person chose to say about them. The list mirrors
-   strengths.js; tests/test-strengths.mjs fails if they drift. */
-const STHEME_LIST = ['Achiever', 'Arranger', 'Belief', 'Consistency', 'Deliberative', 'Discipline', 'Focus',
-  'Responsibility', 'Restorative', 'Activator', 'Command', 'Communication', 'Competition', 'Maximizer',
-  'Self-Assurance', 'Significance', 'Woo', 'Adaptability', 'Connectedness', 'Developer', 'Empathy', 'Harmony',
-  'Includer', 'Individualization', 'Positivity', 'Relator', 'Analytical', 'Context', 'Futuristic', 'Ideation',
-  'Input', 'Intellection', 'Learner', 'Strategic'];
-const SMAX = 10, SNOTE_MAX = 300;
-
-function sharedStrengths_(s) {
-  const st = s && s.strengths;
-  if (!st || !Array.isArray(st.top) || !st.top.length || st.share === false) return null;
-  return { top: st.top.slice(), notes: Object.assign({}, st.notes || {}) };
-}
-function ownStrengths_(s) {
-  const st = s && s.strengths;
-  if (!st || !Array.isArray(st.top) || !st.top.length) return null;
-  return { top: st.top.slice(), notes: Object.assign({}, st.notes || {}), share: st.share !== false, updated: st.updated || '' };
-}
-
-async function saveMyStrengths(username, pin, payload) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
-  const p = payload || {};
-  let top = null, notes = null;
-  if (p.top !== undefined) {
-    if (!Array.isArray(p.top) || !p.top.length || p.top.length > SMAX) return { ok: false, err: 'bad_count' };
-    const seen = {};
-    for (let i = 0; i < p.top.length; i++) {
-      const th = p.top[i];
-      if (STHEME_LIST.indexOf(th) === -1) return { ok: false, err: 'bad_theme' };
-      if (seen[th]) return { ok: false, err: 'duplicate' };
-      seen[th] = 1;
-    }
-    top = p.top.slice();
-  }
-  if (p.notes !== undefined) {
-    if (!p.notes || typeof p.notes !== 'object') return { ok: false, err: 'bad_notes' };
-    notes = {};
-    Object.keys(p.notes).forEach(function (k) {
-      if (STHEME_LIST.indexOf(k) === -1) return;
-      const v = str_(p.notes[k], SNOTE_MAX);
-      if (v) notes[k] = v;
-    });
-  }
-  return mutateStaff_(function (rows) {
-    const idx = rows.findIndex(function (r) { return r.id === s.id; });
-    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
-    const rec = rows[idx];
-    if (p.clear) {
-      delete rec.strengths;
-    } else {
-      const cur = Object.assign({ notes: {} }, rec.strengths || {});
-      if (top) cur.top = top;
-      if (notes) cur.notes = notes;
-      if (p.share !== undefined) cur.share = !!p.share;
-      /* a note only means something beside a theme that is in the list */
-      const keep = {};
-      (cur.top || []).forEach(function (th) { if (cur.notes && cur.notes[th]) keep[th] = cur.notes[th]; });
-      cur.notes = keep;
-      cur.updated = new Date().toISOString();
-      if (cur.top && cur.top.length) rec.strengths = cur;
-    }
-    rec.updated = new Date().toISOString();
-    rows[idx] = rec;
-    return { ok: true, staff: rosterStaff_(rec), strengths: ownStrengths_(rec) };
-  });
-}
-
 /* ==================== GP Strengths (the free one, GP's own) ====================
    Thirty-four strengths in four groups, found by 102 "which is more like
    you?" pairs — all GP's own words, see public/gpstrengths.js. The person sends only their answers;
@@ -593,9 +515,7 @@ function rosterStaff_(s) {
   const out = publicStaff_(s);
   const av = sharedAvatar_(s);
   if (av) out.avatar = av;
-  /* the directory and the team map only need the names/ids, in order */
-  const st = sharedStrengths_(s);
-  if (st) out.strengths = st.top;
+  /* the directory and the team map only need the Top 5 ids, in order */
   const gs = sharedGStrengths_(s);
   if (gs) out.gstrengths = gs;
   return out;
@@ -1140,7 +1060,7 @@ async function updateProfile(username, pin, payload) {
     profile: {
       phone: rec.phone, joined: rec.joined, debt: rec.debt, mentorStatus: rec.mentorStatus || '',
       dashboardColor: rec.dashboardColor || '', dashboardBg: rec.dashboardBg || '', email: rec.email || '',
-      sex: cleanSex_(rec.sex), personality: ownPersonality_(rec), strengths: ownStrengths_(rec),
+      sex: cleanSex_(rec.sex), personality: ownPersonality_(rec),
       gstrengths: ownGStrengths_(rec)
     }
   };
@@ -2860,7 +2780,6 @@ async function staffProfile(username, pin, staffId) {
     staff: rosterStaff_(p),
     personality: shared ? { type: p.personality.type, scores: p.personality.scores || null,
       source: p.personality.source || 'test' } : null,
-    strengths: sharedStrengths_(p),
     gstrengths: sharedGStrengths_(p),
     goals: goals,
     activity: {
@@ -2923,7 +2842,7 @@ async function getMyBoot(username, pin) {
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || '',
-      sex: cleanSex_(s.sex), personality: ownPersonality_(s), strengths: ownStrengths_(s),
+      sex: cleanSex_(s.sex), personality: ownPersonality_(s),
       gstrengths: ownGStrengths_(s)
     },
     roster: (staffRows || []).filter(function (r) { return r.active && !isApplicant_(r); }).map(rosterStaff_),
@@ -5187,7 +5106,6 @@ const HANDLERS = {
   deleteObjective: function (a) { return deleteObjective(a[0], a[1], a[2], a[3]); },
   teamRoster: function (a) { return teamRoster(a[0], a[1]); },
   saveMyPersonality: function (a) { return saveMyPersonality(a[0], a[1], a[2]); },
-  saveMyStrengths: function (a) { return saveMyStrengths(a[0], a[1], a[2]); },
   saveMyGStrengths: function (a) { return saveMyGStrengths(a[0], a[1], a[2]); },
   staffRegister: function (a) { return staffRegister(a[0]); },
   staffLogin: function (a) { return staffLogin(a[0], a[1]); },

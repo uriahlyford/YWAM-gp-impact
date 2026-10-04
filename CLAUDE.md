@@ -875,25 +875,6 @@ from their profile. Screens: `ptestHtml` (S.view 'ptest') and `ptypeHtml` ('ptyp
   docs/khmer-needed.md §52, questions first). Type names translate as one phrase
   via `pTheName()` — Khmer has no article, so never glue a translated "The" on.
 
-## CliftonStrengths (public/strengths.js) — recorded, never assessed
-
-People who took the real CliftonStrengths can add the Top 5 (up to 10) from
-their Gallup report, in order, with a line in their own words per theme. It
-shows under GP Strengths on My Home and on their profile, each theme beside the
-GP strength it lines up with (`GP_SGP_MATCH`), and on the owner's GP results as
-"Compared with your CliftonStrengths".
-
-- **Names only, to record real results.** No questionnaire, no Gallup
-  descriptions, no "which theme are you" logic; the Gallup credit and a link to
-  gallup.com on the editor. test-strengths.mjs fails if strengths.js grows
-  descriptions or questions. Theme names never go through t() — they must match
-  the report in someone's hand.
-- **Visibility is the personality model:** nothing on the public roster;
-  `rosterStaff_` adds the names (not notes) for signed-in readers while shared;
-  `staffProfile` adds names and notes; the owner's copy is `profile.strengths`.
-- The Team tab's Strengths map adds up GP Strengths only — everyone can take
-  that test, not everyone has a Gallup report.
-
 ## GP Strengths (public/gpstrengths.js) — the free strengths finder, GP's own
 
 Thirty-four strengths in four groups — Doing (9), Leading (8), Relating (9),
@@ -901,15 +882,15 @@ Thinking (8) — found through 102 "which is more like you?" pairs (~15 min,
 saved as you go). Results: a Top 5 with what each means, what to watch for and
 how the team can use it; for the owner, where their top 10 fall across the four
 groups and all 34 ranked. The Team tab's Strengths map adds up everyone's Top 5.
+(A CliftonStrengths recorder existed briefly; it was removed. Any Gallup
+results saved then are still in `staff.strengths` but nothing reads them.)
 
-- **As close to CliftonStrengths as it can be without copying it — Uriah's
-  call.** 34 strengths, one per Gallup theme and in Gallup's order, in four
-  groups the size of Gallup's domains. But every word is GP's own: no Gallup
-  theme name or variant of one (the test checks the first five letters both
-  ways, so no "Achieving"/"Focused"/"Communicator"), no Gallup domain names, no
-  Gallup descriptions or questions, not Gallup's domain colours, and the fine
-  print says it is not CliftonStrengths. Gallup's theme names are trademarks
-  and it pursues free look-alikes; the repo is public. Don't close that gap.
+- **GP's own, through and through — Uriah's call.** The app has no
+  CliftonStrengths feature and never mentions Gallup or CliftonStrengths on
+  screen. Every name, statement and description is GP's own; never borrow a
+  Gallup theme name or a variant of one (the test checks five-letter stems
+  both ways against Gallup's 34, kept in the test only), their wording or
+  their domain names.
 - **Pairs, not agree/disagree**, so it ranks rather than rating every good thing
   highly. The pairs are fair by construction and the test re-checks it: each
   strength in six pairs, three each side, always against another group and

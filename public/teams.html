@@ -1393,24 +1393,6 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 .sChips { display:flex; flex-wrap:wrap; gap:6px; }
 .sChip { display:inline-block; font-size:13px; font-weight:700; padding:4px 10px; border-radius:999px; }
 .sChip b { font-weight:900; margin-right:2px; }
-.sNote { font-size:14px; color:var(--muted); margin:6px 0 2px; line-height:1.4; }
-.sRow { padding:10px 0; border-top:1px solid var(--line); }
-.sRow:first-child { border-top:0; padding-top:2px; }
-.sRowTop { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.sBtns { display:flex; gap:6px; flex:0 0 auto; }
-.sMini { width:32px; height:32px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface);
-  color:var(--ink); font-size:15px; cursor:pointer; padding:0; }
-.sMini:disabled { opacity:.35; cursor:default; }
-.sNoteIn { width:100%; margin-top:8px; font:inherit; font-size:14px; padding:8px 10px; border-radius:10px;
-  border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); resize:vertical; }
-.sDomHead { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin:14px 0 6px; }
-.sPick { display:flex; flex-wrap:wrap; gap:7px; }
-.sPickBtn { border:1.5px solid; background:var(--surface); border-radius:999px; padding:7px 12px;
-  font-size:13px; font-weight:700; cursor:pointer; }
-.sPickBtn:disabled { opacity:.4; cursor:default; }
-.sMatch { font-size:12px; color:var(--muted); margin-left:6px; white-space:nowrap; }
-.sCmpRow { display:flex; align-items:center; gap:6px; }
-.sCmpRow .sMatch { margin:0; }
 .sMapRow { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
 .sMapRow:first-child { border-top:0; padding-top:2px; }
 .sMapRow .sChip { flex:0 0 auto; }
@@ -1631,7 +1613,6 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 <script src="km.js" data-optional></script>
 <script src="jobfocus.js" data-optional></script>
 <script src="personality.js" data-optional></script>
-<script src="strengths.js" data-optional></script>
 <script src="gpstrengths.js" data-optional></script>
 <script src="sr-checkin-history.js" data-optional></script>
 <script src="taxonomy.js"></script>
@@ -2283,7 +2264,6 @@ function render(){
   else if(S.view==='admin') m.innerHTML=adminHtml();
   else if(S.view==='ptest') m.innerHTML=ptestHtml();
   else if(S.view==='ptype') m.innerHTML=ptypeHtml();
-  else if(S.view==='strengths') m.innerHTML=strengthsEditHtml();
   else if(S.view==='gtest') m.innerHTML=gtestHtml();
   else if(S.view==='gstr') m.innerHTML=gstrHtml();
   else m.innerHTML=profileHtml();
@@ -4251,98 +4231,6 @@ function bindPersonality(){
   if(ch) ch.onclick=function(){ S.ptest={stage:'pick', answers:{}, page:0, sex:mySex()}; S.view='ptest'; render(); window.scrollTo(0,0); };
 }
 
-/* ==================== CliftonStrengths (recorded from Gallup) ====================
-   A place to put the Top 5 someone already got from Gallup, say in their own
-   words how each shows up in them, and see the team's strengths side by side.
-   This app does not give the assessment and carries none of Gallup's theme
-   descriptions — public/strengths.js says why. Theme names are never passed
-   through t(): they are product names and must match the report in someone's
-   hand, in either language.
-
-   Screens: a line on the My Home Strengths card (below GP Strengths), the editor
-   (S.view 'strengths') and a card on a teammate's profile. The Team tab's map
-   adds up the free GP Strengths instead, which everyone can take. */
-function sOK(){ return typeof GP_STHEME_LIST!=='undefined' && typeof gpSDomainOf==='function'; }
-function myStrengths(){ return (S.profile && S.profile.strengths) || null; }
-
-function sChipHtml(theme, rank){
-  var d=gpSDomainOf(theme); if(!d) return '';
-  return '<span class="sChip" style="background:'+d.tint+';color:'+d.ink+'">'+
-    (rank?'<b>'+rank+'</b> ':'')+esc(theme)+'</span>';
-}
-/* "≈ Hard Worker" — the GP strength that covers the same ground as a Gallup theme */
-function sMatchHtml(theme){
-  if(typeof GP_SGP_MATCH==='undefined' || typeof gsOK!=='function' || !gsOK()) return '';
-  var s=gpGSById(GP_SGP_MATCH[theme]); if(!s) return '';
-  return '<span class="sMatch">≈ '+esc(gpT('GP: {name}',{name:t(s.name)}))+'</span>';
-}
-function sFineHtml(){
-  return '<p class="pFine">'+esc(t('CliftonStrengths® and its theme names are trademarks of Gallup, Inc. GP records the results you got from Gallup — it does not give the assessment.'))+
-    ' <a href="'+GP_SGALLUP_URL+'" target="_blank" rel="noopener">'+esc(t('Take CliftonStrengths at gallup.com'))+' ↗</a></p>';
-}
-
-/* On a teammate's profile: their themes, in order, with what they said about them. */
-function personStrengthsCardHtml(d){
-  if(!sOK() || !d || !d.strengths || !d.strengths.top || !d.strengths.top.length) return '';
-  var notes=d.strengths.notes||{};
-  var h='<h3>'+esc(t('CliftonStrengths (from Gallup)'))+'</h3><div class="card"><ul class="pList">';
-  d.strengths.top.forEach(function(th,i){
-    h+='<li style="padding-left:0">'+sChipHtml(th,i+1)+sMatchHtml(th)+
-      (notes[th]?'<div class="sNote">'+esc(notes[th])+'</div>':'')+'</li>';
-  });
-  return h+'</ul></div>';
-}
-
-/* ---------- the editor ---------- */
-function strengthsEditHtml(){
-  if(!sOK()) return '<p class="sub">'+esc(t('Strengths could not load. Pull down to refresh.'))+'</p>';
-  var st=myStrengths();
-  var D=S.sdraft||(S.sdraft={ top:(st?st.top.slice():[]), notes:Object.assign({}, st?st.notes:{}) });
-  var h='<button class="linkbtn" id="sBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
-  h+='<h2>'+esc(t('My CliftonStrengths'))+'</h2>'+
-    '<p class="sub">'+esc(t('Add your themes in the order your Gallup report gives them. Most reports list a Top 5; you can add up to 10.'))+'</p>';
-
-  h+='<div class="card">';
-  if(!D.top.length){
-    h+='<p class="sub" style="margin:4px 0">'+esc(t('None added yet — tap your themes below.'))+'</p>';
-  }
-  D.top.forEach(function(th,i){
-    h+='<div class="sRow">'+
-      '<div class="sRowTop"><span>'+sChipHtml(th,i+1)+sMatchHtml(th)+'</span>'+
-        '<span class="sBtns">'+
-        '<button class="sMini" data-sup="'+i+'"'+(i===0?' disabled':'')+' aria-label="'+esc(t('Move up'))+'">↑</button>'+
-        '<button class="sMini" data-sdown="'+i+'"'+(i===D.top.length-1?' disabled':'')+' aria-label="'+esc(t('Move down'))+'">↓</button>'+
-        '<button class="sMini" data-sdel="'+esc(th)+'" aria-label="'+esc(t('Remove'))+'">✕</button></span></div>'+
-      '<textarea class="sNoteIn" data-snote="'+esc(th)+'" maxlength="'+GP_SNOTE_MAX+'" rows="2" placeholder="'+
-        esc(t('How this shows up in me (optional)'))+'">'+esc(D.notes[th]||'')+'</textarea></div>';
-  });
-  h+='</div>';
-
-  var full = D.top.length>=GP_SMAX;
-  h+='<h3>'+esc(full?t('That’s ten — remove one to add another.'):t('Add a theme'))+'</h3>';
-  GP_SDOMAINS.forEach(function(dom){
-    h+='<div class="sDomHead" style="color:'+dom.ink+'">'+esc(dom.name)+'</div><div class="sPick">';
-    GP_STHEMES[dom.id].forEach(function(th){
-      var on = D.top.indexOf(th)>-1;
-      h+='<button class="sPickBtn'+(on?' on':'')+'" data-spick="'+esc(th)+'"'+(!on&&full?' disabled':'')+
-        ' style="'+(on?'background:'+dom.ink+';color:var(--pOnMark);border-color:'+dom.ink:'border-color:'+dom.color+';color:'+dom.ink)+'">'+
-        esc(th)+'</button>';
-    });
-    h+='</div>';
-  });
-
-  var share = !st || st.share!==false;
-  h+='<div class="card" style="margin-top:14px">'+
-    '<label class="f">'+esc(t('Show my strengths to the team'))+'</label>'+
-    '<div class="seg" style="max-width:220px">'+
-      '<button id="sShareOn" class="'+(share?'on':'')+'">'+esc(t('Yes'))+'</button>'+
-      '<button id="sShareOff" class="'+(!share?'on':'')+'">'+esc(t('No'))+'</button></div>'+
-    '<button class="btn" id="sSave"'+(D.top.length?'':' disabled')+'>'+esc(t('Save my strengths'))+'</button>'+
-    (st?'<button class="linkbtn" id="sClear">'+esc(t('Remove my strengths'))+'</button>':'')+
-    '</div>';
-  return h+sFineHtml();
-}
-
 /* ---------- the team map (Team tab → Strengths) ---------- */
 /* Adds up the GP Strengths Top 5 of everyone on this campus who shares it. */
 function teamStrengthsHtml_(campus){
@@ -4390,60 +4278,6 @@ function teamStrengthsHtml_(campus){
   return h+gsFineHtml();
 }
 
-function bindStrengths(){
-  var ed=document.getElementById('sEdit');
-  if(ed) ed.onclick=function(){ S.sdraft=null; S.view='strengths'; render(); };
-  var bk=document.getElementById('sBack');
-  if(bk) bk.onclick=function(){ S.sdraft=null; S.view='week'; render(); };
-  if(S.view!=='strengths') return;
-  var D=S.sdraft; if(!D) return;
-  /* a note is kept in the draft as it is typed, so a re-render never loses it */
-  document.querySelectorAll('[data-snote]').forEach(function(ta){
-    ta.oninput=function(){ D.notes[ta.getAttribute('data-snote')]=ta.value; };
-  });
-  document.querySelectorAll('[data-spick]').forEach(function(b){
-    b.onclick=function(){
-      var th=b.getAttribute('data-spick'), at=D.top.indexOf(th);
-      if(at>-1) D.top.splice(at,1);
-      else if(D.top.length<GP_SMAX) D.top.push(th);
-      gpTap(); render();
-    };
-  });
-  document.querySelectorAll('[data-sdel]').forEach(function(b){
-    b.onclick=function(){ var at=D.top.indexOf(b.getAttribute('data-sdel')); if(at>-1) D.top.splice(at,1); render(); };
-  });
-  document.querySelectorAll('[data-sup],[data-sdown]').forEach(function(b){
-    b.onclick=function(){
-      var i=Number(b.getAttribute('data-sup')!==null?b.getAttribute('data-sup'):b.getAttribute('data-sdown'));
-      var j = b.getAttribute('data-sup')!==null ? i-1 : i+1;
-      if(j<0 || j>=D.top.length) return;
-      var x=D.top[i]; D.top[i]=D.top[j]; D.top[j]=x; render();
-    };
-  });
-  function save(payload, after){
-    if(S.busy) return; S.busy=true;
-    run('saveMyStrengths',[S.auth.user,S.auth.pin,payload],function(d){
-      S.busy=false;
-      if(!d || !d.ok){ showMsg(t('Could not save — check your connection and try again.')); render(); return; }
-      S.profile=Object.assign({}, S.profile||{}, { strengths:d.strengths });
-      (S.roster||[]).forEach(function(r){ if(r.id===S.me.id){ if(d.staff && d.staff.strengths) r.strengths=d.staff.strengths; else delete r.strengths; } });
-      if(after) after(); else render();
-    });
-  }
-  var sv=document.getElementById('sSave');
-  if(sv) sv.onclick=function(){
-    if(!D.top.length) return;
-    sv.disabled=true; sv.textContent=t('Saving…');
-    var notes={}; D.top.forEach(function(th){ if(D.notes[th] && D.notes[th].trim()) notes[th]=D.notes[th].trim(); });
-    save({ top:D.top.slice(), notes:notes }, function(){ S.sdraft=null; S.view='week'; showMsg(t('Strengths saved')); render(); });
-  };
-  var on=document.getElementById('sShareOn'), off=document.getElementById('sShareOff');
-  if(on) on.onclick=function(){ if(myStrengths()) save({ share:true }); };
-  if(off) off.onclick=function(){ if(myStrengths()) save({ share:false }); };
-  var cl=document.getElementById('sClear');
-  if(cl) cl.onclick=function(){ save({ clear:true }, function(){ S.sdraft=null; S.view='week'; render(); }); };
-}
-
 /* ==================== GP Strengths (the free test) ====================
    GP's own strengths finder — thirty-four strengths in four groups, found
    through 102 "which is more like you?" pairs (public/gpstrengths.js has the words
@@ -4452,8 +4286,7 @@ function bindStrengths(){
    Screens: the Strengths card on My Home, the test (S.view 'gtest'), and the
    results page (S.view 'gstr') — yours in full, or a teammate's Top 5 when
    opened from their profile. The Team tab's Strengths map adds up GP Top 5s.
-   Every word is GP's own, so it all goes through t() like everything else —
-   unlike the Gallup theme names above, which never do. */
+   Every word is GP's own, so it all goes through t() like everything else. */
 var GS_PAGE = 5;
 var GS_DRAFT_KEY = 'gp_gstr_draft';
 function gsOK(){ return typeof GP_GSTRENGTHS!=='undefined' && typeof gpGSScore==='function'; }
@@ -4481,39 +4314,24 @@ function gsLean(top){
   return GP_GSGROUPS.filter(function(g){ return g.id===best; })[0];
 }
 function gsFineHtml(){
-  return '<p class="pFine">'+esc(t('GP Strengths is GP’s own free questionnaire. It is not CliftonStrengths® and is not connected with Gallup.'))+' '+
+  return '<p class="pFine">'+esc(t('GP Strengths is GP’s own free questionnaire.'))+' '+
     esc(gpT('A strength is what comes naturally to you — everyone can grow in all {n}.',{n:GP_GS_IDS.length}))+'</p>';
 }
 
 /* ---------- My Home ---------- */
 function strengthsCardHtml(){
-  if(!gsOK() && !sOK()) return '';
+  if(!gsOK()) return '';
   var h='<h3 id="sec-strengths">💪 '+esc(t('Strengths'))+'</h3>';
-  if(gsOK()){
-    var g=myGS();
-    if(!g){
-      h+='<button class="card pEntry" id="gsStart">'+
-        '<span class="pEntryArt"><span class="pQ">5</span></span>'+
-        '<span style="flex:1"><div style="font-size:15px;font-weight:800">'+esc(t('Find your top 5 strengths'))+'</div>'+
-        '<div class="pmeta">'+esc(gpT('{n} quick choices · free · about 15 minutes',{n:GP_GSPAIRS.length}))+'</div></span>'+PCHEV+'</button>';
-    } else {
-      h+='<button class="card pEntry" id="gsSeeMine" style="align-items:flex-start">'+
-        '<span style="flex:1"><div class="sChips">'+g.top.map(function(id,i){ return gsChipHtml(id,i+1); }).join('')+'</div>'+
-        '<div class="pmeta" style="margin-top:6px">'+esc(t('Tap to see what your strengths mean for your work.'))+'</div></span>'+PCHEV+'</button>';
-    }
+  var g=myGS();
+  if(!g){
+    return h+'<button class="card pEntry" id="gsStart">'+
+      '<span class="pEntryArt"><span class="pQ">5</span></span>'+
+      '<span style="flex:1"><div style="font-size:15px;font-weight:800">'+esc(t('Find your top 5 strengths'))+'</div>'+
+      '<div class="pmeta">'+esc(gpT('{n} quick choices · free · about 15 minutes',{n:GP_GSPAIRS.length}))+'</div></span>'+PCHEV+'</button>';
   }
-  /* people who took the real CliftonStrengths can put their Gallup Top 5 here too */
-  if(sOK()){
-    var st=myStrengths();
-    if(st){
-      h+='<button class="card pEntry" id="sEdit" style="align-items:flex-start">'+
-        '<span style="flex:1"><div class="pmeta" style="margin-bottom:6px;font-weight:700">'+esc(t('CliftonStrengths (from Gallup)'))+'</div>'+
-        '<div class="sChips">'+st.top.slice(0,5).map(function(th,i){ return sChipHtml(th,i+1); }).join('')+'</div></span>'+PCHEV+'</button>';
-    } else {
-      h+='<button class="linkbtn" id="sEdit" style="margin:-4px 0 8px">'+esc(t('Have CliftonStrengths results from Gallup? Add them'))+'</button>';
-    }
-  }
-  return h;
+  return h+'<button class="card pEntry" id="gsSeeMine" style="align-items:flex-start">'+
+    '<span style="flex:1"><div class="sChips">'+g.top.map(function(id,i){ return gsChipHtml(id,i+1); }).join('')+'</div>'+
+    '<div class="pmeta" style="margin-top:6px">'+esc(t('Tap to see what your strengths mean for your work.'))+'</div></span>'+PCHEV+'</button>';
 }
 
 /* On a teammate's profile: their GP Top 5, and a way into what it means. */
@@ -4639,18 +4457,6 @@ function gstrHtml(){
         '<span class="pTrack gsAllTrack"><span class="pFill" style="left:0;width:'+Math.round((sc+GP_GS_MAX)/(2*GP_GS_MAX)*100)+'%;background:'+g.color+'"></span></span></div>';
     });
     h+='<div class="hint">'+esc(t('The ones lower down are not weaknesses — just what comes less naturally.'))+'</div></div>';
-
-    /* both results side by side, for anyone who has also recorded Gallup's */
-    var gal = (typeof sOK==='function' && sOK() && typeof GP_SGP_MATCH!=='undefined') ? myStrengths() : null;
-    if(gal && gal.top && gal.top.length){
-      h+='<h3>'+esc(t('Compared with your CliftonStrengths'))+'</h3><div class="card"><ul class="pList">';
-      gal.top.slice(0,5).forEach(function(th,i){
-        var id=GP_SGP_MATCH[th], at=ranked.indexOf(id), gs=gpGSById(id);
-        h+='<li style="padding-left:0" class="sCmpRow">'+sChipHtml(th,i+1)+'<span class="sMatch">≈</span>'+
-          (gs?gsChipHtml(id,at+1):'')+'</li>';
-      });
-      h+='</ul><div class="hint">'+esc(t('Each Gallup theme, beside the GP strength that covers the same ground. The number on the GP strength is where it ranks for you here.'))+'</div></div>';
-    }
 
     var share = G.share!==false;
     h+='<div class="card">'+
@@ -10292,7 +10098,6 @@ function personHtml(){
   h+='</div>';
   h+=personTypeCardHtml(d);
   h+=personGSCardHtml(d);
-  h+=personStrengthsCardHtml(d);
 
   var withGoals=(d.goals||[]).filter(function(g){ return g.items.some(function(i){return i.text;}); });
   h+='<h3>🗒️ '+esc(t('Weekly goals'))+'</h3>';
@@ -11985,7 +11790,6 @@ function bind(){
   bindAway();
   bindAdmin();
   bindPersonality();
-  bindStrengths();
   bindGStrengths();
 
   var gpm=document.getElementById('goProfileFromMe');

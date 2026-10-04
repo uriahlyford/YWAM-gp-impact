@@ -5,16 +5,9 @@
     Everything in this file — the strengths, their names, the 204 statements,
     the descriptions and the grouping — is GP's own.
 
-    At Uriah's request it is shaped as closely as it can be to CliftonStrengths:
-    34 strengths, in four groups the size of Gallup's four domains, each one
-    covering the ground of one Gallup theme, in Gallup's order (strengths.js
-    maps them, for people who also record their real Gallup results). But it
-    is NOT CliftonStrengths and must never become a copy of it. Gallup's 34
-    theme names are its trademarks, and its questionnaire and descriptions are
-    its own work, so: no Gallup theme name or a variant of one (not
-    "Achieving", "Focused", "Communicator"…), no Gallup wording, no Gallup
-    domain names, and the group colours are not Gallup's. tests/
-    test-gpstrengths.mjs checks the names, variants included.
+    The names, statements and descriptions are GP's own and must stay that
+    way: no borrowed names or wording from any commercial strengths test
+    (tests/test-gpstrengths.mjs checks the names).
 
     WHY PAIRS, NOT AGREE/DISAGREE: on an agree scale people rate every good
     quality highly, and every strength comes out "strong". A choice between two
