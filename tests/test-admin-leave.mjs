@@ -54,7 +54,7 @@ let r = await call('saveTrip', ['dara', '1234', { from: Y + '-11-02', to: Y + '-
 ok('a mentored person’s request is pending on their mentor', r.body.ok === true && r.body.trips[0].status === 'pending');
 r = await call('saveTrip', ['bopha', '1234', { from: Y + '-10-05', to: Y + '-10-09', type: 'outside', reason: 'Team in Battambang' }]);
 ok('a request from someone with no mentor is noted', r.body.ok === true && r.body.trips[0].status === 'noted');
-r = await call('saveTrip', ['sina', '1234', { from: (Y - 1) + '-12-20', to: (Y - 1) + '-12-24', type: 'personal' }]);
+r = await call('saveTrip', ['sina', '1234', { from: (Y - 1) + '-12-08', to: (Y - 1) + '-12-12', type: 'personal' }]);
 
 console.log('\n=== the admin list ===');
 r = await call('adminListTrips', ['dara', '1234']);

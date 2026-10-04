@@ -66,6 +66,10 @@ const TEAM_FORM = { key: 'team', title: { en: 'Short-term team application', km:
     { id: 'males', type: 'number', label: { en: 'How many males?', km: '' }, help: { en: '', km: '' }, required: true, options: [], audience: 'all' } ] } ] };
 const TEAM_DOCS = [{ id: 'passports', required: true }, { id: 'photo', required: true }, { id: 'flights', required: true }, { id: 'invitation', required: false, from: 'us' }, { id: 'evisa', required: false }];
 let TEAM_APP = null, NEW_TEAM_APP = null;
+// this week's published schedules, as portalBoot hands them to a team that has arrived (made-up names)
+const TEAM_SCHED = { week: '2026-10-04',
+  kitchen: { kind: 'kitchen', week: '2026-10-04', layout: 'grid', title: 'Cooking schedule', km: '', notes: '', days: ['mon', 'tue'], rows: [{ id: 'bf', label: 'Breakfast 7:30', km: '', time: '', off: [], span: false }], cells: { 'bf|mon': ['Member One'] }, published: true },
+  chores: null };
 let CANDS0 = null;  // a fresh copy of the sample records, for blocks that run after others changed them
 const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: TEAM_FORM, reference: REF_FORM };
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
@@ -101,7 +105,7 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'portalBoot') {
       if (u === 'anna.b' && pin === '2468') out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM };
       else if (u === 'srey.k' && pin === '2468') out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Srey Khmer', username: 'srey.k', country: 'Cambodia' }, application: { ...ANNA, name: 'Srey Khmer', stage: 'accepted', status: 'accepted', audience: 'khmer', needsVisa: false, refNeeded: false, steps: STEPS('practical').map(s => s.id === 'docs' ? { ...s, items: [{ id: 'documents', done: true }] } : s), submittedAt: '2026-09-01T00:00:00Z' }, form: FORM };
-      else if (u === 'team.au' && pin === '2468') { TEAM_APP = TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'docs', status: 'docs', refNeeded: false, formKey: 'team', steps: TEAM_STEPS('invitation'), trip: { id: 'ta_cd_team', from: '2026-09-01', to: '2026-09-20', metrics: { 'People Served': 30 }, reached: { male: 5, female: null } }, submittedAt: '2026-09-01T00:00:00Z', visa: { flightsConfirmed: true, invitationSent: false }, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [] }; }
+      else if (u === 'team.au' && pin === '2468') { TEAM_APP = TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'docs', status: 'docs', refNeeded: false, formKey: 'team', steps: TEAM_STEPS('invitation'), trip: { id: 'ta_cd_team', from: '2026-09-01', to: '2026-09-20', metrics: { 'People Served': 30 }, reached: { male: 5, female: null } }, submittedAt: '2026-09-01T00:00:00Z', visa: { flightsConfirmed: true, invitationSent: false }, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [], schedules: TEAM_APP.stage === 'arrived' ? TEAM_SCHED : undefined }; }
       else if (u === 'team.new' && pin === '2468') { NEW_TEAM_APP = NEW_TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'new', status: 'draft', submittedAt: null, refNeeded: false, formKey: 'team', answers: {}, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'New Team', username: 'team.new', country: 'Australia', type: 'team', school: '' }, application: NEW_TEAM_APP, form: TEAM_FORM }; }
       else if (u === 'dara' && pin === '1234') out = { ok: true, role: 'portal-staff', me: STAFF[0], applicants: CANDS, staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], teamStages: ['new', 'applied', 'call1', 'docs', 'call2', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'], forms: FORMS };
       else if (u === 'rithy' && pin === '1234') out = { ok: true, role: 'portal-staff', me: { id: 'st_teams', name: 'Rithy Team', username: 'rithy', campus: 'siemreap', role: 'portal-staff' }, applicants: CANDS.filter(c => c.type === 'team'), scope: ['team'], staff: STAFF, stages: ['new', 'contacted', 'applied', 'interview', 'accepted', 'practical', 'arrived'], teamStages: ['new', 'applied', 'call1', 'docs', 'call2', 'practical', 'arrived'], types: ['student', 'staff', 'volunteer', 'team'], schools: ['dts', 'dbs', 'bcs', 'sms'] };
@@ -159,9 +163,12 @@ async function open(viewport, query, seed) {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, teamTrip: { id: 'ta_' + x.id, from: '2027-01-10', to: '2027-01-20', metrics: {}, reached: {} } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
     } else if (b.fn === 'portalStaffSaveTeamNumbers') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, teamTrip: { id: 'ta_' + x.id, metrics: b.args[3], reached: b.args[4] } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
+    } else if (b.fn === 'portalSaveTeamMembers') {
+      TEAM_APP = { ...TEAM_APP, members: b.args[2] };
+      out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [], schedules: TEAM_APP.stage === 'arrived' ? TEAM_SCHED : undefined };
     } else if (b.fn === 'portalSaveTeamNumbers') {
       TEAM_APP = { ...TEAM_APP, trip: { ...TEAM_APP.trip, metrics: b.args[2], reached: b.args[3] } };
-      out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [] };
+      out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [], schedules: TEAM_APP.stage === 'arrived' ? TEAM_SCHED : undefined };
     } else if (b.fn === 'portalSetVisaFlags') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, portal: { ...(x.portal || {}), visa: { ...((x.portal || {}).visa || {}), ...b.args[3] } } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
     } else if (b.fn === 'portalStaffSaveAnswers') {
@@ -373,8 +380,23 @@ async function open(viewport, query, seed) {
   await page.waitForTimeout(400);
   const tn = sent.filter(b => b.fn === 'portalSaveTeamNumbers').pop();
   ok('saving sends the numbers into the Teams Database', tn && tn.args[2]['People Served'] === 30 && tn.args[2]['Salvations'] === 3 && tn.args[3].female === 7 && tn.args[3].male === 5, JSON.stringify(tn && tn.args.slice(2)));
+  ok('once arrived, this week’s schedules show, with the chores not out yet', /This week at the base/.test(await page.$eval('#teamSchedules', e => e.textContent)) && await page.$eval('[data-pschedshow="chores"]', b => b.disabled));
+  await page.click('[data-pschedshow="kitchen"]'); await page.waitForTimeout(200);
+  ok('tapping the cooking schedule draws it, with a share button', /Member One/.test(await page.$eval('#teamSchedules .dutyGrid', e => e.textContent)) && !!(await page.$('#pschedShare')));
+  ok('the schedule scrolls inside its card on a phone', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   TEAM_APP.stage = 'docs';
   await page.reload(); await page.waitForSelector('#statusPill');
+  ok('before arrival there are no schedules', !(await page.$('#teamSchedules')));
+  ok('the team is asked to list its members', /No one listed yet/.test(await page.$eval('#teamMembers', e => e.textContent)));
+  await page.click('#editMembers'); await page.waitForTimeout(150);
+  await page.fill('[data-mname="0"]', 'Member One'); await page.click('[data-msex="0|f"]'); await page.waitForTimeout(100);
+  await page.click('#addMember'); await page.waitForTimeout(100);
+  await page.fill('[data-mname="1"]', 'Member Two'); await page.click('[data-msex="1|m"]');
+  await page.click('#addMember'); await page.waitForTimeout(100);   // left empty: not sent
+  await page.click('#saveMembers'); await page.waitForTimeout(400);
+  const mem = sent.filter(b => b.fn === 'portalSaveTeamMembers').pop();
+  ok('the member list is saved: names with man / woman, empty rows left out', mem && JSON.stringify(mem.args[2]) === JSON.stringify([{ name: 'Member One', sex: 'f' }, { name: 'Member Two', sex: 'm' }]), JSON.stringify(mem && mem.args[2]));
+  ok('and reads back as a list', (await page.$$eval('#teamMembers .memberList li', l => l.length)) === 2);
   ok('the steps still ahead that are theirs are marked You', /You/.test(await page.$eval('#timeline [data-step="evisa"]', e => e.textContent)));
   ok('the letter of invitation is listed as coming from us, with no upload for them', /Coming from us/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !(await page.$('[data-docup="invitation"]')) && !!(await page.$('[data-docup="evisa"]')));
   ok('the team is told passports are needed as soon as possible', /as soon as possible/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));

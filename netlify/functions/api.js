@@ -1482,7 +1482,7 @@ async function getMenteeLogs(username, pin, menteeId) {
     checkins: checkins,
     profile: { debt: m.debt },
     ministry: await ministryDataFor_(m),
-    trips: { trips: menteeTrips.map(tripOut_), totals: awayTotals_(menteeTrips), ptoCap: PTO_ANNUAL_CAP },
+    trips: { trips: menteeTrips.map(tripOut_), totals: awayTotals_(menteeTrips), ptoCap: PTO_ANNUAL_CAP, holidays: holidayList_() },
     smartGoals: menteeSmart.map(smartGoalOut_)
   };
 }
@@ -2424,7 +2424,79 @@ const LEAVE_TYPES = ['outside', 'special', 'personal'];
 const PTO_ANNUAL_CAP = 30;
 const MAX_TRIP_DAYS = 365;
 
-async function getTrips_() { return readJSON('trips', []); }
+/* ---- national holidays: the base is closed, so they are not work days ----
+   Leave over a national holiday doesn't spend anyone's 30 days (nor count as
+   working outside or special condition). Two come round on their own every
+   year, the working week (Mon–Fri) each falls in: Khmer New Year (14 April)
+   and Christmas (25 December). Pchum Ben follows the moon, so its dates are
+   a list — HOLIDAY_DATED below until an admin edits it (Admin → Leave), then
+   the 'holidays' blob. Work days are always counted from a request's dates
+   with these taken out, never from the number stored when it was made, so
+   changing a holiday puts every year on file right. */
+const HOLIDAY_DATED = [
+  { id: 'pb2024', name: 'Pchum Ben', from: '2024-10-01', to: '2024-10-03' },
+  { id: 'pb2025', name: 'Pchum Ben', from: '2025-09-22', to: '2025-09-23' },
+  { id: 'pb2026', name: 'Pchum Ben', from: '2026-10-12', to: '2026-10-14' }
+];
+const HOLIDAY_RULES = [{ id: 'kny', name: 'Khmer New Year', md: '04-14' }, { id: 'xmas', name: 'Christmas week', md: '12-25' }];
+const HOLIDAY_MAX = 60;
+let holidayCache_ = null;   // { dated, set } — refreshed by getTrips_ on every request that reads leave
+function holidayWeek_(iso) {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));   // that week's Monday
+  const mon = d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() + 4);
+  return { from: mon, to: d.toISOString().slice(0, 10) };
+}
+function holidaysFor_(year, dated) {
+  const out = HOLIDAY_RULES.map(function (r) { return Object.assign({ id: r.id + year, name: r.name, rule: true }, holidayWeek_(year + '-' + r.md)); });
+  (dated || HOLIDAY_DATED).forEach(function (h) { if (String(h.from).slice(0, 4) === String(year) || String(h.to).slice(0, 4) === String(year)) out.push(Object.assign({}, h)); });
+  return out.sort(function (a, b) { return a.from < b.from ? -1 : 1; });
+}
+function holidaySetFrom_(dated) {
+  const set = {};
+  const add = function (h) { for (let d = h.from; d <= h.to; d = addDays_(d, 1)) set[d] = h.name || 'Holiday'; };
+  for (let y = 2020; y <= new Date().getUTCFullYear() + 3; y++) HOLIDAY_RULES.forEach(function (r) { add(Object.assign({ name: r.name }, holidayWeek_(y + '-' + r.md))); });
+  (dated || HOLIDAY_DATED).forEach(add);
+  return set;
+}
+function holidaySet_() { if (!holidayCache_) holidayCache_ = { dated: HOLIDAY_DATED, set: holidaySetFrom_(HOLIDAY_DATED) }; return holidayCache_.set; }
+async function refreshHolidays_() {
+  const dated = await readJSON('holidays', HOLIDAY_DATED);   // none saved yet: the defaults
+  holidayCache_ = { dated: dated, set: holidaySetFrom_(dated) };
+  return holidayCache_;
+}
+/* The holidays the leave page shows and counts with: last year to next. */
+function holidayList_() {
+  const y = new Date().getUTCFullYear(), dated = (holidayCache_ || { dated: HOLIDAY_DATED }).dated;
+  return [y - 1, y, y + 1].reduce(function (acc, yr) { return acc.concat(holidaysFor_(yr, dated)); }, []);
+}
+function cleanHolidays_(list) {
+  const out = [], used = {};
+  (Array.isArray(list) ? list : []).slice(0, HOLIDAY_MAX).forEach(function (h) {
+    h = h && typeof h === 'object' ? h : {};
+    let from = isoDate_(h.from), to = isoDate_(h.to);
+    const name = str_(h.name, 60);
+    if (!from || !name) return;
+    if (!to) to = from;
+    if (to < from) { const x = from; from = to; to = x; }
+    if (tripDays_(from, to) > 31) return;
+    let id = String(h.id || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 30) || ('h' + Math.random().toString(36).slice(2, 8));
+    while (used[id]) id += 'x';
+    used[id] = 1;
+    out.push({ id: id, name: name, from: from, to: to });
+  });
+  return out.sort(function (a, b) { return a.from < b.from ? -1 : 1; });
+}
+async function adminSaveHolidays(username, pin, list) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  await writeJSON('holidays', cleanHolidays_(list));
+  await refreshHolidays_();
+  return adminListTrips(username, pin);
+}
+
+async function getTrips_() { await refreshHolidays_(); return readJSON('trips', []); }
 
 function isDate_(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); }
 function tripDays_(from, to) {
@@ -2432,14 +2504,17 @@ function tripDays_(from, to) {
   return Math.round((b - a) / 86400000) + 1;
 }
 function workDays_(from, to) {
-  const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
+  const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z'), hol = holidaySet_();
   let n = 0;
   for (let d = new Date(a); d <= b; d.setUTCDate(d.getUTCDate() + 1)) {
     const dow = d.getUTCDay();
-    if (dow !== 0 && dow !== 6) n++;
+    if (dow !== 0 && dow !== 6 && !hol[d.toISOString().slice(0, 10)]) n++;
   }
   return n;
 }
+/* Work days for a request on file: from its dates, holidays out — the stored
+   count only for a row too old to have dates. */
+function tripWorkDays_(r) { return isDate_(r.from) && isDate_(r.to) ? workDays_(r.from, r.to) : (Number(r.workDays) || 0); }
 function leaveTypeOf_(r) {
   if (LEAVE_TYPES.indexOf(r.type) > -1) return r.type;
   return r.kind === 'personal' ? 'personal' : 'outside';
@@ -2454,8 +2529,7 @@ function awayTotals_(trips) {
     if (r.status === 'declined') return;
     const year = String(r.from).slice(0, 4);
     if (!out[year]) out[year] = { outside: 0, special: 0, personal: 0, trips: 0 };
-    const wd = r.workDays != null ? r.workDays : workDays_(r.from, r.to);
-    out[year][leaveTypeOf_(r)] += wd;
+    out[year][leaveTypeOf_(r)] += tripWorkDays_(r);
     out[year].trips += 1;
   });
   return out;
@@ -2464,7 +2538,7 @@ function awayTotals_(trips) {
 function tripOut_(r) {
   return {
     id: r.id, from: r.from, to: r.to, days: r.days,
-    type: leaveTypeOf_(r), workDays: r.workDays != null ? r.workDays : workDays_(r.from, r.to),
+    type: leaveTypeOf_(r), workDays: tripWorkDays_(r),
     reason: r.reason || '', coverage: r.coverage || '',
     status: r.status, decidedAt: r.decidedAt || '', created: r.created || ''
   };
@@ -2476,7 +2550,7 @@ async function getMyTrips(username, pin) {
   const mine = (await getTrips_()).filter(function (r) { return r.staffId === s.id; })
     .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
   return {
-    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine), ptoCap: PTO_ANNUAL_CAP,
+    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine), ptoCap: PTO_ANNUAL_CAP, holidays: holidayList_(),
     hasMentor: !!(s.mentorId && s.mentorStatus === 'approved')
   };
 }
@@ -2562,7 +2636,7 @@ async function adminListTrips(username, pin) {
   const totals = {};
   staff.forEach(function (x) { totals[x.id] = awayTotals_(trips.filter(function (r) { return r.staffId === x.id; })); });
   return {
-    ok: true, ptoCap: PTO_ANNUAL_CAP,
+    ok: true, ptoCap: PTO_ANNUAL_CAP, holidays: holidayList_(), holidaysDated: (holidayCache_ || {}).dated || HOLIDAY_DATED,
     trips: trips.map(function (r) {
       const who = byId[r.staffId], mentor = r.mentorId ? byId[r.mentorId] : null;
       return Object.assign(tripOut_(r), {
@@ -3498,6 +3572,335 @@ async function hospDelete(username, pin, kind, id) {
   return getHospitality(username, pin);
 }
 
+/* ==================== weekly schedules ====================
+   Two schedules the base sends out every Sunday for the week ahead: the
+   Culinary team's cooking schedule (meals and dishes, day by day — a GRID of
+   rows × days) and Hospitality's morning chores (places, what to do there and
+   who — a LIST in sections). The ministry that owns one makes it each week on
+   its My Ministry page (canLogFor_, so its members, leaders, overseer and
+   admins); once published, everyone on the campus sees it on My Home, and a
+   team that has arrived sees it in the portal.
+
+   One blob per campus, 'duty:<campus>' = { kitchen: { weeks: { 'YYYY-MM-DD'
+   (the Sunday it starts): sched }, extras: [names typed in by hand] },
+   chores: {…} }. A week holds its own copy of the rows, so changing next
+   week's rows never rewrites an old one; a week not made yet starts as a
+   copy of the latest one before it, names and all (most duties carry over),
+   else from the template below — rows only, no names: this repo is public.
+
+   Names are plain strings, picked from the people here that week
+   (dutyPeople_): campus staff first, other staff, every member of a team
+   whose dates cover the week (from its portal application), guests booked in
+   SR Hospitality, and names typed in before. */
+const DUTY_KINDS = {
+  kitchen: { dept: 'Skills Training', ministry: 'Culinary', layout: 'grid' },
+  chores: { dept: 'Skills Training', ministry: 'Hospitality', layout: 'list' }
+};
+const DUTY_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const DUTY_MAX = { rows: 40, sections: 8, listRows: 60, names: 24, name: 40, weeks: 60, extras: 300 };
+const DUTY_TEMPLATES = {
+  kitchen: {
+    title: 'Cooking schedule', km: 'កាលវិភាគធ្វើម្ហូបប្រចាំសប្តាហ៍', days: ['sun', 'mon', 'tue', 'wed', 'thu', 'fri'],
+    rows: [
+      { id: 'bf', label: 'Breakfast 7:30', km: 'អាហារ-ព្រឹក', time: 'Cooking 6:00', off: ['sun'] },
+      { id: 'md', label: 'Morning chore – Dishes', km: 'លាងចាន-ព្រឹក', time: '', off: ['sun'] },
+      { id: 'lu', label: 'Lunch 12:30', km: 'អាហារ-ត្រង់', time: 'Cooking 11:00', off: ['sun'] },
+      { id: 'pr', label: 'Pray – Announcements', km: 'អធិស្ឋាន-សេចក្ដីប្រកាស', time: '', off: ['sun'], span: true },
+      { id: 'ld', label: 'Lunch dishes · Sweep-mop', km: 'លាងចាន-ថ្ងៃត្រង់', time: '', off: ['sun'] },
+      { id: 'di', label: 'Dinner 6:30', km: 'អាហារ-ល្ងាច', time: 'Cooking 5:00' },
+      { id: 'dd', label: 'Dinner dishes · Sweep-mop', km: 'លាងចាន-ល្ងាច', time: '' }
+    ]
+  },
+  chores: {
+    title: 'Morning chores (8–8:30 AM)', km: 'ការងារពេលព្រឹក (ម៉ោង ៨-៨:៣០)',
+    sections: [
+      { id: 'base', title: 'Base', km: 'មូលដ្ឋាន', rows: [
+        { id: 'c01', place: 'Trash bags (weekend)', duty: 'Change all the trash bags around the base and sweep around the building. Saturday and Sunday.' },
+        { id: 'c02', place: 'Plants (weekend)', duty: 'Water the plants around the base. Saturday and Sunday.' },
+        { id: 'c03', place: 'Morning dishes', duty: 'Put away dishes, wash dishes, clean the sink, wipe all surfaces.' },
+        { id: 'c04', place: 'Stairs 1–4', duty: 'Sweep and mop stairs 1–4.' },
+        { id: 'c05', place: 'Office room', duty: 'Sweep and mop inside and outside the room.' },
+        { id: 'c06', place: 'Media room', duty: 'Sweep and mop inside and outside the room.' },
+        { id: 'c07', place: 'Bathroom on the rooftop', duty: 'Clean the toilet, sink, floor, wall and mirror, and change the trash bags.' },
+        { id: 'c08', place: 'Bathroom in the coffee shop and near the kitchen', duty: 'Clean the toilet, sink, floor, wall and mirror, and change the trash bags.' },
+        { id: 'c09', place: 'Classroom 2 · Worship room', duty: 'Sweep and mop. Set out tables and chairs.' },
+        { id: 'c10', place: 'Rooftop', duty: 'Sweep and mop the rooftop.' },
+        { id: 'c11', place: 'Kitchen towels', duty: 'Change all the kitchen towels, put out the mopping liquid and clean the buckets.' },
+        { id: 'c12', place: 'Open the doors 102, 103, 104, 203, 204, 205, 303, 304, 305', duty: 'Open the doors to every room for 15 minutes.' },
+        { id: 'c13', place: 'Bean bags · green stage', duty: 'Wipe all the bean bags and vacuum the green stage.' },
+        { id: 'c14', place: 'Stair railings', duty: 'Wipe the stair railings in hallways 1, 2, 3 and the Media room.' },
+        { id: 'c15', place: 'Hallway 3', duty: 'Sweep and mop.' },
+        { id: 'c16', place: 'Hallway 2', duty: 'Sweep and mop.' },
+        { id: 'c17', place: 'Hallway 1', duty: 'Sweep and mop.' },
+        { id: 'c18', place: 'Courtyard and parking area', duty: 'Sweep and clean the road in front of the base, the eating area and the coffee shop.' },
+        { id: 'c19', place: 'Trash bags', duty: 'Change all the trash bags around the base and sweep around the building.' },
+        { id: 'c20', place: 'Glass doors, inside and outside', duty: 'Mon: classroom 2 · Tue: classroom 3, rooftop · Wed: meeting room, Media and office · Thu: classroom 2 · Fri: classroom 3, rooftop' },
+        { id: 'c21', place: 'Air conditioners', duty: 'Mon: rooms 203, 204, 401 · Tue: rooms 205, 303, Media · Wed: 304, 305, office · Thu: coffee shop, worship room, classroom 1 · Fri: rooms 101–104 and the DTS classroom' },
+        { id: 'c22', place: 'Plants', duty: 'Water the plants around the base.' },
+        { id: 'c23', place: 'Tables outside', duty: 'Clean all tables and chairs, and put them in order.' },
+        { id: 'c24', place: 'Classroom 3 (rooftop) · tables', duty: 'Wipe all tables and chairs, and change the trash bags.' },
+        { id: 'c25', place: 'Classroom 3 (rooftop) · rooms', duty: 'Sweep and mop inside and outside the classroom and around rooms 401 and 402.' },
+        { id: 'c26', place: 'Classroom 1 (downstairs)', duty: 'Sweep and mop the stairs and vacuum. Mon, Wed, Fri: clean the glass door · Tue, Thu: clean the sofa and table.' },
+        { id: 'c27', place: 'Coffee shop', duty: 'Sweep and mop. Clean all the tables in the coffee shop.' },
+        { id: 'c28', place: 'Coffee shop glass door', duty: 'Clean the glass door inside and outside.' }
+      ] },
+      { id: 'house', title: 'Family house', km: 'អាគារគ្រួសារ', rows: [
+        { id: 'h1', place: 'Courtyard and parking area', duty: 'Sweep under the house, change the trash bags and take the trash out. Sweep and clean the road in front.' },
+        { id: 'h2', place: 'Stairs 1–4', duty: 'Sweep and mop the stairs.' },
+        { id: 'h3', place: 'Plants', duty: 'Water the plants around the house.' },
+        { id: 'h4', place: 'Stair railings', duty: 'Wipe the stair railings in hallways 1, 2, 3.' },
+        { id: 'h5', place: 'Bathroom downstairs', duty: 'Clean the toilet, sink, floor, wall and mirror, and change the trash.' }
+      ] }
+    ]
+  }
+};
+function dutyKey_(campus) { return 'duty:' + campus; }
+function isSunday_(w) { return !!isoDate_(w) && new Date(w + 'T00:00:00Z').getUTCDay() === 0; }
+function addDays_(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+/* The Sunday the current week started on, in Cambodia (UTC+7). */
+function dutyThisWeek_() {
+  const d = new Date(Date.now() + 7 * 3600000); d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.toISOString().slice(0, 10);
+}
+async function getDutyDoc_(campus) {
+  const d = await readJSON(dutyKey_(campus), {});
+  Object.keys(DUTY_KINDS).forEach(function (k) {
+    if (!d[k] || typeof d[k] !== 'object') d[k] = {};
+    if (!d[k].weeks || typeof d[k].weeks !== 'object') d[k].weeks = {};
+    if (!Array.isArray(d[k].extras)) d[k].extras = [];
+  });
+  return d;
+}
+function dutyNames_(v) {
+  const out = [];
+  (Array.isArray(v) ? v : []).forEach(function (n) {
+    const s = String(n == null ? '' : n).replace(/\s+/g, ' ').trim().slice(0, DUTY_MAX.name);
+    if (s && out.indexOf(s) === -1 && out.length < DUTY_MAX.names) out.push(s);
+  });
+  return out;
+}
+function dutyText_(v, n) { return String(v == null ? '' : v).trim().slice(0, n); }
+function dutyId_(v, used, p) {
+  let id = String(v == null ? '' : v).replace(/[^a-z0-9_-]/gi, '').slice(0, 20);
+  if (!id || used[id]) { let i = 1; do { id = p + (i++); } while (used[id]); }
+  used[id] = 1;
+  return id;
+}
+/* A week as the page sent it, kept to the shape of its kind. */
+function cleanSched_(raw, kind) {
+  const k = DUTY_KINDS[kind];
+  raw = raw && typeof raw === 'object' ? raw : {};
+  const out = { layout: k.layout, title: dutyText_(raw.title, 120) || DUTY_TEMPLATES[kind].title, km: dutyText_(raw.km, 120), notes: dutyText_(raw.notes, 1000) };
+  if (k.layout === 'grid') {
+    let days = (Array.isArray(raw.days) ? raw.days : []).filter(function (d, i, a) { return DUTY_DAYS.indexOf(d) > -1 && a.indexOf(d) === i; });
+    if (!days.length) days = DUTY_TEMPLATES.kitchen.days.slice();
+    days.sort(function (a, b) { return DUTY_DAYS.indexOf(a) - DUTY_DAYS.indexOf(b); });
+    out.days = days;
+    const used = {};
+    out.rows = (Array.isArray(raw.rows) ? raw.rows : []).slice(0, DUTY_MAX.rows).map(function (r) {
+      r = r && typeof r === 'object' ? r : {};
+      const label = dutyText_(r.label, 80);
+      if (!label) return null;
+      return { id: dutyId_(r.id, used, 'r'), label: label, km: dutyText_(r.km, 80), time: dutyText_(r.time, 60), span: !!r.span,
+        off: (Array.isArray(r.off) ? r.off : []).filter(function (d) { return days.indexOf(d) > -1; }) };
+    }).filter(Boolean);
+    const cells = {}, src = raw.cells && typeof raw.cells === 'object' ? raw.cells : {};
+    out.rows.forEach(function (r) {
+      (r.span ? ['all'] : days).forEach(function (d) {
+        if (d !== 'all' && r.off.indexOf(d) > -1) return;
+        const names = dutyNames_(src[r.id + '|' + d]);
+        if (names.length) cells[r.id + '|' + d] = names;
+      });
+    });
+    out.cells = cells;
+  } else {
+    const usedS = {}, usedR = {};
+    out.sections = (Array.isArray(raw.sections) ? raw.sections : []).slice(0, DUTY_MAX.sections).map(function (s) {
+      s = s && typeof s === 'object' ? s : {};
+      return { id: dutyId_(s.id, usedS, 's'), title: dutyText_(s.title, 80), km: dutyText_(s.km, 80),
+        rows: (Array.isArray(s.rows) ? s.rows : []).slice(0, DUTY_MAX.listRows).map(function (r) {
+          r = r && typeof r === 'object' ? r : {};
+          const place = dutyText_(r.place, 120);
+          if (!place) return null;
+          return { id: dutyId_(r.id, usedR, 'c'), place: place, km: dutyText_(r.km, 120), duty: dutyText_(r.duty, 400), people: dutyNames_(r.people) };
+        }).filter(Boolean) };
+    });
+  }
+  return out;
+}
+function dutyAllNames_(sch) {
+  const out = [];
+  const add = function (l) { (l || []).forEach(function (n) { if (out.indexOf(n) === -1) out.push(n); }); };
+  if (sch.layout === 'grid') Object.keys(sch.cells || {}).forEach(function (k) { add(sch.cells[k]); });
+  else (sch.sections || []).forEach(function (s) { s.rows.forEach(function (r) { add(r.people); }); });
+  return out;
+}
+/* A first name is what the sheet uses; two campus staff with the same one get an initial. */
+function dutyShortNames_(people) {
+  const first = function (n) { return String(n || '').trim().split(/\s+/)[0] || ''; };
+  const count = {};
+  people.forEach(function (p) { const f = first(p.name).toLowerCase(); count[f] = (count[f] || 0) + 1; });
+  return people.map(function (p) {
+    const parts = String(p.name || '').trim().split(/\s+/), f = parts[0] || '';
+    return count[f.toLowerCase()] > 1 && parts.length > 1 ? f + ' ' + parts[parts.length - 1][0] + '.' : f;
+  });
+}
+/* The days of the week starting `week` (Sun … Sat) each staff member is
+   away on leave — any request not declined, whatever its type: on a break or
+   off campus, they can't cook or clean here. */
+const DUTY_DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function dutyAway_(trips, week) {
+  const days = []; for (let i = 0; i < 7; i++) days.push(addDays_(week, i));
+  const out = {};
+  trips.forEach(function (r) {
+    if (!r || r.status === 'declined' || !isDate_(r.from) || !isDate_(r.to)) return;
+    days.forEach(function (d, i) { if (r.from <= d && d <= r.to) { out[r.staffId] = out[r.staffId] || {}; out[r.staffId][i] = 1; } });
+  });
+  return out;
+}
+/* Who can be put on the week starting `week`: grouped, each group a label
+   and names; `away` notes the days someone on leave for part of the week is
+   gone. Staff away the whole working week (Mon–Fri) are left out. */
+async function dutyPeople_(campus, week, extras) {
+  const weekEnd = addDays_(week, 7), groups = [], away = {};
+  const gone = dutyAway_(await getTrips_(), week);
+  const staff = (await getStaff_()).filter(function (s) { return s && s.active !== false && !isApplicant_(s) && s.campus === campus && !s.archived; })
+    .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+  const shorts = dutyShortNames_(staff);
+  const campusNames = [], otherNames = [];
+  staff.forEach(function (s, i) {
+    if (!shorts[i]) return;
+    const g = gone[s.id];
+    if (g && [1, 2, 3, 4, 5].every(function (d) { return g[d]; })) return;   // away all week
+    if (g) away[shorts[i]] = Object.keys(g).sort().map(function (d) { return DUTY_DAY_SHORT[d]; }).join(', ');
+    (cleanStaffType_(s.staffType) === 'campus' ? campusNames : otherNames).push(shorts[i]);
+  });
+  if (campusNames.length) groups.push({ id: 'campus', label: 'Campus staff', names: campusNames });
+  if (otherNames.length) groups.push({ id: 'staff', label: 'Other staff', names: otherNames });
+  // teams whose dates cover any of the week, with everyone their leader listed on the portal
+  const cands = await getCandidates_(), byCand = {};
+  cands.forEach(function (c) { if (c && c.id) byCand[c.id] = c; });
+  (await getTeamTrips_()).filter(function (t) { return t.campus === campus && t.status !== 'cancelled' && t.from && t.to && t.from < weekEnd && t.to >= week; })
+    .forEach(function (t) {
+      const c = t.candidateId && byCand[t.candidateId];
+      if (!c) return;
+      const a = teamAnswers_(c), names = [];
+      const add = function (n) { n = dutyText_(n, DUTY_MAX.name); if (n && names.indexOf(n) === -1) names.push(n); };
+      add(a.leaderName || c.name);
+      (Array.isArray(a.coLeaders) ? a.coLeaders : []).forEach(function (p) { add(p && p.name); });
+      ((c.portal && c.portal.members) || []).forEach(function (p) { add(p && p.name); });
+      if (names.length) groups.push({ id: 'team_' + t.id, label: t.name, names: names });
+    });
+  // guests, speakers, volunteers… booked into SR Hospitality that week (teams come in above)
+  const guests = [];
+  (await getHosp_(campus)).bookings.forEach(function (k) {
+    if (k.category === 'team' || !(k.from < weekEnd && (k.permanent || k.to > week))) return;
+    const n = dutyText_(k.name, DUTY_MAX.name);
+    if (n && guests.indexOf(n) === -1) guests.push(n);
+  });
+  if (guests.length) groups.push({ id: 'guests', label: 'Staying with us', names: guests });
+  const seen = {};
+  groups.forEach(function (g) { g.names.forEach(function (n) { seen[n] = 1; }); });
+  const more = (extras || []).filter(function (n) { return !seen[n]; });
+  if (more.length) groups.push({ id: 'extras', label: 'Added before', names: more });
+  if (Object.keys(away).length) groups.away = away;
+  return groups;
+}
+function dutyTemplate_(kind) {
+  const t = JSON.parse(JSON.stringify(DUTY_TEMPLATES[kind]));
+  t.layout = DUTY_KINDS[kind].layout;
+  if (t.layout === 'grid') t.cells = {}; else t.sections.forEach(function (s) { s.rows.forEach(function (r) { r.people = []; }); });
+  return cleanSched_(t, kind);
+}
+function dutyOut_(rec, week, kind) { return rec ? Object.assign({}, rec, { kind: kind, week: week }) : null; }
+async function dutyAuth_(username, pin, kind, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { out: { ok: false } };
+  if (!DUTY_KINDS[kind]) return { out: { ok: false, err: 'bad_kind' } };
+  if (!isSunday_(week)) return { out: { ok: false, err: 'bad_week' } };
+  const k = DUTY_KINDS[kind];
+  return { s: s, campus: s.campus, canEdit: canLogFor_(s, s.campus, k.dept, k.ministry) };
+}
+/* One kind for one week. The ministry that makes it gets its draft (or a new
+   week started from the last one) and the names to pick from; anyone else
+   only a published week. */
+async function getDuty(username, pin, kind, week) {
+  const a = await dutyAuth_(username, pin, kind, week); if (a.out) return a.out;
+  const d = await getDutyDoc_(a.campus), box = d[kind];
+  const rec = box.weeks[week] || null;
+  if (!a.canEdit) return { ok: true, kind: kind, week: week, canEdit: false, sched: rec && rec.published ? dutyOut_(rec, week, kind) : null };
+  let sched = rec, isNew = false, from = '';
+  if (!sched) {
+    isNew = true;
+    const before = Object.keys(box.weeks).filter(function (w) { return w < week; }).sort().pop();
+    if (before) { sched = cleanSched_(box.weeks[before], kind); from = before; } else sched = dutyTemplate_(kind);
+    sched.published = false;
+  }
+  const people = await dutyPeople_(a.campus, week, box.extras);
+  return { ok: true, kind: kind, week: week, canEdit: true, isNew: isNew, from: from, sched: dutyOut_(sched, week, kind),
+    people: people, away: people.away || {} };
+}
+/* action: 'save' keeps it as it is (a draft stays a draft, a published week
+   stays published), 'publish' shows it to everyone, 'unpublish' takes it down. */
+async function saveDuty(username, pin, kind, week, sched, action) {
+  const a = await dutyAuth_(username, pin, kind, week); if (a.out) return a.out;
+  if (!a.canEdit) return { ok: false, err: 'not_authorized' };
+  const d = await getDutyDoc_(a.campus), box = d[kind], prev = box.weeks[week];
+  const rec = cleanSched_(sched, kind);
+  const now = new Date().toISOString();
+  rec.published = action === 'publish' ? true : action === 'unpublish' ? false : !!(prev && prev.published);
+  rec.publishedAt = rec.published ? ((prev && prev.published && prev.publishedAt) || now) : null;
+  rec.updated = now; rec.updatedBy = a.s.id;
+  box.weeks[week] = rec;
+  Object.keys(box.weeks).sort().reverse().slice(DUTY_MAX.weeks).forEach(function (w) { delete box.weeks[w]; });
+  // names typed in by hand are offered again next time
+  const known = {};
+  (await dutyPeople_(a.campus, week, [])).forEach(function (g) { g.names.forEach(function (n) { known[n] = 1; }); });
+  dutyAllNames_(rec).forEach(function (n) { if (!known[n] && box.extras.indexOf(n) === -1) box.extras.unshift(n); });
+  box.extras = box.extras.slice(0, DUTY_MAX.extras);
+  await writeJSON(dutyKey_(a.campus), d);
+  return getDuty(username, pin, kind, week);
+}
+/* This week's published schedules (and next week's, once it is out), for My Home. */
+async function dutyPublished_(campus, week) {
+  const d = await getDutyDoc_(campus), out = {};
+  Object.keys(DUTY_KINDS).forEach(function (k) { const r = d[k].weeks[week]; out[k] = r && r.published ? dutyOut_(r, week, k) : null; });
+  return out;
+}
+async function getMySchedules(username, pin, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  week = isSunday_(week) ? week : dutyThisWeek_();
+  const next = addDays_(week, 7);
+  const canEdit = {};
+  Object.keys(DUTY_KINDS).forEach(function (k) { canEdit[k] = canLogFor_(s, s.campus, DUTY_KINDS[k].dept, DUTY_KINDS[k].ministry); });
+  return { ok: true, week: week, now: await dutyPublished_(s.campus, week), next: await dutyPublished_(s.campus, next), nextWeek: next, canEdit: canEdit };
+}
+/* A team's own list of who is coming — names (and men / women), as many as
+   it has — so the kitchen and hospitality can put them on the schedules
+   while they are here. The leader keeps it up to date from the portal. */
+const MEMBERS_MAX = 120;
+function cleanMembers_(v) {
+  const out = [];
+  (Array.isArray(v) ? v : []).slice(0, MEMBERS_MAX).forEach(function (p) {
+    p = p && typeof p === 'object' ? p : { name: p };
+    const name = dutyText_(p.name, 80).replace(/\s+/g, ' ');
+    if (!name) return;
+    out.push({ name: name, sex: p.sex === 'm' || p.sex === 'f' ? p.sex : '' });
+  });
+  return out;
+}
+async function portalSaveTeamMembers(username, pin, members) {
+  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
+  a.cand.portal = a.cand.portal || {};
+  a.cand.portal.members = cleanMembers_(members);
+  a.cand.updated = new Date().toISOString(); a.cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return portalBoot(username, pin);
+}
+
 /* ==================== human resources ====================
    The HR page: each staff member's contract(s), the papers attached to
    them, how long they have served, when the current contract runs out, and
@@ -3990,6 +4393,7 @@ function portalAppOut_(c) {
     draftAt: (c.portal && c.portal.draftAt) || null,
     answersUpdatedAt: (c.portal && c.portal.form && c.portal.form.updatedAt) || null,
     docKinds: docKindsFor_(c), docs: docsOf_(c).map(docMeta_),
+    members: c.type === 'team' ? ((c.portal && c.portal.members) || []) : undefined,
     reference: (function (r) { delete r.answers; delete r.leaderEmail; return r; })(refState_(c)), // the applicant never reads the reference
     steps: portalSteps_(c)
   };
@@ -4184,6 +4588,8 @@ async function portalBoot(username, pin) {
       const trip = (await linkedTrip_(cand)) || (!cand.archived ? await syncTeamTrip_(cand, s.id) : null);
       out.application.trip = teamTripOut_(trip);
       out.metricOverrides = (await getMetricOverrides_()).filter(function (o) { return o.dept === TEAM_DEPT && o.ministry === TEAM_MIN; });
+      // the base's weekly schedules, once the team is here (not before — it would only confuse)
+      if (cand.stage === 'arrived' && !cand.archived) { const wk = dutyThisWeek_(); out.schedules = Object.assign({ week: wk }, await dutyPublished_(cand.campus || PORTAL_DEFAULT_CAMPUS, wk)); }
     }
     return out;
   }
@@ -4846,6 +5252,7 @@ const HANDLERS = {
   getStructure: function (a) { return getStructure(a[0], a[1], a[2], a[3], a[4]); },
   adminListTrips: function (a) { return adminListTrips(a[0], a[1]); },
   adminDecideTrip: function (a) { return adminDecideTrip(a[0], a[1], a[2], a[3]); },
+  adminSaveHolidays: function (a) { return adminSaveHolidays(a[0], a[1], a[2]); },
   saveStructure: function (a) { return saveStructure(a[0], a[1], a[2], a[3], a[4]); },
   saveStructurePlan: function (a) { return saveStructurePlan(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
   hrCandidates: function (a) { return hrCandidates(a[0], a[1]); },
@@ -4883,7 +5290,11 @@ const HANDLERS = {
   getHospitality: function (a) { return getHospitality(a[0], a[1]); },
   hospSave: function (a) { return hospSave(a[0], a[1], a[2], a[3]); },
   hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); },
-  hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); }
+  hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); },
+  getDuty: function (a) { return getDuty(a[0], a[1], a[2], a[3]); },
+  saveDuty: function (a) { return saveDuty(a[0], a[1], a[2], a[3], a[4], a[5]); },
+  getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },
+  portalSaveTeamMembers: function (a) { return portalSaveTeamMembers(a[0], a[1], a[2]); }
 };
 
 export default async (req) => {

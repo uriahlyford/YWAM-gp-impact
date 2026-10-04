@@ -97,6 +97,12 @@ textarea { min-height:80px; resize:vertical; }
 .chip { border:1px solid var(--border2); background:transparent; border-radius:999px; padding:7px 13px; font-size:13px; cursor:pointer; color:var(--muted); }
 .chip:hover { border-color:var(--ink); color:var(--ink); }
 .chip.on { background:var(--ink); border-color:var(--ink); color:var(--accentInk); font-weight:600; }
+.chip:disabled { opacity:.5; cursor:default; }
+.memberList { margin:0 0 8px; padding-left:22px; line-height:1.6; }
+.memberRow { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.memberRow input { flex:1; min-width:0; margin:0; }
+.memberSeg { flex:0 0 auto; margin:0; }
+.memberSeg button { padding:8px 10px; font-size:13px; }
 .pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 12px; font-size:12.5px; font-weight:600; border:1px solid var(--border2); background:var(--surface2); color:var(--muted); white-space:nowrap; }
 .pill.pending, .pill.in_review, .pill.interview { color:var(--warn); border-color:var(--warn); background:transparent; }
 .pill.accepted, .pill.practical, .pill.arrived { color:var(--good); border-color:var(--good); background:transparent; }
@@ -290,6 +296,7 @@ a.staffNavBtn { text-decoration:none; text-align:center; }
 <script src="logo.js"></script>
 <script src="km.js"></script>
 <script src="taxonomy.js"></script>
+<script src="duty.js"></script>
 <script>
 /* ==================== YWAM GP Portal ====================
    Two sides of one page. An applicant signs up (or arrives from the public
@@ -667,6 +674,7 @@ function meHtml_(){
       '</div></li>';
   }).join('')+'</ol></div>';
   h+='</div><div>';
+  h+=schedulesCardHtml_();
   var submitted = !!app.submittedAt;
   var total = d.form ? askedAll_(d.form, app.audience).length : 0, done = d.form ? askedAll_(d.form, app.audience).filter(function(q){ return answered_(q, P.answers[q.id]); }).length : 0;
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📝 '+esc(t('Application form'))+'</h3>'+(submitted?'<button class="linkbtn inline" id="viewAnswers">'+esc(P.showAnswers?t('Hide'):t('View my answers'))+'</button>':'')+'</div>'+
@@ -678,6 +686,7 @@ function meHtml_(){
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
   if(app.refNeeded) h+='<div class="card" id="refCard"><h3 style="margin-top:0">🙏 '+esc(t('Leader reference'))+'</h3>'+refCardHtml_(app)+'</div>';
   h+=teamNumbersHtml_(app);
+  h+=membersCardHtml_(app);
   h+=visaCardHtml_(app);
   h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
     ((app.docKinds||[]).length ? docsBodyHtml_((app.docKinds||[]).filter(function(k){ return app.type!=='team' || teamDocsIn_(app) || (k.id!=='invitation' && k.id!=='evisa'); }), app.docs||[], app.submittedAt ? 'me' : 'before', '')
@@ -776,6 +785,7 @@ function panelHtml_(c, byId){
   h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
   h+=panelTeamFlowHtml_(c);
   h+=panelTeamNumbersHtml_(c);
+  h+=panelMembersHtml_(c);
   h+=panelTripHtml_(c);
   h+=panelVisaHtml_(c);
   h+=panelDocsHtml_(c);
@@ -1145,12 +1155,88 @@ function readTeamNumbers_(pre){
 }
 /* Only once the team has arrived (staff tick Arrived): before that the
    numbers mean nothing to them yet and would only confuse. */
+/* ---- a team's members, and the base's weekly schedules ----
+   The leader lists everyone coming (name, man / woman) so the kitchen and
+   hospitality teams can put them on the weekly schedules while they are
+   here. Once the team has arrived, those schedules — this week's, published
+   — show here too (portalBoot's `schedules`), drawn by duty.js, and can be
+   sent round the team as a picture. */
+function membersCardHtml_(app){
+  if(app.type!=='team' || !app.submittedAt) return '';
+  var list=P.members || app.members || [];
+  var h='<div class="card" id="teamMembers"><h3 style="margin-top:0">👥 '+esc(t('Your team members'))+'</h3>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('Everyone coming, so we can put them on the cooking and chores schedules while you are here. Keep it up to date as your team changes.'))+'</p>';
+  if(!P.members){
+    h+=list.length ? '<ol class="memberList">'+list.map(function(m){ return '<li>'+esc(m.name)+(m.sex?' <span class="hint">· '+esc(m.sex==='m'?t('Man'):t('Woman'))+'</span>':'')+'</li>'; }).join('')+'</ol>'
+      : '<p class="sub" style="margin:0 0 8px">'+esc(t('No one listed yet.'))+'</p>';
+    return h+'<button class="btn small" id="editMembers">'+esc(list.length?t('Edit the list'):t('Add your team members'))+'</button></div>';
+  }
+  h+=list.map(function(m,i){
+    return '<div class="memberRow"><input type="text" data-mname="'+i+'" maxlength="80" value="'+esc(m.name)+'" placeholder="'+esc(t('Full name'))+'" aria-label="'+esc(t('Full name'))+'">'+
+      '<div class="seg memberSeg"><button data-msex="'+i+'|m" class="'+(m.sex==='m'?'on':'')+'">'+esc(t('Man'))+'</button><button data-msex="'+i+'|f" class="'+(m.sex==='f'?'on':'')+'">'+esc(t('Woman'))+'</button></div>'+
+      '<button class="linkbtn inline" data-mdel="'+i+'" aria-label="'+esc(t('Remove'))+'">✕</button></div>';
+  }).join('');
+  h+='<button class="btn small ghost" id="addMember">＋ '+esc(t('Add a person'))+'</button>';
+  return h+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn small" id="saveMembers"'+(P.busy?' disabled':'')+'>'+esc(t('Save the list'))+'</button>'+
+    '<button class="linkbtn inline" id="cancelMembers">'+esc(t('Cancel'))+'</button></div></div>';
+}
+function schedulesCardHtml_(){
+  var sc=P.boot && P.boot.schedules;
+  if(!sc || typeof dutyHtml!=='function') return '';
+  var kinds=[['kitchen','🍲',t('Cooking schedule')],['chores','🧹',t('Morning chores')]];
+  var h='<div class="card" id="teamSchedules"><h3 style="margin-top:0">📋 '+esc(t('This week at the base'))+'</h3>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('Who cooks, washes up and does the morning chores this week — your team’s names included.'))+'</p><div class="chips">'+
+    kinds.map(function(k){ return '<button class="chip'+(P.schedShow===k[0]?' on':'')+'" data-pschedshow="'+k[0]+'"'+(sc[k[0]]?'':' disabled')+'>'+k[1]+' '+esc(k[2])+(sc[k[0]]?'':' · '+esc(t('not out yet')))+'</button>'; }).join('')+'</div>';
+  var s=P.schedShow && sc[P.schedShow];
+  if(s){
+    h+='<div style="margin-top:10px">'+dutyHtml(s, { t:t, esc:esc })+'</div>'+
+      '<button class="btn small" id="pschedShare" style="margin-top:10px">📤 '+esc(t('Share as image'))+'</button>';
+  }
+  return h+'</div>';
+}
+function bindMembersAndSchedules_(){
+  var app=P.boot && P.boot.application;
+  on_('editMembers', function(){ var l=(app.members||[]).map(function(m){ return { name:m.name, sex:m.sex||'' }; }); if(!l.length) l=[{ name:'', sex:'' }]; P.members=l; render(); });
+  on_('cancelMembers', function(){ P.members=null; render(); });
+  document.querySelectorAll('[data-mname]').forEach(function(inp){ inp.oninput=function(){ P.members[Number(inp.getAttribute('data-mname'))].name=inp.value; }; });
+  document.querySelectorAll('[data-msex]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-msex').split('|'), m=P.members[Number(p[0])]; m.sex = m.sex===p[1] ? '' : p[1]; render(); }; });
+  document.querySelectorAll('[data-mdel]').forEach(function(b){ b.onclick=function(){ P.members.splice(Number(b.getAttribute('data-mdel')),1); render(); }; });
+  on_('addMember', function(){ P.members.push({ name:'', sex:'' }); render(); var all=document.querySelectorAll('[data-mname]'); if(all.length) all[all.length-1].focus(); });
+  on_('saveMembers', function(){
+    var list=P.members.filter(function(m){ return String(m.name||'').trim(); });
+    P.busy=true; render();
+    run('portalSaveTeamMembers', [P.auth.user, P.auth.pin, list], function(d){
+      P.busy=false;
+      if(d && d.ok){ P.boot=d; P.members=null; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.'));
+      render();
+    }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
+  document.querySelectorAll('[data-pschedshow]').forEach(function(b){ b.onclick=function(){ var k=b.getAttribute('data-pschedshow'); P.schedShow = P.schedShow===k ? null : k; render(); }; });
+  on_('pschedShare', function(){
+    var sc=P.boot.schedules, s=sc && sc[P.schedShow]; if(!s) return;
+    var e=dutyAddDays(s.week,6), m=function(iso){ return t(MONTH_SHORT_[Number(iso.slice(5,7))-1])+' '+Number(iso.slice(8,10)); };
+    dutyImage(s, { t:t, weekLabel:gpT('Week of {a} – {b}',{a:m(s.week), b:m(e)+', '+e.slice(0,4)}) }).then(function(blob){
+      return dutyShare(blob, (P.schedShow==='kitchen'?'cooking-schedule-':'morning-chores-')+s.week+'.png', s.title);
+    }).then(function(how){ if(how==='downloaded') showMsg(t('Saved as a picture — send it from your photos or downloads.')); }, function(){ showMsg(t('Could not make the picture.')); });
+  });
+}
+var MONTH_SHORT_=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 function teamNumbersHtml_(app){
   if(app.type!=='team' || !app.submittedAt || app.stage!=='arrived') return '';
   return '<div class="card" id="teamNumbers"><h3 style="margin-top:0">📊 '+esc(t('Your team’s numbers'))+'</h3>'+
     '<p class="sub" style="margin:0 0 8px">'+esc(t('Totals for your whole time with us — fill them in as you go. They go straight into our Outreach Teams figures.'))+'</p>'+
     teamNumberRowsHtml_(app.trip, app.campus, 't')+
     '<button class="btn small" id="saveTeamNums"'+(P.busy?' disabled':'')+'>'+esc(t('Save our numbers'))+'</button></div>';
+}
+/* Staff see the team's own list of who is coming. */
+function panelMembersHtml_(c){
+  if(c.type!=='team') return '';
+  var l=(c.portal && c.portal.members) || [];
+  var men=l.filter(function(m){ return m.sex==='m'; }).length, women=l.filter(function(m){ return m.sex==='f'; }).length;
+  return '<h3>👥 '+esc(t('Team members'))+' <small>· '+l.length+(men||women ? ' · '+esc(gpT('{m} men, {w} women',{m:men,w:women})) : '')+'</small></h3>'+
+    (l.length ? '<ol class="memberList" id="panelMembers">'+l.map(function(m){ return '<li>'+esc(m.name)+(m.sex?' <span class="hint">· '+esc(m.sex==='m'?t('Man'):t('Woman'))+'</span>':'')+'</li>'; }).join('')+'</ol>'
+      : '<p class="sub" style="margin:0 0 8px" id="panelMembers">'+esc(t('The team hasn’t listed its members yet.'))+'</p>');
 }
 function panelTeamNumbersHtml_(c){
   if(c.type!=='team') return '';
@@ -1664,6 +1750,7 @@ function bindPanelExtras_(){
 /* ---- bindings ---- */
 function on_(id, fn){ var el=document.getElementById(id); if(el) el.onclick=fn; }
 function bind_(){
+  if(P.boot && P.boot.role==='applicant') bindMembersAndSchedules_();
   var flip=function(){ LANG = LANG==='km' ? 'en' : 'km'; lsSet('gp-lang', LANG); render(); };
   on_('langBtn', flip); on_('langBtn2', flip);
   on_('toChoose', function(){ P.view='choose'; render(); });
