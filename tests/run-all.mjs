@@ -88,6 +88,7 @@ const BROWSER = [
   'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
   'test-strengths-ui.mjs',  // adding a Gallup Top 5, matches to GP strengths, both compared, 320px, Khmer
   'test-gpstrengths-ui.mjs',  // taking the free test, results, the team strengths map, 320px
+  'test-bottom-bar.mjs',  // the bottom bar steps aside for the phone keyboard, and comes back
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward
   'test-mentor-health.mjs', // a mentor sees a mentee by name
