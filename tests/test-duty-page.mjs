@@ -98,11 +98,13 @@ const overflow = (page) => page.evaluate(() => document.documentElement.scrollWi
 console.log('=== everyone: My Home, the menu, reading, the picture ===');
 {
   const { ctx, page, errors, sent } = await open(KIM);
-  await page.waitForSelector('#schedHome .schedBtn');
+  await page.waitForSelector('#schedHome [data-schedopen]');
   const home = await page.$eval('#schedHome', e => e.textContent);
-  ok('My Home has this week’s schedules: cooking out, chores not yet', /Cooking schedule\s*Out for this week/.test(home) && /Morning chores\s*Not out yet/.test(home), home);
+  ok('My Home’s dashboard card has this week’s schedules: cooking out, chores dimmed until it is', !!(await page.$('.hero #schedHome')) && !(await page.$eval('#schedHome [data-schedopen="kitchen"]', b => b.classList.contains('notOut'))) && await page.$eval('#schedHome [data-schedopen="chores"]', b => b.classList.contains('notOut')), home);
   ok('it asked for the week that began on Sunday', sent.find(b => b.fn === 'getMySchedules').args[2] === W0);
-  ok('and lists my own duties', /Your duties this week/.test(home) && /Mon · Breakfast 7:30/.test(home) && /Tue · Dinner 6:30/.test(home));
+  ok('and says how many duties I have', /You have 2 duties this week/.test(home), home);
+  ok('My Home has no daily check-in for now, and no “Log today” banner', !(await page.$('#moreToday')) && !(await page.$('#jumpToday')) && !/Daily check-in/.test(await page.$eval('#main', e => e.textContent)));
+  ok('no separate schedules card below it', (await page.$$('#schedHome')).length === 1 && !(await page.$('.card #schedHome')));
   await page.click('[data-schedopen="kitchen"]'); await page.waitForTimeout(400);
   ok('the schedule opens on the week of 4 October', /Oct 4 – Oct 10/.test(await page.$eval('#schedWeek', e => e.textContent)));
   const grid = await page.evaluate(() => ({
@@ -195,7 +197,7 @@ console.log('=== Hospitality fills the morning chores ===');
 console.log('=== desktop ===');
 {
   const { ctx, page, errors } = await open(KIM, { viewport: { width: 1280, height: 900 } });
-  await page.waitForSelector('#schedHome .schedBtn');
+  await page.waitForSelector('#schedHome [data-schedopen]');
   await page.click('[data-schedopen="kitchen"]'); await page.waitForTimeout(400);
   ok('desktop: the table fits without a sideways page scroll', !!(await page.$('.dutyGrid')) && !(await overflow(page)));
   ok('no errors (desktop)', errors.length === 0, errors.join(' | '));

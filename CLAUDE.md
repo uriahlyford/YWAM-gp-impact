@@ -433,6 +433,12 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   someone waiting (`all_placed` when they all have beds); `toBed` '' takes them off.
   One write, so a swap can't half-happen.
 
+## My Home: no daily check-in for now
+The daily check-in under the habit tracker (hours, mood, the private questions) is hidden —
+`DAILY_CHECKIN = false` in teams.html; flip it to bring it back, nothing it saved is touched —
+and so is the end-of-week "No days logged yet — Log today" banner (`phaseBanner`). The weekly
+health survey on Health is the one check-in.
+
 ## National holidays are not leave
 The base is closed on them, so a leave request over one spends none of the 30 days (nor
 counts as outside or special). **Khmer New Year** and **Christmas week** come round on their
@@ -477,8 +483,9 @@ names, a `span` row (Pray – Announcements) has one `cells['row|all']`, `off` d
 - **Pages**: `public/duty.js` (plain script, shared by teams.html and portal.html) draws a
   schedule (`dutyHtml`), finds your own cells (`dutyMine`), makes the picture (`dutyImage`,
   a white canvas sheet like the paper ones, after the Khmer font loads) and sends it
-  (`dutyShare`: the share sheet with the PNG, else a download). teams.html: My Home's
-  "📋 This week's schedules" card (with "Your duties this week"), the menu's Weekly
+  (`dutyShare`: the share sheet with the PNG, else a download). teams.html: a small row in
+  My Home's dashboard card (`schedHomeHtml_`: Cooking / Chores, dimmed until out, "You have N
+  duties this week"), the menu's Weekly
   schedules, `S.view='sched'` (`schedHtml` / `bindSched_`): read, Share as image, and for
   the ministry Edit — tap a box for the name picker (search, groups, type a new name),
   "Change rows and days" / "Change places", Save draft, Publish, Take it down. My Ministry
