@@ -534,6 +534,10 @@ button.srBarRow:active { opacity:.72; }
   background:none; color:var(--onDark); font:inherit; font-size:12.5px; font-weight:700; line-height:1.25; cursor:pointer;
   -webkit-tap-highlight-color:transparent; }
 .heroQuick button:active { opacity:.72; }
+.heroQuick button.notOut { opacity:.55; }
+.heroSched { margin-top:12px; }
+.heroSchedLabel { font-size:11.5px; font-weight:700; letter-spacing:.5px; color:var(--onDarkFaint); }
+.heroSchedMine { display:block; margin-top:6px; background:none; border:0; padding:0; font:inherit; font-size:12.5px; font-weight:700; color:var(--amber); cursor:pointer; text-align:left; }
 .heroGoalsPreview { margin-left:auto; padding-top:1px; text-align:right; font-size:12px; font-weight:600; line-height:1.6; color:var(--onDark); max-width:48%; overflow:hidden; min-width:0; }
 .heroGoalsPreview div { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .heroGoalDot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; vertical-align:middle; }
@@ -3514,21 +3518,19 @@ function weekPhase(){
   if(dow===5||dow===6||dow===0) return 'review';
   return 'work';
 }
+/* The daily check-in (hours, mood and the private questions, under the habit
+   tracker) is hidden for now — the weekly health survey on Health is the one
+   check-in. Flip this back to bring it back; nothing it saved is touched. */
+var DAILY_CHECKIN=false;
 function phaseBanner(phase, wk){
   var rec=goalsForWeek(wk);
   var hasGoals=!!(rec && rec.items.some(function(i){return i.text;}));
   if(phase==='plan' && !hasGoals)
     return '<div class="banner big">🎯 <strong>Start of the week.</strong> Pick the three things that matter for week '+wk+'.'+
       ' <button class="linkbtn inline" id="jumpGoals">Set them now</button></div>';
-  if(phase==='review'){
-    /* Goals-incomplete used to show as its own big banner here — it's in the
-       notification bell now (see notifItems_) so My Home isn't stacking
-       two "end of the week" banners on top of each other. */
-    if(!thisWeekLogs().length)
-      return '<div class="banner big">💚 <strong>'+esc(t('End of the week.'))+'</strong> No days logged yet — '+
-        'your week’s health figures come straight from these.'+
-        ' <button class="linkbtn inline" id="jumpToday">'+esc(t('Log today'))+'</button></div>';
-  }
+  /* The end-of-week "No days logged yet — Log today" banner is gone: the daily
+     check-in is hidden for now (DAILY_CHECKIN), and the weekly health survey
+     is the one thing to fill in. Goals-incomplete lives in the bell. */
   return '';
 }
 
@@ -3713,6 +3715,7 @@ function miniDashboardHtml(){
       '<button id="dashToHealth">💚 '+esc(t('Health check-in'))+'</button>'+
       '<button id="dashToMinistry">📊 '+esc(t('My Ministry'))+'</button>'+
     '</div>'+
+    (typeof dutyHtml==='function' ? schedHomeHtml_() : '')+
     '<div class="heroDivider"></div>'+
     '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
     '<div class="heroNum" data-count="'+st+'">0</div>'+
@@ -4740,7 +4743,6 @@ function homeHtml(){
   var h=miniDashboardHtml();
   h+=gpQueueBannerHtml_();
   h+=notificationsHtml();
-  if(typeof dutyHtml==='function') h+=schedHomeHtml_();
   h+='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>';
 
   h += quickJumpHtml();
@@ -4934,19 +4936,19 @@ function habitsCardHtml(){
      hand there always wins over the roll-up, so this is a floor under your
      score, not something that has to be overridden to make Health accurate. */
   var d=S.todayDraft;
-  if(log && !d._loaded){
+  if(DAILY_CHECKIN && log && !d._loaded){
     ['langHours','minHours','clarity','growth','lonely','porn'].forEach(function(k){
       if(d[k]===undefined && log[k]!==undefined && log[k]!==null) d[k]=log[k];
     });
     d._loaded=true;
   }
-  h+='<button class="discloseBtn" id="moreToday"><span><strong>'+esc(t('Daily check-in'))+'</strong>'+
+  if(DAILY_CHECKIN) h+='<button class="discloseBtn" id="moreToday"><span><strong>'+esc(t('Daily check-in'))+'</strong>'+
      '<div class="pmeta">'+todaySummaryLine(log)+'</div></span>'+
      '<span class="chev">'+(S.todayOpen?'▴':'▾')+'</span></button>'+
      '<p class="hint" style="margin:4px 0 0">'+
      esc(gpT('Log {n}+ days this week and it fills in your weekly Health check-in — submit that form any time to override it by hand.',{n:MIN_WEEK_DAYS}))+
      '</p>';
-  if(S.todayOpen){
+  if(DAILY_CHECKIN && S.todayOpen){
     h+='<div class="qBlock"><div class="qText">Language study today</div><div class="numIn">'+
        '<input type="number" inputmode="decimal" min="0" step="0.5" id="n_langHours" value="'+(d.langHours!=null?d.langHours:'')+'"> hours</div></div>'+
        '<div class="qBlock"><div class="qText">Community ministry today</div><div class="numIn">'+
@@ -8435,18 +8437,19 @@ function schedMyName_(){
   var same=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus && String(p.name||'').trim().split(/\s+/)[0].toLowerCase()===f.toLowerCase(); }).length;
   return same>1 && parts.length>1 ? f+' '+parts[parts.length-1][0]+'.' : f;
 }
+/* This week's schedules, as one small row inside My Home's dashboard card:
+   a button for each (dimmed until it is out) and, when your name is on one,
+   how many duties you have — the schedule itself is a tap away. */
 function schedHomeHtml_(){
-  var d=S.sched, wk=dutyWeekOf();
-  var h='<div class="card" id="schedHome"><div class="panelHeadRow"><h3 style="margin:0">📋 '+esc(t('This week’s schedules'))+'</h3></div>';
-  if(!d) return h+'<p class="sub" style="margin:6px 0 0">'+esc(S.schedError ? t('Couldn’t load the schedules.') : t('Loading…'))+'</p></div>';
-  var me=schedMyName_(), mine=[];
-  h+='<div class="schedBtns">'+SCHED_KINDS.map(function(k){
-    var s=d.now && d.now[k[0]];
-    if(s) dutyMine(s, me, t).forEach(function(l){ mine.push(k[1]+' '+l); });
-    return '<button class="schedBtn" data-schedopen="'+k[0]+'"><span class="schedBtnIcon">'+k[1]+'</span><span><b>'+esc(t(k[2]))+'</b><span class="rowSub" style="display:block">'+
-      esc(s ? t('Out for this week') : t('Not out yet'))+'</span></span></button>';
+  var d=S.sched;
+  var h='<div class="heroSched" id="schedHome"><div class="heroSchedLabel">📋 '+esc(t('This week’s schedules'))+'</div><div class="heroQuick" style="margin-top:6px">';
+  var me=schedMyName_(), mine=0;
+  h+=SCHED_KINDS.map(function(k){
+    var s=d && d.now && d.now[k[0]];
+    if(s) mine+=dutyMine(s, me, t).length;
+    return '<button class="'+(s?'':'notOut')+'" data-schedopen="'+k[0]+'"'+(d && !s?' title="'+esc(t('Not out yet'))+'"':'')+'>'+k[1]+' '+esc(k[0]==='kitchen' ? t('Cooking') : t('Chores'))+'</button>';
   }).join('')+'</div>';
-  if(mine.length) h+='<div class="schedMine"><b>'+esc(t('Your duties this week'))+'</b><ul>'+mine.slice(0,12).map(function(l){ return '<li>'+esc(l)+'</li>'; }).join('')+'</ul></div>';
+  if(mine) h+='<button class="heroSchedMine" data-schedopen="'+(d.now.kitchen && dutyMine(d.now.kitchen, me, t).length ? 'kitchen' : 'chores')+'">'+esc(gpT(mine===1?'You have {n} duty this week':'You have {n} duties this week',{n:mine}))+' ›</button>';
   return h+'</div>';
 }
 function schedLoad_(kind, week, edit){
