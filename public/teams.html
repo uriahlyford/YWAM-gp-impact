@@ -691,6 +691,8 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .schedSheetHead { display:flex; justify-content:space-between; align-items:center; gap:10px; position:sticky; top:-14px; background:var(--surface); padding:4px 0 8px; }
 .schedAdd { display:flex; gap:8px; align-items:center; margin:6px 0 4px; }
 .schedAdd input { flex:1; margin:0; }
+.schedAway { font-weight:600; color:var(--amberDeep); }
+.hospChip.on .schedAway { color:inherit; }
 .schedGroupLabel { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-top:10px; }
 .schedRowEdit { border-top:1px solid var(--line); padding:8px 0; }
 .schedRowEdit .chips { margin:4px 0; }
@@ -1262,6 +1264,10 @@ textarea { resize:vertical; min-height:64px; }
 .typeLabel { font-size:13.5px; font-weight:600; }
 .typeSub { font-size:11.5px; color:var(--muted); }
 .workDaysLine { text-align:center; padding:12px; background:var(--surface2); border-radius:12px; font-size:13px; color:var(--muted); margin:2px 0 14px; }
+.holidayNote { margin-top:10px; font-size:12.5px; color:var(--muted); line-height:1.5; }
+.holidayNote b { color:var(--ink); }
+.holRow { display:grid; grid-template-columns:1.2fr 1fr 1fr auto; gap:6px; align-items:center; margin-bottom:6px; }
+.holRow input { margin:0; min-width:0; font-size:13px; padding:8px 6px; }
 .workDaysLine b { font-family:'Koulen',sans-serif; font-size:18px; color:var(--ink); }
 .ackRow { display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:var(--muted); line-height:1.5; padding:2px 0 4px; }
 .ackBox { flex:0 0 auto; width:20px; height:20px; border-radius:6px; border:1.5px solid var(--border2); background:var(--bg); cursor:pointer;
@@ -5840,11 +5846,28 @@ function adminLeaveHtml_(){
     });
     h+='</div>';
   }
+  h+='<div class="accCard" style="margin-top:12px">'+accRowHtml('adminAcc', 'holidays', '🎉 '+esc(t('National holidays')), esc(t('Not counted as leave. Khmer New Year and Christmas week come round on their own; set Pchum Ben each year.')), function(){ return adminHolidaysHtml_(L, year); })+'</div>';
   h+='<div class="accCard" style="margin-top:12px">'+accRowHtml('adminAcc', 'leavePast', '🗂️ '+esc(gpT('Earlier in {year}',{year:year}))+' · '+past.length, esc(t('Approved, declined and noted requests that are over')), function(){
     return past.length ? past.map(function(tr){ return row(tr); }).join('') : '<p class="sub" style="margin:0">'+esc(t('Nothing earlier this year.'))+'</p>'; })+'</div>';
   return h;
 }
 
+/* The holidays not counted as leave: the two that come round on their own
+   (fixed, every year) and the dated ones (Pchum Ben…) an admin keeps. Saving
+   recounts everyone's days at once — the server always counts from dates. */
+function adminHolidaysHtml_(L, year){
+  var h='<div id="adminHolidays">'+leaveHolidaysHtml_(L.holidays, year);
+  var list=S.holDraft || (L.holidaysDated||[]).map(function(x){ return { id:x.id, name:x.name, from:x.from, to:x.to }; });
+  h+='<p class="hint" style="margin:8px 0 4px">'+esc(t('Dated holidays (change them for each year):'))+'</p>';
+  list.forEach(function(x, i){
+    h+='<div class="holRow"><input type="text" data-hol="'+i+'" data-hf="name" value="'+esc(x.name)+'" maxlength="60" aria-label="'+esc(t('Name'))+'">'+
+      '<input type="date" data-hol="'+i+'" data-hf="from" value="'+esc(x.from)+'" aria-label="'+esc(t('From'))+'"><input type="date" data-hol="'+i+'" data-hf="to" value="'+esc(x.to)+'" aria-label="'+esc(t('To'))+'">'+
+      '<button class="linkbtn inline teamDelete" data-holdel="'+i+'" aria-label="'+esc(t('Remove'))+'">✕</button></div>';
+  });
+  h+='<button class="btn ghost small" id="holAdd" style="width:auto;margin:6px 8px 0 0;padding:8px 12px;font-size:14px">＋ '+esc(t('Add a holiday'))+'</button>';
+  h+='<button class="btn small" id="holSave" style="width:auto;margin:6px 0 0;padding:8px 12px;font-size:14px">'+esc(t('Save holidays'))+'</button>';
+  return h+'</div>';
+}
 /* One person's account, on its own page: who they are at the top, then the
    same sections the accordion used to hold (adminRowBodyHtml_ — reset PIN,
    profile, mentor, admin access, danger zone), unchanged. */
@@ -6439,6 +6462,19 @@ function bindAdmin(){
   document.querySelectorAll('[data-adminleavecampus]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.adminLeaveCampus=b.getAttribute('data-adminleavecampus'); render(); };
   });
+  var holDraft=function(){ if(!S.holDraft) S.holDraft=((S.adminLeave||{}).holidaysDated||[]).map(function(x){ return { id:x.id, name:x.name, from:x.from, to:x.to }; }); return S.holDraft; };
+  document.querySelectorAll('[data-hol]').forEach(function(inp){ inp.onchange=inp.oninput=function(){ holDraft()[Number(inp.getAttribute('data-hol'))][inp.getAttribute('data-hf')]=inp.value; }; });
+  document.querySelectorAll('[data-holdel]').forEach(function(b){ b.onclick=function(){ holDraft().splice(Number(b.getAttribute('data-holdel')),1); render(); }; });
+  var hla=document.getElementById('holAdd'); if(hla) hla.onclick=function(){ holDraft().push({ id:'', name:'Pchum Ben', from:'', to:'' }); render(); };
+  var hls=document.getElementById('holSave');
+  if(hls) hls.onclick=function(){
+    if(S.busy) return; S.busy=true; hls.disabled=true;
+    run('adminSaveHolidays',[S.auth.user,S.auth.pin,holDraft().filter(function(x){ return x.from; })],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.adminLeave=d; S.holDraft=null; run('getMyTrips',[S.auth.user,S.auth.pin],function(m){ if(m && m.ok){ S.trips=m; render(); } }); showMsg(t('Holidays saved — everyone’s days are counted again')); } else showMsg(t('Could not save'));
+      render();
+    });
+  };
   var aly=document.getElementById('adminLeaveYear');
   if(aly) aly.onchange=function(){ S.adminLeaveYear=Number(aly.value); render(); };
   var decideLeave=function(id, approve){
@@ -8496,7 +8532,8 @@ function schedPickerHtml_(d, s){
     var names=g.names.filter(function(n){ return !q || n.toLowerCase().indexOf(q)>-1; });
     if(!names.length) return;
     h+='<div class="schedGroupLabel">'+esc(t(g.label))+'</div><div class="chips" style="margin-top:2px">'+names.map(function(n){
-      return '<button class="hospChip'+(cur.indexOf(n)>-1?' on':'')+'" data-dpick="'+esc(n)+'">'+esc(n)+'</button>'; }).join('')+'</div>';
+      var aw=(d.away||{})[n];
+      return '<button class="hospChip'+(cur.indexOf(n)>-1?' on':'')+'" data-dpick="'+esc(n)+'"'+(aw?' title="'+esc(gpT('On leave: {days}',{days:aw}))+'"':'')+'>'+esc(n)+(aw?' <small class="schedAway">'+esc(gpT('away {days}',{days:aw}))+'</small>':'')+'</button>'; }).join('')+'</div>';
   });
   return h+'</div></div>';
 }
@@ -9787,14 +9824,29 @@ function weekClear(){
 function leaveTypeLabel_(type){
   return type==='special' ? 'Special Condition' : type==='outside' ? 'Working Outside Siem Reap' : 'Personal Time Off';
 }
+/* National holidays (Khmer New Year week, Pchum Ben, Christmas week) are not
+   work days — the server sends them with the leave (holidayList_ in api.js),
+   so a request over one doesn't spend anyone's 30 days. */
+function leaveHolidaySet_(list){
+  var set={};
+  (list||[]).forEach(function(h){ for(var d=new Date(h.from+'T00:00:00Z'); d<=new Date(h.to+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+1)) set[d.toISOString().slice(0,10)]=h.name; });
+  return set;
+}
 function leaveWorkDays_(from,to){
-  var a=new Date(from+'T00:00:00Z'), b=new Date(to+'T00:00:00Z');
+  var a=new Date(from+'T00:00:00Z'), b=new Date(to+'T00:00:00Z'), hol=leaveHolidaySet_(S.trips && S.trips.holidays);
   var n=0;
   for(var d=new Date(a); d<=b; d.setUTCDate(d.getUTCDate()+1)){
     var dow=d.getUTCDay();
-    if(dow!==0 && dow!==6) n++;
+    if(dow!==0 && dow!==6 && !hol[d.toISOString().slice(0,10)]) n++;
   }
   return n;
+}
+function leaveHolidayRange_(h){ return teamDate_(h.from).replace(/, \d{4}$/,'')+(h.to!==h.from?' – '+teamDate_(h.to).replace(/, \d{4}$/,''):''); }
+function leaveHolidaysHtml_(list, year){
+  var hs=(list||[]).filter(function(h){ return String(h.from).slice(0,4)===String(year); });
+  if(!hs.length) return '';
+  return '<div class="holidayNote" id="holidayNote">🎉 '+esc(gpT('National holidays in {year} aren’t counted:',{year:year}))+' '+
+    hs.map(function(h){ return '<b>'+esc(t(h.name))+'</b> '+esc(leaveHolidayRange_(h)); }).join(' · ')+'</div>';
 }
 
 function leaveEntryHtml(){
@@ -9830,7 +9882,7 @@ function leaveHtml(){
     '<div class="allowMini">'+
       '<span>'+esc(t('Working Outside Siem Reap'))+' <b>'+yt.outside+'d</b></span>'+
       '<span>'+esc(t('Special Condition'))+' <b>'+yt.special+'d</b></span>'+
-    '</div></div>';
+    '</div>'+leaveHolidaysHtml_(d.holidays, year)+'</div>';
 
   var approvals=(S.tripRequests||[]);
   if(approvals.length){
@@ -9853,6 +9905,11 @@ function leaveHtml(){
      '<div class="dateRow"><input type="date" id="lv_from" value="'+esc(draft.from||'')+'">'+
      '<input type="date" id="lv_to" value="'+esc(draft.to||'')+'"></div></div>';
   h+='<div class="workDaysLine"><b>'+draftWorkDays+'</b> '+esc(t('work days requested (Mon–Fri)'))+'</div>';
+  if(draft.from && draft.to && draft.to>=draft.from){
+    var hol=leaveHolidaySet_(d.holidays), inside=[];
+    for(var hd=new Date(draft.from+'T00:00:00Z'); hd<=new Date(draft.to+'T00:00:00Z'); hd.setUTCDate(hd.getUTCDate()+1)){ var k=hd.toISOString().slice(0,10), dw=hd.getUTCDay(); if(hol[k] && dw!==0 && dw!==6 && inside.indexOf(hol[k])===-1) inside.push(hol[k]); }
+    if(inside.length) h+='<p class="hint" id="leaveHolidayHint" style="margin:-8px 0 12px;text-align:center">🎉 '+esc(gpT('{names} not counted — the base is closed.',{names:inside.map(function(n){ return t(n); }).join(', ')}))+'</p>';
+  }
 
   h+='<div class="field"><label class="fieldLabel">'+esc(t('Leave Type'))+'</label><div class="typeChips">';
   [['outside','Working Outside Siem Reap','Not capped, tracked separately'],

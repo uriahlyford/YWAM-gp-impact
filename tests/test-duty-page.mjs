@@ -74,7 +74,7 @@ async function open(who, opts) {
       else {
         let s = store[k + '|' + w], isNew = false, from = '';
         if (!s) { isNew = true; s = { ...(k === 'kitchen' ? KITCHEN() : CHORES()), published: false }; from = k === 'kitchen' ? W0 : ''; if (k === 'chores') s.sections.forEach(x => x.rows.forEach(r => r.people = [])); }
-        out = { ok: true, kind: k, week: w, canEdit: true, isNew, from, sched: { ...JSON.parse(JSON.stringify(s)), kind: k, week: w }, people: PEOPLE };
+        out = { ok: true, kind: k, week: w, canEdit: true, isNew, from, sched: { ...JSON.parse(JSON.stringify(s)), kind: k, week: w }, people: PEOPLE, away: { Kim: 'Tue, Wed' } };
       }
     }
     else if (b.fn === 'saveDuty') {
@@ -145,6 +145,7 @@ console.log('=== Culinary makes next week ===');
   ok('tapping a box opens the picker, titled with the row and day', /Breakfast 7:30 · Tuesday/.test(await page.$eval('#schedSheet', e => e.textContent)));
   const groups = await page.$$eval('.schedGroupLabel', g => g.map(x => x.textContent));
   ok('names are grouped by who is here', groups.join() === 'Campus staff,Example Church,Staying with us', groups.join());
+  ok('someone on leave part of the week says which days', /away Tue, Wed/.test(await page.$eval('[data-dpick="Kim"]', b => b.textContent)));
   await page.click('[data-dpick="Member One"]'); await page.waitForTimeout(150);
   await page.fill('#schedQ', 'kar');
   ok('typing narrows the names', await page.$eval('[data-dpick="Kara"]', b => b.style.display !== 'none') && await page.$eval('[data-dpick="Hana"]', b => b.style.display === 'none'));

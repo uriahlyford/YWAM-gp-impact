@@ -1482,7 +1482,7 @@ async function getMenteeLogs(username, pin, menteeId) {
     checkins: checkins,
     profile: { debt: m.debt },
     ministry: await ministryDataFor_(m),
-    trips: { trips: menteeTrips.map(tripOut_), totals: awayTotals_(menteeTrips), ptoCap: PTO_ANNUAL_CAP },
+    trips: { trips: menteeTrips.map(tripOut_), totals: awayTotals_(menteeTrips), ptoCap: PTO_ANNUAL_CAP, holidays: holidayList_() },
     smartGoals: menteeSmart.map(smartGoalOut_)
   };
 }
@@ -2424,7 +2424,79 @@ const LEAVE_TYPES = ['outside', 'special', 'personal'];
 const PTO_ANNUAL_CAP = 30;
 const MAX_TRIP_DAYS = 365;
 
-async function getTrips_() { return readJSON('trips', []); }
+/* ---- national holidays: the base is closed, so they are not work days ----
+   Leave over a national holiday doesn't spend anyone's 30 days (nor count as
+   working outside or special condition). Two come round on their own every
+   year, the working week (Mon–Fri) each falls in: Khmer New Year (14 April)
+   and Christmas (25 December). Pchum Ben follows the moon, so its dates are
+   a list — HOLIDAY_DATED below until an admin edits it (Admin → Leave), then
+   the 'holidays' blob. Work days are always counted from a request's dates
+   with these taken out, never from the number stored when it was made, so
+   changing a holiday puts every year on file right. */
+const HOLIDAY_DATED = [
+  { id: 'pb2024', name: 'Pchum Ben', from: '2024-10-01', to: '2024-10-03' },
+  { id: 'pb2025', name: 'Pchum Ben', from: '2025-09-22', to: '2025-09-23' },
+  { id: 'pb2026', name: 'Pchum Ben', from: '2026-10-12', to: '2026-10-14' }
+];
+const HOLIDAY_RULES = [{ id: 'kny', name: 'Khmer New Year', md: '04-14' }, { id: 'xmas', name: 'Christmas week', md: '12-25' }];
+const HOLIDAY_MAX = 60;
+let holidayCache_ = null;   // { dated, set } — refreshed by getTrips_ on every request that reads leave
+function holidayWeek_(iso) {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));   // that week's Monday
+  const mon = d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() + 4);
+  return { from: mon, to: d.toISOString().slice(0, 10) };
+}
+function holidaysFor_(year, dated) {
+  const out = HOLIDAY_RULES.map(function (r) { return Object.assign({ id: r.id + year, name: r.name, rule: true }, holidayWeek_(year + '-' + r.md)); });
+  (dated || HOLIDAY_DATED).forEach(function (h) { if (String(h.from).slice(0, 4) === String(year) || String(h.to).slice(0, 4) === String(year)) out.push(Object.assign({}, h)); });
+  return out.sort(function (a, b) { return a.from < b.from ? -1 : 1; });
+}
+function holidaySetFrom_(dated) {
+  const set = {};
+  const add = function (h) { for (let d = h.from; d <= h.to; d = addDays_(d, 1)) set[d] = h.name || 'Holiday'; };
+  for (let y = 2020; y <= new Date().getUTCFullYear() + 3; y++) HOLIDAY_RULES.forEach(function (r) { add(Object.assign({ name: r.name }, holidayWeek_(y + '-' + r.md))); });
+  (dated || HOLIDAY_DATED).forEach(add);
+  return set;
+}
+function holidaySet_() { if (!holidayCache_) holidayCache_ = { dated: HOLIDAY_DATED, set: holidaySetFrom_(HOLIDAY_DATED) }; return holidayCache_.set; }
+async function refreshHolidays_() {
+  const dated = await readJSON('holidays', HOLIDAY_DATED);   // none saved yet: the defaults
+  holidayCache_ = { dated: dated, set: holidaySetFrom_(dated) };
+  return holidayCache_;
+}
+/* The holidays the leave page shows and counts with: last year to next. */
+function holidayList_() {
+  const y = new Date().getUTCFullYear(), dated = (holidayCache_ || { dated: HOLIDAY_DATED }).dated;
+  return [y - 1, y, y + 1].reduce(function (acc, yr) { return acc.concat(holidaysFor_(yr, dated)); }, []);
+}
+function cleanHolidays_(list) {
+  const out = [], used = {};
+  (Array.isArray(list) ? list : []).slice(0, HOLIDAY_MAX).forEach(function (h) {
+    h = h && typeof h === 'object' ? h : {};
+    let from = isoDate_(h.from), to = isoDate_(h.to);
+    const name = str_(h.name, 60);
+    if (!from || !name) return;
+    if (!to) to = from;
+    if (to < from) { const x = from; from = to; to = x; }
+    if (tripDays_(from, to) > 31) return;
+    let id = String(h.id || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 30) || ('h' + Math.random().toString(36).slice(2, 8));
+    while (used[id]) id += 'x';
+    used[id] = 1;
+    out.push({ id: id, name: name, from: from, to: to });
+  });
+  return out.sort(function (a, b) { return a.from < b.from ? -1 : 1; });
+}
+async function adminSaveHolidays(username, pin, list) {
+  const admin = await adminGate_(username, pin);
+  if (!admin) return { ok: false };
+  await writeJSON('holidays', cleanHolidays_(list));
+  await refreshHolidays_();
+  return adminListTrips(username, pin);
+}
+
+async function getTrips_() { await refreshHolidays_(); return readJSON('trips', []); }
 
 function isDate_(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); }
 function tripDays_(from, to) {
@@ -2432,14 +2504,17 @@ function tripDays_(from, to) {
   return Math.round((b - a) / 86400000) + 1;
 }
 function workDays_(from, to) {
-  const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
+  const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z'), hol = holidaySet_();
   let n = 0;
   for (let d = new Date(a); d <= b; d.setUTCDate(d.getUTCDate() + 1)) {
     const dow = d.getUTCDay();
-    if (dow !== 0 && dow !== 6) n++;
+    if (dow !== 0 && dow !== 6 && !hol[d.toISOString().slice(0, 10)]) n++;
   }
   return n;
 }
+/* Work days for a request on file: from its dates, holidays out — the stored
+   count only for a row too old to have dates. */
+function tripWorkDays_(r) { return isDate_(r.from) && isDate_(r.to) ? workDays_(r.from, r.to) : (Number(r.workDays) || 0); }
 function leaveTypeOf_(r) {
   if (LEAVE_TYPES.indexOf(r.type) > -1) return r.type;
   return r.kind === 'personal' ? 'personal' : 'outside';
@@ -2454,8 +2529,7 @@ function awayTotals_(trips) {
     if (r.status === 'declined') return;
     const year = String(r.from).slice(0, 4);
     if (!out[year]) out[year] = { outside: 0, special: 0, personal: 0, trips: 0 };
-    const wd = r.workDays != null ? r.workDays : workDays_(r.from, r.to);
-    out[year][leaveTypeOf_(r)] += wd;
+    out[year][leaveTypeOf_(r)] += tripWorkDays_(r);
     out[year].trips += 1;
   });
   return out;
@@ -2464,7 +2538,7 @@ function awayTotals_(trips) {
 function tripOut_(r) {
   return {
     id: r.id, from: r.from, to: r.to, days: r.days,
-    type: leaveTypeOf_(r), workDays: r.workDays != null ? r.workDays : workDays_(r.from, r.to),
+    type: leaveTypeOf_(r), workDays: tripWorkDays_(r),
     reason: r.reason || '', coverage: r.coverage || '',
     status: r.status, decidedAt: r.decidedAt || '', created: r.created || ''
   };
@@ -2476,7 +2550,7 @@ async function getMyTrips(username, pin) {
   const mine = (await getTrips_()).filter(function (r) { return r.staffId === s.id; })
     .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
   return {
-    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine), ptoCap: PTO_ANNUAL_CAP,
+    ok: true, trips: mine.map(tripOut_), totals: awayTotals_(mine), ptoCap: PTO_ANNUAL_CAP, holidays: holidayList_(),
     hasMentor: !!(s.mentorId && s.mentorStatus === 'approved')
   };
 }
@@ -2562,7 +2636,7 @@ async function adminListTrips(username, pin) {
   const totals = {};
   staff.forEach(function (x) { totals[x.id] = awayTotals_(trips.filter(function (r) { return r.staffId === x.id; })); });
   return {
-    ok: true, ptoCap: PTO_ANNUAL_CAP,
+    ok: true, ptoCap: PTO_ANNUAL_CAP, holidays: holidayList_(), holidaysDated: (holidayCache_ || {}).dated || HOLIDAY_DATED,
     trips: trips.map(function (r) {
       const who = byId[r.staffId], mentor = r.mentorId ? byId[r.mentorId] : null;
       return Object.assign(tripOut_(r), {
@@ -3672,14 +3746,36 @@ function dutyShortNames_(people) {
     return count[f.toLowerCase()] > 1 && parts.length > 1 ? f + ' ' + parts[parts.length - 1][0] + '.' : f;
   });
 }
-/* Who can be put on the week starting `week`: grouped, each group a label and names. */
+/* The days of the week starting `week` (Sun … Sat) each staff member is
+   away on leave — any request not declined, whatever its type: on a break or
+   off campus, they can't cook or clean here. */
+const DUTY_DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function dutyAway_(trips, week) {
+  const days = []; for (let i = 0; i < 7; i++) days.push(addDays_(week, i));
+  const out = {};
+  trips.forEach(function (r) {
+    if (!r || r.status === 'declined' || !isDate_(r.from) || !isDate_(r.to)) return;
+    days.forEach(function (d, i) { if (r.from <= d && d <= r.to) { out[r.staffId] = out[r.staffId] || {}; out[r.staffId][i] = 1; } });
+  });
+  return out;
+}
+/* Who can be put on the week starting `week`: grouped, each group a label
+   and names; `away` notes the days someone on leave for part of the week is
+   gone. Staff away the whole working week (Mon–Fri) are left out. */
 async function dutyPeople_(campus, week, extras) {
-  const weekEnd = addDays_(week, 7), groups = [];
+  const weekEnd = addDays_(week, 7), groups = [], away = {};
+  const gone = dutyAway_(await getTrips_(), week);
   const staff = (await getStaff_()).filter(function (s) { return s && s.active !== false && !isApplicant_(s) && s.campus === campus && !s.archived; })
     .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
   const shorts = dutyShortNames_(staff);
   const campusNames = [], otherNames = [];
-  staff.forEach(function (s, i) { if (!shorts[i]) return; (cleanStaffType_(s.staffType) === 'campus' ? campusNames : otherNames).push(shorts[i]); });
+  staff.forEach(function (s, i) {
+    if (!shorts[i]) return;
+    const g = gone[s.id];
+    if (g && [1, 2, 3, 4, 5].every(function (d) { return g[d]; })) return;   // away all week
+    if (g) away[shorts[i]] = Object.keys(g).sort().map(function (d) { return DUTY_DAY_SHORT[d]; }).join(', ');
+    (cleanStaffType_(s.staffType) === 'campus' ? campusNames : otherNames).push(shorts[i]);
+  });
   if (campusNames.length) groups.push({ id: 'campus', label: 'Campus staff', names: campusNames });
   if (otherNames.length) groups.push({ id: 'staff', label: 'Other staff', names: otherNames });
   // teams whose dates cover any of the week, with everyone their leader listed on the portal
@@ -3708,6 +3804,7 @@ async function dutyPeople_(campus, week, extras) {
   groups.forEach(function (g) { g.names.forEach(function (n) { seen[n] = 1; }); });
   const more = (extras || []).filter(function (n) { return !seen[n]; });
   if (more.length) groups.push({ id: 'extras', label: 'Added before', names: more });
+  if (Object.keys(away).length) groups.away = away;
   return groups;
 }
 function dutyTemplate_(kind) {
@@ -3740,8 +3837,9 @@ async function getDuty(username, pin, kind, week) {
     if (before) { sched = cleanSched_(box.weeks[before], kind); from = before; } else sched = dutyTemplate_(kind);
     sched.published = false;
   }
+  const people = await dutyPeople_(a.campus, week, box.extras);
   return { ok: true, kind: kind, week: week, canEdit: true, isNew: isNew, from: from, sched: dutyOut_(sched, week, kind),
-    people: await dutyPeople_(a.campus, week, box.extras) };
+    people: people, away: people.away || {} };
 }
 /* action: 'save' keeps it as it is (a draft stays a draft, a published week
    stays published), 'publish' shows it to everyone, 'unpublish' takes it down. */
@@ -5154,6 +5252,7 @@ const HANDLERS = {
   getStructure: function (a) { return getStructure(a[0], a[1], a[2], a[3], a[4]); },
   adminListTrips: function (a) { return adminListTrips(a[0], a[1]); },
   adminDecideTrip: function (a) { return adminDecideTrip(a[0], a[1], a[2], a[3]); },
+  adminSaveHolidays: function (a) { return adminSaveHolidays(a[0], a[1], a[2]); },
   saveStructure: function (a) { return saveStructure(a[0], a[1], a[2], a[3], a[4]); },
   saveStructurePlan: function (a) { return saveStructurePlan(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
   hrCandidates: function (a) { return hrCandidates(a[0], a[1]); },

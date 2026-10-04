@@ -433,6 +433,21 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   someone waiting (`all_placed` when they all have beds); `toBed` '' takes them off.
   One write, so a swap can't half-happen.
 
+## National holidays are not leave
+The base is closed on them, so a leave request over one spends none of the 30 days (nor
+counts as outside or special). **Khmer New Year** and **Christmas week** come round on their
+own: the Monday–Friday of the week 14 April / 25 December falls in (`HOLIDAY_RULES`,
+`holidayWeek_`), any year. **Pchum Ben** follows the moon, so it is a dated list —
+`HOLIDAY_DATED` until an admin saves one, then the `holidays` blob (`cleanHolidays_`: a name,
+dates the right way round, at most a month each). `getTrips_` loads them
+(`refreshHolidays_`) and `workDays_` leaves them out. **Work days are always counted from a
+request's dates** (`tripWorkDays_`), never from the `workDays` stored when it was made — that
+is what put every request already on file right when holidays arrived, and what recounts
+everyone when an admin changes the list. `getMyTrips` / `adminListTrips` / a mentee's trips
+carry `holidays` (last year to next) so the leave page lists them under the allowance and
+counts a new request the same way (`leaveWorkDays_`, with a "… not counted" hint).
+`test-holidays.mjs` and `test-holidays-page.mjs` cover it.
+
 ## Weekly schedules — the cooking schedule and the morning chores
 Two schedules the base sends out every Sunday for the week ahead, made in the app and read
 by everyone. **Cooking schedule** (`kitchen`, made by Skills Training › Culinary): a GRID of
@@ -456,7 +471,9 @@ names, a `span` row (Pray – Announcements) has one `cells['row|all']`, `off` d
   with the same first name get an initial (`dutyShortNames_`, mirrored by `schedMyName_` in
   teams.html) — then other staff, then every team in the Teams Database whose dates cover the
   week (its leader, co-leaders and `portal.members`), guests booked in SR Hospitality that
-  week (not team bookings), then names typed in before.
+  week (not team bookings), then names typed in before. Staff on leave (any request not
+  declined) for the whole working week of it are left out; partly away, they stay with
+  `away[name]` = the days ("Tue, Wed"), shown on their chip in the picker (`dutyAway_`).
 - **Pages**: `public/duty.js` (plain script, shared by teams.html and portal.html) draws a
   schedule (`dutyHtml`), finds your own cells (`dutyMine`), makes the picture (`dutyImage`,
   a white canvas sheet like the paper ones, after the Khmer font loads) and sends it
@@ -481,7 +498,8 @@ per mentor with their people, `Waiting` until accepted, then everyone with no me
 read-only, the mentor is set on the person page), `leave` (`adminLeaveHtml_`: everyone's
 leave from `adminListTrips`, one campus at a time + a year picker — waiting with Approve /
 Decline via `adminDecideTrip` (admins may decide pending or `noted` requests, never one
-already decided), away or coming up, days used per person against `PTO_ANNUAL_CAP`, earlier
+already decided), away or coming up, days used per person against `PTO_ANNUAL_CAP`, the
+national holidays (dated ones edited and saved with `adminSaveHolidays`), earlier
 requests folded), `kpis`, `broadcast`, `merge`, and
 `person` (`S.adminPersonId`). Every page has one back link, `#adminBack[data-adminback]`
 — `week` (My Home), `home`, or `accounts`. **Accounts** is a campus chip row (opens on the
