@@ -672,6 +672,30 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .teamGrid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
 .teamGrid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 10px; }
 .teamDelete { color:var(--bad); }
+/* Weekly schedules */
+.schedBtns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.schedBtn { display:flex; gap:10px; align-items:center; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:10px; font:inherit; color:var(--ink); cursor:pointer; min-width:0; }
+.schedBtnIcon { font-size:24px; line-height:1; flex:0 0 auto; }
+.schedMine { margin-top:10px; font-size:13.5px; }
+.schedMine ul { margin:4px 0 0; padding-left:18px; }
+.schedTitle { font-weight:800; font-size:17px; margin:4px 0 8px; }
+.schedState { border-radius:12px; padding:10px 12px; margin-bottom:10px; font-weight:700; font-size:14px; border:1px solid var(--border); }
+.schedState.pub { background:var(--goodSoft); border-color:var(--good); }
+.schedState.draft { background:var(--banner); border-color:var(--bannerBorder); color:var(--bannerInk); }
+.schedTools { margin-bottom:8px; }
+.schedTools .btn.small, .schedRowBtns .btn.small, #schedRows .btn.small, .schedAdd .btn.small, .schedSheetHead .btn.small { width:auto; margin:0; padding:8px 12px; font-size:14px; }
+.schedActions { position:sticky; bottom:calc(64px + env(safe-area-inset-bottom)); background:var(--bg); padding:6px 0 4px; z-index:3; }
+.schedActions .btn { margin-top:8px; }
+.schedSheet { position:fixed; left:0; right:0; bottom:0; max-height:78vh; overflow-y:auto; background:var(--surface); z-index:45; border-radius:18px 18px 0 0; padding:14px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -8px 24px var(--shadowSoft); }
+@media (min-width:720px){ .schedSheet { left:50%; right:auto; width:600px; transform:translateX(-50%); } }
+.schedSheetHead { display:flex; justify-content:space-between; align-items:center; gap:10px; position:sticky; top:-14px; background:var(--surface); padding:4px 0 8px; }
+.schedAdd { display:flex; gap:8px; align-items:center; margin:6px 0 4px; }
+.schedAdd input { flex:1; margin:0; }
+.schedGroupLabel { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-top:10px; }
+.schedRowEdit { border-top:1px solid var(--line); padding:8px 0; }
+.schedRowEdit .chips { margin:4px 0; }
+.schedRowBtns { display:flex; gap:14px; justify-content:flex-end; margin-top:4px; }
+.schedSecEdit { border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; }
 /* SR Hospitality */
 .hospTabs { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:4px; background:var(--surface2); border-radius:12px; padding:3px; margin-bottom:12px; }
 .hospTab { border:0; background:transparent; border-radius:9px; padding:7px 1px; font:inherit; font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
@@ -1593,6 +1617,7 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 <script src="sr-checkin-history.js" data-optional></script>
 <script src="taxonomy.js"></script>
 <script src="rollup.js"></script>
+<script src="duty.js" data-optional></script>
 <script>
 if(typeof getDepartments !== 'function' || typeof CAMPUSES === 'undefined'){
   window.gpBootFailed('taxonomy.js did not load');
@@ -1639,6 +1664,7 @@ var S = {
   /* My Ministry: which of its two tabs is showing, whether the metric form
      is unfolded for the week on screen, and the person's own four numbers. */
   mmTab:'ministry', kpiInputOpen:false, mmDashAll:false, personal:null, personalDraft:{}, mmPeriod:'quarter',
+  sched:null, schedError:'', schedData:null, schedEdit:false, schedPick:null,
   hosp:null, hospLoading:false, hospError:'', hospTab:'dash', hospForm:null, hospRoom:null, hospBld:null,
   teamTrips:{}, teamLoading:{}, teamError:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
   /* Team tab: the directory or the org chart; the chart is cached per
@@ -2138,6 +2164,7 @@ function logout(){
   S.personal=null; S.personalDraft={}; S.mmTab='ministry'; S.kpiInputOpen=false; S.mmDashAll=false; S.metricRename=null;
   S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamError={}; S.teamForm=null;
   S.hosp=null; S.hospLoading=false; S.hospError=''; S.hospForm=null; S.hospRoom=null; S.hospBld=null; S.hospMove=null;
+  S.sched=null; S.schedError=''; S.schedData=null; S.schedEdit=false; S.schedPick=null; S.schedDirty=false;
   S.hrStaff=null; S.hrLoading=false; S.hrError=''; S.hrSub='home'; S.hrPersonId=null; S.hrSearch=''; S.hrContractForm=null; S.hrArchiveDraft=null; S.hrDue=null; S.hrFollowUps=null; S.hrTab='staff';
   S.cands=null; S.candsLoading=false; S.candsError=''; S.candForm=null; S.candPersonId=null; S.candNoteDraft='';
   S.teamMode='dir'; S.structYear=null; S.structQ=null; S.structCache={}; S.structLoading={}; S.structError={};
@@ -2230,6 +2257,7 @@ function render(){
   else if(S.view==='teamsdb') m.innerHTML=teamsDbHtml();
   else if(S.view==='hr') m.innerHTML=hrHtml();
   else if(S.view==='hosp') m.innerHTML=hospHtml();
+  else if(S.view==='sched') m.innerHTML=schedHtml();
   /* OKRs live on My Ministry's second tab now — anything still pointing at
      the old view lands there rather than on a page that no longer exists. */
   else if(S.view==='okr'){ S.view='ministry'; S.mmTab='okr'; m.innerHTML=myMinistryHtml(); }
@@ -2424,6 +2452,10 @@ function renderMenu(){
   if(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) items.push({ id:'portal',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><path d="M8 13h8M8 17h5"/></svg>',
     label:t('YWAM GP Portal') });
+  // the weekly cooking schedule and morning chores — everyone reads them
+  if(typeof dutyHtml==='function') items.push({ id:'sched',
+    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M9 9v12M15 9v12"/></svg>',
+    label:t('Weekly schedules') });
   // SR Hospitality — the Hospitality ministry (Skills Training) and admins
   if(canHospClient_()) items.push({ id:'hosp',
     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V7"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="2"/></svg>',
@@ -2454,6 +2486,7 @@ function renderMenu(){
       else if(id==='admin'){ S.view='admin'; render(); }
       else if(id==='hr'){ S.view='hr'; S.hrSub='home'; render(); }
       else if(id==='hosp'){ S.view='hosp'; render(); }
+      else if(id==='sched'){ schedOpen_('kitchen', false, 'home'); }
       else if(id==='portal'){ renderMenu(); window.open('portal.html', '_blank', 'noopener'); }
       else renderMenu();
     };
@@ -4701,6 +4734,7 @@ function homeHtml(){
   var h=miniDashboardHtml();
   h+=gpQueueBannerHtml_();
   h+=notificationsHtml();
+  if(typeof dutyHtml==='function') h+=schedHomeHtml_();
   h+='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>';
 
   h += quickJumpHtml();
@@ -7307,6 +7341,7 @@ function myMinistryHtml(){
     h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(t('Rooms, beds and bookings for guests, speakers, teams, students and volunteers — and team requests from the portal.'))+'</p>'+
       '<button class="btn" id="goHosp" style="margin-top:0">🌺 '+esc(t('Open SR Hospitality'))+'</button></div>';
   }
+  if(typeof dutyHtml==='function') h+=schedMinistryHtml_(sel.dept, sel.min);
   if(isTeamsMinistry_(sel.dept, sel.min)){
     h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+
       esc(t('Teams are entered one at a time, once their visit is over — not week by week. Each team counts in the week it leaves, and the Base dashboard picks it up from there.'))+'</p>'+
@@ -8341,6 +8376,275 @@ function bindHosp(){
       send('hospDelete', ['room', rf.id], function(){ S.hospRoom=null; }, rd);
     };
   }
+}
+
+/* ---------- Weekly schedules ----------
+   The cooking schedule (Culinary) and the morning chores (Hospitality), a
+   new one every week from Sunday. Everyone reads the published week here
+   (from My Home's card or the menu) and can send it on as a picture; the
+   ministry that owns one makes it here too — "Edit" opens the same page with
+   every cell tappable, a name picker (the people here that week, from
+   getDuty), Save and Publish. Drawing and the picture are duty.js, shared
+   with the portal. */
+var SCHED_KINDS=[['kitchen','🍲','Cooking schedule','Skills Training','Culinary'],['chores','🧹','Morning chores','Skills Training','Hospitality']];
+function schedKind_(id){ return SCHED_KINDS.filter(function(k){ return k[0]===id; })[0] || SCHED_KINDS[0]; }
+function schedWeekLabel_(w, short){
+  var e=dutyAddDays(w,6), m=function(iso){ return t(MONTH_SHORT[Number(iso.slice(5,7))-1])+' '+Number(iso.slice(8,10)); };
+  return short ? m(w)+' – '+m(e) : gpT('Week of {a} – {b}',{a:m(w), b:m(e)+', '+e.slice(0,4)});
+}
+/* My name as the schedules write it: the first name, with an initial when two campus staff share it (dutyShortNames_ in api.js). */
+function schedMyName_(){
+  if(!S.me) return '';
+  var parts=String(S.me.name||'').trim().split(/\s+/), f=parts[0]||'';
+  var same=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus && String(p.name||'').trim().split(/\s+/)[0].toLowerCase()===f.toLowerCase(); }).length;
+  return same>1 && parts.length>1 ? f+' '+parts[parts.length-1][0]+'.' : f;
+}
+function schedHomeHtml_(){
+  var d=S.sched, wk=dutyWeekOf();
+  var h='<div class="card" id="schedHome"><div class="panelHeadRow"><h3 style="margin:0">📋 '+esc(t('This week’s schedules'))+'</h3></div>';
+  if(!d) return h+'<p class="sub" style="margin:6px 0 0">'+esc(S.schedError ? t('Couldn’t load the schedules.') : t('Loading…'))+'</p></div>';
+  var me=schedMyName_(), mine=[];
+  h+='<div class="schedBtns">'+SCHED_KINDS.map(function(k){
+    var s=d.now && d.now[k[0]];
+    if(s) dutyMine(s, me, t).forEach(function(l){ mine.push(k[1]+' '+l); });
+    return '<button class="schedBtn" data-schedopen="'+k[0]+'"><span class="schedBtnIcon">'+k[1]+'</span><span><b>'+esc(t(k[2]))+'</b><span class="rowSub" style="display:block">'+
+      esc(s ? t('Out for this week') : t('Not out yet'))+'</span></span></button>';
+  }).join('')+'</div>';
+  if(mine.length) h+='<div class="schedMine"><b>'+esc(t('Your duties this week'))+'</b><ul>'+mine.slice(0,12).map(function(l){ return '<li>'+esc(l)+'</li>'; }).join('')+'</ul></div>';
+  return h+'</div>';
+}
+function schedLoad_(kind, week, edit){
+  var key=kind+'|'+week+'|'+(edit?'e':'v');
+  if(S.schedData && S.schedData.key===key) return;
+  if(S.schedLoading===key) return;
+  S.schedLoading=key; S.schedErr='';
+  run('getDuty',[S.auth.user,S.auth.pin,kind,week],function(d){
+    if(S.schedLoading!==key) return;
+    S.schedLoading=null;
+    if(d && d.ok){ d.key=key; S.schedData=d; S.schedDirty=false; if(edit && !d.canEdit) S.schedEdit=false; }
+    else S.schedErr=(d && d.err) || t('Could not load');
+    render();
+  }, function(e){ S.schedLoading=null; S.schedErr=(e && e.message) || t('Connection problem — try again.'); render(); });
+}
+function schedHtml(){
+  var kind=schedKind_(S.schedKind)[0], week=S.schedWeek || dutyWeekOf(), edit=!!S.schedEdit;
+  var h='<button class="linkbtn" id="schedBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(S.schedFrom==='ministry' ? t('My Ministry') : t('My Home'))+'</button>';
+  h+='<h2>📋 '+esc(t('Weekly schedules'))+'</h2>';
+  h+='<div class="campusSeg" style="max-width:none">'+SCHED_KINDS.map(function(k){
+    return '<button class="campusBtn'+(kind===k[0]?' on':'')+'" data-schedkind="'+k[0]+'">'+k[1]+' '+esc(t(k[2]))+'</button>'; }).join('')+'</div>';
+  h+='<div class="calNav"><button class="weekArrow" id="schedPrev" aria-label="'+esc(t('Previous week'))+'">‹</button>'+
+    '<div class="calTitle" id="schedWeek">'+esc(schedWeekLabel_(week, true))+'</div>'+
+    '<button class="weekArrow" id="schedNext" aria-label="'+esc(t('Next week'))+'">›</button>'+
+    (week!==dutyWeekOf() ? '<button class="linkbtn inline" id="schedThis">'+esc(t('This week'))+'</button>' : '')+'</div>';
+  var d=S.schedData, key=kind+'|'+week+'|'+(edit?'e':'v');
+  if(!d || d.key!==key){
+    schedLoad_(kind, week, edit);
+    return h+'<div class="card"><p class="sub" style="margin:0">'+esc(S.schedErr ? S.schedErr : t('Loading…'))+'</p>'+(S.schedErr?'<button class="btn ghost" id="schedRetry">'+esc(t('Try again'))+'</button>':'')+'</div>';
+  }
+  var s=d.sched;
+  if(!edit){
+    if(!s){
+      h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('This week’s schedule isn’t out yet.'))+'</p></div>';
+    } else {
+      h+='<div class="schedTitle">'+(s.km?'<span class="dutyKm">'+esc(s.km)+'</span>':'')+esc(s.title)+'</div>';
+      h+=dutyHtml(s, { t:t, esc:esc, me:schedMyName_() });
+      if(s.notes) h+='<p class="hint" style="white-space:pre-line">'+esc(s.notes)+'</p>';
+      h+='<button class="btn" id="schedShare">📤 '+esc(t('Share as image'))+'</button>';
+    }
+    if(d.canEdit) h+='<button class="btn ghost" id="schedEditBtn">✏️ '+esc(s ? t('Edit this schedule') : t('Make this week’s schedule'))+'</button>';
+    return h;
+  }
+  // ---- making it ----
+  h+='<div class="schedState '+(s.published?'pub':'draft')+'" id="schedState">'+(s.published ? '✅ '+esc(t('Published — everyone can see it')) : '📝 '+esc(t('Draft — only your team can see it')))+
+    (d.isNew ? '<span class="rowSub" style="display:block">'+esc(d.from ? gpT('Started as a copy of the week of {date} — change what is different.',{date:hospDate_(d.from)}) : t('Started from the usual rows — tap a box to put people in it.'))+'</span>' : '')+
+    (S.schedDirty ? '<span class="rowSub" style="display:block">● '+esc(t('Changes not saved yet'))+'</span>' : '')+'</div>';
+  h+='<div class="schedTools"><button class="btn ghost small" id="schedRowsBtn">'+esc(S.schedRows ? t('Done changing rows') : (s.layout==='grid' ? t('Change rows and days') : t('Change places')))+'</button></div>';
+  h+= S.schedRows ? schedRowsHtml_(s) : dutyHtml(s, { t:t, esc:esc, edit:true });
+  h+='<label class="f">'+esc(t('Notes'))+'</label><textarea id="schedNotes" rows="2" maxlength="1000">'+esc(s.notes||'')+'</textarea>';
+  h+='<div class="schedActions">'+
+    (s.published
+      ? '<button class="btn" id="schedSave">'+esc(t('Save changes'))+'</button><button class="btn ghost" id="schedUnpub">'+esc(t('Take it down'))+'</button>'
+      : '<button class="btn" id="schedPub">📣 '+esc(t('Publish for everyone'))+'</button><button class="btn ghost" id="schedSave">'+esc(t('Save draft'))+'</button>')+
+    '<button class="linkbtn" id="schedDoneEdit">'+esc(t('Back to the schedule'))+'</button></div>';
+  if(S.schedPick) h+=schedPickerHtml_(d, s);
+  return h;
+}
+function schedCellNames_(s, key){
+  var p=key.split('|');
+  if(s.layout==='grid'){ s.cells=s.cells||{}; return s.cells[key] || (s.cells[key]=[]); }
+  var sec=s.sections.filter(function(x){ return x.id===p[0]; })[0], row=sec && sec.rows.filter(function(r){ return r.id===p[1]; })[0];
+  return row ? (row.people=row.people||[]) : [];
+}
+function schedCellTitle_(s, key){
+  var p=key.split('|');
+  if(s.layout==='grid'){
+    var r=s.rows.filter(function(x){ return x.id===p[0]; })[0];
+    return (r?r.label:'')+' · '+(p[1]==='all' ? t('All week') : t(DUTY_DAY_NAMES[p[1]]||''));
+  }
+  var sec=s.sections.filter(function(x){ return x.id===p[0]; })[0], row=sec && sec.rows.filter(function(r){ return r.id===p[1]; })[0];
+  return row ? row.place : '';
+}
+function schedPickerHtml_(d, s){
+  var key=S.schedPick, cur=schedCellNames_(s, key), q=(S.schedQ||'').trim().toLowerCase();
+  var h='<div class="scrim" id="schedScrim"></div><div class="schedSheet" id="schedSheet" role="dialog">';
+  h+='<div class="schedSheetHead"><b>'+esc(schedCellTitle_(s, key))+'</b><button class="btn small" id="schedPickDone">'+esc(t('Done'))+'</button></div>';
+  h+='<div class="chips" id="schedCur">'+(cur.length ? cur.map(function(n){ return '<button class="hospChip on" data-dunpick="'+esc(n)+'">'+esc(n)+' ✕</button>'; }).join('') : '<span class="rowSub">'+esc(t('Nobody yet — tap names below.'))+'</span>')+'</div>';
+  h+='<div class="schedAdd"><input type="text" id="schedQ" placeholder="'+esc(t('Search, or type a new name'))+'" value="'+esc(S.schedQ||'')+'" maxlength="40" autocomplete="off">'+
+    '<button class="btn small" id="schedAddName">'+esc(t('Add'))+'</button></div>';
+  h+='<div class="schedGroups">';
+  (d.people||[]).forEach(function(g){
+    var names=g.names.filter(function(n){ return !q || n.toLowerCase().indexOf(q)>-1; });
+    if(!names.length) return;
+    h+='<div class="schedGroupLabel">'+esc(t(g.label))+'</div><div class="chips" style="margin-top:2px">'+names.map(function(n){
+      return '<button class="hospChip'+(cur.indexOf(n)>-1?' on':'')+'" data-dpick="'+esc(n)+'">'+esc(n)+'</button>'; }).join('')+'</div>';
+  });
+  return h+'</div></div>';
+}
+function schedRowsHtml_(s){
+  var h='<div class="card" id="schedRows">';
+  if(s.layout==='grid'){
+    h+='<label class="f" style="margin-top:0">'+esc(t('Days'))+'</label><div class="chips">'+['sun','mon','tue','wed','thu','fri','sat'].map(function(dd){
+      return '<button class="hospChip'+(s.days.indexOf(dd)>-1?' on':'')+'" data-sday="'+dd+'">'+esc(t(DUTY_DAY_SHORT[dd]))+'</button>'; }).join('')+'</div>';
+    s.rows.forEach(function(r, i){
+      h+='<div class="schedRowEdit"><div class="teamGrid2"><div><label class="f">'+esc(t('Name'))+'</label><input type="text" data-srow="'+i+'" data-sf="label" value="'+esc(r.label)+'" maxlength="80"></div>'+
+        '<div><label class="f">'+esc(t('Khmer'))+'</label><input type="text" data-srow="'+i+'" data-sf="km" value="'+esc(r.km||'')+'" maxlength="80"></div></div>'+
+        '<label class="f">'+esc(t('Time'))+'</label><input type="text" data-srow="'+i+'" data-sf="time" value="'+esc(r.time||'')+'" maxlength="60" placeholder="'+esc(t('e.g. Cooking 6:00'))+'">'+
+        '<label class="hospCheck"><input type="checkbox" data-srowspan="'+i+'"'+(r.span?' checked':'')+'> '+esc(t('The same people all week'))+'</label>'+
+        '<div class="rowSub">'+esc(t('Days off'))+'</div><div class="chips">'+s.days.map(function(dd){
+          return '<button class="hospChip'+((r.off||[]).indexOf(dd)>-1?' on':'')+'" data-srowoff="'+i+'|'+dd+'">'+esc(t(DUTY_DAY_SHORT[dd]))+'</button>'; }).join('')+'</div>'+
+        '<div class="schedRowBtns"><button class="linkbtn inline" data-srowup="'+i+'">↑</button><button class="linkbtn inline" data-srowdown="'+i+'">↓</button>'+
+        '<button class="linkbtn inline teamDelete" data-srowdel="'+i+'">'+esc(t('Remove'))+'</button></div></div>';
+    });
+    h+='<button class="btn ghost small" id="schedRowAdd">＋ '+esc(t('Add a row'))+'</button>';
+  } else {
+    s.sections.forEach(function(sec, si){
+      h+='<div class="schedSecEdit"><div class="teamGrid2"><div><label class="f">'+esc(t('Section'))+'</label><input type="text" data-ssec="'+si+'" data-sf="title" value="'+esc(sec.title)+'" maxlength="80"></div>'+
+        '<div><label class="f">'+esc(t('Khmer'))+'</label><input type="text" data-ssec="'+si+'" data-sf="km" value="'+esc(sec.km||'')+'" maxlength="80"></div></div>';
+      sec.rows.forEach(function(r, i){
+        h+='<div class="schedRowEdit"><label class="f">'+esc(t('Place'))+'</label><input type="text" data-splace="'+si+'|'+i+'" data-sf="place" value="'+esc(r.place)+'" maxlength="120">'+
+          '<label class="f">'+esc(t('What to do'))+'</label><textarea data-splace="'+si+'|'+i+'" data-sf="duty" rows="2" maxlength="400">'+esc(r.duty||'')+'</textarea>'+
+          '<div class="schedRowBtns"><button class="linkbtn inline" data-splaceup="'+si+'|'+i+'">↑</button><button class="linkbtn inline" data-splacedown="'+si+'|'+i+'">↓</button>'+
+          '<button class="linkbtn inline teamDelete" data-splacedel="'+si+'|'+i+'">'+esc(t('Remove'))+'</button></div></div>';
+      });
+      h+='<button class="btn ghost small" data-splaceadd="'+si+'">＋ '+esc(t('Add a place'))+'</button></div>';
+    });
+    h+='<button class="btn ghost small" id="schedSecAdd">＋ '+esc(t('Add a section'))+'</button>';
+  }
+  return h+'</div>';
+}
+function bindSched_(){
+  var hm=document.getElementById('schedHome');
+  if(hm && !S.sched && !S.schedHomeLoading && !S.schedError){
+    S.schedHomeLoading=true;
+    run('getMySchedules',[S.auth.user,S.auth.pin,dutyWeekOf()],function(d){ S.schedHomeLoading=false; if(d && d.ok) S.sched=d; else S.schedError='x'; render(); },
+      function(){ S.schedHomeLoading=false; S.schedError='x'; render(); });
+  }
+  document.querySelectorAll('[data-schedopen]').forEach(function(b){ b.onclick=function(){ gpTap(); schedOpen_(b.getAttribute('data-schedopen'), false, 'home'); }; });
+  if(S.view!=='sched') return;
+  var d=S.schedData, s=d && d.sched;
+  var mark=function(){ S.schedDirty=true; };
+  var bk=document.getElementById('schedBack');
+  if(bk) bk.onclick=function(){ if(S.schedDirty && !confirm(t('Leave without saving your changes?'))) return; S.schedEdit=false; S.schedPick=null; S.view=S.schedFrom==='ministry'?'ministry':'week'; render(); };
+  document.querySelectorAll('[data-schedkind]').forEach(function(b){ b.onclick=function(){
+    if(S.schedDirty && !confirm(t('Leave without saving your changes?'))) return;
+    gpTap(); S.schedKind=b.getAttribute('data-schedkind'); S.schedPick=null; S.schedRows=false; S.schedDirty=false; render(); }; });
+  var wk=function(n){ if(S.schedDirty && !confirm(t('Leave without saving your changes?'))) return; S.schedWeek=dutyAddDays(S.schedWeek||dutyWeekOf(), n); S.schedPick=null; S.schedDirty=false; render(); };
+  var sp=document.getElementById('schedPrev'); if(sp) sp.onclick=function(){ gpTap(); wk(-7); };
+  var sn=document.getElementById('schedNext'); if(sn) sn.onclick=function(){ gpTap(); wk(7); };
+  var stw=document.getElementById('schedThis'); if(stw) stw.onclick=function(){ gpTap(); S.schedWeek=null; S.schedDirty=false; render(); };
+  var sr=document.getElementById('schedRetry'); if(sr) sr.onclick=function(){ S.schedErr=''; S.schedData=null; render(); };
+  var se=document.getElementById('schedEditBtn'); if(se) se.onclick=function(){ gpTap(); S.schedEdit=true; render(); };
+  var sde=document.getElementById('schedDoneEdit'); if(sde) sde.onclick=function(){ if(S.schedDirty && !confirm(t('Leave without saving your changes?'))) return; S.schedEdit=false; S.schedPick=null; S.schedRows=false; S.schedDirty=false; S.schedData=null; render(); };
+  var sh=document.getElementById('schedShare');
+  if(sh) sh.onclick=function(){
+    var k=schedKind_(s.kind);
+    sh.disabled=true;
+    dutyImage(s, { t:t, weekLabel:schedWeekLabel_(s.week) }).then(function(blob){
+      return dutyShare(blob, (s.kind==='kitchen'?'cooking-schedule-':'morning-chores-')+s.week+'.png', t(k[2]));
+    }).then(function(how){ sh.disabled=false; if(how==='downloaded') showMsg(t('Saved as a picture — send it from your photos or downloads.')); }, function(){ sh.disabled=false; showMsg(t('Could not make the picture.')); });
+  };
+  if(!s || !S.schedEdit) return;
+  var notes=document.getElementById('schedNotes'); if(notes) notes.oninput=function(){ s.notes=notes.value; mark(); };
+  document.querySelectorAll('[data-dcell]').forEach(function(c){ c.onclick=function(){ gpTap(); S.schedPick=c.getAttribute('data-dcell'); S.schedQ=''; render(); var q=document.getElementById('schedQ'); if(q && window.innerWidth>700) q.focus(); }; });
+  var closePick=function(){ S.schedPick=null; S.schedQ=''; render(); };
+  var scr=document.getElementById('schedScrim'); if(scr) scr.onclick=closePick;
+  var pd=document.getElementById('schedPickDone'); if(pd) pd.onclick=closePick;
+  var toggle=function(n){ var l=schedCellNames_(s, S.schedPick), i=l.indexOf(n); if(i>-1) l.splice(i,1); else l.push(n); mark(); };
+  document.querySelectorAll('[data-dpick]').forEach(function(b){ b.onclick=function(){ gpTap(); toggle(b.getAttribute('data-dpick')); render(); }; });
+  document.querySelectorAll('[data-dunpick]').forEach(function(b){ b.onclick=function(){ gpTap(); toggle(b.getAttribute('data-dunpick')); render(); }; });
+  var sq=document.getElementById('schedQ');
+  if(sq){
+    sq.oninput=function(){
+      S.schedQ=sq.value; var q=sq.value.trim().toLowerCase();
+      document.querySelectorAll('#schedSheet [data-dpick]').forEach(function(b){ b.style.display = !q || b.getAttribute('data-dpick').toLowerCase().indexOf(q)>-1 ? '' : 'none'; });
+      document.querySelectorAll('#schedSheet .schedGroupLabel').forEach(function(l){ var box=l.nextElementSibling; l.style.display = box && [].some.call(box.children, function(c){ return c.style.display!=='none'; }) ? '' : 'none'; });
+    };
+    sq.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); var b=document.getElementById('schedAddName'); if(b) b.click(); } };
+  }
+  var an=document.getElementById('schedAddName');
+  if(an) an.onclick=function(){
+    var n=String(S.schedQ||'').replace(/\s+/g,' ').trim().slice(0,40);
+    if(!n) return;
+    var l=schedCellNames_(s, S.schedPick); if(l.indexOf(n)===-1) l.push(n);
+    var g=(d.people||[]).filter(function(x){ return x.id==='extras'; })[0];
+    if(!g){ g={ id:'extras', label:'Added before', names:[] }; d.people=(d.people||[]).concat([g]); }
+    if(!(d.people||[]).some(function(x){ return x.names.indexOf(n)>-1; })) g.names.unshift(n);
+    S.schedQ=''; mark(); render();
+  };
+  // rows and places
+  var rb=document.getElementById('schedRowsBtn'); if(rb) rb.onclick=function(){ gpTap(); S.schedRows=!S.schedRows; render(); };
+  var rid=function(p){ return p+Date.now().toString(36).slice(-4)+Math.random().toString(36).slice(2,4); };
+  var move=function(list, i, n){ var j=i+n; if(j<0 || j>=list.length) return; var x=list[i]; list[i]=list[j]; list[j]=x; mark(); render(); };
+  document.querySelectorAll('[data-srow]').forEach(function(inp){ inp.oninput=function(){ s.rows[Number(inp.getAttribute('data-srow'))][inp.getAttribute('data-sf')]=inp.value; mark(); }; });
+  document.querySelectorAll('[data-srowspan]').forEach(function(inp){ inp.onchange=function(){ s.rows[Number(inp.getAttribute('data-srowspan'))].span=inp.checked; mark(); render(); }; });
+  document.querySelectorAll('[data-srowoff]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-srowoff').split('|'), r=s.rows[Number(p[0])]; r.off=r.off||[]; var i=r.off.indexOf(p[1]); if(i>-1) r.off.splice(i,1); else r.off.push(p[1]); mark(); render(); }; });
+  document.querySelectorAll('[data-sday]').forEach(function(b){ b.onclick=function(){ var dd=b.getAttribute('data-sday'), i=s.days.indexOf(dd);
+    if(i>-1){ if(s.days.length<2) return; s.days.splice(i,1); } else { s.days.push(dd); s.days.sort(function(a,c){ return DUTY_DAY_ORDER_.indexOf(a)-DUTY_DAY_ORDER_.indexOf(c); }); } mark(); render(); }; });
+  document.querySelectorAll('[data-srowup]').forEach(function(b){ b.onclick=function(){ move(s.rows, Number(b.getAttribute('data-srowup')), -1); }; });
+  document.querySelectorAll('[data-srowdown]').forEach(function(b){ b.onclick=function(){ move(s.rows, Number(b.getAttribute('data-srowdown')), 1); }; });
+  document.querySelectorAll('[data-srowdel]').forEach(function(b){ b.onclick=function(){ var i=Number(b.getAttribute('data-srowdel')); if(!confirm(gpT('Remove “{name}”?',{name:s.rows[i].label}))) return; s.rows.splice(i,1); mark(); render(); }; });
+  var ra=document.getElementById('schedRowAdd'); if(ra) ra.onclick=function(){ s.rows.push({ id:rid('r'), label:t('New row'), km:'', time:'', span:false, off:[] }); mark(); render(); };
+  var at=function(v){ var p=v.split('|'); return { sec:s.sections[Number(p[0])], i:Number(p[1]) }; };
+  document.querySelectorAll('[data-ssec]').forEach(function(inp){ inp.oninput=function(){ s.sections[Number(inp.getAttribute('data-ssec'))][inp.getAttribute('data-sf')]=inp.value; mark(); }; });
+  document.querySelectorAll('[data-splace]').forEach(function(inp){ inp.oninput=function(){ var x=at(inp.getAttribute('data-splace')); x.sec.rows[x.i][inp.getAttribute('data-sf')]=inp.value; mark(); }; });
+  document.querySelectorAll('[data-splaceup]').forEach(function(b){ b.onclick=function(){ var x=at(b.getAttribute('data-splaceup')); move(x.sec.rows, x.i, -1); }; });
+  document.querySelectorAll('[data-splacedown]').forEach(function(b){ b.onclick=function(){ var x=at(b.getAttribute('data-splacedown')); move(x.sec.rows, x.i, 1); }; });
+  document.querySelectorAll('[data-splacedel]').forEach(function(b){ b.onclick=function(){ var x=at(b.getAttribute('data-splacedel')); if(!confirm(gpT('Remove “{name}”?',{name:x.sec.rows[x.i].place}))) return; x.sec.rows.splice(x.i,1); mark(); render(); }; });
+  document.querySelectorAll('[data-splaceadd]').forEach(function(b){ b.onclick=function(){ s.sections[Number(b.getAttribute('data-splaceadd'))].rows.push({ id:rid('c'), place:t('New place'), km:'', duty:'', people:[] }); mark(); render(); }; });
+  var sa=document.getElementById('schedSecAdd'); if(sa) sa.onclick=function(){ s.sections.push({ id:rid('s'), title:t('New section'), km:'', rows:[] }); mark(); render(); };
+  // save
+  var save=function(action, btn, msg){
+    if(S.busy) return;
+    S.busy=true; if(btn) btn.disabled=true;
+    run('saveDuty',[S.auth.user,S.auth.pin,s.kind,s.week,s,action],function(r){
+      S.busy=false;
+      if(r && r.ok){ r.key=d.key; S.schedData=r; S.schedDirty=false; S.sched=null; showMsg(msg); }
+      else showMsg(r && r.err==='not_authorized' ? t('Only this ministry’s team can change it.') : t('Could not save'));
+      render();
+    });
+  };
+  var sv=document.getElementById('schedSave'); if(sv) sv.onclick=function(){ save('save', sv, t('Saved')); };
+  var pb=document.getElementById('schedPub'); if(pb) pb.onclick=function(){ save('publish', pb, t('Published — everyone can see it now')); };
+  var up=document.getElementById('schedUnpub'); if(up) up.onclick=function(){ if(!confirm(t('Take this schedule down? Only your team will see it until you publish it again.'))) return; save('unpublish', up, t('Taken down')); };
+}
+var DUTY_DAY_ORDER_=['sun','mon','tue','wed','thu','fri','sat'];
+function schedOpen_(kind, edit, from){
+  S.schedKind=kind; S.schedEdit=!!edit; S.schedFrom=from||'home'; S.schedWeek=null; S.schedPick=null; S.schedRows=false; S.schedDirty=false; S.schedData=null;
+  S.view='sched'; render();
+}
+/* On My Ministry, for the ministry that makes one: the way in. */
+function schedMinistryHtml_(dept, min){
+  var k=SCHED_KINDS.filter(function(x){ return x[3]===dept && x[4]===min; })[0];
+  if(!k || !canLogForClient_(dept, min)) return '';
+  return '<div class="card" id="schedMinistry"><p class="sub" style="margin:0 0 10px">'+k[1]+' '+esc(gpT('Your team makes the {name} each week. Once you publish it, everyone sees it on My Home.',{name:t(k[2]).toLowerCase()}))+'</p>'+
+    '<button class="btn" id="goSchedEdit" data-schedkind-edit="'+k[0]+'" style="margin-top:0">🗓️ '+esc(gpT('Make the {name}',{name:t(k[2]).toLowerCase()}))+'</button></div>';
+}
+/* The page-side mirror of canLogFor_: who may make a ministry's schedule. */
+function canLogForClient_(dept, min){
+  var m=S.me; if(!m) return false;
+  if(m.isAdmin) return true;
+  var key=dept+'|'+min;
+  return (m.dept===dept && m.ministry===min) || (m.ministries||[]).indexOf(key)>-1 || (m.leads||[]).indexOf(key)>-1 || (m.dept==='Campus Leadership' && m.ministry===dept);
 }
 
 function teamsDbHtml(){
@@ -10744,6 +11048,8 @@ function bindAway(){
     if(ovi) ovi.onclick=function(){ var min=ovi.getAttribute('data-ovinput'); gpTap(); S.ovInputOpen[min]=!S.ovInputOpen[min]; render(); };
     var gtd=document.getElementById('goTeamsDb');
     if(gtd) gtd.onclick=function(){ gpTap(); S.view='teamsdb'; render(); };
+    var gse=document.getElementById('goSchedEdit');
+    if(gse) gse.onclick=function(){ gpTap(); schedOpen_(gse.getAttribute('data-schedkind-edit'), true, 'ministry'); };
     var gho=document.getElementById('goHosp');
     if(gho) gho.onclick=function(){ gpTap(); S.view='hosp'; render(); };
   }
@@ -10754,6 +11060,7 @@ function bindAway(){
   });
   bindHr();
   bindHosp();
+  if(typeof dutyHtml==='function') bindSched_();
 
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};
   ['lv_from','lv_to'].forEach(function(id){

@@ -433,6 +433,46 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   someone waiting (`all_placed` when they all have beds); `toBed` '' takes them off.
   One write, so a swap can't half-happen.
 
+## Weekly schedules — the cooking schedule and the morning chores
+Two schedules the base sends out every Sunday for the week ahead, made in the app and read
+by everyone. **Cooking schedule** (`kitchen`, made by Skills Training › Culinary): a GRID of
+rows (meal or chore, with a time and a Khmer name) × days; `cells['row|day']` is a list of
+names, a `span` row (Pray – Announcements) has one `cells['row|all']`, `off` days are shaded.
+**Morning chores** (`chores`, made by Skills Training › Hospitality): a LIST of sections
+(Base, Family house) of places `{place, duty, people}`.
+
+- **Store**: one blob per campus, `duty:<campus>` = `{kitchen:{weeks:{'YYYY-MM-DD' (the
+  Sunday it starts): sched}, extras:[names typed by hand]}, chores:{…}}`, 60 weeks kept. A
+  week holds its own rows, so changing one week never rewrites another. A week not made yet
+  starts as a copy of the latest week before it, names and all, else from `DUTY_TEMPLATES`
+  in api.js — **rows only, no names**: the repo is public, so the names on the paper sheets
+  were never copied in. `cleanSched_` keeps a saved week to its kind's shape.
+- **Handlers**: `getDuty(kind, week)` — the owning ministry (`canLogFor_`, admins too) gets
+  the draft or a new week (`isNew`, `from`) plus `people` to pick from; anyone else only a
+  published week. `saveDuty(kind, week, sched, action)` with action save (keeps its state) |
+  publish | unpublish. `getMySchedules(week)` — this week's and next week's published ones
+  for My Home, and `canEdit` per kind. Weeks are Sundays, Cambodia time (`dutyThisWeek_`).
+- **Names on offer** (`dutyPeople_`): campus staff (staffType campus) by first name — two
+  with the same first name get an initial (`dutyShortNames_`, mirrored by `schedMyName_` in
+  teams.html) — then other staff, then every team in the Teams Database whose dates cover the
+  week (its leader, co-leaders and `portal.members`), guests booked in SR Hospitality that
+  week (not team bookings), then names typed in before.
+- **Pages**: `public/duty.js` (plain script, shared by teams.html and portal.html) draws a
+  schedule (`dutyHtml`), finds your own cells (`dutyMine`), makes the picture (`dutyImage`,
+  a white canvas sheet like the paper ones, after the Khmer font loads) and sends it
+  (`dutyShare`: the share sheet with the PNG, else a download). teams.html: My Home's
+  "📋 This week's schedules" card (with "Your duties this week"), the menu's Weekly
+  schedules, `S.view='sched'` (`schedHtml` / `bindSched_`): read, Share as image, and for
+  the ministry Edit — tap a box for the name picker (search, groups, type a new name),
+  "Change rows and days" / "Change places", Save draft, Publish, Take it down. My Ministry
+  for Culinary / Hospitality has the way in (`#goSchedEdit`).
+- **Portal**: a team lists its members (`portalSaveTeamMembers` → `portal.members`, name +
+  man / woman; "👥 Your team members" card; staff see them on the record). Once the team has
+  **arrived**, `portalBoot` carries `schedules` (this week's published ones) and the
+  dashboard shows "📋 This week at the base" with Share as image — never before arrival.
+- `test-duty.mjs` (server) and `test-duty-page.mjs` (browser) cover it; the portal side is
+  in `test-portal-page.mjs`.
+
 ## Admin — a home menu, one page per tool, one page per person
 `adminHtml` routes on `S.adminSub`: `home` (a card per tool, `ADMIN_SUBS`, with counts on
 Accounts, Approvals and Mentors), `accounts`, `approvals`, `mentors` (`adminMentorsHtml_`:

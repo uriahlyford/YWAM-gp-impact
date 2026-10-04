@@ -3498,6 +3498,311 @@ async function hospDelete(username, pin, kind, id) {
   return getHospitality(username, pin);
 }
 
+/* ==================== weekly schedules ====================
+   Two schedules the base sends out every Sunday for the week ahead: the
+   Culinary team's cooking schedule (meals and dishes, day by day — a GRID of
+   rows × days) and Hospitality's morning chores (places, what to do there and
+   who — a LIST in sections). The ministry that owns one makes it each week on
+   its My Ministry page (canLogFor_, so its members, leaders, overseer and
+   admins); once published, everyone on the campus sees it on My Home, and a
+   team that has arrived sees it in the portal.
+
+   One blob per campus, 'duty:<campus>' = { kitchen: { weeks: { 'YYYY-MM-DD'
+   (the Sunday it starts): sched }, extras: [names typed in by hand] },
+   chores: {…} }. A week holds its own copy of the rows, so changing next
+   week's rows never rewrites an old one; a week not made yet starts as a
+   copy of the latest one before it, names and all (most duties carry over),
+   else from the template below — rows only, no names: this repo is public.
+
+   Names are plain strings, picked from the people here that week
+   (dutyPeople_): campus staff first, other staff, every member of a team
+   whose dates cover the week (from its portal application), guests booked in
+   SR Hospitality, and names typed in before. */
+const DUTY_KINDS = {
+  kitchen: { dept: 'Skills Training', ministry: 'Culinary', layout: 'grid' },
+  chores: { dept: 'Skills Training', ministry: 'Hospitality', layout: 'list' }
+};
+const DUTY_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const DUTY_MAX = { rows: 40, sections: 8, listRows: 60, names: 24, name: 40, weeks: 60, extras: 300 };
+const DUTY_TEMPLATES = {
+  kitchen: {
+    title: 'Cooking schedule', km: 'កាលវិភាគធ្វើម្ហូបប្រចាំសប្តាហ៍', days: ['sun', 'mon', 'tue', 'wed', 'thu', 'fri'],
+    rows: [
+      { id: 'bf', label: 'Breakfast 7:30', km: 'អាហារ-ព្រឹក', time: 'Cooking 6:00', off: ['sun'] },
+      { id: 'md', label: 'Morning chore – Dishes', km: 'លាងចាន-ព្រឹក', time: '', off: ['sun'] },
+      { id: 'lu', label: 'Lunch 12:30', km: 'អាហារ-ត្រង់', time: 'Cooking 11:00', off: ['sun'] },
+      { id: 'pr', label: 'Pray – Announcements', km: 'អធិស្ឋាន-សេចក្ដីប្រកាស', time: '', off: ['sun'], span: true },
+      { id: 'ld', label: 'Lunch dishes · Sweep-mop', km: 'លាងចាន-ថ្ងៃត្រង់', time: '', off: ['sun'] },
+      { id: 'di', label: 'Dinner 6:30', km: 'អាហារ-ល្ងាច', time: 'Cooking 5:00' },
+      { id: 'dd', label: 'Dinner dishes · Sweep-mop', km: 'លាងចាន-ល្ងាច', time: '' }
+    ]
+  },
+  chores: {
+    title: 'Morning chores (8–8:30 AM)', km: 'ការងារពេលព្រឹក (ម៉ោង ៨-៨:៣០)',
+    sections: [
+      { id: 'base', title: 'Base', km: 'មូលដ្ឋាន', rows: [
+        { id: 'c01', place: 'Trash bags (weekend)', duty: 'Change all the trash bags around the base and sweep around the building. Saturday and Sunday.' },
+        { id: 'c02', place: 'Plants (weekend)', duty: 'Water the plants around the base. Saturday and Sunday.' },
+        { id: 'c03', place: 'Morning dishes', duty: 'Put away dishes, wash dishes, clean the sink, wipe all surfaces.' },
+        { id: 'c04', place: 'Stairs 1–4', duty: 'Sweep and mop stairs 1–4.' },
+        { id: 'c05', place: 'Office room', duty: 'Sweep and mop inside and outside the room.' },
+        { id: 'c06', place: 'Media room', duty: 'Sweep and mop inside and outside the room.' },
+        { id: 'c07', place: 'Bathroom on the rooftop', duty: 'Clean the toilet, sink, floor, wall and mirror, and change the trash bags.' },
+        { id: 'c08', place: 'Bathroom in the coffee shop and near the kitchen', duty: 'Clean the toilet, sink, floor, wall and mirror, and change the trash bags.' },
+        { id: 'c09', place: 'Classroom 2 · Worship room', duty: 'Sweep and mop. Set out tables and chairs.' },
+        { id: 'c10', place: 'Rooftop', duty: 'Sweep and mop the rooftop.' },
+        { id: 'c11', place: 'Kitchen towels', duty: 'Change all the kitchen towels, put out the mopping liquid and clean the buckets.' },
+        { id: 'c12', place: 'Open the doors 102, 103, 104, 203, 204, 205, 303, 304, 305', duty: 'Open the doors to every room for 15 minutes.' },
+        { id: 'c13', place: 'Bean bags · green stage', duty: 'Wipe all the bean bags and vacuum the green stage.' },
+        { id: 'c14', place: 'Stair railings', duty: 'Wipe the stair railings in hallways 1, 2, 3 and the Media room.' },
+        { id: 'c15', place: 'Hallway 3', duty: 'Sweep and mop.' },
+        { id: 'c16', place: 'Hallway 2', duty: 'Sweep and mop.' },
+        { id: 'c17', place: 'Hallway 1', duty: 'Sweep and mop.' },
+        { id: 'c18', place: 'Courtyard and parking area', duty: 'Sweep and clean the road in front of the base, the eating area and the coffee shop.' },
+        { id: 'c19', place: 'Trash bags', duty: 'Change all the trash bags around the base and sweep around the building.' },
+        { id: 'c20', place: 'Glass doors, inside and outside', duty: 'Mon: classroom 2 · Tue: classroom 3, rooftop · Wed: meeting room, Media and office · Thu: classroom 2 · Fri: classroom 3, rooftop' },
+        { id: 'c21', place: 'Air conditioners', duty: 'Mon: rooms 203, 204, 401 · Tue: rooms 205, 303, Media · Wed: 304, 305, office · Thu: coffee shop, worship room, classroom 1 · Fri: rooms 101–104 and the DTS classroom' },
+        { id: 'c22', place: 'Plants', duty: 'Water the plants around the base.' },
+        { id: 'c23', place: 'Tables outside', duty: 'Clean all tables and chairs, and put them in order.' },
+        { id: 'c24', place: 'Classroom 3 (rooftop) · tables', duty: 'Wipe all tables and chairs, and change the trash bags.' },
+        { id: 'c25', place: 'Classroom 3 (rooftop) · rooms', duty: 'Sweep and mop inside and outside the classroom and around rooms 401 and 402.' },
+        { id: 'c26', place: 'Classroom 1 (downstairs)', duty: 'Sweep and mop the stairs and vacuum. Mon, Wed, Fri: clean the glass door · Tue, Thu: clean the sofa and table.' },
+        { id: 'c27', place: 'Coffee shop', duty: 'Sweep and mop. Clean all the tables in the coffee shop.' },
+        { id: 'c28', place: 'Coffee shop glass door', duty: 'Clean the glass door inside and outside.' }
+      ] },
+      { id: 'house', title: 'Family house', km: 'អាគារគ្រួសារ', rows: [
+        { id: 'h1', place: 'Courtyard and parking area', duty: 'Sweep under the house, change the trash bags and take the trash out. Sweep and clean the road in front.' },
+        { id: 'h2', place: 'Stairs 1–4', duty: 'Sweep and mop the stairs.' },
+        { id: 'h3', place: 'Plants', duty: 'Water the plants around the house.' },
+        { id: 'h4', place: 'Stair railings', duty: 'Wipe the stair railings in hallways 1, 2, 3.' },
+        { id: 'h5', place: 'Bathroom downstairs', duty: 'Clean the toilet, sink, floor, wall and mirror, and change the trash.' }
+      ] }
+    ]
+  }
+};
+function dutyKey_(campus) { return 'duty:' + campus; }
+function isSunday_(w) { return !!isoDate_(w) && new Date(w + 'T00:00:00Z').getUTCDay() === 0; }
+function addDays_(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+/* The Sunday the current week started on, in Cambodia (UTC+7). */
+function dutyThisWeek_() {
+  const d = new Date(Date.now() + 7 * 3600000); d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.toISOString().slice(0, 10);
+}
+async function getDutyDoc_(campus) {
+  const d = await readJSON(dutyKey_(campus), {});
+  Object.keys(DUTY_KINDS).forEach(function (k) {
+    if (!d[k] || typeof d[k] !== 'object') d[k] = {};
+    if (!d[k].weeks || typeof d[k].weeks !== 'object') d[k].weeks = {};
+    if (!Array.isArray(d[k].extras)) d[k].extras = [];
+  });
+  return d;
+}
+function dutyNames_(v) {
+  const out = [];
+  (Array.isArray(v) ? v : []).forEach(function (n) {
+    const s = String(n == null ? '' : n).replace(/\s+/g, ' ').trim().slice(0, DUTY_MAX.name);
+    if (s && out.indexOf(s) === -1 && out.length < DUTY_MAX.names) out.push(s);
+  });
+  return out;
+}
+function dutyText_(v, n) { return String(v == null ? '' : v).trim().slice(0, n); }
+function dutyId_(v, used, p) {
+  let id = String(v == null ? '' : v).replace(/[^a-z0-9_-]/gi, '').slice(0, 20);
+  if (!id || used[id]) { let i = 1; do { id = p + (i++); } while (used[id]); }
+  used[id] = 1;
+  return id;
+}
+/* A week as the page sent it, kept to the shape of its kind. */
+function cleanSched_(raw, kind) {
+  const k = DUTY_KINDS[kind];
+  raw = raw && typeof raw === 'object' ? raw : {};
+  const out = { layout: k.layout, title: dutyText_(raw.title, 120) || DUTY_TEMPLATES[kind].title, km: dutyText_(raw.km, 120), notes: dutyText_(raw.notes, 1000) };
+  if (k.layout === 'grid') {
+    let days = (Array.isArray(raw.days) ? raw.days : []).filter(function (d, i, a) { return DUTY_DAYS.indexOf(d) > -1 && a.indexOf(d) === i; });
+    if (!days.length) days = DUTY_TEMPLATES.kitchen.days.slice();
+    days.sort(function (a, b) { return DUTY_DAYS.indexOf(a) - DUTY_DAYS.indexOf(b); });
+    out.days = days;
+    const used = {};
+    out.rows = (Array.isArray(raw.rows) ? raw.rows : []).slice(0, DUTY_MAX.rows).map(function (r) {
+      r = r && typeof r === 'object' ? r : {};
+      const label = dutyText_(r.label, 80);
+      if (!label) return null;
+      return { id: dutyId_(r.id, used, 'r'), label: label, km: dutyText_(r.km, 80), time: dutyText_(r.time, 60), span: !!r.span,
+        off: (Array.isArray(r.off) ? r.off : []).filter(function (d) { return days.indexOf(d) > -1; }) };
+    }).filter(Boolean);
+    const cells = {}, src = raw.cells && typeof raw.cells === 'object' ? raw.cells : {};
+    out.rows.forEach(function (r) {
+      (r.span ? ['all'] : days).forEach(function (d) {
+        if (d !== 'all' && r.off.indexOf(d) > -1) return;
+        const names = dutyNames_(src[r.id + '|' + d]);
+        if (names.length) cells[r.id + '|' + d] = names;
+      });
+    });
+    out.cells = cells;
+  } else {
+    const usedS = {}, usedR = {};
+    out.sections = (Array.isArray(raw.sections) ? raw.sections : []).slice(0, DUTY_MAX.sections).map(function (s) {
+      s = s && typeof s === 'object' ? s : {};
+      return { id: dutyId_(s.id, usedS, 's'), title: dutyText_(s.title, 80), km: dutyText_(s.km, 80),
+        rows: (Array.isArray(s.rows) ? s.rows : []).slice(0, DUTY_MAX.listRows).map(function (r) {
+          r = r && typeof r === 'object' ? r : {};
+          const place = dutyText_(r.place, 120);
+          if (!place) return null;
+          return { id: dutyId_(r.id, usedR, 'c'), place: place, km: dutyText_(r.km, 120), duty: dutyText_(r.duty, 400), people: dutyNames_(r.people) };
+        }).filter(Boolean) };
+    });
+  }
+  return out;
+}
+function dutyAllNames_(sch) {
+  const out = [];
+  const add = function (l) { (l || []).forEach(function (n) { if (out.indexOf(n) === -1) out.push(n); }); };
+  if (sch.layout === 'grid') Object.keys(sch.cells || {}).forEach(function (k) { add(sch.cells[k]); });
+  else (sch.sections || []).forEach(function (s) { s.rows.forEach(function (r) { add(r.people); }); });
+  return out;
+}
+/* A first name is what the sheet uses; two campus staff with the same one get an initial. */
+function dutyShortNames_(people) {
+  const first = function (n) { return String(n || '').trim().split(/\s+/)[0] || ''; };
+  const count = {};
+  people.forEach(function (p) { const f = first(p.name).toLowerCase(); count[f] = (count[f] || 0) + 1; });
+  return people.map(function (p) {
+    const parts = String(p.name || '').trim().split(/\s+/), f = parts[0] || '';
+    return count[f.toLowerCase()] > 1 && parts.length > 1 ? f + ' ' + parts[parts.length - 1][0] + '.' : f;
+  });
+}
+/* Who can be put on the week starting `week`: grouped, each group a label and names. */
+async function dutyPeople_(campus, week, extras) {
+  const weekEnd = addDays_(week, 7), groups = [];
+  const staff = (await getStaff_()).filter(function (s) { return s && s.active !== false && !isApplicant_(s) && s.campus === campus && !s.archived; })
+    .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+  const shorts = dutyShortNames_(staff);
+  const campusNames = [], otherNames = [];
+  staff.forEach(function (s, i) { if (!shorts[i]) return; (cleanStaffType_(s.staffType) === 'campus' ? campusNames : otherNames).push(shorts[i]); });
+  if (campusNames.length) groups.push({ id: 'campus', label: 'Campus staff', names: campusNames });
+  if (otherNames.length) groups.push({ id: 'staff', label: 'Other staff', names: otherNames });
+  // teams whose dates cover any of the week, with everyone their leader listed on the portal
+  const cands = await getCandidates_(), byCand = {};
+  cands.forEach(function (c) { if (c && c.id) byCand[c.id] = c; });
+  (await getTeamTrips_()).filter(function (t) { return t.campus === campus && t.status !== 'cancelled' && t.from && t.to && t.from < weekEnd && t.to >= week; })
+    .forEach(function (t) {
+      const c = t.candidateId && byCand[t.candidateId];
+      if (!c) return;
+      const a = teamAnswers_(c), names = [];
+      const add = function (n) { n = dutyText_(n, DUTY_MAX.name); if (n && names.indexOf(n) === -1) names.push(n); };
+      add(a.leaderName || c.name);
+      (Array.isArray(a.coLeaders) ? a.coLeaders : []).forEach(function (p) { add(p && p.name); });
+      ((c.portal && c.portal.members) || []).forEach(function (p) { add(p && p.name); });
+      if (names.length) groups.push({ id: 'team_' + t.id, label: t.name, names: names });
+    });
+  // guests, speakers, volunteers… booked into SR Hospitality that week (teams come in above)
+  const guests = [];
+  (await getHosp_(campus)).bookings.forEach(function (k) {
+    if (k.category === 'team' || !(k.from < weekEnd && (k.permanent || k.to > week))) return;
+    const n = dutyText_(k.name, DUTY_MAX.name);
+    if (n && guests.indexOf(n) === -1) guests.push(n);
+  });
+  if (guests.length) groups.push({ id: 'guests', label: 'Staying with us', names: guests });
+  const seen = {};
+  groups.forEach(function (g) { g.names.forEach(function (n) { seen[n] = 1; }); });
+  const more = (extras || []).filter(function (n) { return !seen[n]; });
+  if (more.length) groups.push({ id: 'extras', label: 'Added before', names: more });
+  return groups;
+}
+function dutyTemplate_(kind) {
+  const t = JSON.parse(JSON.stringify(DUTY_TEMPLATES[kind]));
+  t.layout = DUTY_KINDS[kind].layout;
+  if (t.layout === 'grid') t.cells = {}; else t.sections.forEach(function (s) { s.rows.forEach(function (r) { r.people = []; }); });
+  return cleanSched_(t, kind);
+}
+function dutyOut_(rec, week, kind) { return rec ? Object.assign({}, rec, { kind: kind, week: week }) : null; }
+async function dutyAuth_(username, pin, kind, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { out: { ok: false } };
+  if (!DUTY_KINDS[kind]) return { out: { ok: false, err: 'bad_kind' } };
+  if (!isSunday_(week)) return { out: { ok: false, err: 'bad_week' } };
+  const k = DUTY_KINDS[kind];
+  return { s: s, campus: s.campus, canEdit: canLogFor_(s, s.campus, k.dept, k.ministry) };
+}
+/* One kind for one week. The ministry that makes it gets its draft (or a new
+   week started from the last one) and the names to pick from; anyone else
+   only a published week. */
+async function getDuty(username, pin, kind, week) {
+  const a = await dutyAuth_(username, pin, kind, week); if (a.out) return a.out;
+  const d = await getDutyDoc_(a.campus), box = d[kind];
+  const rec = box.weeks[week] || null;
+  if (!a.canEdit) return { ok: true, kind: kind, week: week, canEdit: false, sched: rec && rec.published ? dutyOut_(rec, week, kind) : null };
+  let sched = rec, isNew = false, from = '';
+  if (!sched) {
+    isNew = true;
+    const before = Object.keys(box.weeks).filter(function (w) { return w < week; }).sort().pop();
+    if (before) { sched = cleanSched_(box.weeks[before], kind); from = before; } else sched = dutyTemplate_(kind);
+    sched.published = false;
+  }
+  return { ok: true, kind: kind, week: week, canEdit: true, isNew: isNew, from: from, sched: dutyOut_(sched, week, kind),
+    people: await dutyPeople_(a.campus, week, box.extras) };
+}
+/* action: 'save' keeps it as it is (a draft stays a draft, a published week
+   stays published), 'publish' shows it to everyone, 'unpublish' takes it down. */
+async function saveDuty(username, pin, kind, week, sched, action) {
+  const a = await dutyAuth_(username, pin, kind, week); if (a.out) return a.out;
+  if (!a.canEdit) return { ok: false, err: 'not_authorized' };
+  const d = await getDutyDoc_(a.campus), box = d[kind], prev = box.weeks[week];
+  const rec = cleanSched_(sched, kind);
+  const now = new Date().toISOString();
+  rec.published = action === 'publish' ? true : action === 'unpublish' ? false : !!(prev && prev.published);
+  rec.publishedAt = rec.published ? ((prev && prev.published && prev.publishedAt) || now) : null;
+  rec.updated = now; rec.updatedBy = a.s.id;
+  box.weeks[week] = rec;
+  Object.keys(box.weeks).sort().reverse().slice(DUTY_MAX.weeks).forEach(function (w) { delete box.weeks[w]; });
+  // names typed in by hand are offered again next time
+  const known = {};
+  (await dutyPeople_(a.campus, week, [])).forEach(function (g) { g.names.forEach(function (n) { known[n] = 1; }); });
+  dutyAllNames_(rec).forEach(function (n) { if (!known[n] && box.extras.indexOf(n) === -1) box.extras.unshift(n); });
+  box.extras = box.extras.slice(0, DUTY_MAX.extras);
+  await writeJSON(dutyKey_(a.campus), d);
+  return getDuty(username, pin, kind, week);
+}
+/* This week's published schedules (and next week's, once it is out), for My Home. */
+async function dutyPublished_(campus, week) {
+  const d = await getDutyDoc_(campus), out = {};
+  Object.keys(DUTY_KINDS).forEach(function (k) { const r = d[k].weeks[week]; out[k] = r && r.published ? dutyOut_(r, week, k) : null; });
+  return out;
+}
+async function getMySchedules(username, pin, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  week = isSunday_(week) ? week : dutyThisWeek_();
+  const next = addDays_(week, 7);
+  const canEdit = {};
+  Object.keys(DUTY_KINDS).forEach(function (k) { canEdit[k] = canLogFor_(s, s.campus, DUTY_KINDS[k].dept, DUTY_KINDS[k].ministry); });
+  return { ok: true, week: week, now: await dutyPublished_(s.campus, week), next: await dutyPublished_(s.campus, next), nextWeek: next, canEdit: canEdit };
+}
+/* A team's own list of who is coming — names (and men / women), as many as
+   it has — so the kitchen and hospitality can put them on the schedules
+   while they are here. The leader keeps it up to date from the portal. */
+const MEMBERS_MAX = 120;
+function cleanMembers_(v) {
+  const out = [];
+  (Array.isArray(v) ? v : []).slice(0, MEMBERS_MAX).forEach(function (p) {
+    p = p && typeof p === 'object' ? p : { name: p };
+    const name = dutyText_(p.name, 80).replace(/\s+/g, ' ');
+    if (!name) return;
+    out.push({ name: name, sex: p.sex === 'm' || p.sex === 'f' ? p.sex : '' });
+  });
+  return out;
+}
+async function portalSaveTeamMembers(username, pin, members) {
+  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
+  a.cand.portal = a.cand.portal || {};
+  a.cand.portal.members = cleanMembers_(members);
+  a.cand.updated = new Date().toISOString(); a.cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return portalBoot(username, pin);
+}
+
 /* ==================== human resources ====================
    The HR page: each staff member's contract(s), the papers attached to
    them, how long they have served, when the current contract runs out, and
@@ -3990,6 +4295,7 @@ function portalAppOut_(c) {
     draftAt: (c.portal && c.portal.draftAt) || null,
     answersUpdatedAt: (c.portal && c.portal.form && c.portal.form.updatedAt) || null,
     docKinds: docKindsFor_(c), docs: docsOf_(c).map(docMeta_),
+    members: c.type === 'team' ? ((c.portal && c.portal.members) || []) : undefined,
     reference: (function (r) { delete r.answers; delete r.leaderEmail; return r; })(refState_(c)), // the applicant never reads the reference
     steps: portalSteps_(c)
   };
@@ -4184,6 +4490,8 @@ async function portalBoot(username, pin) {
       const trip = (await linkedTrip_(cand)) || (!cand.archived ? await syncTeamTrip_(cand, s.id) : null);
       out.application.trip = teamTripOut_(trip);
       out.metricOverrides = (await getMetricOverrides_()).filter(function (o) { return o.dept === TEAM_DEPT && o.ministry === TEAM_MIN; });
+      // the base's weekly schedules, once the team is here (not before — it would only confuse)
+      if (cand.stage === 'arrived' && !cand.archived) { const wk = dutyThisWeek_(); out.schedules = Object.assign({ week: wk }, await dutyPublished_(cand.campus || PORTAL_DEFAULT_CAMPUS, wk)); }
     }
     return out;
   }
@@ -4883,7 +5191,11 @@ const HANDLERS = {
   getHospitality: function (a) { return getHospitality(a[0], a[1]); },
   hospSave: function (a) { return hospSave(a[0], a[1], a[2], a[3]); },
   hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); },
-  hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); }
+  hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); },
+  getDuty: function (a) { return getDuty(a[0], a[1], a[2], a[3]); },
+  saveDuty: function (a) { return saveDuty(a[0], a[1], a[2], a[3], a[4], a[5]); },
+  getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },
+  portalSaveTeamMembers: function (a) { return portalSaveTeamMembers(a[0], a[1], a[2]); }
 };
 
 export default async (req) => {
