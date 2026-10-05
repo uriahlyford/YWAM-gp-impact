@@ -307,6 +307,7 @@ header { background:var(--headerBg); color:var(--onDark); display:flex; justify-
 .drawerItem { display:flex; align-items:center; gap:12px; padding:13px 8px; border-radius:12px; background:none; border:0;
   cursor:pointer; text-align:left; font-family:inherit; color:var(--ink); width:100%; }
 .drawerItem:active { background:var(--surface2); }
+.drawerSection { font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); margin:14px 8px 2px; padding-top:12px; border-top:1px solid var(--line); }
 .drawerIcon { flex:0 0 auto; color:var(--accent); display:flex; }
 .drawerLabel { font-size:14.5px; font-weight:600; flex:1; }
 
@@ -2503,48 +2504,31 @@ function renderMenu(){
   var root = document.getElementById('menuRoot');
   if(!root) return;
   if(!S.menuOpen || !S.me){ root.innerHTML=''; return; }
-  var items = [
-    { id:'dashboard', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="20" x2="5" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="14"/></svg>',
-      label:t('GP Dashboard') },
-    { id:'ministry', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
-      label:t('My Ministry') },
-    { id:'leave', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><line x1="3.5" y1="10" x2="20.5" y2="10"/><path d="M8 8V3.5M16 8V3.5"/><path d="M8.5 14.5l2 2 4-4"/></svg>',
-      label:t('Leave Request') },
-    { id:'checkin', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>',
-      label:t('Weekly Check-in') }
+  /* Sections, so the menu stays short to read. Everyone: My Ministry and
+     Leave Request, then Operations (the weekly schedules; SR Hospitality for
+     the Hospitality ministry and admins). Applications: the YWAM GP Portal,
+     for admins, portal staff/admins and the Outreach Teams leader (S.me.portal,
+     from the server). Admin: HR (admins, or anyone given hr) and the Admin
+     page (admins). Weekly Check-in is gone — the Health tab is its home — and
+     the GP Dashboard is hidden for now. An empty section isn't drawn. */
+  var IC={"ministry":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01\"/></svg>","leave":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"16\" rx=\"2.5\"/><line x1=\"3.5\" y1=\"10\" x2=\"20.5\" y2=\"10\"/><path d=\"M8 8V3.5M16 8V3.5\"/><path d=\"M8.5 14.5l2 2 4-4\"/></svg>","sched":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18M9 9v12M15 9v12\"/></svg>","hosp":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 18V7\"/><path d=\"M3 14h18v4\"/><path d=\"M21 14v-2a3 3 0 0 0-3-3h-7v5\"/><circle cx=\"7\" cy=\"11\" r=\"2\"/></svg>","portal":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 4h11l5 5v11H4z\"/><path d=\"M15 4v5h5\"/><path d=\"M8 13h8M8 17h5\"/></svg>","hr":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18\"/><path d=\"M8 2.5V6M16 2.5V6\"/><path d=\"M8 14h4M8 17.5h8\"/></svg>","admin":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z\"/><path d=\"M9 12l2 2 4-4\"/></svg>"};
+  var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
+  var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
+  var sections=[
+    { title:'', items:[it('ministry', t('My Ministry')), it('leave', t('Leave Request'))] },
+    { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
+    { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
+    { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : []) }
   ];
-  // Only whoever actually holds isAdmin sees this — a menu item that goes
-  // nowhere is worse than no menu item, which is why it wasn't here before
-  // there was an account-approval system behind it.
-  // HR — staff contracts, archiving. An admin, or anyone an admin gave `hr`.
-  if(S.me.isAdmin || S.me.hr) items.push({ id:'hr',
-    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18"/><path d="M8 2.5V6M16 2.5V6"/><path d="M8 14h4M8 17.5h8"/></svg>',
-    label:t('HR')+(((S.hrDue||0)+(S.hrFollowUps||0)) ? ' · '+((S.hrDue||0)+(S.hrFollowUps||0)) : '') });
-  // The YWAM GP Portal — applications. Only people with portal access (an
-  // admin, anyone an admin ticked on Admin → Portal access, or the Outreach
-  // Teams leader — S.me.portal, worked out by the server); opens in its own
-  // tab so the staff app stays where it was.
-  if(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) items.push({ id:'portal',
-    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><path d="M8 13h8M8 17h5"/></svg>',
-    label:t('YWAM GP Portal') });
-  // the weekly cooking schedule and morning chores — everyone reads them
-  if(typeof dutyHtml==='function') items.push({ id:'sched',
-    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M9 9v12M15 9v12"/></svg>',
-    label:t('Weekly schedules') });
-  // SR Hospitality — the Hospitality ministry (Skills Training) and admins
-  if(canHospClient_()) items.push({ id:'hosp',
-    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V7"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="2"/></svg>',
-    label:t('SR Hospitality') });
-  if(S.me.isAdmin) items.push({ id:'admin',
-    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
-    label:t('Admin') });
   root.innerHTML = '<div class="scrim" id="menuScrim"></div>'+
     '<div class="drawer">'+
       '<div class="drawerHead"><span class="drawerTitle">✦ '+esc(t('Menu'))+'</span>'+
         '<button class="hbtn icon" id="menuCloseBtn" style="border-color:var(--border2);color:var(--ink)" aria-label="'+esc(t('Dismiss'))+'">'+DRAWER_CLOSE_SVG+'</button></div>'+
-      items.map(function(it){
-        return '<button class="drawerItem" data-menu-item="'+it.id+'"><span class="drawerIcon">'+it.icon+'</span>'+
-          '<span class="drawerLabel">'+esc(it.label)+'</span></button>';
+      sections.filter(function(sec){ return sec.items.length; }).map(function(sec){
+        return (sec.title ? '<div class="drawerSection">'+esc(sec.title)+'</div>' : '')+sec.items.map(function(x){
+          return '<button class="drawerItem" data-menu-item="'+x.id+'"><span class="drawerIcon">'+x.icon+'</span>'+
+            '<span class="drawerLabel">'+esc(x.label)+'</span></button>';
+        }).join('');
       }).join('')+
     '</div>';
   var close=function(){ S.menuOpen=false; renderMenu(); };
@@ -2554,10 +2538,8 @@ function renderMenu(){
     btn.onclick=function(){
       var id=btn.getAttribute('data-menu-item');
       S.menuOpen=false;
-      if(id==='dashboard') gpGo('index');
-      else if(id==='ministry'){ S.view='ministry'; render(); }
+      if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
-      else if(id==='checkin'){ S.view='health'; render(); }
       else if(id==='admin'){ S.view='admin'; render(); }
       else if(id==='hr'){ S.view='hr'; S.hrSub='home'; render(); }
       else if(id==='hosp'){ S.view='hosp'; render(); }

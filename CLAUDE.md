@@ -448,6 +448,17 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   someone waiting (`all_placed` when they all have beds); `toBed` '' takes them off.
   One write, so a swap can't half-happen.
 
+## The hamburger menu, by role
+`renderMenu` draws sections, and leaves out a section with nothing in it:
+- everyone: **My Ministry**, **Leave Request**;
+- **Operations**: Weekly schedules (everyone), SR Hospitality (`canHospClient_`: the Hospitality
+  ministry — members, leaders, the Skills Training overseer — and admins);
+- **Applications**: YWAM GP Portal (admins, portal staff / portal admins, the Outreach Teams
+  leader — `S.me.portal` from the server);
+- **Admin**: HR (admins, or anyone given `hr`), Admin (admins).
+Weekly Check-in is not in the menu (the Health tab is its home) and the GP Dashboard is hidden
+for now. `test-menu.mjs` checks each role.
+
 ## Campus Leadership on My Ministry: OKRs and the Monday meeting board
 Campus Leadership doesn't log weekly numbers (hidden for now). Its own row in the picker
 ("🧭 Campus Leadership", where My Ministry opens for anyone in Campus Leadership —
