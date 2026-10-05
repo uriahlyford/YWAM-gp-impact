@@ -126,7 +126,9 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   ok('the teams came with boot — no second request', !sent.some(x => x.fn === 'getTeamTrips'));
   ok('the personal numbers are off the page', !s.personalFold && s.personalOpen === 0);
   ok('a team card is short: its dates (and how many days) and how many people', await page.evaluate(() => { const c = document.querySelector('[data-teamcard="t5"]'); if (!c) return false; const tx = c.textContent; return /Jan 5, 2027 → Jan 25, 2027 · 21 days/.test(tx) && /9 people/.test(tx) && !/Hosted by|🎯|No numbers/.test(tx); }));
-  // the quarter view defaults to this quarter; pick the year view to see everything finished this year
+  const seg = await page.$$eval('[data-teamperiod]', b => b.map(x => x.textContent.trim() + (x.classList.contains('on') ? '*' : '')));
+  ok('it opens on Year to date, with the year month by month — Full year, Quarter and Month beside it', seg.join(' | ') === 'Year to date* | Full year | Quarter | Month' && !!(await page.$('#teamYear')), seg.join(' | '));
+  ok('the switch is the full width of the page', await page.$eval('.periodSeg', e => e.getBoundingClientRect().width > 340));
   await page.click('[data-teamperiod="year"]');
   await page.waitForTimeout(400);
   s = await state(page);
