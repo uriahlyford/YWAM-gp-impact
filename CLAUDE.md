@@ -221,15 +221,9 @@ Three rules hold it together:
   change one, change both.
 
 **Enter each number once.** Two rules matter here:
-- **Weekly health has two ways in, and one row.** The eleven questions are a form on
-  the Health tab (`saveMyWeek`) — the primary path, because daily logging proved
-  unsustainable. `syncWeekSurvey_` still derives a week from daily logs at the end of
-  `saveDaily` for anyone who logs them (thresholds `WEEK_EXERCISE_RATE` /
-  `WEEK_QUIETTIME_RATE`; yes/no fields are "did this happen at all this week", 1-10
-  scales average the days logged). **Both write the same row**, keyed by the person's
-  `surveyToken` — one per person per week, so they cannot double-count — and **a week
-  answered by hand wins**: the sync leaves `source:'weekly'` alone. See "Health lives
-  on the staff page" for who is allowed to read it.
+- **Weekly health has one way in.** The eleven questions are a form on the Health tab
+  (`saveMyWeek`), one row per person per week keyed by their `surveyToken`. Daily logs no
+  longer derive a week. See "Health lives on the staff page" for who may read it.
 - **Base health exports as slides, not as a file of rows.** "Export as slides" (on the
   Health tab's Base health section, both campuses, and on Base's Base Health row —
   `[data-healthexport]`, `hxOpen_`) opens a full-screen deck of the same pooled figures
@@ -531,11 +525,11 @@ week strip / input: two tabs.
   phone they scroll across in their own row.
 - `test-lead-board.mjs` (server) and `test-lead-board-page.mjs` (browser) cover it.
 
-## My Home: no daily check-in for now
-The daily check-in under the habit tracker (hours, mood, the private questions) is hidden —
-`DAILY_CHECKIN = false` in teams.html; flip it to bring it back, nothing it saved is touched —
-and so is the end-of-week "No days logged yet — Log today" banner (`phaseBanner`). The weekly
-health survey on Health is the one check-in.
+## My Home: no daily health inputs
+The daily check-in (hours, mood, the private questions), the "This week" totals built from
+daily logs, the days-logged health view and "Recent days" are removed — code and all (Uriah,
+Oct 2026). The **Habit Tracker stays** as a personal daily tool (with its streaks under
+"Load more") but feeds no score. The weekly health check-in on Health is the one check-in.
 
 ## National holidays are not leave
 The base is closed on them, so a leave request over one spends none of the 30 days (nor
@@ -1194,15 +1188,15 @@ weeks** (every week I've answered, newest first), then **the base average** my w
 feeds — score for the week and YTD, check-in rate, and the per-question averages
 and shares.
 
-**Weekly entry is the primary path.** Daily logging proved unsustainable, so the
-eleven questions are a form again — `saveMyWeek` in `api.js`, filled in on the
-Health tab. It writes to the **same survey row the daily roll-up would have
-written**, keyed by the person's `surveyToken`: one row per person per week, so the
-two paths cannot double-count anybody. Daily logging still works for anyone who
-does it, and `syncWeekSurvey_` still derives a week from days — but **a week
-answered by hand wins**: the sync leaves a row with `source:'weekly'` alone,
-because a deliberate answer beats an inference from however many days got logged.
-Each week's tag says which way it was answered.
+**The weekly check-in is the only thing that scores a week (Uriah, Oct 2026).** The
+eleven questions are a form on the Health tab (`saveMyWeek`), one survey row per person
+per week keyed by their `surveyToken`. The daily roll-up is gone: `saveDaily` still
+records a day's habits for the Habit Tracker but writes no survey row (`syncWeekSurvey_`,
+`weekSurveyFrom_` and `MIN_WEEK_DAYS` were removed). Rows the old roll-up wrote stay as
+history, tagged "from daily logs"; answering that week by hand replaces them. My Home's
+health card and the top "My Health" figure read **weekly check-ins only**
+(`weeklyCheckin_`, `homeHealth_`): this week's once answered, last week's until then,
+never a rolled-up week. tests/test-weekly-health-only.mjs, test-weekly-health-home-ui.mjs.
 
 **Who sees what — the token is the whole mechanism.** Survey rows carry a token and
 never a name, so anything pooled base-wide is anonymous *by construction*, not by

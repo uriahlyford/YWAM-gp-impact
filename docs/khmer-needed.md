@@ -2721,3 +2721,10 @@ moment later; this small label sits at the top while it does.
 | English | Khmer (pending) |
 |---|---|
 | Updating… | កំពុងធ្វើបច្ចុប្បន្នភាព… |
+
+## 62. My Home's health card (weekly check-in only)
+
+| English | Khmer (pending) |
+|---|---|
+| Your score comes from the weekly check-in. | ពិន្ទុរបស់អ្នកបានមកពីការឆែកសុខភាពប្រចាំសប្តាហ៍។ |
+| Open Health | បើកសុខភាព |

@@ -1842,22 +1842,15 @@ function metricsFor(campusId, dept, ministry){
   return list.filter(function(m){ return SENSITIVE.indexOf(m) === -1; });
 }
 
-/* The yes/no dailies are habit tiles now (see HABIT_LIBRARY) — one tap each
-   instead of a list of questions. Only the 1-10 scales still need asking, and
-   they sit in the collapsed part of the Today card. */
-var MOODS = [
-  {id:'clarity', text:'How clear am I on what to do today?'},
-  {id:'growth',  text:'How would I rate my growth today?'}
-];
 
 var S = {
   auth:{user:'', pin:''}, me:null, profile:null,
   logs:[], roster:[], mentees:[], mentorRequests:[], view:'week', base:null,
-  todayDraft:{}, regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
+  regMode:false, mentee:null, menteeLogs:[], menteeGoals:[], busy:false,
   goals:[], checkins:[], menteeCheckins:[], goalsWeek:null, goalEditIdx:null, ministry:null, kpiDraft:{}, kpiWeekDraft:{}, kpiWeek:null, weekDraft:{},
   kpiMonthDraft:{}, kpiQuarterDraft:{},
   habits:null, habitEdit:false, menteeHabits:[], menteeMinistry:null, menteeTrips:null, menteeSmart:[],
-  todayOpen:false, weekOpen:false, kpiAll:false, kpiPick:false, person:null, habitMore:false,
+  kpiAll:false, kpiPick:false, person:null, habitMore:false,
   metricEditTarget:null, metricNewName:'', metricNewType:'sum', metricRename:null, metricRenameText:'',
   /* My Ministry: which of its two tabs is showing, whether the metric form
      is unfolded for the week on screen, and the person's own four numbers. */
@@ -1927,9 +1920,6 @@ function myHabits(){
 }
 
 /* ---------- week helpers (must match isoWeek_ in netlify/functions/api.js) ---------- */
-/* Mirrors MIN_WEEK_DAYS in the API: below this many logged days the week isn't
-   scored or reported. Kept in step by hand — if you change one, change both. */
-var MIN_WEEK_DAYS = 3;
 function isoWeekOf(d){
   var y=d.getFullYear();
   var jan1=new Date(y,0,1);
@@ -2285,12 +2275,6 @@ function logForDate(ds){
   return null;
 }
 function fmtD(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
-function thisWeekLogs(){
-  // Monday-based week matching the backend
-  var d=new Date(); var day=(d.getDay()+6)%7; var mon=new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
-  var ms=fmtD(mon);
-  return S.logs.filter(function(l){ return l.date>=ms; });
-}
 function sum(rows, f){ var acc=0; rows.forEach(function(r){ acc+=Number(f(r))||0; }); return acc; }
 function count(rows, f){ var n=0; rows.forEach(function(r){ if(f(r)) n++; }); return n; }
 
@@ -3848,19 +3832,15 @@ function weekPhase(){
   if(dow===5||dow===6||dow===0) return 'review';
   return 'work';
 }
-/* The daily check-in (hours, mood and the private questions, under the habit
-   tracker) is hidden for now — the weekly health survey on Health is the one
-   check-in. Flip this back to bring it back; nothing it saved is touched. */
-var DAILY_CHECKIN=false;
 function phaseBanner(phase, wk){
   var rec=goalsForWeek(wk);
   var hasGoals=!!(rec && rec.items.some(function(i){return i.text;}));
   if(phase==='plan' && !hasGoals)
     return '<div class="banner big">🎯 <strong>Start of the week.</strong> Pick the three things that matter for week '+wk+'.'+
       ' <button class="linkbtn inline" id="jumpGoals">Set them now</button></div>';
-  /* The end-of-week "No days logged yet — Log today" banner is gone: the daily
-     check-in is hidden for now (DAILY_CHECKIN), and the weekly health survey
-     is the one thing to fill in. Goals-incomplete lives in the bell. */
+  /* No end-of-week "Log today" banner: there is no daily check-in any more —
+     the weekly health check-in is the one thing to fill in. Goals-incomplete
+     lives in the bell. */
   return '';
 }
 
@@ -3990,11 +3970,10 @@ function miniDashboardHtml(){
   var yt=(S.trips && S.trips.totals && S.trips.totals[year]) || {personal:0};
   var cap=(S.trips && S.trips.ptoCap) || 30;
   var ptoLeft=Math.max(0, cap-yt.personal);
-  var c=checkinForWeek(wk);
-  var score=c?compositeOf(c):null;
+  var HH=homeHealth_();   // the weekly check-in only: this week's, or last week's until it is answered
+  var score=HH.score;
   var healthPct=score!==null?Math.round(score*10):0;
-  var prevC=checkinForWeek(wk-1);
-  var prevScore=prevC?compositeOf(prevC):null;
+  var prevScore=HH.prevScore;
   var healthTrend=(score!==null&&prevScore!==null)?trendBadge(pctChange(prevScore,score),true):'';
   var mentorId=S.me.mentorId||'';
   var mentorRec=mentorId?personOf(mentorId):null;
@@ -4967,7 +4946,6 @@ function homeHtml(){
   h += personalityCardHtml();
   h += strengthsCardHtml();
   h += weekSummaryHtml(wk);
-  h += weekStatsHtml();
   h += leaveEntryHtml();
 
   // Profile and settings live under My Home now rather than owning a tab of their own.
@@ -4993,99 +4971,32 @@ function quickJumpHtml(){
   return h+'</div>';
 }
 
-/* Streaks, this week's totals, and recent days — carried over from the old
-   Me tab verbatim. Folded in here as its own block rather than interleaved
-   with the goal/habit/KPI cards above, since it's a look-back, not a task. */
-/* This week's totals — sits with My Health, since every figure in it is a
-   health-adjacent tally (hours, workouts, one-on-ones), not a habit tap. */
-function weekStatsHtml(){
-  var wl=thisWeekLogs();
-  var h='<h3>📅 '+esc(t('This week'))+'</h3><div class="grid">';
-  var cells=[
-    [sum(wl,function(r){return r.langHours;}).toFixed(1),'Language hrs'],
-    [sum(wl,function(r){return r.minHours;}).toFixed(1),'Ministry hrs'],
-    [count(wl,function(r){return r.workout;}),'Workout days'],
-    [count(wl,function(r){return r.quietTime;}),'Quiet-time days'],
-    [count(wl,function(r){return r.bible;}),'Bible days'],
-    [count(wl,function(r){return r.oneOnOne;}),'One-on-ones'],
-    [count(wl,function(r){return r.sharedFaith;}),'Shared faith'],
-    [count(wl,function(r){return r.sabbath;}),'Sabbaths']
-  ];
-  cells.forEach(function(c){ h+='<div class="stat"><div class="statNum">'+c[0]+'</div><div class="statLabel">'+esc(t(c[1]))+'</div></div>'; });
-  return h+'</div>';
+/* My Home's health card: the weekly check-in, nothing else (Uriah, Oct 2026 —
+   the daily inputs and the days-logged view are gone). This week's score once
+   it is answered, last week's until then, and a way in to answer. */
+function weeklyCheckin_(wk){ var c=checkinForWeek(wk); return (c && c.source==='weekly') ? c : null; }
+function homeHealth_(){
+  var cur=thisWeek(), row=weeklyCheckin_(cur), wk=cur;
+  if(!row && cur>1 && weeklyCheckin_(cur-1)){ wk=cur-1; row=weeklyCheckin_(wk); }
+  var prev=row ? weeklyCheckin_(wk-1) : null;
+  return { cur:cur, wk:wk, row:row, score: row ? compositeOf(row) : null, prevScore: prev ? compositeOf(prev) : null };
 }
-
-/* The daily log, day by day — sits with Habit Tracker, since it's the same
-   daily taps read back as a history instead of a run. */
-function recentDaysHtml(){
-  var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🗓️ '+esc(t('Recent days'))+'</div>';
-  if(!S.logs.length) h+='<p class="sub" style="margin:6px 0">No entries yet — log your first day on the Today tab.</p>';
-  S.logs.slice(0,7).forEach(function(l){
-    var bits=[];
-    if(l.langHours) bits.push(l.langHours+'h lang');
-    if(l.minHours) bits.push(l.minHours+'h min');
-    if(l.workout) bits.push('workout');
-    if(l.quietTime) bits.push('quiet time');
-    if(l.bible) bits.push('Bible');
-    h+='<div class="row"><span class="rowName">'+esc(l.date)+'<div class="pmeta">'+(bits.join(' · ')||'—')+'</div></span></div>';
-  });
-  return h+'</div>';
-}
-
-/* One line, not a form. If you log days, this is the week those days work out to
-   — tap to see what the base would receive. The weekly form on the Health tab is
-   the other way in, and the one most people use; a week answered there wins over
-   this, so nothing here can overwrite an answer you gave deliberately. */
-function weekSummaryHtml(wk){
-  var c=checkinForWeek(wk);
-  var wl=thisWeekLogs();
-  if(!c && !wl.length) return '';
-  var open=S.weekOpen;
-  // Your own weekly score, using exactly the maths the base dashboard uses on
-  // the pooled data — so the chain daily → your week → base health is visible
-  // rather than something that happens off-screen.
-  var score = c ? compositeOf(c) : null;
-  // No score until there's enough of a week to mean anything — showing a low
-  // number built from one day would just be wrong, and it isn't sent to the
-  // base either. Say how many more days instead.
-  var short = MIN_WEEK_DAYS - wl.length;
-  var sub = score!==null ? gpT('{n} of 7 days logged',{n:wl.length})
-    : (wl.length===0 ? t('log a day and this starts filling in')
-                     : gpT('{n} days logged · {m} more for your score',{n:wl.length,m:short}));
-  var h='<div class="card slim" id="sec-health"><button class="discloseBtn" id="weekToggle">'+
-    '<span><strong>💚 '+esc(t('My health'))+' · '+esc(t('week'))+' '+wk+'</strong>'+
-    '<div class="pmeta">'+esc(sub)+'</div></span>'+
-    '<span class="'+(score===null?'chev':'pctBig')+'">'+
-      (score===null ? (open?'▴':'▾') : score.toFixed(1))+'</span></button>';
-  if(score!==null){
-    h+='<div class="bar" style="margin-top:8px"><div class="barFill'+(score>=8?' done':'')+
-       '" style="width:'+Math.round(score*10)+'%"></div></div>'+
-       '<div class="pmeta">'+esc(gpT('Health score out of 10, from the {n} days you logged',{n:wl.length}))+
-       ' · '+esc(gpT('feeds the base total for {campus}',{campus:t(campusName(S.me.campus))}))+
-       ' · <button class="linkbtn inline" id="toHealthTab">'+esc(t('answer the week directly'))+'</button></div>';
+function weekSummaryHtml(){
+  var H=homeHealth_();
+  var h='<div class="card slim" id="sec-health">';
+  if(H.score!==null){
+    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>💚 '+esc(t('My health'))+' · '+esc(t('week'))+' '+H.wk+'</strong>'+
+      '<div class="pmeta">'+esc(t('From your weekly check-in'))+' · '+esc(gpT('feeds the base total for {campus}',{campus:t(campusName(S.me.campus))}))+'</div></span>'+
+      '<span class="pctBig">'+H.score.toFixed(1)+(H.prevScore!==null ? trendBadge(pctChange(H.prevScore,H.score), true) : '')+'</span></div>'+
+      '<div class="bar" style="margin-top:8px"><div class="barFill'+(H.score>=8?' done':'')+'" style="width:'+Math.round(H.score*10)+'%"></div></div>';
+  } else {
+    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>💚 '+esc(t('My health'))+'</strong>'+
+      '<div class="pmeta">'+esc(t('Your score comes from the weekly check-in.'))+'</div></span></div>';
   }
-  if(open && c){
-    var yn=function(v){ return v? 'yes':'no'; };
-    var rows=[
-      ['Loneliness (avg)', c.lonely||'—'],
-      ['Clarity (avg)', c.clarity||'—'],
-      ['Growth (avg)', c.growth||'—'],
-      ['Exercised 3+ days', yn(c.exercise)],
-      ['Regular quiet time', yn(c.quietTime)],
-      ['One-on-one', yn(c.oneOnOne)],
-      ['Shared faith', yn(c.sharedFaith)],
-      ['Sabbath', yn(c.sabbath)],
-      ['Language hours', c.langHours||0],
-      ['Ministry hours', c.minHours||0]
-    ];
-    h+='<div style="margin-top:10px">';
-    rows.forEach(function(r){
-      h+='<div class="row"><span class="rowName">'+esc(r[0])+'</span><span class="pctSm">'+esc(String(r[1]))+'</span></div>';
-    });
-    h+='<p class="hint" style="margin-top:8px">Leaders only ever see these pooled with everyone else’s — never your name.</p></div>';
-  } else if(open){
-    h+='<p class="sub" style="margin:10px 0 0">Nothing yet for this week. It appears once you log a day.</p>';
-  }
+  if(H.wk!==H.cur || H.score===null)
+    h+='<button class="btn" id="toHealthTab" style="margin-top:10px">'+esc(t('Fill out this week’s check-in'))+'</button>';
+  else
+    h+='<button class="linkbtn" id="toHealthTab" style="margin:6px 0 0">'+esc(t('Open Health'))+'</button>';
   return h+'</div>';
 }
 
@@ -5131,55 +5042,15 @@ function habitsCardHtml(){
 
   h+='<button class="linkbtn" id="editHabits" style="margin:8px 0 4px">'+esc(t('Choose my habits'))+'</button>';
 
-  /* Hours, mood and the private questions used to live on a separate Today
-     screen. They're the same daily entry, so they're folded in here behind a
-     disclosure — one place to log the day, without a wall of inputs. Once
-     MIN_WEEK_DAYS days are logged in a week, syncWeekSurvey_ in api.js rolls
-     them straight into that week's Health check-in — a form filled in by
-     hand there always wins over the roll-up, so this is a floor under your
-     score, not something that has to be overridden to make Health accurate. */
-  var d=S.todayDraft;
-  if(DAILY_CHECKIN && log && !d._loaded){
-    ['langHours','minHours','clarity','growth','lonely','porn'].forEach(function(k){
-      if(d[k]===undefined && log[k]!==undefined && log[k]!==null) d[k]=log[k];
-    });
-    d._loaded=true;
-  }
-  if(DAILY_CHECKIN) h+='<button class="discloseBtn" id="moreToday"><span><strong>'+esc(t('Daily check-in'))+'</strong>'+
-     '<div class="pmeta">'+todaySummaryLine(log)+'</div></span>'+
-     '<span class="chev">'+(S.todayOpen?'▴':'▾')+'</span></button>'+
-     '<p class="hint" style="margin:4px 0 0">'+
-     esc(gpT('Log {n}+ days this week and it fills in your weekly Health check-in — submit that form any time to override it by hand.',{n:MIN_WEEK_DAYS}))+
-     '</p>';
-  if(DAILY_CHECKIN && S.todayOpen){
-    h+='<div class="qBlock"><div class="qText">Language study today</div><div class="numIn">'+
-       '<input type="number" inputmode="decimal" min="0" step="0.5" id="n_langHours" value="'+(d.langHours!=null?d.langHours:'')+'"> hours</div></div>'+
-       '<div class="qBlock"><div class="qText">Community ministry today</div><div class="numIn">'+
-       '<input type="number" inputmode="decimal" min="0" step="0.5" id="n_minHours" value="'+(d.minHours!=null?d.minHours:'')+'"> hours</div></div>';
-    MOODS.forEach(function(q){
-      h+='<div class="qBlock"><div class="qText">'+esc(q.text)+'</div><div class="scale">';
-      for(var i=1;i<=10;i++) h+='<button data-scale="'+q.id+'|'+i+'" class="'+(Number(d[q.id])===i?'on':'')+'">'+i+'</button>';
-      h+='</div></div>';
-    });
-    h+='<div class="privateWrap"><p class="hint" style="margin:0 0 6px">🔒 Only you'+
-       (S.me.mentorId?' and '+esc(nameOf(S.me.mentorId)):'')+'. Leaders see anonymous totals only.</p>'+
-       '<div class="qBlock"><div class="qText">How lonely do I feel today? <span class="hint">(1 = not at all, 10 = very)</span></div><div class="scale">';
-    for(var j=1;j<=10;j++) h+='<button data-scale="lonely|'+j+'" class="'+(Number(d.lonely)===j?'on':'')+'">'+j+'</button>';
-    h+='</div></div><div class="qBlock"><div class="qText">Did I look at porn today?</div><div class="seg">'+
-       '<button data-yn="porn|1" class="'+(d.porn===true||d.porn===1?'on bad':'')+'">Yes</button>'+
-       '<button data-yn="porn|0" class="'+(d.porn===false||d.porn===0?'on':'')+'">No</button></div></div></div>';
-    h+='<button class="btn" id="saveDayBtn">'+esc(t('Save today'))+'</button>';
-  }
   h += '</div>';
 
-  /* Streaks and Recent days are a look-back, not something anyone needs open
-     every visit — collapsed behind one button under the daily check-in so
-     the page settles sooner, the same way KPI counts hide behind "show all". */
-  h += '<button class="linkbtn" id="habitLoadMore" style="margin:4px 0 10px">'+
-    esc(t(S.habitMore ? 'Show less' : 'Load more'))+'</button>';
-  if(S.habitMore){
-    h += streaksHtml();
-    h += recentDaysHtml();
+  /* Streaks are a look-back, not something anyone needs open every visit —
+     behind one button so the page settles sooner. No button when there are none. */
+  var runs=streaksHtml();
+  if(runs){
+    h += '<button class="linkbtn" id="habitLoadMore" style="margin:4px 0 10px">'+
+      esc(t(S.habitMore ? 'Show less' : 'Load more'))+'</button>';
+    if(S.habitMore) h += runs;
   }
   return h;
 }
@@ -5201,15 +5072,6 @@ function streaksHtml(){
   return h+'</div>';
 }
 
-function todaySummaryLine(log){
-  if(!log) return t('Not logged yet');
-  var bits=[];
-  if(log.langHours) bits.push(log.langHours+'h language');
-  if(log.minHours) bits.push(log.minHours+'h ministry');
-  if(log.clarity!=null) bits.push('clarity '+log.clarity);
-  if(log.growth!=null) bits.push('growth '+log.growth);
-  return bits.length ? bits.join(' · ') : 'Nothing added yet';
-}
 
 
 /* --- three weekly goals --- */
@@ -12796,14 +12658,8 @@ function bindHome(){
   if(gp) gp.onclick=function(){ S.view='profile'; render(); };
   var jg=document.getElementById('jumpGoals');
   if(jg) jg.onclick=function(){ S.view='week'; render(); };
-  var jt=document.getElementById('jumpToday');
-  if(jt) jt.onclick=function(){ S.view='week'; S.todayOpen=true; render(); };
   var fd=document.getElementById('goFullDash');
   if(fd) fd.onclick=function(){ gpGo('index'); };
-  var mt=document.getElementById('moreToday');
-  if(mt) mt.onclick=function(){ S.todayOpen=!S.todayOpen; render(); };
-  var wt=document.getElementById('weekToggle');
-  if(wt) wt.onclick=function(){ S.weekOpen=!S.weekOpen; render(); };
 
   /* Quick-jump bar: scroll to a section already on this tab, or navigate
      straight to the screen for the one that lives elsewhere (Account). */
@@ -12864,52 +12720,6 @@ function bindHome(){
       });
     };
   });
-
-  // hours / mood / private — same daily record as the habit tiles.
-  // Keep typed hours in the draft as they're typed: tapping a mood scale
-  // re-renders the card and would otherwise blank a half-entered number.
-  ['langHours','minHours'].forEach(function(k){
-    var el=document.getElementById('n_'+k);
-    if(el) el.oninput=function(){ S.todayDraft[k] = el.value===''? undefined : Number(el.value); };
-  });
-  document.querySelectorAll('[data-scale]').forEach(function(b){
-    b.onclick=function(){ var p=b.getAttribute('data-scale').split('|'); S.todayDraft[p[0]]=Number(p[1]); render(); };
-  });
-  document.querySelectorAll('[data-yn]').forEach(function(b){
-    b.onclick=function(){ var p=b.getAttribute('data-yn').split('|'); S.todayDraft[p[0]]=Number(p[1])===1; render(); };
-  });
-  var sdb=document.getElementById('saveDayBtn');
-  if(sdb) sdb.onclick=function(){
-    if(S.busy) return;
-    var d=S.todayDraft;
-    var lh=document.getElementById('n_langHours'), mh=document.getElementById('n_minHours');
-    if(lh) d.langHours = lh.value===''? 0 : Number(lh.value);
-    if(mh) d.minHours  = mh.value===''? 0 : Number(mh.value);
-    S.busy=true; sdb.disabled=true; sdb.textContent='…';
-    var map=todayHabitMap();
-    var log=logForDate(todayStr())||{};
-    var payload={
-      langHours:d.langHours||0, minHours:d.minHours||0,
-      workout:log.workout, bible:log.bible, quietTime:log.quietTime,
-      oneOnOne:log.oneOnOne, sharedFaith:log.sharedFaith, sabbath:log.sabbath,
-      clarity:d.clarity, growth:d.growth, lonely:d.lonely, porn:d.porn,
-      habits:map
-    };
-    ['workout','bible','quietTime','oneOnOne','sharedFaith','sabbath'].forEach(function(k){
-      if(map[k]!==undefined) payload[k]=map[k];
-    });
-    run('saveDaily',[S.auth.user,S.auth.pin,todayStr(),payload],function(r){
-      S.busy=false;
-      if(r.ok){
-        S.logs=r.logs;
-        adoptHabits(r.habits);
-        // The week's health row is recomputed server-side from the days.
-        if(r.week) upsertCheckin(r.week);
-        S.todayDraft={}; showMsg('Saved');
-      } else showMsg('Could not save');
-      render();
-    });
-  };
 
   // --- daily habits ---
   /* No S.busy gate here on purpose: toggleHabit() updates the local log and

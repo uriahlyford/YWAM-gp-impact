@@ -1299,8 +1299,9 @@ async function saveDaily(username, pin, dateStr, payload) {
   };
   if (idx > -1) rows[idx] = rec; else rows.push(rec);
   await writeJSON('dailyLogs', rows);
-  // The week's health row follows from the days — no second form to fill in.
-  const week = await syncWeekSurvey_(s, rec.week, rows);
+  /* No health row from the days any more (Uriah, Oct 2026): the weekly check-in
+     (saveMyWeek) is the only thing that scores a week. A day still records its
+     habits — the Habit Tracker is unchanged — it just feeds no score. */
   /*  Answer from the rows we just wrote — never from a fresh read of the store.
 
       This used to end with `getMyLogs(username, pin)`, which re-reads
@@ -1315,7 +1316,7 @@ async function saveDaily(username, pin, dateStr, payload) {
       ask for. Two blob reads and a second PIN check saved as well. */
   return {
     ok: true, logs: logsFor_(rows, s.id), profile: { debt: s.debt },
-    habits: habitsOf_(s), bibleDay: s.bibleDay || 0, week: week
+    habits: habitsOf_(s), bibleDay: s.bibleDay || 0, week: null
   };
 }
 
@@ -1734,113 +1735,19 @@ async function saveGoals(username, pin, week, items) {
   return { ok: true, goals: goalsFor_(rows, s.id) };
 }
 
-/* ==================== weekly health, derived from the daily log ====================
-   There is no separate weekly survey form any more: it asked the same eleven
-   questions as the daily check-in, just summarised, so people were entering
-   the same information twice. The week's row is now computed from that week's
-   daily logs every time a day is saved.
-
-   It writes into the same 'survey' blob the anonymous device survey uses, so
-   the base health score picks it up with no extra plumbing. Rows are keyed by
-   a random per-staff token held on the staff record and never exposed through
-   publicStaff_ — one person is one row per week, but nobody reading the survey
-   can tie a row back to a name.
-
-   Thresholds match what the old form asked in words ("exercised 3+ days",
-   "regular quiet time"); the yes/no ones are "did this happen at all this
-   week", and the 1-10 scales average the days actually logged. */
-/* Thresholds are RATES over the days actually logged, not absolute day counts.
-   Counting absolute days conflated "didn't do it" with "didn't log it": someone
-   logging two days a week could never reach 3 workout days, so they scored zero
-   on exercise even having worked out both days — and that depressed score fed
-   the base health total, making the base look unhealthy when it was only
-   under-logged. Rates ask "how much of your logged week looked like this",
-   which is answerable however often you log.
-   (3/7 and 4/7 are the old "3+ days" and "regular" bars expressed as rates.) */
-const WEEK_EXERCISE_RATE = 3 / 7;
-const WEEK_QUIETTIME_RATE = 4 / 7;
-
-/* …but a rate off one or two days is noise, and one enthusiastic Monday
-   shouldn't speak for a whole week in the base total. Below this many logged
-   days the week is treated as not yet reportable: no survey row is written, and
-   any existing row for that week is removed. Tune freely — it's the one knob
-   that decides how much logging counts as "a week". */
-const MIN_WEEK_DAYS = 3;
-
+/* Each person's survey token: a random id on their own staff record, never in
+   publicStaff_. Survey rows carry it instead of a name, so anything pooled across
+   the base is nameless; only the person's own record maps it back (their one
+   approved mentor's view). Made the first time it is needed. */
 function surveyTokenFor_(rec) {
   if (!rec.surveyToken) rec.surveyToken = 'st' + crypto.randomBytes(9).toString('hex');
   return rec.surveyToken;
 }
 
-function weekSurveyFrom_(logs, s, token, wk) {
-  const days = logs.filter(function (r) { return Number(r.week) === wk; });
-  const anyOf = function (k) { return days.some(function (r) { return !!r[k]; }) ? 1 : 0; };
-  const countOf = function (k) { return days.filter(function (r) { return !!r[k]; }).length; };
-  const meanOf = function (k) {
-    const vals = days.map(function (r) { return r[k]; }).filter(function (v) { return v != null && !isNaN(Number(v)); });
-    if (!vals.length) return 0;
-    return Math.round(vals.reduce(function (a, b) { return a + Number(b); }, 0) / vals.length);
-  };
-  const sumOf = function (k) {
-    return days.reduce(function (a, r) { return a + (Number(r[k]) || 0); }, 0);
-  };
-  return {
-    campus: s.campus, week: wk, year: currentYear_(), device: token,
-    lonely: meanOf('lonely'), clarity: meanOf('clarity'), growth: meanOf('growth'),
-    porn: anyOf('porn'), oneOnOne: anyOf('oneOnOne'), sharedFaith: anyOf('sharedFaith'),
-    sabbath: anyOf('sabbath'),
-    exercise: days.length && countOf('workout') / days.length >= WEEK_EXERCISE_RATE ? 1 : 0,
-    quietTime: days.length && countOf('quietTime') / days.length >= WEEK_QUIETTIME_RATE ? 1 : 0,
-    debt: s.debt ? 1 : 0,
-    langHours: sumOf('langHours'),
-    days: days.length,
-    updated: new Date().toISOString()
-  };
-}
-
-/* Recompute and store the week's survey row. Returns it so the UI can show
-   what the base will see without asking for any of it again. */
-async function syncWeekSurvey_(s, wk, dailyRows) {
-  const staffRows = await getStaff_();
-  const si = staffRows.findIndex(function (r) { return r.id === s.id; });
-  if (si === -1) return null;
-  const token = surveyTokenFor_(staffRows[si]);
-  await saveStaff_(staffRows);
-
-  const mine = dailyRows.filter(function (r) { return r.staffId === s.id; });
-  const rec = weekSurveyFrom_(mine, staffRows[si], token, wk);
-  const rows = await getSurvey_();
-  const idx = rows.findIndex(function (r) {
-    return r.campus === s.campus && Number(r.week) === wk && r.device === token &&
-      yearOf_(r) === rec.year;
-  });
-
-  // Too few days to speak for a week: publish nothing, and withdraw anything
-  // published earlier for this week so a thin week can't sit in the base total.
-  if (rec.days < MIN_WEEK_DAYS) {
-    if (idx > -1) {
-      rows.splice(idx, 1);
-      await writeJSON('survey', rows);
-    }
-    return { pending: true, week: wk, days: rec.days, need: MIN_WEEK_DAYS };
-  }
-
-  /* A week answered by hand wins over one derived from days. Filling in the
-     weekly form is a deliberate statement about the week; the daily roll-up is
-     an inference from however many days got logged. So the sync leaves a
-     hand-entered row alone rather than quietly overwriting it. */
-  if (idx > -1 && rows[idx].source === 'weekly') return rows[idx];
-
-  if (idx > -1) rows[idx] = rec; else rows.push(rec);
-  await writeJSON('survey', rows);
-  return rec;
-}
-
 /* ---------- the weekly check-in, filled in by hand ----------
-   Daily logging turned out not to be sustainable, so this is the primary way a
-   week gets answered. It writes to the SAME survey row the daily roll-up would
-   have written — one row per person per week, keyed by their survey token — so
-   the two paths can never double-count somebody.
+   The only way a week gets a health score (the daily roll-up is gone, Oct 2026).
+   One survey row per person per week, keyed by their survey token; rows the old
+   roll-up wrote stay as they were, and answering that week here replaces them.
 
    The token is what makes the base average anonymous and the mentor view
    possible at the same time: survey rows carry a token, never a name, so
