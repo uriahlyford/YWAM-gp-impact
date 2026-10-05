@@ -46,6 +46,7 @@ const SERVER = [
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted
   'test-personality.mjs', // personality types: scoring, and who can see a type, an avatar or a season
+  'test-km-review.mjs', // Khmer review: who may review, what a fix must keep, km-apply-reviews.mjs moving only reviewed lines
   'test-backup.mjs', // the nightly backup: stored once, thirty nights, a failed night, restoring; admins see when it ran
   'test-dept-pulse.mjs', // a department leader's pulse: who sees it, health as two numbers only, staff debt from Finance
   'test-numbers-people.mjs', // each ministry's main person and backup, due Friday: who may set them, the reminders' data
@@ -92,6 +93,7 @@ const BROWSER = [
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
+  'test-km-review-ui.mjs',  // the Khmer review page: one line at a time, Correct / Fix / Skip / Undo, the admin's download
   'test-offline-open-ui.mjs',  // opening with no connection: the kept page and boot, ministry numbers queued and merged
   'test-backup-real.mjs',  // the backup against the real @netlify/blobs (needs npm install; no browser)
   'test-backup-ui.mjs',  // Admin home's "Last backup", the bell when a night is missed
