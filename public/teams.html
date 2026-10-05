@@ -2143,6 +2143,8 @@ function gpQueueFlush(){
       gpQueueRemove_(item.key);
       if(item.fn==='saveGoals' && d && d.goals) S.goals=d.goals;
       if(item.fn==='saveMyWeek' && d && d.checkins) S.checkins=d.checkins;
+      if(item.fn==='saveMyMinistry' && d && d.ok) S.ministry=d;
+      if(item.fn==='saveMinistryFor' && d && d.ok && S.oversee) S.oversee[item.args[3]]=d;
       i++; next();
     }, function(){ _gpQueueFlushing=false; });
   }
@@ -2179,6 +2181,39 @@ function gpSaveGoals_(wk, written, cb){
     if(d && d.ok) S.goals=d.goals||[]; else showMsg(t('That didn’t save — try again.'));
     cb(!!(d && d.ok));
   }, queueOffline);
+}
+
+/* Ministry numbers queue too — the week's, the month's and the quarter's boxes on
+   My Ministry and an overseer's card. Each save carries absolute values per
+   metric for one week, so a second offline save to the same ministry and week
+   merges into the first by metric (the newer box wins) rather than replacing
+   it: one card saved, then another, must both arrive. The numbers show on the
+   page at once (gpMinistryOverlay_), and again over a fresh boot until sent. */
+function gpMinistryOverlay_(data, wk, updates){
+  if(!data) return;
+  data.entries = data.entries || {};
+  (updates||[]).forEach(function(u){
+    var e = data.entries[u.metric] || (data.entries[u.metric] = {});
+    if(u.value===null || u.value===undefined) delete e[String(wk)]; else e[String(wk)] = u.value;
+  });
+}
+function gpSaveMinistry_(o){
+  function queueOffline(){
+    var key = 'min:'+o.dept+'|'+o.min+'|'+o.wk;
+    var prev = gpQueueList_().filter(function(x){ return x.key===key; })[0];
+    var merged = {}, order = [];
+    ((prev && prev.args[prev.args.length-1]) || []).concat(o.updates).forEach(function(u){
+      if(!(u.metric in merged)) order.push(u.metric);
+      merged[u.metric] = u;
+    });
+    gpQueuePut_(key, o.fn, o.args.slice(0, -1).concat([order.map(function(m){ return merged[m]; })]));
+    gpMinistryOverlay_(o.fn==='saveMinistryFor' ? (S.oversee||{})[o.min] : S.ministry, o.wk, o.updates);
+    if(o.updates.some(function(u){ return u.value!==null && u.value!==undefined; })) numbersMarkLogged_(o.dept, o.min, o.wk);
+    showMsg(t('Saved on your phone — will sync once you’re back online.'));
+    o.done(null, true);
+  }
+  if(!gpOnline_()){ queueOffline(); return; }
+  run(o.fn, o.args, function(d){ o.done(d, false); }, queueOffline);
 }
 
 /* consecutive-day streak ending today or yesterday */
@@ -2241,6 +2276,56 @@ function thisWeekLogs(){
 function sum(rows, f){ var acc=0; rows.forEach(function(r){ acc+=Number(f(r))||0; }); return acc; }
 function count(rows, f){ var n=0; rows.forEach(function(r){ if(f(r)) n++; }); return n; }
 
+/* ---------- offline: the last page this phone loaded ----------
+   Every good getMyBoot is kept on the phone (gp-boot-cache, with whose it is
+   and when), so the app can open with no connection: sw.js serves the page
+   itself, and this serves the data, marked as a copy (S.offlineSince) with a
+   line at the top of every screen. It is the same data this phone was already
+   showing, behind the same remembered PIN; logging out, or a PIN the server
+   refuses, deletes it. Saves that queue offline (goals, the health check-in,
+   ministry numbers) still queue; the rest say they could not save. Back online,
+   the page boots again by itself and the line goes. */
+var GP_BOOT_CACHE = 'gp-boot-cache', GP_BOOT_CACHE_MAX = 3000000;
+function gpBootCacheSave_(d){
+  try {
+    var txt = JSON.stringify({ user:S.auth.user, at:new Date().toISOString(), d:d });
+    if(txt.length > GP_BOOT_CACHE_MAX) { lsDel(GP_BOOT_CACHE); return; }   // too big to keep: keep none rather than a stale one
+    lsSet(GP_BOOT_CACHE, txt);
+  } catch(e){}
+}
+function gpBootCacheLoad_(user){
+  try {
+    var c = JSON.parse(lsGet(GP_BOOT_CACHE)||'null');
+    return (c && c.d && c.d.ok && c.user===user) ? c : null;
+  } catch(e){ return null; }
+}
+function gpBootFromCache_(){
+  var c = gpBootCacheLoad_(S.auth.user);
+  if(!c) return false;
+  S.me = c.d.staff; S.profile = c.d.profile;
+  S.offlineSince = c.at;
+  applyBoot(c.d, true);
+  return true;
+}
+/* Back online (or back to the app) while showing the copy: boot again, quietly. */
+var _gpReboot = false;
+function gpRebootIfOffline_(){
+  if(!S.offlineSince || _gpReboot || !gpOnline_() || !S.auth || !S.auth.user) return;
+  _gpReboot = true;
+  run('getMyBoot', [S.auth.user, S.auth.pin], function(d){
+    _gpReboot = false;
+    if(d && d.ok){ S.offlineSince = null; S.me = d.staff; S.profile = d.profile; applyBoot(d); }
+  }, function(){ _gpReboot = false; });
+}
+window.addEventListener('online', gpRebootIfOffline_);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) gpRebootIfOffline_(); });
+function gpOfflineBannerHtml_(){
+  if(!S.offlineSince || !S.me) return '';
+  var d=new Date(S.offlineSince);
+  var when=shortDay_(d)+', '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  return '<div class="banner offlineBanner" id="offlineBanner">📴 '+esc(gpT('No connection — this is your page as it was on {date}. Numbers, goals and check-ins you save will send when you’re back online.',{date:when}))+'</div>';
+}
+
 /* ---------- boot ---------- */
 function boot(){
   /* The dashboard's front door links straight here: ?reg=1 opens the create
@@ -2266,12 +2351,19 @@ function boot(){
          hiccuped is the wrong answer. run() already reports a dropped connection;
          this covers a server that answered but not with a page. */
       if(d && d.err === 'auth'){
-        lsDel('gp-staff');
+        lsDel('gp-staff'); lsDel(GP_BOOT_CACHE);
         S.me = null; S.auth = { user:'', pin:'' };
         showMsg(t('Your PIN didn’t work — please log in again.'));
+      } else if(gpBootFromCache_()){
+        return;
       } else {
         showMsg(t('Couldn’t load your page — pull down to try again.'));
       }
+      render();
+    }, function(){
+      /* No connection at all: the copy from last time, if this phone has one. */
+      if(gpBootFromCache_()) return;
+      showMsg(t('No connection — your page will load once you’re back online.'));
       render();
     });
   } else { render(); }
@@ -2305,7 +2397,8 @@ function afterLogin(){
 
 /* Everything a boot payload carries, in one place, because two entry points use
    it: a remembered session and a fresh login. */
-function applyBoot(d){
+function applyBoot(d, fromCache){
+  if(!fromCache){ S.offlineSince = null; gpBootCacheSave_(d); }
   S.roster = d.roster || [];
   S.logs = d.logs || [];
   adoptHabits(d.habits);
@@ -2336,6 +2429,8 @@ function applyBoot(d){
       var gwk=item.args[2], gwritten=item.args[3];
       S.goals = (S.goals||[]).filter(function(g){ return Number(g.week)!==Number(gwk); })
         .concat([{week:gwk, pct:gpGoalsWeekPct_(gwritten), updated:'', items:gwritten}]);
+    } else if(item.fn==='saveMyMinistry'){
+      gpMinistryOverlay_(S.ministry, item.args[2], item.args[3]);
     } else if(item.fn==='saveMyWeek'){
       var wwk=item.args[2], wpayload=item.args[3];
       S.checkins = (S.checkins||[]).filter(function(c){ return Number(c.week)!==Number(wwk); })
@@ -2347,7 +2442,7 @@ function applyBoot(d){
 }
 
 function logout(){
-  lsDel('gp-staff');
+  lsDel('gp-staff'); lsDel(GP_BOOT_CACHE); S.offlineSince=null;
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
@@ -2458,6 +2553,7 @@ function render(){
   else if(S.view==='gtest') m.innerHTML=gtestHtml();
   else if(S.view==='gstr') m.innerHTML=gstrHtml();
   else m.innerHTML=profileHtml();
+  if(S.offlineSince) m.insertAdjacentHTML('afterbegin', gpOfflineBannerHtml_());
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
      Request from partway down My Home lands on whatever the leave screen
@@ -12820,12 +12916,14 @@ function bindHome(){
     });
     var bad=kpiProblem_(updates, S.me.ministry); if(bad){ showMsg(bad); return; }
     S.busy=true; skw.disabled=true; skw.textContent=t('Saving…');
-    run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
+    gpSaveMinistry_({ fn:'saveMyMinistry', args:[S.auth.user,S.auth.pin,wk,updates], dept:S.me.dept, min:S.me.ministry, wk:wk, updates:updates,
+      done:function(d, queued){
       S.busy=false;
+      if(queued){ S.kpiWeekDraft={}; render(); return; }
       if(d && d.ok){ S.ministry=d; S.kpiWeekDraft={}; numbersMarkLogged_(S.me.dept, S.me.ministry, wk); showMsg(d.rejected&&d.rejected.length ? kpiProblem_(d.rejected.map(function(m){ return {metric:m, value:-1e9}; }), S.me.ministry) : 'Saved — week '+wk+' updated'); }
       else showMsg('Could not save');
       render();
-    });
+    }});
   };
 
   /* Monthly/quarterly-cadence figures — one number for the period, written
@@ -12846,12 +12944,14 @@ function bindHome(){
     });
     var bad=kpiProblem_(updates, S.me.ministry); if(bad){ showMsg(bad); return; }
     S.busy=true; skm.disabled=true; skm.textContent=t('Saving…');
-    run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
+    gpSaveMinistry_({ fn:'saveMyMinistry', args:[S.auth.user,S.auth.pin,wk,updates], dept:S.me.dept, min:S.me.ministry, wk:wk, updates:updates,
+      done:function(d, queued){
       S.busy=false;
+      if(queued){ S.kpiMonthDraft={}; render(); return; }
       if(d && d.ok){ S.ministry=d; S.kpiMonthDraft={}; showMsg(t('Saved')); }
       else showMsg(t('Could not save'));
       render();
-    });
+    }});
   };
   document.querySelectorAll('[data-kpiquarter]').forEach(function(inp){
     inp.oninput=function(){ S.kpiQuarterDraft[inp.getAttribute('data-kpiquarter')]=inp.value; };
@@ -12866,12 +12966,14 @@ function bindHome(){
     });
     var bad=kpiProblem_(updates, S.me.ministry); if(bad){ showMsg(bad); return; }
     S.busy=true; skq.disabled=true; skq.textContent=t('Saving…');
-    run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
+    gpSaveMinistry_({ fn:'saveMyMinistry', args:[S.auth.user,S.auth.pin,wk,updates], dept:S.me.dept, min:S.me.ministry, wk:wk, updates:updates,
+      done:function(d, queued){
       S.busy=false;
+      if(queued){ S.kpiQuarterDraft={}; render(); return; }
       if(d && d.ok){ S.ministry=d; S.kpiQuarterDraft={}; showMsg(t('Saved')); }
       else showMsg(t('Could not save'));
       render();
-    });
+    }});
   };
 
   // --- ministries you oversee: weekly only, keyed by ministry name so
@@ -12913,12 +13015,14 @@ function bindHome(){
       });
     var bad=kpiProblem_(updates, min); if(bad){ showMsg(bad); return; }
       S.busy=true; btn.disabled=true; btn.textContent=t('Saving…');
-      run('saveMinistryFor',[S.auth.user,S.auth.pin,dept,min,wk,updates],function(d){
+      gpSaveMinistry_({ fn:'saveMinistryFor', args:[S.auth.user,S.auth.pin,dept,min,wk,updates], dept:dept, min:min, wk:wk, updates:updates,
+        done:function(d, queued){
         S.busy=false;
+        if(queued){ S.ovWeekDraft[min]={}; render(); return; }
         if(d && d.ok){ S.oversee[min]=d; S.ovWeekDraft[min]={}; numbersMarkLogged_(dept, min, wk); showMsg(gpT('Saved — week {wk} updated',{wk:wk})); }
         else showMsg(t('Could not save'));
         render();
-      });
+      }});
     };
   });
 }
@@ -13591,6 +13695,16 @@ gpPullToRefresh(function(){ return refreshAll(); }, { blocked: function(){ retur
 gpSelectNumberOnFocus();   // tapping a number box types over it, rather than beside the 0
 gpInstallPrompt();
 
+/* The offline copy of the page (sw.js). Not under a test browser unless the
+   test asks for it: a worker serving cached files would quietly change what
+   every other test is testing. */
+(function(){
+  try {
+    if(!('serviceWorker' in navigator)) return;
+    if(navigator.webdriver && !lsGet('gp-sw-test')) return;
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  } catch(e){}
+})();
 boot();
 </script>
 </body>

@@ -87,7 +87,7 @@ const bellText = async page => {
   const t = await page.$eval('#notifRoot', e => e.innerText);
   return t;
 };
-const toAdmin = async page => { await page.evaluate(() => { S.view = 'admin'; S.adminSub = 'home'; render(); }); await page.waitForTimeout(300); };
+const toAdmin = async page => { await page.evaluate(() => { S.bellOpen = false; renderNotifPanel(); S.view = 'admin'; S.adminSub = 'home'; render(); }); await page.waitForTimeout(300); };
 const line = page => page.$eval('#backupLine', e => e.innerText.replace(/\s+/g, ' ').trim()).catch(() => '');
 
 /* ---------- 1. last night's backup ran ---------- */
@@ -95,7 +95,6 @@ status({ at: '2026-10-05T20:00:00Z' });
 {
   const { ctx, page } = await open('uriah', { at: AT });
   ok('the bell says nothing about the backup when it ran last night', !/backup/i.test(await bellText(page)));
-  await page.click('#bellBtn').catch(() => {});
   await toAdmin(page);
   const l = await line(page);
   ok('Admin home says when it last ran, how much, how many nights kept', /Last backup: Oct 6, 03:00 · 214 items · 30 nights kept/.test(l), l);
@@ -137,7 +136,6 @@ delete mem.status;
 {
   const { ctx, page } = await open('uriah', { at: AT });
   ok('before the first night: no warning', !/backup/i.test(await bellText(page)));
-  await page.click('#bellBtn').catch(() => {});
   await toAdmin(page);
   ok('Admin home says the first one runs tonight', /No backup has run yet — the first one runs tonight at 3:00\./.test(await line(page)), await line(page));
   await ctx.close();

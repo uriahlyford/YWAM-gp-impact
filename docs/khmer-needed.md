@@ -2630,3 +2630,13 @@ means a saved copy of the app's data.
 | No backup has run yet — the first one runs tonight at 3:00. | មិនទាន់មានការបម្រុងទុកទិន្នន័យនៅឡើយទេ — លើកដំបូងនឹងដំណើរការយប់នេះ ម៉ោង 3:00។ |
 | Last error: {msg} | កំហុសចុងក្រោយ៖ {msg} |
 | Last backup: {date} · {n} items · {days} nights kept | ការបម្រុងទុកចុងក្រោយ៖ {date} · {n} ធាតុ · រក្សាទុក {days} យប់ |
+
+## 58. Opening the app with no connection
+
+The app now opens without internet and shows the page as it was the last time
+it loaded. This line sits at the top of every screen while that is happening.
+
+| English | Khmer (pending) |
+|---|---|
+| No connection — this is your page as it was on {date}. Numbers, goals and check-ins you save will send when you’re back online. | គ្មានការតភ្ជាប់ — នេះជាទំព័ររបស់អ្នក ដូចដែលវាមាននៅ {date}។ លេខ គោលដៅ និងការឆែកសុខភាពដែលអ្នករក្សាទុក នឹងផ្ញើទៅ នៅពេលអ្នកមានអ៊ីនធឺណិតវិញ។ |
+| No connection — your page will load once you’re back online. | គ្មានការតភ្ជាប់ — ទំព័ររបស់អ្នកនឹងផ្ទុក នៅពេលអ្នកមានអ៊ីនធឺណិតវិញ។ |

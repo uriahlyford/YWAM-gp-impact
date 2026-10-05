@@ -1005,6 +1005,32 @@ results saved then are still in `staff.strengths` but nothing reads them.)
   localStorage (`gp_gstr_draft`) until saved.
 - **Khmer:** all ~515 strings in `PENDING_KM` (docs/khmer-needed.md §53).
 
+## Opening with no connection (public/sw.js and the boot copy)
+- **sw.js is network first, always.** A push to main is live at once, and a phone
+  running yesterday's page against today's server is worse than a slow load. Pages
+  and scripts come from the network; the kept copy is used only when the network
+  fails or takes over 4 seconds (`NET_WAIT_MS`), and a late network answer still
+  refreshes the copy. Only same-origin GETs: the API (a POST), `/.netlify/` and Google
+  Fonts are never touched. Bump `SHELL` when `PRECACHE` changes — and add any new
+  `<script src>` teams.html loads to `PRECACHE`.
+- **The data is the page's last getMyBoot,** kept in localStorage as `gp-boot-cache`
+  (`{user, at, d}`; skipped over 3 MB). With no connection — or a server that answers
+  but not with a page — a remembered session boots from it (`gpBootFromCache_`) with
+  `S.offlineSince` set, and every screen gets the "No connection — this is your page
+  as it was on …" line. Back online (`online`, or the app coming back to the front) it
+  boots again by itself. Another user's copy is never used; logging out or a refused
+  PIN deletes it. It is what that phone was already showing, behind the PIN it
+  already remembers.
+- **Ministry numbers queue offline now,** beside goals and the health check-in
+  (`gpSaveMinistry_`): the week's, month's and quarter's boxes and an overseer's card.
+  Queue key `min:<dept>|<ministry>|<week>`; a second save to the same key **merges by
+  metric** (newer box wins) instead of replacing. Shown at once (`gpMinistryOverlay_`)
+  and re-applied over a fresh boot until sent. The daily count path (`saveMyKpiDay`)
+  does not queue: its numbers add up, and replaying one twice would double it.
+- **Not under a test browser** unless `localStorage['gp-sw-test']` is set
+  (`navigator.webdriver`): a worker serving cached files would change what every other
+  browser test tests. tests/test-offline-open-ui.mjs sets it.
+
 ## Nightly backup (netlify/functions/backup.js)
 A scheduled function, `0 20 * * *` (03:00 Phnom Penh), copies every key in `gp-data`
 into a second store, `gp-backups`, and keeps 30 nights. Before it there was no other

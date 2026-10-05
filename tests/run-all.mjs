@@ -92,6 +92,7 @@ const BROWSER = [
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
+  'test-offline-open-ui.mjs',  // opening with no connection: the kept page and boot, ministry numbers queued and merged
   'test-backup-real.mjs',  // the backup against the real @netlify/blobs (needs npm install; no browser)
   'test-backup-ui.mjs',  // Admin home's "Last backup", the bell when a night is missed
   'test-dept-pulse-ui.mjs',  // the department leader's card, Finance's staff debt, the Campus Director's view
