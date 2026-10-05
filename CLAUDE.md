@@ -410,6 +410,21 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   + `with`), a bed `out` of use, an unknown bed, and a second booking for the same team.
   Removing a bed from a room takes it out of every booking; a building with rooms, or a
   room someone is still booked into, can't be deleted.
+- **Starting rooms**: Siem Reap reads `HOSP_SEED` (api.js) until its book is first saved — the
+  Old Base (rooms 101–104, 201–205, 301–305, 401, 402) and Peace House (Units 1–7), with their
+  bed letters and room types, taken from the base's rooms sheet. Layout only, **no names**.
+- **Upload the rooms sheet** (Rooms tab, `hospImportHtml_`): the base's own "Rooms and Peoples
+  in Base" sheet downloaded as CSV, read as it is (`hospSheetRows_`: "Room 102" blocks with
+  their Bunk line and name / letter rows; family, couple and teacher rooms by their "Total:";
+  Peace House "Unit N" rows). "(staff)" after a name → staff, others in a dorm → student,
+  families → staff. A plain list with Building / Room / … headers is read too. The rows go
+  to `hospImport`, which adds missing buildings, rooms and beds (matched by name) and puts
+  each person in their bed from today, staying (permanent — now allowed for staff, students
+  and volunteers); a family or couple room's rows with one name are one booking; a bed
+  already held is skipped and reported. Importing twice adds nothing twice.
+- **On a wide screen** the page takes the width (`main.wide`, set in `render()` for
+  `S.view==='hosp'`): tiles four across, requests / bookings / bed-board rooms in columns
+  (`.hospGrid`), room rows in columns (`.hospRoomGrid`). Phones are unchanged.
 - **Team requests** are not stored: `getHospitality` lists every team in the Teams
   Database (`getTeamTrips_`) on the campus, not cancelled, with dates, not left yet —
   with `pending` from `pendingTeamIds_` and `bookingId` when a booking has its `tripId`.

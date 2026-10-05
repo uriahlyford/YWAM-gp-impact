@@ -91,6 +91,7 @@ async function open(who, opts) {
       A.bedIds = from ? A.bedIds.map(x => x === from ? to : x).filter(Boolean) : A.bedIds.concat([to]);
       out = hospOut();
     }
+    else if (b.fn === 'hospImport') out = { ...hospOut(), imported: { buildings: 1, rooms: 3, beds: 9, people: 5, skipped: [{ name: 'Taken Example', room: '102', with: 'Someone' }] } };
     else if (b.fn === 'hospDelete') { const kind = b.args[2]; const key = kind + 's'; H[key] = H[key].filter(x => x.id !== b.args[3]); out = hospOut(); }
     else if (b.fn === 'getMinistryFor') out = { ok: true, campus: 'siemreap', dept: b.args[2], ministry: b.args[3], entries: {}, daily: {}, prev: {}, pins: [] };
     else if (/^getMy/.test(b.fn)) out = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
@@ -268,12 +269,49 @@ const UNPLACED = { id: 'k2', category: 'volunteer', name: 'Volunteer Example', f
   await ctx.close();
 }
 
+console.log('=== uploading the rooms sheet ===');
+{
+  // the base's sheet, in its own layout (made-up names): a dorm block, a family room with its total, Peace House units
+  const SHEET = [
+    'First floor,,,,,,,,Family,,,,Floor,Peace House,,Parent,Kid,People',
+    'Boys Room 102(students),,,Girl Room 205,,,Example house 201,,Couple - R402,,,,Floor 0,Unit 1,,,,',
+    '6 Bunk,,,Bunk 6,,,Parent,2,Parent,,,,Floor 1,Unit 2,Example family,2,1,3',
+    'Student Example,A,,,A,,kid,1,Kid,,,,,,,,,',
+    'Staff Example (Staff),B,,,B,,Total:,3,Total:,0,,,,,,,,',
+    ',C,,,C,,,,,,,,,,,,,',
+  ].join('\n');
+  const { ctx, page, errors, sent } = await open(HANA);
+  await page.click('#menuBtn'); await page.waitForTimeout(150);
+  await page.click('[data-menu-item="hosp"]'); await page.waitForTimeout(500);
+  await page.click('[data-hosptab="rooms"]'); await page.waitForTimeout(200);
+  ok('Rooms has the sheet upload, with no template to fill in', /Upload your rooms sheet/.test(await page.$eval('#hospImportCard', e => e.textContent)) && !(await page.$('#hospCsvTemplate')));
+  await page.setInputFiles('#hospCsvFile', { name: 'rooms.csv', mimeType: 'text/csv', buffer: Buffer.from(SHEET) });
+  await page.waitForTimeout(300);
+  ok('it reads the sheet as it is and says what it found', /2 buildings, 6 rooms, 12 beds, 4 people/.test(await page.$eval('#hospImportPreview', e => e.textContent)), await page.$eval('#hospImportCard', e => e.textContent));
+  await page.click('#hospImportGo'); await page.waitForTimeout(400);
+  const rows = (sent.filter(b => b.fn === 'hospImport').pop() || { args: [] }).args[2] || [];
+  const at = (room, bed) => rows.find(r => r.room === room && r.bed === bed) || {};
+  ok('a dorm’s names go to their bed letters, (staff) makes staff, others students', at('102', 'A').name === 'Student Example' && at('102', 'A').category === 'student' && at('102', 'B').name === 'Staff Example' && at('102', 'B').category === 'staff' && at('102', 'A').style === 'male' && at('102', 'A').building === 'Old Base', JSON.stringify(rows.slice(0, 3)));
+  ok('an empty bed comes along empty', at('102', 'C').name === '' && at('205', 'A').style === 'female');
+  ok('a family room fills as many beds as its total, as one family', ['A', 'B', 'C'].every(l => at('201', l).name === 'Example house' && at('201', l).style === 'family') && !at('201', 'D').room);
+  ok('an empty couple room adds no one', rows.filter(r => r.room === '402').every(r => !r.name) && rows.find(r => r.room === '402').style === 'couple');
+  ok('Peace House units: the family and how many', ['A', 'B', 'C'].every(l => at('Unit 2', l).name === 'Example family' && at('Unit 2', l).building === 'Peace House') && rows.some(r => r.room === 'Unit 1' && !r.name));
+  ok('it says what was added and who was left out', /Added 1 buildings, 3 rooms, 9 beds and 5 people/.test(await page.$eval('#hospImportDone', e => e.textContent)) && /Taken Example/.test(await page.$eval('#hospImportCard', e => e.textContent)));
+  ok('no errors (upload)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
 console.log('=== desktop ===');
 {
   const { ctx, page, errors, sent } = await open(HANA, { viewport: { width: 1280, height: 900 } });
   await page.click('#menuBtn'); await page.waitForTimeout(150);
   await page.click('[data-menu-item="hosp"]'); await page.waitForTimeout(500);
   ok('desktop: dashboard renders without sideways scroll', !!(await page.$('#hospChart')) && !(await overflow(page)));
+  ok('desktop: SR Hospitality takes the width, not the phone column', await page.$eval('main', m => m.classList.contains('wide') && m.getBoundingClientRect().width > 1000), await page.$eval('main', m => m.getBoundingClientRect().width));
+  ok('desktop: the tiles sit four across', await page.$eval('.mmGrid', g => getComputedStyle(g).gridTemplateColumns.split(' ').length === 4));
+  await page.click('[data-hosptab="book"]'); await page.waitForTimeout(150);
+  ok('desktop: bookings sit in columns', await page.$eval('#hospList', g => getComputedStyle(g).display === 'grid' && getComputedStyle(g).gridTemplateColumns.split(' ').length >= 2));
+  await page.click('[data-hosptab="dash"]'); await page.waitForTimeout(150);
   await page.click('[data-hosptab="req"]'); await page.waitForTimeout(150);
   await page.click('[data-hospbookreq="tt1"]'); await page.waitForTimeout(200);
   ok('desktop: the bed picker fits', !(await overflow(page)) && (await page.$$('[data-hbed]')).length === 8);
@@ -283,6 +321,8 @@ console.log('=== desktop ===');
   await page.click('[data-hospcalmode="board"]'); await page.waitForTimeout(150);
   await page.dragAndDrop('[data-hboard="m0"]', '[data-hboard="m3"]'); await page.waitForTimeout(300);
   ok('desktop: dragging a person to an empty bed moves them', sent.filter(b => b.fn === 'hospMoveBed').pop()?.args.slice(2).join() === 'k1,m0,m3');
+  await page.click('#hospBack'); await page.waitForTimeout(300);
+  ok('desktop: the rest of the app keeps its column', await page.$eval('main', m => !m.classList.contains('wide')));
   ok('no errors (desktop)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

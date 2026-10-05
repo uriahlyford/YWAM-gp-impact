@@ -803,6 +803,16 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .hospBed.board.drop { background:var(--accentSoft); }
 .hospWho.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); }
 @media (min-width:720px){ .hospCalGrid { grid-template-columns:80px repeat(14, minmax(36px, 1fr)); min-width:0; } }
+@media (min-width:900px){
+  main.wide { max-width:1180px; }
+  main.wide .hospTabs { max-width:760px; }
+  main.wide .mmGrid { grid-template-columns:repeat(4, minmax(0,1fr)); }
+  main.wide .hospGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:10px; align-items:start; }
+  main.wide .hospGrid > .card, main.wide .hospGrid > .hospBooking { margin:0; }
+  main.wide .hospRoomGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); column-gap:18px; }
+  main.wide #hospFormCard, main.wide #hospRoomForm, main.wide #hospImportCard, main.wide #hospBldForm { max-width:860px; }
+  main.wide #hospAddBld, main.wide #hospNewBtn { max-width:320px; }
+}
 @media (min-width:720px){ .hospTab { font-size:13px; } .hospBeds { grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); } .hospBarRow { grid-template-columns:72px 1fr 80px; } }
 .adminMenu { display:grid; gap:10px; margin-top:6px; }
 .adminMenuCard { display:flex; align-items:center; gap:12px; width:100%; text-align:left; font:inherit; color:var(--ink); cursor:pointer; padding:14px; }
@@ -2293,6 +2303,9 @@ function render(){
      shows at that same pixel offset, which usually isn't its top. Re-renders
      of the SAME screen (an accordion opening, a slider dragging) must not
      reset scroll, so this only fires when S.view actually changed. */
+  /* SR Hospitality is a desk tool as much as a phone one: on a wide screen it
+     takes the width (main.wide), its cards in columns; on a phone, unchanged. */
+  m.classList.toggle('wide', S.view==='hosp');
   if(S.view!==lastRenderedView){ window.scrollTo(0,0); lastRenderedView=S.view; }
   bind();
 }
@@ -7929,8 +7942,8 @@ function hospReqsHtml_(H){
   var h='<p class="sub" style="margin:0 0 10px">'+esc(t('Every team in the Teams Database that hasn’t left yet. Pending teams applied on the portal and haven’t confirmed flights.'))+'</p>';
   if(!reqs.length) return h+'<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No upcoming teams.'))+'</p></div>';
   var open=reqs.filter(function(q){ return !q.bookingId; }), done=reqs.filter(function(q){ return q.bookingId; });
-  h+=open.map(function(q){ return hospReqCardHtml_(H, q); }).join('');
-  if(done.length) h+='<h3>'+esc(t('Booked'))+' <small>· '+done.length+'</small></h3>'+done.map(function(q){ return hospReqCardHtml_(H, q); }).join('');
+  h+='<div class="hospGrid">'+open.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>';
+  if(done.length) h+='<h3>'+esc(t('Booked'))+' <small>· '+done.length+'</small></h3><div class="hospGrid">'+done.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>';
   return h;
 }
 function hospBookingCardHtml_(H, k, idx){
@@ -7958,7 +7971,7 @@ function hospBookingsHtml_(H){
   }).sort(function(a,b){ return when==='past' ? (a.from<b.from?1:-1) : (a.from<b.from?-1:a.from>b.from?1:0); });
   if(!list.length) return h+'<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No bookings here.'))+'</p></div>';
   var idx=hospBedIndex_(H);
-  return h+'<div id="hospList">'+list.map(function(k){ return hospBookingCardHtml_(H, k, idx); }).join('')+'</div>';
+  return h+'<div id="hospList" class="hospGrid">'+list.map(function(k){ return hospBookingCardHtml_(H, k, idx); }).join('')+'</div>';
 }
 /* Who has each bed on any night of [from, to), leaving out the booking being edited. */
 function hospTaken_(H, f){
@@ -7981,7 +7994,7 @@ function hospFormHtml_(H){
   var inp=function(key, label, type, extra){ var v=f[key]; if(v==null) v='';
     return '<div><label class="f">'+esc(label)+'</label><input type="'+type+'"'+(type==='number'?' inputmode="numeric" min="0"':'')+' data-hf="'+key+'" value="'+esc(String(v))+'"'+(extra||'')+'></div>'; };
   h+=inp('name', t('Name'), 'text', ' maxlength="120" placeholder="'+esc(t('e.g. Pastor Sam, YWAM Example DTS'))+'"');
-  if(f.category==='staff') h+='<label class="hospCheck"><input type="checkbox" data-hfchk="permanent"'+(f.permanent?' checked':'')+'> '+esc(t('Permanent (no leaving date)'))+'</label>';
+  if(['staff','student','volunteer'].indexOf(f.category)>-1) h+='<label class="hospCheck"><input type="checkbox" data-hfchk="permanent"'+(f.permanent?' checked':'')+'> '+esc(t('Permanent (no leaving date)'))+'</label>';
   h+='<div class="teamGrid2">'+inp('from', t('Arriving'), 'date')+(f.permanent?'':inp('to', t('Leaving'), 'date'))+'</div>';
   h+='<div class="teamGrid3">'+inp('males', t('Men'), 'number')+inp('females', t('Women'), 'number')+inp('count', t('Beds'), 'number')+'</div>';
   h+='<label class="hospCheck"><input type="checkbox" data-hfchk="family"'+(f.family?' checked':'')+'> '+esc(t('A family or couple (keep them together)'))+'</label>';
@@ -8041,8 +8054,129 @@ function hospAutoPick_(H, f){
   take(freeIn(flex), rest);
   return sel.slice(0, hospFormCount_(f));
 }
+/* ---- upload the rooms sheet ----
+   The base's own "Rooms and Peoples in Base" sheet, downloaded as CSV, read
+   as it is (hospSheetRows_): each "Room 102" block with its "Bunk" line and
+   name / bed-letter rows; each family, couple or teacher room with its
+   "Total:" head count; and Peace House's "Unit N" rows with the family and
+   how many. "(staff)" after a name makes them staff, anyone else in a dorm a
+   student, families staff. A plain list with a header row (Building, Room,
+   Room type, Bed, Name, Category) is read too. Either way it becomes rows for
+   hospImport, which fills the beds already in the book (and adds any room or
+   bed it hasn't got). */
+function hospCsvParse_(text){
+  var rows=[], row=[], cell='', q=false, i, c;
+  text=String(text||'').replace(/^\uFEFF/,'');
+  for(i=0;i<text.length;i++){
+    c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q=false; } else cell+=c; continue; }
+    if(c==='"') q=true;
+    else if(c===','){ row.push(cell); cell=''; }
+    else if(c==='\n' || c==='\r'){ if(c==='\r' && text[i+1]==='\n') i++; row.push(cell); rows.push(row); row=[]; cell=''; }
+    else cell+=c;
+  }
+  if(cell!=='' || row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(function(r){ return r.some(function(x){ return String(x).trim(); }); });
+}
+function hospStyleOf_(v){
+  v=String(v||'').toLowerCase();
+  if(/family/.test(v)) return 'family';
+  if(/couple/.test(v)) return 'couple';
+  if(/girl|wom|female|ladies/.test(v)) return 'female';
+  if(/boy|bosy|guy|\bmen\b|\bman\b|male/.test(v)) return 'male';
+  if(/guest|speaker|teacher/.test(v)) return 'guest';
+  if(/staff/.test(v)) return 'staff';
+  return 'mixed';
+}
+var HOSP_LETTERS='ABCDEFGHIJKL';
+function hospSheetRows_(grid){
+  var cell=function(r,c){ return (grid[r] && grid[r][c]!=null) ? String(grid[r][c]).trim() : ''; };
+  var num=function(v){ v=String(v||'').trim(); return /^\d+$/.test(v) ? Number(v) : null; };
+  var rows=[], r, c;
+  var staffName=function(n){ return /\(\s*staff\s*\)/i.test(n); };
+  var clean=function(n){ return n.replace(/\(\s*staff\s*\)/ig,'').replace(/\s+/g,' ').trim(); };
+  for(r=0;r<grid.length;r++) for(c=0;c<(grid[r]||[]).length;c++){
+    var v=cell(r,c), m;
+    // Peace House: "Unit 2 | Yi family | 2 | 1 | 3"
+    if((m=v.match(/^unit\s*(\d+)$/i))){
+      var fam=cell(r,c+1), people=num(cell(r,c+4)); if(people==null) people=(num(cell(r,c+2))||0)+(num(cell(r,c+3))||0);
+      for(var u=0; u<(fam?people:0) && u<HOSP_LETTERS.length; u++) rows.push({ building:'Peace House', room:'Unit '+m[1], style:'family', bed:HOSP_LETTERS[u], name:fam, category:'staff' });
+      if(!fam || !people) rows.push({ building:'Peace House', room:'Unit '+m[1], style:'family', bed:'', name:'', category:'' });
+      continue;
+    }
+    // a room heading: "Bosy Room 102(students)", "Couple - R402", "Emmy's Family 202"…
+    if(!/[a-z]/i.test(v) || !(m=v.match(/(?:^|[^\d])(\d{3})(?!\d)/))) continue;
+    var room=m[1];
+    if(/bunk/i.test(cell(r+1,c))){
+      var style=hospStyleOf_(v);
+      for(var rr=r+2; rr<grid.length && /^[A-L]$/i.test(cell(rr,c+1)); rr++){
+        var nm=cell(rr,c);
+        rows.push({ building:'Old Base', room:room, style:style, bed:cell(rr,c+1).toUpperCase(), name:clean(nm), category: !nm ? '' : staffName(nm) ? 'staff' : 'student' });
+      }
+      continue;
+    }
+    // family / couple / teacher: how many, from the "Total:" line below it
+    var total=null;
+    for(var tr=r+1; tr<=r+8 && tr<grid.length; tr++){
+      if((grid[tr]||[]).some(function(x){ return /^total\s*:?$/i.test(String(x).trim()); })){ total=num(cell(tr,c)); if(total==null) total=num(cell(tr,c+1)); break; }
+    }
+    var label=v.replace(/(?:room\s*)?-?\s*\bR?\s*\d{3}\b/ig,'').replace(/[-–]+\s*$/,'').replace(/\s+/g,' ').trim();
+    var kind=/couple/i.test(v) ? 'couple' : /teacher|speaker|guest/i.test(v) ? 'guest' : 'family';
+    var generic=/^(couple|teacher|speaker|guest|family)$/i.test(label);
+    if(total && !generic) for(var k=0;k<total && k<HOSP_LETTERS.length;k++) rows.push({ building:'Old Base', room:room, style:kind, bed:HOSP_LETTERS[k], name:label, category:'staff' });
+    else rows.push({ building:'Old Base', room:room, style:kind, bed:'', name:'', category:'' });
+  }
+  return rows;
+}
+/* The rows to send, or an error to show. */
+function hospCsvRows_(text){
+  var all=hospCsvParse_(text);
+  if(all.length<2) return { err:t('That file has no rows under its header.') };
+  var head=all[0].map(function(h){ return String(h).trim().toLowerCase(); });
+  var listLike=head.some(function(h){ return /^building/.test(h); }) && head.some(function(h){ return /^room/.test(h); });
+  if(!listLike){
+    var sheet=hospSheetRows_(all);
+    return sheet.length ? { rows:sheet } : { err:t('No rooms found in that file.') };
+  }
+  var col=function(re){ for(var i=0;i<head.length;i++) if(re.test(head[i])) return i; return -1; };
+  var cb=col(/^building|house/), cr=col(/^room$|^room\s*(name|number|no)/), cs=col(/type|style|kind/), cd=col(/^bed/), cn=col(/^name|person|who$/), cc=col(/categ|role/);
+  if(cr<0) cr=col(/room/);
+  if(cb<0 || cr<0) return { err:t('The file needs at least a Building and a Room column.') };
+  var out=[];
+  all.slice(1).forEach(function(r){
+    var g=function(i){ return i<0 ? '' : String(r[i]==null?'':r[i]).trim(); };
+    var name=g(cn), cat=g(cc).toLowerCase();
+    if(/\(\s*staff\s*\)/i.test(name)){ cat='staff'; name=name.replace(/\(\s*staff\s*\)/ig,'').trim(); }
+    cat = /staff/.test(cat) ? 'staff' : /student/.test(cat) ? 'student' : /volunt/.test(cat) ? 'volunteer' : (name ? 'staff' : '');
+    if(!g(cb) || !g(cr)) return;
+    out.push({ building:g(cb), room:g(cr), style:hospStyleOf_(g(cs)), bed:g(cd), name:name, category:cat });
+  });
+  if(!out.length) return { err:t('No rooms found in that file.') };
+  return { rows:out };
+}
+function hospImportHtml_(){
+  var I=S.hospImport||{};
+  var h='<div class="card" id="hospImportCard"><h3 style="margin-top:0">⬆️ '+esc(t('Upload your rooms sheet'))+'</h3>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('The “Rooms and Peoples in Base” sheet, as it is: in Google Sheets choose File → Download → CSV, then pick that file here. Everyone on it goes into their bed from today — (staff) after a name makes them staff.'))+'</p>'+
+    '<input type="file" id="hospCsvFile" accept=".csv,text/csv">';
+  if(I.err) h+='<p class="hint hospWarn" id="hospImportErr">⚠️ '+esc(I.err)+'</p>';
+  if(I.rows){
+    var b={}, r={}, people={};
+    I.rows.forEach(function(x){ b[x.building]=1; r[x.building+'|'+x.room]=1; if(x.name) people[x.building+'|'+x.room+'|'+(x.style==='family'||x.style==='couple'?x.name:x.bed)]=1; });
+    var beds=I.rows.filter(function(x){ return x.bed; }).length;
+    h+='<p class="sub" id="hospImportPreview" style="margin:10px 0 4px"><b>'+esc(I.file||'')+'</b>: '+esc(gpT('{b} buildings, {r} rooms, {d} beds, {p} people',{b:Object.keys(b).length, r:Object.keys(r).length, d:beds, p:Object.keys(people).length}))+'</p>'+
+      '<button class="btn" id="hospImportGo" style="margin-top:6px">'+esc(t('Import'))+'</button>';
+  }
+  if(I.done){
+    var d=I.done;
+    h+='<p class="sub" id="hospImportDone" style="margin:10px 0 0">✅ '+esc(gpT('Added {b} buildings, {r} rooms, {d} beds and {p} people.',{b:d.buildings, r:d.rooms, d:d.beds, p:d.people}))+'</p>'+
+      (d.skipped && d.skipped.length ? '<p class="hint">'+esc(gpT('{n} already had their bed taken and were left out:',{n:d.skipped.length}))+' '+d.skipped.slice(0,20).map(function(x){ return esc(x.name+' ('+x.room+')'); }).join(', ')+'</p>' : '');
+  }
+  return h+'</div>';
+}
 function hospRoomsHtml_(H){
   var h='<p class="sub" style="margin:0 0 10px">'+esc(t('Your buildings, rooms and beds. A bed out of use isn’t counted or booked.'))+'</p>';
+  h+=hospImportHtml_();
   if(S.hospBld) h+=hospBldFormHtml_();
   else h+='<button class="btn ghost" id="hospAddBld" style="margin-top:0">＋ '+esc(t('Add a building'))+'</button>';
   H.buildings.forEach(function(b){
@@ -8050,13 +8184,13 @@ function hospRoomsHtml_(H){
     var beds=0; rooms.forEach(function(r){ r.beds.forEach(function(x){ if(!x.out) beds++; }); });
     h+='<div class="card slim hospBld" data-hospbld="'+esc(b.id)+'"><div class="teamHead"><div style="min-width:0"><div class="rowName"><b>🏠 '+esc(b.name)+'</b></div>'+
       '<div class="rowSub">'+esc(gpT('{r} rooms · {b} beds',{r:rooms.length,b:beds}))+'</div></div>'+
-      '<button class="linkbtn inline" data-hospbldedit="'+esc(b.id)+'">'+esc(t('Rename'))+'</button></div>';
+      '<button class="linkbtn inline" data-hospbldedit="'+esc(b.id)+'">'+esc(t('Rename'))+'</button></div><div class="hospRoomGrid">';
     rooms.forEach(function(r){
       var out=r.beds.filter(function(x){ return x.out; }).length;
       h+='<button class="hospRoomRow" data-hosproom="'+esc(r.id)+'"><span><b>'+esc(r.name)+'</b> · '+esc(hospStyle_(r.style))+'</span><span class="rowSub">'+
         esc(gpT('{n} beds',{n:r.beds.length}))+(out?' · '+esc(gpT('{n} out',{n:out})):'')+' ›</span></button>';
     });
-    h+='<button class="btn ghost small" data-hospaddroom="'+esc(b.id)+'" style="margin:8px 0 0">＋ '+esc(t('Add a room'))+'</button>';
+    h+='</div><button class="btn ghost small" data-hospaddroom="'+esc(b.id)+'" style="margin:8px 0 0">＋ '+esc(t('Add a room'))+'</button>';
     if(!rooms.length) h+=' <button class="linkbtn inline teamDelete" data-hospbldel="'+esc(b.id)+'">'+esc(t('Delete building'))+'</button>';
     h+='</div>';
   });
@@ -8188,7 +8322,7 @@ function hospBoardHtml_(H){
   H.buildings.forEach(function(b){
     var rooms=H.rooms.filter(function(r){ return r.buildingId===b.id; });
     if(!rooms.length) return;
-    h+='<div class="hospPickBld">'+esc(b.name)+'</div>';
+    h+='<div class="hospPickBld">'+esc(b.name)+'</div><div class="hospGrid">';
     rooms.forEach(function(r){
       h+='<div class="card slim hospBoardRoom"><div class="rowSub"><b>'+esc(r.name)+'</b> · '+esc(hospStyle_(r.style))+'</div><div class="hospBeds">';
       r.beds.forEach(function(x){
@@ -8201,6 +8335,7 @@ function hospBoardHtml_(H){
       });
       h+='</div></div>';
     });
+    h+='</div>';
   });
   return '<p class="sub" id="hospBoardSum" style="margin:0 0 6px">'+esc(gpT('{a} in a bed · {b} beds free',{a:used,b:free}))+'</p>'+h;
 }
@@ -8288,6 +8423,7 @@ function hospErr_(d){
   if(e==='in_use') return t('Someone is still booked into this room.');
   if(e==='not_authorized') return t('SR Hospitality is for the Hospitality ministry and admins.');
   if(e==='bad_record') return t('Check the name and dates.');
+  if(e==='empty') return t('No rooms found in that file.');
   if(e==='all_placed') return t('Everyone in this booking already has a bed.');
   if(e==='not_in_bed' || e==='not_found') return t('That booking changed — try again.');
   if(e==='same_bed') return t('They are already in that bed.');
@@ -8350,7 +8486,7 @@ function bindHosp(){
         render(); if(key){ var nx=document.querySelector('[data-hf="'+key+'"]'); if(nx) nx.focus(); } }, 0); };
     });
     document.querySelectorAll('[data-hfchk]').forEach(function(inp){ inp.onchange=function(){ f[inp.getAttribute('data-hfchk')]=inp.checked; render(); }; });
-    document.querySelectorAll('[data-hfcat]').forEach(function(b){ b.onclick=function(){ gpTap(); f.category=b.getAttribute('data-hfcat'); if(f.category!=='staff') f.permanent=false; render(); }; });
+    document.querySelectorAll('[data-hfcat]').forEach(function(b){ b.onclick=function(){ gpTap(); f.category=b.getAttribute('data-hfcat'); if(['staff','student','volunteer'].indexOf(f.category)===-1) f.permanent=false; render(); }; });
     document.querySelectorAll('[data-hbed]').forEach(function(b){ b.onclick=function(){
       var id=b.getAttribute('data-hbed'), i=f.bedIds.indexOf(id);
       gpTap(); if(i>-1) f.bedIds.splice(i,1); else f.bedIds.push(id); render(); }; });
@@ -8377,6 +8513,19 @@ function bindHosp(){
       send('hospDelete', ['booking', f.id], function(){ S.hospForm=null; showMsg(t('Booking deleted')); }, dl);
     };
   }
+  // import from a spreadsheet
+  var cf=document.getElementById('hospCsvFile');
+  if(cf) cf.onchange=function(){
+    var file=cf.files && cf.files[0]; if(!file) return;
+    var rd=new FileReader();
+    rd.onload=function(){ var res=hospCsvRows_(rd.result); S.hospImport={ file:file.name, rows:res.rows||null, err:res.err||'' }; render(); };
+    rd.readAsText(file);
+  };
+  var ig=document.getElementById('hospImportGo');
+  if(ig) ig.onclick=function(){
+    var rows=S.hospImport && S.hospImport.rows; if(!rows) return;
+    send('hospImport', [rows], function(d){ S.hospImport={ done:d.imported }; showMsg(t('Imported')); }, ig);
+  };
   // buildings
   var abd=document.getElementById('hospAddBld'); if(abd) abd.onclick=function(){ gpTap(); S.hospBld={ id:'', name:'' }; render(); var i=document.getElementById('hospBldName'); if(i) i.focus(); };
   document.querySelectorAll('[data-hospbldedit]').forEach(function(b){ b.onclick=function(){

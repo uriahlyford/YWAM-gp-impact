@@ -86,6 +86,16 @@ for (const u of ['gone', 'appl']) {
 }
 ok('a wrong PIN gets nothing', (await call('getHospitality', ['hana', '9999'])).ok === false);
 
+console.log('=== the rooms it starts from ===');
+{ const r0 = await call('getHospitality', ['hana', '1234']);
+  const n = (b) => r0.rooms.filter(x => x.buildingId === r0.buildings.find(y => y.name === b).id);
+  ok('Siem Reap starts with the base’s rooms from its sheet: the Old Base and Peace House', r0.buildings.map(b => b.name).join() === 'Old Base,Peace House' && n('Old Base').length === 16 && n('Peace House').length === 7, r0.rooms.length);
+  const room = (x) => r0.rooms.find(y => y.name === x);
+  ok('with their beds and who each room is for', room('104').beds.map(b => b.label).join('') === 'ABCDEFGH' && room('104').style === 'female' && room('203').style === 'male' && room('201').style === 'family' && room('402').style === 'couple' && room('Unit 7').beds.length === 3);
+  ok('but nobody in them — names never live in the code', r0.bookings.length === 0);
+  ok('nothing is written until the book is first saved', !mem['hosp:siemreap']);
+  ok('Poipet starts empty', (await call('getHospitality', ['pph', '1234'])).rooms.length === 0); }
+mem['hosp:siemreap'] = { buildings: [], rooms: [], bookings: [] };   // the rest starts from an empty book
 console.log('=== buildings, rooms, beds ===');
 let r = await call('hospSave', [...H, 'building', { name: 'Main House' }]);
 ok('a building is saved', r.ok && r.buildings.length === 1 && r.buildings[0].name === 'Main House');
@@ -199,6 +209,37 @@ r = await call('hospMoveBed', [...H, 'kA', '', '']);
 ok('a move to nowhere from nowhere is refused', r.ok === false && r.err === 'bad_move');
 r = await call('hospMoveBed', [...H, 'nope', '', 'x1']);
 ok('an unknown booking is refused', r.ok === false && r.err === 'not_found');
+
+console.log('=== importing a house from a spreadsheet ===');
+mem['hosp:siemreap'] = { buildings: [], rooms: [], bookings: [] };
+const ROWS = [
+  { building: 'Old House', room: '102', style: 'male', bed: 'A', name: 'Student One', category: 'student' },
+  { building: 'Old House', room: '102', style: 'male', bed: 'B', name: 'Staff Two', category: 'staff' },
+  { building: 'Old House', room: '102', style: 'male', bed: 'C', name: '', category: '' },
+  { building: 'Old House', room: '304', style: 'female', bed: 'D', name: 'Same Name', category: 'student' },
+  { building: 'Old House', room: '304', style: 'female', bed: 'E', name: 'Same Name', category: 'student' },
+  { building: 'Old House', room: '201', style: 'family', bed: 'A', name: 'Example Family', category: 'staff' },
+  { building: 'Old House', room: '201', style: 'family', bed: 'B', name: 'Example Family', category: 'staff' },
+  { building: 'Old House', room: '201', style: 'family', bed: 'C', name: 'Example Family', category: 'staff' },
+  { building: 'Old House', room: '402', style: 'couple', bed: 'A', name: '', category: '' },
+  { building: 'Old House', room: '402', style: 'couple', bed: 'B', name: '', category: '' },
+  { building: 'Garden House', room: 'Unit 1', style: 'weird', bed: '', name: '', category: '' },
+];
+ok('only Hospitality (or an admin) may import', (await call('hospImport', ['kim', '1234', ROWS])).ok === false && mem['hosp:siemreap'].rooms.length === 0);
+r = await call('hospImport', [...H, ROWS]);
+ok('buildings, rooms and beds are made', r.ok && r.imported.buildings === 2 && r.imported.rooms === 5 && r.imported.beds === 10, JSON.stringify(r.imported));
+const room = (n) => r.rooms.find(x => x.name === n);
+ok('rooms keep their type; an unknown type is mixed; a room with no beds listed is still made', room('201').style === 'family' && room('Unit 1').style === 'mixed' && room('Unit 1').beds.length === 0 && room('102').beds.map(b => b.label).join() === 'A,B,C');
+ok('everyone named is in their bed from today, staying (no leaving date)', r.imported.people === 5 && r.bookings.every(k => k.permanent && k.to === '' && k.from), JSON.stringify(r.bookings.map(k => k.name)));
+const bk = (n) => r.bookings.filter(k => k.name === n);
+ok('staff and students keep their kind', bk('Staff Two')[0].category === 'staff' && bk('Student One')[0].category === 'student');
+ok('a family room’s rows with one name are one booking over its beds', bk('Example Family').length === 1 && bk('Example Family')[0].bedIds.length === 3 && bk('Example Family')[0].count === 3 && bk('Example Family')[0].family === true);
+ok('in a dorm two people with one name stay two people', bk('Same Name').length === 2 && bk('Same Name').every(k => k.bedIds.length === 1));
+r = await call('hospImport', [...H, ROWS]);
+ok('importing again adds nothing twice, and says whose beds were already taken', r.ok && r.imported.rooms === 0 && r.imported.beds === 0 && r.imported.people === 0 && r.imported.skipped.length === 5 && r.bookings.length === 5, JSON.stringify(r.imported));
+ok('an empty import is refused', (await call('hospImport', [...H, []])).err === 'empty');
+r = await call('hospSave', [...H, 'booking', { category: 'student', name: 'Long Stay', from: day(1), permanent: true }]);
+ok('a student or volunteer can stay without a leaving date too; a guest can’t', r.ok && r.saved.permanent === true && (await call('hospSave', [...H, 'booking', { category: 'guest', name: 'X', from: day(1), permanent: true }])).err === 'bad_record');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -3384,8 +3384,52 @@ function canHosp_(s) {
     (deptOf_(s) === 'Campus Leadership' && s.ministry === HOSP_DEPT);
 }
 function hospKey_(campus) { return 'hosp:' + campus; }
+/* The rooms and beds SR Hospitality starts from, taken from the base's own
+   rooms sheet — layout only, no names (this repo is public; who sleeps where
+   comes in through the app, by uploading the sheet or by hand). It is what a
+   campus reads until its book is first saved; from then on the saved book is
+   all there is. */
+function hospSeedRooms_(buildingId, list) {
+  return list.map(function (r) {
+    return { id: 'hr_' + buildingId.replace(/^hb_/, '') + '_' + r[0].replace(/\s+/g, '').toLowerCase(), buildingId: buildingId, name: r[0], style: r[1], notes: r[3] || '',
+      beds: 'ABCDEFGH'.slice(0, r[2]).split('').map(function (l) { return { id: 'bd_' + buildingId.replace(/^hb_/, '') + '_' + r[0].replace(/\s+/g, '').toLowerCase() + '_' + l, label: l, out: false }; }) };
+  });
+}
+const HOSP_SEED = {
+  siemreap: {
+    buildings: [{ id: 'hb_old', name: 'Old Base' }, { id: 'hb_peace', name: 'Peace House' }],
+    rooms: hospSeedRooms_('hb_old', [
+      ['101', 'family', 2, 'First floor · Family room'],
+      ['102', 'male', 6, 'First floor · Students'],
+      ['103', 'male', 6, 'First floor · Students'],
+      ['104', 'female', 8, 'First floor · Students'],
+      ['201', 'family', 4, 'Family room'],
+      ['202', 'family', 2, 'Family room'],
+      ['203', 'male', 6, 'Second floor · Staff'],
+      ['204', 'male', 6, 'Second floor · Staff'],
+      ['205', 'female', 6, 'Second floor'],
+      ['301', 'family', 4, 'Family room'],
+      ['302', 'couple', 2, 'Couple room'],
+      ['303', 'female', 6, 'Third floor'],
+      ['304', 'female', 8, 'Third floor'],
+      ['305', 'male', 8, 'Third floor'],
+      ['401', 'guest', 1, 'Training speaker / teacher'],
+      ['402', 'couple', 2, 'Couple room']
+    ]).concat(hospSeedRooms_('hb_peace', [
+      ['Unit 1', 'family', 2, 'Floor 0'],
+      ['Unit 2', 'family', 3, 'Floor 1'],
+      ['Unit 3', 'family', 3, 'Floor 1'],
+      ['Unit 4', 'family', 2, 'Floor 2'],
+      ['Unit 5', 'family', 2, 'Floor 2'],
+      ['Unit 6', 'family', 3, 'Floor 3'],
+      ['Unit 7', 'family', 3, 'Floor 3']
+    ])),
+    bookings: []
+  }
+};
 async function getHosp_(campus) {
-  const d = await readJSON(hospKey_(campus), {});
+  const stored = await readJSON(hospKey_(campus), null);
+  const d = stored && typeof stored === 'object' ? stored : (HOSP_SEED[campus] ? JSON.parse(JSON.stringify(HOSP_SEED[campus])) : {});
   return {
     buildings: Array.isArray(d.buildings) ? d.buildings : [],
     rooms: Array.isArray(d.rooms) ? d.rooms : [],
@@ -3427,7 +3471,8 @@ function cleanHospBooking_(k) {
   const name = str_(k && k.name, 120);
   const category = HOSP_CATS.indexOf(k && k.category) > -1 ? k.category : null;
   const from = isoDate_(k && k.from);
-  const permanent = !!(k && k.permanent) && category === 'staff';
+  // staying until someone changes it: staff, and students and volunteers who live here
+  const permanent = !!(k && k.permanent) && ['staff', 'student', 'volunteer'].indexOf(category) > -1;
   const to = permanent ? '' : isoDate_(k && k.to);
   if (!name || !category || !from || (!permanent && (!to || to <= from))) return null;
   const males = hospCount_(k.males), females = hospCount_(k.females);
@@ -3549,6 +3594,73 @@ async function hospMoveBed(username, pin, bookingId, fromBed, toBed) {
   A.updated = now; A.updatedBy = a.s.id;
   await writeJSON(hospKey_(campus), d);
   return getHospitality(username, pin);
+}
+/* Bringing a whole house in at once — the rooms, beds and who sleeps where —
+   from a spreadsheet, so moving off the old sheet is one upload, not an
+   afternoon of tapping. The page reads the CSV and sends its rows:
+     { building, room, style, bed, name, category }
+   Buildings, rooms and beds are made when they are not there yet (matched by
+   name, so importing twice adds nothing twice) and a name puts that person
+   in that bed from today, staying until someone changes it (permanent —
+   residents have no leaving date). In a family or couple room the rows with
+   one name are one booking over all its beds; anywhere else each row is its
+   own person (two people can share a first name). A bed someone already has
+   is left alone and reported. Hospitality ministry and admins only, like the
+   rest of SR Hospitality. */
+const HOSP_IMPORT_MAX = 2000;
+const HOSP_STAY_CATS = ['staff', 'student', 'volunteer'];
+async function hospImport(username, pin, rows) {
+  const a = await hospAuth_(username, pin); if (a.out) return a.out;
+  if (!Array.isArray(rows) || !rows.length) return { ok: false, err: 'empty' };
+  if (rows.length > HOSP_IMPORT_MAX) return { ok: false, err: 'too_many' };
+  const campus = a.s.campus, d = await getHosp_(campus);
+  const today = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+  const key = function (v) { return String(v || '').trim().toLowerCase().replace(/\s+/g, ' '); };
+  const out = { buildings: 0, rooms: 0, beds: 0, people: 0, skipped: [] };
+  const groups = {}, order = [];
+  rows.forEach(function (r) {
+    r = r && typeof r === 'object' ? r : {};
+    const bName = str_(r.building, 80), rName = str_(r.room, 60), label = str_(r.bed, 20);
+    if (!bName || !rName) return;
+    let b = d.buildings.find(function (x) { return key(x.name) === key(bName); });
+    if (!b) {
+      if (d.buildings.length >= HOSP_MAX.buildings) return;
+      b = { id: hospId_('hb'), name: bName, updated: now, updatedBy: a.s.id }; d.buildings.push(b); out.buildings++;
+    }
+    let room = d.rooms.find(function (x) { return x.buildingId === b.id && key(x.name) === key(rName); });
+    if (!room) {
+      if (d.rooms.length >= HOSP_MAX.rooms) return;
+      room = { id: hospId_('hr'), buildingId: b.id, name: rName, style: HOSP_STYLES.indexOf(key(r.style)) > -1 ? key(r.style) : 'mixed', notes: str_(r.notes, 300) || '', beds: [], updated: now, updatedBy: a.s.id };
+      d.rooms.push(room); out.rooms++;
+    }
+    if (!label) return;
+    let bed = room.beds.find(function (x) { return key(x.label) === key(label); });
+    if (!bed) {
+      if (room.beds.length >= HOSP_MAX.beds) return;
+      bed = { id: hospId_('bd'), label: label, out: false }; room.beds.push(bed); out.beds++;
+    }
+    const name = str_(r.name, 120);
+    if (!name) return;
+    const cat = HOSP_STAY_CATS.indexOf(key(r.category)) > -1 ? key(r.category) : 'staff';
+    const together = room.style === 'family' || room.style === 'couple';
+    const g = together ? room.id + '|' + key(name) : room.id + '|' + bed.id;
+    if (!groups[g]) { groups[g] = { name: name, category: cat, family: together, bedIds: [], room: room }; order.push(g); }
+    if (groups[g].bedIds.indexOf(bed.id) === -1) groups[g].bedIds.push(bed.id);
+  });
+  order.forEach(function (g) {
+    const p = groups[g];
+    const holder = d.bookings.find(function (k) { return hospOverlap_(k, { from: today, to: '', permanent: true }) && (k.bedIds || []).some(function (id) { return p.bedIds.indexOf(id) > -1; }); });
+    if (holder) { out.skipped.push({ name: p.name, room: p.room.name, with: holder.name }); return; }
+    if (d.bookings.length >= HOSP_MAX.bookings) { out.skipped.push({ name: p.name, room: p.room.name, with: '' }); return; }
+    d.bookings.push({ id: hospId_('hk'), category: p.category, name: p.name, from: today, to: '', permanent: true,
+      males: 0, females: 0, count: p.bedIds.length, family: p.family && p.bedIds.length > 1, bedIds: p.bedIds, notes: '', tripId: '', updated: now, updatedBy: a.s.id });
+    out.people++;
+  });
+  await writeJSON(hospKey_(campus), d);
+  const res = await getHospitality(username, pin);
+  res.imported = out;
+  return res;
 }
 async function hospDelete(username, pin, kind, id) {
   const a = await hospAuth_(username, pin); if (a.out) return a.out;
@@ -5291,6 +5403,7 @@ const HANDLERS = {
   hospSave: function (a) { return hospSave(a[0], a[1], a[2], a[3]); },
   hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); },
   hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); },
+  hospImport: function (a) { return hospImport(a[0], a[1], a[2]); },
   getDuty: function (a) { return getDuty(a[0], a[1], a[2], a[3]); },
   saveDuty: function (a) { return saveDuty(a[0], a[1], a[2], a[3], a[4], a[5]); },
   getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },
