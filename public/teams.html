@@ -637,6 +637,13 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .barFill { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
 .barFill.done { background:linear-gradient(90deg,var(--amber),var(--amberDeep)); }
 @media (prefers-reduced-motion: reduce){ .gRing, .gSlide::-webkit-slider-thumb { transition:none } }
+.pulseGrid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+@media (min-width:560px){ .pulseGrid { grid-template-columns:repeat(3,1fr); } }
+.pulseTile { background:var(--surface2); border-radius:12px; padding:10px 12px; min-width:0; }
+.pulseLabel { font-size:12px; font-weight:700; color:var(--muted); }
+.pulseBig { font-size:22px; font-weight:800; line-height:1.2; margin-top:2px; }
+.pulseSub { font-size:12px; color:var(--muted); line-height:1.35; margin-top:2px; overflow-wrap:anywhere; }
+.pulseMore { margin-top:10px; } .pulseMore summary { cursor:pointer; font-size:13.5px; font-weight:700; color:var(--accent); }
 .numHead { padding:2px 0 12px; margin-bottom:12px; border-bottom:1px solid var(--line); }
 .numTitle { font-size:17px; font-weight:800; margin-bottom:4px; }
 .numDue { font-size:13.5px; font-weight:700; color:var(--muted); }
@@ -2324,6 +2331,7 @@ function applyBoot(d){
   S.personal = d.personal || null;
   S.hrDue = (d.hrDue===undefined) ? null : d.hrDue;
   S.numbers = d.numbers || null;
+  S.pulse = {}; S.staffDebt = null;
   S.hrFollowUps = (d.hrFollowUps===undefined) ? null : d.hrFollowUps;
   if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
   S.smartGoals = d.smartGoals || [];
@@ -7197,6 +7205,149 @@ function ministryDashboardHtml_(campus, dept, ministry, data){
 /* Which week, whether it's been logged, and the one button that unfolds the
    form. The strip is the last eight weeks: filled means something was logged,
    hollow means nothing was — tap one to open it. */
+/* ==================== department pulse ====================
+   A department leader's page leads with the department as it is this week,
+   with nothing to type: numbers in on time, headcount and who is away, the
+   health check-ins (two numbers only, none under the server's minimum —
+   getDeptPulse), 1-on-1s this month, OKR progress this quarter and staff
+   debt (entered monthly by the Finance office). The Campus Director sees
+   one for every department, plus the quarter's own scores to enter. */
+var PULSE_DEPTS_ = ['Community Service','Youth Education','Leadership Development','Skills Training'];
+function pulseDeptsForMe_(){
+  if(!S.me || S.me.dept!==BL_DEPT) return [];
+  if(S.me.ministry==='Campus Director') return PULSE_DEPTS_.slice();
+  return PULSE_DEPTS_.indexOf(S.me.ministry)>-1 ? [S.me.ministry] : [];
+}
+function pulseLoad_(dept){
+  S.pulse=S.pulse||{}; S.pulseLoading=S.pulseLoading||{};
+  if(S.pulse[dept] || S.pulseLoading[dept]) return;
+  S.pulseLoading[dept]=true;
+  run('getDeptPulse',[S.auth.user,S.auth.pin,dept],function(d){
+    S.pulseLoading[dept]=false;
+    S.pulse[dept] = (d && d.ok) ? d : { ok:false };
+    if(S.view==='ministry') render();
+  });
+}
+function pulseOkr_(dept){
+  var okrs=((S.base && S.base.okrs)||[]).filter(function(o){ return o.campus===S.me.campus && o.dept===dept && Number(o.quarter)===leadQNow_(); });
+  if(!okrs.length || typeof baseR!=='function') return null;
+  var R=baseR();
+  return { n:okrs.length, pct:Math.round(okrs.reduce(function(a,o){ return a+R.objProgress(o); },0)/okrs.length) };
+}
+function pulseTile_(label, big, sub){
+  return '<div class="pulseTile"><div class="pulseLabel">'+esc(label)+'</div><div class="pulseBig">'+big+'</div>'+
+    (sub?'<div class="pulseSub">'+sub+'</div>':'')+'</div>';
+}
+function pulseCardHtml_(dept, compact){
+  pulseLoad_(dept);
+  var P=S.pulse && S.pulse[dept];
+  var h='<div class="card pulseCard"><div class="goalCardTitle" style="margin-bottom:8px">📊 '+esc(gpT('{dept} this week',{dept:t(dept)}))+'</div>';
+  if(!P) return h+'<p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  if(!P.ok) return h+'<p class="sub" style="margin:0">'+esc(t('Couldn’t load this — pull down to try again.'))+'</p></div>';
+  var mins=numbersDeptMinistries_(dept), wk=P.week, lg=(P.numbers.logged||{})[wk]||[];
+  var inN=mins.filter(function(m){ return lg.indexOf(m)>-1; }).length;
+  var st=numbersDueState_(wk, inN===mins.length);
+  var hNow=P.health[0], hLast=P.health[1]||null;
+  var hShow=(hLast && hLast.score!==undefined) ? hLast : (hNow.score!==undefined ? hNow : null);
+  var okr=pulseOkr_(dept);
+  h+='<div class="pulseGrid">';
+  h+=pulseTile_(t('Numbers in'), inN+' / '+mins.length,
+    esc(st==='done'?t('all in'):(st==='late'?t('overdue'):(st==='today'?t('due today'):gpT('due Friday, {date}',{date:shortDay_(weekFriday_(wk))})))));
+  h+=pulseTile_(t('Staff'), String(P.staff), esc(P.away.length ? gpT('{n} away this week',{n:P.away.length}) : t('nobody away this week')));
+  h+=pulseTile_(t('Health'), hShow ? hShow.score.toFixed(1) : '—',
+    esc(hShow ? gpT('{n} of {total} answered · week {wk}',{n:hShow.answered,total:hShow.total,wk:hShow.week})
+              : gpT('{n} answered — too few to show',{n:(hLast||hNow).answered})));
+  h+=pulseTile_(t('1-on-1s'), String(P.oneOnOnes), esc(t('this month')));
+  h+=pulseTile_(t('OKRs'), okr ? okr.pct+'%' : '—', esc(okr ? gpT('{n} objectives · Q{q}',{n:okr.n,q:leadQNow_()}) : t('none this quarter')));
+  h+=pulseTile_(t('Staff debt'), P.staffDebt ? fmt(P.staffDebt.value, 'Staff Debt ($)') : '—',
+    esc(P.staffDebt ? gpT('from Finance, {date}',{date:P.staffDebt.at ? shortDay_(new Date(P.staffDebt.at)) : ''}) : t('not entered yet')));
+  h+='</div>';
+  if(P.away.length){
+    h+='<div class="hint" style="margin:8px 0 0">'+esc(t('Away:'))+' '+esc(P.away.map(function(a){
+      return a.name.split(' ')[0]+' ('+shortDay_(new Date(a.from+'T00:00:00'))+(a.to!==a.from?'–'+shortDay_(new Date(a.to+'T00:00:00')):'')+')'; }).join(', '))+'</div>';
+  }
+  h+='<div class="hint" style="margin:6px 0 0">'+esc(gpT('Health is the department’s average check-in score, never anyone’s answers — hidden when fewer than {n} answered.',{n:P.minN}))+'</div>';
+  var list=numbersDeptListHtml_(P.numbers);
+  if(list) h+= compact ? '<details class="pulseMore"><summary>'+esc(t('Which ministries are in'))+'</summary>'+list+'</details>' : list;
+  return h+'</div>';
+}
+
+/* The Campus Director's own quarter: three scores and the base plants, once a quarter. */
+var DIRECTOR_QUARTERLY_ = ['Base Vision (1-10)','Communications (1-10)','Partner Relationships (1-10)','Base Plants in Planning'];
+function directorQuarterHtml_(){
+  if(!S.me || S.me.dept!==BL_DEPT || S.me.ministry!=='Campus Director') return '';
+  var wk=quarterAnchorWeek_(), entries=(S.ministry&&S.ministry.entries)||{}, d=S.dirDraft||{};
+  var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:4px">🧭 '+esc(gpT('Q{q} check-in',{q:leadQNow_()}))+'</div>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('Once a quarter: how the base is doing, in your own honest view.'))+'</p>';
+  DIRECTOR_QUARTERLY_.forEach(function(m){
+    var cur = d[m]!==undefined ? d[m] : ((entries[m]||{})[String(wk)]!==undefined ? entries[m][String(wk)] : '');
+    h+='<div class="row"><div>'+(typeof kpiNameHtml_==='function' ? kpiNameHtml_(m, 'Campus Director') : '<div class="rowName">'+esc(t(m))+'</div>')+'</div>'+
+      '<input type="number" inputmode="decimal" class="kpiIn"'+(m.indexOf('(1-10)')>-1?' min="1" max="10" step="1"':' min="0"')+' data-dirq="'+esc(m)+'" value="'+esc(String(cur))+'"></div>';
+  });
+  return h+'<button class="btn" id="dirQSave">'+esc(gpT('Save Q{q}',{q:leadQNow_()}))+'</button></div>';
+}
+
+/* Finances: the staff debt for each department, monthly. */
+function canEnterStaffDebtClient_(){
+  var m=S.me; if(!m) return false;
+  var key='Skills Training|Finances';
+  return !!(m.isAdmin || (m.dept==='Skills Training' && m.ministry==='Finances') || (m.ministries||[]).indexOf(key)>-1 || (m.leads||[]).indexOf(key)>-1);
+}
+function staffDebtCardHtml_(){
+  if(!canEnterStaffDebtClient_()) return '';
+  if(!S.staffDebt && !S.staffDebtLoading){
+    S.staffDebtLoading=true;
+    run('getStaffDebt',[S.auth.user,S.auth.pin],function(d){ S.staffDebtLoading=false; S.staffDebt=(d&&d.ok)?d.debt:{}; if(S.view==='ministry') render(); });
+  }
+  var D=S.staffDebt, dr=S.debtDraft||{};
+  var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:4px">💵 '+esc(t('Staff debt by department'))+'</div>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('Once a month, from the Finance office. Department leaders see it on their page.'))+'</p>';
+  if(!D) return h+'<p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  PULSE_DEPTS_.forEach(function(dept){
+    var cur=D[dept], v = dr[dept]!==undefined ? dr[dept] : (cur ? cur.value : '');
+    var sub = cur ? gpT('last entered {date}',{date: cur.at ? shortDay_(new Date(cur.at)) : ''})+(cur.by?' · '+cur.by:'') : t('not entered yet');
+    h+='<div class="row"><div><div class="rowName">'+esc(t(dept))+'</div><div class="rowSub">'+esc(sub)+'</div></div>'+
+      '<input type="number" inputmode="decimal" class="kpiIn" min="0" data-debt="'+esc(dept)+'" value="'+esc(String(v))+'" placeholder="$"></div>';
+  });
+  return h+'<button class="btn" id="debtSave">'+esc(t('Save staff debt'))+'</button></div>';
+}
+
+document.addEventListener('input', function(e){
+  var el=e.target; if(!el || !el.getAttribute) return;
+  if(el.hasAttribute('data-dirq')){ S.dirDraft=S.dirDraft||{}; S.dirDraft[el.getAttribute('data-dirq')]=el.value; }
+  if(el.hasAttribute('data-debt')){ S.debtDraft=S.debtDraft||{}; S.debtDraft[el.getAttribute('data-debt')]=el.value; }
+});
+document.addEventListener('click', function(e){
+  var el=e.target && e.target.closest ? e.target.closest('#dirQSave,#debtSave') : null;
+  if(!el || S.busy) return;
+  if(el.id==='dirQSave'){
+    var updates=[];
+    document.querySelectorAll('[data-dirq]').forEach(function(inp){
+      updates.push({ metric:inp.getAttribute('data-dirq'), value: inp.value==='' ? null : Number(inp.value) });
+    });
+    for(var i=0;i<updates.length;i++){
+      var u=updates[i];
+      if(u.value!==null && u.metric.indexOf('(1-10)')>-1 && (u.value<1 || u.value>10)){ showMsg(gpT('{metric} goes from {min} to {max} — check the number you typed.',{metric:t(u.metric),min:1,max:10})); return; }
+    }
+    S.busy=true; el.disabled=true; el.textContent=t('Saving…');
+    run('saveMyMinistry',[S.auth.user,S.auth.pin,quarterAnchorWeek_(),updates],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.ministry=d; S.dirDraft={}; showMsg(t('Saved')); } else showMsg(t('Could not save'));
+      render();
+    });
+  }
+  if(el.id==='debtSave'){
+    var vals={};
+    document.querySelectorAll('[data-debt]').forEach(function(inp){ if(inp.value!=='') vals[inp.getAttribute('data-debt')]=Number(inp.value); });
+    S.busy=true; el.disabled=true; el.textContent=t('Saving…');
+    run('saveStaffDebt',[S.auth.user,S.auth.pin,vals],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.staffDebt=d.debt; S.debtDraft={}; S.pulse={}; showMsg(t('Saved')); } else showMsg(t('Could not save'));
+      render();
+    });
+  }
+});
+
 /* ==================== numbers people ====================
    Each ministry's weekly numbers are somebody's job: a main person and a
    backup (with nobody set, the ministry's leaders), due by Friday of that
@@ -7204,7 +7355,7 @@ function ministryDashboardHtml_(campus, dept, ministry, data){
    leader, its department's overseer or an admin (the server decides —
    data.numbers.canSet). Outreach Teams and Campus Leadership's own rows have
    none (numbersExempt_). The reminders are in notifItems_; the department
-   overseer's done / not done list is numbersDeptCardHtml_. */
+   overseer's done / not done list is numbersDeptListHtml_, inside their department card (pulseCardHtml_). */
 function numbersExempt_(dept, min){ return isTeamsMinistry_(dept, min) || dept===BL_DEPT; }
 function weekFriday_(wk){ var d=new Date(mondayOfWeek_(wk)); d.setDate(d.getDate()+4); return d; }
 function shortDay_(d){ return MONTH_ABBR[d.getMonth()]+' '+d.getDate(); }
@@ -7293,12 +7444,12 @@ function numbersWhoFor_(D, m){
   var l=D.leaders && D.leaders[m];
   return (l && l.length) ? l[0].name : t('nobody set');
 }
-/* The department overseer's list: this week and last, done or not, and whose. */
-function numbersDeptCardHtml_(){
-  var D=S.numbers && S.numbers.dept; if(!D) return '';
+/* A department's list: this week and last, done or not, and whose. */
+function numbersDeptListHtml_(D){
+  if(!D) return '';
   var mins=numbersDeptMinistries_(D.dept); if(!mins.length) return '';
   var nw=thisWeek(), weeks=[nw]; if(nw>1) weeks.push(nw-1);
-  var h='<div class="card numDeptCard"><div class="goalCardTitle" style="margin-bottom:6px">📝 '+esc(gpT('{dept} numbers',{dept:t(D.dept)}))+'</div>';
+  var h='<div class="numDeptCard">';
   weeks.forEach(function(w){
     var lg=D.logged && D.logged[w]; if(!lg) return;
     var done=mins.filter(function(m){ return lg.indexOf(m)>-1; }).length;
@@ -7878,7 +8029,11 @@ function myMinistryHtml(){
   h+=mmBannerHtml_(sel, mine);
   // Campus Leadership: its OKRs and the Monday meeting board, no weekly numbers (hidden for now)
   S.leadShown = sel.dept===BL_DEPT;
-  if(S.leadShown) return h+(mine ? numbersDeptCardHtml_() : '')+leadSectionHtml_();
+  if(S.leadShown){
+    var pd = mine ? pulseDeptsForMe_() : [];
+    var ph = pd.map(function(d){ return pulseCardHtml_(d, pd.length>1); }).join('');
+    return h+ph+(mine ? directorQuarterHtml_() : '')+leadSectionHtml_();
+  }
 
   if(sel.dept==='Skills Training' && sel.min==='Hospitality' && canHospClient_()){
     h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(t('Rooms, beds and bookings for guests, speakers, teams, students and volunteers — and team requests from the portal.'))+'</p>'+
@@ -7903,6 +8058,7 @@ function myMinistryHtml(){
     }
     h+=ministryWeekStatusHtml_(S.ministry, wk, null);
     if(S.kpiInputOpen) h+=kpiCardHtml(wk);
+    if(sel.dept==='Skills Training' && sel.min==='Finances') h+=staffDebtCardHtml_();
     h+=schedH;
     h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, S.ministry);
   } else {
@@ -7919,6 +8075,7 @@ function myMinistryHtml(){
       if(S.ovAutoKey[sel.min]!==okey){ S.ovAutoKey[sel.min]=okey; S.ovInputOpen[sel.min]=!ministryWeekLogged_(data, owk); }
       h+=ministryWeekStatusHtml_(data, owk, sel.min);
       if(S.ovInputOpen[sel.min]) h+=ovWeekRowsHtml_(sel.dept, sel.min, data, owk);
+      if(sel.dept==='Skills Training' && sel.min==='Finances') h+=staffDebtCardHtml_();
       h+=schedH;
       h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, data);
     }

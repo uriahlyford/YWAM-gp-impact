@@ -2450,3 +2450,38 @@ Saturday "overdue" reminders, and the department leader's done / not done list.
 | due Friday, {date} | ត្រូវបញ្ចូលនៅថ្ងៃសុក្រ {date} |
 | Pick two different people | សូមជ្រើសរើសមនុស្សពីរនាក់ផ្សេងគ្នា |
 | Choose a main person first | សូមជ្រើសរើសអ្នកទទួលខុសត្រូវចម្បងជាមុនសិន |
+
+## 55. Campus Leadership — the department pulse, the Director's quarter, staff debt
+
+A department leader's page now opens with six figures about their department
+(numbers in, staff and who is away, health, 1-on-1s, OKRs, staff debt); the
+Campus Director enters three scores once a quarter; Finance enters staff debt
+monthly. "Health" is a department average — the note under it promises nobody's
+answers are shown, so please make sure the Khmer says exactly that.
+
+| English | Khmer (pending) |
+|---|---|
+| {dept} this week | {dept} សប្តាហ៍នេះ |
+| Couldn’t load this — pull down to try again. | មិនអាចផ្ទុកបានទេ — ទាញចុះក្រោមដើម្បីសាកល្បងម្តងទៀត។ |
+| Numbers in | លេខបានបញ្ចូល |
+| all in | បញ្ចូលរួចទាំងអស់ |
+| {n} away this week | {n} នាក់អវត្តមានសប្តាហ៍នេះ |
+| nobody away this week | គ្មាននរណាអវត្តមានសប្តាហ៍នេះទេ |
+| {n} of {total} answered · week {wk} | បានឆ្លើយ {n} ក្នុងចំណោម {total} · សប្តាហ៍ទី {wk} |
+| {n} answered — too few to show | បានឆ្លើយ {n} — តិចពេកដើម្បីបង្ហាញ |
+| 1-on-1s | ការជួបម្នាក់ទល់ម្នាក់ |
+| {n} objectives · Q{q} | គោលបំណង {n} · ត្រីមាសទី {q} |
+| none this quarter | គ្មាននៅត្រីមាសនេះទេ |
+| Staff debt | បំណុលបុគ្គលិក |
+| not entered yet | មិនទាន់បញ្ចូលនៅឡើយ |
+| Away: | អវត្តមាន៖ |
+| Health is the department’s average check-in score, never anyone’s answers — hidden when fewer than {n} answered. | សុខភាព គឺជាពិន្ទុជាមធ្យមនៃការឆែកសុខភាពរបស់ផ្នែក មិនមែនជាចម្លើយរបស់នរណាម្នាក់ទេ — លាក់ទុកនៅពេលមានអ្នកឆ្លើយតិចជាង {n} នាក់។ |
+| Which ministries are in | ក្រសួងបម្រើណាខ្លះបានបញ្ចូលរួច |
+| Q{q} check-in | ការពិនិត្យត្រីមាសទី {q} |
+| Once a quarter: how the base is doing, in your own honest view. | ម្តងក្នុងមួយត្រីមាស៖ មូលដ្ឋានកំពុងដំណើរការយ៉ាងដូចម្តេច តាមទស្សនៈស្មោះត្រង់របស់អ្នក។ |
+| Save Q{q} | រក្សាទុកត្រីមាសទី {q} |
+| Once a month, from the Finance office. Department leaders see it on their page. | ម្តងក្នុងមួយខែ ពីការិយាល័យហិរញ្ញវត្ថុ។ អ្នកដឹកនាំផ្នែកមើលឃើញវានៅលើទំព័ររបស់ពួកគេ។ |
+| Save staff debt | រក្សាទុកបំណុលបុគ្គលិក |
+| {metric} goes from {min} to {max} — check the number you typed. | {metric} គឺពី {min} ដល់ {max} — សូមពិនិត្យលេខដែលអ្នកបានវាយ។ |
+| from Finance, {date} | ពីហិរញ្ញវត្ថុ {date} |
+| last entered {date} | បញ្ចូលចុងក្រោយ {date} |

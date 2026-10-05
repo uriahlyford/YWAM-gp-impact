@@ -477,6 +477,24 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
 Weekly Check-in is not in the menu (the Health tab is its home) and the GP Dashboard is hidden
 for now. `test-menu.mjs` checks each role.
 
+## Campus Leadership: the department pulse, the Director's quarter, staff debt from Finance
+- **Department pulse** (`pulseCardHtml_` ← `getDeptPulse`): a department leader's own
+  page leads with six figures and nothing to type — numbers in on time (numbers
+  people), staff and who is away this week (approved/noted leave; names and dates,
+  never reasons), the department's health score (see the exception under "Who sees
+  what"), 1-on-1s accepted this month, OKR progress this quarter (client, `baseR`), and
+  staff debt — with the ministries' done / not done list under it. The Campus
+  Director gets one per department (lists folded). Their weekly typed numbers stay off.
+- **The Campus Director's quarter** (`directorQuarterHtml_`): Base Vision,
+  Communications, Partner Relationships (1–10) and Base Plants in Planning, saved once
+  a quarter to their own row at `quarterAnchorWeek_()`.
+- **Staff debt from the Finance office** (`staffDebtCardHtml_`, `getStaffDebt` /
+  `saveStaffDebt`): monthly, one box per department, on the Finances ministry page,
+  for Finances members/leaders and admins only (`canEnterStaffDebt_` — not the Skills
+  Training overseer). Stored as it always was — `Staff Debt ($)` on each department's
+  Campus Leadership row, with `by` — so everything reading it still does. Funds
+  Raised is left alone (Uriah: don't worry about it).
+
 ## Campus Leadership on My Ministry: OKRs and the Monday meeting board
 Campus Leadership doesn't log weekly numbers (hidden for now). Its own row in the picker
 ("🧭 Campus Leadership", where My Ministry opens for anyone in Campus Leadership —
@@ -1105,6 +1123,16 @@ Leadership reads the base total; it never reads an individual's answers. A
 teammate's page (`staffProfile`) carries no health answers at all. 15 checks cover
 this against the real handler, including that a non-mentor and a *pending* mentor
 request are both refused, and that `getData` survey rows are nameless.
+
+**One sanctioned exception: department totals (Uriah, Oct 2026).** `getDeptPulse`
+joins a department's staff to their tokens *on the server* and returns exactly two
+numbers per week — how many answered, and the average health score
+(`compositeOf_`, mirrored from taxonomy.js and test-checked) — never a row, a token,
+a name or an answer, and **no score at all under `PULSE_MIN_N` (3) answers**, so a
+small department cannot single anyone out. Only the department's own Campus
+Leadership leader, the Campus Director and admins can call it. tests/test-dept-pulse.mjs
+asserts nothing of a check-in leaves the server. Do not widen this: no per-question
+breakdown, no per-ministry split, no lowering the minimum.
 
 **Consequence to know:** the dashboard has no per-question health breakdown and no
 all-campuses view of it — a staff member's Health tab shows their own campus. The

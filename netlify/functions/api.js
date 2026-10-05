@@ -2206,6 +2206,141 @@ async function numbersStatus_(s, rows) {
   return { week: wk, duty: duty, dept: dept };
 }
 
+/* ==================== department pulse ====================
+   What a department's leader sees about the department, with nothing typed:
+   whether its ministries had their numbers in on time (numbers people), its
+   headcount and who is away this week, its health check-ins, its 1-on-1s
+   this month, and its staff debt (entered monthly by the Finance office —
+   saveStaffDebt). The Campus Director sees it for every department.
+
+   HEALTH STAYS ANONYMOUS. Check-ins carry a token, never a name (see "Who
+   sees what" in CLAUDE.md). This joins the department's staff to their
+   tokens on the server and sends back only two numbers — how many answered
+   and the average health score — never a row, a name or an answer, and no
+   score at all when fewer than PULSE_MIN_N answered, so nobody can be
+   singled out. The health score is compositeOf in taxonomy.js; compositeOf_
+   mirrors it and tests/test-dept-pulse.mjs checks they agree. */
+const PULSE_MIN_N = 3;
+const PULSE_DEPTS = ['Community Service', 'Youth Education', 'Leadership Development', 'Skills Training'];
+function compositeOf_(r) {
+  const parts = [10 - (Number(r.lonely) || 0), Number(r.clarity) || 0,
+    r.porn ? 0 : 10, r.oneOnOne ? 10 : 0, r.exercise ? 10 : 0, r.quietTime ? 10 : 0, r.debt ? 0 : 10];
+  ['growth'].forEach(function (k) { if (r[k] !== null && r[k] !== undefined) parts.push(Number(r[k]) || 0); });
+  ['sharedFaith', 'sabbath', 'familyCall', 'ministryUpdate', 'twoOneOnOnes'].forEach(function (k) {
+    if (r[k] !== null && r[k] !== undefined) parts.push(r[k] ? 10 : 0);
+  });
+  if (r.lonelyMonth !== null && r.lonelyMonth !== undefined) parts.push(r.lonelyMonth ? 0 : 10);
+  return parts.reduce(function (a, b) { return a + b; }, 0) / parts.length;
+}
+function canSeePulse_(s, dept) {
+  if (PULSE_DEPTS.indexOf(dept) === -1) return false;
+  if (s.isAdmin) return true;
+  if (deptOf_(s) !== 'Campus Leadership') return false;
+  return s.ministry === dept || s.ministry === 'Campus Director';
+}
+function canEnterStaffDebt_(s) {
+  return !!(s && (s.isAdmin || memberOf_(s, 'Skills Training', 'Finances') || isLeaderOf_(s, 'Skills Training', 'Finances')));
+}
+function overlaps_(from, to, a, b) { return from <= b && to >= a; }
+
+async function getDeptPulse(username, pin, dept) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  dept = str_(dept, 80);
+  if (!canSeePulse_(s, dept)) return { ok: false, err: 'not_authorized' };
+  const [rows, np, entries, survey, trips, ones] = await Promise.all([
+    getStaff_(), getNumbersPeople_(), getEntries_(), getSurvey_(), getTrips_(), getOneOnOnes_()]);
+  const campus = s.campus, yr = currentYear_();
+  const today = baseToday_(), wk = isoWeek_(today);
+  const staff = rows.filter(function (r) { return r.active && r.campus === campus && !isApplicant_(r) && deptOf_(r) === dept; });
+  const ids = {}; staff.forEach(function (r) { ids[r.id] = r; });
+
+  /* away this week: approved (or simply noted) leave overlapping Mon–Sun — names and dates, no reasons */
+  const mon = new Date(today + 'T00:00:00Z'); mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7));
+  const sun = new Date(mon); sun.setUTCDate(sun.getUTCDate() + 6);
+  const a = mon.toISOString().slice(0, 10), b = sun.toISOString().slice(0, 10);
+  const away = trips.filter(function (t) {
+    return ids[t.staffId] && (t.status === 'approved' || t.status === 'noted') && isDate_(t.from) && isDate_(t.to) && overlaps_(t.from, t.to, a, b);
+  }).map(function (t) { return { name: ids[t.staffId].name, from: t.from, to: t.to }; });
+
+  /* health, by week, as two numbers only */
+  const tokens = {}; staff.forEach(function (r) { if (r.surveyToken) tokens[r.surveyToken] = 1; });
+  const healthFor = function (w) {
+    const got = survey.filter(function (r) { return tokens[r.device] && Number(r.week) === w && yearOf_(r) === yr; });
+    const out = { week: w, answered: got.length, total: staff.length };
+    if (got.length >= PULSE_MIN_N) out.score = Math.round(got.reduce(function (x, r) { return x + compositeOf_(r); }, 0) / got.length * 10) / 10;
+    return out;
+  };
+  const health = [healthFor(wk)]; if (wk > 1) health.push(healthFor(wk - 1));
+
+  /* 1-on-1s this month that someone in the department was part of */
+  const month = today.slice(0, 7);
+  const oneOnOnes = ones.filter(function (o) {
+    return o.status === 'accepted' && (ids[o.fromId] || ids[o.toId]) && String(o.decidedAt || o.created || '').slice(0, 7) === month;
+  }).length;
+
+  /* numbers in on time, this week and last */
+  const weeks = [wk]; if (wk > 1) weeks.push(wk - 1);
+  const logged = {}; weeks.forEach(function (w) { logged[w] = {}; });
+  entries.forEach(function (r) {
+    if (r.campus !== campus || r.dept !== dept || yearOf_(r) !== yr || !logged[Number(r.week)]) return;
+    logged[Number(r.week)][r.ministry] = true;
+  });
+  const lg = {}; weeks.forEach(function (w) { lg[w] = Object.keys(logged[w]); });
+  const people = {};
+  Object.keys(np).forEach(function (k) {
+    const parts = k.split('|');
+    if (parts[0] === campus && parts[1] === dept) people[parts[2]] = numbersPeopleFor_(np, rows, campus, dept, parts[2]);
+  });
+  const leaders = {};
+  rows.forEach(function (r) {
+    if (!r.active || r.campus !== campus || isApplicant_(r)) return;
+    leadsOf_(r).forEach(function (k) { const parts = k.split('|'); if (parts[0] === dept) (leaders[parts[1]] = leaders[parts[1]] || []).push({ id: r.id, name: r.name }); });
+  });
+
+  return { ok: true, dept: dept, week: wk, staff: staff.length, away: away, health: health, minN: PULSE_MIN_N,
+    oneOnOnes: oneOnOnes, staffDebt: staffDebtFor_(entries, rows, campus, dept),
+    numbers: { dept: dept, people: people, leaders: leaders, logged: lg } };
+}
+
+/* ---- staff debt, entered monthly by the Finance office ----
+   Stored the way it always was — the level metric "Staff Debt ($)" on each
+   department's Campus Leadership row — so everything that reads it still
+   does; only who types it has changed. */
+function staffDebtFor_(entries, rows, campus, dept) {
+  let best = null;
+  entries.forEach(function (r) {
+    if (r.campus !== campus || r.dept !== 'Campus Leadership' || r.ministry !== dept || r.metric !== 'Staff Debt ($)') return;
+    if (!best || (r.updated || '') > (best.updated || '')) best = r;
+  });
+  if (!best) return null;
+  const p = personOut_(rows, best.by);
+  return { value: Number(best.value), at: best.updated || '', by: p ? p.name : '' };
+}
+async function getStaffDebt(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canEnterStaffDebt_(s)) return { ok: false, err: 'not_authorized' };
+  const [entries, rows] = await Promise.all([getEntries_(), getStaff_()]);
+  const out = {};
+  PULSE_DEPTS.forEach(function (d) { out[d] = staffDebtFor_(entries, rows, s.campus, d); });
+  return { ok: true, debt: out };
+}
+async function saveStaffDebt(username, pin, values) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canEnterStaffDebt_(s)) return { ok: false, err: 'not_authorized' };
+  const v = values || {};
+  const wk = isoWeek_(baseToday_());
+  for (const d of PULSE_DEPTS) {
+    if (v[d] === undefined || v[d] === null || v[d] === '') continue;
+    const n = finiteNum_(v[d], 0, 1e9);
+    if (n === null) return { ok: false, err: 'bad_amount' };
+    await saveMinistryInternal_(s.campus, 'Campus Leadership', d, wk, [{ metric: 'Staff Debt ($)', value: n }], s.id);
+  }
+  return getStaffDebt(username, pin);
+}
+
 async function ministryDataFor_(s) {
   const d = await ministryDataFor2_(s.campus, s.dept, s.ministry);
   d.pins = Array.isArray(s.kpiPins) ? s.kpiPins : [];
@@ -5734,6 +5869,9 @@ const HANDLERS = {
   getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
   saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
   setNumbersPeople: function (a) { return setNumbersPeople(a[0], a[1], a[2], a[3], a[4]); },
+  getDeptPulse: function (a) { return getDeptPulse(a[0], a[1], a[2]); },
+  getStaffDebt: function (a) { return getStaffDebt(a[0], a[1]); },
+  saveStaffDebt: function (a) { return saveStaffDebt(a[0], a[1], a[2]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   getMinistryFor: function (a) { return getMinistryFor(a[0], a[1], a[2], a[3]); },
   saveMinistryFor: function (a) { return saveMinistryFor(a[0], a[1], a[2], a[3], a[4], a[5]); },
