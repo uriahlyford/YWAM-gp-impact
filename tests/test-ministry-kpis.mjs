@@ -96,7 +96,8 @@ await page.click('nav.bottom button:nth-child(1)');          // My week
 await page.click('#goMinistryFromMe');                        // My Ministry — its own full page now
 await page.waitForTimeout(300);
 // the metric form is folded behind one button now; it opens every section
-await page.click('#kpiInputBtn');
+/* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
+if (!/Hide the metric form/.test(await page.$eval('#kpiInputBtn', b => b.textContent))) await page.click('#kpiInputBtn');
 await page.waitForSelector('#kpiDayCard', { timeout: 10000 });
 await page.waitForTimeout(400);
 
@@ -187,7 +188,8 @@ function ok(name, cond, extra) {
   await p3.click('nav.bottom button:nth-child(1)');
   await p3.click('#goMinistryFromMe');
   await p3.waitForTimeout(300);
-  await p3.click('#kpiInputBtn');
+/* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
+  if (!/Hide the metric form/.test(await p3.$eval('#kpiInputBtn', b => b.textContent))) await p3.click('#kpiInputBtn');
   await p3.waitForSelector('#kpiWeekCard', { timeout: 10000 });
 
   const bank = await p3.$eval('input[data-kpiweek="Total in Bank Account ($)"]',
@@ -345,7 +347,8 @@ function ok(name, cond, extra) {
   await p2.click('nav.bottom button:nth-child(1)');
   await p2.click('#goMinistryFromMe');
   await p2.waitForTimeout(300);
-  await p2.click('#kpiInputBtn');
+/* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
+  if (!/Hide the metric form/.test(await p2.$eval('#kpiInputBtn', b => b.textContent))) await p2.click('#kpiInputBtn');
   await p2.waitForSelector('#kpiWeekCard', { timeout: 10000 });
   const score = await p2.$eval('input[data-kpiweek="Food Taste (1-10)"]', i =>
     ({ min: i.min, max: i.max }));

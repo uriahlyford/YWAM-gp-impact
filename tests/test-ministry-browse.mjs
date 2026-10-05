@@ -162,7 +162,8 @@ ok('another of my ministries says it is one of mine', /One of your ministries/.t
 // the browsed ministry gets the same status card as your own: its strip, and one button that unfolds its weekly rows
 const browsedStrip = await p.$('#mmWeekCard .wkStrip');
 ok('the browsed ministry has a week strip too', !!browsedStrip);
-await p.click('#kpiInputBtn[data-ovinput="Cafe"]');
+/* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
+if (!/Hide the metric form/.test(await p.$eval('#kpiInputBtn[data-ovinput="Cafe"]', b => b.textContent))) await p.click('#kpiInputBtn[data-ovinput="Cafe"]');
 await p.waitForTimeout(400);
 
 const showsCafe = await p.evaluate(() => document.querySelector('#main').innerText.includes('Days Open'));

@@ -108,13 +108,11 @@ console.log('=== the leader’s page ===');
   await page.waitForTimeout(400);
   const s2 = await page.evaluate(() => ({ status: document.querySelector('.mmStatus').textContent, btn: document.querySelector('#kpiInputBtn').textContent }));
   ok('tapping a hollow week says nothing is logged for it', /Nothing logged/.test(s2.status), s2.status);
-  ok('and offers to input it rather than edit it', /Input this week/.test(s2.btn), s2.btn);
-
-  await page.click('#kpiInputBtn');
-  await page.waitForTimeout(400);
+  /* a week with nothing in opens its boxes straight away — no extra tap */
+  ok('and opens its boxes straight away', /Hide the metric form/.test(s2.btn), s2.btn);
   const s3 = await page.evaluate(() => ({ day: !!document.querySelector('#kpiDayCard'), week: !!document.querySelector('#kpiWeekCard'),
     dup: (function () { const ids = [].map.call(document.querySelectorAll('[id]'), e => e.id); return ids.filter((x, i) => ids.indexOf(x) !== i); })() }));
-  ok('one tap unfolds both the daily and the weekly sections', s3.day && s3.week, JSON.stringify(s3));
+  ok('both the daily and the weekly sections are open', s3.day && s3.week, JSON.stringify(s3));
   ok('no duplicate element ids (the week picker moved, it was not copied)', s3.dup.length === 0, s3.dup.join(','));
 
   ok('the banner names the ministry whose numbers these are', await page.evaluate(() => /Cafe/.test((document.querySelector('#mmBanner') || {}).textContent || '') && /entering its numbers/.test(document.querySelector('#mmBanner').textContent)));

@@ -637,6 +637,19 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .barFill { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
 .barFill.done { background:linear-gradient(90deg,var(--amber),var(--amberDeep)); }
 @media (prefers-reduced-motion: reduce){ .gRing, .gSlide::-webkit-slider-thumb { transition:none } }
+.numHead { padding:2px 0 12px; margin-bottom:12px; border-bottom:1px solid var(--line); }
+.numTitle { font-size:17px; font-weight:800; margin-bottom:4px; }
+.numDue { font-size:13.5px; font-weight:700; color:var(--muted); }
+.numDue.done { color:var(--good); } .numDue.today { color:var(--accent); } .numDue.late { color:var(--bad); }
+.numBar { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; margin:8px 0 10px; }
+.numBar div { height:100%; background:var(--accent); border-radius:99px; }
+.numPeople { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:14px; }
+.numChange { width:auto; margin:0; padding:4px 0 4px 8px; flex:0 0 auto; }
+.numEdit select { width:100%; }
+.numDeptWeek { font-size:13.5px; margin:10px 0 4px; }
+.numDeptRow { display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; border:0; border-top:1px solid var(--line);
+  background:none; color:var(--ink); font:inherit; font-size:14px; padding:9px 0; cursor:pointer; }
+.numDeptWho { color:var(--muted); font-size:13px; text-align:right; }
 .kpiIn { width:88px !important; text-align:right; }
 
 /* team directory grouped by department then ministry */
@@ -2310,6 +2323,7 @@ function applyBoot(d){
   if(d.ministry) S.ministry = d.ministry;
   S.personal = d.personal || null;
   S.hrDue = (d.hrDue===undefined) ? null : d.hrDue;
+  S.numbers = d.numbers || null;
   S.hrFollowUps = (d.hrFollowUps===undefined) ? null : d.hrFollowUps;
   if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
   S.smartGoals = d.smartGoals || [];
@@ -4001,6 +4015,46 @@ function notifItems_(){
     var hrBtn='<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-gohr="1">'+esc(t('Open HR'))+'</button>';
     if(S.hrDue) items.push({ when:todayStr()+'T23:59:59.000Z', text: S.hrDue===1 ? t('1 staff contract is due for renewal') : gpT('{n} staff contracts are due for renewal',{n:S.hrDue}), actions:hrBtn });
     if(S.hrFollowUps) items.push({ when:todayStr()+'T23:59:58.000Z', text: S.hrFollowUps===1 ? t('1 candidate follow-up is due') : gpT('{n} candidate follow-ups are due',{n:S.hrFollowUps}), actions:hrBtn });
+  }
+  /* Ministry numbers, due Friday. Whoever is responsible (main, backup, or the
+     leaders with nobody set) gets "due today" on Friday and "overdue" from
+     Saturday — Friday- and Saturday-dated, so a Clear holds for that day —
+     until the week has numbers in. Last week's, still missing, comes back
+     each day (dated today) until it is in. A department's overseer gets the
+     done / not done list on the same days. */
+  if(S.me && S.numbers){
+    var nw=thisWeek(), ntoday=todayStr(), nfriD=weekFriday_(nw), nfri2=isoDateOf_(nfriD);
+    var nsatD=new Date(nfriD); nsatD.setDate(nsatD.getDate()+1); var nsat=isoDateOf_(nsatD);
+    var goBtn=function(x){ return '<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-gonumbers="'+esc(x.dept+'|'+x.ministry)+'">'+esc(t('Enter them'))+'</button>'; };
+    (S.numbers.duty||[]).forEach(function(x){
+      if(ntoday>=nfri2 && !numLogged_(x, nw)){
+        items.push({ when: ntoday>nfri2 ? nsat : nfri2,
+          text: ntoday>nfri2 ? gpT('{ministry} numbers for week {wk} are overdue',{ministry:t(x.ministry), wk:nw})
+                             : gpT('{ministry} numbers for week {wk} are due today',{ministry:t(x.ministry), wk:nw}),
+          actions: goBtn(x) });
+      }
+      if(nw>1 && !numLogged_(x, nw-1)){
+        items.push({ when: ntoday, text: gpT('{ministry} numbers for week {wk} are overdue',{ministry:t(x.ministry), wk:nw-1}), actions: goBtn(x) });
+      }
+    });
+    var ND=S.numbers.dept;
+    if(ND){
+      var nmins=numbersDeptMinistries_(ND.dept);
+      var deptBtn='<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-gonumdept="'+esc(ND.dept)+'">'+esc(t('See them'))+'</button>';
+      var missing=function(w){ var lg=ND.logged && ND.logged[w]; return lg ? nmins.filter(function(m){ return lg.indexOf(m)===-1; }) : null; };
+      var listOf=function(ms){ return ms.map(function(m){ return t(m)+' ('+numbersWhoFor_(ND, m)+')'; }).join(', '); };
+      var mNow=missing(nw);
+      if(nmins.length && mNow && ntoday>=nfri2){
+        items.push({ when: ntoday>nfri2 ? nsat : nfri2,
+          text: gpT('{dept} week {wk}: {n} of {total} ministries have their numbers in.',{dept:t(ND.dept), wk:nw, n:nmins.length-mNow.length, total:nmins.length})+
+            (mNow.length ? ' '+gpT('Not yet: {list}',{list:listOf(mNow)}) : ''),
+          actions: deptBtn });
+      }
+      var mLast = nw>1 ? missing(nw-1) : null;
+      if(nmins.length && mLast && mLast.length && ntoday<nfri2){
+        items.push({ when: ntoday, text: gpT('{dept} week {wk}: still missing {list}',{dept:t(ND.dept), wk:nw-1, list:listOf(mLast)}), actions: deptBtn });
+      }
+    }
   }
   if(S.me && !(S.profile && S.profile.email)){
     items.push({ when:new Date().toISOString(), text:t('Add your email to your profile'),
@@ -7143,6 +7197,154 @@ function ministryDashboardHtml_(campus, dept, ministry, data){
 /* Which week, whether it's been logged, and the one button that unfolds the
    form. The strip is the last eight weeks: filled means something was logged,
    hollow means nothing was — tap one to open it. */
+/* ==================== numbers people ====================
+   Each ministry's weekly numbers are somebody's job: a main person and a
+   backup (with nobody set, the ministry's leaders), due by Friday of that
+   week. Anyone on the ministry can still enter them. Set by the ministry's
+   leader, its department's overseer or an admin (the server decides —
+   data.numbers.canSet). Outreach Teams and Campus Leadership's own rows have
+   none (numbersExempt_). The reminders are in notifItems_; the department
+   overseer's done / not done list is numbersDeptCardHtml_. */
+function numbersExempt_(dept, min){ return isTeamsMinistry_(dept, min) || dept===BL_DEPT; }
+function weekFriday_(wk){ var d=new Date(mondayOfWeek_(wk)); d.setDate(d.getDate()+4); return d; }
+function shortDay_(d){ return MONTH_ABBR[d.getMonth()]+' '+d.getDate(); }
+/* 'done' · 'upcoming' (before Friday) · 'today' (Friday) · 'late' */
+function numbersDueState_(wk, logged){
+  if(logged) return 'done';
+  var today=todayStr(), fri=isoDateOf_(weekFriday_(wk));
+  return today<fri ? 'upcoming' : (today===fri ? 'today' : 'late');
+}
+function numbersProgress_(campus, dept, min, data, wk){
+  var metrics=metricsFor(campus, dept, min), entries=(data&&data.entries)||{}, daily=(data&&data.daily)||{};
+  var b=weekBounds_(wk), n=0;
+  metrics.forEach(function(m){
+    if(entries[m] && entries[m][String(wk)]!==undefined){ n++; return; }
+    var d=daily[m]||{};
+    for(var date in d){ if(date>=b.from && date<=b.to){ n++; return; } }
+  });
+  return { n:n, total:metrics.length };
+}
+function numbersPersonName_(n){
+  if(n && n.main) return n.main.name;
+  if(n && n.leaders && n.leaders.length) return n.leaders.map(function(p){ return p.name; }).join(', ');
+  return '';
+}
+function numbersHeadHtml_(data, wk, ovMin){
+  var dept=data&&data.dept, min=data&&data.ministry;
+  if(!data || !min || numbersExempt_(dept, min)) return '';
+  var n=data.numbers||null, key=dept+'|'+min;
+  var logged=ministryWeekLogged_(data, wk), st=numbersDueState_(wk, logged);
+  var pr=numbersProgress_(S.me.campus, dept, min, data, wk);
+  var fri=shortDay_(weekFriday_(wk));
+  var due = st==='done' ? gpT('Numbers are in · {n} of {total} entered',{n:pr.n,total:pr.total})
+    : st==='today' ? gpT('Due today · {n} of {total} entered',{n:pr.n,total:pr.total})
+    : st==='late' ? gpT('Overdue — was due Friday, {date} · {n} of {total} entered',{date:fri,n:pr.n,total:pr.total})
+    : gpT('Due Friday, {date} · {n} of {total} entered',{date:fri,n:pr.n,total:pr.total});
+  var h='<div class="numHead">'+
+    '<div class="numTitle">📝 '+esc(gpT('Week {wk} numbers',{wk:wk}))+'</div>'+
+    '<div class="numDue '+st+'">'+esc(due)+'</div>'+
+    '<div class="numBar"><div style="width:'+(pr.total?Math.round(pr.n/pr.total*100):0)+'%"></div></div>';
+  if(S.numEdit===key && n && n.canSet){
+    h+=numbersEditHtml_(n, dept, min);
+  } else {
+    var main=n && n.main ? n.main.name : '', backup=n && n.backup ? n.backup.name : '';
+    var who = main ? gpT('Numbers: {name}',{name:main}) :
+      (n && n.leaders && n.leaders.length ? gpT('Numbers: {name} (ministry leader)',{name:numbersPersonName_(n)}) : t('Nobody is responsible for these numbers yet'));
+    h+='<div class="numPeople"><span>'+esc(who)+(backup?' · '+esc(gpT('Backup: {name}',{name:backup})):'')+'</span>'+
+      (n && n.canSet ? '<button class="linkbtn numChange" data-numedit="'+esc(key)+'">'+esc(main?t('Change'):t('Choose'))+'</button>' : '')+'</div>';
+  }
+  var lb=n && n.lastBy && n.lastBy[String(wk)];
+  if(lb && lb.name) h+='<div class="hint" style="margin:2px 0 0">'+esc(gpT('Last entered by {name}, {date}',{name:lb.name, date: lb.at ? shortDay_(new Date(lb.at)) : ''}))+'</div>';
+  return h+'</div>';
+}
+function numbersEditHtml_(n, dept, min){
+  /* people on this ministry first, then everyone else on the campus */
+  var people=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus; });
+  var inMin=function(p){ return p.dept===dept && p.ministry===min; };
+  people.sort(function(a,b){ return (inMin(b)?1:0)-(inMin(a)?1:0) || String(a.name).localeCompare(String(b.name)); });
+  var opt=function(sel, none){
+    return '<option value="">'+esc(none)+'</option>'+people.map(function(p){
+      return '<option value="'+esc(p.id)+'"'+(sel===p.id?' selected':'')+'>'+esc(p.name)+(inMin(p)?'':' · '+esc(t(p.ministry||p.dept||'')))+'</option>';
+    }).join('');
+  };
+  return '<div class="numEdit">'+
+    '<label class="f">'+esc(t('Main person'))+'</label><select id="numMain">'+opt(n.main&&n.main.id, t('Nobody — the ministry leader'))+'</select>'+
+    '<label class="f">'+esc(t('Backup'))+'</label><select id="numBackup">'+opt(n.backup&&n.backup.id, t('No backup'))+'</select>'+
+    '<div class="hint">'+esc(t('They get a reminder on Friday if the week’s numbers aren’t in, and again on Saturday. Anyone on the ministry can still enter them.'))+'</div>'+
+    '<div style="display:flex;gap:8px;margin-top:8px">'+
+      '<button class="btn" data-numsave="'+esc(dept+'|'+min)+'" style="flex:2;margin-top:0">'+esc(t('Save'))+'</button>'+
+      '<button class="btn ghost" data-numcancel="1" style="flex:1;margin-top:0">'+esc(t('Cancel'))+'</button></div></div>';
+}
+/* My numbers for (dept, min) are now in for week wk — the bell follows at
+   once, without waiting for the next boot. */
+function numbersMarkLogged_(dept, min, wk){
+  var N=S.numbers; if(!N) return;
+  (N.duty||[]).forEach(function(x){ if(x.dept===dept && x.ministry===min){ x.logged=x.logged||{}; x.logged[wk]=true; } });
+  if(N.dept && N.dept.dept===dept && N.dept.logged && N.dept.logged[wk] && N.dept.logged[wk].indexOf(min)===-1) N.dept.logged[wk].push(min);
+}
+function numLogged_(x, wk){ return !(x && x.logged && x.logged[wk]===false); }
+function numbersDeptMinistries_(dept){
+  var d=(typeof getDepartments==='function' ? getDepartments(S.me.campus) : {})[dept]||{};
+  return Object.keys(d).filter(function(m){ return !numbersExempt_(dept, m); });
+}
+function numbersWhoFor_(D, m){
+  var p=D.people && D.people[m];
+  if(p && p.main) return p.main.name;
+  var l=D.leaders && D.leaders[m];
+  return (l && l.length) ? l[0].name : t('nobody set');
+}
+/* The department overseer's list: this week and last, done or not, and whose. */
+function numbersDeptCardHtml_(){
+  var D=S.numbers && S.numbers.dept; if(!D) return '';
+  var mins=numbersDeptMinistries_(D.dept); if(!mins.length) return '';
+  var nw=thisWeek(), weeks=[nw]; if(nw>1) weeks.push(nw-1);
+  var h='<div class="card numDeptCard"><div class="goalCardTitle" style="margin-bottom:6px">📝 '+esc(gpT('{dept} numbers',{dept:t(D.dept)}))+'</div>';
+  weeks.forEach(function(w){
+    var lg=D.logged && D.logged[w]; if(!lg) return;
+    var done=mins.filter(function(m){ return lg.indexOf(m)>-1; }).length;
+    var st=numbersDueState_(w, done===mins.length);
+    h+='<div class="numDeptWeek"><b>'+esc(gpT('Week {wk}',{wk:w}))+'</b> · '+esc(gpT('{n} of {total} in',{n:done,total:mins.length}))+
+      (st==='done'?'':' · <span class="numDue '+st+'" style="display:inline">'+esc(st==='late'?t('overdue'):(st==='today'?t('due today'):gpT('due Friday, {date}',{date:shortDay_(weekFriday_(w))})))+'</span>')+'</div>';
+    mins.forEach(function(m){
+      var ok=lg.indexOf(m)>-1;
+      h+='<button class="numDeptRow" data-numgo="'+esc(D.dept+'|'+m)+'"><span>'+(ok?'✅':'⚠️')+' '+esc(t(m))+'</span>'+
+        '<span class="numDeptWho">'+esc(numbersWhoFor_(D, m))+'</span></button>';
+    });
+  });
+  return h+'</div>';
+}
+/* All the numbers-people taps, delegated once — these buttons are drawn in the
+   page, the bell drawer and the My Home updates card alike. */
+document.addEventListener('click', function(e){
+  var el=e.target && e.target.closest ? e.target.closest('[data-numedit],[data-numcancel],[data-numsave],[data-numgo],[data-gonumbers],[data-gonumdept]') : null;
+  if(!el) return;
+  var open=function(v){ var i=v.lastIndexOf('|'); S.bellOpen=false; if(typeof renderNotifPanel==='function') renderNotifPanel();
+    S.view='ministry'; S.mmTab='ministry'; S.mmBrowseDept=v.slice(0,i); S.mmBrowseMinistry=v.slice(i+1); render(); window.scrollTo(0,0); };
+  if(el.hasAttribute('data-numedit')){ gpTap(); S.numEdit=el.getAttribute('data-numedit'); render(); return; }
+  if(el.hasAttribute('data-numcancel')){ S.numEdit=null; render(); return; }
+  if(el.hasAttribute('data-numgo')){ gpTap(); open(el.getAttribute('data-numgo')); return; }
+  if(el.hasAttribute('data-gonumbers')){ open(el.getAttribute('data-gonumbers')); return; }
+  if(el.hasAttribute('data-gonumdept')){ S.bellOpen=false; if(typeof renderNotifPanel==='function') renderNotifPanel();
+    S.view='ministry'; S.mmTab='ministry'; S.mmBrowseDept=BL_DEPT; S.mmBrowseMinistry=el.getAttribute('data-gonumdept'); render(); window.scrollTo(0,0); return; }
+  if(el.hasAttribute('data-numsave')){
+    if(S.busy) return;
+    var v=el.getAttribute('data-numsave'), i=v.lastIndexOf('|'), dept=v.slice(0,i), min=v.slice(i+1);
+    var main=(document.getElementById('numMain')||{}).value||'', backup=(document.getElementById('numBackup')||{}).value||'';
+    if(main && backup && main===backup){ showMsg(t('Pick two different people')); return; }
+    if(!main && backup){ showMsg(t('Choose a main person first')); return; }
+    S.busy=true; el.disabled=true; el.textContent=t('Saving…');
+    run('setNumbersPeople',[S.auth.user,S.auth.pin,dept,min,{ main:main, backup:backup }],function(d){
+      S.busy=false;
+      if(!d || !d.ok){ showMsg(t('Could not save')); render(); return; }
+      var data = (S.ministry && S.ministry.dept===dept && S.ministry.ministry===min) ? S.ministry : S.oversee[min];
+      if(data) data.numbers=Object.assign({}, d.numbers, { lastBy:(data.numbers&&data.numbers.lastBy)||{} });
+      S.numEdit=null; showMsg(t('Saved')); render();
+      /* who is responsible changed, so whose reminders are due changed too */
+      if(typeof refreshAll==='function') try { refreshAll(); } catch(e){}
+    });
+  }
+});
+
 function ministryWeekStatusHtml_(data, wk, ovMin){
   var isCur=Number(wk)===Number(thisWeek());
   var logged=ministryWeekLogged_(data, wk);
@@ -7151,6 +7353,7 @@ function ministryWeekStatusHtml_(data, wk, ovMin){
   var prevA = ovMin ? ' data-ovprev="'+esc(ovMin)+'"' : ' id="kpiPrevWeek"';
   var nextA = ovMin ? ' data-ovnext="'+esc(ovMin)+'"' : ' id="kpiNextWeek"';
   var h='<div class="card" id="mmWeekCard">';
+  h+=numbersHeadHtml_(data, wk, ovMin);
   h+='<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
     '<div class="weekNavRow">'+
       '<button class="weekArrow"'+prevA+' aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
@@ -7675,22 +7878,33 @@ function myMinistryHtml(){
   h+=mmBannerHtml_(sel, mine);
   // Campus Leadership: its OKRs and the Monday meeting board, no weekly numbers (hidden for now)
   S.leadShown = sel.dept===BL_DEPT;
-  if(S.leadShown) return h+leadSectionHtml_();
+  if(S.leadShown) return h+(mine ? numbersDeptCardHtml_() : '')+leadSectionHtml_();
 
   if(sel.dept==='Skills Training' && sel.min==='Hospitality' && canHospClient_()){
     h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(t('Rooms, beds and bookings for guests, speakers, teams, students and volunteers — and team requests from the portal.'))+'</p>'+
       '<button class="btn" id="goHosp" style="margin-top:0">🌺 '+esc(t('Open SR Hospitality'))+'</button></div>';
   }
-  if(typeof dutyHtml==='function') h+=schedMinistryHtml_(sel.dept, sel.min);
+  /* The week's numbers come first — status, who is responsible, and the boxes
+     themselves, already open when the week has nothing in yet — and the
+     schedules and the at-a-glance charts after them: they are for reading,
+     the numbers are what this page is for. */
+  var schedH = (typeof dutyHtml==='function') ? schedMinistryHtml_(sel.dept, sel.min) : '';
   if(isTeamsMinistry_(sel.dept, sel.min)){
+    h+=schedH;
     h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+
       esc(t('Teams are entered one at a time, once their visit is over — not week by week. Each team counts in the week it leaves, and the Base dashboard picks it up from there.'))+'</p>'+
       '<button class="btn" id="goTeamsDb" style="margin-top:0">🗂️ '+esc(t('Open the Teams Database'))+'</button></div>';
   } else if(mine){
-    var wk=kpiViewWeek();
-    h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, S.ministry);
+    var wk=kpiViewWeek(), akey=sel.dept+'|'+sel.min+'|'+wk;
+    if(S.ministry && S.kpiAutoKey!==akey){
+      S.kpiAutoKey=akey;
+      S.kpiInputOpen=!ministryWeekLogged_(S.ministry, wk);
+      if(S.kpiInputOpen){ S.dbAcc.kpiDay=true; S.dbAcc.kpiWeek=true; S.dbAcc.kpiMonth=true; S.dbAcc.kpiQuarter=true; }
+    }
     h+=ministryWeekStatusHtml_(S.ministry, wk, null);
     if(S.kpiInputOpen) h+=kpiCardHtml(wk);
+    h+=schedH;
+    h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, S.ministry);
   } else {
     var data=S.oversee[sel.min];
     if(!data && S.ovError[sel.min]){
@@ -7700,11 +7914,15 @@ function myMinistryHtml(){
     }
     else if(!data) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
     else {
-      var owk=ovWeekFor_(sel.min);
-      h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, data);
+      var owk=ovWeekFor_(sel.min), okey=sel.dept+'|'+sel.min+'|'+owk;
+      S.ovAutoKey=S.ovAutoKey||{};
+      if(S.ovAutoKey[sel.min]!==okey){ S.ovAutoKey[sel.min]=okey; S.ovInputOpen[sel.min]=!ministryWeekLogged_(data, owk); }
       h+=ministryWeekStatusHtml_(data, owk, sel.min);
       if(S.ovInputOpen[sel.min]) h+=ovWeekRowsHtml_(sel.dept, sel.min, data, owk);
+      h+=schedH;
+      h+=ministryDashboardHtml_(S.me.campus, sel.dept, sel.min, data);
     }
+    if(!data) h+=schedH;
   }
 
   if(canEditMetricsClient_(S.me.campus, sel.dept, sel.min)){
@@ -12538,7 +12756,7 @@ function bindHome(){
     // Not the current week → the entry lands on that week's own last day.
     run('saveMyKpiDay',[S.auth.user,S.auth.pin,kpiEntryDate_(kpiViewWeek()),updates],function(d){
       S.busy=false;
-      if(d.ok){ S.ministry=d; S.kpiDraft={}; showMsg('Saved — week total updated'); }
+      if(d.ok){ S.ministry=d; S.kpiDraft={}; numbersMarkLogged_(S.me.dept, S.me.ministry, kpiViewWeek()); showMsg('Saved — week total updated'); }
       else showMsg('Could not save');
       render();
     });
@@ -12558,7 +12776,7 @@ function bindHome(){
     S.busy=true; skw.disabled=true; skw.textContent=t('Saving…');
     run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
       S.busy=false;
-      if(d && d.ok){ S.ministry=d; S.kpiWeekDraft={}; showMsg('Saved — week '+wk+' updated'); }
+      if(d && d.ok){ S.ministry=d; S.kpiWeekDraft={}; numbersMarkLogged_(S.me.dept, S.me.ministry, wk); showMsg('Saved — week '+wk+' updated'); }
       else showMsg('Could not save');
       render();
     });
@@ -12648,7 +12866,7 @@ function bindHome(){
       S.busy=true; btn.disabled=true; btn.textContent=t('Saving…');
       run('saveMinistryFor',[S.auth.user,S.auth.pin,dept,min,wk,updates],function(d){
         S.busy=false;
-        if(d && d.ok){ S.oversee[min]=d; S.ovWeekDraft[min]={}; showMsg(gpT('Saved — week {wk} updated',{wk:wk})); }
+        if(d && d.ok){ S.oversee[min]=d; S.ovWeekDraft[min]={}; numbersMarkLogged_(dept, min, wk); showMsg(gpT('Saved — week {wk} updated',{wk:wk})); }
         else showMsg(t('Could not save'));
         render();
       });

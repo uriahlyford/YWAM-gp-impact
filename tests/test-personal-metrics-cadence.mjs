@@ -77,7 +77,8 @@ if (!(await p.$('#kpiInputBtn'))) {
   process.exit(shown ? 0 : 1);
 }
 // the metric form is folded behind one button; opening it unfolds every section
-await p.click('#kpiInputBtn');
+/* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
+if (!/Hide the metric form/.test(await p.$eval('#kpiInputBtn', b => b.textContent))) await p.click('#kpiInputBtn');
 await p.waitForTimeout(400);
 
 let pass = 0, fail = 0;

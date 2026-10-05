@@ -57,7 +57,8 @@ await p.waitForTimeout(600);
 await p.click('#goMinistryFromMe');
 await p.waitForTimeout(700);
 // the metric form is folded behind one button; it opens every section
-await p.click('#kpiInputBtn');
+/* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
+if (!/Hide the metric form/.test(await p.$eval('#kpiInputBtn', b => b.textContent))) await p.click('#kpiInputBtn');
 await p.waitForTimeout(400);
 await p.click('#kpiShowAll').catch(() => {});
 await p.waitForTimeout(300);

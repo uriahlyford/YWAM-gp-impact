@@ -93,6 +93,24 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
   asserts every ministry in the taxonomy has a focus written for it. Edit one, edit both.
   Lookups take the department because Campus Leadership's "ministries" are named after the
   departments they oversee.
+- **Numbers people (who is responsible for a ministry's weekly numbers).** Each
+  ministry has a main person and a backup (`numbersPeople` blob, keyed
+  `campus|dept|ministry`); with nobody set, its leaders are responsible. Numbers are
+  **due Friday** of their week. Set by the ministry's leader, its department's Campus
+  Leadership overseer, or an admin (`canSetNumbers_`); anyone on the ministry can
+  still enter them — `canLogFor_` is unchanged. Outreach Teams and Campus
+  Leadership's own rows have none (`numbersExempt_`, both sides).
+  - My Ministry leads with the week's numbers card (`numbersHeadHtml_`: whose job,
+    due / due today / overdue, "n of N entered", "Last entered by …") and opens the
+    boxes by itself when the week has nothing in (`S.kpiAutoKey`); the schedules and
+    the at-a-glance charts come after. Entries now record `by` (staff id) on every
+    save path, which is where "last entered by" comes from (`withNumbers_`).
+  - Reminders are bell items built by the page (`notifItems_`) from `S.numbers`
+    (the boot's `numbersStatus_`): Friday "due today", from Saturday "overdue",
+    Friday/Saturday-dated so Clear holds for the day; last week's missing numbers
+    recur daily until in. They also show in My Home's Updates card. A department
+    overseer gets the done / not done list on the same days, and on their own page
+    (`numbersDeptCardHtml_`). Saving marks the week in at once (`numbersMarkLogged_`).
 - `taxonomy.js` — campuses, departments, ministries, metric lists, `STAFF_TYPES`, `COUNTRIES`,
   `modeOf()`, `compositeOf()`
   and the ministry emoji, shared by both pages.

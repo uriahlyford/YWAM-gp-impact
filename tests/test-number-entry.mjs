@@ -102,7 +102,8 @@ await page.waitForTimeout(400);
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(400);
   // the metric form is folded behind one button; it opens every section
-  await page.click('#kpiInputBtn');
+/* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
+  if (!/Hide the metric form/.test(await page.$eval('#kpiInputBtn', b => b.textContent))) await page.click('#kpiInputBtn');
   await page.waitForTimeout(400);
   const cases = [
     ['[data-kpi="Days Open"]', 'a saved zero', '0'],

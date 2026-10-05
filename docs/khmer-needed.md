@@ -2409,3 +2409,44 @@ person's Gallup report — so only the app's words around them are here.
 | I can see the best path when others are confused. | ខ្ញុំអាចឃើញផ្លូវល្អបំផុត នៅពេលអ្នកដទៃភាន់ច្រឡំ។ |
 | I like to think a few steps ahead. | ខ្ញុំចូលចិត្តគិតទុកជាមុនពីរបីជំហាន។ |
 | I quickly spot the options in a situation. | ខ្ញុំឆាប់រកឃើញជម្រើសនានាក្នុងស្ថានភាពមួយ។ |
+
+## 54. Numbers people — who enters a ministry's weekly numbers, due Friday
+
+Each ministry now has a main person and a backup for its weekly numbers, due by
+Friday. These are the labels on My Ministry, the Friday "due today" and
+Saturday "overdue" reminders, and the department leader's done / not done list.
+"Numbers" here means the ministry's weekly KPI figures, not phone numbers.
+
+| English | Khmer (pending) |
+|---|---|
+| Enter them | បញ្ចូលវា |
+| {ministry} numbers for week {wk} are overdue | លេខរបស់ {ministry} សម្រាប់សប្តាហ៍ទី {wk} ហួសកំណត់ហើយ |
+| {ministry} numbers for week {wk} are due today | លេខរបស់ {ministry} សម្រាប់សប្តាហ៍ទី {wk} ត្រូវបញ្ចូលនៅថ្ងៃនេះ |
+| See them | មើលវា |
+| {dept} week {wk}: {n} of {total} ministries have their numbers in. | {dept} សប្តាហ៍ទី {wk}៖ ក្រសួងបម្រើ {n} ក្នុងចំណោម {total} បានបញ្ចូលលេខរួចហើយ។ |
+| Not yet: {list} | មិនទាន់៖ {list} |
+| {dept} week {wk}: still missing {list} | {dept} សប្តាហ៍ទី {wk}៖ នៅខ្វះ {list} |
+| Numbers are in · {n} of {total} entered | លេខបានបញ្ចូលរួច · បានបញ្ចូល {n} ក្នុងចំណោម {total} |
+| Due today · {n} of {total} entered | ត្រូវបញ្ចូលថ្ងៃនេះ · បានបញ្ចូល {n} ក្នុងចំណោម {total} |
+| Overdue — was due Friday, {date} · {n} of {total} entered | ហួសកំណត់ — ត្រូវបញ្ចូលនៅថ្ងៃសុក្រ {date} · បានបញ្ចូល {n} ក្នុងចំណោម {total} |
+| Due Friday, {date} · {n} of {total} entered | ត្រូវបញ្ចូលនៅថ្ងៃសុក្រ {date} · បានបញ្ចូល {n} ក្នុងចំណោម {total} |
+| Week {wk} numbers | លេខសប្តាហ៍ទី {wk} |
+| Numbers: {name} | អ្នកបញ្ចូលលេខ៖ {name} |
+| Numbers: {name} (ministry leader) | អ្នកបញ្ចូលលេខ៖ {name} (អ្នកដឹកនាំក្រសួងបម្រើ) |
+| Nobody is responsible for these numbers yet | មិនទាន់មាននរណាម្នាក់ទទួលខុសត្រូវលើលេខទាំងនេះទេ |
+| Backup: {name} | អ្នកជំនួស៖ {name} |
+| Change | ប្តូរ |
+| Choose | ជ្រើសរើស |
+| Main person | អ្នកទទួលខុសត្រូវចម្បង |
+| Nobody — the ministry leader | គ្មាន — អ្នកដឹកនាំក្រសួងបម្រើ |
+| Backup | អ្នកជំនួស |
+| No backup | គ្មានអ្នកជំនួស |
+| They get a reminder on Friday if the week’s numbers aren’t in, and again on Saturday. Anyone on the ministry can still enter them. | ពួកគេនឹងទទួលបានការរំលឹកនៅថ្ងៃសុក្រ ប្រសិនបើលេខប្រចាំសប្តាហ៍មិនទាន់បានបញ្ចូល ហើយម្តងទៀតនៅថ្ងៃសៅរ៍។ អ្នកណាម្នាក់ក្នុងក្រសួងបម្រើនៅតែអាចបញ្ចូលបាន។ |
+| nobody set | មិនទាន់កំណត់ |
+| {dept} numbers | លេខរបស់ {dept} |
+| {n} of {total} in | បានបញ្ចូល {n} ក្នុងចំណោម {total} |
+| overdue | ហួសកំណត់ |
+| due today | ត្រូវបញ្ចូលថ្ងៃនេះ |
+| due Friday, {date} | ត្រូវបញ្ចូលនៅថ្ងៃសុក្រ {date} |
+| Pick two different people | សូមជ្រើសរើសមនុស្សពីរនាក់ផ្សេងគ្នា |
+| Choose a main person first | សូមជ្រើសរើសអ្នកទទួលខុសត្រូវចម្បងជាមុនសិន |

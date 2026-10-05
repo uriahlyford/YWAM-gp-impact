@@ -1614,9 +1614,10 @@ async function saveEntries(campus, updates, code, username, pin) {
     if (value == null) return;
     if (idx > -1) {
       rows[idx].value = value; rows[idx].updated = now; rows[idx].year = yr;
+      if (writer) rows[idx].by = writer.id;
     } else {
-      rows.push({ campus: campus, dept: dept, ministry: ministry, metric: metric,
-        week: week, year: yr, value: value, updated: now });
+      rows.push(Object.assign({ campus: campus, dept: dept, ministry: ministry, metric: metric,
+        week: week, year: yr, value: value, updated: now }, writer ? { by: writer.id } : {}));
     }
   });
   await writeJSON('entries', rows);
@@ -2052,6 +2053,159 @@ async function ministryDataFor2_(campus, dept, ministry) {
     entries: out, daily: daily, prev: prev, pins: [] };
 }
 
+/* ==================== numbers people ====================
+   Each ministry has a main person and a backup who are responsible for its
+   weekly numbers, which are due by Friday of that week. Anyone on the
+   ministry can still enter them (canLogFor_ is unchanged) — this says whose
+   job it is, so it is somebody's. With nobody set, the ministry's leaders are
+   responsible by default.
+
+     numbersPeople: { 'campus|dept|ministry': { main: staffId, backup: staffId|'', by, at } }
+
+   Set by the ministry's leader, its department's Campus Leadership overseer,
+   or an admin (canSetNumbers_). Outreach Teams is left out: its numbers come
+   from the Teams Database and work as they are.
+
+   The reminders themselves are drawn by the page (notifItems_ in teams.html)
+   from numbersStatus_, which the boot carries: whether each ministry I am
+   responsible for has numbers in this week and last, and — for a department
+   overseer — the same for every ministry in the department, with names. */
+function numbersKey_(campus, dept, ministry) { return campus + '|' + dept + '|' + ministry; }
+function isTeamsMinistry_(dept, ministry) { return dept === TEAM_DEPT && ministry === TEAM_MIN; }
+/* Outreach Teams (the Teams Database) and Campus Leadership's own rows (OKRs and
+   the Monday board, no weekly numbers) have no numbers people. */
+function numbersExempt_(dept, ministry) { return isTeamsMinistry_(dept, ministry) || dept === 'Campus Leadership'; }
+async function getNumbersPeople_() {
+  const v = await readJSON('numbersPeople', {});
+  return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+}
+function canSetNumbers_(s, dept, ministry) {
+  if (numbersExempt_(dept, ministry)) return false;
+  return !!(s && (s.isAdmin || isLeaderOf_(s, dept, ministry) || (deptOf_(s) === 'Campus Leadership' && s.ministry === dept)));
+}
+function personOut_(rows, id) {
+  const r = id ? rows.find(function (x) { return x.id === id && x.active; }) : null;
+  return r ? { id: r.id, name: r.name } : null;
+}
+function numbersPeopleFor_(np, rows, campus, dept, ministry) {
+  const rec = np[numbersKey_(campus, dept, ministry)] || {};
+  const main = personOut_(rows, rec.main), backup = personOut_(rows, rec.backup);
+  const leaders = rows.filter(function (r) {
+    return r.active && r.campus === campus && !isApplicant_(r) && isLeaderOf_(r, dept, ministry);
+  }).map(function (r) { return { id: r.id, name: r.name }; });
+  return { main: main, backup: backup, leaders: leaders, defaulted: !main };
+}
+/* The day in Cambodia — the base's week turns over at its own midnight, not the server's. */
+function baseToday_() { return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10); }
+
+async function setNumbersPeople(username, pin, dept, ministry, payload) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  dept = str_(dept, 80); ministry = str_(ministry, 80);
+  if (!dept || !ministry) return { ok: false, err: 'bad_ministry' };
+  if (!canSetNumbers_(s, dept, ministry)) return { ok: false, err: 'not_authorized' };
+  const p = payload || {};
+  const rows = await getStaff_();
+  const pick = function (id) {
+    if (id === null || id === undefined || id === '') return '';
+    const r = rows.find(function (x) { return x.id === String(id) && x.active && x.campus === s.campus && !isApplicant_(x); });
+    return r ? r.id : null;
+  };
+  const main = pick(p.main), backup = pick(p.backup);
+  if (main === null || backup === null) return { ok: false, err: 'bad_person' };
+  if (main && backup && main === backup) return { ok: false, err: 'same_person' };
+  if (!main && backup) return { ok: false, err: 'backup_needs_main' };
+  const np = await getNumbersPeople_();
+  const key = numbersKey_(s.campus, dept, ministry);
+  if (!main) delete np[key];
+  else np[key] = { main: main, backup: backup || '', by: s.id, at: new Date().toISOString() };
+  await writeJSON('numbersPeople', np);
+  const out = numbersPeopleFor_(np, rows, s.campus, dept, ministry);
+  out.canSet = true;
+  return { ok: true, numbers: out };
+}
+
+/* The numbers people for one ministry, plus who last entered each week's
+   numbers — attached to what My Ministry loads (getMyMinistry / getMinistryFor). */
+async function withNumbers_(d, s) {
+  if (!d || !d.ok || !d.ministry || numbersExempt_(d.dept, d.ministry)) return d;
+  const [np, rows, entries] = await Promise.all([getNumbersPeople_(), getStaff_(), getEntries_()]);
+  const n = numbersPeopleFor_(np, rows, d.campus, d.dept, d.ministry);
+  n.canSet = canSetNumbers_(s, d.dept, d.ministry);
+  const yr = currentYear_(), last = {};
+  entries.forEach(function (r) {
+    if (r.campus !== d.campus || r.dept !== d.dept || r.ministry !== d.ministry || yearOf_(r) !== yr || !r.by) return;
+    const w = String(r.week);
+    if (!last[w] || (r.updated || '') > last[w].at) last[w] = { id: r.by, at: r.updated || '' };
+  });
+  n.lastBy = {};
+  Object.keys(last).forEach(function (w) {
+    const p = personOut_(rows, last[w].id);
+    n.lastBy[w] = { name: p ? p.name : '', at: last[w].at };
+  });
+  d.numbers = n;
+  return d;
+}
+
+/* For the boot: which ministries I am responsible for (main, backup, or a
+   leader with nobody set) and whether each has numbers in this week and last;
+   and for a department's overseer, every ministry in the department with its
+   people. "In" means any number for the week — the same rule as the page's
+   ministryWeekLogged_ (a day's figures roll up into the week's entry). */
+async function numbersStatus_(s, rows) {
+  const np = await getNumbersPeople_();
+  const entries = await getEntries_();
+  const wk = isoWeek_(baseToday_());
+  const weeks = [wk]; if (wk > 1) weeks.push(wk - 1);
+  const yr = currentYear_();
+  const logged = {};
+  weeks.forEach(function (w) { logged[w] = {}; });
+  entries.forEach(function (r) {
+    if (r.campus !== s.campus || yearOf_(r) !== yr || !logged[Number(r.week)]) return;
+    logged[Number(r.week)][r.dept + '|' + r.ministry] = true;
+  });
+  const loggedFor = function (dept, ministry) {
+    const o = {}; weeks.forEach(function (w) { o[w] = !!logged[w][dept + '|' + ministry]; }); return o;
+  };
+  const duty = [], seen = {};
+  Object.keys(np).forEach(function (k) {
+    const parts = k.split('|');
+    if (parts[0] !== s.campus || numbersExempt_(parts[1], parts[2])) return;
+    const role = np[k].main === s.id ? 'main' : (np[k].backup === s.id ? 'backup' : '');
+    if (!role) return;
+    seen[parts[1] + '|' + parts[2]] = 1;
+    duty.push({ dept: parts[1], ministry: parts[2], role: role, logged: loggedFor(parts[1], parts[2]) });
+  });
+  leadsOf_(s).forEach(function (k) {
+    const parts = k.split('|');
+    if (numbersExempt_(parts[0], parts[1]) || seen[k] || np[numbersKey_(s.campus, parts[0], parts[1])]) return;
+    duty.push({ dept: parts[0], ministry: parts[1], role: 'leader', logged: loggedFor(parts[0], parts[1]) });
+  });
+  let dept = null;
+  if (deptOf_(s) === 'Campus Leadership' && s.ministry && s.ministry !== 'Campus Director') {
+    const people = {};
+    Object.keys(np).forEach(function (k) {
+      const parts = k.split('|');
+      if (parts[0] === s.campus && parts[1] === s.ministry) people[parts[2]] = numbersPeopleFor_(np, rows, s.campus, s.ministry, parts[2]);
+    });
+    const leaders = {};
+    rows.forEach(function (r) {
+      if (!r.active || r.campus !== s.campus || isApplicant_(r)) return;
+      leadsOf_(r).forEach(function (k) {
+        const parts = k.split('|');
+        if (parts[0] === s.ministry) (leaders[parts[1]] = leaders[parts[1]] || []).push({ id: r.id, name: r.name });
+      });
+    });
+    const lg = {};
+    weeks.forEach(function (w) {
+      lg[w] = Object.keys(logged[w]).filter(function (k) { return k.split('|')[0] === s.ministry; })
+        .map(function (k) { return k.split('|')[1]; });
+    });
+    dept = { dept: s.ministry, people: people, leaders: leaders, logged: lg };
+  }
+  return { week: wk, duty: duty, dept: dept };
+}
+
 async function ministryDataFor_(s) {
   const d = await ministryDataFor2_(s.campus, s.dept, s.ministry);
   d.pins = Array.isArray(s.kpiPins) ? s.kpiPins : [];
@@ -2061,7 +2215,7 @@ async function ministryDataFor_(s) {
 async function getMyMinistry(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
-  return ministryDataFor_(s);
+  return withNumbers_(await ministryDataFor_(s), s);
 }
 
 /* Who sees and enters a ministry's numbers on My Ministry: the people IN it.
@@ -2084,10 +2238,10 @@ async function getMinistryFor(username, pin, dept, ministry) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
-  return ministryDataFor2_(s.campus, dept, ministry);
+  return withNumbers_(await ministryDataFor2_(s.campus, dept, ministry), s);
 }
 
-async function saveMinistryInternal_(campus, dept, ministry, week, updates) {
+async function saveMinistryInternal_(campus, dept, ministry, week, updates, by) {
   const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   const rows = await getEntries_();
@@ -2106,8 +2260,9 @@ async function saveMinistryInternal_(campus, dept, ministry, week, updates) {
     }
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
-    if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; }
-    else rows.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: yr, value: value, updated: now });
+    /* who typed it, for "last entered by" on My Ministry */
+    if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; if (by) rows[idx].by = by; }
+    else rows.push(Object.assign({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: yr, value: value, updated: now }, by ? { by: by } : {}));
   });
   await writeJSON('entries', rows);
   return { ok: true };
@@ -2117,7 +2272,7 @@ async function saveMyMinistry(username, pin, week, updates) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   if (!s.ministry) return { ok: false, err: 'no_ministry' };
-  await saveMinistryInternal_(s.campus, s.dept, s.ministry, week, updates);
+  await saveMinistryInternal_(s.campus, s.dept, s.ministry, week, updates, s.id);
   return getMyMinistry(username, pin);
 }
 
@@ -2125,7 +2280,7 @@ async function saveMinistryFor(username, pin, dept, ministry, week, updates) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
-  await saveMinistryInternal_(s.campus, dept, ministry, week, updates);
+  await saveMinistryInternal_(s.campus, dept, ministry, week, updates, s.id);
   return getMinistryFor(username, pin, dept, ministry);
 }
 
@@ -2378,8 +2533,8 @@ async function saveKpiDayInternal_(campus, dept, ministry, dateStr, updates, sta
         r.metric === metric && String(r.week) === String(wk) && yearOf_(r) === dayYear;
     });
     if (total === null) { if (ei > -1) entries.splice(ei, 1); return; }
-    if (ei > -1) { entries[ei].value = total; entries[ei].updated = now; }
-    else entries.push({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: dayYear, value: total, updated: now });
+    if (ei > -1) { entries[ei].value = total; entries[ei].updated = now; if (staffId) entries[ei].by = staffId; }
+    else entries.push(Object.assign({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: dayYear, value: total, updated: now }, staffId ? { by: staffId } : {}));
   });
   await writeJSON('entries', entries);
   return { ok: true };
@@ -2943,6 +3098,8 @@ async function getMyBoot(username, pin) {
     teamTrips: teamTrips || null,
     // for the HR menu item's badge: contracts run out or running out within 90 days
     hrDue: canHR_(s) ? hrDueCount_(staffRows) : null,
+    // whose numbers are due, and (for a department overseer) which ministries are in
+    numbers: await part(function () { return numbersStatus_(s, staffRows || []); }),
     hrFollowUps: canHR_(s) ? candFollowUpsCount_(candRows || []) : null,
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
@@ -5576,6 +5733,7 @@ const HANDLERS = {
   saveGoals: function (a) { return saveGoals(a[0], a[1], a[2], a[3]); },
   getMyMinistry: function (a) { return getMyMinistry(a[0], a[1]); },
   saveMyMinistry: function (a) { return saveMyMinistry(a[0], a[1], a[2], a[3]); },
+  setNumbersPeople: function (a) { return setNumbersPeople(a[0], a[1], a[2], a[3], a[4]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   getMinistryFor: function (a) { return getMinistryFor(a[0], a[1], a[2], a[3]); },
   saveMinistryFor: function (a) { return saveMinistryFor(a[0], a[1], a[2], a[3], a[4], a[5]); },
