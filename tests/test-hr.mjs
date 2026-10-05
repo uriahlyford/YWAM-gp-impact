@@ -119,6 +119,12 @@ r = await call('hrSaveStart', ['sina', '1234', 'st_nobody', { baseSince: '2020-0
 ok('nor for someone who isn’t there', r.body.ok === false && r.body.err === 'not_found');
 r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { baseSince: '' }]);
 ok('clearing the base month keeps the YWAM year', r.body.ok === true && r.body.staff.baseSince === '' && r.body.staff.ywamSince === 2003);
+r = await call('hrSaveContract', ['sina', '1234', 'st_andrew', { signed: '2020-01', years: 5, campus: 'poipet' }]);
+const pp = r.body.staff.contracts.find(c => c.signed === '2020-01');
+ok('a contract keeps the campus it was signed with', r.body.ok === true && pp.campus === 'poipet');
+r = await call('hrSaveContract', ['sina', '1234', 'st_andrew', { id: pp.id, signed: '2020-01', years: 5, campus: 'phnompenh' }]);
+ok('an unknown campus is left empty (reads as their own)', r.body.staff.contracts.find(c => c.id === pp.id).campus === '');
+await call('hrDeleteContract', ['sina', '1234', 'st_andrew', pp.id]);
 
 console.log('\n=== attachments ===');
 const pdf = Buffer.from('%PDF-1.4 the signed paper').toString('base64');
