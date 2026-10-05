@@ -119,6 +119,15 @@ r = await call('hrSaveStart', ['sina', '1234', 'st_nobody', { baseSince: '2020-0
 ok('nor for someone who isn’t there', r.body.ok === false && r.body.err === 'not_found');
 r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { baseSince: '' }]);
 ok('clearing the base month keeps the YWAM year', r.body.ok === true && r.body.staff.baseSince === '' && r.body.staff.ywamSince === 2003);
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { starts: { poipet: '2015-02', siemreap: '2024-01' } }]);
+ok('a start month for each campus — Poipet and Siem Reap', r.body.ok === true && r.body.staff.starts.poipet === '2015-02' && r.body.staff.starts.siemreap === '2024-01' && r.body.staff.baseSince === '2024-01');
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { starts: { poipet: '' } }]);
+ok('one can be cleared without touching the other', r.body.ok === true && !r.body.staff.starts.poipet && r.body.staff.starts.siemreap === '2024-01');
+ok('a campus we don’t have is refused', (await call('hrSaveStart', ['sina', '1234', 'st_andrew', { starts: { phnompenh: '2020-01' } }])).body.err === 'bad_campus');
+ok('a campus start before the YWAM year is refused', (await call('hrSaveStart', ['sina', '1234', 'st_andrew', { starts: { poipet: '1999-01' } }])).body.err === 'base_before_ywam');
+ok('… and so is a YWAM year after a campus start', (await call('hrSaveStart', ['sina', '1234', 'st_andrew', { ywamSince: 2025 }])).body.err === 'base_before_ywam');
+ok('an ordinary member cannot set a campus start', (await call('hrSaveStart', ['dara', '1234', 'st_andrew', { starts: { poipet: '2015-02' } }])).body.err === 'not_authorized');
+await call('hrSaveStart', ['sina', '1234', 'st_andrew', { starts: { siemreap: '' } }]);
 r = await call('hrSaveContract', ['sina', '1234', 'st_andrew', { signed: '2020-01', years: 5, campus: 'poipet' }]);
 const pp = r.body.staff.contracts.find(c => c.signed === '2020-01');
 ok('a contract keeps the campus it was signed with', r.body.ok === true && pp.campus === 'poipet');

@@ -4288,7 +4288,18 @@ function hrStaffOut_(s) {
   const out = adminStaffOut_(s);
   out.joined = s.joined || ''; out.photo = s.photo || ''; out.contracts = contractsOf_(s);
   out.ywamSince = ywamSinceOf_(s);
-  out.baseSince = isoMonth_(s.baseSince) || '';
+  out.starts = startsOf_(s);
+  out.baseSince = out.starts[s.campus] || '';
+  return out;
+}
+/* When they started on each of our campuses — { poipet:'2020-01',
+   siemreap:'2024-01' }, a month each, either may be missing. Someone who
+   served in Poipet and moved to Siem Reap has both; their time in YWAM GP
+   runs from the earlier. (baseSince, from before, is their own campus's.) */
+function startsOf_(s) {
+  const out = {}, st = s && s.starts && typeof s.starts === 'object' ? s.starts : {};
+  HR_CAMPUSES.forEach(function (c) { const m = isoMonth_(st[c]); if (m) out[c] = m; });
+  if (s && !out[s.campus] && isoMonth_(s.baseSince) && HR_CAMPUSES.indexOf(s.campus) > -1) out[s.campus] = isoMonth_(s.baseSince);
   return out;
 }
 /* A contract covers this base only; many staff served YWAM elsewhere first.
@@ -4337,25 +4348,31 @@ async function hrSaveContract(username, pin, staffId, contract) {
     }
   });
 }
-/* The two start dates, apart from any contract. '' clears one. */
+/* The start dates, apart from any contract: ywamSince (a year), and the
+   month they started on each campus — starts: { poipet, siemreap }, only
+   the ones being changed; '' clears one. baseSince is the same as their
+   own campus's start. */
 async function hrSaveStart(username, pin, staffId, dates) {
   dates = dates && typeof dates === 'object' ? dates : {};
   return hrMutate_(username, pin, staffId, function (rec) {
-    let ywam = rec.ywamSince == null ? null : rec.ywamSince, baseM = isoMonth_(rec.baseSince) || '';
+    let ywam = rec.ywamSince == null ? null : rec.ywamSince;
+    const starts = startsOf_(rec), now = new Date(), nowM = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2);
     if (dates.ywamSince !== undefined) {
       if (dates.ywamSince === '' || dates.ywamSince === null) ywam = null;
       else { ywam = ywamSinceOf_({ ywamSince: dates.ywamSince }); if (!ywam) return { abort: true, ok: false, err: 'bad_ywam_since' }; }
     }
-    if (dates.baseSince !== undefined) {
-      if (dates.baseSince === '' || dates.baseSince === null) baseM = '';
-      else {
-        baseM = isoMonth_(dates.baseSince);
-        const now = new Date(), nowM = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2);
-        if (!baseM || baseM > nowM || Number(baseM.slice(0, 4)) < 1960) return { abort: true, ok: false, err: 'bad_base_since' };
-      }
+    const change = Object.assign({}, dates.starts && typeof dates.starts === 'object' ? dates.starts : {});
+    if (dates.baseSince !== undefined) change[rec.campus] = dates.baseSince;
+    for (const c of Object.keys(change)) {
+      if (HR_CAMPUSES.indexOf(c) === -1) return { abort: true, ok: false, err: 'bad_campus' };
+      const v = change[c];
+      if (v === '' || v === null) { delete starts[c]; continue; }
+      const m = isoMonth_(v);
+      if (!m || m > nowM || Number(m.slice(0, 4)) < 1960) return { abort: true, ok: false, err: 'bad_base_since' };
+      starts[c] = m;
     }
-    if (ywam && baseM && Number(baseM.slice(0, 4)) < ywam) return { abort: true, ok: false, err: 'base_before_ywam' };
-    rec.ywamSince = ywam; rec.baseSince = baseM;
+    if (ywam && Object.keys(starts).some(function (c) { return Number(starts[c].slice(0, 4)) < ywam; })) return { abort: true, ok: false, err: 'base_before_ywam' };
+    rec.ywamSince = ywam; rec.starts = starts; rec.baseSince = starts[rec.campus] || '';
   });
 }
 async function hrDeleteContract(username, pin, staffId, contractId) {
