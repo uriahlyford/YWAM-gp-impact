@@ -45,7 +45,7 @@ const trip = (o) => ({ id: o.id, campus: 'siemreap', name: o.name, org: o.org ||
 // two teams left in Feb of this year, one in May, one is still here, one was cancelled
 const TRIPS = [
   trip({ id: 't1', name: 'Alpha DTS', org: 'YWAM Kona', country: 'United States', from: Y + '-01-20', to: Y + '-02-10', size: 8, staff: 'Sok', metrics: { 'People Served': 100, 'Salvations': 2 }, reached: { male: 40, female: 60 } }),
-  trip({ id: 't2', name: 'Bravo Church', org: 'Four Square', country: 'United States', from: Y + '-02-01', to: Y + '-02-20', size: 12, metrics: { 'People Served': 50, 'Healings': 1 } }),
+  trip({ id: 't2', name: 'Bravo Church', org: 'Four Square', country: 'usa', from: Y + '-02-01', to: Y + '-02-20', size: 12, metrics: { 'People Served': 50, 'Healings': 1 } }),
   trip({ id: 't3', name: 'Charlie DTS', from: Y + '-04-20', to: Y + '-05-10', size: 6, metrics: { 'People Served': 30 } }),
   trip({ id: 't4', name: 'Delta DTS', from: Y + '-02-05', to: Y + '-02-25', size: 5, status: 'cancelled' }),
   // applied on the portal and not arrived yet: pending — one still coming, one whose dates have passed
@@ -133,8 +133,14 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   await page.waitForTimeout(400);
   s = await state(page);
   ok('Year: the three teams that finished this year are counted', await tileOf(page, 'Teams Hosted') === '3', await tileOf(page, 'Teams Hosted'));
-  ok('team members add up across them', await tileOf(page, 'Team Members') === '26', await tileOf(page, 'Team Members'));
+  ok('Volunteers Mobilized is everyone who came — no separate Team Members', await tileOf(page, 'Volunteers Mobilized') === '26' && await tileOf(page, 'Team Members') === null, await tileOf(page, 'Volunteers Mobilized'));
+  const tileNames = await page.$$eval('.mmTile .mmTileName', t => t.slice(0, 3).map(x => x.textContent.trim()));
+  ok('the first three: Teams Hosted, Volunteers Mobilized, Countries', tileNames.join() === 'Teams Hosted,Volunteers Mobilized,Countries', tileNames.join());
+  ok('“usa” and “United States” are one country', await tileOf(page, 'Countries') === '1');
+  const ctry = await page.$eval('#teamCountries', e => [].map.call(e.children, c => [].map.call(c.childNodes, n => n.textContent.trim()).join(' ')).join(' | '));
+  ok('where they came from: each country with its teams and people, and teams with none set', /1 countries/.test(ctry) && /United States 2 teams · 20 people/.test(ctry) && /1 teams with no country yet/.test(ctry), ctry);
   ok('so does each metric', await tileOf(page, 'People Served') === '180' && await tileOf(page, 'Salvations') === '2', await tileOf(page, 'People Served'));
+  if (await page.$('#mmDashAll')) { await page.click('#mmDashAll'); await page.waitForTimeout(200); }
   ok('the men / women split shows', await tileOf(page, 'Men / Women Reached') === '40 / 60', await tileOf(page, 'Men / Women Reached'));
   ok('the cancelled team is not among them, the one still coming is listed separately', !s.cards.slice(0, 3).includes('Delta DTS') && s.heading.some(h => /Here now or coming/.test(h)) && s.cards.includes('Echo Team'), JSON.stringify(s.cards));
   ok('every card offers Edit to its own staff', s.edits === s.cards.length && s.add, s.edits + '/' + s.cards.length);
@@ -151,7 +157,7 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   await page.waitForTimeout(400);
   ok('Quarter → Q2: the one that left in May', await tileOf(page, 'Teams Hosted') === '1' && await tileOf(page, 'People Served') === '30');
   await page.click('[data-teamperiod="ytd"]'); await page.waitForTimeout(400);
-  ok('YTD: this year up to today — three teams, 26 people', await tileOf(page, 'Teams Hosted') === '3' && await tileOf(page, 'Team Members') === '26' && /2026 to Aug 12 at a glance/.test(await page.evaluate(() => document.querySelector('h3').textContent)));
+  ok('YTD: this year up to today — three teams, 26 people', await tileOf(page, 'Teams Hosted') === '3' && await tileOf(page, 'Volunteers Mobilized') === '26' && /2026 to Aug 12 at a glance/.test(await page.evaluate(() => document.querySelector('h3').textContent)));
   const bars = await page.$$eval('.teamYearBar', b => b.map(x => x.querySelector('.teamYearN').textContent + (x.classList.contains('future') ? 'f' : '')));
   ok('the year month by month: two teams in Feb, one in May; months still to come are faded', bars.length === 12 && bars[1] === '2' && bars[4] === '1' && bars[0] === '' && bars[8] === 'f' && bars[7] === '', bars.join(','));
   ok('… with the people under each month', await page.$eval('[data-teamym="2"] .teamYearP', e => e.textContent) === '20');

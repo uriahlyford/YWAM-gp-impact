@@ -3108,7 +3108,7 @@ function cleanTrip_(t, campus) {
   if (from && to && to < from) { const x = from; from = to; to = x; }
   const rec = {
     id: str_(t.id, 60) || ('tt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)),
-    campus: campus, name: name, org: str_(t.org, 120), country: str_(t.country, 60), from: from, to: to,
+    campus: campus, name: name, org: str_(t.org, 120), country: cleanCountry_(t.country) || str_(t.country, 60), from: from, to: to,
     staff: str_(t.staff, 120), focus: str_(t.focus, 200), status: t.status === 'cancelled' ? 'cancelled' : 'active',
     notes: str_(t.notes, 1000), metrics: {}, reached: { male: null, female: null }
   };
@@ -3127,7 +3127,8 @@ function cleanTrip_(t, campus) {
 /* Volunteers Mobilized for a team is the team itself — everyone who came —
    so it is no longer typed in: for a team that leaves on or after
    TEAM_AUTO_FROM the figure is its head count (size), whatever was entered.
-   Earlier teams keep the number logged for them. */
+   Earlier teams keep the number logged for them, and one with none logged
+   counts its head count too. */
 const TEAM_AUTO_FROM = '2026-10-01';
 const TEAM_AUTO_METRIC = 'Volunteers Mobilized';
 function tripMetrics_(t) {
@@ -3135,7 +3136,7 @@ function tripMetrics_(t) {
   if (t && t.to && t.to >= TEAM_AUTO_FROM) {
     if (t.size != null && t.size !== '' && !isNaN(Number(t.size))) m[TEAM_AUTO_METRIC] = Number(t.size);
     else delete m[TEAM_AUTO_METRIC];
-  }
+  } else if (t && (m[TEAM_AUTO_METRIC] == null || m[TEAM_AUTO_METRIC] === '') && t.size != null && t.size !== '' && !isNaN(Number(t.size))) m[TEAM_AUTO_METRIC] = Number(t.size);
   return m;
 }
 function teamEntryRows_(trips) {
