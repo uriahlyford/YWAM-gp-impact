@@ -658,7 +658,8 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .leadBanner .mmBannerEmoji { font-size:20px; }
 .leadBanner .mmBannerName { font-size:18px; }
 .leadBanner .rowSub { font-size:12px; }
-.periodSeg .campusBtn { padding-left:8px; padding-right:8px; font-size:12.5px; }
+.periodSeg { display:flex; width:100%; }
+.periodSeg .campusBtn { flex:1 1 auto; min-width:0; padding:9px 2px; font-size:12px; letter-spacing:-.1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .teamYear { margin-bottom:12px; }
 .teamYearBars { display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:3px; align-items:end; }
 .teamYearBar { display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:0; padding:0; font:inherit; cursor:pointer; min-width:0; }
@@ -1832,7 +1833,7 @@ var S = {
   lead:null, leadErr:'', leadForm:null, leadTab:'okrs', leadShown:false,
   sched:null, schedError:'', schedData:null, schedEdit:false, schedPick:null,
   hosp:null, hospLoading:false, hospError:'', hospTab:'dash', hospForm:null, hospRoom:null, hospBld:null,
-  teamTrips:{}, teamLoading:{}, teamError:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
+  teamTrips:{}, teamLoading:{}, teamError:{}, teamPeriod:'ytd', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
   /* Team tab: the directory or the org chart; the chart is cached per
      campus|year|quarter, and an admin's unsaved edits live in structDraft. */
   teamMode:'dir', structYear:null, structQ:null, structCache:{}, structLoading:{}, structError:{},
@@ -7209,6 +7210,9 @@ function tripMetric_(tr, m){
   if(m===TEAM_AUTO_METRIC && tr && tr.to && tr.to>=TEAM_AUTO_FROM) return (tr.size!=null && tr.size!=='') ? Number(tr.size) : null;
   return tr && tr.metrics ? tr.metrics[m] : null;
 }
+/* The page opens on the year so far — the overview first; Year, Quarter
+   and Month narrow it from there. */
+function teamPeriod_(){ return ['month','quarter','ytd','year'].indexOf(S.teamPeriod)>-1 ? S.teamPeriod : 'ytd'; }
 function teamYear_(){ return S.teamYear || new Date().getFullYear(); }
 function teamQ_(){ return S.teamQ || (Math.floor(new Date().getMonth()/3)+1); }
 function teamMonth_(){ return S.teamMonth || (new Date().getMonth()+1); }
@@ -7227,19 +7231,19 @@ function tripInPeriod_(tr, year, period, n){
   return true;
 }
 function teamPeriodLabel_(){
-  var p=S.teamPeriod||'quarter', y=teamYear_();
+  var p=teamPeriod_(), y=teamYear_();
   if(p==='month') return t(MONTH_SHORT[teamMonth_()-1])+' '+y;
   if(p==='quarter') return 'Q'+teamQ_()+' '+y;
   if(p==='ytd') return gpT('{year} to {date}',{year:y, date:hospDate_(todayStr())});
   return String(y);
 }
 function tripsShown_(trips){
-  var p=S.teamPeriod||'quarter', n = p==='month' ? teamMonth_() : teamQ_();
+  var p=teamPeriod_(), n = p==='month' ? teamMonth_() : teamQ_();
   return trips.filter(function(tr){ return tripInPeriod_(tr, teamYear_(), p, n); });
 }
 function teamPeriodBarHtml_(){
-  var p=S.teamPeriod||'quarter', yNow=new Date().getFullYear(), y=teamYear_();
-  var h='<div class="campusSeg periodSeg">'+[['month','Month'],['quarter','Quarter'],['ytd','YTD'],['year','Year']].map(function(o){
+  var p=teamPeriod_(), yNow=new Date().getFullYear(), y=teamYear_();
+  var h='<div class="campusSeg periodSeg">'+[['ytd','Year to date'],['year','Full year'],['quarter','Quarter'],['month','Month']].map(function(o){
     return '<button class="campusBtn'+(p===o[0]?' on':'')+'" data-teamperiod="'+o[0]+'">'+esc(t(o[1]))+'</button>'; }).join('')+'</div>';
   h+='<div class="pickerRow teamPickRow"><label class="pick"><span>'+esc(t('Year'))+'</span><select id="teamYearSel">'+
     [yNow-2,yNow-1,yNow].map(function(yy){ return '<option value="'+yy+'"'+(yy===y?' selected':'')+'>'+yy+'</option>'; }).join('')+'</select></label>';
@@ -7255,7 +7259,7 @@ function teamPeriodBarHtml_(){
    with the year before over the same stretch. Tapping a month or a quarter
    opens it. */
 function teamYearOverviewHtml_(trips){
-  var p=S.teamPeriod, y=teamYear_(), today=todayStr(), cutMd = p==='ytd' ? today.slice(5) : '12-31';
+  var p=teamPeriod_(), y=teamYear_(), today=todayStr(), cutMd = p==='ytd' ? today.slice(5) : '12-31';
   var months=[], quarters=[0,0,0,0], qPeople=[0,0,0,0];
   for(var m=1;m<=12;m++) months.push({ teams:0, people:0 });
   var tally=function(year){ var n=0, ppl=0; trips.forEach(function(tr){ if(!tripFinished_(tr) || Number(tr.to.slice(0,4))!==year || tr.to.slice(5)>cutMd) return; n++; ppl+=Number(tr.size)||0; }); return { teams:n, people:ppl }; };
@@ -7454,7 +7458,7 @@ function teamsMinistryHtml_(campus){
   if(view==='cal') return h+teamCalHtml_(campus, c.trips)+'</div>';
   h+=teamPeriodBarHtml_();
   h+=teamsDashboardHtml_(campus, c.trips);
-  if(S.teamPeriod==='year' || S.teamPeriod==='ytd') h+=teamYearOverviewHtml_(c.trips);
+  if(teamPeriod_()==='year' || teamPeriod_()==='ytd') h+=teamYearOverviewHtml_(c.trips);
   if(c.canEdit){
     if(S.teamForm && S.teamForm.campus===campus) h+=teamFormHtml_(campus);
     else h+='<button class="btn" id="teamAddBtn" style="margin-top:0">＋ '+esc(t('Add a team'))+'</button>';
