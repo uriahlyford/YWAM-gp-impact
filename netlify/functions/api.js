@@ -4013,6 +4013,131 @@ async function portalSaveTeamMembers(username, pin, members) {
   return portalBoot(username, pin);
 }
 
+/* ==================== the leadership meeting board ====================
+   Campus Leadership meets every Monday. Its board ('leadBoard:<campus>') is
+   all theirs to shape:
+     cols      the columns, in order — {id, title, done}; one of them counts
+               as finished (moving a card there stamps doneAt). Starts as
+               Agenda / In progress / Done.
+     areas     the focus areas projects belong to — for Siem Reap this
+               quarter and toward 2027: Siem Reap finances, Siem Reap
+               ministries, Construction.
+     standing  the agenda items every Monday has — Department and ministry
+               updates, Events coming up.
+     cards     agenda items and projects: title, type, column, focus area,
+               owner, due date, notes, and optionally the Leadership OKR
+               (objective id) it moves forward.
+   Campus Leadership on the campus and admins read and change it; nobody
+   else sees it. */
+const LEAD_TYPES = ['agenda', 'project'];
+const LEAD_MAX = { cards: 600, cols: 8, areas: 12, standing: 12 };
+const LEAD_DEFAULT = {
+  cols: [{ id: 'agenda', title: 'Agenda', done: false }, { id: 'doing', title: 'In progress', done: false }, { id: 'done', title: 'Done', done: true }],
+  areas: [{ id: 'finances', title: 'Siem Reap finances' }, { id: 'ministries', title: 'Siem Reap ministries' }, { id: 'construction', title: 'Construction' }],
+  standing: [{ id: 'updates', title: 'Department and ministry updates' }, { id: 'events', title: 'Events coming up' }]
+};
+function canLead_(s) { return !!(s && !isApplicant_(s) && s.active !== false && (s.isAdmin || deptOf_(s) === 'Campus Leadership')); }
+function leadKey_(campus) { return 'leadBoard:' + campus; }
+async function leadAuth_(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { out: { ok: false } };
+  if (!canLead_(s)) return { out: { ok: false, err: 'not_authorized' } };
+  return { s: s, campus: s.campus };
+}
+async function getLeadDoc_(campus) {
+  const d = await readJSON(leadKey_(campus), {});
+  return {
+    cols: Array.isArray(d.cols) && d.cols.length ? d.cols : JSON.parse(JSON.stringify(LEAD_DEFAULT.cols)),
+    areas: Array.isArray(d.areas) ? d.areas : JSON.parse(JSON.stringify(LEAD_DEFAULT.areas)),
+    standing: Array.isArray(d.standing) ? d.standing : JSON.parse(JSON.stringify(LEAD_DEFAULT.standing)),
+    cards: Array.isArray(d.cards) ? d.cards : []
+  };
+}
+function leadOut_(campus, d, extra) { return Object.assign({ ok: true, campus: campus, cols: d.cols, areas: d.areas, standing: d.standing, cards: d.cards }, extra || {}); }
+async function getLeadBoard(username, pin) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  return leadOut_(a.campus, await getLeadDoc_(a.campus));
+}
+function cleanLeadCard_(c, prev, d) {
+  const title = str_(c && c.title, 160);
+  if (!title) return null;
+  const colIds = d.cols.map(function (x) { return x.id; }), areaIds = d.areas.map(function (x) { return x.id; });
+  return Object.assign({}, prev || {}, {
+    id: (prev && prev.id) || str_(c.id, 60) || ('lc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    title: title, notes: dutyText_(c.notes, 2000),
+    type: LEAD_TYPES.indexOf(c.type) > -1 ? c.type : 'agenda',
+    col: colIds.indexOf(c.col) > -1 ? c.col : colIds[0],
+    area: areaIds.indexOf(c.area) > -1 ? c.area : '',
+    owner: str_(c.owner, 60) || '', due: isoDate_(c.due) || '',
+    okrId: str_(c.okrId, 60) || '', meeting: isoDate_(c.meeting) || ''
+  });
+}
+/* Add or change a card (including moving it to another column). */
+async function saveLeadCard(username, pin, card) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  const d = await getLeadDoc_(a.campus), cards = d.cards;
+  const idx = cards.findIndex(function (c) { return c.id === str_(card && card.id, 60); });
+  const rec = cleanLeadCard_(card, idx > -1 ? cards[idx] : null, d);
+  if (!rec) return { ok: false, err: 'bad_card' };
+  if (idx === -1 && cards.length >= LEAD_MAX.cards) return { ok: false, err: 'too_many' };
+  const now = new Date().toISOString();
+  const doneCol = function (id) { return d.cols.some(function (x) { return x.id === id && x.done; }); };
+  if (idx === -1) { rec.created = now; rec.createdBy = a.s.id; }
+  if (doneCol(rec.col) && !(idx > -1 && doneCol(cards[idx].col))) rec.doneAt = now;
+  if (!doneCol(rec.col)) delete rec.doneAt;
+  rec.updated = now; rec.updatedBy = a.s.id;
+  if (idx > -1) cards[idx] = rec; else cards.push(rec);
+  await writeJSON(leadKey_(a.campus), d);
+  return leadOut_(a.campus, d, { saved: rec });
+}
+async function deleteLeadCard(username, pin, id) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  const d = await getLeadDoc_(a.campus);
+  const idx = d.cards.findIndex(function (c) { return c.id === str_(id, 60); });
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  d.cards.splice(idx, 1);
+  await writeJSON(leadKey_(a.campus), d);
+  return leadOut_(a.campus, d);
+}
+/* The board's own shape: its columns (one counts as done), focus areas and
+   standing agenda items. A card in a column that goes moves to the first
+   one; a card in a focus area that goes keeps its place with no area. */
+function leadList_(list, max, prefix) {
+  const out = [], used = {};
+  (Array.isArray(list) ? list : []).slice(0, max).forEach(function (x) {
+    x = x && typeof x === 'object' ? x : {};
+    const title = str_(x.title, 80);
+    if (!title) return;
+    let id = String(x.id || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 30);
+    if (!id || used[id]) { let i = 1; do { id = prefix + (i++) + Math.random().toString(36).slice(2, 5); } while (used[id]); }
+    used[id] = 1;
+    out.push({ id: id, title: title, done: !!x.done });
+  });
+  return out;
+}
+async function saveLeadSettings(username, pin, settings) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  settings = settings && typeof settings === 'object' ? settings : {};
+  const d = await getLeadDoc_(a.campus);
+  const cols = leadList_(settings.cols, LEAD_MAX.cols, 'c');
+  if (!cols.length) return { ok: false, err: 'no_columns' };
+  const doneIdx = cols.findIndex(function (c) { return c.done; });
+  cols.forEach(function (c, i) { c.done = doneIdx === -1 ? i === cols.length - 1 : i === doneIdx; });   // exactly one finished column
+  const areas = leadList_(settings.areas, LEAD_MAX.areas, 'a').map(function (x) { return { id: x.id, title: x.title }; });
+  const standing = leadList_(settings.standing, LEAD_MAX.standing, 's').map(function (x) { return { id: x.id, title: x.title }; });
+  const colIds = cols.map(function (c) { return c.id; }), areaIds = areas.map(function (x) { return x.id; });
+  const doneId = cols.filter(function (c) { return c.done; })[0].id, now = new Date().toISOString();
+  d.cards.forEach(function (c) {
+    if (colIds.indexOf(c.col) === -1) c.col = colIds[0];
+    if (c.area && areaIds.indexOf(c.area) === -1) c.area = '';
+    if (c.col === doneId && !c.doneAt) c.doneAt = now;
+    if (c.col !== doneId) delete c.doneAt;
+  });
+  d.cols = cols; d.areas = areas; d.standing = standing;
+  await writeJSON(leadKey_(a.campus), d);
+  return leadOut_(a.campus, d);
+}
+
 /* ==================== human resources ====================
    The HR page: each staff member's contract(s), the papers attached to
    them, how long they have served, when the current contract runs out, and
@@ -5404,6 +5529,10 @@ const HANDLERS = {
   hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); },
   hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); },
   hospImport: function (a) { return hospImport(a[0], a[1], a[2]); },
+  getLeadBoard: function (a) { return getLeadBoard(a[0], a[1]); },
+  saveLeadCard: function (a) { return saveLeadCard(a[0], a[1], a[2]); },
+  deleteLeadCard: function (a) { return deleteLeadCard(a[0], a[1], a[2]); },
+  saveLeadSettings: function (a) { return saveLeadSettings(a[0], a[1], a[2]); },
   getDuty: function (a) { return getDuty(a[0], a[1], a[2], a[3]); },
   saveDuty: function (a) { return saveDuty(a[0], a[1], a[2], a[3], a[4], a[5]); },
   getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },

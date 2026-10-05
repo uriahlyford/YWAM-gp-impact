@@ -229,10 +229,12 @@ console.log('\n=== the department’s overseer: the teams page among the ministr
   // the server answers canEdit — here it says no, so the page must be read-only whatever the role
   const { ctx, page, errors, sent } = await open(OVERSEER, { stayOnMinistry: true });
   await page.waitForTimeout(800);
+  ok('the overseer’s My Ministry opens on Campus Leadership (its OKRs and meeting board)', !!(await page.$('#leadOkrs')));
+  await page.click('[data-mmpick="Community Service|Cafe"]'); await page.waitForTimeout(800);
   let s = await state(page);
   const chips = await page.evaluate(() => [].map.call(document.querySelectorAll('[data-mmpick]'), b => b.getAttribute('data-mmpick')));
   ok('the overseer picks among the department’s ministries', chips.includes('Community Service|Cafe') && chips.includes('Community Service|Outreach Teams'), chips.join(' , '));
-  ok('and lands on a weekly one, not Outreach Teams — with its week strip', s.strip && s.form && !s.teamsPage && await page.evaluate(() => document.querySelector('[data-mmpick].on').getAttribute('data-mmpick') !== 'Community Service|Outreach Teams'));
+  ok('a weekly ministry of theirs shows its week strip', s.strip && s.form && !s.teamsPage && await page.evaluate(() => document.querySelector('[data-mmpick].on').getAttribute('data-mmpick') !== 'Community Service|Outreach Teams'));
   ok('their own leadership figures are not the default, they sit last in the picker', chips[chips.length - 1] === 'Campus Leadership|Community Service');
   ok('no “Individual — your own numbers” paragraph any more', !(await page.evaluate(() => document.body.innerText.includes('Individual'))));
   await page.click('[data-mmpick="Community Service|Outreach Teams"]');
