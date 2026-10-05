@@ -1355,7 +1355,9 @@ body.hxOn { overflow:hidden; }
 .deptChip.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); font-weight:700; }
 /* Team → Structure: the org chart as nested cards. Leads wear the crown;
    children hang off a rule on the left, the way the Canva chart draws it. */
-.teamModeSeg { margin-bottom:8px; }
+.teamModeSeg { margin-bottom:8px; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); max-width:none; width:100%; box-sizing:border-box; }
+.teamModeSeg .campusBtn { padding:7px 4px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media (max-width:400px){ .teamModeSeg { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 .orgChart { margin-top:4px; }
 .orgQuarterBar { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin:4px 0 6px; }
 .orgLevelLabel { font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:0 0 6px; text-align:center; }
@@ -1540,6 +1542,13 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 .pHero .pTag { font-size:14px; margin-top:6px; color:var(--pInk2); }
 .pHero .pWho { font-size:13px; font-weight:700; margin-bottom:6px; color:var(--pInk2); }
 .pBar { margin:10px 0 14px; }
+.tpPair .pBarTop { gap:6px; } .tpPair .pBarTop span:nth-child(2) { font-size:12px; }
+.tpSplit .pFill + .pFill { opacity:.55; }
+.tpLean { font-size:13px; line-height:1.45; margin-top:6px; }
+.tpTypeRow { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+.tpTypeRow:first-child { border-top:0; }
+.tpArt { flex:0 0 44px; height:44px; } .tpArt svg { width:44px; height:44px; }
+.tpType { flex:1; min-width:0; font-size:14px; } .tpN { font-weight:800; font-size:16px; flex:0 0 auto; }
 .pBar .pBarTop { display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; }
 .pBar .pBarTop b { font-weight:800; }
 .pBar .pTrack { position:relative; height:10px; border-radius:6px; background:var(--surface2); }
@@ -4643,6 +4652,92 @@ function teamStrengthsHtml_(campus){
     h+='</div>';
   });
   return h+gsFineHtml();
+}
+
+/* ==================== Team → Personalities ====================
+   The team's mix of the sixteen types, added up from the types people have
+   shared (rosterStaff_ carries avatar.type only while "Show my type to the team"
+   is on; season never leaves its owner). For the whole campus, a department or
+   one ministry. The four groups, the four pairs with what the team's lean tends
+   to mean — GP's own words — and who has which type. Counts only: no scores. */
+var TP_LEAN = 0.65;   // this share or more on one side of a pair is a lean
+var TP_LEAN_TEXT = {
+  E: 'Mostly Extraverted — this team talks things through and gets its energy from people. Make room for the quieter voices to speak first.',
+  I: 'Mostly Introverted — this team thinks before it speaks and does deep, focused work. Say out loud what you are thinking, so plans don’t stay in heads.',
+  S: 'Mostly Sensing — practical and grounded, good with what is real today. Set aside time now and then for the bigger picture.',
+  N: 'Mostly Intuitive — full of ideas and possibilities. Pin down the details and the next small step, or ideas may stay ideas.',
+  T: 'Mostly Thinking — clear, honest and fair in decisions. Check how a decision lands on people, not only whether it is right.',
+  F: 'Mostly Feeling — warm and people-first; everyone is cared for. Don’t put off the hard conversation — kindness includes honesty.',
+  J: 'Mostly Judging — organised, plans ahead and finishes. Leave a little room for the unexpected, and for people who need it.',
+  P: 'Mostly Perceiving — flexible and quick to adapt. Agree deadlines and who owns what, so things get finished.'
+};
+var TP_MIXED = 'Evenly mixed — the team has both. Let each side lead where it is strongest.';
+function teamPScopePeople_(campus){
+  var sc=S.teamPScope||'', here=S.roster.filter(function(p){ return p.campus===campus; });
+  if(sc.indexOf('dept:')===0){ var d=sc.slice(5); return here.filter(function(p){ return p.dept===d; }); }
+  if(sc.indexOf('min:')===0){ var k=sc.slice(4), i=k.indexOf('|'); return here.filter(function(p){ return p.dept===k.slice(0,i) && p.ministry===k.slice(i+1); }); }
+  return here;
+}
+function teamPScopeSelect_(campus){
+  var here=S.roster.filter(function(p){ return p.campus===campus; }), byDept={};
+  here.forEach(function(p){ if(!p.dept) return; (byDept[p.dept]=byDept[p.dept]||{}); if(p.ministry) byDept[p.dept][p.ministry]=1; });
+  var sc=S.teamPScope||'';
+  var opt=function(v, label){ return '<option value="'+esc(v)+'"'+(sc===v?' selected':'')+'>'+esc(label)+'</option>'; };
+  var h='<select id="teamPScope" aria-label="'+esc(t('Which team'))+'">'+opt('', gpT('Everyone at {campus}',{campus:t(campusName(campus))}));
+  Object.keys(byDept).sort().forEach(function(d){
+    h+='<optgroup label="'+esc(t(d))+'">'+opt('dept:'+d, gpT('All of {dept}',{dept:t(d)}));
+    Object.keys(byDept[d]).sort().forEach(function(m){ h+=opt('min:'+d+'|'+m, t(m)); });
+    h+='</optgroup>';
+  });
+  return h+'</select>';
+}
+function teamPersonalityHtml_(campus){
+  var all=teamPScopePeople_(campus);
+  var people=all.filter(function(p){ return p.avatar && gpPIsType(p.avatar.type); });
+  var h='<div class="card">'+teamPScopeSelect_(campus)+
+    '<div class="pmeta" style="margin-top:8px">'+esc(gpT('{n} of {total} people have shared their type',{n:people.length, total:all.length}))+'</div></div>';
+  if(!people.length) return h+'<div class="card"><p class="sub" style="margin:4px 0">'+
+    esc(t('Nobody here has shared a personality type yet. Take the test from My Home.'))+'</p></div>'+pFineHtml();
+  var n=people.length;
+
+  // the four groups
+  var byGroup={}; Object.keys(GP_PGROUPS).forEach(function(g){ byGroup[g]=[]; });
+  people.forEach(function(p){ var g=gpPGroupOf(p.avatar.type); if(g) byGroup[g.id].push(p); });
+  h+='<h3>'+esc(t('The four groups'))+'</h3><div class="card">';
+  Object.keys(GP_PGROUPS).forEach(function(gid){
+    var g=GP_PGROUPS[gid], c=byGroup[gid].length, pct=Math.round(c/n*100);
+    h+='<div class="pBar"><div class="pBarTop"><span style="color:'+g.ink+';font-weight:800">'+esc(t(g.name))+'</span><span><b>'+c+'</b> · '+pct+'%</span></div>'+
+      '<div class="pTrack"><div class="pFill" style="left:0;width:'+pct+'%;background:'+g.color+'"></div></div>'+
+      '<div class="hint" style="margin-top:4px">'+esc(t(g.blurb))+'</div></div>';
+  });
+  h+='</div>';
+
+  // the four pairs
+  h+='<h3>'+esc(t('How this team leans'))+'</h3><div class="card">';
+  GP_PAXES.forEach(function(ax, i){
+    var a=people.filter(function(p){ return p.avatar.type.charAt(i)===ax.a; }).length, b=n-a;
+    var pa=Math.round(a/n*100), lean = a/n>=TP_LEAN ? ax.a : (b/n>=TP_LEAN ? ax.b : '');
+    h+='<div class="pBar tpPair"><div class="pBarTop"><span><b>'+esc(t(ax.aName))+'</b> '+a+'</span><span style="color:var(--muted)">'+esc(t(ax.label))+'</span><span>'+b+' <b>'+esc(t(ax.bName))+'</b></span></div>'+
+      '<div class="pTrack tpSplit"><div class="pFill" style="left:0;width:'+pa+'%;background:var(--accent)"></div><div class="pFill" style="right:0;width:'+(100-pa)+'%;background:var(--faint)"></div></div>'+
+      '<div class="tpLean">'+esc(t(lean ? TP_LEAN_TEXT[lean] : TP_MIXED))+'</div></div>';
+  });
+  h+='</div>';
+
+  // the sixteen types and who has them
+  var byType={}; people.forEach(function(p){ (byType[p.avatar.type]=byType[p.avatar.type]||[]).push(p); });
+  var codes=GP_PTYPE_CODES.slice().sort(function(x,y){ return (byType[y]||[]).length-(byType[x]||[]).length; });
+  var had=codes.filter(function(c){ return byType[c]; }), none=codes.filter(function(c){ return !byType[c]; });
+  h+='<h3>'+esc(t('Who has which type'))+'</h3><div class="card">';
+  had.forEach(function(c){
+    var g=gpPGroupOf(c);
+    h+='<div class="tpTypeRow"><span class="tpArt">'+gpPAvatar(c, (byType[c][0].avatar.sex)||'', 44, true)+'</span>'+
+      '<span class="tpType"><b style="color:'+g.ink+'">'+esc(c)+'</b> · '+esc(pTheName(c))+'<span class="sWho">'+
+      byType[c].map(function(p){ return '<button class="sWhoBtn" data-person="'+esc(p.id)+'">'+esc(firstName_(p.name))+'</button>'; }).join('')+
+      '</span></span><span class="tpN">'+byType[c].length+'</span></div>';
+  });
+  if(none.length) h+='<div class="hint" style="margin-top:8px">'+esc(t('Not on this team yet:'))+' '+esc(none.join(', '))+'</div>';
+  h+='</div>';
+  return h+pFineHtml();
 }
 
 /* ==================== GP Strengths (the free test) ====================
@@ -11685,16 +11780,18 @@ function teamHtml(){
   var campus = S.teamCampus || (S.me && S.me.campus) || CAMPUSES[0].id;
   var cInfo = CAMPUSES.filter(function(c){ return c.id===campus; })[0];
   var here = S.roster.filter(function(p){ return p.campus===campus; });
-  var mode = S.teamMode==='org' ? 'org' : (S.teamMode==='str' && gsOK() ? 'str' : 'dir');
+  var mode = S.teamMode==='org' ? 'org' : (S.teamMode==='str' && gsOK() ? 'str' : (S.teamMode==='pers' && pOK() ? 'pers' : 'dir'));
 
   var h='<h2>'+esc(t('Team'))+' <small>· '+S.roster.length+' '+esc(t('staff'))+'</small></h2>'+
     mentorEntryHtml();
   h+='<div class="campusSeg teamModeSeg">'+
     '<button class="campusBtn'+(mode==='dir'?' on':'')+'" data-teammode="dir">👥 '+esc(t('Directory'))+'</button>'+
     '<button class="campusBtn'+(mode==='org'?' on':'')+'" data-teammode="org">🧭 '+esc(t('Structure'))+'</button>'+
-    (gsOK()?'<button class="campusBtn'+(mode==='str'?' on':'')+'" data-teammode="str">💪 '+esc(t('Strengths'))+'</button>':'')+'</div>';
+    (gsOK()?'<button class="campusBtn'+(mode==='str'?' on':'')+'" data-teammode="str">💪 '+esc(t('Strengths'))+'</button>':'')+
+    (pOK()?'<button class="campusBtn'+(mode==='pers'?' on':'')+'" data-teammode="pers">🧩 '+esc(t('Personalities'))+'</button>':'')+'</div>';
   h+='<p class="sub">'+esc(mode==='org' ? t('Departments and ministries, and who is in each this quarter.') :
     mode==='str' ? t('Who on the base has which strengths, from the Top 5s people have shared.') :
+    mode==='pers' ? t('The team’s mix of personality types, from the types people have shared.') :
     t('Tap anyone to see their ministry and this week’s goals.'))+'</p>';
 
   h+='<div class="campusSeg">'+CAMPUSES.map(function(c){
@@ -11703,6 +11800,7 @@ function teamHtml(){
 
   if(mode==='org') return h+orgStructureHtml_(campus);
   if(mode==='str') return h+teamStrengthsHtml_(campus);
+  if(mode==='pers') return h+teamPersonalityHtml_(campus);
 
   h+='<h3>'+esc(t(cInfo?cInfo.name:campus))+' <small>· '+here.length+'</small></h3>';
 
@@ -13488,8 +13586,10 @@ function bind(){
   };
 
   // team + mentor cards
+  var tps=document.getElementById('teamPScope');
+  if(tps) tps.onchange=function(){ S.teamPScope=tps.value; render(); };
   document.querySelectorAll('[data-teamcampus]').forEach(function(b){
-    b.onclick=function(){ S.teamCampus=b.getAttribute('data-teamcampus'); render(); };
+    b.onclick=function(){ S.teamCampus=b.getAttribute('data-teamcampus'); S.teamPScope=''; render(); };
   });
   // tapping a teammate in the directory opens their public profile
   document.querySelectorAll('[data-person]').forEach(function(c){

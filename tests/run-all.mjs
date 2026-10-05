@@ -95,6 +95,7 @@ const BROWSER = [
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
+  'test-team-personality-ui.mjs',  // Team → Personalities: the team's mix from shared types only, by campus / department / ministry
   'test-weekly-health-home-ui.mjs',  // My Home health is the weekly check-in only; no daily inputs; habits stay
   'test-groups-ui.mjs',  // Arrivals & departures: the invite link through to a sign-up, archiving several with a confirm
   'test-loose-ends-ui.mjs',  // Admin → Loose ends: each list, taps through, the other campus, before 30 days of counting

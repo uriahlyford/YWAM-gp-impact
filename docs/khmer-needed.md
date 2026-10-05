@@ -2728,3 +2728,31 @@ moment later; this small label sits at the top while it does.
 |---|---|
 | Your score comes from the weekly check-in. | ពិន្ទុរបស់អ្នកបានមកពីការឆែកសុខភាពប្រចាំសប្តាហ៍។ |
 | Open Health | បើកសុខភាព |
+
+## 63. Team → Personalities
+
+The team's mix of personality types, added up from the types people share. The
+"Mostly …" lines describe a whole team, not a person; keep them gentle.
+
+| English | Khmer (pending) |
+|---|---|
+| Personalities | បុគ្គលិកលក្ខណៈ |
+| The team’s mix of personality types, from the types people have shared. | ការលាយបញ្ចូលគ្នានៃប្រភេទបុគ្គលិកលក្ខណៈរបស់ក្រុម ពីប្រភេទដែលមនុស្សបានចែករំលែក។ |
+| Which team | ក្រុមណា |
+| Everyone at {campus} | មនុស្សគ្រប់គ្នានៅ {campus} |
+| All of {dept} | ទាំងអស់នៃ {dept} |
+| {n} of {total} people have shared their type | មនុស្ស {n} នាក់ក្នុងចំណោម {total} នាក់ បានចែករំលែកប្រភេទរបស់ពួកគេ |
+| Nobody here has shared a personality type yet. Take the test from My Home. | មិនទាន់មាននរណាម្នាក់នៅទីនេះចែករំលែកប្រភេទបុគ្គលិកលក្ខណៈនៅឡើយទេ។ សូមធ្វើតេស្តពីទំព័រដើមរបស់ខ្ញុំ។ |
+| The four groups | ក្រុមទាំងបួន |
+| How this team leans | ក្រុមនេះមានទំនោរយ៉ាងដូចម្តេច |
+| Who has which type | អ្នកណាមានប្រភេទណា |
+| Not on this team yet: | មិនទាន់មាននៅក្នុងក្រុមនេះទេ៖ |
+| Mostly Extraverted — this team talks things through and gets its energy from people. Make room for the quieter voices to speak first. | ភាគច្រើនជាអ្នកបើកចំហ — ក្រុមនេះពិភាក្សារឿងនានា ហើយទទួលបានថាមពលពីមនុស្ស។ សូមទុកឱកាសឱ្យអ្នកស្ងប់ស្ងាត់និយាយមុន។ |
+| Mostly Introverted — this team thinks before it speaks and does deep, focused work. Say out loud what you are thinking, so plans don’t stay in heads. | ភាគច្រើនជាអ្នកស្ងប់ស្ងាត់ — ក្រុមនេះគិតមុននឹងនិយាយ ហើយធ្វើការយ៉ាងស៊ីជម្រៅ និងផ្តោតអារម្មណ៍។ សូមនិយាយចេញនូវអ្វីដែលអ្នកកំពុងគិត ដើម្បីកុំឱ្យផែនការនៅតែក្នុងក្បាល។ |
+| Mostly Sensing — practical and grounded, good with what is real today. Set aside time now and then for the bigger picture. | ភាគច្រើនជាអ្នកផ្អែកលើការពិត — ជាក់ស្តែង និងមានមូលដ្ឋាន ពូកែជាមួយអ្វីដែលពិតប្រាកដនាពេលនេះ។ សូមទុកពេលម្តងម្កាលសម្រាប់រូបភាពធំ។ |
+| Mostly Intuitive — full of ideas and possibilities. Pin down the details and the next small step, or ideas may stay ideas. | ភាគច្រើនជាអ្នកមើលឃើញលទ្ធភាព — ពោរពេញដោយគំនិត និងលទ្ធភាព។ សូមកំណត់ព័ត៌មានលម្អិត និងជំហានតូចបន្ទាប់ បើមិនដូច្នោះទេ គំនិតអាចនៅតែជាគំនិត។ |
+| Mostly Thinking — clear, honest and fair in decisions. Check how a decision lands on people, not only whether it is right. | ភាគច្រើនជាអ្នកសម្រេចចិត្តដោយហេតុផល — ច្បាស់លាស់ ស្មោះត្រង់ និងយុត្តិធម៌ក្នុងការសម្រេចចិត្ត។ សូមពិនិត្យមើលថាការសម្រេចចិត្តប៉ះពាល់ដល់មនុស្សយ៉ាងដូចម្តេច មិនមែនត្រឹមតែថាវាត្រឹមត្រូវឬអត់នោះទេ។ |
+| Mostly Feeling — warm and people-first; everyone is cared for. Don’t put off the hard conversation — kindness includes honesty. | ភាគច្រើនជាអ្នកសម្រេចចិត្តដោយចិត្ត — កក់ក្តៅ និងគិតពីមនុស្សមុន ហើយមនុស្សគ្រប់គ្នាត្រូវបានយកចិត្តទុកដាក់។ កុំពន្យារការសន្ទនាដ៏លំបាក — សេចក្តីសប្បុរសរួមបញ្ចូលទាំងភាពស្មោះត្រង់។ |
+| Mostly Judging — organised, plans ahead and finishes. Leave a little room for the unexpected, and for people who need it. | ភាគច្រើនជាអ្នករៀបចំផែនការ — មានរបៀបរៀបរយ គិតទុកជាមុន និងបញ្ចប់ការងារ។ សូមទុកកន្លែងបន្តិចសម្រាប់រឿងដែលមិននឹកស្មានដល់ និងសម្រាប់មនុស្សដែលត្រូវការវា។ |
+| Mostly Perceiving — flexible and quick to adapt. Agree deadlines and who owns what, so things get finished. | ភាគច្រើនជាអ្នកបត់បែន — បត់បែន និងសម្របខ្លួនបានលឿន។ សូមព្រមព្រៀងគ្នាលើថ្ងៃផុតកំណត់ និងអ្នកទទួលខុសត្រូវលើអ្វី ដើម្បីឱ្យការងារបានបញ្ចប់។ |
+| Evenly mixed — the team has both. Let each side lead where it is strongest. | លាយស្មើគ្នា — ក្រុមមានទាំងពីរ។ សូមឱ្យភាគីនីមួយៗដឹកនាំនៅកន្លែងដែលខ្លួនខ្លាំងបំផុត។ |

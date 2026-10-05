@@ -957,6 +957,12 @@ from their profile. Screens: `ptestHtml` (S.view 'ptest') and `ptypeHtml` ('ptyp
     owner has "Show my type to the team" on (the default);
   - **season is private** — "a stretched season" says how someone is doing, which
     is not a directory fact. It lives only in the owner's `profile.personality`.
+- **Team → Personalities** (`teamPersonalityHtml_`, `S.teamMode='pers'`): the team's mix
+  added up on the page from the roster's shared `avatar.type` — so someone with sharing
+  off is neither counted nor named, and season never appears. Whole campus by default;
+  a department or one ministry from the select (`S.teamPScope`). The four groups, each
+  pair with the team's lean (`TP_LEAN` 65% or more on one side; `TP_LEAN_TEXT` is GP's
+  own wording) and who has which type. Counts only, never anyone's bars.
 - **The server re-checks the maths.** `cleanPScores_` refuses bars that disagree
   with the letters (E:80 on an I type), so the screen can never contradict itself.
 - **The type and season lists exist twice** (personality.js and `PTYPE_CODES` /
