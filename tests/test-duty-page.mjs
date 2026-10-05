@@ -56,7 +56,7 @@ async function open(who, opts) {
   const errors = [], sent = [];
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION/.test(m.text())) errors.push('console: ' + m.text()); });
-  const store = { ['kitchen|' + W0]: { ...KITCHEN(), published: true, publishedAt: '2026-10-04T01:00:00Z' }, ['chores|' + W0]: null };
+  const store = { ['kitchen|' + W0]: { ...KITCHEN(), published: true, publishedAt: '2026-10-04T01:00:00Z' }, ['chores|' + W0]: opts.chores || null };
   const edits = { kitchen: who === KARA, chores: who === HANA };
   await ctx.route('**/.netlify/functions/api', r => {
     const b = JSON.parse(r.request().postData() || '{}'); sent.push(b);
@@ -102,7 +102,7 @@ console.log('=== everyone: My Home, the menu, reading, the picture ===');
   const home = await page.$eval('#schedHome', e => e.textContent);
   ok('My Home’s dashboard card has this week’s schedules: cooking out, chores dimmed until it is', !!(await page.$('.hero #schedHome')) && !(await page.$eval('#schedHome [data-schedopen="kitchen"]', b => b.classList.contains('notOut'))) && await page.$eval('#schedHome [data-schedopen="chores"]', b => b.classList.contains('notOut')), home);
   ok('it asked for the week that began on Sunday', sent.find(b => b.fn === 'getMySchedules').args[2] === W0);
-  ok('and says how many duties I have', /You have 2 duties this week/.test(home), home);
+  ok('and names my cooking duties', /Cooking: Mon · Breakfast 7:30, Tue · Dinner 6:30/.test(home), home);
   ok('My Home has no daily check-in for now, and no “Log today” banner', !(await page.$('#moreToday')) && !(await page.$('#jumpToday')) && !/Daily check-in/.test(await page.$eval('#main', e => e.textContent)));
   ok('no separate schedules card below it', (await page.$$('#schedHome')).length === 1 && !(await page.$('.card #schedHome')));
   await page.click('[data-schedopen="kitchen"]'); await page.waitForTimeout(400);
@@ -201,6 +201,34 @@ console.log('=== desktop ===');
   await page.click('[data-schedopen="kitchen"]'); await page.waitForTimeout(400);
   ok('desktop: the table fits without a sideways page scroll', !!(await page.$('.dutyGrid')) && !(await overflow(page)));
   ok('no errors (desktop)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+console.log('=== the morning chores at a glance ===');
+{
+  const ch = CHORES(); ch.sections[0].rows[0].people = ['Kara']; ch.sections[0].rows[1].people = ['Kim', 'Hana'];
+  const { ctx, page, errors } = await open(KIM, { chores: { ...ch, published: true } });
+  const home = await page.$eval('#schedHome', e => e.textContent);
+  ok('My Home names my chore', /Your chore: Rooftop/.test(home), home);
+  await page.click('#schedMineChore'); await page.waitForTimeout(700);
+  const mine = await page.$eval('#schedMine', e => e.textContent.replace(/\s+/g, ' '));
+  ok('at the top: my chore, what to do, and who I am with', /Your chore this week/.test(mine) && /Rooftop/.test(mine) && /Sweep and mop the rooftop/.test(mine) && /With Hana/.test(mine), mine);
+  const rows = await page.$$eval('.dutyItem', r => r.map(x => x.querySelector('.dutyPlace').textContent + ' = ' + x.querySelector('.dutyWho').textContent));
+  ok('the list is one line a chore with the names beside it — no “what to do” in the way', rows.join(' | ') === 'Stairs 1–4 = Kara | Rooftop = KimHana | Plants = ' && (await page.$$('.dutyWhat')).length === 0 && await page.$eval('.dutyList', e => e.classList.contains('compact')), rows.join(' | '));
+  await page.click('#schedDetails'); await page.waitForTimeout(200);
+  ok('“Show what to do” brings the descriptions back', (await page.$$('.dutyWhat')).length === 3);
+  await page.click('#schedDetails'); await page.click('[data-schedonly="1"]'); await page.waitForTimeout(200);
+  ok('“Mine” shows just my chore', (await page.$$eval('.dutyItem .dutyPlace', p => p.map(x => x.textContent))).join() === 'Rooftop');
+  await page.click('[data-schedonly="0"]'); await page.waitForTimeout(200);
+  ok('“Everyone” shows them all again', (await page.$$('.dutyItem')).length === 3);
+  ok('no sideways scroll; no errors', !(await overflow(page)) && errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+{
+  const ch = CHORES(); ch.sections[0].rows[1].people = ['Kara'];
+  const { ctx, page } = await open(KIM, { chores: { ...ch, published: true } });
+  await page.click('[data-schedopen="chores"]'); await page.waitForTimeout(700);
+  ok('someone with no chore sees no “your chore” and no Mine switch', !(await page.$('#schedMine')) && !(await page.$('[data-schedonly]')));
   await ctx.close();
 }
 
