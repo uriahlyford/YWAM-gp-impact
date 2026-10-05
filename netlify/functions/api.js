@@ -4026,11 +4026,17 @@ async function portalSaveTeamMembers(username, pin, members) {
                updates, Events coming up.
      cards     agenda items and projects: title, type, column, focus area,
                owner, due date, notes, and optionally the Leadership OKR
-               (objective id) it moves forward.
+               (objective id) it moves forward. Each can hold a short list of
+               tasks — {id, text, done, owner, due, meeting} — changed one at a
+               time (saveLeadTask / deleteLeadTask) so two people ticking
+               tasks off in the same meeting don't undo each other.
+     notes     the meeting notes, one per Monday — {date, text, updated,
+               updatedBy}. A line in them can become a card or a task; those
+               carry the meeting's date (meeting) so they trace back to it.
    Campus Leadership on the campus and admins read and change it; nobody
    else sees it. */
 const LEAD_TYPES = ['agenda', 'project'];
-const LEAD_MAX = { cards: 600, cols: 8, areas: 12, standing: 12 };
+const LEAD_MAX = { cards: 600, cols: 8, areas: 12, standing: 12, tasks: 40, notes: 260, noteText: 8000 };
 const LEAD_DEFAULT = {
   cols: [{ id: 'agenda', title: 'Agenda', done: false }, { id: 'doing', title: 'In progress', done: false }, { id: 'done', title: 'Done', done: true }],
   areas: [{ id: 'finances', title: 'Siem Reap finances' }, { id: 'ministries', title: 'Siem Reap ministries' }, { id: 'construction', title: 'Construction' }],
@@ -4050,13 +4056,23 @@ async function getLeadDoc_(campus) {
     cols: Array.isArray(d.cols) && d.cols.length ? d.cols : JSON.parse(JSON.stringify(LEAD_DEFAULT.cols)),
     areas: Array.isArray(d.areas) ? d.areas : JSON.parse(JSON.stringify(LEAD_DEFAULT.areas)),
     standing: Array.isArray(d.standing) ? d.standing : JSON.parse(JSON.stringify(LEAD_DEFAULT.standing)),
-    cards: Array.isArray(d.cards) ? d.cards : []
+    cards: Array.isArray(d.cards) ? d.cards : [],
+    notes: Array.isArray(d.notes) ? d.notes : []
   };
 }
-function leadOut_(campus, d, extra) { return Object.assign({ ok: true, campus: campus, cols: d.cols, areas: d.areas, standing: d.standing, cards: d.cards }, extra || {}); }
+function leadOut_(campus, d, extra) { return Object.assign({ ok: true, campus: campus, cols: d.cols, areas: d.areas, standing: d.standing, cards: d.cards, notes: d.notes }, extra || {}); }
 async function getLeadBoard(username, pin) {
   const a = await leadAuth_(username, pin); if (a.out) return a.out;
   return leadOut_(a.campus, await getLeadDoc_(a.campus));
+}
+function cleanLeadTask_(t, prev) {
+  const text = dutyText_(t && t.text, 200);
+  if (!text) return null;
+  return Object.assign({}, prev || {}, {
+    id: (prev && prev.id) || ('lt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    text: text, done: !!t.done, owner: str_(t.owner, 60) || '', due: isoDate_(t.due) || '',
+    meeting: isoDate_(t.meeting) || (prev && prev.meeting) || ''
+  });
 }
 function cleanLeadCard_(c, prev, d) {
   const title = str_(c && c.title, 160);
@@ -4069,7 +4085,8 @@ function cleanLeadCard_(c, prev, d) {
     col: colIds.indexOf(c.col) > -1 ? c.col : colIds[0],
     area: areaIds.indexOf(c.area) > -1 ? c.area : '',
     owner: str_(c.owner, 60) || '', due: isoDate_(c.due) || '',
-    okrId: str_(c.okrId, 60) || '', meeting: isoDate_(c.meeting) || ''
+    okrId: str_(c.okrId, 60) || '', meeting: isoDate_(c.meeting) || '',
+    fromNotes: !!(c.fromNotes || (prev && prev.fromNotes))
   });
 }
 /* Add or change a card (including moving it to another column). */
@@ -4082,7 +4099,10 @@ async function saveLeadCard(username, pin, card) {
   if (idx === -1 && cards.length >= LEAD_MAX.cards) return { ok: false, err: 'too_many' };
   const now = new Date().toISOString();
   const doneCol = function (id) { return d.cols.some(function (x) { return x.id === id && x.done; }); };
-  if (idx === -1) { rec.created = now; rec.createdBy = a.s.id; }
+  if (idx === -1) {
+    rec.created = now; rec.createdBy = a.s.id;
+    rec.tasks = (Array.isArray(card.tasks) ? card.tasks : []).slice(0, LEAD_MAX.tasks).map(function (t) { return cleanLeadTask_(t, null); }).filter(Boolean);
+  }
   if (doneCol(rec.col) && !(idx > -1 && doneCol(cards[idx].col))) rec.doneAt = now;
   if (!doneCol(rec.col)) delete rec.doneAt;
   rec.updated = now; rec.updatedBy = a.s.id;
@@ -4098,6 +4118,62 @@ async function deleteLeadCard(username, pin, id) {
   d.cards.splice(idx, 1);
   await writeJSON(leadKey_(a.campus), d);
   return leadOut_(a.campus, d);
+}
+/* One task on a card: add it (no id), change it (tick it off, rename it,
+   give it an owner or a due date), or take it away. */
+async function saveLeadTask(username, pin, cardId, task) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  const d = await getLeadDoc_(a.campus);
+  const card = d.cards.find(function (c) { return c.id === str_(cardId, 60); });
+  if (!card) return { ok: false, err: 'not_found' };
+  const tasks = Array.isArray(card.tasks) ? card.tasks : [];
+  const idx = tasks.findIndex(function (t) { return t.id === str_(task && task.id, 60); });
+  if (task && task.id && idx === -1) return { ok: false, err: 'not_found' };
+  const rec = cleanLeadTask_(task, idx > -1 ? tasks[idx] : null);
+  if (!rec) return { ok: false, err: 'bad_task' };
+  if (idx === -1 && tasks.length >= LEAD_MAX.tasks) return { ok: false, err: 'too_many' };
+  const now = new Date().toISOString();
+  if (rec.done && !(idx > -1 && tasks[idx].done)) { rec.doneAt = now; rec.doneBy = a.s.id; }
+  if (!rec.done) { delete rec.doneAt; delete rec.doneBy; }
+  if (idx === -1) { rec.created = now; rec.createdBy = a.s.id; tasks.push(rec); } else tasks[idx] = rec;
+  card.tasks = tasks; card.updated = now; card.updatedBy = a.s.id;
+  await writeJSON(leadKey_(a.campus), d);
+  return leadOut_(a.campus, d, { saved: rec, card: card.id });
+}
+async function deleteLeadTask(username, pin, cardId, taskId) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  const d = await getLeadDoc_(a.campus);
+  const card = d.cards.find(function (c) { return c.id === str_(cardId, 60); });
+  const idx = card && Array.isArray(card.tasks) ? card.tasks.findIndex(function (t) { return t.id === str_(taskId, 60); }) : -1;
+  if (idx === -1) return { ok: false, err: 'not_found' };
+  card.tasks.splice(idx, 1);
+  await writeJSON(leadKey_(a.campus), d);
+  return leadOut_(a.campus, d);
+}
+/* A Monday's notes. Empty notes take the day away. If someone else saved
+   that day's notes since this person opened them (since = the updated stamp
+   they had), nothing is overwritten: they get err 'changed' with the
+   latest, to put the two together. */
+async function saveLeadNote(username, pin, note) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  note = note && typeof note === 'object' ? note : {};
+  const date = isoDate_(note.date);
+  if (!date) return { ok: false, err: 'bad_date' };
+  const d = await getLeadDoc_(a.campus);
+  const idx = d.notes.findIndex(function (n) { return n.date === date; });
+  const prev = idx > -1 ? d.notes[idx] : null;
+  const since = String(note.since == null ? '' : note.since);
+  if (prev && prev.updated !== since && prev.updatedBy !== a.s.id) return leadOut_(a.campus, d, { ok: false, err: 'changed', latest: prev });
+  const text = String(note.text == null ? '' : note.text).replace(/\r\n?/g, '\n').replace(/\s+$/, '').slice(0, LEAD_MAX.noteText);
+  if (!text.trim()) { if (idx > -1) d.notes.splice(idx, 1); }
+  else {
+    const rec = { date: date, text: text, updated: new Date().toISOString(), updatedBy: a.s.id };
+    if (idx > -1) d.notes[idx] = rec; else d.notes.push(rec);
+    d.notes.sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : 0; });
+    if (d.notes.length > LEAD_MAX.notes) d.notes.splice(0, d.notes.length - LEAD_MAX.notes);
+  }
+  await writeJSON(leadKey_(a.campus), d);
+  return leadOut_(a.campus, d, { saved: d.notes.find(function (n) { return n.date === date; }) || null });
 }
 /* The board's own shape: its columns (one counts as done), focus areas and
    standing agenda items. A card in a column that goes moves to the first
@@ -5533,6 +5609,9 @@ const HANDLERS = {
   saveLeadCard: function (a) { return saveLeadCard(a[0], a[1], a[2]); },
   deleteLeadCard: function (a) { return deleteLeadCard(a[0], a[1], a[2]); },
   saveLeadSettings: function (a) { return saveLeadSettings(a[0], a[1], a[2]); },
+  saveLeadTask: function (a) { return saveLeadTask(a[0], a[1], a[2], a[3]); },
+  deleteLeadTask: function (a) { return deleteLeadTask(a[0], a[1], a[2], a[3]); },
+  saveLeadNote: function (a) { return saveLeadNote(a[0], a[1], a[2]); },
   getDuty: function (a) { return getDuty(a[0], a[1], a[2], a[3]); },
   saveDuty: function (a) { return saveDuty(a[0], a[1], a[2], a[3], a[4], a[5]); },
   getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },
