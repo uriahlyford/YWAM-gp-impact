@@ -637,12 +637,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .barFill { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
 .barFill.done { background:linear-gradient(90deg,var(--amber),var(--amberDeep)); }
 @media (prefers-reduced-motion: reduce){ .gRing, .gSlide::-webkit-slider-thumb { transition:none } }
-.kmrEn { font-size:16px; line-height:1.45; background:var(--surface2); border-radius:12px; padding:12px 14px; margin:6px 0 12px; overflow-wrap:anywhere; }
-.kmrKm { font-size:19px; line-height:1.7; border:2px solid var(--line); border-radius:12px; padding:12px 14px; margin:6px 0 12px; overflow-wrap:anywhere; }
-.kmrFix { width:100%; min-height:110px; font-size:18px; line-height:1.6; }
-.kmrBtns { display:flex; gap:8px; flex-wrap:wrap; } .kmrBtns .btn { flex:1 1 30%; margin:0; min-width:96px; }
-.kmrBar { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; margin:8px 0 4px; } .kmrBar div { height:100%; background:var(--good); }
-.kmrRecent .row { align-items:flex-start; }
+.btnRow { display:flex; gap:8px; flex-wrap:wrap; } .btnRow .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .grpRow { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer; }
 .grpRow input { width:auto; flex:0 0 auto; margin:0; }
 .looseWhy { font-size:13px; color:var(--muted); line-height:1.4; margin:2px 0 6px; }
@@ -2483,7 +2478,6 @@ function applyBoot(d, fromCache){
 
 function logout(){
   lsDel('gp-staff'); lsDel(GP_BOOT_CACHE); S.offlineSince=null;
-  S.kmr={ reviews:null, loading:false, error:'', skipped:{}, fix:false, q:'', busy:false, msg:'' };
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
@@ -2593,7 +2587,6 @@ function render(){
   else if(S.view==='ptype') m.innerHTML=ptypeHtml();
   else if(S.view==='gtest') m.innerHTML=gtestHtml();
   else if(S.view==='gstr') m.innerHTML=gstrHtml();
-  else if(S.view==='kmreview') m.innerHTML=kmReviewHtml();
   else m.innerHTML=profileHtml();
   if(S.offlineSince) m.insertAdjacentHTML('afterbegin', gpOfflineBannerHtml_());
   /* Switching screens should open at the top of the new one, not wherever the
@@ -2770,14 +2763,13 @@ function renderMenu(){
      page (admins). Weekly Check-in is gone — the Health tab is its home — and
      the GP Dashboard is hidden for now. An empty section isn't drawn. */
   var IC={"ministry":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01\"/></svg>","leave":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"16\" rx=\"2.5\"/><line x1=\"3.5\" y1=\"10\" x2=\"20.5\" y2=\"10\"/><path d=\"M8 8V3.5M16 8V3.5\"/><path d=\"M8.5 14.5l2 2 4-4\"/></svg>","sched":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18M9 9v12M15 9v12\"/></svg>","hosp":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 18V7\"/><path d=\"M3 14h18v4\"/><path d=\"M21 14v-2a3 3 0 0 0-3-3h-7v5\"/><circle cx=\"7\" cy=\"11\" r=\"2\"/></svg>","portal":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 4h11l5 5v11H4z\"/><path d=\"M15 4v5h5\"/><path d=\"M8 13h8M8 17h5\"/></svg>","hr":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18\"/><path d=\"M8 2.5V6M16 2.5V6\"/><path d=\"M8 14h4M8 17.5h8\"/></svg>","admin":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z\"/><path d=\"M9 12l2 2 4-4\"/></svg>"};
-  IC.kmreview='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h8M8 3v2M5.5 5c.8 3 3 5.5 6 7M10.5 5c-.8 3-3 5.5-6 7"/><path d="M13 21l4-9 4 9M14.5 18h5"/></svg>';
   var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
   var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
   var sections=[
     { title:'', items:[it('ministry', t('My Ministry')), it('leave', t('Leave Request'))] },
     { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
     { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
-    { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : [], (S.me.isAdmin || S.me.kmReviewer) ? [it('kmreview', t('Khmer review'))] : []) }
+    { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : []) }
   ];
   root.innerHTML = '<div class="scrim" id="menuScrim"></div>'+
     '<div class="drawer">'+
@@ -2800,7 +2792,6 @@ function renderMenu(){
       if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='admin'){ S.view='admin'; render(); }
-      else if(id==='kmreview'){ S.view='kmreview'; kmrLoad_(); render(); }
       else if(id==='hr'){ S.view='hr'; S.hrSub='home'; render(); }
       else if(id==='hosp'){ S.view='hosp'; render(); }
       else if(id==='sched'){ schedOpen_('kitchen', false, 'home'); }
@@ -5830,128 +5821,6 @@ function backupLineHtml_(){
   } else h+='<span class="rowSub">🗄️ '+esc(gpT('Last backup: {date} · {n} items · {days} nights kept',{date:backupWhen_(b.at), n:b.items, days:b.days}))+'</span>';
   return h+'</div>';
 }
-/* ---------- Khmer review (kmReviewer or admin) ----------
-   The strings still in PENDING_KM, one at a time: the English, the Khmer the
-   app shows now, and Correct / Fix it / Skip. Verdicts are stored on the server
-   (saveKmReview) and change nothing on screen — the app keeps showing the
-   pending Khmer until someone runs scripts/km-apply-reviews.mjs on the download
-   and commits km.js. An admin can download; a reviewer just reviews. Skips
-   last for this visit only. Search finds a line by its English or Khmer. */
-S.kmr = { reviews:null, loading:false, error:'', skipped:{}, fix:false, q:'', busy:false, msg:'' };
-function kmrLoad_(){
-  if(S.kmr.loading) return;
-  S.kmr.loading=true; S.kmr.error='';
-  run('getKmReviews',[S.auth.user,S.auth.pin],function(d){
-    S.kmr.loading=false;
-    if(d && d.ok) S.kmr.reviews=d.reviews||[]; else S.kmr.error=t('Couldn’t load the reviews — try again.');
-    if(S.view==='kmreview') render();
-  }, function(){ S.kmr.loading=false; S.kmr.error=t('Couldn’t load the reviews — try again.'); if(S.view==='kmreview') render(); });
-}
-function kmrPendingKeys_(){
-  var P=(typeof PENDING_KM==='object' && PENDING_KM) || {}, R=(typeof REVIEWED_KM==='object' && REVIEWED_KM) || {};
-  return Object.keys(P).filter(function(k){ return !(k in R); });
-}
-function kmrQueue_(){
-  var done={}; (S.kmr.reviews||[]).forEach(function(r){ done[r.key]=1; });
-  var q=S.kmr.q.trim().toLowerCase();
-  return kmrPendingKeys_().filter(function(k){
-    if(done[k] || S.kmr.skipped[k]) return false;
-    return !q || k.toLowerCase().indexOf(q)>-1 || String(PENDING_KM[k]).indexOf(S.kmr.q.trim())>-1;
-  });
-}
-function kmrPlaceholders_(str){ return (String(str).match(/\{[a-zA-Z0-9_]+\}/g)||[]).sort().join(); }
-function kmReviewHtml(){
-  var h='<button class="linkbtn" id="kmrBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
-  h+='<h2>🔤 '+esc(t('Khmer review'))+'</h2>';
-  h+='<p class="sub">'+esc(t('Check each line the app shows in Khmer. Tap Correct if it reads right, or fix it. Nothing changes in the app until your reviews are added to it.'))+'</p>';
-  if(S.kmr.error) return h+'<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(S.kmr.error)+'</p><button class="btn ghost" id="kmrRetry">'+esc(t('Try again'))+'</button></div>';
-  if(S.kmr.reviews===null) return h+'<p class="sub">'+esc(t('Loading…'))+'</p>';
-  var pend=kmrPendingKeys_(), pset={}; pend.forEach(function(k){ pset[k]=1; });
-  var total=pend.length, doneN=(S.kmr.reviews||[]).filter(function(r){ return pset[r.key]; }).length, pct=total?Math.round(doneN*100/total):100;
-  h+='<div class="card"><div class="rowSub">'+esc(gpT('{n} of {total} lines reviewed',{n:doneN.toLocaleString(), total:total.toLocaleString()}))+'</div>'+
-    '<div class="kmrBar"><div style="width:'+pct+'%"></div></div>'+
-    '<input type="search" id="kmrSearch" placeholder="'+esc(t('Find a line (English or Khmer)'))+'" value="'+esc(S.kmr.q)+'" style="margin-top:8px"></div>';
-  var queue=kmrQueue_(), key=queue[0];
-  if(!key){
-    h+='<div class="card"><p class="sub" style="margin:0">'+esc(S.kmr.q ? t('No lines waiting match that.') : t('Every line has been reviewed — thank you!'))+'</p>'+
-      (Object.keys(S.kmr.skipped).length ? '<button class="linkbtn" id="kmrUnskip">'+esc(t('Show the ones I skipped'))+'</button>' : '')+'</div>';
-  } else {
-    h+='<div class="card" id="kmrCard" data-kmrkey="'+esc(key)+'">';
-    h+='<div class="rowSub">'+esc(gpT('{n} waiting',{n:queue.length.toLocaleString()}))+'</div>';
-    h+='<div class="goalCardTitle" style="margin-top:8px">'+esc(t('English'))+'</div><div class="kmrEn" lang="en">'+esc(key)+'</div>';
-    h+='<div class="goalCardTitle">'+esc(t('Khmer in the app now'))+'</div>';
-    if(S.kmr.fix){
-      h+='<textarea class="kmrFix" id="kmrFixText" lang="km">'+esc(S.kmr.fixText!==undefined ? S.kmr.fixText : PENDING_KM[key])+'</textarea>';
-      if(kmrPlaceholders_(key)) h+='<p class="hint">'+esc(gpT('Keep these exactly as they are: {list}',{list:kmrPlaceholders_(key).split(',').join(' ')}))+'</p>';
-      if(S.kmr.msg) h+='<p class="hint" style="color:var(--bad)">'+esc(S.kmr.msg)+'</p>';
-      h+='<div class="kmrBtns"><button class="btn" id="kmrSaveFix">'+esc(t('Save my fix'))+'</button><button class="btn ghost" id="kmrCancelFix">'+esc(t('Cancel'))+'</button></div>';
-    } else {
-      h+='<div class="kmrKm" lang="km">'+esc(PENDING_KM[key])+'</div>';
-      h+='<div class="kmrBtns"><button class="btn" id="kmrOk">✓ '+esc(t('Correct'))+'</button>'+
-        '<button class="btn ghost" id="kmrFixBtn">✏️ '+esc(t('Fix it'))+'</button>'+
-        '<button class="btn ghost" id="kmrSkip">'+esc(t('Skip'))+'</button></div>';
-    }
-    h+='</div>';
-  }
-  var mine=(S.kmr.reviews||[]).slice().sort(function(a,b){ return (b.at||'')<(a.at||'')?-1:1; }).slice(0,5);
-  if(mine.length){
-    h+='<div class="card kmrRecent"><div class="goalCardTitle" style="margin-bottom:6px">'+esc(t('Recent reviews'))+'</div>';
-    mine.forEach(function(r){
-      h+='<div class="row"><div style="min-width:0"><div class="rowSub">'+esc(r.key)+'</div><div lang="km">'+(r.verdict==='fixed'?'✏️ ':'✓ ')+esc(r.km)+'</div>'+
-        '<div class="rowSub">'+esc(r.byName)+'</div></div><button class="linkbtn" style="width:auto;flex:0 0 auto" data-kmrundo="'+esc(r.key)+'">'+esc(t('Undo'))+'</button></div>';
-    });
-    h+='</div>';
-  }
-  if(S.me.isAdmin) h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(t('For whoever updates the app: the reviews as a file, for scripts/km-apply-reviews.mjs.'))+'</p>'+
-    '<button class="btn ghost" id="kmrDownload" style="margin:0">⬇️ '+esc(gpT('Download {n} reviews',{n:(S.kmr.reviews||[]).length}))+'</button></div>';
-  return h;
-}
-function kmrSave_(key, verdict, km){
-  if(S.kmr.busy) return;
-  S.kmr.busy=true;
-  run('saveKmReview',[S.auth.user,S.auth.pin,key,verdict,km],function(d){
-    S.kmr.busy=false;
-    if(d && d.ok){ S.kmr.reviews=d.reviews||[]; S.kmr.fix=false; S.kmr.fixText=undefined; S.kmr.msg=''; if(verdict!=='undo') gpTap(); }
-    else if(d && d.err==='placeholders') S.kmr.msg=gpT('Keep these exactly as they are: {list}',{list:(d.want||[]).join(' ')});
-    else if(d && d.err==='not_khmer') S.kmr.msg=t('Write it in Khmer, please.');
-    else showMsg(t('Could not save'));
-    render();
-  });
-}
-function bindKmReview_(){
-  var on=function(id, fn){ var el=document.getElementById(id); if(el) el.onclick=fn; };
-  var key=function(){ var c=document.getElementById('kmrCard'); return c ? c.getAttribute('data-kmrkey') : ''; };
-  on('kmrBack', function(){ S.view='week'; render(); });
-  on('kmrRetry', function(){ kmrLoad_(); render(); });
-  on('kmrOk', function(){ var k=key(); if(k) kmrSave_(k, 'ok', PENDING_KM[k]); });
-  on('kmrFixBtn', function(){ S.kmr.fix=true; S.kmr.fixText=undefined; S.kmr.msg=''; render(); var ta=document.getElementById('kmrFixText'); if(ta) ta.focus(); });
-  on('kmrCancelFix', function(){ S.kmr.fix=false; S.kmr.fixText=undefined; S.kmr.msg=''; render(); });
-  on('kmrSkip', function(){ var k=key(); if(k){ S.kmr.skipped[k]=1; render(); } });
-  on('kmrUnskip', function(){ S.kmr.skipped={}; render(); });
-  on('kmrSaveFix', function(){
-    var k=key(), v=(document.getElementById('kmrFixText')||{}).value||'';
-    S.kmr.fixText=v;
-    if(!v.trim()){ S.kmr.msg=t('Write it in Khmer, please.'); render(); return; }
-    if(kmrPlaceholders_(k)!==kmrPlaceholders_(v)){ S.kmr.msg=gpT('Keep these exactly as they are: {list}',{list:kmrPlaceholders_(k).split(',').join(' ')}); render(); return; }
-    kmrSave_(k, v.trim()===String(PENDING_KM[k]).trim() ? 'ok' : 'fixed', v);
-  });
-  var ta=document.getElementById('kmrFixText');
-  if(ta) ta.oninput=function(){ S.kmr.fixText=ta.value; };
-  var sr=document.getElementById('kmrSearch');
-  if(sr) sr.oninput=function(){
-    S.kmr.q=sr.value; S.kmr.fix=false;
-    var pos=sr.selectionStart; render();
-    var again=document.getElementById('kmrSearch'); if(again){ again.focus(); try { again.setSelectionRange(pos,pos); } catch(e){} }
-  };
-  document.querySelectorAll('[data-kmrundo]').forEach(function(b){ b.onclick=function(){ kmrSave_(b.getAttribute('data-kmrundo'), 'undo', ''); }; });
-  on('kmrDownload', function(){
-    var data={ format:'gp-km-reviews', at:new Date().toISOString(), reviews:S.kmr.reviews||[] };
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));
-    a.download='km-reviews-'+todayStr()+'.json';
-    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  });
-}
 function adminHtml(){
   var sub = S.adminSub;
   if(sub==='person'){
@@ -6125,7 +5994,7 @@ function adminGroupsHtml_(){
     '<label class="f">'+esc(t('Department'))+'</label><select id="grpDept"><option value="">'+esc(t('— they choose —'))+'</option>'+depts.map(function(d){ return '<option value="'+esc(d)+'"'+(d===G.dept?' selected':'')+'>'+esc(t(d))+'</option>'; }).join('')+'</select>'+
     (G.dept ? '<label class="f">'+esc(t('Ministry'))+'</label><select id="grpMin"><option value="">'+esc(t('— they choose —'))+'</option>'+mins.map(function(m){ return '<option value="'+esc(m)+'"'+(m===G.ministry?' selected':'')+'>'+esc(t(m))+'</option>'; }).join('')+'</select>' : '')+
     '<label class="f">'+esc(t('The link'))+'</label><input type="text" id="grpLink" readonly value="'+esc(link)+'">'+
-    '<div class="kmrBtns" style="margin-top:8px"><button class="btn" id="grpCopy">'+esc(t('Copy link'))+'</button>'+
+    '<div class="btnRow" style="margin-top:8px"><button class="btn" id="grpCopy">'+esc(t('Copy link'))+'</button>'+
     (navigator.share ? '<button class="btn ghost" id="grpShare">'+esc(t('Share'))+'</button>' : '')+'</div>'+
     (G.dept===BL_DEPT ? '<p class="hint">'+esc(t('Campus Leadership sign-ups still wait for an admin to approve them.'))+'</p>' : '')+
     '</div>';
@@ -6143,7 +6012,7 @@ function adminGroupsHtml_(){
     '<p class="looseWhy">'+esc(t('When a school or team leaves: they can no longer log in, and drop off the lists. HR can bring anyone back.'))+'</p>'+
     '<div class="deptChips">'+CAMPUSES.map(function(c){ return '<button class="deptChip'+(c.id===C?' on':'')+'" data-admincampustab="'+esc(c.id)+'">'+esc(c.short)+'</button>'; }).join('')+'</div>'+
     '<input type="search" id="grpSearch" placeholder="'+esc(t('Find by name, ministry or role…'))+'" value="'+esc(G.q)+'" style="margin:8px 0">'+
-    '<div class="kmrBtns" style="margin-bottom:6px"><button class="btn ghost" id="grpAll">'+esc(gpT('Select all shown ({n})',{n:shown.length}))+'</button>'+
+    '<div class="btnRow" style="margin-bottom:6px"><button class="btn ghost" id="grpAll">'+esc(gpT('Select all shown ({n})',{n:shown.length}))+'</button>'+
     '<button class="btn ghost" id="grpNone">'+esc(t('Clear'))+'</button></div>'+
     '<div id="grpList">'+shown.map(function(x){
       return '<label class="grpRow"><input type="checkbox" data-grppick="'+esc(x.id)+'"'+(G.pick[x.id]?' checked':'')+'> '+avatarHtml(x,'sm')+
@@ -6154,7 +6023,7 @@ function adminGroupsHtml_(){
       '<label class="f">'+esc(t('Why (optional)'))+'</label><input type="text" id="grpReason" value="'+esc(G.reason)+'" placeholder="'+esc(t('e.g. DTS finished'))+'">';
     if(!G.confirm) h+='<button class="btn" id="grpArchive" style="background:var(--bad);border-color:var(--bad)">'+esc(gpT('Archive {n} people',{n:picked.length}))+'</button>';
     else h+='<div class="banner" style="margin-top:10px">'+esc(gpT('Archive {n} people? They will not be able to log in.',{n:picked.length}))+'</div>'+
-      '<div class="kmrBtns"><button class="btn" id="grpYes" style="background:var(--bad);border-color:var(--bad)">'+esc(gpT('Yes, archive {n}',{n:picked.length}))+'</button><button class="btn ghost" id="grpNo">'+esc(t('Cancel'))+'</button></div>';
+      '<div class="btnRow"><button class="btn" id="grpYes" style="background:var(--bad);border-color:var(--bad)">'+esc(gpT('Yes, archive {n}',{n:picked.length}))+'</button><button class="btn ghost" id="grpNo">'+esc(t('Cancel'))+'</button></div>';
   }
   return h+'</div>';
 }
@@ -6600,8 +6469,6 @@ function adminRowBodyHtml_(s){
       '<div class="leadsPick" id="adm_leads">'+leadsPickHtml_(dCampus, d.leads!==undefined?d.leads:(s.leads||[]))+'</div>'+
       '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:12px">'+
         '<input type="checkbox" id="adm_hr"'+((d.hr!==undefined?d.hr:!!s.hr)?' checked':'')+'> 🗂️ '+esc(t('HR access — staff contracts and archiving'))+'</label>'+
-      '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:8px">'+
-        '<input type="checkbox" id="adm_kmreviewer"'+((d.kmReviewer!==undefined?d.kmReviewer:!!s.kmReviewer)?' checked':'')+'> 🔤 '+esc(t('Khmer reviewer — checks the app’s Khmer, one line at a time'))+'</label>'+
       '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:8px">'+
         '<input type="checkbox" id="adm_portalstaff"'+((d.portalStaff!==undefined?d.portalStaff:!!s.portalStaff)?' checked':'')+'> 🛂 '+esc(t('Portal staff — sees and works every application'))+'</label>'+
       '<label class="f" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;margin-top:8px">'+
@@ -7257,7 +7124,6 @@ function bindAdmin(){
         leads:[].map.call(document.querySelectorAll('[data-admlead]:checked'), function(c){ return c.getAttribute('data-admlead'); }),
         ministries:[].map.call(document.querySelectorAll('[data-admmin]:checked'), function(c){ return c.getAttribute('data-admmin'); }),
         hr:!!(document.getElementById('adm_hr')||{}).checked,
-        kmReviewer:!!(document.getElementById('adm_kmreviewer')||{}).checked,
         portalStaff:!!(document.getElementById('adm_portalstaff')||{}).checked,
         portalAdmin:!!(document.getElementById('adm_portaladmin')||{}).checked
       };
@@ -12838,7 +12704,6 @@ function bindAway(){
     b.onclick=function(){ gpTap(); S.view='hr'; S.hrSub='home'; render(); };
   });
   bindHr();
-  if(S.view==='kmreview') bindKmReview_();
   if(S.view==='admin' && S.adminSub==='groups') bindAdminGroups_();
   bindHosp();
   if(S.view==='ministry') bindLead_();

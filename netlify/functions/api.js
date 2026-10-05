@@ -695,7 +695,7 @@ function isAdminCode_(code) {
 function adminStaffOut_(s) {
   return {
     id: s.id, name: s.name, username: s.username, campus: s.campus, dept: s.dept,
-    ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin, hr: !!s.hr, kmReviewer: !!s.kmReviewer,
+    ministry: s.ministry || '', role: s.role, active: s.active !== false, isAdmin: !!s.isAdmin, hr: !!s.hr,
     kind: s.kind || 'staff', portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin,
     staffType: s.staffType || '', country: s.country || '', email: s.email || '',
     mentorId: s.mentorId || '', mentorStatus: s.mentorStatus || '',
@@ -892,8 +892,6 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
     if (payload.leads !== undefined) rec.leads = cleanLeads_(payload.leads);
     // HR access — the Human Resources page (staff contracts, archiving). Admin-assigned.
     if (payload.hr !== undefined) rec.hr = !!payload.hr;
-    // Khmer reviewer — the Khmer review page (a native speaker checking pending strings). Admin-assigned.
-    if (payload.kmReviewer !== undefined) rec.kmReviewer = !!payload.kmReviewer;
     // Portal access — who works applications. Admin-assigned; never to an applicant account.
     if (payload.portalStaff !== undefined || payload.portalAdmin !== undefined) {
       if (isApplicant_(rec)) return { abort: true, ok: false, err: 'is_applicant' };
@@ -3165,7 +3163,7 @@ async function getMyBoot(username, pin) {
 
   return {
     ok: true,
-    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, kmReviewer: !!s.kmReviewer, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s), hospitality: canHosp_(s) }),
+    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s), hospitality: canHosp_(s) }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || '',
@@ -5877,46 +5875,6 @@ async function adminLooseEnds(username, pin) {
   };
 }
 
-/* ==================== Khmer review ====================
-   A native speaker (kmReviewer, admin-assigned — or an admin) goes through the
-   strings still in PENDING_KM one at a time on the Khmer review page: correct as
-   it is, or fixed. The verdicts land here, in 'kmReviews', one per English key,
-   the latest winning. Nothing here changes what the app shows: km.js is code, and
-   a reviewed string reaches REVIEWED_KM only when someone runs
-   scripts/km-apply-reviews.mjs on the page's download and commits the result —
-   so "never put an unreviewed string into REVIEWED_KM" stays true by
-   construction. A fix must keep every {placeholder} the English has. */
-const KM_KEY_MAX = 2000, KM_TEXT_MAX = 4000;
-function canKmReview_(s) { return !!(s && (s.isAdmin || s.kmReviewer)); }
-function kmPlaceholders_(str) { return (String(str).match(/\{[a-zA-Z0-9_]+\}/g) || []).sort(); }
-function kmReviewOut_(r) { return { key: r.key, km: r.km, verdict: r.verdict, byName: r.byName || '', at: r.at || '' }; }
-async function getKmReviews(username, pin) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
-  if (!canKmReview_(s)) return { ok: false, err: 'not_authorized' };
-  const rows = await readJSON('kmReviews', []);
-  return { ok: true, reviews: rows.filter(function (r) { return r && typeof r.key === 'string'; }).map(kmReviewOut_) };
-}
-async function saveKmReview(username, pin, key, verdict, km) {
-  const s = await verifyStaff_(username, pin);
-  if (!s) return { ok: false };
-  if (!canKmReview_(s)) return { ok: false, err: 'not_authorized' };
-  key = typeof key === 'string' ? key : '';
-  if (!key || key.length > KM_KEY_MAX) return { ok: false, err: 'bad_key' };
-  if (verdict !== 'ok' && verdict !== 'fixed' && verdict !== 'undo') return { ok: false, err: 'bad_verdict' };
-  const rows = (await readJSON('kmReviews', [])).filter(function (r) { return r && r.key !== key; });
-  if (verdict !== 'undo') {
-    km = typeof km === 'string' ? km.trim() : '';
-    if (!km || km.length > KM_TEXT_MAX) return { ok: false, err: 'bad_text' };
-    if (!/[ក-៿]/.test(km)) return { ok: false, err: 'not_khmer' };
-    const want = kmPlaceholders_(key), have = kmPlaceholders_(km);
-    if (want.join() !== have.join()) return { ok: false, err: 'placeholders', want: want };
-    rows.push({ key: key, km: km, verdict: verdict, by: s.id, byName: s.name || '', at: new Date().toISOString() });
-  }
-  await writeJSON('kmReviews', rows);
-  return getKmReviews(username, pin);
-}
-
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
   getData: function (a) { return getData(a[0], a[1]); },
@@ -5955,11 +5913,9 @@ const HANDLERS = {
   getDeptPulse: function (a) { return getDeptPulse(a[0], a[1], a[2]); },
   getStaffDebt: function (a) { return getStaffDebt(a[0], a[1]); },
   saveStaffDebt: function (a) { return saveStaffDebt(a[0], a[1], a[2]); },
-  getKmReviews: function (a) { return getKmReviews(a[0], a[1]); },
   adminLooseEnds: function (a) { return adminLooseEnds(a[0], a[1]); },
   markSeen: function (a) { return markSeen(a[0], a[1]); },
   hrArchiveMany: function (a) { return hrArchiveMany(a[0], a[1], a[2], a[3]); },
-  saveKmReview: function (a) { return saveKmReview(a[0], a[1], a[2], a[3], a[4]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   getMinistryFor: function (a) { return getMinistryFor(a[0], a[1], a[2], a[3]); },
   saveMinistryFor: function (a) { return saveMinistryFor(a[0], a[1], a[2], a[3], a[4], a[5]); },

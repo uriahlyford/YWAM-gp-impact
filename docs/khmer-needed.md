@@ -2641,37 +2641,7 @@ it loaded. This line sits at the top of every screen while that is happening.
 | No connection — this is your page as it was on {date}. Numbers, goals and check-ins you save will send when you’re back online. | គ្មានការតភ្ជាប់ — នេះជាទំព័ររបស់អ្នក ដូចដែលវាមាននៅ {date}។ លេខ គោលដៅ និងការឆែកសុខភាពដែលអ្នករក្សាទុក នឹងផ្ញើទៅ នៅពេលអ្នកមានអ៊ីនធឺណិតវិញ។ |
 | No connection — your page will load once you’re back online. | គ្មានការតភ្ជាប់ — ទំព័ររបស់អ្នកនឹងផ្ទុក នៅពេលអ្នកមានអ៊ីនធឺណិតវិញ។ |
 
-## 59. The Khmer review page itself
-
-The page Sreilea and Leakha use to check the app's Khmer, one line at a time.
-"Correct" means "this Khmer is right as it is"; "Fix it" opens it for editing.
-
-| English | Khmer (pending) |
-|---|---|
-| Khmer review | ពិនិត្យភាសាខ្មែរ |
-| Khmer reviewer — checks the app’s Khmer, one line at a time | អ្នកពិនិត្យភាសាខ្មែរ — ពិនិត្យភាសាខ្មែររបស់កម្មវិធី ម្តងមួយបន្ទាត់ |
-| Couldn’t load the reviews — try again. | មិនអាចផ្ទុកការពិនិត្យបានទេ — សូមសាកល្បងម្តងទៀត។ |
-| Check each line the app shows in Khmer. Tap Correct if it reads right, or fix it. Nothing changes in the app until your reviews are added to it. | សូមពិនិត្យបន្ទាត់នីមួយៗដែលកម្មវិធីបង្ហាញជាភាសាខ្មែរ។ ចុច ត្រឹមត្រូវ ប្រសិនបើវាអានបានត្រឹមត្រូវ ឬកែវា។ គ្មានអ្វីផ្លាស់ប្តូរនៅក្នុងកម្មវិធីទេ រហូតដល់ការពិនិត្យរបស់អ្នកត្រូវបានបញ្ចូលទៅក្នុងវា។ |
-| {n} of {total} lines reviewed | បានពិនិត្យ {n} ក្នុងចំណោម {total} បន្ទាត់ |
-| Find a line (English or Khmer) | ស្វែងរកបន្ទាត់ (អង់គ្លេស ឬខ្មែរ) |
-| No lines waiting match that. | គ្មានបន្ទាត់ដែលកំពុងរង់ចាំត្រូវនឹងការស្វែងរកនោះទេ។ |
-| Every line has been reviewed — thank you! | បន្ទាត់ទាំងអស់ត្រូវបានពិនិត្យរួចហើយ — សូមអរគុណ! |
-| Show the ones I skipped | បង្ហាញបន្ទាត់ដែលខ្ញុំបានរំលង |
-| {n} waiting | {n} កំពុងរង់ចាំ |
-| English | អង់គ្លេស |
-| Khmer in the app now | ភាសាខ្មែរនៅក្នុងកម្មវិធីឥឡូវនេះ |
-| Keep these exactly as they are: {list} | សូមរក្សាទាំងនេះឱ្យដូចដើម៖ {list} |
-| Save my fix | រក្សាទុកការកែរបស់ខ្ញុំ |
-| Correct | ត្រឹមត្រូវ |
-| Fix it | កែវា |
-| Skip | រំលង |
-| Recent reviews | ការពិនិត្យថ្មីៗ |
-| Undo | មិនធ្វើវិញ |
-| For whoever updates the app: the reviews as a file, for scripts/km-apply-reviews.mjs. | សម្រាប់អ្នកដែលធ្វើបច្ចុប្បន្នភាពកម្មវិធី៖ ការពិនិត្យជាឯកសារ សម្រាប់ scripts/km-apply-reviews.mjs។ |
-| Download {n} reviews | ទាញយកការពិនិត្យ {n} |
-| Write it in Khmer, please. | សូមសរសេរវាជាភាសាខ្មែរ។ |
-
-## 60. Admin → Loose ends
+## 59. Admin → Loose ends
 
 An admin-only page listing small gaps to fix: ministries with nobody set to enter
 numbers, people who have not opened the app in a month, and so on. "Loose ends"
@@ -2713,7 +2683,7 @@ means small unfinished things, not anything broken.
 | Nothing loose at {campus} | គ្មានចំណុចខ្វះនៅ {campus} ទេ |
 | Show all {n} | បង្ហាញទាំងអស់ {n} |
 
-## 61. Admin → Arrivals & departures
+## 60. Admin → Arrivals & departures
 
 A sign-up link for a new school or team, and archiving several people at once when
 a group leaves. "Archive" means the account is switched off and kept, not deleted.

@@ -1035,25 +1035,6 @@ themselves). Long lists show five and fold the rest.
   boot. **The boot itself still writes nothing** (test-boot.mjs). "Not opened in 30
   days" lists nobody until 30 days after `started`; it says when it fills in.
 
-## Khmer review (the review page and scripts/km-apply-reviews.mjs)
-The ~3,000 strings in `PENDING_KM` are machine-drafted Khmer nobody has checked.
-The Khmer review page (menu → Admin → Khmer review; `S.view='kmreview'`) lets a
-native speaker check them one at a time: the English, the Khmer the app shows now,
-**Correct / Fix it / Skip**, a search box, Undo on recent reviews.
-- **Who:** `kmReviewer` (an admin ticks "Khmer reviewer" on Admin → person; in the
-  boot's staff and `adminStaffOut_`, never the public roster) or an admin
-  (`canKmReview_`). Skips last for the visit only.
-- **Stored, not applied.** `saveKmReview` writes the `kmReviews` blob, one row per
-  English key (latest wins; `undo` removes it), with the reviewer's id and name.
-  A fix must contain Khmer and keep exactly the English's `{placeholders}` (server
-  and page both check). **Nothing on screen changes** — the app keeps showing
-  `PENDING_KM` until someone runs `node scripts/km-apply-reviews.mjs <download>
-  [--write]` on the file an admin downloads from the page, and commits km.js. That
-  script is the only road from `PENDING_KM` to `REVIEWED_KM`: it moves exactly the
-  reviewed keys with the reviewer's words, refuses a fix missing a placeholder,
-  reports keys no longer pending, and leaves every other byte of km.js alone (a dry
-  run without `--write`). docs/khmer-needed.md is not touched by it.
-
 ## Opening with no connection (public/sw.js and the boot copy)
 - **sw.js is network first, always.** A push to main is live at once, and a phone
   running yesterday's page against today's server is worse than a slow load. Pages

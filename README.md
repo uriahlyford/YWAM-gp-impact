@@ -76,7 +76,6 @@ netlify/functions/
   backup.js        the nightly backup of everything into a second store, 30 nights kept
 scripts/
   restore-backup.mjs  put keys back from a night's backup, by hand, with a Netlify token
-  km-apply-reviews.mjs  move the Khmer review page's reviewed lines from PENDING_KM into REVIEWED_KM
 tests/             24 files; see tests/README.md
 docs/
   khmer-needed.md  the Khmer review checklist for the native speakers
