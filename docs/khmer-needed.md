@@ -2485,3 +2485,154 @@ answers are shown, so please make sure the Khmer says exactly that.
 | {metric} goes from {min} to {max} — check the number you typed. | {metric} គឺពី {min} ដល់ {max} — សូមពិនិត្យលេខដែលអ្នកបានវាយ។ |
 | from Finance, {date} | ពីហិរញ្ញវត្ថុ {date} |
 | last entered {date} | បញ្ចូលចុងក្រោយ {date} |
+
+## 56. What each KPI means (the ⓘ beside every box)
+
+Staff can now tap ⓘ beside any metric they log to read one line on what to
+count. These are the KPI guide's own English lines (help.html), so the Khmer
+should say exactly the same thing — what to count, and for how long ("this
+week", "right now — latest count"). Short is better: it sits under the metric
+name on a phone.
+
+| English | Khmer (pending) |
+|---|---|
+| What to count | អ្វីដែលត្រូវរាប់ |
+| {metric} goes from {min} to {max} — check the number you typed. | {metric} គឺពី {min} ដល់ {max} — សូមពិនិត្យលេខដែលអ្នកបានវាយ។ |
+| Days the café was open this week. | ចំនួនថ្ងៃដែលហាងកាហ្វេបានបើកនៅសប្តាហ៍នេះ។ |
+| Drinks sold this week. | ភេសជ្ជៈដែលបានលក់នៅសប្តាហ៍នេះ។ |
+| Customers served this week. | អតិថិជនដែលបានបម្រើនៅសប្តាហ៍នេះ។ |
+| Meaningful faith conversations you had with customers. | ការសន្ទនាអំពីជំនឿដែលមានអត្ថន័យ ដែលអ្នកបានធ្វើជាមួយអតិថិជន។ |
+| People who prayed to receive Jesus for the first time this week. | មនុស្សដែលបានអធិស្ឋានទទួលព្រះយេស៊ូវជាលើកដំបូងនៅសប្តាហ៍នេះ។ |
+| Income minus expenses this week, in dollars. | ចំណូលដកចំណាយនៅសប្តាហ៍នេះ គិតជាដុល្លារ។ |
+| Total money spent running the café this week. | ប្រាក់សរុបដែលបានចំណាយលើការដំណើរការហាងកាហ្វេនៅសប្តាហ៍នេះ។ |
+| Current balance — enter the latest number, not a weekly total. | សមតុល្យបច្ចុប្បន្ន — បញ្ចូលលេខចុងក្រោយ មិនមែនសរុបប្រចាំសប្តាហ៍ទេ។ |
+| Number of schools you're currently running. | ចំនួនសាលាដែលអ្នកកំពុងដំណើរការ។ |
+| Staff serving in this ministry right now. | បុគ្គលិកដែលកំពុងបម្រើក្នុងក្រសួងបម្រើនេះពេលនេះ។ |
+| Students currently enrolled — enter the latest count. | សិស្សដែលកំពុងចុះឈ្មោះរៀន — បញ្ចូលចំនួនចុងក្រោយ។ |
+| Students whose fees/costs you help cover. | សិស្សដែលអ្នកជួយបង់ថ្លៃសិក្សា/ថ្លៃចំណាយ។ |
+| Students you provide food and/or housing for. | សិស្សដែលអ្នកផ្តល់អាហារ និង/ឬកន្លែងស្នាក់នៅ។ |
+| Students actively being discipled, not just attending. | សិស្សដែលកំពុងត្រូវបានបង្ហាត់បង្រៀនជាសិស្សព្រះគ្រីស្ទយ៉ាងសកម្ម មិនមែនគ្រាន់តែចូលរៀនទេ។ |
+| People baptised this week. | មនុស្សដែលបានទទួលបុណ្យជ្រមុជទឹកនៅសប្តាហ៍នេះ។ |
+| Total hours of prayer covered this week. | ម៉ោងអធិស្ឋានសរុបដែលបានបំពេញនៅសប្តាហ៍នេះ។ |
+| Prayer meetings you held this week. | ការប្រជុំអធិស្ឋានដែលអ្នកបានធ្វើនៅសប្តាហ៍នេះ។ |
+| How many ministries you specifically prayed over. | ចំនួនក្រសួងបម្រើដែលអ្នកបានអធិស្ឋានឱ្យជាពិសេស។ |
+| Answered-prayer stories reported this week. | រឿងចម្លើយនៃការអធិស្ឋាន ដែលបានរាយការណ៍នៅសប្តាហ៍នេះ។ |
+| Your own honest 1–10 sense of how the week went. | ការវាយតម្លៃដោយស្មោះត្រង់របស់អ្នក ១–១០ អំពីរបៀបដែលសប្តាហ៍នេះបានកន្លងទៅ។ |
+| Training sessions or league fixtures you ran. | វគ្គហ្វឹកហាត់ ឬការប្រកួតលីគដែលអ្នកបានដំណើរការ។ |
+| Games played this week. | ការប្រកួតដែលបានលេងនៅសប្តាហ៍នេះ។ |
+| Games won this week. | ការប្រកួតដែលបានឈ្នះនៅសប្តាហ៍នេះ។ |
+| Young people who took part this week. | យុវជនដែលបានចូលរួមនៅសប្តាហ៍នេះ។ |
+| Active coaches right now — latest count. | គ្រូបង្វឹកសកម្មពេលនេះ — ចំនួនចុងក្រោយ។ |
+| People you're developing into coaches. | មនុស្សដែលអ្នកកំពុងអភិវឌ្ឍឱ្យក្លាយជាគ្រូបង្វឹក។ |
+| Players you're intentionally discipling. | អ្នកលេងដែលអ្នកកំពុងបង្ហាត់បង្រៀនជាសិស្សព្រះគ្រីស្ទដោយចេតនា។ |
+| Number of Instagram pages/accounts you run — latest count. | ចំនួនទំព័រ/គណនី Instagram ដែលអ្នកគ្រប់គ្រង — ចំនួនចុងក្រោយ។ |
+| Total Instagram followers — latest count. | អ្នកតាមដាន Instagram សរុប — ចំនួនចុងក្រោយ។ |
+| Total Instagram views this week. | ការមើលសរុបនៅលើ Instagram នៅសប្តាហ៍នេះ។ |
+| Posts published on Instagram this week. | ការបង្ហោះនៅលើ Instagram នៅសប្តាហ៍នេះ។ |
+| Comments you replied to on Instagram. | មតិយោបល់ដែលអ្នកបានឆ្លើយតបនៅលើ Instagram។ |
+| Messages you replied to on Instagram. | សារដែលអ្នកបានឆ្លើយតបនៅលើ Instagram។ |
+| Potential students who came in via Instagram. | សិស្សដែលមានសក្តានុពល ដែលបានមកតាមរយៈ Instagram។ |
+| Number of Facebook pages/accounts you run — latest count. | ចំនួនទំព័រ/គណនី Facebook ដែលអ្នកគ្រប់គ្រង — ចំនួនចុងក្រោយ។ |
+| Total Facebook followers — latest count. | អ្នកតាមដាន Facebook សរុប — ចំនួនចុងក្រោយ។ |
+| Total Facebook views this week. | ការមើលសរុបនៅលើ Facebook នៅសប្តាហ៍នេះ។ |
+| Posts published on Facebook this week. | ការបង្ហោះនៅលើ Facebook នៅសប្តាហ៍នេះ។ |
+| Comments you replied to on Facebook. | មតិយោបល់ដែលអ្នកបានឆ្លើយតបនៅលើ Facebook។ |
+| Messages you replied to on Facebook. | សារដែលអ្នកបានឆ្លើយតបនៅលើ Facebook។ |
+| Potential students who came in via Facebook. | សិស្សដែលមានសក្តានុពល ដែលបានមកតាមរយៈ Facebook។ |
+| Number of YouTube pages/accounts you run — latest count. | ចំនួនទំព័រ/គណនី YouTube ដែលអ្នកគ្រប់គ្រង — ចំនួនចុងក្រោយ។ |
+| Total YouTube followers — latest count. | អ្នកតាមដាន YouTube សរុប — ចំនួនចុងក្រោយ។ |
+| Total YouTube views this week. | ការមើលសរុបនៅលើ YouTube នៅសប្តាហ៍នេះ។ |
+| Posts published on YouTube this week. | ការបង្ហោះនៅលើ YouTube នៅសប្តាហ៍នេះ។ |
+| Comments you replied to on YouTube. | មតិយោបល់ដែលអ្នកបានឆ្លើយតបនៅលើ YouTube។ |
+| Messages you replied to on YouTube. | សារដែលអ្នកបានឆ្លើយតបនៅលើ YouTube។ |
+| Potential students who came in via YouTube. | សិស្សដែលមានសក្តានុពល ដែលបានមកតាមរយៈ YouTube។ |
+| Number of TikTok pages/accounts you run — latest count. | ចំនួនទំព័រ/គណនី TikTok ដែលអ្នកគ្រប់គ្រង — ចំនួនចុងក្រោយ។ |
+| Total TikTok followers — latest count. | អ្នកតាមដាន TikTok សរុប — ចំនួនចុងក្រោយ។ |
+| Total TikTok views this week. | ការមើលសរុបនៅលើ TikTok នៅសប្តាហ៍នេះ។ |
+| Posts published on TikTok this week. | ការបង្ហោះនៅលើ TikTok នៅសប្តាហ៍នេះ។ |
+| Comments you replied to on TikTok. | មតិយោបល់ដែលអ្នកបានឆ្លើយតបនៅលើ TikTok។ |
+| Messages you replied to on TikTok. | សារដែលអ្នកបានឆ្លើយតបនៅលើ TikTok។ |
+| Potential students who came in via TikTok. | សិស្សដែលមានសក្តានុពល ដែលបានមកតាមរយៈ TikTok។ |
+| Days you ran classes this week. | ចំនួនថ្ងៃដែលអ្នកបានបង្រៀននៅសប្តាហ៍នេះ។ |
+| Youth currently enrolled — latest count. | យុវជនដែលកំពុងចុះឈ្មោះរៀន — ចំនួនចុងក្រោយ។ |
+| Tests or assessments given this week. | ការប្រឡង ឬការវាយតម្លៃដែលបានធ្វើនៅសប្តាហ៍នេះ។ |
+| Percent of students who passed — enter 0–100. | ភាគរយនៃសិស្សដែលបានជាប់ — បញ្ចូល ០–១០០។ |
+| Celebrations or events held this week. | ការអបអរ ឬកម្មវិធីដែលបានធ្វើនៅសប្តាហ៍នេះ។ |
+| Competitions run this week. | ការប្រកួតប្រជែងដែលបានដំណើរការនៅសប្តាហ៍នេះ។ |
+| Students you brought along to a local church. | សិស្សដែលអ្នកបាននាំទៅក្រុមជំនុំមូលដ្ឋាន។ |
+| Worship nights you hosted this week. | រាត្រីថ្វាយបង្គំដែលអ្នកបានរៀបចំនៅសប្តាហ៍នេះ។ |
+| Total people at your worship gatherings. | ចំនួនមនុស្សសរុបនៅក្នុងការជួបជុំថ្វាយបង្គំរបស់អ្នក។ |
+| Musicians you're currently training. | តន្ត្រីករដែលអ្នកកំពុងបង្ហាត់បង្រៀន។ |
+| Total practice hours this week. | ម៉ោងហាត់សមសរុបនៅសប្តាហ៍នេះ។ |
+| New songs written this week. | បទចម្រៀងថ្មីដែលបានសរសេរនៅសប្តាហ៍នេះ។ |
+| Songs recorded this week. | បទចម្រៀងដែលបានថតនៅសប្តាហ៍នេះ។ |
+| Songs posted to social media this week. | បទចម្រៀងដែលបានបង្ហោះលើបណ្តាញសង្គមនៅសប្តាហ៍នេះ។ |
+| Students who graduated this week/period. | សិស្សដែលបានបញ្ចប់ការសិក្សានៅសប្តាហ៍/រយៈពេលនេះ។ |
+| Average student feedback on teaching, 1–10. | មតិយោបល់ជាមធ្យមរបស់សិស្សលើការបង្រៀន ១–១០។ |
+| Students you're concerned about and watching closely. | សិស្សដែលអ្នកព្រួយបារម្ភ ហើយកំពុងតាមដានយ៉ាងដិតដល់។ |
+| Students who could become future staff. | សិស្សដែលអាចក្លាយជាបុគ្គលិកនៅពេលអនាគត។ |
+| Distinct places your outreach reached. | ទីកន្លែងផ្សេងៗគ្នាដែលការចេញផ្សព្វផ្សាយរបស់អ្នកបានទៅដល់។ |
+| Total people who heard a gospel message this week. | ចំនួនមនុស្សសរុបដែលបានឮសារដំណឹងល្អនៅសប្តាហ៍នេះ។ |
+| Testimonies of physical or emotional healing you saw or heard reported. | ទីបន្ទាល់នៃការប្រោសឱ្យជាផ្លូវកាយ ឬផ្លូវចិត្ត ដែលអ្នកបានឃើញ ឬបានឮរាយការណ៍។ |
+| For the next school intake: intl students contacted. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ សិស្សអន្តរជាតិដែលបានទាក់ទង។ |
+| For the next school intake: local students contacted. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ សិស្សក្នុងស្រុកដែលបានទាក់ទង។ |
+| For the next school intake: intl students applied. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ សិស្សអន្តរជាតិដែលបានដាក់ពាក្យ។ |
+| For the next school intake: local students applied. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ សិស្សក្នុងស្រុកដែលបានដាក់ពាក្យ។ |
+| For the next school intake: intl students enrolled. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ សិស្សអន្តរជាតិដែលបានចុះឈ្មោះ។ |
+| For the next school intake: local students enrolled. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ សិស្សក្នុងស្រុកដែលបានចុះឈ្មោះ។ |
+| For the next school intake: teachers confirmed. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ គ្រូដែលបានបញ្ជាក់។ |
+| For the next school intake: staff confirmed. | សម្រាប់ការចូលរៀនសាលាបន្ទាប់៖ បុគ្គលិកដែលបានបញ្ជាក់។ |
+| New social pages/channels launched. | ទំព័រ/ឆានែលសង្គមថ្មីដែលបានបើកដំណើរការ។ |
+| New followers gained this week across pages. | អ្នកតាមដានថ្មីដែលទទួលបាននៅសប្តាហ៍នេះ គ្រប់ទំព័រ។ |
+| Views on your top-performing video — latest number. | ការមើលលើវីដេអូដែលល្អបំផុតរបស់អ្នក — លេខចុងក្រោយ។ |
+| Total filming hours this week. | ម៉ោងថតសរុបនៅសប្តាហ៍នេះ។ |
+| Pieces of content published this week. | មាតិកាដែលបានបង្ហោះនៅសប្តាហ៍នេះ។ |
+| One-to-one counseling sessions completed. | វគ្គប្រឹក្សាយោបល់ម្នាក់ទល់ម្នាក់ដែលបានបញ្ចប់។ |
+| Your read of students' average English level, 1–10. | ការវាយតម្លៃរបស់អ្នកលើកម្រិតភាសាអង់គ្លេសជាមធ្យមរបស់សិស្ស ១–១០។ |
+| Your read of students' average Khmer level, 1–10. | ការវាយតម្លៃរបស់អ្នកលើកម្រិតភាសាខ្មែរជាមធ្យមរបស់សិស្ស ១–១០។ |
+| Outreach/evangelism events held this week. | កម្មវិធីចេញផ្សព្វផ្សាយ/ប្រកាសដំណឹងល្អដែលបានធ្វើនៅសប្តាហ៍នេះ។ |
+| Faith conversations you started this week. | ការសន្ទនាអំពីជំនឿដែលអ្នកបានចាប់ផ្តើមនៅសប្តាហ៍នេះ។ |
+| People who heard the gospel through your work. | មនុស្សដែលបានឮដំណឹងល្អតាមរយៈការងាររបស់អ្នក។ |
+| People you helped plug into a local church (not just a one-time visit). | មនុស្សដែលអ្នកបានជួយឱ្យចូលរួមក្នុងក្រុមជំនុំមូលដ្ឋាន (មិនមែនគ្រាន់តែទៅលេងម្តងទេ)។ |
+| Partner churches you actively supported. | ក្រុមជំនុំដៃគូដែលអ្នកបានគាំទ្រយ៉ាងសកម្ម។ |
+| Churches you are currently leading. | ក្រុមជំនុំដែលអ្នកកំពុងដឹកនាំ។ |
+| Total attendance across the churches you lead. | ចំនួនអ្នកចូលរួមសរុបនៅគ្រប់ក្រុមជំនុំដែលអ្នកដឹកនាំ។ |
+| New churches started this week/period. | ក្រុមជំនុំថ្មីដែលបានចាប់ផ្តើមនៅសប្តាហ៍/រយៈពេលនេះ។ |
+| Hours of training you delivered this week. | ម៉ោងបណ្តុះបណ្តាលដែលអ្នកបានផ្តល់នៅសប្តាហ៍នេះ។ |
+| People currently in your training track. | មនុស្សដែលកំពុងស្ថិតក្នុងកម្មវិធីបណ្តុះបណ្តាលរបស់អ្នក។ |
+| Reports you submitted on time this week. | របាយការណ៍ដែលអ្នកបានដាក់ជូនទាន់ពេលនៅសប្តាហ៍នេះ។ |
+| How clear and healthy the finance system feels, 1–10. | ប្រព័ន្ធហិរញ្ញវត្ថុមានភាពច្បាស់លាស់ និងល្អប៉ុណ្ណា ១–១០។ |
+| Total funds brought together/reconciled — latest number. | មូលនិធិសរុបដែលបានប្រមូលផ្តុំ/ផ្ទៀងផ្ទាត់ — លេខចុងក្រោយ។ |
+| Cash reserve on hand — latest number. | ប្រាក់បម្រុងដែលមាននៅក្នុងដៃ — លេខចុងក្រោយ។ |
+| Guest beds prepared this week. | គ្រែភ្ញៀវដែលបានរៀបចំនៅសប្តាហ៍នេះ។ |
+| Guests you welcomed and settled in. | ភ្ញៀវដែលអ្នកបានស្វាគមន៍ និងជួយឱ្យតាំងលំនៅ។ |
+| Welcome gifts handed out. | កាដូស្វាគមន៍ដែលបានចែក។ |
+| How welcoming the base felt this week, 1–10. | មូលដ្ឋានមានអារម្មណ៍ស្វាគមន៍ប៉ុណ្ណានៅសប្តាហ៍នេះ ១–១០។ |
+| Hospitality improvement projects underway. | គម្រោងកែលម្អបដិសណ្ឋារកិច្ចដែលកំពុងដំណើរការ។ |
+| Technical projects finished this week. | គម្រោងបច្ចេកទេសដែលបានបញ្ចប់នៅសប្តាហ៍នេះ។ |
+| Technical projects currently underway. | គម្រោងបច្ចេកទេសដែលកំពុងដំណើរការ។ |
+| Overall condition/upkeep of the base, 1–10. | ស្ថានភាព/ការថែទាំទូទៅរបស់មូលដ្ឋាន ១–១០។ |
+| People you cooked for this week. | មនុស្សដែលអ្នកបានចម្អិនឱ្យនៅសប្តាហ៍នេះ។ |
+| Breakfasts served this week. | អាហារពេលព្រឹកដែលបានបម្រើនៅសប្តាហ៍នេះ។ |
+| Lunches served this week. | អាហារថ្ងៃត្រង់ដែលបានបម្រើនៅសប្តាហ៍នេះ។ |
+| Dinners served this week. | អាហារពេលល្ងាចដែលបានបម្រើនៅសប្តាហ៍នេះ។ |
+| New dishes you introduced this week. | មុខម្ហូបថ្មីដែលអ្នកបានណែនាំនៅសប្តាហ៍នេះ។ |
+| How the food tasted, 1–10. | រសជាតិអាហារ ១–១០។ |
+| How reliably meals were on time, 1–10. | អាហាររួចរាល់ទាន់ពេលបានទៀងទាត់ប៉ុណ្ណា ១–១០។ |
+| How well food stayed on budget, 1–10. | អាហារនៅក្នុងថវិកាបានល្អប៉ុណ្ណា ១–១០។ |
+| One-to-one discipleship/support meetings you held with your leaders. | ការជួបបង្ហាត់បង្រៀន/គាំទ្រម្នាក់ទល់ម្នាក់ ដែលអ្នកបានធ្វើជាមួយអ្នកដឹកនាំរបស់អ្នក។ |
+| Meaningful connections made with partners/supporters. | ទំនាក់ទំនងដែលមានអត្ថន័យ ដែលបានបង្កើតជាមួយដៃគូ/អ្នកគាំទ្រ។ |
+| Times you preached or shared at a church. | ចំនួនដងដែលអ្នកបានអធិប្បាយ ឬចែកចាយនៅក្រុមជំនុំ។ |
+| Times you spoke at a YWAM base. | ចំនួនដងដែលអ្នកបាននិយាយនៅមូលដ្ឋាន YWAM។ |
+| Your own hours spent sharing the gospel this week. | ម៉ោងផ្ទាល់ខ្លួនរបស់អ្នកក្នុងការចែកចាយដំណឹងល្អនៅសប្តាហ៍នេះ។ |
+| Department meetings you led this week. | ការប្រជុំផ្នែកដែលអ្នកបានដឹកនាំនៅសប្តាហ៍នេះ។ |
+| Teachings/lessons you prepared this week. | ការបង្រៀន/មេរៀនដែលអ្នកបានរៀបចំនៅសប្តាហ៍នេះ។ |
+| Meetings you led this week. | ការប្រជុំដែលអ្នកបានដឹកនាំនៅសប្តាហ៍នេះ។ |
+| Staff under your care right now — latest count. | បុគ្គលិកក្រោមការថែទាំរបស់អ្នកពេលនេះ — ចំនួនចុងក្រោយ។ |
+| Total outstanding support/debt your staff are carrying. | ការគាំទ្រ/បំណុលសរុបដែលបុគ្គលិករបស់អ្នកកំពុងជំពាក់។ |
+| Money raised this week toward your department. | ប្រាក់ដែលបានរៃអង្គាសនៅសប្តាហ៍នេះសម្រាប់ផ្នែករបស់អ្នក។ |
+| How clear and alive the base vision feels, 1–10. | ចក្ខុវិស័យមូលដ្ឋានមានភាពច្បាស់លាស់ និងរស់រវើកប៉ុណ្ណា ១–១០។ |
+| How well communication is flowing, 1–10. | ការប្រាស្រ័យទាក់ទងកំពុងដំណើរការល្អប៉ុណ្ណា ១–១០។ |
+| Health of your partner relationships, 1–10. | សុខភាពនៃទំនាក់ទំនងជាមួយដៃគូរបស់អ្នក ១–១០។ |
+| New bases you're planning/preparing to plant. | មូលដ្ឋានថ្មីដែលអ្នកកំពុងគ្រោង/ត្រៀមដើម្បីបង្កើត។ |
+| Overall base finances — latest number. | ហិរញ្ញវត្ថុមូលដ្ឋានទាំងមូល — លេខចុងក្រោយ។ |

@@ -657,6 +657,11 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .numDeptRow { display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; border:0; border-top:1px solid var(--line);
   background:none; color:var(--ink); font:inherit; font-size:14px; padding:9px 0; cursor:pointer; }
 .numDeptWho { color:var(--muted); font-size:13px; text-align:right; }
+.kpiNameLine { display:flex; align-items:baseline; gap:2px; }
+.kpiNameLine .rowName { display:block; }
+.kpiInfo { flex:0 0 auto; border:0; background:none; color:var(--faint); font-size:14px; padding:0 4px; cursor:pointer; vertical-align:baseline; }
+.kpiInfo[aria-expanded="true"] { color:var(--accent); }
+.kpiGlossLine { font-size:12.5px; color:var(--muted); line-height:1.4; margin:2px 0 4px; max-width:34ch; }
 .kpiIn { width:88px !important; text-align:right; }
 
 /* team directory grouped by department then ministry */
@@ -1809,6 +1814,7 @@ footer { text-align:center; font-size:12px; color:var(--muted); margin-top:26px;
 </script>
 <script src="km.js" data-optional></script>
 <script src="jobfocus.js" data-optional></script>
+<script src="kpiguide.js" data-optional></script>
 <script src="personality.js" data-optional></script>
 <script src="strengths.js" data-optional></script>
 <script src="gpstrengths.js" data-optional></script>
@@ -5456,7 +5462,7 @@ function kpiWeekRowHtml_(metric, wk, entries, prevMap, draft, campus, dept, mini
   }
   if(campus && dept && ministry) sub += metricOkrNote_(campus, dept, ministry, metric);
   if(draft[metric]!==undefined) cur=draft[metric];
-  return '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+  return '<div class="row"><div>'+kpiNameHtml_(metric, ministry||(S.me&&S.me.ministry))+
     '<div class="rowSub">'+sub+'</div></div>'+
     '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
     ' data-kpiweek="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
@@ -5472,7 +5478,7 @@ function kpiPeriodRowHtml_(metric, anchorWeek, entries, draft, attr, campus, dep
   var cur = draft[metric]!==undefined ? draft[metric] : (stored!==undefined ? stored : '');
   var sub = stored!==undefined ? (esc(t('logged'))+' '+fmt(Number(stored), metric)) : esc(t('nothing logged yet'));
   if(campus && dept && ministry) sub += metricOkrNote_(campus, dept, ministry, metric);
-  return '<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+  return '<div class="row"><div>'+kpiNameHtml_(metric, ministry||(S.me&&S.me.ministry))+
     '<div class="rowSub">'+sub+'</div></div>'+
     '<input type="number" inputmode="decimal" class="kpiIn" data-'+attr+'="'+esc(metric)+'" value="'+esc(String(cur))+'"></div>';
 }
@@ -5581,7 +5587,7 @@ function kpiCardHtml(wk){
         var base = (weekVal===undefined?0:Number(weekVal)) - (savedToday===undefined?0:Number(savedToday));
         /* Last week next to this one, because "is the cafe up or down" is the
            question anyone typing the number is really asking. */
-        b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+        b+='<div class="row"><div>'+kpiNameHtml_(metric, S.me.ministry)+
           '<div class="rowSub">'+esc(t('week total'))+' '+fmt(weekVal===undefined?null:Number(weekVal), metric)+
           gpVsLastWeek(entries[metric], wk, metric, weekVal)+
           metricOkrNote_(S.me.campus, S.me.dept, S.me.ministry, metric)+
@@ -5716,7 +5722,7 @@ function ovWeekRowsHtml_(dept, ministry, data, wk){
           gpVsLastWeek(wks, wk, metric, weekDraft[metric]!==undefined ? weekDraft[metric] : cur);
       }
       if(weekDraft[metric]!==undefined) cur=weekDraft[metric];
-      b+='<div class="row"><div><div class="rowName">'+esc(t(metric))+'</div>'+
+      b+='<div class="row"><div>'+kpiNameHtml_(metric, ministry)+
         '<div class="rowSub">'+sub+'</div></div>'+
         '<input type="number" inputmode="decimal" class="kpiIn"'+kpiInputAttrs_(metric)+
         ' data-ovweek="'+esc(ministry)+'" data-ovmetric="'+esc(metric)+'" value="'+esc(String(cur))+'"'+extra+'></div>';
@@ -10052,6 +10058,41 @@ function teamsDbHtml(){
 /* A 1-10 score and a percentage have edges; a phone keypad should know about
    them. Same rules the metric names already carry, read the same way fmt() reads
    them, so nothing new has to be kept in step. */
+/* A metric's name, with an ⓘ that opens the KPI guide's one line on what to
+   count (kpiguide.js). The line is drawn hidden and shown by a delegated tap
+   (see the document listener below), so opening it never re-renders the card
+   and never disturbs a number half typed. Outreach Teams is left as it is. */
+function kpiNameHtml_(metric, ministry){
+  var g = (typeof kpiGloss==='function' && ministry!=='Outreach Teams') ? kpiGloss(metric) : '';
+  if(!g) return '<div class="rowName">'+esc(t(metric))+'</div>';
+  /* the ⓘ sits beside .rowName, not inside it, so the name reads exactly as
+     before to anything that reads it (tests, the OKR "feeds" note lookups) */
+  return '<div class="kpiNameLine"><span class="rowName">'+esc(t(metric))+'</span>'+
+    '<button type="button" class="kpiInfo" data-kpiinfo aria-expanded="false" aria-label="'+esc(t('What to count'))+'">ⓘ</button></div>'+
+    '<div class="kpiGlossLine" hidden>'+esc(t(g))+'</div>';
+}
+/* The first number in a save that is outside its edges (kpiRange in
+   taxonomy.js), as the message to show — or '' when everything is fine. The
+   server refuses the same numbers; this just says so before anything is sent. */
+function kpiProblem_(updates, ministry){
+  if(ministry==='Outreach Teams' || typeof kpiRange!=='function') return '';
+  for(var i=0;i<updates.length;i++){
+    var u=updates[i], r=kpiRange(u.metric||'');
+    if(!r || u.value===null || u.value===undefined || isNaN(u.value)) continue;
+    if(u.value<r.min || u.value>r.max)
+      return gpT('{metric} goes from {min} to {max} — check the number you typed.',{metric:t(u.metric), min:r.min, max:r.max});
+  }
+  return '';
+}
+document.addEventListener('click', function(e){
+  var b = e.target && e.target.closest ? e.target.closest('[data-kpiinfo]') : null;
+  if(!b) return;
+  var line = b.parentNode && b.parentNode.nextElementSibling;
+  if(!line || !line.classList.contains('kpiGlossLine')) return;
+  line.hidden = !line.hidden;
+  b.setAttribute('aria-expanded', line.hidden ? 'false' : 'true');
+});
+
 function kpiInputAttrs_(metric){
   if(metric.indexOf('(1-10)')>-1) return ' min="1" max="10" step="1"';
   if(metric.indexOf('(%)')>-1) return ' min="0" max="100"';
@@ -12912,6 +12953,7 @@ function bindHome(){
         value: inp.value==='' ? null : Number(inp.value)
       });
     });
+    var bad=kpiProblem_(updates, S.me.ministry); if(bad){ showMsg(bad); return; }
     S.busy=true; skb.disabled=true; skb.textContent='…';
     // Saves the DAY; the server rolls the week up from the days it holds.
     // Not the current week → the entry lands on that week's own last day.
@@ -12934,10 +12976,11 @@ function bindHome(){
       updates.push({ metric:inp.getAttribute('data-kpiweek'),
         value: inp.value==='' ? null : Number(inp.value) });
     });
+    var bad=kpiProblem_(updates, S.me.ministry); if(bad){ showMsg(bad); return; }
     S.busy=true; skw.disabled=true; skw.textContent=t('Saving…');
     run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
       S.busy=false;
-      if(d && d.ok){ S.ministry=d; S.kpiWeekDraft={}; numbersMarkLogged_(S.me.dept, S.me.ministry, wk); showMsg('Saved — week '+wk+' updated'); }
+      if(d && d.ok){ S.ministry=d; S.kpiWeekDraft={}; numbersMarkLogged_(S.me.dept, S.me.ministry, wk); showMsg(d.rejected&&d.rejected.length ? kpiProblem_(d.rejected.map(function(m){ return {metric:m, value:-1e9}; }), S.me.ministry) : 'Saved — week '+wk+' updated'); }
       else showMsg('Could not save');
       render();
     });
@@ -12959,6 +13002,7 @@ function bindHome(){
       updates.push({ metric:inp.getAttribute('data-kpimonth'),
         value: inp.value==='' ? null : Number(inp.value) });
     });
+    var bad=kpiProblem_(updates, S.me.ministry); if(bad){ showMsg(bad); return; }
     S.busy=true; skm.disabled=true; skm.textContent=t('Saving…');
     run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
       S.busy=false;
@@ -12978,6 +13022,7 @@ function bindHome(){
       updates.push({ metric:inp.getAttribute('data-kpiquarter'),
         value: inp.value==='' ? null : Number(inp.value) });
     });
+    var bad=kpiProblem_(updates, S.me.ministry); if(bad){ showMsg(bad); return; }
     S.busy=true; skq.disabled=true; skq.textContent=t('Saving…');
     run('saveMyMinistry',[S.auth.user,S.auth.pin,wk,updates],function(d){
       S.busy=false;
@@ -13024,6 +13069,7 @@ function bindHome(){
         updates.push({ metric:inp.getAttribute('data-ovmetric'),
           value: inp.value==='' ? null : Number(inp.value) });
       });
+    var bad=kpiProblem_(updates, min); if(bad){ showMsg(bad); return; }
       S.busy=true; btn.disabled=true; btn.textContent=t('Saving…');
       run('saveMinistryFor',[S.auth.user,S.auth.pin,dept,min,wk,updates],function(d){
         S.busy=false;

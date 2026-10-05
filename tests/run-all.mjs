@@ -49,6 +49,7 @@ const SERVER = [
   'test-strengths.mjs', // CliftonStrengths as recorded: validation, and who can see a Top 5
   'test-dept-pulse.mjs', // a department leader's pulse: who sees it, health as two numbers only, staff debt from Finance
   'test-numbers-people.mjs', // each ministry's main person and backup, due Friday: who may set them, the reminders' data
+  'test-kpi-guide.mjs', // what each KPI means, and scores / percentages that cannot be out of range
   'test-gpstrengths.mjs', // the free GP Strengths test: content, fair pairs, server scoring, who sees what
   'test-staff-email.mjs', // one profile per email; adminMergeStaff cleans up a real duplicate
   'test-overscroll-behavior.mjs', // none of the three pages' html/body may go back to overscroll-behavior:none (confirmed live: it disabled scrolling entirely on real desktop Chrome)
@@ -95,6 +96,7 @@ const BROWSER = [
   'test-dept-pulse-ui.mjs',  // the department leader's card, Finance's staff debt, the Campus Director's view
   'test-numbers-people-ui.mjs',  // numbers first on My Ministry, Friday/Saturday reminders, the department leader's list
   'test-gpstrengths-ui.mjs',  // taking the free test, results, the team strengths map, 320px
+  'test-kpi-guide-ui.mjs',  // the ⓘ beside each KPI, and an out-of-range score caught before saving
   'test-bottom-bar.mjs',  // the bottom bar steps aside for the phone keyboard, and comes back
   'test-habit-stale.mjs',   // a tap survives a store that reads older than its own writes
   'test-ministry-kpis.mjs', // the ministry's whole log form on My week: which card, and carry-forward

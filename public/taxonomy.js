@@ -199,6 +199,18 @@ var LD_SCHOOL_MINISTRIES = ['GPDTS','DTS','DBS','SMS','BCS','SOMD'];
 var CS_SCHOOL_MINISTRIES = ['GP Education','Ponlork School','LTN','Sry Noi'];
 var YE_SCHOOL_MINISTRIES = ['YDC'];
 
+/* The edges a typed number may have. A score's name ends "(1-10)" and a
+   percentage's "(%)" — the same naming rule modeOf() reads — so a new score
+   gets its edges without anything else to keep in step. Counts and money have
+   none: a day's count can be negative to undo a mistake, and so can a profit.
+   api.js keeps its own copy (kpiRange_) — change one, change both;
+   tests/test-kpi-range.mjs checks they agree. */
+function kpiRange(metric){
+  if (metric.indexOf('(1-10)')>-1) return { min:1, max:10 };
+  if (metric.indexOf('(%)')>-1) return { min:0, max:100 };
+  return null;
+}
+
 function modeOf(metric){
   if (metric.indexOf('(1-10)')>-1 || metric.indexOf('(%)')>-1) return 'avg';
   if (LATEST_SET.indexOf(metric)>-1) return 'latest';

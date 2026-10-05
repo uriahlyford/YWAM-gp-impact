@@ -1612,6 +1612,7 @@ async function saveEntries(campus, updates, code, username, pin) {
     }
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
+    if (kpiOutOfRange_(ministry, metric, value)) return;
     if (idx > -1) {
       rows[idx].value = value; rows[idx].updated = now; rows[idx].year = yr;
       if (writer) rows[idx].by = writer.id;
@@ -2376,12 +2377,28 @@ async function getMinistryFor(username, pin, dept, ministry) {
   return withNumbers_(await ministryDataFor2_(s.campus, dept, ministry), s);
 }
 
+/* A score is 1–10 and a percentage 0–100; anything else would be a typo that
+   drags an average for the rest of the year (a 70 for a 7). Mirrors kpiRange in
+   public/taxonomy.js. Outreach Teams is left exactly as it is — its numbers are
+   run from the Teams Database and work as they are. */
+function kpiRange_(metric) {
+  if (metric.indexOf('(1-10)') > -1) return { min: 1, max: 10 };
+  if (metric.indexOf('(%)') > -1) return { min: 0, max: 100 };
+  return null;
+}
+function kpiOutOfRange_(ministry, metric, value) {
+  if (ministry === 'Outreach Teams') return false;
+  const r = kpiRange_(metric);
+  return !!r && (value < r.min || value > r.max);
+}
+
 async function saveMinistryInternal_(campus, dept, ministry, week, updates, by) {
   const wk = finiteNum_(week, 1, 52);
   if (wk == null) return { ok: false, err: 'bad_week' };
   const rows = await getEntries_();
   const now = new Date().toISOString();
   const yr = currentYear_();
+  const rejected = [];
   (Array.isArray(updates) ? updates : []).forEach(function (u) {
     const metric = str_(u && u.metric, 80);
     if (!metric || SENSITIVE.indexOf(metric) > -1) return;
@@ -2395,28 +2412,33 @@ async function saveMinistryInternal_(campus, dept, ministry, week, updates, by) 
     }
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
+    if (kpiOutOfRange_(ministry, metric, value)) { rejected.push(metric); return; }
     /* who typed it, for "last entered by" on My Ministry */
     if (idx > -1) { rows[idx].value = value; rows[idx].updated = now; if (by) rows[idx].by = by; }
     else rows.push(Object.assign({ campus: campus, dept: dept, ministry: ministry, metric: metric, week: wk, year: yr, value: value, updated: now }, by ? { by: by } : {}));
   });
   await writeJSON('entries', rows);
-  return { ok: true };
+  return { ok: true, rejected: rejected };
 }
 
 async function saveMyMinistry(username, pin, week, updates) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   if (!s.ministry) return { ok: false, err: 'no_ministry' };
-  await saveMinistryInternal_(s.campus, s.dept, s.ministry, week, updates, s.id);
-  return getMyMinistry(username, pin);
+  const saved = await saveMinistryInternal_(s.campus, s.dept, s.ministry, week, updates, s.id);
+  const out = await getMyMinistry(username, pin);
+  if (out && saved && saved.rejected && saved.rejected.length) out.rejected = saved.rejected;
+  return out;
 }
 
 async function saveMinistryFor(username, pin, dept, ministry, week, updates) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   if (!canLogFor_(s, s.campus, dept, ministry)) return { ok: false, err: 'not_authorized' };
-  await saveMinistryInternal_(s.campus, dept, ministry, week, updates, s.id);
-  return getMinistryFor(username, pin, dept, ministry);
+  const saved = await saveMinistryInternal_(s.campus, dept, ministry, week, updates, s.id);
+  const out = await getMinistryFor(username, pin, dept, ministry);
+  if (out && saved && saved.rejected && saved.rejected.length) out.rejected = saved.rejected;
+  return out;
 }
 
 /* ==================== ministry metric overrides ====================
@@ -2642,6 +2664,7 @@ async function saveKpiDayInternal_(campus, dept, ministry, dateStr, updates, sta
     }
     const value = finiteNum_(u.value, -1e9, 1e9);
     if (value == null) return;
+    if (kpiOutOfRange_(ministry, metric, value)) { delete touched[metric]; return; }
     const rec = {
       campus: campus, dept: dept, ministry: ministry, metric: metric,
       date: date, week: wk, year: yearFromDate_(date) || currentYear_(),

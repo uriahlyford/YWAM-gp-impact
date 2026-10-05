@@ -111,6 +111,18 @@ Netlify iframe "shell" — that setup is retired; see git history if you need it
     recur daily until in. They also show in My Home's Updates card. A department
     overseer gets the done / not done list on the same days, and on their own page
     (`numbersDeptCardHtml_`). Saving marks the week in at once (`numbersMarkLogged_`).
+- `kpiguide.js` — `KPI_GLOSS` / `kpiGloss(metric)`: the KPI guide's one line on what to
+  count for each metric, shown under the ⓘ beside each box people log (`kpiNameHtml_` in
+  teams.html; hidden until tapped, toggled without a re-render so a half-typed number is
+  never lost). Extracted verbatim from `help.html`; **two copies** — tests/test-kpi-guide.mjs
+  compares them and checks every logged metric has a line. Edit one, edit both. Khmer for
+  each line is in `PENDING_KM`. Not shown for Outreach Teams (left exactly as it is).
+- **Scores and percentages have edges.** `kpiRange(metric)` in taxonomy.js (mirrored as
+  `kpiRange_` in api.js, test-checked): a name ending "(1-10)" is 1–10, "(%)" is 0–100;
+  counts and money have none (a day's count can be negative to undo a mistake; a profit
+  can be negative). The page says so before saving (`kpiProblem_`, and `saveCard` on the
+  dashboard); the server refuses out-of-range values on every save path and returns them
+  in `rejected`, keeping the good numbers beside them. Outreach Teams is exempt.
 - `taxonomy.js` — campuses, departments, ministries, metric lists, `STAFF_TYPES`, `COUNTRIES`,
   `modeOf()`, `compositeOf()`
   and the ministry emoji, shared by both pages.
@@ -1355,8 +1367,8 @@ inferred from volunteer counts.
 - **~219 Khmer strings are translated but unreviewed** (`PENDING_KM` in `km.js`). They
   are on screen now rather than sitting in English, which was Uriah's call, but nobody
   who speaks Khmer has read them yet. `docs/khmer-needed.md` is the checklist.
-- **The job-focus paragraphs are still English.** `public/jobfocus.js` and the KPI
-  glossary in `help.html` carry 28 ministries' worth of prose — that is content rather
+- **The job-focus paragraphs are still English.** `public/jobfocus.js` (the KPI
+  guide's one-line descriptions now have pending Khmer, in-app) carries 28 ministries' worth of prose — that is content rather
   than interface, it is long, and it reads as teaching material, so it wants a person
   writing it rather than a translation of the English.
 
