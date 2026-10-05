@@ -72,6 +72,9 @@ public/            the whole frontend, served directly by Netlify
   logo.js          the brand marks as base64 — never regenerate these
 netlify/functions/
   api.js           the entire backend: one function, Netlify Blobs for storage
+  backup.js        the nightly backup of everything into a second store, 30 nights kept
+scripts/
+  restore-backup.mjs  put keys back from a night's backup, by hand, with a Netlify token
 tests/             24 files; see tests/README.md
 docs/
   khmer-needed.md  the Khmer review checklist for the native speakers

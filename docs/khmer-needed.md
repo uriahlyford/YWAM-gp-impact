@@ -2616,3 +2616,17 @@ name on a phone.
 | Health of your partner relationships, 1–10. | សុខភាពនៃទំនាក់ទំនងជាមួយដៃគូរបស់អ្នក ១–១០។ |
 | New bases you're planning/preparing to plant. | មូលដ្ឋានថ្មីដែលអ្នកកំពុងគ្រោង/ត្រៀមដើម្បីបង្កើត។ |
 | Overall base finances — latest number. | ហិរញ្ញវត្ថុមូលដ្ឋានទាំងមូល — លេខចុងក្រោយ។ |
+
+## 57. Nightly backup — what admins see
+
+Every night the app now copies all its data to a safe second place. Only admins
+see these lines: on Admin home, and in the bell if a night is missed. "Backup"
+means a saved copy of the app's data.
+
+| English | Khmer (pending) |
+|---|---|
+| Open Admin | បើកផ្នែកអ្នកគ្រប់គ្រង |
+| The nightly backup has not run since {date}. | ការបម្រុងទុកទិន្នន័យប្រចាំយប់ មិនបានដំណើរការទេតាំងពី {date}។ |
+| No backup has run yet — the first one runs tonight at 3:00. | មិនទាន់មានការបម្រុងទុកទិន្នន័យនៅឡើយទេ — លើកដំបូងនឹងដំណើរការយប់នេះ ម៉ោង 3:00។ |
+| Last error: {msg} | កំហុសចុងក្រោយ៖ {msg} |
+| Last backup: {date} · {n} items · {days} nights kept | ការបម្រុងទុកចុងក្រោយ៖ {date} · {n} ធាតុ · រក្សាទុក {days} យប់ |

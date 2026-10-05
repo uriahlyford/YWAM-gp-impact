@@ -3105,6 +3105,18 @@ async function staffProfile(username, pin, staffId) {
   };
 }
 
+/* The nightly backup's last run, for an admin's "Last backup: …" line and the
+   bell warning when a night is missed. Only the run's time and counts — never
+   anything from inside the backup. */
+async function backupStatus_() {
+  const st = await getStore({ name: 'gp-backups', consistency: 'strong' }).get('status', { type: 'json' });
+  if (!st || typeof st !== 'object' || Array.isArray(st)) return { none: true };
+  return {
+    at: String(st.at || ''), items: Number(st.items) || 0, days: Number(st.days) || 0,
+    lastError: st.lastError ? String(st.lastError).slice(0, 300) : '', errorAt: String(st.errorAt || '')
+  };
+}
+
 /* ---------- one call for a page open ----------
    Opening the staff page used to fire ten separate function invocations —
    staffLogin, teamRoster, getMyLogs, getMyMentees, getMyMentorRequests,
@@ -3178,6 +3190,8 @@ async function getMyBoot(username, pin) {
     // whose numbers are due, and (for a department overseer) which ministries are in
     numbers: await part(function () { return numbersStatus_(s, staffRows || []); }),
     hrFollowUps: canHR_(s) ? candFollowUpsCount_(candRows || []) : null,
+    // admins only: when the nightly backup last ran (netlify/functions/backup.js)
+    backup: s.isAdmin ? await part(backupStatus_) : null,
     // the roster is already top-level above; no need to ship it twice in one response
     base: base ? Object.assign({}, base, { roster: undefined }) : null
   };

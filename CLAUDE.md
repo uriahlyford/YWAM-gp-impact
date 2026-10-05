@@ -1005,6 +1005,37 @@ results saved then are still in `staff.strengths` but nothing reads them.)
   localStorage (`gp_gstr_draft`) until saved.
 - **Khmer:** all ~515 strings in `PENDING_KM` (docs/khmer-needed.md §53).
 
+## Nightly backup (netlify/functions/backup.js)
+A scheduled function, `0 20 * * *` (03:00 Phnom Penh), copies every key in `gp-data`
+into a second store, `gp-backups`, and keeps 30 nights. Before it there was no other
+copy of anything.
+- **Stored once, listed nightly.** `obj/<sha256>` holds a value's bytes the first
+  time that exact content is seen; `day/YYYY-MM-DD` lists every key and its hash that
+  night. Unchanged keys and uploaded documents cost nothing extra per night. Pruning
+  drops lists past the newest 30, then every object no kept list points to.
+- **Never trust `list({ prefix })`.** @netlify/blobs' own server answers a slashed
+  prefix with nothing, and a backup that thinks it has no nights deletes every object
+  it holds. `listAll_` lists the whole store and filters in code;
+  tests/test-backup-real.mjs runs the real library to keep that true (the fake in
+  test-backup.mjs answers a prefix with nothing too, on purpose).
+- **The app reads only `status`** — time, item count, nights kept, last error —
+  through the boot, for admins only (`backupStatus_`): Admin home's "Last backup"
+  line, and a bell warning (`backupLate_`) when the last good run is over 36 hours
+  old or a run failed after it. Nothing in the app can read, download or restore a
+  backup: it holds PIN hashes and the anonymous health answers. Keep it that way.
+- **Restoring** is `scripts/restore-backup.mjs` (`list` / `show <day>` /
+  `restore <day> <keys…|--all> [--yes]`), run by hand with `NETLIFY_AUTH_TOKEN` and
+  `NETLIFY_SITE_ID` in the environment — never commit either. Without `--yes` it is a
+  dry run; with it, it first snapshots now as `day/<today>~before-restore` (so the
+  restore can be undone), writes only keys that differ, and never deletes a key the
+  night lacked. A snapshot does not change "Last backup".
+- **Same Netlify account.** This protects against bad writes, bugs and hand-edits —
+  not against losing the Netlify site or account. An off-site copy would need
+  credentials somewhere else; not set up.
+- A scheduled function cannot be called by URL on the live site; Netlify's function
+  page has "Run now". Scheduled functions get 30 seconds — `status.ms` says how long
+  a night took; watch it if the store grows a lot.
+
 ## Deploy rules — do not break
 - **CI gates pull requests.** `.github/workflows/tests.yml` runs the suite as two
   checks — `server tests` (seconds, no install) and `browser tests` (Playwright +

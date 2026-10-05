@@ -637,6 +637,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .barFill { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
 .barFill.done { background:linear-gradient(90deg,var(--amber),var(--amberDeep)); }
 @media (prefers-reduced-motion: reduce){ .gRing, .gSlide::-webkit-slider-thumb { transition:none } }
+.backupLine { padding:10px 14px; } .backupLate { color:var(--bad); font-size:14px; }
 .pulseGrid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
 @media (min-width:560px){ .pulseGrid { grid-template-columns:repeat(3,1fr); } }
 .pulseTile { background:var(--surface2); border-radius:12px; padding:10px 12px; min-width:0; }
@@ -2317,6 +2318,7 @@ function applyBoot(d){
   if(d.ministry) S.ministry = d.ministry;
   S.personal = d.personal || null;
   S.hrDue = (d.hrDue===undefined) ? null : d.hrDue;
+  S.backup = d.backup || null;   // admins only: the nightly backup's last run
   S.numbers = d.numbers || null;
   S.pulse = {}; S.staffDebt = null;
   S.hrFollowUps = (d.hrFollowUps===undefined) ? null : d.hrFollowUps;
@@ -2581,6 +2583,9 @@ function renderNotifPanel(){
   });
   document.querySelectorAll('#notifRoot [data-goprofile]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='profile'; render(); };
+  });
+  document.querySelectorAll('#notifRoot [data-goadmin]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='admin'; S.adminSub='home'; render(); };
   });
   document.querySelectorAll('#notifRoot [data-gohr]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.bellOpen=false; S.view='hr'; S.hrSub='home'; render(); };
@@ -4009,6 +4014,13 @@ function notifItems_(){
     var hrBtn='<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-gohr="1">'+esc(t('Open HR'))+'</button>';
     if(S.hrDue) items.push({ when:todayStr()+'T23:59:59.000Z', text: S.hrDue===1 ? t('1 staff contract is due for renewal') : gpT('{n} staff contracts are due for renewal',{n:S.hrDue}), actions:hrBtn });
     if(S.hrFollowUps) items.push({ when:todayStr()+'T23:59:58.000Z', text: S.hrFollowUps===1 ? t('1 candidate follow-up is due') : gpT('{n} candidate follow-ups are due',{n:S.hrFollowUps}), actions:hrBtn });
+  }
+  /* The nightly backup (admins): only when a night was missed or the last run
+     failed — dated today, so Clear holds until tomorrow and it comes back while
+     it is still not running. */
+  if(S.me && S.me.isAdmin && backupLate_()){
+    items.push({ when:todayStr()+'T23:59:57.000Z', text: backupLateText_(),
+      actions:'<button class="linkbtn" style="width:auto;margin:0;padding:6px 10px" data-goadmin="1">'+esc(t('Open Admin'))+'</button>' });
   }
   /* Ministry numbers, due Friday. Whoever is responsible (main, backup, or the
      leaders with nobody set) gets "due today" on Friday and "overdue" from
@@ -5652,6 +5664,30 @@ var ADMIN_SUBS = [
 function adminBackHtml_(to, label){
   return '<button class="linkbtn" id="adminBack" data-adminback="'+to+'" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(label)+'</button>';
 }
+/* The nightly backup (netlify/functions/backup.js): late when the last good
+   run is more than a day and a half old, or a run failed after it. Nothing
+   in the app reads or restores a backup — that is scripts/restore-backup.mjs. */
+function backupLate_(){
+  var b=S.backup; if(!b || b.none || !b.at) return false;
+  var at=Date.parse(b.at); if(!isFinite(at)) return false;
+  return (Date.now()-at > 36*3600*1000) || (!!b.errorAt && b.errorAt > b.at);
+}
+function backupWhen_(iso){
+  var d=new Date(iso); return shortDay_(d)+', '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function backupLateText_(){
+  return gpT('The nightly backup has not run since {date}.',{date:backupWhen_(S.backup.at)});
+}
+function backupLineHtml_(){
+  var b=S.backup; if(!b) return '';
+  var h='<div class="card backupLine" id="backupLine">';
+  if(b.none) h+='<span class="rowSub">🗄️ '+esc(t('No backup has run yet — the first one runs tonight at 3:00.'))+'</span>';
+  else if(backupLate_()){
+    h+='<b class="backupLate">⚠️ '+esc(backupLateText_())+'</b>';
+    if(b.lastError) h+='<div class="rowSub">'+esc(gpT('Last error: {msg}',{msg:b.lastError}))+'</div>';
+  } else h+='<span class="rowSub">🗄️ '+esc(gpT('Last backup: {date} · {n} items · {days} nights kept',{date:backupWhen_(b.at), n:b.items, days:b.days}))+'</span>';
+  return h+'</div>';
+}
 function adminHtml(){
   var sub = S.adminSub;
   if(sub==='person'){
@@ -5679,6 +5715,7 @@ function adminHomeHtml_(){
   var activeN = loading ? null : list.filter(function(x){ return x.active; }).length;
   var h=adminBackHtml_('week', t('My Home'));
   h+='<h2>'+esc(t('Admin'))+'</h2><p class="sub">'+esc(t('Approve new leadership accounts, and manage everyone’s.'))+'</p>';
+  h+=backupLineHtml_();
   h+='<div class="adminMenu">'+ADMIN_SUBS.map(function(x){
     var noMentorN = loading ? null : list.filter(function(x2){ return x2.active && !x2.archived && !x2.mentorId; }).length;
     var waitingN = S.adminLeave ? S.adminLeave.trips.filter(function(tr){ return (tr.status==='pending'||tr.status==='noted') && tr.active; }).length : null;
