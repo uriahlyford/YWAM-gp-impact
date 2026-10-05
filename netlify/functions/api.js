@@ -4282,12 +4282,16 @@ function hrStaffOut_(s) {
   const out = adminStaffOut_(s);
   out.joined = s.joined || ''; out.photo = s.photo || ''; out.contracts = contractsOf_(s);
   out.ywamSince = ywamSinceOf_(s);
+  out.baseSince = isoMonth_(s.baseSince) || '';
   return out;
 }
 /* A contract covers this base only; many staff served YWAM elsewhere first.
    `ywamSince` is the year they joined YWAM anywhere — a fact about the
    person, not the contract — so "Serving in Siem Reap since 2021" and "In
-   YWAM since 2003" can both be true. Set from the contract form. */
+   YWAM since 2003" can both be true. `baseSince` (YYYY-MM) is when they
+   started at this base. Both are set on their own (hrSaveStart) and no
+   contract changes them; with no baseSince the page counts from the
+   earliest contract or the year they joined, whichever is first. */
 function ywamSinceOf_(s) {
   const y = Number(s && s.ywamSince);
   return (Number.isInteger(y) && y >= 1960 && y <= new Date().getFullYear()) ? y : null;
@@ -4325,6 +4329,27 @@ async function hrSaveContract(username, pin, staffId, contract) {
       if (contract.ywamSince === '' || contract.ywamSince === null) rec.ywamSince = null;
       else { const y = ywamSinceOf_({ ywamSince: contract.ywamSince }); if (!y) return { abort: true, ok: false, err: 'bad_ywam_since' }; rec.ywamSince = y; }
     }
+  });
+}
+/* The two start dates, apart from any contract. '' clears one. */
+async function hrSaveStart(username, pin, staffId, dates) {
+  dates = dates && typeof dates === 'object' ? dates : {};
+  return hrMutate_(username, pin, staffId, function (rec) {
+    let ywam = rec.ywamSince == null ? null : rec.ywamSince, baseM = isoMonth_(rec.baseSince) || '';
+    if (dates.ywamSince !== undefined) {
+      if (dates.ywamSince === '' || dates.ywamSince === null) ywam = null;
+      else { ywam = ywamSinceOf_({ ywamSince: dates.ywamSince }); if (!ywam) return { abort: true, ok: false, err: 'bad_ywam_since' }; }
+    }
+    if (dates.baseSince !== undefined) {
+      if (dates.baseSince === '' || dates.baseSince === null) baseM = '';
+      else {
+        baseM = isoMonth_(dates.baseSince);
+        const now = new Date(), nowM = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2);
+        if (!baseM || baseM > nowM || Number(baseM.slice(0, 4)) < 1960) return { abort: true, ok: false, err: 'bad_base_since' };
+      }
+    }
+    if (ywam && baseM && Number(baseM.slice(0, 4)) < ywam) return { abort: true, ok: false, err: 'base_before_ywam' };
+    rec.ywamSince = ywam; rec.baseSince = baseM;
   });
 }
 async function hrDeleteContract(username, pin, staffId, contractId) {
@@ -5556,6 +5581,7 @@ const HANDLERS = {
   deleteTeamTrip: function (a) { return deleteTeamTrip(a[0], a[1], a[2]); },
   hrList: function (a) { return hrList(a[0], a[1]); },
   hrSaveContract: function (a) { return hrSaveContract(a[0], a[1], a[2], a[3]); },
+  hrSaveStart: function (a) { return hrSaveStart(a[0], a[1], a[2], a[3]); },
   hrDeleteContract: function (a) { return hrDeleteContract(a[0], a[1], a[2], a[3]); },
   hrUploadFile: function (a) { return hrUploadFile(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
   hrGetFile: function (a) { return hrGetFile(a[0], a[1], a[2]); },

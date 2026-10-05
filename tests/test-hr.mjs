@@ -98,6 +98,28 @@ r = await call('hrSaveContract', ['uriah', '1234', 'st_andrew', { signed: '2026-
 ok('a renewal is a second row, and the list comes back oldest first', r.body.ok === true && r.body.staff.contracts.length === 2 && r.body.staff.contracts[1].signed === '2026-10', r.body.staff.contracts.map(c => c.signed).join(','));
 const c2 = r.body.staff.contracts[1];
 
+console.log('\n=== start dates, apart from the contracts ===');
+ok('a renewal leaves the YWAM year alone', r.body.staff.ywamSince === 2003);
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { ywamSince: 2003, baseSince: '2019-06' }]);
+ok('the YWAM year and the month they started at this base are saved on the person', r.body.ok === true && r.body.staff.ywamSince === 2003 && r.body.staff.baseSince === '2019-06' && mem.staff.find(s => s.id === 'st_andrew').baseSince === '2019-06');
+r = await call('hrSaveContract', ['sina', '1234', 'st_andrew', { signed: '2028-10', years: 2 }]);
+ok('adding another contract changes neither', r.body.ok === true && r.body.staff.ywamSince === 2003 && r.body.staff.baseSince === '2019-06');
+await call('hrDeleteContract', ['sina', '1234', 'st_andrew', r.body.staff.contracts.find(c => c.signed === '2028-10').id]);
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { baseSince: '2001-01' }]);
+ok('starting here before joining YWAM is refused', r.body.ok === false && r.body.err === 'base_before_ywam' && mem.staff.find(s => s.id === 'st_andrew').baseSince === '2019-06');
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { baseSince: '2999-01' }]);
+ok('a month in the future is refused', r.body.ok === false && r.body.err === 'bad_base_since');
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { baseSince: 'June 2019' }]);
+ok('… and so is a month it can’t read', r.body.ok === false && r.body.err === 'bad_base_since');
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { ywamSince: 1850 }]);
+ok('an impossible YWAM year is refused', r.body.ok === false && r.body.err === 'bad_ywam_since');
+r = await call('hrSaveStart', ['dara', '1234', 'st_andrew', { baseSince: '2020-01' }]);
+ok('an ordinary member cannot set them', r.body.ok === false && r.body.err === 'not_authorized' && mem.staff.find(s => s.id === 'st_andrew').baseSince === '2019-06');
+r = await call('hrSaveStart', ['sina', '1234', 'st_nobody', { baseSince: '2020-01' }]);
+ok('nor for someone who isn’t there', r.body.ok === false && r.body.err === 'not_found');
+r = await call('hrSaveStart', ['sina', '1234', 'st_andrew', { baseSince: '' }]);
+ok('clearing the base month keeps the YWAM year', r.body.ok === true && r.body.staff.baseSince === '' && r.body.staff.ywamSince === 2003);
+
 console.log('\n=== attachments ===');
 const pdf = Buffer.from('%PDF-1.4 the signed paper').toString('base64');
 r = await call('hrUploadFile', ['dara', '1234', 'st_andrew', c1.id, 'contract.pdf', 'application/pdf', pdf]);
