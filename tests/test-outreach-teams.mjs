@@ -317,6 +317,30 @@ console.log('\n=== pending teams and the calendar ===');
   await ctx.close();
 }
 
+console.log('\n=== a team here across the end of a quarter counts once ===');
+TRIPS.push(trip({ id: 't10', name: 'Juliet Team', country: 'Canada', from: Y + '-03-25', to: Y + '-04-08', size: 5 }));
+{
+  const { ctx, page, errors } = await open(SOK);
+  await page.click('[data-teamperiod="year"]'); await page.waitForTimeout(300);
+  const year = Number(await tileOf(page, 'Teams Hosted'));
+  ok('the year counts it once — four teams', year === 4, year);
+  ok('in the year view there is no note — the visit is inside the year', !/Arrived in/.test(await page.$eval('[data-teamcard="t10"]', e => e.textContent)));
+  let sum = 0;
+  for (const q of [1, 2, 3, 4]) { await page.click('[data-teamperiod="quarter"]'); await page.click('[data-teamq="' + q + '"]'); await page.waitForTimeout(250); sum += Number(await tileOf(page, 'Teams Hosted')) || 0; }
+  ok('the four quarters add up to the year — nothing counted twice or missed', sum === year, sum + ' vs ' + year);
+  await page.click('[data-teamq="1"]'); await page.waitForTimeout(300);
+  const q1 = await page.evaluate(() => ({ counted: [].map.call(document.querySelectorAll('#teamsPage [data-teamcard]'), c => c.getAttribute('data-teamcard')), also: (document.querySelector('#teamsAlso') || {}).textContent || '' }));
+  ok('Q1: it is listed under “Also here in Q1”, not counted (Q1 is still the two that left in February)', Number(await tileOf(page, 'Teams Hosted')) === 2 && new RegExp('Also here in Q1 ' + Y).test(q1.also) && q1.counted.includes('t10'), JSON.stringify(q1));
+  ok('… with a note: arrived in Q1, counted in Q2 when it left', new RegExp('Arrived in Q1 ' + Y + ' — counted in Q2 ' + Y + ', when it left').test(await page.$eval('[data-teamcard="t10"]', e => e.textContent)));
+  await page.click('[data-teamq="2"]'); await page.waitForTimeout(300);
+  ok('Q2: it is counted there, with the same note', Number(await tileOf(page, 'Teams Hosted')) === 2 && /counted in Q2/.test(await page.$eval('[data-teamcard="t10"]', e => e.textContent)) && !(await page.$('#teamsAlso')));
+  await page.click('[data-teamperiod="month"]'); await page.selectOption('#teamMonthSel', '3'); await page.waitForTimeout(300);
+  ok('March: also here, counted in April', /Also here in Mar/.test(await page.$eval('#teamsAlso', e => e.textContent)) && /counted in Apr/.test(await page.$eval('[data-teamcard="t10"]', e => e.textContent)));
+  ok('no page errors (overlap)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+TRIPS.pop();
+
 await browser.close();
 server.close();
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
