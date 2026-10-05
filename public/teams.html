@@ -700,9 +700,20 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .leadKrPct { font-weight:800; color:var(--muted); flex:0 0 auto; }
 .leadObjCards { margin-top:6px; font-size:13px; }
 .leadHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
+.leadHeadBtns { display:flex; flex-direction:column; gap:6px; flex:0 0 auto; }
 .leadHead .btn.small { width:auto; margin:0; padding:8px 12px; font-size:14px; flex:0 0 auto; }
-.leadCols { display:grid; grid-auto-flow:column; grid-auto-columns:86%; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
-.leadCol { scroll-snap-align:start; background:var(--surface2); border-radius:14px; padding:10px; min-height:120px; }
+.leadFilters { margin:4px 0 10px; }
+.leadFilterRow { display:flex; gap:8px; align-items:flex-start; margin-bottom:4px; }
+.leadFilterLabel { flex:0 0 76px; font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); padding-top:9px; }
+.leadFilterRow .chips { margin:0; flex:1; min-width:0; }
+@media (min-width:900px){ .leadHeadBtns { flex-direction:row; } }
+.leadColTabs { display:flex; gap:4px; background:var(--surface2); border-radius:12px; padding:3px; margin-bottom:8px; }
+.leadColTab { flex:1; min-width:0; border:0; background:transparent; border-radius:9px; padding:9px 4px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.leadColTab.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px var(--shadowSoft); }
+.leadCols { display:block; }
+.leadCol { background:var(--surface2); border-radius:14px; padding:10px; min-height:120px; }
+.leadCol:not(.on) { display:none; }
+.leadCol .leadColHead { display:none; }
 .leadCol.drop { outline:2px dashed var(--accent); outline-offset:-2px; }
 .leadColHead { font-weight:800; font-size:14px; margin-bottom:8px; }
 .leadEmpty { margin:4px 2px; }
@@ -720,9 +731,47 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .leadDonePick { margin:0; font-size:12.5px; flex:0 0 auto; }
 .leadSetAdd { width:auto !important; margin:2px 0 0 !important; padding:7px 12px !important; font-size:13.5px !important; }
 .leadMove { display:flex; justify-content:space-between; margin-top:6px; font-size:12.5px; }
+.leadTasksBtn { display:block; width:100%; text-align:left; background:none; border:0; padding:6px 0 2px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; }
+.leadTasksBtn.on { color:var(--ink); }
+.leadCaret { font-size:10px; }
+.leadTasks { border-top:1px solid var(--line); margin-top:6px; padding-top:4px; }
+.leadTasks.inForm { border:1px solid var(--border); border-radius:12px; padding:6px 10px; margin:0 0 8px; }
+.leadTask { padding:5px 0; border-bottom:1px solid var(--line); }
+.leadTask:last-of-type { border-bottom:0; }
+.leadTaskTick { display:flex; gap:8px; align-items:flex-start; font-size:13.5px; text-transform:none; letter-spacing:0; font-weight:500; color:var(--ink); margin:0; cursor:pointer; }
+.leadTaskTick input { width:18px; height:18px; flex:0 0 auto; margin:1px 0 0; }
+.leadTask.done .leadTaskTick span { text-decoration:line-through; color:var(--muted); }
+.leadTaskSub { font-size:11.5px; color:var(--muted); margin:2px 0 0 26px; }
+.leadTaskMeta { display:flex; gap:6px; align-items:center; margin:4px 0 0 26px; }
+.leadTaskMeta select, .leadTaskMeta input { margin:0; padding:6px 8px; font-size:13px; min-width:0; flex:1; }
+.leadTaskAdd { display:flex; gap:6px; margin-top:6px; }
+.leadTaskAdd input { margin:0; padding:7px 10px; font-size:13.5px; flex:1; min-width:0; }
+.leadTaskAdd .btn.small { width:auto; margin:0; padding:6px 12px; flex:0 0 auto; }
+.leadNoteWeek { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.leadNoteWeek .btn.small { width:auto; margin:0; padding:6px 14px; font-size:18px; flex:0 0 auto; }
+.leadNoteDate { text-align:center; }
+.leadNotePast { align-items:center; margin-bottom:8px; }
+.leadNotePast .leadFilterLabel { flex:0 0 auto; padding:0 4px 0 0; }
+.leadNoteCard textarea { min-height:240px; font-size:14.5px; line-height:1.5; }
+.leadNoteCard #leadNoteStart { width:auto; margin:0 0 8px; }
+.leadNoteFoot { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.leadNoteFoot .btn.small { width:auto; margin:0; flex:0 0 auto; }
+.leadLine { padding:8px 0; border-top:1px solid var(--line); }
+.leadLineText { font-size:14px; font-weight:600; }
+.leadLineBtns { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.leadLineBtns .hospChip { font-size:12.5px; padding:5px 10px; }
+.leadLineDone { font-size:12.5px; color:var(--goodInk); font-weight:700; margin-top:3px; }
+.leadLineTask { display:flex; gap:6px; align-items:center; margin-top:6px; }
+.leadLineTask select { margin:0; flex:1; min-width:0; padding:6px 8px; font-size:13px; }
+.leadLineTask .btn.small { width:auto; margin:0; flex:0 0 auto; padding:6px 12px; }
+.leadMade { font-size:13px; padding:3px 0; color:var(--muted); }
+@media (min-width:900px){ main.wide .leadNoteGrid { display:grid; grid-template-columns:3fr 2fr; gap:12px; align-items:start; } main.wide .leadNoteGrid .card { margin:0; } }
 @media (min-width:900px){
   main.wide { max-width:1180px; }
-  main.wide .leadCols { grid-auto-flow:row; grid-template-columns:repeat(var(--leadN, 3), minmax(0,1fr)); overflow:visible; }
+  main.wide .leadCols { display:grid; grid-template-columns:repeat(var(--leadN, 3), minmax(0,1fr)); gap:10px; }
+  main.wide .leadCol, main.wide .leadCol:not(.on) { display:block; }
+  main.wide .leadCol .leadColHead { display:block; }
+  main.wide .leadColTabs { display:none; }
   main.wide .leadTiles { grid-template-columns:repeat(4, minmax(0,1fr)); }
   main.wide #leadForm { max-width:760px; }
   main.wide #leadOkrs .leadObj { max-width:none; }
@@ -8887,11 +8936,13 @@ function canLogForClient_(dept, min){
    agenda items every Monday has (Department and ministry updates, Events
    coming up). Columns, focus areas and standing items are all theirs to
    change — "Edit the board" (getLeadBoard / saveLeadCard / saveLeadSettings
-   in api.js).
+   in api.js). Each card holds a checklist of tasks (saveLeadTask /
+   deleteLeadTask), and a third tab keeps the notes of each Monday's meeting
+   (saveLeadNote), where any line can be put on the board as a card or a task.
    An objective shows how many of its cards are done; a card shows its
    objective's progress. Progress is edited where it always was, on the OKRs
-   tab. On a computer the board's three columns sit side by side; on a phone
-   they scroll across. */
+   tab. On a computer the board's columns sit side by side; on a phone one
+   column shows at a time, picked by tabs. */
 function leadCols_(){ return (S.lead && S.lead.cols) || []; }
 function leadDoneId_(){ var d=leadCols_().filter(function(c){ return c.done; })[0]; return d ? d.id : ''; }
 function leadAreaName_(id){ var a=((S.lead && S.lead.areas) || []).filter(function(x){ return x.id===id; })[0]; return a ? a.title : ''; }
@@ -8902,11 +8953,12 @@ function leadOkrs_(){
 }
 function leadNextMonday_(){ var d=new Date(); d.setHours(12,0,0,0); var add=(8-d.getDay())%7; d.setDate(d.getDate()+add); return calIso_(d); }
 function leadSectionHtml_(){
-  var tab=S.leadTab==='board' ? 'board' : 'okrs';
+  var tab=S.leadTab==='board' || S.leadTab==='notes' ? S.leadTab : 'okrs';
   var h='<div class="campusSeg leadTabs" style="max-width:none">'+
     '<button class="campusBtn'+(tab==='okrs'?' on':'')+'" data-leadtab="okrs">🎯 '+esc(t('Leadership OKRs'))+'</button>'+
-    '<button class="campusBtn'+(tab==='board'?' on':'')+'" data-leadtab="board">🗂️ '+esc(t('Monday meetings'))+'</button></div>';
-  return h+(tab==='board' ? leadBoardHtml_() : leadOkrDashHtml_());
+    '<button class="campusBtn'+(tab==='board'?' on':'')+'" data-leadtab="board">🗂️ '+esc(t('Monday meetings'))+'</button>'+
+    '<button class="campusBtn'+(tab==='notes'?' on':'')+'" data-leadtab="notes">📝 '+esc(t('Meeting notes'))+'</button></div>';
+  return h+(tab==='board' ? leadBoardHtml_() : tab==='notes' ? leadNotesHtml_() : leadOkrDashHtml_());
 }
 function leadCardsFor_(okrId){ return ((S.lead && S.lead.cards) || []).filter(function(c){ return c.okrId===okrId; }); }
 function leadOkrDashHtml_(){
@@ -8943,6 +8995,27 @@ function leadOwnerOptions_(){
   if(!list.some(function(p){ return p.id===S.me.id; })) list.push(S.me);
   return list.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
 }
+/* The little tasks inside a card — a checklist anyone in the meeting can
+   tick. On the board a card shows how many are done and opens to the list;
+   the card's edit form also gives each one an owner and a due date. */
+function leadTasks_(c){ return (c && Array.isArray(c.tasks)) ? c.tasks : []; }
+function leadTaskRowHtml_(cid, tk, full){
+  var late=tk.due && !tk.done && tk.due<todayStr(), key=esc(cid)+'|'+esc(tk.id);
+  var h='<div class="leadTask'+(tk.done?' done':'')+'"><label class="leadTaskTick"><input type="checkbox" data-ltick="'+key+'"'+(tk.done?' checked':'')+'> <span>'+esc(tk.text)+'</span></label>';
+  if(full){
+    h+='<div class="leadTaskMeta"><select data-ltowner="'+key+'" aria-label="'+esc(t('Who owns it'))+'"><option value="">'+esc(t('— nobody yet —'))+'</option>'+
+      leadOwnerOptions_().map(function(p){ return '<option value="'+esc(p.id)+'"'+(tk.owner===p.id?' selected':'')+'>'+esc(p.name)+'</option>'; }).join('')+'</select>'+
+      '<input type="date" data-ltdue="'+key+'" value="'+esc(tk.due||'')+'" aria-label="'+esc(t('Due'))+'">'+
+      '<button class="linkbtn inline teamDelete" data-ltdel="'+key+'" aria-label="'+esc(t('Remove'))+'">✕</button></div>';
+  } else if(tk.owner || tk.due){
+    h+='<div class="leadTaskSub">'+(tk.owner?'👤 '+esc(String(nameOf(tk.owner)).split(' ')[0]):'')+(tk.owner&&tk.due?' · ':'')+(tk.due?'<span class="leadDue'+(late?' late':'')+'">📅 '+esc(hospDate_(tk.due))+'</span>':'')+'</div>';
+  }
+  return h+'</div>';
+}
+function leadTaskAddHtml_(cid){
+  return '<div class="leadTaskAdd"><input type="text" data-ltnew="'+esc(cid)+'" maxlength="200" placeholder="'+esc(t('Add a task…'))+'" aria-label="'+esc(t('Add a task…'))+'">'+
+    '<button class="btn small" data-ltadd="'+esc(cid)+'" aria-label="'+esc(t('Add a task'))+'">＋</button></div>';
+}
 function leadCardHtml_(c, R, objs){
   var o=c.okrId && ((S.base && S.base.okrs) || []).filter(function(x){ return x.id===c.okrId; })[0];
   var cols=leadCols_(), today=todayStr(), late=c.due && c.col!==leadDoneId_() && c.due<today;
@@ -8954,6 +9027,10 @@ function leadCardHtml_(c, R, objs){
   if(c.area && leadAreaName_(c.area)) h+='<span class="leadArea">'+esc(leadAreaName_(c.area))+'</span>';
   if(c.owner) h+='<div class="rowSub">👤 '+esc(nameOf(c.owner))+'</div>';
   if(o){ var p=R.objProgress(o); h+='<div class="leadLink" title="'+esc(o.objective)+'">🎯 '+esc(o.objective)+' · <b>'+p+'%</b><div class="leadBar sm"><div style="width:'+p+'%;background:'+gpRingColor(p)+'"></div></div></div>'; }
+  var tasks=leadTasks_(c), td=tasks.filter(function(x){ return x.done; }).length, open=!!(S.leadOpen||{})[c.id];
+  h+='<button class="leadTasksBtn'+(open?' on':'')+'" data-ltoggle="'+esc(c.id)+'" aria-expanded="'+open+'">'+(tasks.length ? '☑️ '+esc(gpT('{d} of {n} tasks',{d:td,n:tasks.length})) : '＋ '+esc(t('Tasks')))+' <span class="leadCaret">'+(open?'▴':'▾')+'</span></button>';
+  if(tasks.length){ var tp=Math.round(td/tasks.length*100); h+='<div class="leadBar sm"><div style="width:'+tp+'%;background:'+gpRingColor(tp)+'"></div></div>'; }
+  if(open) h+='<div class="leadTasks">'+tasks.map(function(tk){ return leadTaskRowHtml_(c.id, tk, false); }).join('')+leadTaskAddHtml_(c.id)+'</div>';
   h+='<div class="leadMove">'+(i>0?'<button class="linkbtn inline" data-leadmove="'+esc(c.id)+'|'+esc(cols[i-1].id)+'" aria-label="'+esc(t('Move back'))+'">← '+esc(cols[i-1].title)+'</button>':'<span></span>')+
     (i>-1 && i<cols.length-1?'<button class="linkbtn inline" data-leadmove="'+esc(c.id)+'|'+esc(cols[i+1].id)+'" aria-label="'+esc(t('Move on'))+'">'+esc(cols[i+1].title)+' →</button>':'')+'</div>';
   return h+'</div>';
@@ -8965,27 +9042,97 @@ function leadBoardHtml_(){
   var nm=leadNextMonday_();
   h+='<div class="leadHead"><div><b>'+esc(gpT('Next meeting: Monday {date}',{date:hospDate_(nm)}))+'</b>'+
     '<div class="rowSub">'+esc(t('Agenda items to talk about, projects as they move — tie them to an OKR to see it grow.'))+'</div></div>'+
-    '<button class="btn small" id="leadNew">＋ '+esc(t('Add a card'))+'</button></div>';
+    '<div class="leadHeadBtns"><button class="btn small" id="leadNew">＋ '+esc(t('Add a card'))+'</button>'+
+    '<button class="btn ghost small" id="leadEditBoard">✏️ '+esc(t('Edit the board'))+'</button></div></div>';
   if(S.lead.standing.length) h+='<div class="leadStanding" id="leadStanding"><b>'+esc(t('Every Monday'))+'</b>'+S.lead.standing.map(function(x){ return '<span class="leadStandItem">• '+esc(x.title)+'</span>'; }).join('')+'</div>';
-  h+='<div class="chips hospChips">'+[['all',t('All')],['agenda',t('Agenda items')],['project',t('Projects')]].concat(S.lead.areas.map(function(a){ return ['area:'+a.id, a.title]; })).concat([['mine',t('Mine')]]).map(function(f){
-    return '<button class="hospChip'+(filter===f[0]?' on':'')+'" data-leadfilter="'+esc(f[0])+'">'+esc(f[1])+'</button>'; }).join('')+
-    '<button class="hospChip" id="leadEditBoard">✏️ '+esc(t('Edit the board'))+'</button></div>';
+  /* Which cards to show: everything, one kind, or only mine (cards I own
+     or have an open task on). */
+  h+='<div class="leadFilters"><div class="leadFilterRow"><span class="leadFilterLabel">'+esc(t('Show'))+'</span><div class="chips">'+
+    [['all',t('All')],['agenda','💬 '+t('Agenda items')],['project','🔨 '+t('Projects')],['mine','👤 '+t('Mine')]].map(function(f){
+      return '<button class="hospChip'+(filter===f[0]?' on':'')+'" data-leadfilter="'+esc(f[0])+'">'+esc(f[1])+'</button>'; }).join('')+'</div></div></div>';
   if(S.leadEdit) h+=leadSettingsHtml_();
   if(S.leadForm) h+=leadFormHtml_(objs);
-  var cards=S.lead.cards.filter(function(c){ return filter==='all' || (filter==='mine' ? c.owner===S.me.id : filter.indexOf('area:')===0 ? c.area===filter.slice(5) : c.type===filter); });
+  var mine=function(c){ return c.owner===S.me.id || leadTasks_(c).some(function(x){ return !x.done && x.owner===S.me.id; }); };
+  var cards=S.lead.cards.filter(function(c){ return filter==='all' || (filter==='mine' ? mine(c) : c.type===filter); });
   var cutoff=calIso_(new Date(Date.now()-30*86400000));
-  h+='<div class="leadCols" style="--leadN:'+leadCols_().length+'">'+leadCols_().map(function(col, ci){
+  /* On a phone one column at a time, picked by the tabs above it (no
+     scrolling sideways through the board); on a computer they sit side by
+     side and the tabs aren't shown. */
+  var colIcon=function(col, ci){ return col.done ? '✅' : ci===0 ? '📋' : '🔨'; };
+  var lists=leadCols_().map(function(col){
     var list=cards.filter(function(c){ return c.col===col.id; });
     var hidden=0;
     if(col.done){ var recent=list.filter(function(c){ return S.leadOld || !c.doneAt || c.doneAt.slice(0,10)>=cutoff; }); hidden=list.length-recent.length; list=recent; }
     list.sort(function(a,b){ return col.done ? String(b.doneAt||'').localeCompare(String(a.doneAt||'')) : String(a.due||'9999').localeCompare(String(b.due||'9999')); });
-    return '<div class="leadCol" data-leadcol="'+esc(col.id)+'"><div class="leadColHead">'+(col.done?'✅ ':ci===0?'📋 ':'🔨 ')+esc(col.title)+' <span class="hospBadge">'+list.length+'</span></div>'+
+    return { list:list, hidden:hidden };
+  });
+  var cur=leadCols_().some(function(c){ return c.id===S.leadCol; }) ? S.leadCol : (leadCols_()[0]||{}).id;
+  h+='<div class="leadColTabs" role="tablist">'+leadCols_().map(function(col, ci){
+    return '<button class="leadColTab'+(col.id===cur?' on':'')+'" role="tab" data-leadcoltab="'+esc(col.id)+'">'+colIcon(col, ci)+' '+esc(col.title)+' <span class="hospBadge">'+lists[ci].list.length+'</span></button>'; }).join('')+'</div>';
+  h+='<div class="leadCols" style="--leadN:'+leadCols_().length+'">'+leadCols_().map(function(col, ci){
+    var list=lists[ci].list, hidden=lists[ci].hidden;
+    return '<div class="leadCol'+(col.id===cur?' on':'')+'" data-leadcol="'+esc(col.id)+'"><div class="leadColHead">'+colIcon(col, ci)+' '+esc(col.title)+' <span class="hospBadge">'+list.length+'</span></div>'+
       list.map(function(c){ return leadCardHtml_(c, R, objs); }).join('')+
       (!list.length?'<p class="hint leadEmpty">'+esc(t('Nothing here yet.'))+'</p>':'')+
       (hidden?'<button class="linkbtn inline" id="leadOld">'+esc(gpT('Show {n} older',{n:hidden}))+'</button>':'')+
     '</div>';
   }).join('')+'</div>';
   return h+'</div>';
+}
+/* Meeting notes, one page per Monday. Any line can be turned into an agenda
+   item, a project or a task on a card — that card or task remembers the
+   meeting it came from, and the line shows it's on the board. */
+function leadMonday_(){ var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-((d.getDay()+6)%7)); return calIso_(d); }
+function leadAddDays_(iso, n){ var d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return calIso_(d); }
+function leadNoteFor_(date){ return ((S.lead && S.lead.notes) || []).filter(function(n){ return n.date===date; })[0]; }
+function leadDraft_(date){
+  S.leadDrafts=S.leadDrafts||{};
+  var n=leadNoteFor_(date), d=S.leadDrafts[date];
+  if(!d || !d.dirty) d=S.leadDrafts[date]={ text:n ? n.text : '', since:n ? n.updated : '', dirty:false };
+  return d;
+}
+function leadLine_(x){ return String(x||'').replace(/^\s*(?:[-*•#>]+|\d+[.)]|\[[ xX]?\])\s*/, '').replace(/^\[[ xX]?\]\s*/, '').trim(); }
+function leadNoteLinesHtml_(date, text){
+  var standing=(S.lead.standing||[]).map(function(x){ return x.title.toLowerCase(); }), seen={}, lines=[];
+  String(text||'').split('\n').forEach(function(raw){ var l=leadLine_(raw); var k=l.toLowerCase(); if(l && !seen[k] && standing.indexOf(k.replace(/:$/,''))===-1){ seen[k]=1; lines.push(l); } });
+  S.leadLines=lines;
+  if(!lines.length) return '<p class="hint" style="margin:0">'+esc(t('Write a line in the notes — each one can become an agenda item, a project or a task.'))+'</p>';
+  var openCards=S.lead.cards.filter(function(c){ return c.col!==leadDoneId_(); });
+  return lines.map(function(l, i){
+    var k=l.toLowerCase(), card=S.lead.cards.filter(function(c){ return c.title.toLowerCase()===k; })[0], onCard=null;
+    if(!card) S.lead.cards.some(function(c){ return leadTasks_(c).some(function(tk){ if(tk.text.toLowerCase()===k){ onCard=c; return true; } }); });
+    var h='<div class="leadLine" data-lnline="'+i+'"><div class="leadLineText">'+esc(l)+'</div>';
+    if(card) h+='<div class="leadLineDone">✓ '+esc(gpT('On the board — {col}',{col:(leadCols_().filter(function(x){ return x.id===card.col; })[0]||{}).title||''}))+'</div>';
+    else if(onCard) h+='<div class="leadLineDone">✓ '+esc(gpT('Task on “{card}”',{card:onCard.title}))+'</div>';
+    else if(S.leadNoteTask===l) h+='<div class="leadLineTask"><select id="leadLnCard" aria-label="'+esc(t('Which card?'))+'">'+
+      openCards.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>'; }).join('')+'</select>'+
+      '<button class="btn small" data-lntaskgo="'+i+'"'+(openCards.length?'':' disabled')+'>'+esc(t('Add task'))+'</button><button class="linkbtn inline" data-lntaskno="1">'+esc(t('Cancel'))+'</button></div>';
+    else h+='<div class="leadLineBtns"><button class="hospChip" data-lnmake="agenda|'+i+'">＋ 💬 '+esc(t('Agenda item'))+'</button>'+
+      '<button class="hospChip" data-lnmake="project|'+i+'">＋ 🔨 '+esc(t('Project'))+'</button>'+
+      '<button class="hospChip" data-lntask="'+i+'">＋ ☑️ '+esc(t('Task'))+'</button></div>';
+    return h+'</div>';
+  }).join('');
+}
+function leadNotesHtml_(){
+  var h='<div id="leadNotes">';
+  if(!S.lead) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(S.leadErr || t('Loading…'))+'</p></div></div>';
+  var thisMon=leadMonday_(), date=/^\d{4}-\d{2}-\d{2}$/.test(S.leadNoteDate||'') ? S.leadNoteDate : thisMon, d=leadDraft_(date), n=leadNoteFor_(date);
+  var rel=date===thisMon ? t('This week’s meeting') : date===leadAddDays_(thisMon,-7) ? t('Last week') : date===leadAddDays_(thisMon,7) ? t('Next week') : '';
+  h+='<div class="leadNoteWeek"><button class="btn ghost small" data-lnweek="-7" aria-label="'+esc(t('Earlier'))+'">‹</button>'+
+    '<div class="leadNoteDate"><b>'+esc(gpT('Monday {date}',{date:hospDate_(date)}))+'</b>'+(rel?'<div class="rowSub">'+esc(rel)+'</div>':'')+'</div>'+
+    '<button class="btn ghost small" data-lnweek="7" aria-label="'+esc(t('Later'))+'">›</button></div>';
+  var past=((S.lead.notes)||[]).map(function(x){ return x.date; }).filter(function(x){ return x!==date; }).slice(-8).reverse();
+  if(past.length) h+='<div class="chips leadNotePast"><span class="leadFilterLabel">'+esc(t('Earlier notes'))+'</span>'+past.map(function(x){ return '<button class="hospChip" data-lndate="'+esc(x)+'">'+esc(hospDate_(x))+'</button>'; }).join('')+'</div>';
+  h+='<div class="leadNoteGrid"><div class="card leadNoteCard">';
+  if(!d.text) h+='<button class="btn ghost small" id="leadNoteStart">📋 '+esc(t('Start from the agenda'))+'</button>';
+  h+='<textarea id="leadNoteText" rows="14" maxlength="8000" placeholder="'+esc(t('What came up, what was decided, who is doing what… One thing per line.'))+'">'+esc(d.text)+'</textarea>'+
+    '<div class="leadNoteFoot"><span class="hint" id="leadNoteState">'+esc(d.dirty ? t('Not saved yet') : n ? gpT('Saved by {name}',{name:nameOf(n.updatedBy)}) : '')+'</span>'+
+    '<button class="btn small" id="leadNoteSave">'+esc(t('Save notes'))+'</button></div></div>';
+  h+='<div class="card leadNoteCard"><h4 style="margin:0 0 4px">'+esc(t('Put it on the board'))+'</h4><p class="hint" style="margin:0 0 8px">'+esc(t('Turn a line into an agenda item, a project, or a task on a card.'))+'</p>'+
+    '<div id="leadNoteLines">'+leadNoteLinesHtml_(date, d.text)+'</div>';
+  var made=[]; S.lead.cards.forEach(function(c){ if(c.meeting===date && c.fromNotes) made.push((c.type==='project'?'🔨 ':'💬 ')+c.title); leadTasks_(c).forEach(function(tk){ if(tk.meeting===date) made.push('☑️ '+tk.text+' — '+c.title); }); });
+  if(made.length) h+='<h4 style="margin:14px 0 4px">'+esc(t('From this meeting'))+'</h4>'+made.map(function(x){ return '<div class="leadMade">'+esc(x)+'</div>'; }).join('');
+  return h+'</div></div></div>';
 }
 /* Edit the board: its columns (and which one is finished), focus areas and
    the agenda items every Monday has. */
@@ -9024,6 +9171,9 @@ function leadFormHtml_(objs){
     objs.map(function(o){ return '<option value="'+esc(o.id)+'"'+(f.okrId===o.id?' selected':'')+'>'+esc(o.objective)+'</option>'; }).join('')+
     (f.okrId && !known ? '<option value="'+esc(f.okrId)+'" selected>'+esc(t('An earlier quarter’s objective'))+'</option>' : '')+'</select>';
   h+='<label class="f">'+esc(t('Notes'))+'</label><textarea data-lf="notes" rows="3" maxlength="2000" placeholder="'+esc(t('What to decide, next steps, who to ask…'))+'">'+esc(f.notes||'')+'</textarea>';
+  /* an existing card's tasks save as they change; a new card's go with it */
+  var cur=isNew ? null : S.lead.cards.filter(function(c){ return c.id===f.id; })[0], tasks=isNew ? (f.tasks||[]) : leadTasks_(cur);
+  h+='<label class="f">'+esc(t('Tasks'))+'</label><div class="leadTasks inForm" id="leadFormTasks">'+tasks.map(function(tk){ return leadTaskRowHtml_(f.id||'', tk, true); }).join('')+leadTaskAddHtml_(f.id||'')+'</div>';
   h+='<button class="btn" id="leadSave">'+esc(isNew?t('Add card'):t('Save card'))+'</button><button class="btn ghost" id="leadCancel">'+esc(t('Cancel'))+'</button>';
   if(!isNew) h+='<button class="linkbtn teamDelete" id="leadDelete">'+esc(t('Delete this card'))+'</button>';
   return h+'</div>';
@@ -9032,22 +9182,58 @@ function bindLead_(){
   document.querySelectorAll('[data-leadtab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadTab=b.getAttribute('data-leadtab'); render(); }; });
   document.querySelectorAll('#leadGoOkr').forEach(function(b){ b.onclick=function(){ gpTap(); S.mmTab='okr'; render(); }; });
   document.querySelectorAll('[data-leadobjcards]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadTab='board'; S.leadFilter='all'; render(); }; });
-  if((document.getElementById('leadBoard') || document.getElementById('leadOkrs')) && !S.lead && !S.leadLoading && !S.leadErr){
+  if((document.getElementById('leadBoard') || document.getElementById('leadOkrs') || document.getElementById('leadNotes')) && !S.lead && !S.leadLoading && !S.leadErr){
     S.leadLoading=true;
     run('getLeadBoard',[S.auth.user,S.auth.pin],function(d){ S.leadLoading=false; if(d && d.ok) S.lead=d; else S.leadErr=(d && d.err==='not_authorized') ? t('The meeting board is for Campus Leadership.') : t('Could not load'); render(); },
       function(e){ S.leadLoading=false; S.leadErr=(e && e.message) || t('Connection problem — try again.'); render(); });
   }
-  if(!document.getElementById('leadBoard')) return;
+  if(!S.lead) return;
   var save=function(card, msg, after){
     if(S.busy) return; S.busy=true;
-    run('saveLeadCard',[S.auth.user,S.auth.pin,card],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; if(after) after(); if(msg) showMsg(msg); } else showMsg(d && d.err==='bad_card' ? t('Give the card a title first.') : t('Could not save')); render(); });
+    run('saveLeadCard',[S.auth.user,S.auth.pin,card],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; if(after) after(d); if(msg) showMsg(msg); } else showMsg(d && d.err==='bad_card' ? t('Give the card a title first.') : t('Could not save')); render(); });
+  };
+  var saveTask=function(cid, task, msg, after){
+    if(S.busy) return; S.busy=true;
+    run('saveLeadTask',[S.auth.user,S.auth.pin,cid,task],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; if(after) after(d); if(msg) showMsg(msg); } else showMsg(d && d.err==='too_many' ? t('That card has as many tasks as it can hold.') : t('Could not save')); render(); });
   };
   var find=function(id){ return S.lead.cards.filter(function(c){ return c.id===id; })[0]; };
-  var nw=document.getElementById('leadNew'); if(nw) nw.onclick=function(){ gpTap(); var fl=S.leadFilter||''; S.leadForm={ id:'', type: fl==='project' || fl.indexOf('area:')===0 ? 'project' : 'agenda', col:(leadCols_()[0]||{}).id||'', area: fl.indexOf('area:')===0 ? fl.slice(5) : '', title:'', owner:'', due:'', okrId:'', notes:'', meeting:leadNextMonday_() }; render(); var el=document.getElementById('leadForm'); if(el) el.scrollIntoView({block:'start'}); };
+  /* tasks — on the board and in the edit form. A new card (no id yet) keeps
+     its tasks in the form until it is added. */
+  var f=S.leadForm;
+  var taskAt=function(v){ var p=v.split('|'), c=p[0] ? find(p[0]) : null, list=p[0] ? leadTasks_(c) : ((f && f.tasks) || []); return { cid:p[0], task:list.filter(function(x){ return x.id===p[1]; })[0] }; };
+  var changeTask=function(v, patch){
+    var x=taskAt(v); if(!x.task) return;
+    if(!x.cid){ Object.assign(x.task, patch); render(); return; }
+    saveTask(x.cid, Object.assign({}, x.task, patch));
+  };
+  document.querySelectorAll('[data-ltoggle]').forEach(function(b){ b.onclick=function(){ gpTap(); var id=b.getAttribute('data-ltoggle'); S.leadOpen=S.leadOpen||{}; S.leadOpen[id]=!S.leadOpen[id]; render();
+    if(S.leadOpen[id]){ var inp=document.querySelector('[data-leadcard="'+id+'"] [data-ltnew]'); if(inp && !leadTasks_(find(id)).length) inp.focus(); } }; });
+  document.querySelectorAll('[data-ltick]').forEach(function(b){ b.onchange=function(){ gpTap(); changeTask(b.getAttribute('data-ltick'), { done:b.checked }); }; });
+  document.querySelectorAll('[data-ltowner]').forEach(function(b){ b.onchange=function(){ changeTask(b.getAttribute('data-ltowner'), { owner:b.value }); }; });
+  document.querySelectorAll('[data-ltdue]').forEach(function(b){ b.onchange=function(){ changeTask(b.getAttribute('data-ltdue'), { due:b.value }); }; });
+  document.querySelectorAll('[data-ltdel]').forEach(function(b){ b.onclick=function(){ var x=taskAt(b.getAttribute('data-ltdel')); if(!x.task) return; gpTap();
+    if(!x.cid){ f.tasks=f.tasks.filter(function(y){ return y!==x.task; }); render(); return; }
+    if(S.busy) return; S.busy=true;
+    run('deleteLeadTask',[S.auth.user,S.auth.pin,x.cid,x.task.id],function(d){ S.busy=false; if(d && d.ok) S.lead=d; else showMsg(t('Could not save')); render(); }); }; });
+  var addTask=function(cid){
+    var inp=document.querySelector('[data-ltnew="'+cid+'"]'), text=inp ? inp.value.trim() : '';
+    if(!text){ if(inp) inp.focus(); return; }
+    gpTap();
+    if(!cid){ f.tasks=(f.tasks||[]).concat([{ id:'new'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), text:text, done:false, owner:'', due:'' }]); render(); var el=document.querySelector('[data-ltnew=""]'); if(el) el.focus(); return; }
+    saveTask(cid, { text:text }, '', function(){ setTimeout(function(){ var el=document.querySelector('[data-ltnew="'+cid+'"]'); if(el) el.focus(); }, 0); });
+  };
+  document.querySelectorAll('[data-ltadd]').forEach(function(b){ b.onclick=function(){ addTask(b.getAttribute('data-ltadd')); }; });
+  document.querySelectorAll('[data-ltnew]').forEach(function(inp){ inp.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); addTask(inp.getAttribute('data-ltnew')); } }; });
+  if(document.getElementById('leadNotes')) bindLeadNotes_(save, saveTask, find);
+  if(!document.getElementById('leadBoard')) return;
+  var nw=document.getElementById('leadNew'); if(nw) nw.onclick=function(){ gpTap(); S.leadForm={ id:'', type: S.leadFilter==='project' ? 'project' : 'agenda', col:(leadCols_()[0]||{}).id||'', area:'', title:'', owner:'', due:'', okrId:'', notes:'', meeting:leadNextMonday_(), tasks:[] }; render(); var el=document.getElementById('leadForm'); if(el) el.scrollIntoView({block:'start'}); };
   document.querySelectorAll('[data-leadfilter]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadFilter=b.getAttribute('data-leadfilter'); render(); }; });
   var lo=document.getElementById('leadOld'); if(lo) lo.onclick=function(){ S.leadOld=true; render(); };
   document.querySelectorAll('[data-leadedit]').forEach(function(b){ b.onclick=function(){ var c=find(b.getAttribute('data-leadedit')); if(!c) return; gpTap(); S.leadForm=JSON.parse(JSON.stringify(c)); render(); var el=document.getElementById('leadForm'); if(el) el.scrollIntoView({block:'start'}); }; });
-  document.querySelectorAll('[data-leadmove]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-leadmove').split('|'), c=find(p[0]); if(!c) return; gpTap(); save(Object.assign({}, c, { col:p[1] })); }; });
+  document.querySelectorAll('[data-leadcoltab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadCol=b.getAttribute('data-leadcoltab'); render(); }; });
+  document.querySelectorAll('[data-leadmove]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-leadmove').split('|'), c=find(p[0]); if(!c) return; gpTap();
+    var to=leadCols_().filter(function(x){ return x.id===p[1]; })[0];
+    save(Object.assign({}, c, { col:p[1] }), to ? gpT('Moved to {col}',{col:to.title}) : ''); }; });
   // drag a card to another column (a mouse; a phone uses the arrows)
   document.querySelectorAll('[data-leadcard]').forEach(function(el){ el.ondragstart=function(e){ try{ e.dataTransfer.setData('text/plain', el.getAttribute('data-leadcard')); e.dataTransfer.effectAllowed='move'; }catch(x){} }; });
   document.querySelectorAll('[data-leadcol]').forEach(function(col){
@@ -9072,7 +9258,6 @@ function bindLead_(){
       run('saveLeadSettings',[S.auth.user,S.auth.pin,e],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; S.leadEdit=null; showMsg(t('Board saved')); } else showMsg(d && d.err==='no_columns' ? t('The board needs at least one column.') : t('Could not save')); render(); });
     };
   }
-  var f=S.leadForm;
   if(f){
     document.querySelectorAll('[data-lf]').forEach(function(inp){ var k=inp.getAttribute('data-lf'); inp.oninput=inp.onchange=function(){ f[k]=inp.value; }; });
     document.querySelectorAll('[data-lftype]').forEach(function(b){ b.onclick=function(){ f.type=b.getAttribute('data-lftype'); render(); }; });
@@ -9086,6 +9271,48 @@ function bindLead_(){
       run('deleteLeadCard',[S.auth.user,S.auth.pin,f.id],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; S.leadForm=null; showMsg(t('Card deleted')); } else showMsg(t('Could not save')); render(); });
     };
   }
+}
+function bindLeadNotes_(save, saveTask, find){
+  var thisMon=leadMonday_(), date=/^\d{4}-\d{2}-\d{2}$/.test(S.leadNoteDate||'') ? S.leadNoteDate : thisMon, d=leadDraft_(date);
+  var ta=document.getElementById('leadNoteText'), state=document.getElementById('leadNoteState'), box=document.getElementById('leadNoteLines'), timer=null;
+  var go=function(iso){ gpTap(); S.leadNoteDate=iso; S.leadNoteTask=''; render(); };
+  document.querySelectorAll('[data-lnweek]').forEach(function(b){ b.onclick=function(){ go(leadAddDays_(date, Number(b.getAttribute('data-lnweek')))); }; });
+  document.querySelectorAll('[data-lndate]').forEach(function(b){ b.onclick=function(){ go(b.getAttribute('data-lndate')); }; });
+  var saveNote=function(then){
+    if(S.busy) return; S.busy=true;
+    run('saveLeadNote',[S.auth.user,S.auth.pin,{ date:date, text:d.text, since:d.since }],function(r){
+      S.busy=false;
+      if(r && r.ok){ S.lead=r; S.leadDrafts[date]={ text:r.saved ? r.saved.text : '', since:r.saved ? r.saved.updated : '', dirty:false }; if(then) then(); else showMsg(t('Notes saved')); }
+      else if(r && r.err==='changed'){
+        /* someone else saved this Monday's notes meanwhile: keep both, for this person to tidy and save */
+        S.lead=Object.assign({}, S.lead, { notes:r.notes });
+        var theirs=(r.latest && r.latest.text) || '';
+        S.leadDrafts[date]={ text: theirs===d.text ? theirs : theirs+'\n\n— '+t('your notes')+' —\n'+d.text, since:(r.latest && r.latest.updated) || '', dirty:true };
+        showMsg(gpT('{name} saved these notes too — both are in the box. Check them and save.',{name:nameOf(r.latest && r.latest.updatedBy)}));
+      }
+      else showMsg(t('Could not save'));
+      render();
+    });
+  };
+  var lines=function(){ box.innerHTML=leadNoteLinesHtml_(date, d.text); bindLines(); };
+  if(ta) ta.oninput=function(){ d.text=ta.value; d.dirty=true; if(state) state.textContent=t('Not saved yet'); clearTimeout(timer); timer=setTimeout(lines, 350); };
+  var sv=document.getElementById('leadNoteSave'); if(sv) sv.onclick=function(){ gpTap(); saveNote(); };
+  var st=document.getElementById('leadNoteStart'); if(st) st.onclick=function(){ gpTap();
+    var first=(leadCols_()[0]||{}).id, agenda=S.lead.cards.filter(function(c){ return c.col===first && c.type!=='project'; });
+    d.text=S.lead.standing.concat(agenda).map(function(x){ return x.title+'\n- '; }).join('\n'); d.dirty=true; render();
+    var el=document.getElementById('leadNoteText'); if(el){ el.focus(); } };
+  /* make a line into a card or a task — the notes are saved first so the line stays */
+  var withNotes=function(fn){ if(d.dirty) saveNote(fn); else fn(); };
+  var bindLines=function(){
+    var L=S.leadLines||[];
+    box.querySelectorAll('[data-lnmake]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-lnmake').split('|'), text=L[Number(p[1])]; if(!text) return; gpTap();
+      withNotes(function(){ save({ title:text.slice(0,160), type:p[0], col:(leadCols_()[0]||{}).id||'', meeting:date, fromNotes:true }, p[0]==='project' ? t('Project added to the board') : t('Agenda item added to the board')); }); }; });
+    box.querySelectorAll('[data-lntask]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadNoteTask=L[Number(b.getAttribute('data-lntask'))]||''; lines(); }; });
+    box.querySelectorAll('[data-lntaskno]').forEach(function(b){ b.onclick=function(){ S.leadNoteTask=''; lines(); }; });
+    box.querySelectorAll('[data-lntaskgo]').forEach(function(b){ b.onclick=function(){ var text=L[Number(b.getAttribute('data-lntaskgo'))], sel=document.getElementById('leadLnCard'), c=sel && find(sel.value); if(!text || !c) return; gpTap();
+      withNotes(function(){ S.leadNoteTask=''; saveTask(c.id, { text:text.slice(0,200), meeting:date }, gpT('Task added to “{card}”',{card:c.title})); }); }; });
+  };
+  if(box) bindLines();
 }
 
 function teamsDbHtml(){
