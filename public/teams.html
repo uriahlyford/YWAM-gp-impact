@@ -651,6 +651,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .mmBannerEmoji { font-size:30px; line-height:1; flex:0 0 auto; }
 .mmBannerName { font-family:'Koulen',sans-serif; font-size:24px; line-height:1.1; color:var(--ink); }
 .mmBannerNote { font-size:12px; color:var(--accent); font-weight:700; margin-top:4px; }
+.leadBanner { padding:10px 14px; gap:10px; margin-bottom:10px; }
+.leadBanner .mmBannerEmoji { font-size:20px; }
+.leadBanner .mmBannerName { font-size:18px; }
+.leadBanner .rowSub { font-size:12px; }
 .periodSeg .campusBtn { padding-left:8px; padding-right:8px; font-size:12.5px; }
 .teamYear { margin-bottom:12px; }
 .teamYearBars { display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:3px; align-items:end; }
@@ -705,7 +709,8 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .teamGrid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 10px; }
 .teamDelete { color:var(--bad); }
 /* Campus Leadership: OKR dashboard and the Monday meeting board */
-.leadTabs { margin-bottom:12px; }
+.leadTabs { margin-bottom:12px; padding:3px; border-radius:12px; }
+.leadTabs .leadSeg { padding:8px 4px; font-size:13.5px; border-radius:9px; }
 .leadPace { height:6px; background:var(--surface2); border-radius:4px; overflow:hidden; margin:-4px 0 12px; }
 .leadPaceFill { height:100%; background:var(--faint); }
 .leadObj { margin-bottom:8px; }
@@ -717,38 +722,45 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .leadKrText { min-width:0; color:var(--ink); }
 .leadKrPct { font-weight:800; color:var(--muted); flex:0 0 auto; }
 .leadObjCards { margin-top:6px; font-size:13px; }
-.leadHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
-.leadHeadBtns { display:flex; flex-direction:column; gap:6px; flex:0 0 auto; }
-.leadHead .btn.small { width:auto; margin:0; padding:8px 12px; font-size:14px; flex:0 0 auto; }
-.leadFilters { margin:4px 0 10px; }
-.leadFilterRow { display:flex; gap:8px; align-items:flex-start; margin-bottom:4px; }
-.leadFilterLabel { flex:0 0 76px; font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); padding-top:9px; }
-.leadFilterRow .chips { margin:0; flex:1; min-width:0; }
-@media (min-width:900px){ .leadHeadBtns { flex-direction:row; } }
-.leadColTabs { display:flex; gap:4px; background:var(--surface2); border-radius:12px; padding:3px; margin-bottom:8px; }
-.leadColTab { flex:1; min-width:0; border:0; background:transparent; border-radius:9px; padding:9px 4px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.leadColTab.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px var(--shadowSoft); }
-.leadCols { display:block; }
-.leadCol { background:var(--surface2); border-radius:14px; padding:10px; min-height:120px; }
-.leadCol:not(.on) { display:none; }
-.leadCol .leadColHead { display:none; }
-.leadCol.drop { outline:2px dashed var(--accent); outline-offset:-2px; }
-.leadColHead { font-weight:800; font-size:14px; margin-bottom:8px; }
+.leadHead { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px; }
+.leadNext { font-size:15px; min-width:0; }
+.leadNextLabel { font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+.leadHeadBtns { display:flex; gap:6px; align-items:center; flex:0 0 auto; }
+.leadHead .btn.small { width:auto; margin:0; padding:7px 12px; font-size:13.5px; flex:0 0 auto; }
+.leadIconBtn { background:var(--surface2); border:1px solid var(--border); border-radius:999px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; color:var(--ink); padding:0; flex:0 0 auto; }
+.leadFilters { display:flex; gap:2px; background:var(--surface2); border-radius:10px; padding:2px; margin:0 0 8px; }
+.leadSeg { flex:1; min-width:0; border:0; background:transparent; border-radius:8px; padding:6px 4px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.leadSeg.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px var(--shadowSoft); }
+.leadColPick { margin-bottom:4px; }
+.leadCols { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(108px, 1fr); gap:6px; overflow-x:auto; scroll-snap-type:x proximity; padding-bottom:2px; -webkit-overflow-scrolling:touch; }
+.leadCol { background:var(--surface2); border-radius:12px; padding:6px; min-height:140px; scroll-snap-align:start; min-width:0; transition:background .12s; }
+.leadCol.drop { background:var(--banner); outline:2px dashed var(--accent); outline-offset:-2px; }
+.leadColHead { display:flex; justify-content:space-between; align-items:center; gap:4px; font-weight:800; font-size:12px; color:var(--muted); margin:2px 2px 6px; white-space:nowrap; overflow:hidden; }
+.leadColHead span:first-child { overflow:hidden; text-overflow:ellipsis; }
+.leadColN { font-size:11px; background:var(--surface); border-radius:999px; padding:0 6px; color:var(--ink); flex:0 0 auto; }
+.leadDragHint { margin:6px 2px 0; font-size:11.5px; }
 .leadEmpty { margin:4px 2px; }
-.leadCard { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:12px; padding:9px 10px; margin-bottom:8px; }
+.leadCard { position:relative; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:9px; padding:6px 7px 7px; margin-bottom:5px; cursor:grab; overflow:hidden;
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
 .leadCard.project { border-left-color:var(--amber); }
-.leadCardTop { display:flex; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--muted); font-weight:700; }
+.leadCard.lifted { opacity:.35; }
+.leadGhost { position:fixed; left:0; top:0; z-index:1000; pointer-events:none; margin:0; box-shadow:0 10px 24px rgba(0,0,0,.25); cursor:grabbing; }
+.leadTitle { font-size:12.5px; font-weight:700; line-height:1.3; color:var(--ink); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.leadMeta { display:flex; flex-wrap:wrap; gap:3px 6px; align-items:center; margin-top:4px; font-size:10.5px; color:var(--muted); font-weight:700; }
+.leadWho { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 3px; border-radius:999px; background:var(--surface2); border:1px solid var(--border); font-size:9.5px; color:var(--ink); }
 .leadDue.late { color:var(--bad); }
-.leadTitle { display:block; width:100%; text-align:left; background:none; border:0; padding:4px 0 2px; font:inherit; font-size:14.5px; font-weight:800; color:var(--ink); cursor:pointer; }
-.leadLink { font-size:12px; color:var(--muted); margin-top:4px; overflow:hidden; text-overflow:ellipsis; }
-.leadCard .rowSub { font-size:12.5px; }
+.leadTaskCount.all { color:var(--goodInk); }
+.leadOkrLine { position:absolute; left:0; right:0; bottom:0; height:3px; background:var(--surface2); }
+.leadOkrLine span { display:block; height:100%; }
+.leadSheet .leadTasks.inForm { margin-bottom:10px; }
 .leadArea { display:inline-block; font-size:11px; font-weight:700; background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:1px 8px; margin:2px 0; color:var(--muted); }
-.leadStanding { display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; font-size:13px; background:var(--banner); border:1px solid var(--bannerBorder); color:var(--bannerInk); border-radius:12px; padding:8px 12px; margin-bottom:8px; }
+.leadStanding { font-size:12.5px; color:var(--muted); margin:0 0 8px; line-height:1.5; }
+.leadStandItem { color:var(--ink); }
+.leadDot { margin:0 5px; color:var(--faint); }
 .leadSetRow { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
 .leadSetRow input[type=text] { flex:1; min-width:0; margin:0; }
 .leadDonePick { margin:0; font-size:12.5px; flex:0 0 auto; }
 .leadSetAdd { width:auto !important; margin:2px 0 0 !important; padding:7px 12px !important; font-size:13.5px !important; }
-.leadMove { display:flex; justify-content:space-between; margin-top:6px; font-size:12.5px; }
 .leadTasksBtn { display:block; width:100%; text-align:left; background:none; border:0; padding:6px 0 2px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; }
 .leadTasksBtn.on { color:var(--ink); }
 .leadCaret { font-size:10px; }
@@ -769,6 +781,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .leadNoteWeek .btn.small { width:auto; margin:0; padding:6px 14px; font-size:18px; flex:0 0 auto; }
 .leadNoteDate { text-align:center; }
 .leadNotePast { align-items:center; margin-bottom:8px; }
+.leadFilterLabel { font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
 .leadNotePast .leadFilterLabel { flex:0 0 auto; padding:0 4px 0 0; }
 .leadNoteCard textarea { min-height:240px; font-size:14.5px; line-height:1.5; }
 .leadNoteCard #leadNoteStart { width:auto; margin:0 0 8px; }
@@ -797,10 +810,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 @media (min-width:900px){ main.wide .leadNoteGrid { display:grid; grid-template-columns:3fr 2fr; gap:12px; align-items:start; } main.wide .leadNoteGrid .card { margin:0; } }
 @media (min-width:900px){
   main.wide { max-width:1180px; }
-  main.wide .leadCols { display:grid; grid-template-columns:repeat(var(--leadN, 3), minmax(0,1fr)); gap:10px; }
-  main.wide .leadCol, main.wide .leadCol:not(.on) { display:block; }
-  main.wide .leadCol .leadColHead { display:block; }
-  main.wide .leadColTabs { display:none; }
+  main.wide .leadCols { grid-auto-columns:minmax(170px, 1fr); gap:10px; }
+  main.wide .leadCol { padding:8px; min-height:220px; }
+  main.wide .leadTitle { font-size:13.5px; }
+  main.wide .leadMeta { font-size:11.5px; }
   main.wide .leadTiles { grid-template-columns:repeat(4, minmax(0,1fr)); }
   main.wide #leadForm { max-width:760px; }
   main.wide #leadOkrs .leadObj { max-width:none; }
@@ -7532,6 +7545,9 @@ function mmBannerHtml_(sel, mine){
   var isBL = sel.dept===BL_DEPT;
   var name = isBL ? t('Campus Leadership') : t(sel.min);
   var emoji = isBL ? '🧭' : (MIN_EMOJI[sel.min]||'📊');
+  /* Campus Leadership's is one slim line — its page is the OKRs and the board */
+  if(isBL) return '<div class="card mmBanner slim leadBanner" id="mmBanner"><div class="mmBannerEmoji">'+emoji+'</div><div style="min-width:0">'+
+    '<div class="mmBannerName">'+esc(name)+'</div><div class="rowSub">'+esc(campusName(S.me.campus))+'</div></div></div>';
   var h='<div class="card mmBanner" id="mmBanner"><div class="mmBannerEmoji">'+emoji+'</div><div style="min-width:0">'+
     '<div class="mmBannerName">'+esc(name)+'</div>'+
     '<div class="rowSub">'+esc(isBL ? t('OKRs and the Monday leadership meeting') : t(sel.dept))+' · '+esc(campusName(S.me.campus))+'</div>';
@@ -9084,10 +9100,10 @@ function leadOkrs_(){
 function leadNextMonday_(){ var d=new Date(); d.setHours(12,0,0,0); var add=(8-d.getDay())%7; d.setDate(d.getDate()+add); return calIso_(d); }
 function leadSectionHtml_(){
   var tab=S.leadTab==='board' || S.leadTab==='notes' ? S.leadTab : 'okrs';
-  var h='<div class="campusSeg leadTabs" style="max-width:none">'+
-    '<button class="campusBtn'+(tab==='okrs'?' on':'')+'" data-leadtab="okrs">🎯 '+esc(t('Leadership OKRs'))+'</button>'+
-    '<button class="campusBtn'+(tab==='board'?' on':'')+'" data-leadtab="board">🗂️ '+esc(t('Monday meetings'))+'</button>'+
-    '<button class="campusBtn'+(tab==='notes'?' on':'')+'" data-leadtab="notes">📝 '+esc(t('Meeting notes'))+'</button></div>';
+  var h='<div class="leadFilters leadTabs" role="tablist">'+
+    '<button class="leadSeg'+(tab==='okrs'?' on':'')+'" role="tab" data-leadtab="okrs" title="'+esc(t('Leadership OKRs'))+'">🎯 '+esc(t('OKRs'))+'</button>'+
+    '<button class="leadSeg'+(tab==='board'?' on':'')+'" role="tab" data-leadtab="board" title="'+esc(t('Monday meetings'))+'">🗂️ '+esc(t('Board'))+'</button>'+
+    '<button class="leadSeg'+(tab==='notes'?' on':'')+'" role="tab" data-leadtab="notes" title="'+esc(t('Meeting notes'))+'">📝 '+esc(t('Notes'))+'</button></div>';
   return h+(tab==='board' ? leadBoardHtml_() : tab==='notes' ? leadNotesHtml_() : leadOkrDashHtml_());
 }
 function leadCardsFor_(okrId){ return ((S.lead && S.lead.cards) || []).filter(function(c){ return c.okrId===okrId; }); }
@@ -9146,23 +9162,23 @@ function leadTaskAddHtml_(cid){
   return '<div class="leadTaskAdd"><input type="text" data-ltnew="'+esc(cid)+'" maxlength="200" placeholder="'+esc(t('Add a task…'))+'" aria-label="'+esc(t('Add a task…'))+'">'+
     '<button class="btn small" data-ltadd="'+esc(cid)+'" aria-label="'+esc(t('Add a task'))+'">＋</button></div>';
 }
+/* A card on the board is small on purpose: its title, then one line —
+   who owns it, when it's due, how many tasks are done — and a thin line
+   along the bottom for its OKR's progress. Everything else is in the sheet
+   that opens when it's tapped. Hold it (or on a computer just drag it) to
+   move it to another column. */
 function leadCardHtml_(c, R, objs){
   var o=c.okrId && ((S.base && S.base.okrs) || []).filter(function(x){ return x.id===c.okrId; })[0];
-  var cols=leadCols_(), today=todayStr(), late=c.due && c.col!==leadDoneId_() && c.due<today;
-  var i=cols.map(function(x){ return x.id; }).indexOf(c.col);
-  var h='<div class="leadCard '+esc(c.type)+'" data-leadcard="'+esc(c.id)+'" draggable="true">';
-  h+='<div class="leadCardTop"><span class="leadType">'+(c.type==='project'?'🔨 '+esc(t('Project')):'💬 '+esc(t('Agenda item')))+'</span>'+
-    (c.due?'<span class="leadDue'+(late?' late':'')+'">📅 '+esc(hospDate_(c.due))+'</span>':'')+'</div>';
-  h+='<button class="leadTitle" data-leadedit="'+esc(c.id)+'">'+esc(c.title)+'</button>';
-  if(c.area && leadAreaName_(c.area)) h+='<span class="leadArea">'+esc(leadAreaName_(c.area))+'</span>';
-  if(c.owner) h+='<div class="rowSub">👤 '+esc(nameOf(c.owner))+'</div>';
-  if(o){ var p=R.objProgress(o); h+='<div class="leadLink" title="'+esc(o.objective)+'">🎯 '+esc(o.objective)+' · <b>'+p+'%</b><div class="leadBar sm"><div style="width:'+p+'%;background:'+gpRingColor(p)+'"></div></div></div>'; }
-  var tasks=leadTasks_(c), td=tasks.filter(function(x){ return x.done; }).length, open=!!(S.leadOpen||{})[c.id];
-  h+='<button class="leadTasksBtn'+(open?' on':'')+'" data-ltoggle="'+esc(c.id)+'" aria-expanded="'+open+'">'+(tasks.length ? '☑️ '+esc(gpT('{d} of {n} tasks',{d:td,n:tasks.length})) : '＋ '+esc(t('Tasks')))+' <span class="leadCaret">'+(open?'▴':'▾')+'</span></button>';
-  if(tasks.length){ var tp=Math.round(td/tasks.length*100); h+='<div class="leadBar sm"><div style="width:'+tp+'%;background:'+gpRingColor(tp)+'"></div></div>'; }
-  if(open) h+='<div class="leadTasks">'+tasks.map(function(tk){ return leadTaskRowHtml_(c.id, tk, false); }).join('')+leadTaskAddHtml_(c.id)+'</div>';
-  h+='<div class="leadMove">'+(i>0?'<button class="linkbtn inline" data-leadmove="'+esc(c.id)+'|'+esc(cols[i-1].id)+'" aria-label="'+esc(t('Move back'))+'">← '+esc(cols[i-1].title)+'</button>':'<span></span>')+
-    (i>-1 && i<cols.length-1?'<button class="linkbtn inline" data-leadmove="'+esc(c.id)+'|'+esc(cols[i+1].id)+'" aria-label="'+esc(t('Move on'))+'">'+esc(cols[i+1].title)+' →</button>':'')+'</div>';
+  var late=c.due && c.col!==leadDoneId_() && c.due<todayStr();
+  var tasks=leadTasks_(c), td=tasks.filter(function(x){ return x.done; }).length;
+  var meta=[];
+  if(c.owner) meta.push('<span class="leadWho" title="'+esc(nameOf(c.owner))+'">'+esc(initials(nameOf(c.owner)))+'</span>');
+  if(c.due) meta.push('<span class="leadDue'+(late?' late':'')+'">'+esc(hospDate_(c.due))+'</span>');
+  if(tasks.length) meta.push('<span class="leadTaskCount'+(td===tasks.length?' all':'')+'">☑ '+td+'/'+tasks.length+'</span>');
+  var h='<div class="leadCard '+esc(c.type)+'" data-leadcard="'+esc(c.id)+'" role="button" tabindex="0" aria-label="'+esc(c.title)+'">';
+  h+='<div class="leadTitle">'+esc(c.title)+'</div>';
+  if(meta.length) h+='<div class="leadMeta">'+meta.join('')+'</div>';
+  if(o){ var p=R.objProgress(o); h+='<div class="leadOkrLine" title="'+esc(o.objective+' · '+p+'%')+'"><span style="width:'+p+'%;background:'+gpRingColor(p)+'"></span></div>'; }
   return h+'</div>';
 }
 function leadBoardHtml_(){
@@ -9170,25 +9186,21 @@ function leadBoardHtml_(){
   if(!S.lead){ return h+'<div class="card"><p class="sub" style="margin:0">'+esc(S.leadErr || t('Loading…'))+'</p></div></div>'; }
   var R=baseR(), objs=leadOkrs_(), filter=S.leadFilter||'all', today=todayStr();
   var nm=leadNextMonday_();
-  h+='<div class="leadHead"><div><b>'+esc(gpT('Next meeting: Monday {date}',{date:hospDate_(nm)}))+'</b>'+
-    '<div class="rowSub">'+esc(t('Agenda items to talk about, projects as they move — tie them to an OKR to see it grow.'))+'</div></div>'+
-    '<div class="leadHeadBtns"><button class="btn small" id="leadNew">＋ '+esc(t('Add a card'))+'</button>'+
-    '<button class="btn ghost small" id="leadEditBoard">✏️ '+esc(t('Edit the board'))+'</button></div></div>';
-  if(S.lead.standing.length) h+='<div class="leadStanding" id="leadStanding"><b>'+esc(t('Every Monday'))+'</b>'+S.lead.standing.map(function(x){ return '<span class="leadStandItem">• '+esc(x.title)+'</span>'; }).join('')+'</div>';
+  h+='<div class="leadHead"><div class="leadNext"><span class="leadNextLabel">'+esc(t('Next meeting'))+'</span> <b>'+esc(gpT('Monday {date}',{date:hospDate_(nm)}))+'</b></div>'+
+    '<div class="leadHeadBtns"><button class="leadIconBtn" id="leadEditBoard" aria-label="'+esc(t('Edit the board'))+'" title="'+esc(t('Edit the board'))+'">✏️</button>'+
+    '<button class="btn small" id="leadNew">＋ '+esc(t('Card'))+'</button></div></div>';
+  if(S.lead.standing.length) h+='<div class="leadStanding" id="leadStanding"><span class="leadNextLabel">'+esc(t('Every Monday'))+'</span> '+S.lead.standing.map(function(x){ return '<span class="leadStandItem">'+esc(x.title)+'</span>'; }).join('<span class="leadDot">·</span>')+'</div>';
   /* Which cards to show: everything, one kind, or only mine (cards I own
      or have an open task on). */
-  h+='<div class="leadFilters"><div class="leadFilterRow"><span class="leadFilterLabel">'+esc(t('Show'))+'</span><div class="chips">'+
-    [['all',t('All')],['agenda','💬 '+t('Agenda items')],['project','🔨 '+t('Projects')],['mine','👤 '+t('Mine')]].map(function(f){
-      return '<button class="hospChip'+(filter===f[0]?' on':'')+'" data-leadfilter="'+esc(f[0])+'">'+esc(f[1])+'</button>'; }).join('')+'</div></div></div>';
+  h+='<div class="leadFilters" role="group" aria-label="'+esc(t('Show'))+'">'+
+    [['all',t('All')],['agenda','💬 '+t('Agenda')],['project','🔨 '+t('Projects')],['mine','👤 '+t('Mine')]].map(function(f){
+      return '<button class="leadSeg'+(filter===f[0]?' on':'')+'" data-leadfilter="'+esc(f[0])+'">'+esc(f[1])+'</button>'; }).join('')+'</div>';
   if(S.leadEdit) h+=leadSettingsHtml_();
-  if(S.leadForm) h+=leadFormHtml_(objs);
   var mine=function(c){ return c.owner===S.me.id || leadTasks_(c).some(function(x){ return !x.done && x.owner===S.me.id; }); };
   var cards=S.lead.cards.filter(function(c){ return filter==='all' || (filter==='mine' ? mine(c) : c.type===filter); });
   var cutoff=calIso_(new Date(Date.now()-30*86400000));
-  /* On a phone one column at a time, picked by the tabs above it (no
-     scrolling sideways through the board); on a computer they sit side by
-     side and the tabs aren't shown. */
-  var colIcon=function(col, ci){ return col.done ? '✅' : ci===0 ? '📋' : '🔨'; };
+  /* The columns side by side, narrow enough that three fit on a phone;
+     a board with more scrolls across a little. */
   var lists=leadCols_().map(function(col){
     var list=cards.filter(function(c){ return c.col===col.id; });
     var hidden=0;
@@ -9196,17 +9208,16 @@ function leadBoardHtml_(){
     list.sort(function(a,b){ return col.done ? String(b.doneAt||'').localeCompare(String(a.doneAt||'')) : String(a.due||'9999').localeCompare(String(b.due||'9999')); });
     return { list:list, hidden:hidden };
   });
-  var cur=leadCols_().some(function(c){ return c.id===S.leadCol; }) ? S.leadCol : (leadCols_()[0]||{}).id;
-  h+='<div class="leadColTabs" role="tablist">'+leadCols_().map(function(col, ci){
-    return '<button class="leadColTab'+(col.id===cur?' on':'')+'" role="tab" data-leadcoltab="'+esc(col.id)+'">'+colIcon(col, ci)+' '+esc(col.title)+' <span class="hospBadge">'+lists[ci].list.length+'</span></button>'; }).join('')+'</div>';
   h+='<div class="leadCols" style="--leadN:'+leadCols_().length+'">'+leadCols_().map(function(col, ci){
     var list=lists[ci].list, hidden=lists[ci].hidden;
-    return '<div class="leadCol'+(col.id===cur?' on':'')+'" data-leadcol="'+esc(col.id)+'"><div class="leadColHead">'+colIcon(col, ci)+' '+esc(col.title)+' <span class="hospBadge">'+list.length+'</span></div>'+
+    return '<div class="leadCol" data-leadcol="'+esc(col.id)+'"><div class="leadColHead"><span>'+esc(col.title)+'</span><span class="leadColN">'+list.length+'</span></div>'+
       list.map(function(c){ return leadCardHtml_(c, R, objs); }).join('')+
       (!list.length?'<p class="hint leadEmpty">'+esc(t('Nothing here yet.'))+'</p>':'')+
       (hidden?'<button class="linkbtn inline" id="leadOld">'+esc(gpT('Show {n} older',{n:hidden}))+'</button>':'')+
     '</div>';
   }).join('')+'</div>';
+  h+='<p class="hint leadDragHint">'+esc(t('Tap a card to open it. Hold and drag it to move it.'))+'</p>';
+  if(S.leadForm) h+=leadFormHtml_(objs);
   return h+'</div>';
 }
 /* Meeting notes, one page per Monday. Any line can be turned into an agenda
@@ -9301,19 +9312,20 @@ function leadSettingsHtml_(){
 }
 function leadFormHtml_(objs){
   var f=S.leadForm, isNew=!f.id;
-  var h='<div class="card" id="leadForm"><h3 style="margin-top:0">'+esc(isNew?t('New card'):t('Edit card'))+'</h3>';
+  var h='<div class="scrim" id="leadScrim"></div><div class="schedSheet leadSheet" id="leadForm" role="dialog" aria-label="'+esc(isNew?t('New card'):f.title)+'">'+
+    '<div class="schedSheetHead"><h3 style="margin:0">'+esc(isNew?t('New card'):t('Card'))+'</h3><button class="leadIconBtn" id="leadClose" aria-label="'+esc(t('Close'))+'">✕</button></div>';
   h+='<div class="chips hospChips">'+[['agenda','💬','Agenda item'],['project','🔨','Project']].map(function(x){
     return '<button class="hospChip'+(f.type===x[0]?' on':'')+'" data-lftype="'+x[0]+'">'+x[1]+' '+esc(t(x[2]))+'</button>'; }).join('')+'</div>';
   h+='<label class="f">'+esc(t('Title'))+'</label><input type="text" data-lf="title" maxlength="160" value="'+esc(f.title||'')+'" placeholder="'+esc(t('e.g. Staff retreat plan'))+'">';
   h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Who owns it'))+'</label><select data-lf="owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+
     leadOwnerOptions_().map(function(p){ return '<option value="'+esc(p.id)+'"'+(f.owner===p.id?' selected':'')+'>'+esc(p.name)+'</option>'; }).join('')+'</select></div>'+
     '<div><label class="f">'+esc(t('Due'))+'</label><input type="date" data-lf="due" value="'+esc(f.due||'')+'"></div></div>';
-  h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Column'))+'</label><select data-lf="col">'+leadCols_().map(function(c){ return '<option value="'+esc(c.id)+'"'+(f.col===c.id?' selected':'')+'>'+esc(c.title)+'</option>'; }).join('')+'</select></div>'+
-    '<div><label class="f">'+esc(t('Focus area'))+'</label><select data-lf="area"><option value="">'+esc(t('— none —'))+'</option>'+(S.lead.areas||[]).map(function(a){ return '<option value="'+esc(a.id)+'"'+(f.area===a.id?' selected':'')+'>'+esc(a.title)+'</option>'; }).join('')+'</select></div></div>';
+  h+='<label class="f">'+esc(t('Column'))+'</label><div class="leadFilters leadColPick">'+leadCols_().map(function(c){ return '<button class="leadSeg'+(f.col===c.id?' on':'')+'" data-lfcol="'+esc(c.id)+'">'+esc(c.title)+'</button>'; }).join('')+'</div>';
+  h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Focus area'))+'</label><select data-lf="area"><option value="">'+esc(t('— none —'))+'</option>'+(S.lead.areas||[]).map(function(a){ return '<option value="'+esc(a.id)+'"'+(f.area===a.id?' selected':'')+'>'+esc(a.title)+'</option>'; }).join('')+'</select></div>';
   var known=objs.some(function(o){ return o.id===f.okrId; });
-  h+='<label class="f">'+esc(t('Moves forward which OKR?'))+'</label><select data-lf="okrId"><option value="">'+esc(t('— none —'))+'</option>'+
+  h+='<div><label class="f">'+esc(t('Moves forward which OKR?'))+'</label><select data-lf="okrId"><option value="">'+esc(t('— none —'))+'</option>'+
     objs.map(function(o){ return '<option value="'+esc(o.id)+'"'+(f.okrId===o.id?' selected':'')+'>'+esc(o.objective)+'</option>'; }).join('')+
-    (f.okrId && !known ? '<option value="'+esc(f.okrId)+'" selected>'+esc(t('An earlier quarter’s objective'))+'</option>' : '')+'</select>';
+    (f.okrId && !known ? '<option value="'+esc(f.okrId)+'" selected>'+esc(t('An earlier quarter’s objective'))+'</option>' : '')+'</select></div></div>';
   h+='<label class="f">'+esc(t('Notes'))+'</label><textarea data-lf="notes" rows="3" maxlength="2000" placeholder="'+esc(t('What to decide, next steps, who to ask…'))+'">'+esc(f.notes||'')+'</textarea>';
   /* an existing card's tasks save as they change; a new card's go with it */
   var cur=isNew ? null : S.lead.cards.filter(function(c){ return c.id===f.id; })[0], tasks=isNew ? (f.tasks||[]) : leadTasks_(cur);
@@ -9321,6 +9333,69 @@ function leadFormHtml_(objs){
   h+='<button class="btn" id="leadSave">'+esc(isNew?t('Add card'):t('Save card'))+'</button><button class="btn ghost" id="leadCancel">'+esc(t('Cancel'))+'</button>';
   if(!isNew) h+='<button class="linkbtn teamDelete" id="leadDelete">'+esc(t('Delete this card'))+'</button>';
   return h+'</div>';
+}
+/* Moving a card: on a phone, hold it for a moment until it lifts, then drag
+   it over another column and let go; with a mouse, just drag it. A short
+   tap opens it. While a card is held the board scrolls sideways if the
+   finger nears its edge. */
+function leadDrag_(onTap, onDrop){
+  var board=document.querySelector('#leadBoard .leadCols'); if(!board) return;
+  var HOLD=320, d=null;
+  var colAt=function(x, y){ var el=document.elementFromPoint(x, y); return el && el.closest ? el.closest('[data-leadcol]') : null; };
+  var mark=function(col){ board.querySelectorAll('.leadCol.drop').forEach(function(c){ if(c!==col) c.classList.remove('drop'); }); if(col) col.classList.add('drop'); };
+  var lift=function(){
+    if(!d || d.ghost) return;
+    var r=d.el.getBoundingClientRect();
+    d.ghost=d.el.cloneNode(true); d.ghost.classList.add('leadGhost'); d.ghost.removeAttribute('data-leadcard');
+    d.ghost.style.width=r.width+'px'; d.dx=d.x-r.left; d.dy=d.y-r.top;
+    document.body.appendChild(d.ghost); d.el.classList.add('lifted');
+    try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
+    move(d.x, d.y);
+  };
+  var move=function(x, y){
+    if(!d || !d.ghost) return;
+    d.x=x; d.y=y;
+    d.ghost.style.transform='translate('+(x-d.dx)+'px,'+(y-d.dy)+'px) rotate(2deg)';
+    mark(colAt(x, y));
+    var br=board.getBoundingClientRect();
+    d.edge = x<br.left+36 ? -1 : x>br.right-36 ? 1 : 0;
+    if(d.edge && !d.timer) d.timer=setInterval(function(){ if(!d || !d.edge){ return; } board.scrollLeft+=d.edge*12; mark(colAt(d.x, d.y)); }, 30);
+  };
+  var end=function(cancel){
+    if(!d) return;
+    clearTimeout(d.hold); clearInterval(d.timer);
+    var was=d; d=null;
+    mark(null);
+    if(was.ghost){ was.ghost.remove(); was.el.classList.remove('lifted');
+      var col=!cancel && colAt(was.x, was.y); if(col) onDrop(was.id, col.getAttribute('data-leadcol'));
+      return true; }
+    return false;
+  };
+  board.querySelectorAll('[data-leadcard]').forEach(function(el){
+    var id=el.getAttribute('data-leadcard');
+    el.addEventListener('touchstart', function(e){
+      if(e.touches.length!==1) return;
+      var p=e.touches[0]; d={ el:el, id:id, x:p.clientX, y:p.clientY, sx:p.clientX, sy:p.clientY, touch:true };
+      d.hold=setTimeout(lift, HOLD);
+    }, { passive:true });
+    el.addEventListener('touchmove', function(e){
+      if(!d || d.el!==el) return;
+      var p=e.touches[0];
+      if(d.ghost){ e.preventDefault(); move(p.clientX, p.clientY); return; }
+      if(Math.abs(p.clientX-d.sx)+Math.abs(p.clientY-d.sy)>10){ clearTimeout(d.hold); d=null; }   // a scroll, not a hold
+    }, { passive:false });
+    el.addEventListener('touchend', function(e){ if(!d || d.el!==el) return; var lifted=!!d.ghost; end(false); if(lifted) e.preventDefault(); else { e.preventDefault(); onTap(id); } });
+    el.addEventListener('touchcancel', function(){ if(d && d.el===el) end(true); });
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    el.addEventListener('mousedown', function(e){
+      if(e.button!==0) return;
+      e.preventDefault();
+      d={ el:el, id:id, x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY };
+      var mm=function(ev){ if(!d) return; if(!d.ghost && Math.abs(ev.clientX-d.sx)+Math.abs(ev.clientY-d.sy)>6){ d.x=ev.clientX; d.y=ev.clientY; lift(); } else move(ev.clientX, ev.clientY); };
+      var mu=function(ev){ document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); if(!d) return; d.x=ev.clientX; d.y=ev.clientY; if(!end(false)) onTap(id); };
+      document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu);
+    });
+  });
 }
 function bindLead_(){
   document.querySelectorAll('[data-leadtab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadTab=b.getAttribute('data-leadtab'); render(); }; });
@@ -9350,8 +9425,6 @@ function bindLead_(){
     if(!x.cid){ Object.assign(x.task, patch); render(); return; }
     saveTask(x.cid, Object.assign({}, x.task, patch));
   };
-  document.querySelectorAll('[data-ltoggle]').forEach(function(b){ b.onclick=function(){ gpTap(); var id=b.getAttribute('data-ltoggle'); S.leadOpen=S.leadOpen||{}; S.leadOpen[id]=!S.leadOpen[id]; render();
-    if(S.leadOpen[id]){ var inp=document.querySelector('[data-leadcard="'+id+'"] [data-ltnew]'); if(inp && !leadTasks_(find(id)).length) inp.focus(); } }; });
   document.querySelectorAll('[data-ltick]').forEach(function(b){ b.onchange=function(){ gpTap(); changeTask(b.getAttribute('data-ltick'), { done:b.checked }); }; });
   document.querySelectorAll('[data-ltowner]').forEach(function(b){ b.onchange=function(){ changeTask(b.getAttribute('data-ltowner'), { owner:b.value }); }; });
   document.querySelectorAll('[data-ltdue]').forEach(function(b){ b.onchange=function(){ changeTask(b.getAttribute('data-ltdue'), { due:b.value }); }; });
@@ -9370,20 +9443,14 @@ function bindLead_(){
   document.querySelectorAll('[data-ltnew]').forEach(function(inp){ inp.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); addTask(inp.getAttribute('data-ltnew')); } }; });
   if(document.getElementById('leadNotes')) bindLeadNotes_(save, saveTask, find);
   if(!document.getElementById('leadBoard')) return;
-  var nw=document.getElementById('leadNew'); if(nw) nw.onclick=function(){ gpTap(); S.leadForm={ id:'', type: S.leadFilter==='project' ? 'project' : 'agenda', col:(leadCols_()[0]||{}).id||'', area:'', title:'', owner:'', due:'', okrId:'', notes:'', meeting:leadNextMonday_(), tasks:[] }; render(); var el=document.getElementById('leadForm'); if(el) el.scrollIntoView({block:'start'}); };
+  var nw=document.getElementById('leadNew'); if(nw) nw.onclick=function(){ gpTap(); S.leadForm={ id:'', type: S.leadFilter==='project' ? 'project' : 'agenda', col:(leadCols_()[0]||{}).id||'', area:'', title:'', owner:'', due:'', okrId:'', notes:'', meeting:leadNextMonday_(), tasks:[] }; render(); var el=document.querySelector('#leadForm [data-lf="title"]'); if(el) el.focus(); };
   document.querySelectorAll('[data-leadfilter]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadFilter=b.getAttribute('data-leadfilter'); render(); }; });
   var lo=document.getElementById('leadOld'); if(lo) lo.onclick=function(){ S.leadOld=true; render(); };
-  document.querySelectorAll('[data-leadedit]').forEach(function(b){ b.onclick=function(){ var c=find(b.getAttribute('data-leadedit')); if(!c) return; gpTap(); S.leadForm=JSON.parse(JSON.stringify(c)); render(); var el=document.getElementById('leadForm'); if(el) el.scrollIntoView({block:'start'}); }; });
-  document.querySelectorAll('[data-leadcoltab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadCol=b.getAttribute('data-leadcoltab'); render(); }; });
-  document.querySelectorAll('[data-leadmove]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-leadmove').split('|'), c=find(p[0]); if(!c) return; gpTap();
-    var to=leadCols_().filter(function(x){ return x.id===p[1]; })[0];
-    save(Object.assign({}, c, { col:p[1] }), to ? gpT('Moved to {col}',{col:to.title}) : ''); }; });
-  // drag a card to another column (a mouse; a phone uses the arrows)
-  document.querySelectorAll('[data-leadcard]').forEach(function(el){ el.ondragstart=function(e){ try{ e.dataTransfer.setData('text/plain', el.getAttribute('data-leadcard')); e.dataTransfer.effectAllowed='move'; }catch(x){} }; });
-  document.querySelectorAll('[data-leadcol]').forEach(function(col){
-    col.ondragover=function(e){ e.preventDefault(); col.classList.add('drop'); };
-    col.ondragleave=function(){ col.classList.remove('drop'); };
-    col.ondrop=function(e){ e.preventDefault(); col.classList.remove('drop'); var id=''; try{ id=e.dataTransfer.getData('text/plain'); }catch(x){} var c=find(id); var to=col.getAttribute('data-leadcol'); if(c && c.col!==to) save(Object.assign({}, c, { col:to })); };
+  var openCard=function(id){ var c=find(id); if(!c) return; gpTap(); S.leadForm=JSON.parse(JSON.stringify(c)); render(); };
+  document.querySelectorAll('[data-leadcard]').forEach(function(el){ el.onkeydown=function(e){ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openCard(el.getAttribute('data-leadcard')); } }; });
+  leadDrag_(openCard, function(id, to){
+    var c=find(id), col=leadCols_().filter(function(x){ return x.id===to; })[0];
+    if(c && col && c.col!==to) save(Object.assign({}, c, { col:to }), gpT('Moved to {col}',{col:col.title}));
   });
   var eb=document.getElementById('leadEditBoard');
   if(eb) eb.onclick=function(){ gpTap(); S.leadEdit = S.leadEdit ? null : { cols:JSON.parse(JSON.stringify(S.lead.cols)), areas:JSON.parse(JSON.stringify(S.lead.areas)), standing:JSON.parse(JSON.stringify(S.lead.standing)) }; render(); var el=document.getElementById('leadSettings'); if(el) el.scrollIntoView({block:'start'}); };
@@ -9406,6 +9473,8 @@ function bindLead_(){
     document.querySelectorAll('[data-lf]').forEach(function(inp){ var k=inp.getAttribute('data-lf'); inp.oninput=inp.onchange=function(){ f[k]=inp.value; }; });
     document.querySelectorAll('[data-lftype]').forEach(function(b){ b.onclick=function(){ f.type=b.getAttribute('data-lftype'); render(); }; });
     var cn=document.getElementById('leadCancel'); if(cn) cn.onclick=function(){ S.leadForm=null; render(); };
+    ['leadClose','leadScrim'].forEach(function(id){ var x=document.getElementById(id); if(x) x.onclick=function(){ S.leadForm=null; render(); }; });
+    document.querySelectorAll('[data-lfcol]').forEach(function(b){ b.onclick=function(){ gpTap(); f.col=b.getAttribute('data-lfcol'); render(); }; });
     var sv=document.getElementById('leadSave');
     if(sv) sv.onclick=function(){ if(!(f.title||'').trim()){ showMsg(t('Give the card a title first.')); return; } save(f, f.id ? t('Card saved') : t('Card added'), function(){ S.leadForm=null; }); };
     var dl=document.getElementById('leadDelete');
