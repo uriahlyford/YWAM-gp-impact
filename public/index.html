@@ -1610,6 +1610,17 @@ function saveCard(btn){
     updates.push({ dept:state.dept, ministry:state.ministry, metric:inp.getAttribute('data-metric'),
       week:state.week, value: inp.value==='' ? null : Number(inp.value) });
   });
+  /* a score is 1–10 and a percentage 0–100 (kpiRange in taxonomy.js); the
+     server refuses anything else, so say so here instead of losing it */
+  if(state.ministry!=='Outreach Teams' && typeof kpiRange==='function'){
+    for(var i=0;i<updates.length;i++){
+      var r=kpiRange(updates[i].metric||''), v=updates[i].value;
+      if(r && v!==null && !isNaN(v) && (v<r.min || v>r.max)){
+        showError(gpT('{metric} goes from {min} to {max} — check the number you typed.',{metric:t(updates[i].metric), min:r.min, max:r.max}));
+        return;
+      }
+    }
+  }
   btn.disabled=true; btn.textContent=t('Saving…'); hideError();
   /* The server needs to know who is writing: the leadership code, or a staff
      login. Without one of them it refuses, and a staff login may only write its

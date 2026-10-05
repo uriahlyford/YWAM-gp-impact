@@ -66,6 +66,7 @@ public/            the whole frontend, served directly by Netlify
   taxonomy.js      campuses, departments, ministries, metrics, staff types, countries
   km.js            Khmer dictionary — REVIEWED_KM and PENDING_KM, kept apart
   jobfocus.js      what each of the 28 ministries is for
+  kpiguide.js      what each KPI means — the line behind the ⓘ beside every box staff log
   personality.js   the personality-type questionnaire, sixteen types, avatars and tips — GP's own words and art
   strengths.js     CliftonStrengths theme names, for RECORDING real Gallup results, and which GP strength each matches
   gpstrengths.js   GP Strengths: the free strengths test — 34 strengths in four groups, 102 pairs, GP's own words
