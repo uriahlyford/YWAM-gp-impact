@@ -4234,6 +4234,11 @@ async function saveLeadSettings(username, pin, settings) {
 const HR_FILE_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 const HR_FILE_MAX_B64 = 5.6 * 1024 * 1024;   // ~4 MB of file, once base64'd
 const HR_MAX_CONTRACTS = 30, HR_MAX_FILES = 10;
+/* The campus a contract was signed with — someone who signed with Poipet
+   and later moved to Siem Reap keeps that Poipet contract as it was. Same
+   ids as CAMPUSES in taxonomy.js. A contract from before this has none,
+   which reads as the person's own campus. */
+const HR_CAMPUSES = ['poipet', 'siemreap'];
 function canHR_(s) { return !!(s && (s.isAdmin || s.hr)); }
 function hrId_(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function archivedOf_(s) {
@@ -4252,6 +4257,7 @@ function cleanContract_(c, keepFiles) {
   const signed = isoMonth_(c.signed), years = finiteNum_(c.years, 0.25, 30);
   if (!signed || years == null) return null;
   return { id: str_(c.id, 60) || hrId_('ct'), signed: signed, years: Math.round(years * 4) / 4, notes: str_(c.notes, 500),
+    campus: HR_CAMPUSES.indexOf(c.campus) > -1 ? c.campus : '',
     files: (Array.isArray(keepFiles) ? keepFiles : []).map(cleanFileMeta_).filter(Boolean).slice(0, HR_MAX_FILES),
     added: str_(c.added, 40), addedBy: str_(c.addedBy, 60) };
 }

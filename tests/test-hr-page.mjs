@@ -54,8 +54,8 @@ async function open(who) {
       trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [], base: { leader: false, entries: {}, okrs: [], survey: [], metricOverrides: [] }, hrDue: who.isAdmin ? 2 : null };
     else if (b.fn === 'getData') out = { entries: {}, okrs: [], survey: [] };
     else if (b.fn === 'hrList') out = { ok: true, staff };
-    else if (b.fn === 'hrSaveStart') { const p = find(b.args[2]); const d = b.args[3]; p.ywamSince = d.ywamSince === '' ? null : d.ywamSince; p.baseSince = d.baseSince; out = { ok: true, staff: p }; }
-    else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; if (c.ywamSince !== undefined) p.ywamSince = c.ywamSince === '' ? null : c.ywamSince; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); out = { ok: true, staff: p }; }
+    else if (b.fn === 'hrSaveStart') { const p = find(b.args[2]); const d = b.args[3]; if (d.ywamSince !== undefined) p.ywamSince = d.ywamSince === '' ? null : d.ywamSince; if (d.baseSince !== undefined) p.baseSince = d.baseSince; out = { ok: true, staff: p }; }
+    else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; if (c.ywamSince !== undefined) p.ywamSince = c.ywamSince === '' ? null : c.ywamSince; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, campus: c.campus, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); out = { ok: true, staff: p }; }
     else if (b.fn === 'hrUploadFile') { const p = find(b.args[2]); const c = p.contracts.find(x => x.id === b.args[3]); const meta = { id: 'f_new', name: b.args[4], mime: b.args[5], size: Math.floor(b.args[6].length * 3 / 4) }; c.files = c.files.concat([meta]); out = { ok: true, staff: p, file: meta }; }
     else if (b.fn === 'hrGetFile') out = { ok: true, id: b.args[2], name: 'contract 2021.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQ=' };
     else if (b.fn === 'hrArchive') { const p = find(b.args[2]); p.active = false; p.archived = { at: b.args[3].at, reason: b.args[3].reason, by: 'st_admin' }; out = { ok: true, staff: p }; }
@@ -148,18 +148,19 @@ console.log('=== the menu ===');
   const sinceBefore = await page.$eval('.adminPersonHead', e => e.textContent);
   ok('a renewal doesn’t move when they started here — still the first contract', /Serving in YWAM Siem Reap 4 yr 11 mo/.test(sinceBefore), sinceBefore);
 
-  // the start dates, on their own
-  ok('Start dates: YWAM and YWAM Siem Reap, apart from the contracts, saying contracts don’t change them', !!(await page.$('#hrStarts #hr_ywamsince')) && !!(await page.$('#hrStarts #hr_basesince')) && /Started at YWAM Siem Reap/.test(await page.$eval('#hrStarts', e => e.textContent)) && /never changes these/.test(await page.$eval('#hrStarts', e => e.textContent)));
-  await page.fill('#hr_ywamsince', '2003');
-  await page.fill('#hr_basesince', ym(Y + 1, 1));
-  await page.click('#hrStartSave'); await page.waitForTimeout(300);
-  ok('a start month in the future is stopped on the page', !sent.some(x => x.fn === 'hrSaveStart'));
-  await page.fill('#hr_ywamsince', '2003');
-  await page.fill('#hr_basesince', ym(Y - 7, 3));
-  await page.click('#hrStartSave'); await page.waitForTimeout(500);
-  const ss = sent.find(x => x.fn === 'hrSaveStart');
-  ok('Save start dates posts both for this person', ss && ss.args[2] === 'st_1' && ss.args[3].ywamSince === 2003 && ss.args[3].baseSince === ym(Y - 7, 3), ss && JSON.stringify(ss.args[3]));
-  ok('the header says how long in YWAM, and in YWAM Siem Reap from the date set', /In YWAM since 2003/.test(await page.$eval('#hrYwamSince', e => e.textContent)) && /Serving in YWAM Siem Reap [67] yr/.test(await page.$eval('.adminPersonHead', e => e.textContent)), await page.$eval('.adminPersonHead', e => e.textContent));
+  // the starts, in the profile at the top — each with a small edit
+  ok('the profile lines: In YWAM (add the year), serving in Siem Reap — each with ✏️; contracts don’t ask', /In YWAM since — add the year/.test(await page.$eval('#hrYwamSince', e => e.textContent)) && !!(await page.$('#hrYwamSince [data-hrstartedit="ywam"]')) && !!(await page.$('#hrBaseSince [data-hrstartedit="base"]')) && !(await page.$('#hrStarts')));
+  await page.click('[data-hrstartedit="ywam"]'); await page.waitForTimeout(200);
+  await page.fill('#hr_ywamsince', '2003'); await page.press('#hr_ywamsince', 'Enter'); await page.waitForTimeout(500);
+  let ss = sent.filter(x => x.fn === 'hrSaveStart').pop();
+  ok('✏️ on In YWAM edits just the year, right there', ss && ss.args[2] === 'st_1' && ss.args[3].ywamSince === 2003 && ss.args[3].baseSince === undefined && /In YWAM since 2003/.test(await page.$eval('#hrYwamSince', e => e.textContent)) && !(await page.$('#hrStartBox')), ss && JSON.stringify(ss.args[3]));
+  await page.click('[data-hrstartedit="base"]'); await page.waitForTimeout(200);
+  ok('✏️ on Siem Reap opens a month, filled with where it counts from now', await page.$eval('#hr_basesince', e => e.value) === ym(Y - 5, M + 1));
+  await page.fill('#hr_basesince', ym(Y + 1, 1)); await page.click('#hrStartSave'); await page.waitForTimeout(300);
+  ok('a start month in the future is stopped on the page', sent.filter(x => x.fn === 'hrSaveStart').length === 1);
+  await page.fill('#hr_basesince', ym(Y - 7, 3)); await page.click('#hrStartSave'); await page.waitForTimeout(500);
+  ss = sent.filter(x => x.fn === 'hrSaveStart').pop();
+  ok('… and saves the month they started here', ss.args[3].baseSince === ym(Y - 7, 3) && ss.args[3].ywamSince === undefined && /Serving in YWAM Siem Reap [67] yr/.test(await page.$eval('#hrBaseSince', e => e.textContent)), await page.$eval('#hrBaseSince', e => e.textContent));
 
   // attach a file to the new contract
   const input = await page.$('[data-hrattach="c_new"]');
@@ -196,6 +197,33 @@ console.log('=== the menu ===');
   const tiles2 = await page.evaluate(() => [].map.call(document.querySelectorAll('.mmTile'), t => t.querySelector('.mmTileNum').textContent.trim()));
   ok('the home tiles follow: one fewer active, one more archived', tiles2[0] === '4' && tiles2[3] === '2', tiles2.join(','));
   ok('no page errors', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+// signed with Poipet, moved to Siem Reap when it was pioneered
+staff.push({ ...base, id: 'st_6', name: 'Mora Moved', username: 'mora', dept: 'Community Service', ministry: 'Cafe', ywamSince: 2010, baseSince: ym(Y - 2, 1), contracts: [{ id: 'c6', signed: ym(Y - 4, 1), years: 6, campus: 'poipet', files: [] }] });
+{
+  const { ctx, page, errors, sent } = await open(ADMIN);
+  await page.click('#menuBtn'); await page.waitForTimeout(300);
+  await page.click('[data-menu-item="hr"]'); await page.waitForTimeout(800);
+  console.log('\n=== moved from Poipet to Siem Reap ===');
+  await page.click('[data-hrperson="st_6"]'); await page.waitForTimeout(300);
+  const mora = await page.evaluate(() => ({ ywam: document.querySelector('#hrYwamSince').textContent, gp: (document.querySelector('#hrGpSince') || {}).textContent || '', base: document.querySelector('#hrBaseSince').textContent, tag: document.querySelector('[data-hrcontract="c6"] .hrCampusTag').textContent }));
+  ok('their Poipet contract says Poipet', mora.tag === 'YWAM Poipet', mora.tag);
+  ok('three starts: YWAM anywhere, YWAM GP (their Poipet contract), and Siem Reap since they moved', /In YWAM since 2010/.test(mora.ywam) && new RegExp('With YWAM GP since Jan ' + (Y - 4) + ' — 4 yr').test(mora.gp) && new RegExp('Serving in YWAM Siem Reap \\d yr.*since Jan ' + (Y - 2)).test(mora.base), JSON.stringify(mora));
+  await page.click('#hrAddContract'); await page.waitForTimeout(300);
+  ok('a new contract is with the campus they are on now', await page.$eval('[data-hrcampus].on', b => b.getAttribute('data-hrcampus')) === 'siemreap' && /Years serving in YWAM Siem Reap/.test(await page.$eval('#hrContractForm', e => e.textContent)));
+  await page.click('[data-hrcampus="poipet"]'); await page.waitForTimeout(150);
+  ok('picking Poipet says so on the years too', /Years serving in YWAM Poipet/.test(await page.$eval('#hrContractForm', e => e.textContent)));
+  await page.click('[data-hrcampus="siemreap"]'); await page.waitForTimeout(150);
+  await page.fill('#hr_signed', ym(Y, M)); await page.fill('#hr_years', '3'); await page.click('#hrContractSave'); await page.waitForTimeout(500);
+  const mc = sent.filter(x => x.fn === 'hrSaveContract').pop();
+  ok('the contract is saved with its campus', mc.args[2] === 'st_6' && mc.args[3].campus === 'siemreap');
+  ok('the Siem Reap start stays where it was set', new RegExp('since Jan ' + (Y - 2)).test(await page.$eval('#hrBaseSince', e => e.textContent)));
+  await page.click('[data-hredit="c6"]'); await page.waitForTimeout(300);
+  ok('editing the old one keeps it Poipet', await page.$eval('[data-hrcampus].on', b => b.getAttribute('data-hrcampus')) === 'poipet');
+
+  ok('no page errors (moved)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 

@@ -453,6 +453,11 @@ button.srBarRow:active { opacity:.72; }
 @media (prefers-reduced-motion: reduce){ .srBarFill { transition:none } }
 .pname { font-family:'Koulen',sans-serif; font-size:22px; letter-spacing:.5px; }
 .pmeta { font-size:13px; color:var(--muted); margin-top:2px; }
+.hrStartEdit { font-size:12px; padding:0 2px; text-decoration:none; }
+.hrStartBox { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:4px 0; }
+.hrStartBox input { width:auto; margin:0; padding:5px 8px; font-size:13.5px; max-width:150px; }
+.hrStartBox .btn.small { width:auto; margin:0; padding:5px 12px; font-size:13px; }
+.hrCampusTag { display:inline-block; font-size:11px; font-weight:700; background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:1px 8px; color:var(--muted); vertical-align:1px; }
 
 .chips { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 4px; }
 .chip { background:var(--banner); border:1px solid var(--bannerBorder); color:var(--ink); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:700; }
@@ -6322,36 +6327,48 @@ function bindHr(){
   var person=(S.hrStaff||[]).filter(function(x){ return x.id===pid; })[0];
   if(S.hrSub!=='person' || !person) return;
   var ac=document.getElementById('hrAddContract');
-  if(ac) ac.onclick=function(){ gpTap(); S.hrContractForm={ staffId:pid, id:'', signed:'', years:'', notes:'' }; render(); var el=document.getElementById('hrContractForm'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
+  if(ac) ac.onclick=function(){ gpTap(); S.hrContractForm={ staffId:pid, id:'', signed:'', years:'', notes:'', campus:person.campus }; render(); var el=document.getElementById('hrContractForm'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
   document.querySelectorAll('[data-hredit]').forEach(function(b){
     b.onclick=function(){
       var c=(person.contracts||[]).filter(function(x){ return x.id===b.getAttribute('data-hredit'); })[0]; if(!c) return;
-      S.hrContractForm={ staffId:pid, id:c.id, signed:c.signed, years:c.years, notes:c.notes||'' }; render();
+      S.hrContractForm={ staffId:pid, id:c.id, signed:c.signed, years:c.years, notes:c.notes||'', campus:hrContractCampus_(person, c) }; render();
     };
   });
   ['hr_signed','hr_years','hr_notes'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.oninput=el.onchange=function(){ if(!S.hrContractForm) return; S.hrContractForm[id==='hr_signed'?'signed':id==='hr_years'?'years':'notes']=el.value; };
   });
-  var startDraft=function(){ if(!S.hrStartDraft || S.hrStartDraft.staffId!==pid) S.hrStartDraft={ staffId:pid, ywamSince:person.ywamSince==null?'':String(person.ywamSince), baseSince:person.baseSince||'' }; return S.hrStartDraft; };
-  [['hr_ywamsince','ywamSince'],['hr_basesince','baseSince']].forEach(function(x){
-    var el=document.getElementById(x[0]); if(el) el.oninput=el.onchange=function(){ startDraft()[x[1]]=el.value; };
-  });
-  var ss=document.getElementById('hrStartSave');
-  if(ss) ss.onclick=function(){
-    if(S.busy) return;
-    var d=startDraft(), ys=String(d.ywamSince||'').trim(), bs=String(d.baseSince||'').trim();
-    if(ys && !(/^\d{4}$/.test(ys) && Number(ys)>=1960 && Number(ys)<=new Date().getFullYear())){ showMsg(t('Started with YWAM: a year like 2003, or leave it empty.')); return; }
-    if(bs && (!/^\d{4}-\d{2}$/.test(bs) || bs>todayStr().slice(0,7))){ showMsg(t('Pick the month they started here, or leave it empty.')); return; }
-    if(ys && bs && Number(bs.slice(0,4))<Number(ys)){ showMsg(t('They can’t have started here before they joined YWAM.')); return; }
-    S.busy=true; ss.disabled=true; ss.textContent=t('Saving…');
-    run('hrSaveStart',[S.auth.user,S.auth.pin,pid,{ ywamSince: ys ? Number(ys) : '', baseSince: bs }],function(r){
-      S.busy=false;
-      if(r && r.ok){ hrPut_(r); S.hrStartDraft=null; showMsg(t('Start dates saved')); }
-      else showMsg(r && r.err==='bad_base_since' ? t('Pick the month they started here, or leave it empty.') : r && r.err==='base_before_ywam' ? t('They can’t have started here before they joined YWAM.') : hrFail_(r));
-      render();
-    });
-  };
+  document.querySelectorAll('[data-hrcampus]').forEach(function(b){ b.onclick=function(){ if(!S.hrContractForm) return; gpTap(); S.hrContractForm.campus=b.getAttribute('data-hrcampus'); render(); }; });
+  document.querySelectorAll('[data-hrstartedit]').forEach(function(b){ b.onclick=function(){ gpTap(); var k=b.getAttribute('data-hrstartedit');
+    S.hrStartEdit={ staffId:pid, key:k, value: k==='ywam' ? (person.ywamSince==null?'':String(person.ywamSince)) : (person.baseSince || hrSince_(person).slice(0,7)) }; render();
+    var el=document.getElementById(k==='ywam'?'hr_ywamsince':'hr_basesince'); if(el) el.focus(); }; });
+  var se=S.hrStartEdit && S.hrStartEdit.staffId===pid ? S.hrStartEdit : null;
+  if(se){
+    var sin=document.getElementById(se.key==='ywam'?'hr_ywamsince':'hr_basesince');
+    if(sin){ sin.oninput=sin.onchange=function(){ se.value=sin.value; }; sin.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); var b=document.getElementById('hrStartSave'); if(b) b.click(); } }; }
+    var scn=document.getElementById('hrStartCancel'); if(scn) scn.onclick=function(){ S.hrStartEdit=null; render(); };
+    var ss=document.getElementById('hrStartSave');
+    if(ss) ss.onclick=function(){
+      if(S.busy) return;
+      var v=String(se.value||'').trim(), body={};
+      if(se.key==='ywam'){
+        if(v && !(/^\d{4}$/.test(v) && Number(v)>=1960 && Number(v)<=new Date().getFullYear())){ showMsg(t('Started with YWAM: a year like 2003, or leave it empty.')); return; }
+        if(v && person.baseSince && Number(person.baseSince.slice(0,4))<Number(v)){ showMsg(t('They can’t have started here before they joined YWAM.')); return; }
+        body.ywamSince = v ? Number(v) : '';
+      } else {
+        if(v && (!/^\d{4}-\d{2}$/.test(v) || v>todayStr().slice(0,7))){ showMsg(t('Pick the month they started here, or leave it empty.')); return; }
+        if(v && person.ywamSince && Number(v.slice(0,4))<Number(person.ywamSince)){ showMsg(t('They can’t have started here before they joined YWAM.')); return; }
+        body.baseSince = v;
+      }
+      S.busy=true; ss.disabled=true;
+      run('hrSaveStart',[S.auth.user,S.auth.pin,pid,body],function(r){
+        S.busy=false;
+        if(r && r.ok){ hrPut_(r); S.hrStartEdit=null; showMsg(t('Start dates saved')); }
+        else showMsg(r && r.err==='bad_base_since' ? t('Pick the month they started here, or leave it empty.') : r && r.err==='base_before_ywam' ? t('They can’t have started here before they joined YWAM.') : hrFail_(r));
+        render();
+      });
+    };
+  }
   var cc=document.getElementById('hrContractCancel');
   if(cc) cc.onclick=function(){ S.hrContractForm=null; render(); };
   var cs=document.getElementById('hrContractSave');
@@ -6361,7 +6378,7 @@ function bindHr(){
     if(!/^\d{4}-\d{2}$/.test(f.signed||'')){ showMsg(t('Pick the month the contract was signed.')); return; }
     var yrs=Number(f.years); if(!(yrs>0)){ showMsg(t('How many years did they commit to?')); return; }
     S.busy=true; cs.disabled=true; cs.textContent=t('Saving…');
-    run('hrSaveContract',[S.auth.user,S.auth.pin,pid,{ id:f.id||'', signed:f.signed, years:yrs, notes:f.notes||'' }],function(d){
+    run('hrSaveContract',[S.auth.user,S.auth.pin,pid,{ id:f.id||'', signed:f.signed, years:yrs, notes:f.notes||'', campus:f.campus||person.campus }],function(d){
       S.busy=false;
       if(d && d.ok){ hrPut_(d); S.hrContractForm=null; showMsg(t('Contract saved')); } else showMsg(hrFail_(d));
       render();
@@ -7614,18 +7631,33 @@ function hrStatus_(p){
   if(d<=HR_DUE_DAYS) return { key:'due', label:gpT('Renew in {n} days',{n:d}), short:t('Renew soon'), days:d };
   return { key:'active', label:gpT('Until {month}',{month:hrMonthLabel_(hrEndYm_(c))}), short:gpT('Until {month}',{month:hrMonthLabel_(hrEndYm_(c))}), days:d };
 }
-/* When they started at this base: the date set for it, or else the earliest
-   of their first contract and the year they joined — adding a newer
-   contract never moves it. */
+/* Three different starts, because people come from three different places:
+     In YWAM since      the year they joined YWAM anywhere in the world
+                        (ywamSince — some served in other countries first)
+     With YWAM GP since their first contract on any of our campuses, Poipet
+                        or Siem Reap (shown only when it is earlier than…)
+     At this campus     when they started at the campus they are on now:
+                        the month set for it (baseSince), or else the first
+                        contract signed with this campus, or else the year
+                        they joined. A Poipet contract never counts as Siem
+                        Reap time, and adding a newer contract never moves it. */
+function hrContractCampus_(p, c){ return (c && c.campus) || p.campus; }
 function hrSince_(p){
   if(/^\d{4}-\d{2}$/.test(p.baseSince||'')) return p.baseSince+'-01';
-  var l=p.contracts||[], c=[];
-  if(l.length) c.push(l[0].signed+'-01');
+  var here=(p.contracts||[]).filter(function(c){ return hrContractCampus_(p, c)===p.campus; }), c=[];
+  if(here.length) c.push(here[0].signed+'-01');
   if(/^\d{4}$/.test(p.joined||'')) c.push(p.joined+'-01-01');
   return c.sort()[0] || '';
 }
-function hrServing_(p){
-  var since=hrSince_(p); if(!since) return '';
+function hrGpSince_(p){
+  var c=[], l=p.contracts||[], here=hrSince_(p);
+  if(l.length) c.push(l[0].signed+'-01');
+  if(here) c.push(here);
+  return c.sort()[0] || '';
+}
+function hrServing_(p){ return hrSpan_(hrSince_(p)); }
+function hrSpan_(since){
+  if(!since) return '';
   var a=new Date(since+'T00:00:00'), b=new Date();
   var months=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()); if(b.getDate()<a.getDate()) months--; if(months<0) months=0;
   var y=Math.floor(months/12), m=months%12, parts=[];
@@ -7865,7 +7897,7 @@ function candPersonHtml_(c){
 function hrFileSize_(n){ n=Number(n)||0; return n>1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
 function hrContractCardHtml_(p, c, isCurrent){
   var h='<div class="card slim hrContract" data-hrcontract="'+esc(c.id)+'">';
-  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+'</div>'+
+  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
     '<div class="rowSub">'+esc(gpT('Ends {month}',{month:hrMonthLabel_(hrEndYm_(c))}))+(isCurrent && !p.archived ? ' · '+esc(hrStatus_(p).label) : '')+'</div>'+
     (c.notes?'<div class="rowSub" style="margin-top:2px">'+esc(c.notes)+'</div>':'')+'</div>'+
     '<button class="linkbtn inline" data-hredit="'+esc(c.id)+'">'+esc(t('Edit'))+'</button></div>';
@@ -7885,13 +7917,32 @@ function hrContractCardHtml_(p, c, isCurrent){
 function hrContractFormHtml_(p){
   var f=S.hrContractForm, isNew=!f.id;
   var h='<div class="card" id="hrContractForm"><h3 style="margin-top:0">'+esc(isNew ? ((p.contracts||[]).length ? t('Add a renewal') : t('Add a contract')) : t('Edit contract'))+'</h3>';
+  var fc=f.campus || p.campus;
+  h+='<label class="f">'+esc(t('Signed with'))+'</label><div class="chips hospChips">'+CAMPUSES.map(function(x){
+    return '<button class="hospChip'+(fc===x.id?' on':'')+'" data-hrcampus="'+esc(x.id)+'">'+esc(x.name)+'</button>'; }).join('')+'</div>'+
+    '<div class="hint" style="margin:-2px 0 8px">'+esc(t('The campus this contract is with. Someone who moved keeps their old contract as it was — set when they started here at the top of their page.'))+'</div>';
   h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Month signed'))+'</label><input type="month" id="hr_signed" value="'+esc(f.signed||'')+'"></div>'+
-    '<div><label class="f">'+esc(gpT('Years serving in {campus}',{campus:campusName(p.campus)}))+'</label><input type="number" id="hr_years" inputmode="decimal" min="0.25" max="30" step="0.25" value="'+esc(f.years==null?'':String(f.years))+'" placeholder="2"></div></div>';
+    '<div><label class="f">'+esc(gpT('Years serving in {campus}',{campus:campusName(fc)}))+'</label><input type="number" id="hr_years" inputmode="decimal" min="0.25" max="30" step="0.25" value="'+esc(f.years==null?'':String(f.years))+'" placeholder="2"></div></div>';
   h+='<label class="f">'+esc(t('Notes'))+'</label><input type="text" id="hr_notes" maxlength="500" value="'+esc(f.notes||'')+'" placeholder="'+esc(t('e.g. second term, part-time'))+'">';
   h+='<button class="btn" id="hrContractSave">'+esc(isNew?t('Save contract'):t('Save changes'))+'</button>';
   h+='<button class="btn ghost" id="hrContractCancel">'+esc(t('Cancel'))+'</button>';
   if(!isNew) h+='<button class="linkbtn teamDelete" id="hrContractDelete">'+esc(t('Delete this contract'))+'</button>';
   return h+'</div>';
+}
+/* The starts in the profile at the top, each on its own line; the YWAM
+   year and the month they came to this campus have a small ✏️ that opens
+   right there. */
+function hrStartsHtml_(p){
+  var e=S.hrStartEdit && S.hrStartEdit.staffId===p.id ? S.hrStartEdit : null;
+  var since=hrSince_(p), gp=hrGpSince_(p), edit=function(k){ return '<button class="linkbtn inline hrStartEdit" data-hrstartedit="'+k+'" aria-label="'+esc(t('Edit'))+'">✏️</button>'; };
+  var box=function(k, input){ return '<div class="pmeta hrStartBox" id="hrStartBox">'+input+'<button class="btn small" id="hrStartSave">'+esc(t('Save'))+'</button><button class="linkbtn inline" id="hrStartCancel">'+esc(t('Cancel'))+'</button></div>'; };
+  var h='';
+  if(e && e.key==='ywam') h+=box('ywam', '🌍 <label for="hr_ywamsince">'+esc(t('In YWAM since'))+'</label> <input type="number" id="hr_ywamsince" inputmode="numeric" min="1960" max="'+new Date().getFullYear()+'" step="1" value="'+esc(e.value)+'" placeholder="'+esc(String(new Date().getFullYear()-2))+'">');
+  else h+='<div class="pmeta" id="hrYwamSince">🌍 '+(p.ywamSince ? esc(gpT('In YWAM since {year} — {n} years',{year:p.ywamSince, n:hrYwamYears_(p.ywamSince)})) : '<span class="hint" style="display:inline">'+esc(t('In YWAM since — add the year'))+'</span>')+' '+edit('ywam')+'</div>';
+  if(gp && since && gp<since) h+='<div class="pmeta" id="hrGpSince">🤝 '+esc(gpT('With YWAM GP since {month} — {time}',{month:hrMonthLabel_(gp.slice(0,7)), time:hrSpan_(gp)}))+'</div>';
+  if(e && e.key==='base') h+=box('base', '⏳ <label for="hr_basesince">'+esc(gpT('Started at {campus}',{campus:campusName(p.campus)}))+'</label> <input type="month" id="hr_basesince" value="'+esc(e.value)+'">');
+  else h+='<div class="pmeta" id="hrBaseSince">⏳ '+(since ? esc(gpT('Serving in {campus} {time}',{campus:campusName(p.campus), time:hrSpan_(since)}))+' · '+esc(gpT('since {month}',{month:hrMonthLabel_(since.slice(0,7))})) : '<span class="hint" style="display:inline">'+esc(gpT('Started at {campus} — add the month',{campus:campusName(p.campus)}))+'</span>')+' '+edit('base')+'</div>';
+  return h;
 }
 function hrPersonHtml_(p){
   var st=hrStatus_(p), cur=hrCurrent_(p), serving=hrServing_(p), since=hrSince_(p);
@@ -7900,8 +7951,7 @@ function hrPersonHtml_(p){
     '<div class="pname">'+esc(p.name)+'</div>'+
     '<div class="pmeta">@'+esc(p.username)+(p.email?' · '+esc(p.email):'')+'</div>'+
     '<div class="pmeta">'+esc(campusName(p.campus))+' · '+esc(t(p.dept))+(p.ministry?' · '+esc(t(p.ministry)):'')+(p.role?' · '+esc(p.role):'')+'</div>'+
-    (serving?'<div class="pmeta">⏳ '+esc(gpT('Serving in {campus} {time}',{campus:campusName(p.campus), time:serving}))+' · '+esc(gpT('since {month}',{month:hrMonthLabel_(since.slice(0,7))}))+'</div>':'')+
-    (p.ywamSince?'<div class="pmeta" id="hrYwamSince">🌍 '+esc(gpT('In YWAM since {year} — {n} years',{year:p.ywamSince, n:hrYwamYears_(p.ywamSince)}))+'</div>':'')+
+    hrStartsHtml_(p)+
     '</div></div>';
   h+='<div class="hrBanner '+st.key+'">'+(st.key==='archived'?'📦':st.key==='none'?'📝':st.key==='expired'?'🔴':st.key==='due'?'🟠':'🟢')+' <b>'+esc(st.label)+'</b>'+
     (cur && !p.archived ? '<span class="rowSub"> · '+esc(gpT('Signed {month}',{month:hrMonthLabel_(cur.signed)}))+' · '+esc(hrYearsLabel_(cur.years))+'</span>' : '')+'</div>';
@@ -7911,16 +7961,6 @@ function hrPersonHtml_(p){
   }
   h+='</div>';
 
-  /* The two start dates sit on their own, apart from the contracts: time in
-     YWAM is the person's whole story (23 years in YWAM on a 2-year Siem
-     Reap contract), and when they came to this base doesn't move when a
-     contract is added. */
-  var sd=S.hrStartDraft && S.hrStartDraft.staffId===p.id ? S.hrStartDraft : { ywamSince:p.ywamSince==null?'':String(p.ywamSince), baseSince:p.baseSince||'' };
-  h+='<h3>🗓️ '+esc(t('Start dates'))+'</h3><div class="card" id="hrStarts">'+
-    '<div class="teamGrid2"><div><label class="f">'+esc(t('Started with YWAM (year)'))+'</label><input type="number" id="hr_ywamsince" inputmode="numeric" min="1960" max="'+new Date().getFullYear()+'" step="1" value="'+esc(sd.ywamSince)+'" placeholder="'+esc(String(new Date().getFullYear()-2))+'"></div>'+
-    '<div><label class="f">'+esc(gpT('Started at {campus}',{campus:campusName(p.campus)}))+'</label><input type="month" id="hr_basesince" value="'+esc(sd.baseSince)+'"></div></div>'+
-    '<p class="hint" style="margin:6px 0 0">'+esc(p.baseSince ? t('Adding or renewing a contract never changes these.') : gpT('Adding or renewing a contract never changes these. Left empty, {campus} counts from {month}.',{campus:campusName(p.campus), month:since ? hrMonthLabel_(since.slice(0,7)) : '—'}))+'</p>'+
-    '<button class="btn ghost" id="hrStartSave">'+esc(t('Save start dates'))+'</button></div>';
   h+='<h3>📄 '+esc(t('Contracts'))+'</h3>';
   var list=(p.contracts||[]).slice().reverse();
   if(!list.length && !S.hrContractForm) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No contract on file yet. Add the one from the paper folder.'))+'</p></div>';
