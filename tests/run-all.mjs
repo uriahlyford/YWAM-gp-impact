@@ -76,6 +76,7 @@ const BROWSER = [
   'test-duty-page.mjs', // weekly schedules page: My Home card with your duties, the menu, the table (scrolls in its card), Share as image (a PNG), Culinary's draft from last week + name picker + rows + Publish, Hospitality's chores place by place; phone and desktop
   'test-holidays-page.mjs', // national holidays on the leave page (listed, left out of a new request's count, with why) and in Admin → Leave (dated ones edited and saved)
   'test-lead-board-page.mjs', // Campus Leadership on My Ministry: no weekly numbers, OKRs as the dashboard, the Monday meeting board (standing items, focus areas, cards with OKR links, arrows / drag, editing the board); phone and desktop
+  'test-menu.mjs', // the hamburger menu by role, in sections: everyone (My Ministry, Leave, Operations → Weekly schedules), Hospitality (+ SR Hospitality), portal people (Applications → Portal), HR and admins (Admin); no Weekly Check-in or GP Dashboard
   'test-admin-select.mjs', // Admin: home menu → Accounts (campus chips, search) → a row opens that person's page → Back keeps the search and the narrowed list
   'test-admin-mentors.mjs', // Admin → Mentors: one card per mentor with their people (Waiting when not yet accepted), everyone with no mentor, the home card's count, a person's header names their mentor
   'test-admin-leave-page.mjs', // Admin → Leave page: campus chips + year, tiles, waiting with Approve/Decline, away/coming up, days used vs cap, earlier folded, names open the person
