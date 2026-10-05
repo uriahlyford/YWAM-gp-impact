@@ -114,7 +114,12 @@ r = await call('saveTeamTrip', ['sok', '1234', { ...TRIP, id: 'tt_vm_old', name:
   const vm = d['Community Service|Outreach Teams|Volunteers Mobilized'] || {};
   ok('a team leaving from October counts its head count as Volunteers Mobilized, whatever was typed', vm[wkOf('2026-10-16')] === 14, JSON.stringify(vm));
   ok('an earlier team keeps the number logged for it', vm[wkOf('2026-08-14')] === 9, JSON.stringify(vm)); }
-mem.teamTrips = mem.teamTrips.filter(t => t.id !== 'tt_vm_new' && t.id !== 'tt_vm_old');
+r = await call('saveTeamTrip', ['sok', '1234', { ...TRIP, id: 'tt_vm_none', name: 'June Team', from: '2026-06-01', to: '2026-06-12', size: 11, country: 'usa', metrics: {} }]);
+ok('a team’s country is saved as one spelling (usa → United States)', mem.teamTrips.find(t => t.id === 'tt_vm_none').country === 'United States');
+{ const d = (await call('getData', ['leadercode', 2026])).body.entries.siemreap || {};
+  const vm = d['Community Service|Outreach Teams|Volunteers Mobilized'] || {};
+  ok('an earlier team with nothing logged counts its head count', vm[wkOf('2026-06-12')] === 11, JSON.stringify(vm)); }
+mem.teamTrips = mem.teamTrips.filter(t => t.id !== 'tt_vm_new' && t.id !== 'tt_vm_old' && t.id !== 'tt_vm_none');
 
 // a hand-logged row for the same week is replaced, not added to
 mem.entries = [{ campus: 'siemreap', dept: 'Community Service', ministry: 'Outreach Teams', metric: 'Teams Hosted', week: wk, year: YR, value: 7 },
