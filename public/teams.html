@@ -685,6 +685,47 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .teamGrid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
 .teamGrid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 10px; }
 .teamDelete { color:var(--bad); }
+/* Campus Leadership: OKR dashboard and the Monday meeting board */
+.leadTabs { margin-bottom:12px; }
+.leadPace { height:6px; background:var(--surface2); border-radius:4px; overflow:hidden; margin:-4px 0 12px; }
+.leadPaceFill { height:100%; background:var(--faint); }
+.leadObj { margin-bottom:8px; }
+.leadPct { font-size:18px; flex:0 0 auto; }
+.leadBar { height:8px; background:var(--surface2); border-radius:5px; overflow:hidden; margin:6px 0 8px; }
+.leadBar > div { height:100%; border-radius:5px; }
+.leadBar.sm { height:5px; margin:4px 0 0; }
+.leadKr { display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:3px 0; border-top:1px solid var(--line); }
+.leadKrText { min-width:0; color:var(--ink); }
+.leadKrPct { font-weight:800; color:var(--muted); flex:0 0 auto; }
+.leadObjCards { margin-top:6px; font-size:13px; }
+.leadHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
+.leadHead .btn.small { width:auto; margin:0; padding:8px 12px; font-size:14px; flex:0 0 auto; }
+.leadCols { display:grid; grid-auto-flow:column; grid-auto-columns:86%; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+.leadCol { scroll-snap-align:start; background:var(--surface2); border-radius:14px; padding:10px; min-height:120px; }
+.leadCol.drop { outline:2px dashed var(--accent); outline-offset:-2px; }
+.leadColHead { font-weight:800; font-size:14px; margin-bottom:8px; }
+.leadEmpty { margin:4px 2px; }
+.leadCard { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:12px; padding:9px 10px; margin-bottom:8px; }
+.leadCard.project { border-left-color:var(--amber); }
+.leadCardTop { display:flex; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--muted); font-weight:700; }
+.leadDue.late { color:var(--bad); }
+.leadTitle { display:block; width:100%; text-align:left; background:none; border:0; padding:4px 0 2px; font:inherit; font-size:14.5px; font-weight:800; color:var(--ink); cursor:pointer; }
+.leadLink { font-size:12px; color:var(--muted); margin-top:4px; overflow:hidden; text-overflow:ellipsis; }
+.leadCard .rowSub { font-size:12.5px; }
+.leadArea { display:inline-block; font-size:11px; font-weight:700; background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:1px 8px; margin:2px 0; color:var(--muted); }
+.leadStanding { display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; font-size:13px; background:var(--banner); border:1px solid var(--bannerBorder); color:var(--bannerInk); border-radius:12px; padding:8px 12px; margin-bottom:8px; }
+.leadSetRow { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+.leadSetRow input[type=text] { flex:1; min-width:0; margin:0; }
+.leadDonePick { margin:0; font-size:12.5px; flex:0 0 auto; }
+.leadSetAdd { width:auto !important; margin:2px 0 0 !important; padding:7px 12px !important; font-size:13.5px !important; }
+.leadMove { display:flex; justify-content:space-between; margin-top:6px; font-size:12.5px; }
+@media (min-width:900px){
+  main.wide { max-width:1180px; }
+  main.wide .leadCols { grid-auto-flow:row; grid-template-columns:repeat(var(--leadN, 3), minmax(0,1fr)); overflow:visible; }
+  main.wide .leadTiles { grid-template-columns:repeat(4, minmax(0,1fr)); }
+  main.wide #leadForm { max-width:760px; }
+  main.wide #leadOkrs .leadObj { max-width:none; }
+}
 /* Weekly schedules */
 .schedBtns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
 .schedBtn { display:flex; gap:10px; align-items:center; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:10px; font:inherit; color:var(--ink); cursor:pointer; min-width:0; }
@@ -1693,6 +1734,7 @@ var S = {
   /* My Ministry: which of its two tabs is showing, whether the metric form
      is unfolded for the week on screen, and the person's own four numbers. */
   mmTab:'ministry', kpiInputOpen:false, mmDashAll:false, personal:null, personalDraft:{}, mmPeriod:'quarter',
+  lead:null, leadErr:'', leadForm:null, leadTab:'okrs', leadShown:false,
   sched:null, schedError:'', schedData:null, schedEdit:false, schedPick:null,
   hosp:null, hospLoading:false, hospError:'', hospTab:'dash', hospForm:null, hospRoom:null, hospBld:null,
   teamTrips:{}, teamLoading:{}, teamError:{}, teamPeriod:'quarter', teamYear:null, teamQ:null, teamMonth:null, teamForm:null,
@@ -2193,6 +2235,7 @@ function logout(){
   S.personal=null; S.personalDraft={}; S.mmTab='ministry'; S.kpiInputOpen=false; S.mmDashAll=false; S.metricRename=null;
   S.mmPeriod='quarter'; S.teamTrips={}; S.teamLoading={}; S.teamError={}; S.teamForm=null;
   S.hosp=null; S.hospLoading=false; S.hospError=''; S.hospForm=null; S.hospRoom=null; S.hospBld=null; S.hospMove=null;
+  S.lead=null; S.leadErr=''; S.leadForm=null; S.leadLoading=false; S.leadEdit=null;
   S.sched=null; S.schedError=''; S.schedData=null; S.schedEdit=false; S.schedPick=null; S.schedDirty=false;
   S.hrStaff=null; S.hrLoading=false; S.hrError=''; S.hrSub='home'; S.hrPersonId=null; S.hrSearch=''; S.hrContractForm=null; S.hrArchiveDraft=null; S.hrDue=null; S.hrFollowUps=null; S.hrTab='staff';
   S.cands=null; S.candsLoading=false; S.candsError=''; S.candForm=null; S.candPersonId=null; S.candNoteDraft='';
@@ -2305,7 +2348,7 @@ function render(){
      reset scroll, so this only fires when S.view actually changed. */
   /* SR Hospitality is a desk tool as much as a phone one: on a wide screen it
      takes the width (main.wide), its cards in columns; on a phone, unchanged. */
-  m.classList.toggle('wide', S.view==='hosp');
+  m.classList.toggle('wide', S.view==='hosp' || (S.view==='ministry' && S.mmTab!=='okr' && !!S.leadShown));
   if(S.view!==lastRenderedView){ window.scrollTo(0,0); lastRenderedView=S.view; }
   bind();
 }
@@ -7302,11 +7345,12 @@ function teamsMinistryHtml_(campus){
    weekly form (kpiCardHtml); any other gets the weekly rows (ovWeekRowsHtml_).
    Outreach Teams is entered on its own Teams Database page instead.
 
-   A Campus Leadership person's own row — Total Staff, one-on-ones and the
-   rest of the leadership figures — is deliberately NOT the default here: it
-   sits last in the picker as "Campus Leadership figures", so the page opens
-   on a real ministry. The person's own four personal numbers are off the
-   page altogether for now (personalCardHtml_ is kept for when they return). */
+   A Campus Leadership person's own row is their team's section: no weekly
+   numbers (hidden for now) — the Leadership OKRs as its dashboard and the
+   Monday meeting board (leadSectionHtml_). It sits last in the picker as
+   "Campus Leadership" and is where the page opens for them. The person's own
+   four personal numbers are off the page altogether for now (personalCardHtml_
+   is kept for when they return). */
 /* Only the ministries you are part of (same rule as canLogFor_ in api.js):
    your main one, the others on your profile, any you lead, and — for a
    department's Campus Leadership overseer — that department's ministries.
@@ -7332,12 +7376,13 @@ function mmSelected_(opts){
   // a department picked with no ministry yet (the admin's Department select) → its first weekly ministry
   var inDept=opts.filter(function(o){ return o.dept===S.mmBrowseDept; });
   if(inDept.length) return inDept.filter(function(o){ return !isTeamsMinistry_(o.dept, o.min); })[0] || inDept[0];
-  var own = S.me.dept!==BL_DEPT && opts.filter(function(o){ return o.dept===S.me.dept && o.min===S.me.ministry; })[0];
+  // your own first — for Campus Leadership that is its OKRs and meeting board
+  var own = opts.filter(function(o){ return o.dept===S.me.dept && o.min===S.me.ministry; })[0];
   // otherwise the first weekly ministry — Outreach Teams is its own page
   return own || opts.filter(function(o){ return !isTeamsMinistry_(o.dept, o.min); })[0] || opts[0];
 }
 function mmOptionLabel_(o){
-  if(o.dept===BL_DEPT) return '🧭 '+t('Campus Leadership figures');
+  if(o.dept===BL_DEPT) return '🧭 '+t('Campus Leadership');
   return (MIN_EMOJI[o.min]?MIN_EMOJI[o.min]+' ':'')+t(o.min);
 }
 function mmPickerHtml_(opts, sel){
@@ -7362,14 +7407,15 @@ function mmPickerHtml_(opts, sel){
 }
 function mmBannerHtml_(sel, mine){
   var isBL = sel.dept===BL_DEPT;
-  var name = isBL ? t('Campus Leadership figures') : t(sel.min);
+  var name = isBL ? t('Campus Leadership') : t(sel.min);
   var emoji = isBL ? '🧭' : (MIN_EMOJI[sel.min]||'📊');
   var h='<div class="card mmBanner" id="mmBanner"><div class="mmBannerEmoji">'+emoji+'</div><div style="min-width:0">'+
     '<div class="mmBannerName">'+esc(name)+'</div>'+
-    '<div class="rowSub">'+esc(isBL ? gpT('Your own figures as {dept}',{dept:t(sel.min)}) : t(sel.dept))+' · '+esc(campusName(S.me.campus))+'</div>';
+    '<div class="rowSub">'+esc(isBL ? t('OKRs and the Monday leadership meeting') : t(sel.dept))+' · '+esc(campusName(S.me.campus))+'</div>';
   var leaders = isBL ? [] : ministryLeaders_(S.me.campus, sel.dept, sel.min);
   if(leaders.length) h+='<div class="rowSub">👑 '+esc(t('Led by'))+' '+leaders.map(function(p){ return esc(p.name); }).join(', ')+'</div>';
-  var note = mine ? 'Your main ministry — you are entering its numbers.'
+  var note = isBL ? 'Campus Leadership tracks its OKRs here, not weekly numbers.'
+    : mine ? 'Your main ministry — you are entering its numbers.'
     : sel.role==='member' ? 'One of your ministries — you are entering its numbers.'
     : sel.role==='leader' ? 'You lead this ministry — you are entering its numbers.'
     : sel.role==='admin' ? 'As an admin you can see and enter this ministry’s numbers.'
@@ -7396,6 +7442,9 @@ function myMinistryHtml(){
   var mine = sel.dept===S.me.dept && sel.min===S.me.ministry;
   h+=mmPickerHtml_(opts, sel);
   h+=mmBannerHtml_(sel, mine);
+  // Campus Leadership: its OKRs and the Monday meeting board, no weekly numbers (hidden for now)
+  S.leadShown = sel.dept===BL_DEPT;
+  if(S.leadShown) return h+leadSectionHtml_();
 
   if(sel.dept==='Skills Training' && sel.min==='Hospitality' && canHospClient_()){
     h+='<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(t('Rooms, beds and bookings for guests, speakers, teams, students and volunteers — and team requests from the portal.'))+'</p>'+
@@ -8843,6 +8892,218 @@ function canLogForClient_(dept, min){
   if(m.isAdmin) return true;
   var key=dept+'|'+min;
   return (m.dept===dept && m.ministry===min) || (m.ministries||[]).indexOf(key)>-1 || (m.leads||[]).indexOf(key)>-1 || (m.dept==='Campus Leadership' && m.ministry===dept);
+}
+
+/* ---------- Campus Leadership on My Ministry ----------
+   Campus Leadership doesn't log weekly numbers (they're hidden for now), so
+   its section of My Ministry is two things: its OKRs as the dashboard — this
+   quarter's Campus Leadership objectives, how far along, each key result —
+   and the board for the Monday leadership meeting: agenda items and projects
+   in columns (Agenda / In progress / Done to start), each with a focus area
+   (Siem Reap finances, Siem Reap ministries, Construction to start), an
+   owner, a due date and the Leadership OKR it moves forward, under the
+   agenda items every Monday has (Department and ministry updates, Events
+   coming up). Columns, focus areas and standing items are all theirs to
+   change — "Edit the board" (getLeadBoard / saveLeadCard / saveLeadSettings
+   in api.js).
+   An objective shows how many of its cards are done; a card shows its
+   objective's progress. Progress is edited where it always was, on the OKRs
+   tab. On a computer the board's three columns sit side by side; on a phone
+   they scroll across. */
+function leadCols_(){ return (S.lead && S.lead.cols) || []; }
+function leadDoneId_(){ var d=leadCols_().filter(function(c){ return c.done; })[0]; return d ? d.id : ''; }
+function leadAreaName_(id){ var a=((S.lead && S.lead.areas) || []).filter(function(x){ return x.id===id; })[0]; return a ? a.title : ''; }
+function leadQNow_(){ return Math.min(4, Math.floor((thisWeek()-1)/13)+1); }
+function leadOkrs_(){
+  var q=leadQNow_();
+  return ((S.base && S.base.okrs) || []).filter(function(o){ return o.campus===S.me.campus && Number(o.quarter)===q && o.dept==='Campus Leadership'; });
+}
+function leadNextMonday_(){ var d=new Date(); d.setHours(12,0,0,0); var add=(8-d.getDay())%7; d.setDate(d.getDate()+add); return calIso_(d); }
+function leadSectionHtml_(){
+  var tab=S.leadTab==='board' ? 'board' : 'okrs';
+  var h='<div class="campusSeg leadTabs" style="max-width:none">'+
+    '<button class="campusBtn'+(tab==='okrs'?' on':'')+'" data-leadtab="okrs">🎯 '+esc(t('Leadership OKRs'))+'</button>'+
+    '<button class="campusBtn'+(tab==='board'?' on':'')+'" data-leadtab="board">🗂️ '+esc(t('Monday meetings'))+'</button></div>';
+  return h+(tab==='board' ? leadBoardHtml_() : leadOkrDashHtml_());
+}
+function leadCardsFor_(okrId){ return ((S.lead && S.lead.cards) || []).filter(function(c){ return c.okrId===okrId; }); }
+function leadOkrDashHtml_(){
+  var R=baseR(), objs=leadOkrs_(), q=leadQNow_(), wk=thisWeek(), wq=Math.max(1, Math.min(13, wk-(q-1)*13));
+  var h='<div id="leadOkrs">';
+  if(!objs.length) return h+'<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(gpT('No Campus Leadership OKRs for Q{q} yet.',{q:q}))+'</p>'+
+    '<button class="btn" id="leadGoOkr" style="margin-top:0">🎯 '+esc(t('Set this quarter’s OKRs'))+'</button></div></div>';
+  var avg=Math.round(objs.reduce(function(a,o){ return a+R.objProgress(o); },0)/objs.length);
+  var krs=0, krsOn=0; objs.forEach(function(o){ (o.krs||[]).forEach(function(kr){ krs++; if(R.krProgress(o,kr).pct>=Math.round(wq/13*100)) krsOn++; }); });
+  h+='<div class="mmGrid leadTiles">'+
+    '<div class="mmTile"><div class="mmTileName">'+esc(gpT('Q{q} progress',{q:q}))+'</div><div class="mmTileNum">'+avg+'%</div><div class="mmTileSub">'+esc(gpT('Week {n} of 13',{n:wq}))+'</div></div>'+
+    '<div class="mmTile"><div class="mmTileName">'+esc(t('Objectives'))+'</div><div class="mmTileNum">'+objs.length+'</div><div class="mmTileSub">'+esc(gpT('{n} key results',{n:krs}))+'</div></div>'+
+    '<div class="mmTile"><div class="mmTileName">'+esc(t('Key results on pace'))+'</div><div class="mmTileNum">'+krsOn+'/'+krs+'</div><div class="mmTileSub">'+esc(t('at or ahead of the quarter so far'))+'</div></div>'+
+    '<div class="mmTile"><div class="mmTileName">'+esc(t('Meeting board'))+'</div><div class="mmTileNum">'+(S.lead ? S.lead.cards.filter(function(c){ return c.col!==leadDoneId_(); }).length : '—')+'</div><div class="mmTileSub">'+esc(t('open agenda items and projects'))+'</div></div>'+
+  '</div>';
+  h+='<div class="leadPace"><div class="leadPaceFill" style="width:'+Math.round(wq/13*100)+'%"></div></div>';
+  objs.forEach(function(o, i){
+    var p=R.objProgress(o), cards=leadCardsFor_(o.id), done=cards.filter(function(c){ return c.col===leadDoneId_(); }).length;
+    h+='<div class="card slim leadObj" data-leadobj="'+esc(o.id)+'"><div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+(i+1)+'. '+esc(o.objective)+'</b></div></div>'+
+      '<b class="leadPct" style="color:'+gpRingColor(p)+'">'+p+'%</b></div>'+
+      '<div class="leadBar"><div style="width:'+p+'%;background:'+gpRingColor(p)+'"></div></div>';
+    (o.krs||[]).forEach(function(kr){
+      var kp=R.krProgress(o,kr);
+      h+='<div class="leadKr"><span class="leadKrText">'+esc(kr.text)+'</span><span class="leadKrPct">'+kp.pct+'%</span></div>';
+    });
+    if(cards.length) h+='<button class="linkbtn inline leadObjCards" data-leadobjcards="'+esc(o.id)+'">🗂️ '+esc(gpT('{d} of {n} meeting cards done',{d:done,n:cards.length}))+'</button>';
+    h+='</div>';
+  });
+  h+='<button class="btn ghost" id="leadGoOkr">🎯 '+esc(t('Update progress or change the OKRs'))+'</button>';
+  return h+'</div>';
+}
+function leadOwnerOptions_(){
+  var list=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus && p.dept==='Campus Leadership'; });
+  if(!list.some(function(p){ return p.id===S.me.id; })) list.push(S.me);
+  return list.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+}
+function leadCardHtml_(c, R, objs){
+  var o=c.okrId && ((S.base && S.base.okrs) || []).filter(function(x){ return x.id===c.okrId; })[0];
+  var cols=leadCols_(), today=todayStr(), late=c.due && c.col!==leadDoneId_() && c.due<today;
+  var i=cols.map(function(x){ return x.id; }).indexOf(c.col);
+  var h='<div class="leadCard '+esc(c.type)+'" data-leadcard="'+esc(c.id)+'" draggable="true">';
+  h+='<div class="leadCardTop"><span class="leadType">'+(c.type==='project'?'🔨 '+esc(t('Project')):'💬 '+esc(t('Agenda item')))+'</span>'+
+    (c.due?'<span class="leadDue'+(late?' late':'')+'">📅 '+esc(hospDate_(c.due))+'</span>':'')+'</div>';
+  h+='<button class="leadTitle" data-leadedit="'+esc(c.id)+'">'+esc(c.title)+'</button>';
+  if(c.area && leadAreaName_(c.area)) h+='<span class="leadArea">'+esc(leadAreaName_(c.area))+'</span>';
+  if(c.owner) h+='<div class="rowSub">👤 '+esc(nameOf(c.owner))+'</div>';
+  if(o){ var p=R.objProgress(o); h+='<div class="leadLink" title="'+esc(o.objective)+'">🎯 '+esc(o.objective)+' · <b>'+p+'%</b><div class="leadBar sm"><div style="width:'+p+'%;background:'+gpRingColor(p)+'"></div></div></div>'; }
+  h+='<div class="leadMove">'+(i>0?'<button class="linkbtn inline" data-leadmove="'+esc(c.id)+'|'+esc(cols[i-1].id)+'" aria-label="'+esc(t('Move back'))+'">← '+esc(cols[i-1].title)+'</button>':'<span></span>')+
+    (i>-1 && i<cols.length-1?'<button class="linkbtn inline" data-leadmove="'+esc(c.id)+'|'+esc(cols[i+1].id)+'" aria-label="'+esc(t('Move on'))+'">'+esc(cols[i+1].title)+' →</button>':'')+'</div>';
+  return h+'</div>';
+}
+function leadBoardHtml_(){
+  var h='<div id="leadBoard">';
+  if(!S.lead){ return h+'<div class="card"><p class="sub" style="margin:0">'+esc(S.leadErr || t('Loading…'))+'</p></div></div>'; }
+  var R=baseR(), objs=leadOkrs_(), filter=S.leadFilter||'all', today=todayStr();
+  var nm=leadNextMonday_();
+  h+='<div class="leadHead"><div><b>'+esc(gpT('Next meeting: Monday {date}',{date:hospDate_(nm)}))+'</b>'+
+    '<div class="rowSub">'+esc(t('Agenda items to talk about, projects as they move — tie them to an OKR to see it grow.'))+'</div></div>'+
+    '<button class="btn small" id="leadNew">＋ '+esc(t('Add a card'))+'</button></div>';
+  if(S.lead.standing.length) h+='<div class="leadStanding" id="leadStanding"><b>'+esc(t('Every Monday'))+'</b>'+S.lead.standing.map(function(x){ return '<span class="leadStandItem">• '+esc(x.title)+'</span>'; }).join('')+'</div>';
+  h+='<div class="chips hospChips">'+[['all',t('All')],['agenda',t('Agenda items')],['project',t('Projects')]].concat(S.lead.areas.map(function(a){ return ['area:'+a.id, a.title]; })).concat([['mine',t('Mine')]]).map(function(f){
+    return '<button class="hospChip'+(filter===f[0]?' on':'')+'" data-leadfilter="'+esc(f[0])+'">'+esc(f[1])+'</button>'; }).join('')+
+    '<button class="hospChip" id="leadEditBoard">✏️ '+esc(t('Edit the board'))+'</button></div>';
+  if(S.leadEdit) h+=leadSettingsHtml_();
+  if(S.leadForm) h+=leadFormHtml_(objs);
+  var cards=S.lead.cards.filter(function(c){ return filter==='all' || (filter==='mine' ? c.owner===S.me.id : filter.indexOf('area:')===0 ? c.area===filter.slice(5) : c.type===filter); });
+  var cutoff=calIso_(new Date(Date.now()-30*86400000));
+  h+='<div class="leadCols" style="--leadN:'+leadCols_().length+'">'+leadCols_().map(function(col, ci){
+    var list=cards.filter(function(c){ return c.col===col.id; });
+    var hidden=0;
+    if(col.done){ var recent=list.filter(function(c){ return S.leadOld || !c.doneAt || c.doneAt.slice(0,10)>=cutoff; }); hidden=list.length-recent.length; list=recent; }
+    list.sort(function(a,b){ return col.done ? String(b.doneAt||'').localeCompare(String(a.doneAt||'')) : String(a.due||'9999').localeCompare(String(b.due||'9999')); });
+    return '<div class="leadCol" data-leadcol="'+esc(col.id)+'"><div class="leadColHead">'+(col.done?'✅ ':ci===0?'📋 ':'🔨 ')+esc(col.title)+' <span class="hospBadge">'+list.length+'</span></div>'+
+      list.map(function(c){ return leadCardHtml_(c, R, objs); }).join('')+
+      (!list.length?'<p class="hint leadEmpty">'+esc(t('Nothing here yet.'))+'</p>':'')+
+      (hidden?'<button class="linkbtn inline" id="leadOld">'+esc(gpT('Show {n} older',{n:hidden}))+'</button>':'')+
+    '</div>';
+  }).join('')+'</div>';
+  return h+'</div>';
+}
+/* Edit the board: its columns (and which one is finished), focus areas and
+   the agenda items every Monday has. */
+function leadSettingsHtml_(){
+  var e=S.leadEdit;
+  var list=function(key, label, addLabel, withDone){
+    var h='<h4 style="margin:12px 0 4px">'+esc(label)+'</h4>';
+    e[key].forEach(function(x, i){
+      h+='<div class="leadSetRow"><input type="text" data-lset="'+key+'|'+i+'" value="'+esc(x.title)+'" maxlength="80" aria-label="'+esc(label)+'">'+
+        (withDone ? '<label class="hospCheck leadDonePick"><input type="radio" name="leadDone" data-ldone="'+i+'"'+(x.done?' checked':'')+'> '+esc(t('Finished'))+'</label>' : '')+
+        '<button class="linkbtn inline" data-lsetup="'+key+'|'+i+'" aria-label="'+esc(t('Move up'))+'">↑</button>'+
+        '<button class="linkbtn inline teamDelete" data-lsetdel="'+key+'|'+i+'" aria-label="'+esc(t('Remove'))+'">✕</button></div>';
+    });
+    return h+'<button class="btn ghost small leadSetAdd" data-lsetadd="'+key+'">＋ '+esc(addLabel)+'</button>';
+  };
+  return '<div class="card" id="leadSettings"><h3 style="margin-top:0">✏️ '+esc(t('Edit the board'))+'</h3>'+
+    list('cols', t('Columns'), t('Add a column'), true)+
+    list('areas', t('Focus areas'), t('Add a focus area'), false)+
+    list('standing', t('Every Monday’s agenda'), t('Add an agenda item'), false)+
+    '<p class="hint">'+esc(t('Cards in a column you take away move to the first column. “Finished” is the column that counts as done.'))+'</p>'+
+    '<button class="btn" id="leadSetSave">'+esc(t('Save the board'))+'</button><button class="btn ghost" id="leadSetCancel">'+esc(t('Cancel'))+'</button></div>';
+}
+function leadFormHtml_(objs){
+  var f=S.leadForm, isNew=!f.id;
+  var h='<div class="card" id="leadForm"><h3 style="margin-top:0">'+esc(isNew?t('New card'):t('Edit card'))+'</h3>';
+  h+='<div class="chips hospChips">'+[['agenda','💬','Agenda item'],['project','🔨','Project']].map(function(x){
+    return '<button class="hospChip'+(f.type===x[0]?' on':'')+'" data-lftype="'+x[0]+'">'+x[1]+' '+esc(t(x[2]))+'</button>'; }).join('')+'</div>';
+  h+='<label class="f">'+esc(t('Title'))+'</label><input type="text" data-lf="title" maxlength="160" value="'+esc(f.title||'')+'" placeholder="'+esc(t('e.g. Staff retreat plan'))+'">';
+  h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Who owns it'))+'</label><select data-lf="owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+
+    leadOwnerOptions_().map(function(p){ return '<option value="'+esc(p.id)+'"'+(f.owner===p.id?' selected':'')+'>'+esc(p.name)+'</option>'; }).join('')+'</select></div>'+
+    '<div><label class="f">'+esc(t('Due'))+'</label><input type="date" data-lf="due" value="'+esc(f.due||'')+'"></div></div>';
+  h+='<div class="teamGrid2"><div><label class="f">'+esc(t('Column'))+'</label><select data-lf="col">'+leadCols_().map(function(c){ return '<option value="'+esc(c.id)+'"'+(f.col===c.id?' selected':'')+'>'+esc(c.title)+'</option>'; }).join('')+'</select></div>'+
+    '<div><label class="f">'+esc(t('Focus area'))+'</label><select data-lf="area"><option value="">'+esc(t('— none —'))+'</option>'+(S.lead.areas||[]).map(function(a){ return '<option value="'+esc(a.id)+'"'+(f.area===a.id?' selected':'')+'>'+esc(a.title)+'</option>'; }).join('')+'</select></div></div>';
+  var known=objs.some(function(o){ return o.id===f.okrId; });
+  h+='<label class="f">'+esc(t('Moves forward which OKR?'))+'</label><select data-lf="okrId"><option value="">'+esc(t('— none —'))+'</option>'+
+    objs.map(function(o){ return '<option value="'+esc(o.id)+'"'+(f.okrId===o.id?' selected':'')+'>'+esc(o.objective)+'</option>'; }).join('')+
+    (f.okrId && !known ? '<option value="'+esc(f.okrId)+'" selected>'+esc(t('An earlier quarter’s objective'))+'</option>' : '')+'</select>';
+  h+='<label class="f">'+esc(t('Notes'))+'</label><textarea data-lf="notes" rows="3" maxlength="2000" placeholder="'+esc(t('What to decide, next steps, who to ask…'))+'">'+esc(f.notes||'')+'</textarea>';
+  h+='<button class="btn" id="leadSave">'+esc(isNew?t('Add card'):t('Save card'))+'</button><button class="btn ghost" id="leadCancel">'+esc(t('Cancel'))+'</button>';
+  if(!isNew) h+='<button class="linkbtn teamDelete" id="leadDelete">'+esc(t('Delete this card'))+'</button>';
+  return h+'</div>';
+}
+function bindLead_(){
+  document.querySelectorAll('[data-leadtab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadTab=b.getAttribute('data-leadtab'); render(); }; });
+  document.querySelectorAll('#leadGoOkr').forEach(function(b){ b.onclick=function(){ gpTap(); S.mmTab='okr'; render(); }; });
+  document.querySelectorAll('[data-leadobjcards]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadTab='board'; S.leadFilter='all'; render(); }; });
+  if((document.getElementById('leadBoard') || document.getElementById('leadOkrs')) && !S.lead && !S.leadLoading && !S.leadErr){
+    S.leadLoading=true;
+    run('getLeadBoard',[S.auth.user,S.auth.pin],function(d){ S.leadLoading=false; if(d && d.ok) S.lead=d; else S.leadErr=(d && d.err==='not_authorized') ? t('The meeting board is for Campus Leadership.') : t('Could not load'); render(); },
+      function(e){ S.leadLoading=false; S.leadErr=(e && e.message) || t('Connection problem — try again.'); render(); });
+  }
+  if(!document.getElementById('leadBoard')) return;
+  var save=function(card, msg, after){
+    if(S.busy) return; S.busy=true;
+    run('saveLeadCard',[S.auth.user,S.auth.pin,card],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; if(after) after(); if(msg) showMsg(msg); } else showMsg(d && d.err==='bad_card' ? t('Give the card a title first.') : t('Could not save')); render(); });
+  };
+  var find=function(id){ return S.lead.cards.filter(function(c){ return c.id===id; })[0]; };
+  var nw=document.getElementById('leadNew'); if(nw) nw.onclick=function(){ gpTap(); var fl=S.leadFilter||''; S.leadForm={ id:'', type: fl==='project' || fl.indexOf('area:')===0 ? 'project' : 'agenda', col:(leadCols_()[0]||{}).id||'', area: fl.indexOf('area:')===0 ? fl.slice(5) : '', title:'', owner:'', due:'', okrId:'', notes:'', meeting:leadNextMonday_() }; render(); var el=document.getElementById('leadForm'); if(el) el.scrollIntoView({block:'start'}); };
+  document.querySelectorAll('[data-leadfilter]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadFilter=b.getAttribute('data-leadfilter'); render(); }; });
+  var lo=document.getElementById('leadOld'); if(lo) lo.onclick=function(){ S.leadOld=true; render(); };
+  document.querySelectorAll('[data-leadedit]').forEach(function(b){ b.onclick=function(){ var c=find(b.getAttribute('data-leadedit')); if(!c) return; gpTap(); S.leadForm=JSON.parse(JSON.stringify(c)); render(); var el=document.getElementById('leadForm'); if(el) el.scrollIntoView({block:'start'}); }; });
+  document.querySelectorAll('[data-leadmove]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-leadmove').split('|'), c=find(p[0]); if(!c) return; gpTap(); save(Object.assign({}, c, { col:p[1] })); }; });
+  // drag a card to another column (a mouse; a phone uses the arrows)
+  document.querySelectorAll('[data-leadcard]').forEach(function(el){ el.ondragstart=function(e){ try{ e.dataTransfer.setData('text/plain', el.getAttribute('data-leadcard')); e.dataTransfer.effectAllowed='move'; }catch(x){} }; });
+  document.querySelectorAll('[data-leadcol]').forEach(function(col){
+    col.ondragover=function(e){ e.preventDefault(); col.classList.add('drop'); };
+    col.ondragleave=function(){ col.classList.remove('drop'); };
+    col.ondrop=function(e){ e.preventDefault(); col.classList.remove('drop'); var id=''; try{ id=e.dataTransfer.getData('text/plain'); }catch(x){} var c=find(id); var to=col.getAttribute('data-leadcol'); if(c && c.col!==to) save(Object.assign({}, c, { col:to })); };
+  });
+  var eb=document.getElementById('leadEditBoard');
+  if(eb) eb.onclick=function(){ gpTap(); S.leadEdit = S.leadEdit ? null : { cols:JSON.parse(JSON.stringify(S.lead.cols)), areas:JSON.parse(JSON.stringify(S.lead.areas)), standing:JSON.parse(JSON.stringify(S.lead.standing)) }; render(); var el=document.getElementById('leadSettings'); if(el) el.scrollIntoView({block:'start'}); };
+  var e=S.leadEdit;
+  if(e){
+    var at=function(v){ var p=v.split('|'); return { list:e[p[0]], i:Number(p[1]) }; };
+    document.querySelectorAll('[data-lset]').forEach(function(inp){ inp.oninput=function(){ var x=at(inp.getAttribute('data-lset')); x.list[x.i].title=inp.value; }; });
+    document.querySelectorAll('[data-ldone]').forEach(function(inp){ inp.onchange=function(){ e.cols.forEach(function(c, i){ c.done = i===Number(inp.getAttribute('data-ldone')); }); }; });
+    document.querySelectorAll('[data-lsetup]').forEach(function(b){ b.onclick=function(){ var x=at(b.getAttribute('data-lsetup')); if(x.i<1) return; var tmp=x.list[x.i]; x.list[x.i]=x.list[x.i-1]; x.list[x.i-1]=tmp; render(); }; });
+    document.querySelectorAll('[data-lsetdel]').forEach(function(b){ b.onclick=function(){ var x=at(b.getAttribute('data-lsetdel')); if(b.getAttribute('data-lsetdel').indexOf('cols|')===0 && e.cols.length<2) return; x.list.splice(x.i,1); render(); }; });
+    document.querySelectorAll('[data-lsetadd]').forEach(function(b){ b.onclick=function(){ var k=b.getAttribute('data-lsetadd'); e[k].push({ id:'', title:'', done:false }); render(); var all=document.querySelectorAll('[data-lset^="'+k+'|"]'); if(all.length) all[all.length-1].focus(); }; });
+    var sc=document.getElementById('leadSetCancel'); if(sc) sc.onclick=function(){ S.leadEdit=null; render(); };
+    var ss=document.getElementById('leadSetSave');
+    if(ss) ss.onclick=function(){
+      if(S.busy) return; S.busy=true; ss.disabled=true;
+      run('saveLeadSettings',[S.auth.user,S.auth.pin,e],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; S.leadEdit=null; showMsg(t('Board saved')); } else showMsg(d && d.err==='no_columns' ? t('The board needs at least one column.') : t('Could not save')); render(); });
+    };
+  }
+  var f=S.leadForm;
+  if(f){
+    document.querySelectorAll('[data-lf]').forEach(function(inp){ var k=inp.getAttribute('data-lf'); inp.oninput=inp.onchange=function(){ f[k]=inp.value; }; });
+    document.querySelectorAll('[data-lftype]').forEach(function(b){ b.onclick=function(){ f.type=b.getAttribute('data-lftype'); render(); }; });
+    var cn=document.getElementById('leadCancel'); if(cn) cn.onclick=function(){ S.leadForm=null; render(); };
+    var sv=document.getElementById('leadSave');
+    if(sv) sv.onclick=function(){ if(!(f.title||'').trim()){ showMsg(t('Give the card a title first.')); return; } save(f, f.id ? t('Card saved') : t('Card added'), function(){ S.leadForm=null; }); };
+    var dl=document.getElementById('leadDelete');
+    if(dl) dl.onclick=function(){
+      if(!confirm(gpT('Delete “{name}”?',{name:f.title}))) return;
+      if(S.busy) return; S.busy=true;
+      run('deleteLeadCard',[S.auth.user,S.auth.pin,f.id],function(d){ S.busy=false; if(d && d.ok){ S.lead=d; S.leadForm=null; showMsg(t('Card deleted')); } else showMsg(t('Could not save')); render(); });
+    };
+  }
 }
 
 function teamsDbHtml(){
@@ -11278,6 +11539,7 @@ function bindAway(){
   });
   bindHr();
   bindHosp();
+  if(S.view==='ministry') bindLead_();
   if(typeof dutyHtml==='function') bindSched_();
 
   if(!S.leaveDraft) S.leaveDraft={from:'',to:'',type:'',reason:'',coverage:'',ack:false};

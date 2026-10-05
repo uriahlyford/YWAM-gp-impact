@@ -66,6 +66,16 @@ await p.waitForTimeout(700);
 // the overseer's own leadership figures are the LAST pick, never the default — pick them
 await p.click('[data-mmpick="Campus Leadership|Community Service"]');
 await p.waitForTimeout(500);
+/* Campus Leadership's weekly figures are hidden for now: its own row is its
+   OKRs and the Monday meeting board instead. While they are hidden there is
+   nothing below to check; the checks come back with them. */
+if (!(await p.$('#kpiInputBtn'))) {
+  const shown = !!(await p.$('#leadOkrs'));
+  console.log((shown ? 'ok   ' : 'FAIL ') + 'Campus Leadership’s own row is its OKRs and meeting board — its weekly figures are hidden for now');
+  await b.close(); srv.close();
+  console.log('\n' + (shown ? 1 : 0) + ' passed, ' + (shown ? 0 : 1) + ' failed');
+  process.exit(shown ? 0 : 1);
+}
 // the metric form is folded behind one button; opening it unfolds every section
 await p.click('#kpiInputBtn');
 await p.waitForTimeout(400);

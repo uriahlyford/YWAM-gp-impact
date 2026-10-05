@@ -448,6 +448,30 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   someone waiting (`all_placed` when they all have beds); `toBed` '' takes them off.
   One write, so a swap can't half-happen.
 
+## Campus Leadership on My Ministry: OKRs and the Monday meeting board
+Campus Leadership doesn't log weekly numbers (hidden for now). Its own row in the picker
+("🧭 Campus Leadership", where My Ministry opens for anyone in Campus Leadership —
+`mmSelected_` defaults to your own row) renders `leadSectionHtml_` instead of the dashboard /
+week strip / input: two tabs.
+- **Leadership OKRs** (`leadOkrDashHtml_`): this quarter's Campus Leadership objectives on the
+  campus — tiles (quarter progress = mean `objProgress`, objectives, key results on pace with
+  the week of the quarter, open meeting cards), each objective with its bar, its key results,
+  and "N of M meeting cards done". Progress is still edited on the OKRs tab.
+- **Monday meetings** (`leadBoardHtml_`): blob `leadBoard:<campus>` =
+  `{cols:[{id,title,done}], areas:[{id,title}], standing:[{id,title}], cards}`. Defaults
+  (`LEAD_DEFAULT`): columns Agenda / In progress / Done (Done is the finished one); focus areas
+  Siem Reap finances, Siem Reap ministries, Construction; every-Monday agenda Department and
+  ministry updates, Events coming up. A card: title, type (agenda | project), col, area, owner
+  (staff id), due, notes, okrId (an objective's id — the card shows its progress). Moving into
+  the finished column stamps `doneAt`; Done shows the last 30 days ("Show N older").
+  "Edit the board" (`saveLeadSettings`) renames / adds / removes / reorders columns (exactly
+  one finished; cards in a removed column go to the first), focus areas and standing items.
+  Cards move by arrows, or drag on a computer. Handlers `getLeadBoard`, `saveLeadCard`,
+  `deleteLeadCard`, `saveLeadSettings`; `canLead_` = Campus Leadership on the campus or admins.
+- On a wide screen the section takes the width (`main.wide`), the columns side by side; on a
+  phone they scroll across in their own row.
+- `test-lead-board.mjs` (server) and `test-lead-board-page.mjs` (browser) cover it.
+
 ## My Home: no daily check-in for now
 The daily check-in under the habit tracker (hours, mood, the private questions) is hidden —
 `DAILY_CHECKIN = false` in teams.html; flip it to bring it back, nothing it saved is touched —

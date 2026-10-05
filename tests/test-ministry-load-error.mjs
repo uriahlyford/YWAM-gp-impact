@@ -57,6 +57,8 @@ async function open(who, failFn) {
   await page.waitForTimeout(500);
   await page.click('#goMinistryFromMe');
   await page.waitForTimeout(800);
+  // Campus Leadership opens on its own OKRs and meeting board — this file is about another ministry's numbers, so go to one
+  if (await page.$('#leadOkrs')) { await page.evaluate(() => { S.mmBrowseDept = 'Community Service'; S.mmBrowseMinistry = 'Cafe'; render(); }); await page.waitForTimeout(800); }
   return { ctx, page, errors, sent, recover: () => { failing = false; } };
 }
 
