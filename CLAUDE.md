@@ -1057,6 +1057,16 @@ themselves). Long lists show five and fold the rest.
   metric** (newer box wins) instead of replacing. Shown at once (`gpMinistryOverlay_`)
   and re-applied over a fresh boot until sent. The daily count path (`saveMyKpiDay`)
   does not queue: its numbers add up, and replaying one twice would double it.
+- **The copy draws first on every open,** not only offline. With a remembered session
+  and a copy for that user, `boot()` applies it at once with `S.bootStale` (a thin
+  "Updating…" bar) and the fresh boot replaces it (`gpBootFresh_`). While stale,
+  **`run()` holds every call but `getMyBoot`** (`_gpHeld`) and sends them in order once
+  the fresh boot lands — so nothing is saved against the copy — or, if the boot fails,
+  releases them into the offline handling; a refused PIN drops them unsent.
+- **Server side, each request reads each blob once** (`readJSON` keeps the store's raw
+  text per request; each reader parses its own copy), and `getMyBoot` starts every read
+  it needs at once (`prefetch_`, `BOOT_KEYS`). A boot went from 66 blob reads (staff ×19,
+  loginThrottle ×24) to 18. Add a key a boot reads to `BOOT_KEYS`.
 - **Not under a test browser** unless `localStorage['gp-sw-test']` is set
   (`navigator.webdriver`): a worker serving cached files would change what every other
   browser test tests. tests/test-offline-open-ui.mjs sets it.

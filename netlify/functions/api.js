@@ -144,10 +144,34 @@ function shaped_(v, fallback) {
   return v;
 }
 
+/* And read each key once per request. A boot runs a dozen handlers side by side,
+   and each one verifies the PIN and reads what it needs on its own — 66 blob
+   reads for one page open, the staff list 19 times and loginThrottle 24, each a
+   round trip to the store. Within one request the first read of a key is shared
+   (the promise itself, so reads already in flight are shared too). It is kept as
+   the store's raw text and each reader parses its own copy — the same work every
+   read already did, without the trip. A write still wins (the map above), and
+   mutateStaff_ still reads the store directly, so its check-after-write sees the
+   real thing. Unparseable text reads as missing, as the shape check already
+   treats a junk blob. */
+function readsOf_(mine) { return mine.__reads || (mine.__reads = new Map()); }
 async function readJSON(key, fallback) {
   const mine = requestScope.getStore();
   if (mine && mine.has(key)) return shaped_(copy_(mine.get(key)), fallback);
-  return shaped_(await store().get(key, { type: 'json' }), fallback);
+  if (!mine) return shaped_(await store().get(key, { type: 'json' }), fallback);
+  const reads = readsOf_(mine);
+  if (!reads.has(key)) reads.set(key, store().get(key, { type: 'text' }).catch(function (e) { reads.delete(key); throw e; }));
+  const v = await reads.get(key);
+  if (mine.has(key)) return shaped_(copy_(mine.get(key)), fallback);   // written while we waited
+  if (typeof v !== 'string') return shaped_(copy_(v), fallback);       // a store that hands back objects (the tests' fakes)
+  let parsed = null;
+  try { parsed = JSON.parse(v); } catch (e) { parsed = null; }
+  return shaped_(parsed, fallback);
+}
+/* Start reading these now, all at once, so the handlers that need them later
+   find them already there instead of waiting their turn one after another. */
+function prefetch_(keys) {
+  keys.forEach(function (k) { readJSON(k, null).catch(function () { /* the handler that needs it will see the failure */ }); });
 }
 async function writeJSON(key, value) {
   await store().setJSON(key, value);
@@ -3131,7 +3155,10 @@ async function backupStatus_() {
 
    It deliberately does NOT fail as a unit: each section is caught on its own, so
    a problem reading trips cannot stop the page from having the base's figures. */
+const BOOT_KEYS = ['entries', 'survey', 'okrs', 'dailyLogs', 'goals', 'holidays', 'smartGoals', 'broadcasts',
+  'personalKpi', 'trips', 'kpiDaily', 'oneOnOnes', 'numbersPeople', 'metricOverrides', 'teamTrips'];
 async function getMyBoot(username, pin) {
+  prefetch_(['staff', 'loginThrottle'].concat(BOOT_KEYS));   // before the PIN check, so they travel together
   const s = await verifyStaff_(username, pin);
   // `err:'auth'` on purpose: the page must be able to tell "your PIN is wrong"
   // from "the request failed", because only the first should log somebody out.

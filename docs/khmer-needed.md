@@ -2712,3 +2712,12 @@ a group leaves. "Archive" means the account is switched off and kept, not delete
 | Yes, archive {n} | បាទ/ចាស ដាក់ប័ណ្ណសារ {n} |
 | Link copied | បានចម្លងតំណ |
 | {n} archived | បានដាក់ប័ណ្ណសារ {n} |
+
+## 61. Opening faster
+
+The app now shows your page from last time straight away and refreshes it a
+moment later; this small label sits at the top while it does.
+
+| English | Khmer (pending) |
+|---|---|
+| Updating… | កំពុងធ្វើបច្ចុប្បន្នភាព… |

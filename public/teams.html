@@ -637,6 +637,11 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .barFill { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
 .barFill.done { background:linear-gradient(90deg,var(--amber),var(--amberDeep)); }
 @media (prefers-reduced-motion: reduce){ .gRing, .gSlide::-webkit-slider-thumb { transition:none } }
+.staleBar { position:sticky; top:0; z-index:5; height:0; overflow:visible; }
+.staleBar span { position:absolute; right:0; top:2px; font-size:11.5px; font-weight:700; color:var(--muted); background:var(--surface2); border-radius:99px; padding:3px 10px; }
+.staleBar::before { content:''; position:absolute; left:0; right:0; top:-2px; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); background-size:200% 100%; animation:staleSlide 1.1s linear infinite; }
+@keyframes staleSlide { from { background-position:200% 0; } to { background-position:-200% 0; } }
+@media (prefers-reduced-motion: reduce){ .staleBar::before { animation:none; } }
 .btnRow { display:flex; gap:8px; flex-wrap:wrap; } .btnRow .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .grpRow { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer; }
 .grpRow input { width:auto; flex:0 0 auto; margin:0; }
@@ -2071,6 +2076,12 @@ var REQUEST_TIMEOUT_MS = 20000;
    release the lock. With it, the caller owns the failure (the habit tiles use
    this to put back a toggle the server never accepted). */
 function run(fn, args, onOk, onErr){
+  /* While the page shows the copy kept from last time (S.bootStale), every call
+     but the boot itself waits for the fresh boot: a save is then made against
+     today's data, not the copy, and a read answers with what is true now. They
+     go out in order the moment it lands (gpBootFresh_), or, if it fails, fall
+     to the offline handling they already have. */
+  if(S.bootStale && fn!=='getMyBoot'){ _gpHeld.push([fn, args, onOk, onErr]); return; }
   var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
   var settled = false;
   var timer = setTimeout(function(){ if(!settled && ctl) ctl.abort(); }, REQUEST_TIMEOUT_MS);
@@ -2311,7 +2322,9 @@ function gpBootFromCache_(){
   if(!c) return false;
   S.me = c.d.staff; S.profile = c.d.profile;
   S.offlineSince = c.at;
+  S.bootStale = false;
   applyBoot(c.d, true);
+  gpReleaseHeld_();   // what was tapped meanwhile now meets the offline queue, or says it could not save
   return true;
 }
 /* Back online (or back to the app) while showing the copy: boot again, quietly. */
@@ -2321,7 +2334,7 @@ function gpRebootIfOffline_(){
   _gpReboot = true;
   run('getMyBoot', [S.auth.user, S.auth.pin], function(d){
     _gpReboot = false;
-    if(d && d.ok){ S.offlineSince = null; S.me = d.staff; S.profile = d.profile; applyBoot(d); }
+    if(d && d.ok) gpBootFresh_(d);
   }, function(){ _gpReboot = false; });
 }
 window.addEventListener('online', gpRebootIfOffline_);
@@ -2340,6 +2353,23 @@ function gpMarkSeen_(){
   if(lsGet('gp-seen-day')===day+'|'+S.auth.user) return;
   run('markSeen',[S.auth.user,S.auth.pin],function(d){ if(d && d.ok) lsSet('gp-seen-day', day+'|'+S.auth.user); }, function(){});
 }
+
+/* Opening the app: the copy first, then the truth. With a remembered session and
+   a copy of this person's last boot on the phone, the page draws from the copy at
+   once — no blank screen while the server answers — marked by a thin "Updating…"
+   bar, and replaces it when the fresh boot lands, usually a second or two later. */
+var _gpHeld = [];
+function gpReleaseHeld_(){
+  var held=_gpHeld; _gpHeld=[];
+  held.forEach(function(c){ run(c[0], c[1], c[2], c[3]); });
+}
+function gpBootFresh_(d){
+  S.bootStale=false; S.offlineSince=null;
+  S.me = d.staff; S.profile = d.profile;
+  applyBoot(d);
+  gpReleaseHeld_();
+}
+function gpStaleBarHtml_(){ return S.bootStale ? '<div class="staleBar" id="staleBar"><span>'+esc(t('Updating…'))+'</span></div>' : ''; }
 
 /* ---------- boot ---------- */
 /* An invite link (Admin → Arrivals & departures): teams.html?reg=1&campus=…&dept=…
@@ -2374,12 +2404,10 @@ function boot(){
        to come first is not needed. Logging in by hand still uses staffLogin,
        because there the answer to "is this PIN right" is the whole point. */
     S.auth = saved;
+    var kept = gpBootCacheLoad_(saved.user);
+    if(kept){ S.bootStale = true; S.me = kept.d.staff; S.profile = kept.d.profile; applyBoot(kept.d, true); }
     run('getMyBoot', [saved.user, saved.pin], function(d){
-      if(d && d.ok){
-        S.me = d.staff; S.profile = d.profile;
-        applyBoot(d);
-        return;
-      }
+      if(d && d.ok){ gpBootFresh_(d); return; }
       /* Only forget the session when the server actually says the credentials are
          wrong. Anything else — a 500, a bad gateway, a truncated response — is the
          request failing, and making somebody retype their PIN because the server
@@ -2387,17 +2415,20 @@ function boot(){
          this covers a server that answered but not with a page. */
       if(d && d.err === 'auth'){
         lsDel('gp-staff'); lsDel(GP_BOOT_CACHE);
+        S.bootStale = false; _gpHeld = [];   // nothing held goes out under a PIN the server refused
         S.me = null; S.auth = { user:'', pin:'' };
         showMsg(t('Your PIN didn’t work — please log in again.'));
       } else if(gpBootFromCache_()){
         return;
       } else {
+        S.bootStale = false; gpReleaseHeld_();
         showMsg(t('Couldn’t load your page — pull down to try again.'));
       }
       render();
     }, function(){
       /* No connection at all: the copy from last time, if this phone has one. */
       if(gpBootFromCache_()) return;
+      S.bootStale = false; gpReleaseHeld_();
       showMsg(t('No connection — your page will load once you’re back online.'));
       render();
     });
@@ -2589,6 +2620,7 @@ function render(){
   else if(S.view==='gstr') m.innerHTML=gstrHtml();
   else m.innerHTML=profileHtml();
   if(S.offlineSince) m.insertAdjacentHTML('afterbegin', gpOfflineBannerHtml_());
+  if(S.bootStale) m.insertAdjacentHTML('afterbegin', gpStaleBarHtml_());
   /* Switching screens should open at the top of the new one, not wherever the
      old screen happened to be scrolled to — without this, tapping into Leave
      Request from partway down My Home lands on whatever the leave screen
