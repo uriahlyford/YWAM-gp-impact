@@ -46,7 +46,6 @@ const SERVER = [
   'test-jobfocus.mjs',   // jobfocus.js and help.html agree
   'test-stafftype.mjs',  // kind of staff + home country: stored, carried, counted
   'test-personality.mjs', // personality types: scoring, and who can see a type, an avatar or a season
-  'test-strengths.mjs', // CliftonStrengths as recorded: validation, and who can see a Top 5
   'test-dept-pulse.mjs', // a department leader's pulse: who sees it, health as two numbers only, staff debt from Finance
   'test-numbers-people.mjs', // each ministry's main person and backup, due Friday: who may set them, the reminders' data
   'test-kpi-guide.mjs', // what each KPI means, and scores / percentages that cannot be out of range
@@ -92,7 +91,6 @@ const BROWSER = [
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
-  'test-strengths-ui.mjs',  // adding a Gallup Top 5, matches to GP strengths, both compared, 320px, Khmer
   'test-dept-pulse-ui.mjs',  // the department leader's card, Finance's staff debt, the Campus Director's view
   'test-numbers-people-ui.mjs',  // numbers first on My Ministry, Friday/Saturday reminders, the department leader's list
   'test-gpstrengths-ui.mjs',  // taking the free test, results, the team strengths map, 320px

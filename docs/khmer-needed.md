@@ -1842,55 +1842,35 @@ _A type name is translated as one phrase ("The Guide" → អ្នកណែន�
 | Under stress you may try to control more. Let go of one thing this week. | ពេលតានតឹង អ្នកប្រហែលព្យាយាមគ្រប់គ្រងច្រើនជាងមុន។ ទុកចោលរឿងមួយនៅសប្តាហ៍នេះ។ |
 | Under stress you may avoid decisions. Make one small decision today. | ពេលតានតឹង អ្នកប្រហែលជៀសវាងការសម្រេចចិត្ត។ ធ្វើការសម្រេចចិត្តតូចមួយនៅថ្ងៃនេះ។ |
 
-## 53. Strengths — GP Strengths (the free test) and recording Gallup results
+## 53. GP Strengths (the free strengths test)
 
 GP's own strengths finder: 102 pairs of statements ("Which is more like you?"),
 then a Top 5 of 34 strengths in four groups (Doing, Leading, Relating,
-Thinking), with what each means for work. It is shaped like CliftonStrengths,
-but every word is GP's own, so all of it is translated. The statements matter
+Thinking), with what each means for work. Every word is GP's own,
+so all of it is translated. The statements matter
 most — each pair is two good things, and the Khmer should keep them equally
 attractive, so neither side sounds better. Strength names should read as a
 kind of person ("អ្នក…").
 
-People who took the real CliftonStrengths can also record their Gallup Top 5.
-Gallup's theme names (Achiever, Empathy…) stay in English — they must match the
-person's Gallup report — so only the app's words around them are here.
-
-### Screens (both)
+### Screens
 
 | English | Khmer (pending) |
 |---|---|
-| GP: {name} | GP៖ {name} |
-| CliftonStrengths® and its theme names are trademarks of Gallup, Inc. GP records the results you got from Gallup — it does not give the assessment. | CliftonStrengths® និងឈ្មោះប្រធានបទរបស់វា គឺជាពាណិជ្ជសញ្ញារបស់ក្រុមហ៊ុន Gallup។ GP កត់ត្រាលទ្ធផលដែលអ្នកបានទទួលពី Gallup — វាមិនធ្វើការវាយតម្លៃនោះទេ។ |
-| Take CliftonStrengths at gallup.com | ធ្វើតេស្ត CliftonStrengths នៅ gallup.com |
-| CliftonStrengths (from Gallup) | CliftonStrengths (ពី Gallup) |
 | Strengths could not load. Pull down to refresh. | មិនអាចផ្ទុកចំណុចខ្លាំងបានទេ។ ទាញចុះក្រោមដើម្បីផ្ទុកឡើងវិញ។ |
 | My Home | ផ្ទះរបស់ខ្ញុំ |
-| My CliftonStrengths | CliftonStrengths របស់ខ្ញុំ |
-| Add your themes in the order your Gallup report gives them. Most reports list a Top 5; you can add up to 10. | បញ្ចូលប្រធានបទរបស់អ្នកតាមលំដាប់ដែលរបាយការណ៍ Gallup ផ្តល់ឱ្យ។ របាយការណ៍ភាគច្រើនមាន Top 5 ហើយអ្នកអាចបញ្ចូលបានរហូតដល់ ១០។ |
-| None added yet — tap your themes below. | មិនទាន់បានបញ្ចូលទេ — ចុចលើប្រធានបទរបស់អ្នកខាងក្រោម។ |
 | Move up | ផ្លាស់ឡើងលើ |
 | Move down | ផ្លាស់ចុះក្រោម |
 | Remove | ដកចេញ |
-| How this shows up in me (optional) | របៀបដែលវាបង្ហាញក្នុងខ្លួនខ្ញុំ (ស្រេចចិត្ត) |
-| That’s ten — remove one to add another. | គ្រប់ ១០ ហើយ — ដកមួយចេញដើម្បីបញ្ចូលមួយទៀត។ |
-| Add a theme | បញ្ចូលប្រធានបទ |
-| Show my strengths to the team | បង្ហាញចំណុចខ្លាំងរបស់ខ្ញុំដល់ក្រុម |
-| Save my strengths | រក្សាទុកចំណុចខ្លាំងរបស់ខ្ញុំ |
-| Remove my strengths | លុបចំណុចខ្លាំងរបស់ខ្ញុំ |
 | Nobody here has found their strengths yet. Take the free test from My Home. | មិនទាន់មាននរណាម្នាក់នៅទីនេះរកឃើញចំណុចខ្លាំងរបស់ខ្លួនទេ។ ធ្វើតេស្តឥតគិតថ្លៃពីទំព័រដើមរបស់ខ្ញុំ។ |
 | {n} people have shared their Top 5 | មនុស្ស {n} នាក់បានចែករំលែក Top 5 របស់ខ្លួន |
 | Share of the team’s Top 5 strengths in each group. | ចំណែកនៃចំណុចខ្លាំង Top 5 របស់ក្រុម ក្នុងក្រុមនីមួយៗ។ |
 | Not in anyone’s Top 5 yet: | មិនទាន់មានក្នុង Top 5 របស់នរណាម្នាក់ទេ៖ |
 | Could not save — check your connection and try again. | មិនអាចរក្សាទុកបានទេ — សូមពិនិត្យការតភ្ជាប់ ហើយព្យាយាមម្តងទៀត។ |
-| Strengths saved | បានរក្សាទុកចំណុចខ្លាំង |
-| GP Strengths is GP’s own free questionnaire. It is not CliftonStrengths® and is not connected with Gallup. | GP Strengths គឺជាកម្រងសំណួរឥតគិតថ្លៃរបស់ GP ផ្ទាល់។ វាមិនមែនជា CliftonStrengths® ទេ ហើយមិនពាក់ព័ន្ធនឹង Gallup ទេ។ |
 | A strength is what comes naturally to you — everyone can grow in all {n}. | ចំណុចខ្លាំង គឺជាអ្វីដែលកើតឡើងដោយធម្មជាតិចំពោះអ្នក — មនុស្សគ្រប់គ្នាអាចលូតលាស់បានក្នុងទាំង {n}។ |
 | Strengths | ចំណុចខ្លាំង |
 | Find your top 5 strengths | ស្វែងរកចំណុចខ្លាំង Top 5 របស់អ្នក |
 | {n} quick choices · free · about 15 minutes | ជម្រើសរហ័ស {n} · ឥតគិតថ្លៃ · ប្រហែល ១៥ នាទី |
 | Tap to see what your strengths mean for your work. | ចុចដើម្បីមើលថាចំណុចខ្លាំងរបស់អ្នកមានន័យយ៉ាងណាសម្រាប់ការងាររបស់អ្នក។ |
-| Have CliftonStrengths results from Gallup? Add them | មានលទ្ធផល CliftonStrengths ពី Gallup មែនទេ? បញ្ចូលវា |
 | How to make the most of {name}’s strengths | របៀបប្រើចំណុចខ្លាំងរបស់ {name} ឱ្យបានល្អបំផុត |
 | GP Strengths | ចំណុចខ្លាំង GP |
 | {n} pairs of statements. For each pair, choose which one is more like you — even when both are. | ឃ្លាចំនួន {n} គូ។ សម្រាប់គូនីមួយៗ សូមជ្រើសរើសមួយណាដែលដូចអ្នកជាង — ទោះបីជាទាំងពីរដូចអ្នកក៏ដោយ។ |
@@ -1914,12 +1894,12 @@ person's Gallup report — so only the app's words around them are here.
 | Most people lead from one or two groups. No group is better than another. | មនុស្សភាគច្រើនមានចំណុចខ្លាំងនៅក្នុងក្រុមមួយ ឬពីរ។ គ្មានក្រុមណាល្អជាងក្រុមណាទេ។ |
 | All {n} | ទាំង {n} |
 | The ones lower down are not weaknesses — just what comes less naturally. | អ្វីដែលនៅខាងក្រោម មិនមែនជាចំណុចខ្សោយទេ — គ្រាន់តែជាអ្វីដែលមិនសូវកើតឡើងដោយធម្មជាតិប៉ុណ្ណោះ។ |
-| Compared with your CliftonStrengths | ប្រៀបធៀបជាមួយ CliftonStrengths របស់អ្នក |
-| Each Gallup theme, beside the GP strength that covers the same ground. The number on the GP strength is where it ranks for you here. | ប្រធានបទ Gallup នីមួយៗ នៅក្បែរចំណុចខ្លាំង GP ដែលគ្របដណ្តប់លើរឿងដូចគ្នា។ លេខនៅលើចំណុចខ្លាំង GP គឺជាលំដាប់របស់វាសម្រាប់អ្នកនៅទីនេះ។ |
 | Show my top 5 to the team | បង្ហាញ Top 5 របស់ខ្ញុំដល់ក្រុម |
 | Your answers and the full list always stay private. | ចម្លើយរបស់អ្នក និងបញ្ជីពេញលេញ តែងតែនៅជាឯកជន។ |
 | Retake the test | ធ្វើតេស្តម្តងទៀត |
 | Answer every pair first. | សូមឆ្លើយគ្រប់គូជាមុនសិន។ |
+
+| GP Strengths is GP’s own free questionnaire. | GP Strengths គឺជាកម្រងសំណួរឥតគិតថ្លៃរបស់ GP ផ្ទាល់។ |
 
 ### Groups, strengths, descriptions and the 204 statements
 
