@@ -320,7 +320,7 @@ h3 { font-family:'Koulen',sans-serif; font-size:16px; letter-spacing:.5px; margi
 .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px; margin-bottom:12px; }
 label.f { display:block; font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:12px 0 4px; }
 label.f:first-child { margin-top:0; }
-input[type=text], input[type=search], input[type=tel], input[type=number], input[type=password], select {
+input[type=text], input[type=search], input[type=email], input[type=tel], input[type=number], input[type=password], select {
   /* 16px is the iOS Safari threshold — anything smaller zooms the whole page in on focus. */
   width:100%; font-size:16px; padding:11px; border-radius:10px; border:1.5px solid var(--ink); background:var(--surface); color:var(--ink); }
 .hint { font-size:11.5px; color:var(--faint); margin-top:4px; }
@@ -643,6 +643,8 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .kmrBtns { display:flex; gap:8px; flex-wrap:wrap; } .kmrBtns .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .kmrBar { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; margin:8px 0 4px; } .kmrBar div { height:100%; background:var(--good); }
 .kmrRecent .row { align-items:flex-start; }
+.grpRow { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer; }
+.grpRow input { width:auto; flex:0 0 auto; margin:0; }
 .looseWhy { font-size:13px; color:var(--muted); line-height:1.4; margin:2px 0 6px; }
 .looseRow { border-top:1px solid var(--line); padding:6px 0; font-size:14px; overflow-wrap:anywhere; }
 .looseCard .adminBadge { margin-left:6px; vertical-align:middle; }
@@ -2345,10 +2347,30 @@ function gpMarkSeen_(){
 }
 
 /* ---------- boot ---------- */
+/* An invite link (Admin → Arrivals & departures): teams.html?reg=1&campus=…&dept=…
+   &ministry=… opens the sign-up form with those chosen. It grants nothing — the
+   person still picks their own username, PIN and email, and a Campus Leadership
+   sign-up still waits for an admin, exactly as without the link. Anything in it
+   that is not a real campus / department / ministry is ignored. */
+function gpInviteFromUrl_(){
+  try {
+    var q=new URLSearchParams(location.search||'');
+    var c=q.get('campus')||'', d=q.get('dept')||'', m=q.get('ministry')||'';
+    if(!CAMPUSES.some(function(x){ return x.id===c; })) return null;
+    if(d && deptsFor(c).indexOf(d)===-1) d='';
+    if(!d || ministriesFor(c, d).indexOf(m)===-1) m='';
+    return { campus:c, dept:d, ministry:m };
+  } catch(e){ return null; }
+}
+function gpInviteLink_(c, d, m){
+  var base=location.origin+location.pathname.replace(/[^\/]*$/, '')+'teams.html';
+  return base+'?reg=1&campus='+encodeURIComponent(c)+(d?'&dept='+encodeURIComponent(d):'')+(m?'&ministry='+encodeURIComponent(m):'');
+}
 function boot(){
   /* The dashboard's front door links straight here: ?reg=1 opens the create
      form rather than making someone find the "New here?" link first. */
   try { if(String(location.search||'').indexOf('reg=1')>-1) S.regMode = true; } catch(e){}
+  S.regPrefill = gpInviteFromUrl_();
   var saved = null;
   try { saved = JSON.parse(lsGet('gp-staff')||'null'); } catch(e){}
   if(saved && saved.user && saved.pin){
@@ -5778,6 +5800,7 @@ var ADMIN_SUBS = [
   { id:'kpis', label:'Ministry KPIs', emoji:'🗂️', blurb:'What each ministry tracks — add, rename, remove, re-time' },
   { id:'broadcast', label:'Announcements', emoji:'📣', blurb:'A message to everyone’s notification bell' },
   { id:'merge', label:'Merge duplicates', emoji:'🔀', blurb:'Two profiles that are really one person' },
+  { id:'groups', label:'Arrivals & departures', emoji:'👥', blurb:'A sign-up link for a new school or team, and archiving several people at once' },
   { id:'loose', label:'Loose ends', emoji:'🧵', blurb:'Small gaps that quietly make the totals wrong — and who to nudge' }
 ];
 function adminBackHtml_(to, label){
@@ -5949,6 +5972,7 @@ function adminHtml(){
   if(sub==='portal') return h+adminPortalHtml_();
   if(sub==='merge') return h+adminMergeHtml_();
   if(sub==='loose') return h+adminLooseHtml_();
+  if(sub==='groups') return h+adminGroupsHtml_();
   return h+adminAccountsHtml_();
 }
 function adminHomeHtml_(){
@@ -6082,6 +6106,89 @@ function adminLooseHtml_(){
 
   h+='<p class="sub" style="margin:10px 0">'+esc(total ? gpT('{n} loose ends at {campus}',{n:total, campus:campusName(C)}) : gpT('Nothing loose at {campus}',{campus:campusName(C)}))+'</p>';
   return h+out;
+}
+/* Admin → Arrivals & departures. A new school or team: pick where they are
+   joining and share one sign-up link (gpInviteLink_) — everyone makes their own
+   profile, PIN and all. Leaving: tick several people (search, then "Select all
+   shown") and archive them in one go (hrArchiveMany), with the date and why, same
+   as HR's archive; HR can bring anyone back one at a time. */
+S.grp={ campus:'', dept:'', ministry:'', q:'', pick:{}, at:'', reason:'', confirm:false, busy:false };
+function adminGroupsHtml_(){
+  var G=S.grp;
+  if(!G.campus) G.campus=S.me.campus;
+  var depts=deptsFor(G.campus); if(G.dept && depts.indexOf(G.dept)===-1) G.dept='';
+  var mins=G.dept ? ministriesFor(G.campus, G.dept) : []; if(G.ministry && mins.indexOf(G.ministry)===-1) G.ministry='';
+  var link=gpInviteLink_(G.campus, G.dept, G.ministry);
+  var h='<div class="card"><div class="goalCardTitle">👋 '+esc(t('Invite a new group'))+'</div>'+
+    '<p class="looseWhy">'+esc(t('Everyone opens the link on their own phone and makes their own profile and PIN — with where they are joining already chosen.'))+'</p>'+
+    '<label class="f">'+esc(t('Campus'))+'</label><select id="grpCampus">'+CAMPUSES.map(function(c){ return '<option value="'+c.id+'"'+(c.id===G.campus?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select>'+
+    '<label class="f">'+esc(t('Department'))+'</label><select id="grpDept"><option value="">'+esc(t('— they choose —'))+'</option>'+depts.map(function(d){ return '<option value="'+esc(d)+'"'+(d===G.dept?' selected':'')+'>'+esc(t(d))+'</option>'; }).join('')+'</select>'+
+    (G.dept ? '<label class="f">'+esc(t('Ministry'))+'</label><select id="grpMin"><option value="">'+esc(t('— they choose —'))+'</option>'+mins.map(function(m){ return '<option value="'+esc(m)+'"'+(m===G.ministry?' selected':'')+'>'+esc(t(m))+'</option>'; }).join('')+'</select>' : '')+
+    '<label class="f">'+esc(t('The link'))+'</label><input type="text" id="grpLink" readonly value="'+esc(link)+'">'+
+    '<div class="kmrBtns" style="margin-top:8px"><button class="btn" id="grpCopy">'+esc(t('Copy link'))+'</button>'+
+    (navigator.share ? '<button class="btn ghost" id="grpShare">'+esc(t('Share'))+'</button>' : '')+'</div>'+
+    (G.dept===BL_DEPT ? '<p class="hint">'+esc(t('Campus Leadership sign-ups still wait for an admin to approve them.'))+'</p>' : '')+
+    '</div>';
+
+  // archive several
+  if(S.adminStaff===null) return h+'<p class="sub">'+esc(t('Loading…'))+'</p>';
+  var C = CAMPUSES.some(function(c){ return c.id===S.adminCampusTab; }) ? S.adminCampusTab : S.me.campus;
+  S.adminCampusTab=C;
+  var q=G.q.trim().toLowerCase();
+  var all=(S.adminStaff||[]).filter(function(x){ return x.campus===C && x.active && !x.archived && x.id!==S.me.id; })
+    .sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+  var shown=all.filter(function(x){ return !q || [x.name, x.username, x.dept, x.ministry, x.role, t(x.ministry||''), t(x.dept||'')].join(' ').toLowerCase().indexOf(q)>-1; });
+  var picked=Object.keys(G.pick).filter(function(id){ return G.pick[id]; });
+  h+='<div class="card"><div class="goalCardTitle">🚪 '+esc(t('Archive several people'))+'</div>'+
+    '<p class="looseWhy">'+esc(t('When a school or team leaves: they can no longer log in, and drop off the lists. HR can bring anyone back.'))+'</p>'+
+    '<div class="deptChips">'+CAMPUSES.map(function(c){ return '<button class="deptChip'+(c.id===C?' on':'')+'" data-admincampustab="'+esc(c.id)+'">'+esc(c.short)+'</button>'; }).join('')+'</div>'+
+    '<input type="search" id="grpSearch" placeholder="'+esc(t('Find by name, ministry or role…'))+'" value="'+esc(G.q)+'" style="margin:8px 0">'+
+    '<div class="kmrBtns" style="margin-bottom:6px"><button class="btn ghost" id="grpAll">'+esc(gpT('Select all shown ({n})',{n:shown.length}))+'</button>'+
+    '<button class="btn ghost" id="grpNone">'+esc(t('Clear'))+'</button></div>'+
+    '<div id="grpList">'+shown.map(function(x){
+      return '<label class="grpRow"><input type="checkbox" data-grppick="'+esc(x.id)+'"'+(G.pick[x.id]?' checked':'')+'> '+avatarHtml(x,'sm')+
+        '<span style="min-width:0"><b>'+esc(x.name)+'</b><span class="rowSub" style="display:block">'+esc([t(x.ministry||''), x.role||''].filter(Boolean).join(' · ') || t('no ministry'))+'</span></span></label>';
+    }).join('')+(shown.length ? '' : '<p class="rowSub">'+esc(t('No one matches that search.'))+'</p>')+'</div>';
+  if(picked.length){
+    h+='<label class="f">'+esc(t('Leaving on'))+'</label><input type="date" id="grpAt" value="'+esc(G.at||todayStr())+'">'+
+      '<label class="f">'+esc(t('Why (optional)'))+'</label><input type="text" id="grpReason" value="'+esc(G.reason)+'" placeholder="'+esc(t('e.g. DTS finished'))+'">';
+    if(!G.confirm) h+='<button class="btn" id="grpArchive" style="background:var(--bad);border-color:var(--bad)">'+esc(gpT('Archive {n} people',{n:picked.length}))+'</button>';
+    else h+='<div class="banner" style="margin-top:10px">'+esc(gpT('Archive {n} people? They will not be able to log in.',{n:picked.length}))+'</div>'+
+      '<div class="kmrBtns"><button class="btn" id="grpYes" style="background:var(--bad);border-color:var(--bad)">'+esc(gpT('Yes, archive {n}',{n:picked.length}))+'</button><button class="btn ghost" id="grpNo">'+esc(t('Cancel'))+'</button></div>';
+  }
+  return h+'</div>';
+}
+function bindAdminGroups_(){
+  var G=S.grp, on=function(id, ev, fn){ var el=document.getElementById(id); if(el) el[ev]=fn; return el; };
+  on('grpCampus','onchange',function(e){ G.campus=e.target.value; G.dept=''; G.ministry=''; render(); });
+  on('grpDept','onchange',function(e){ G.dept=e.target.value; G.ministry=''; render(); });
+  on('grpMin','onchange',function(e){ G.ministry=e.target.value; render(); });
+  on('grpCopy','onclick',function(){
+    var v=document.getElementById('grpLink').value;
+    var done=function(){ showMsg(t('Link copied')); };
+    try { navigator.clipboard.writeText(v).then(done, function(){ document.getElementById('grpLink').select(); document.execCommand('copy'); done(); }); }
+    catch(e){ document.getElementById('grpLink').select(); try { document.execCommand('copy'); } catch(e2){} done(); }
+  });
+  on('grpShare','onclick',function(){ try { navigator.share({ title:'YWAM GP', url:document.getElementById('grpLink').value }); } catch(e){} });
+  var sr=on('grpSearch','oninput',function(){ G.q=sr.value; var pos=sr.selectionStart; render(); var a=document.getElementById('grpSearch'); if(a){ a.focus(); try { a.setSelectionRange(pos,pos); } catch(e){} } });
+  document.querySelectorAll('[data-grppick]').forEach(function(c){ c.onchange=function(){ G.pick[c.getAttribute('data-grppick')]=c.checked; G.confirm=false; render(); }; });
+  on('grpAll','onclick',function(){ document.querySelectorAll('[data-grppick]').forEach(function(c){ G.pick[c.getAttribute('data-grppick')]=true; }); G.confirm=false; render(); });
+  on('grpNone','onclick',function(){ G.pick={}; G.confirm=false; render(); });
+  on('grpAt','onchange',function(e){ G.at=e.target.value; });
+  on('grpReason','oninput',function(e){ G.reason=e.target.value; });
+  on('grpArchive','onclick',function(){ G.confirm=true; render(); });
+  on('grpNo','onclick',function(){ G.confirm=false; render(); });
+  on('grpYes','onclick',function(){
+    if(G.busy) return;
+    var ids=Object.keys(G.pick).filter(function(id){ return G.pick[id]; });
+    G.busy=true;
+    run('hrArchiveMany',[S.auth.user,S.auth.pin,ids,{ at:G.at||todayStr(), reason:G.reason }],function(d){
+      G.busy=false; G.confirm=false;
+      if(d && d.ok){ G.pick={}; G.reason=''; showMsg(gpT('{n} archived',{n:d.archived})); adminRefreshQuiet_(); }
+      else showMsg(t('Could not save'));
+      render();
+    });
+  });
 }
 function adminApprovalsHtml_(){
   if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
@@ -10370,16 +10477,18 @@ function bindCountryOther(){
 }
 
 function registerHtml(){
+  var inv = S.regPrefill;
   var opts = S.roster.map(function(p){ return '<option value="'+esc(p.id)+'">'+esc(p.name)+' · '+esc(p.dept)+'</option>'; }).join('');
   return '<h2>Create my profile</h2><p class="sub">Pick a username and a 4-digit PIN you\u2019ll remember. You can add a photo right after.</p>'+
+    (inv ? '<div class="banner" id="inviteBanner">👋 '+esc(gpT('You’re joining {where}. Check it below, then make your profile.',{where:[inv.ministry?t(inv.ministry):'', inv.dept?t(inv.dept):'', campusName(inv.campus)].filter(Boolean).join(' · ')}))+'</div>' : '')+
     '<div class="card">'+
     '<label class="f">Full name</label><input type="text" id="r_name" placeholder="Your name">'+
     '<label class="f">Email</label><input type="email" id="r_email" autocapitalize="none" placeholder="you@example.com">'+
     '<div class="hint">One profile per email \u2014 this is what stops a duplicate sign-up.</div>'+
     '<label class="f">Username</label><input type="text" id="r_user" autocapitalize="none" placeholder="lowercase, no spaces"><div class="hint">Letters, numbers, . _ - (2\u201320 chars)</div>'+
     '<label class="f">PIN (4 digits)</label><input type="password" id="r_pin" inputmode="numeric" maxlength="4" placeholder="••••">'+
-    '<label class="f">Campus</label><select id="r_campus">'+CAMPUSES.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>';}).join('')+'</select>'+
-    '<label class="f">Department</label><select id="r_dept">'+deptsFor('poipet').map(function(d){return '<option value="'+esc(d)+'">'+esc(t(d))+'</option>';}).join('')+'</select>'+
+    '<label class="f">Campus</label><select id="r_campus">'+CAMPUSES.map(function(c){return '<option value="'+c.id+'"'+(inv && inv.campus===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+'</select>'+
+    '<label class="f">Department</label><select id="r_dept">'+deptsFor(inv ? inv.campus : 'poipet').map(function(d){return '<option value="'+esc(d)+'"'+(inv && inv.dept===d?' selected':'')+'>'+esc(t(d))+'</option>';}).join('')+'</select>'+
     '<label class="f">Ministry</label><select id="r_ministry"></select><div class="hint">This is what puts your team’s KPIs on your home page.</div>'+
     '<label class="f">Role / team</label><input type="text" id="r_role" placeholder="e.g. Cafe barista, DTS staff">'+
     staffTypeFieldHtml('r_type','')+
@@ -12299,7 +12408,7 @@ function fillMinistrySelect(selId, campusSelId, deptSelId, current){
 }
 function bindMinistrySelects(){
   if(document.getElementById('r_ministry')){
-    fillMinistrySelect('r_ministry','r_campus','r_dept','');
+    fillMinistrySelect('r_ministry','r_campus','r_dept',(S.regPrefill && S.regPrefill.ministry) || '');
     ['r_campus','r_dept'].forEach(function(id){
       var el=document.getElementById(id);
       if(el) el.onchange=function(){ fillMinistrySelect('r_ministry','r_campus','r_dept',''); };
@@ -12730,6 +12839,7 @@ function bindAway(){
   });
   bindHr();
   if(S.view==='kmreview') bindKmReview_();
+  if(S.view==='admin' && S.adminSub==='groups') bindAdminGroups_();
   bindHosp();
   if(S.view==='ministry') bindLead_();
   if(typeof dutyHtml==='function') bindSched_();

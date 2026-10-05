@@ -1005,6 +1005,20 @@ results saved then are still in `staff.strengths` but nothing reads them.)
   localStorage (`gp_gstr_draft`) until saved.
 - **Khmer:** all ~515 strings in `PENDING_KM` (docs/khmer-needed.md §53).
 
+## Admin → Arrivals & departures
+- **Invite a new group:** pick campus, department and (optionally) ministry → one link,
+  `teams.html?reg=1&campus=…&dept=…&ministry=…` (`gpInviteLink_`). It opens the
+  sign-up form with those chosen and a "You're joining …" line (`gpInviteFromUrl_`,
+  `S.regPrefill`). **It grants nothing**: everyone still picks their own username, PIN
+  and email, and a Campus Leadership sign-up still waits for an admin. Values that
+  aren't a real campus / department / ministry are dropped. Admins do not create
+  accounts or choose anyone's PIN — deliberately not built.
+- **Archive several people:** search (name, ministry, role), Select all shown, a
+  confirm step, date and reason → `hrArchiveMany` (admin or HR, never yourself, up to
+  200): the same `archived` record as HR's single archive, all in **one** write of the
+  staff list so a group can't race itself; someone already archived is left as they
+  were. Bringing back is still one at a time (`hrUnarchive`).
+
 ## Admin → Loose ends
 One page of the small gaps that quietly make the base's totals wrong, one campus at
 a time (`adminLooseHtml_`), each row a tap away from the person (Admin → person) or

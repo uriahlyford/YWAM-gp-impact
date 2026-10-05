@@ -4690,6 +4690,35 @@ async function hrArchive(username, pin, staffId, info) {
     rec.active = false;
   });
 }
+/* Archive a group at once — a school or team that has left — in ONE write of the
+   staff list, so twenty archives cannot race each other the way twenty single
+   calls would. Same rules and record as hrArchive: admin or HR, never yourself,
+   the date and reason on each, active off; someone already archived is left as
+   they were. Bringing anyone back is still one at a time (hrUnarchive). */
+const HR_ARCHIVE_MANY_MAX = 200;
+async function hrArchiveMany(username, pin, ids, info) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  if (!Array.isArray(ids) || !ids.length) return { ok: false, err: 'none' };
+  if (ids.length > HR_ARCHIVE_MANY_MAX) return { ok: false, err: 'too_many' };
+  const want = new Set(ids.map(function (x) { return str_(x, 60); }));
+  if (want.has(s.id)) return { ok: false, err: 'self_archive' };
+  const at = isoDate_(info && info.at) || new Date().toISOString().slice(0, 10);
+  const reason = str_(info && info.reason, 300);
+  return mutateStaff_(function (rows) {
+    let n = 0;
+    const now = new Date().toISOString();
+    rows.forEach(function (r) {
+      if (!want.has(r.id) || r.archived) return;
+      r.archived = { at: at, reason: reason, by: s.id };
+      r.active = false;
+      r.updated = now;
+      n++;
+    });
+    return { ok: true, archived: n };
+  });
+}
 async function hrUnarchive(username, pin, staffId) {
   return hrMutate_(username, pin, staffId, function (rec) {
     if (!rec.archived) return { abort: true, ok: false, err: 'not_archived' };
@@ -5929,6 +5958,7 @@ const HANDLERS = {
   getKmReviews: function (a) { return getKmReviews(a[0], a[1]); },
   adminLooseEnds: function (a) { return adminLooseEnds(a[0], a[1]); },
   markSeen: function (a) { return markSeen(a[0], a[1]); },
+  hrArchiveMany: function (a) { return hrArchiveMany(a[0], a[1], a[2], a[3]); },
   saveKmReview: function (a) { return saveKmReview(a[0], a[1], a[2], a[3], a[4]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   getMinistryFor: function (a) { return getMinistryFor(a[0], a[1], a[2], a[3]); },

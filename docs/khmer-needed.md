@@ -2712,3 +2712,33 @@ means small unfinished things, not anything broken.
 | {n} loose ends at {campus} | ចំណុចខ្វះ {n} នៅ {campus} |
 | Nothing loose at {campus} | គ្មានចំណុចខ្វះនៅ {campus} ទេ |
 | Show all {n} | បង្ហាញទាំងអស់ {n} |
+
+## 61. Admin → Arrivals & departures
+
+A sign-up link for a new school or team, and archiving several people at once when
+a group leaves. "Archive" means the account is switched off and kept, not deleted.
+
+| English | Khmer (pending) |
+|---|---|
+| Arrivals & departures | ការមកដល់ និងការចាកចេញ |
+| A sign-up link for a new school or team, and archiving several people at once | តំណចុះឈ្មោះសម្រាប់សាលា ឬក្រុមថ្មី និងការដាក់ប័ណ្ណសារមនុស្សច្រើននាក់ក្នុងពេលតែមួយ |
+| You’re joining {where}. Check it below, then make your profile. | អ្នកកំពុងចូលរួមជាមួយ {where}។ សូមពិនិត្យខាងក្រោម រួចបង្កើតប្រវត្តិរូបរបស់អ្នក។ |
+| Invite a new group | អញ្ជើញក្រុមថ្មី |
+| Everyone opens the link on their own phone and makes their own profile and PIN — with where they are joining already chosen. | មនុស្សគ្រប់គ្នាបើកតំណនៅលើទូរស័ព្ទរបស់ខ្លួន ហើយបង្កើតប្រវត្តិរូប និងលេខ PIN ផ្ទាល់ខ្លួន — ដោយកន្លែងដែលពួកគេចូលរួមត្រូវបានជ្រើសរើសរួចហើយ។ |
+| — they choose — | — ពួកគេជ្រើសរើស — |
+| The link | តំណ |
+| Share | ចែករំលែក |
+| Campus Leadership sign-ups still wait for an admin to approve them. | ការចុះឈ្មោះក្នុងថ្នាក់ដឹកនាំមូលដ្ឋាន នៅតែរង់ចាំអ្នកគ្រប់គ្រងអនុម័ត។ |
+| Archive several people | ដាក់ប័ណ្ណសារមនុស្សច្រើននាក់ |
+| When a school or team leaves: they can no longer log in, and drop off the lists. HR can bring anyone back. | នៅពេលសាលា ឬក្រុមណាមួយចាកចេញ៖ ពួកគេមិនអាចចូលបានទៀតទេ ហើយត្រូវដកចេញពីបញ្ជី។ ផ្នែកធនធានមនុស្សអាចនាំនរណាម្នាក់ត្រឡប់មកវិញបាន។ |
+| Find by name, ministry or role… | ស្វែងរកតាមឈ្មោះ ក្រសួងបម្រើ ឬតួនាទី… |
+| Select all shown ({n}) | ជ្រើសរើសទាំងអស់ដែលបង្ហាញ ({n}) |
+| Clear | សម្អាត |
+| Leaving on | ចាកចេញនៅថ្ងៃ |
+| Why (optional) | មូលហេតុ (ស្រេចចិត្ត) |
+| e.g. DTS finished | ឧ. DTS បានបញ្ចប់ |
+| Archive {n} people | ដាក់ប័ណ្ណសារ {n} នាក់ |
+| Archive {n} people? They will not be able to log in. | ដាក់ប័ណ្ណសារ {n} នាក់? ពួកគេនឹងមិនអាចចូលបានទេ។ |
+| Yes, archive {n} | បាទ/ចាស ដាក់ប័ណ្ណសារ {n} |
+| Link copied | បានចម្លងតំណ |
+| {n} archived | បានដាក់ប័ណ្ណសារ {n} |
