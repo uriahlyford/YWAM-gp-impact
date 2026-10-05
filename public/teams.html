@@ -778,6 +778,17 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .leadLineTask select { margin:0; flex:1; min-width:0; padding:6px 8px; font-size:13px; }
 .leadLineTask .btn.small { width:auto; margin:0; flex:0 0 auto; padding:6px 12px; }
 .leadMade { font-size:13px; padding:3px 0; color:var(--muted); }
+.leadNoteOkr { font-size:13px; color:var(--muted); margin:0 0 10px; padding:0 2px; }
+.leadNoteOkr summary { cursor:pointer; list-style:none; padding:4px 0; }
+.leadNoteOkr summary::-webkit-details-marker { display:none; }
+.leadNoteOkr summary::after { content:' ▾'; font-size:10px; }
+.leadNoteOkr[open] summary::after { content:' ▴'; }
+.leadNoteOkr summary b { color:var(--ink); }
+.leadNoteOkrRow { display:flex; align-items:center; gap:8px; padding:3px 0; }
+.leadNoteOkrName { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.leadNoteOkrBar { flex:0 0 70px; height:5px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+.leadNoteOkrBar span { display:block; height:100%; }
+.leadNoteOkrRow b { flex:0 0 34px; text-align:right; color:var(--ink); font-size:12px; }
 @media (min-width:900px){ main.wide .leadNoteGrid { display:grid; grid-template-columns:3fr 2fr; gap:12px; align-items:start; } main.wide .leadNoteGrid .card { margin:0; } }
 @media (min-width:900px){
   main.wide { max-width:1180px; }
@@ -9192,6 +9203,19 @@ function leadNoteLinesHtml_(date, text){
     return h+'</div>';
   }).join('');
 }
+/* The quarter's Leadership OKRs in one quiet line above the notes — tap it
+   for each objective's progress. Closed unless opened. */
+function leadNoteOkrHtml_(){
+  var objs=leadOkrs_(); if(!objs.length) return '';
+  var R=baseR(), q=leadQNow_(), wq=Math.max(1, Math.min(13, thisWeek()-(q-1)*13));
+  var avg=Math.round(objs.reduce(function(a,o){ return a+R.objProgress(o); },0)/objs.length);
+  var krs=0, on=0; objs.forEach(function(o){ (o.krs||[]).forEach(function(kr){ krs++; if(R.krProgress(o,kr).pct>=Math.round(wq/13*100)) on++; }); });
+  return '<details class="leadNoteOkr" id="leadNoteOkr"'+(S.leadNoteOkrOpen?' open':'')+'><summary>🎯 '+esc(gpT('Q{q} OKRs',{q:q}))+' · <b>'+avg+'%</b>'+
+    (krs?' <span class="leadNoteOkrSub">· '+esc(gpT('{d} of {n} key results on pace',{d:on,n:krs}))+'</span>':'')+'</summary>'+
+    objs.map(function(o){ var p=R.objProgress(o);
+      return '<div class="leadNoteOkrRow"><span class="leadNoteOkrName">'+esc(o.objective)+'</span><span class="leadNoteOkrBar"><span style="width:'+p+'%;background:'+gpRingColor(p)+'"></span></span><b>'+p+'%</b></div>'; }).join('')+
+  '</details>';
+}
 function leadNotesHtml_(){
   var h='<div id="leadNotes">';
   if(!S.lead) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(S.leadErr || t('Loading…'))+'</p></div></div>';
@@ -9202,6 +9226,7 @@ function leadNotesHtml_(){
     '<button class="btn ghost small" data-lnweek="7" aria-label="'+esc(t('Later'))+'">›</button></div>';
   var past=((S.lead.notes)||[]).map(function(x){ return x.date; }).filter(function(x){ return x!==date; }).slice(-8).reverse();
   if(past.length) h+='<div class="chips leadNotePast"><span class="leadFilterLabel">'+esc(t('Earlier notes'))+'</span>'+past.map(function(x){ return '<button class="hospChip" data-lndate="'+esc(x)+'">'+esc(hospDate_(x))+'</button>'; }).join('')+'</div>';
+  h+=leadNoteOkrHtml_();
   h+='<div class="leadNoteGrid"><div class="card leadNoteCard">';
   if(!d.text) h+='<button class="btn ghost small" id="leadNoteStart">📋 '+esc(t('Start from the agenda'))+'</button>';
   h+='<textarea id="leadNoteText" rows="14" maxlength="8000" placeholder="'+esc(t('What came up, what was decided, who is doing what… One thing per line.'))+'">'+esc(d.text)+'</textarea>'+
@@ -9355,6 +9380,7 @@ function bindLeadNotes_(save, saveTask, find){
   var thisMon=leadMonday_(), date=/^\d{4}-\d{2}-\d{2}$/.test(S.leadNoteDate||'') ? S.leadNoteDate : thisMon, d=leadDraft_(date);
   var ta=document.getElementById('leadNoteText'), state=document.getElementById('leadNoteState'), box=document.getElementById('leadNoteLines'), timer=null;
   var go=function(iso){ gpTap(); S.leadNoteDate=iso; S.leadNoteTask=''; render(); };
+  var okr=document.getElementById('leadNoteOkr'); if(okr) okr.ontoggle=function(){ S.leadNoteOkrOpen=okr.open; };
   document.querySelectorAll('[data-lnweek]').forEach(function(b){ b.onclick=function(){ go(leadAddDays_(date, Number(b.getAttribute('data-lnweek')))); }; });
   document.querySelectorAll('[data-lndate]').forEach(function(b){ b.onclick=function(){ go(b.getAttribute('data-lndate')); }; });
   var saveNote=function(then){
