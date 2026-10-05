@@ -662,6 +662,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .periodSeg .campusBtn { flex:1 1 auto; min-width:0; padding:9px 2px; font-size:12px; letter-spacing:-.1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .teamYear { margin-bottom:12px; }
 .teamCountries { margin:-4px 0 12px; }
+.teamCross { color:var(--accent); font-weight:600; }
 .teamCountriesHead { font-weight:800; font-size:14px; margin-bottom:4px; }
 .teamCountry { display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:4px 0; border-top:1px solid var(--line); }
 .teamCountry .hint { margin:0; flex:0 0 auto; }
@@ -7261,6 +7262,45 @@ function teamPeriodLabel_(){
   if(p==='ytd') return gpT('{year} to {date}',{year:y, date:hospDate_(todayStr())});
   return String(y);
 }
+/* Each team counts once, in the period it leaves — so a team here across
+   the end of a quarter (or a year) is counted in the later one. The page
+   says so on the team, and a period lists the teams that were here during
+   it but count in the next one, without adding them in. */
+function teamPeriodKey_(iso, p){
+  if(!iso) return '';
+  if(p==='month') return iso.slice(0,7);
+  if(p==='quarter') return iso.slice(0,4)+'Q'+Math.ceil(Number(iso.slice(5,7))/3);
+  return iso.slice(0,4);
+}
+function teamPeriodName_(iso, p){
+  if(p==='month') return t(MONTH_SHORT[Number(iso.slice(5,7))-1])+' '+iso.slice(0,4);
+  if(p==='quarter') return 'Q'+Math.ceil(Number(iso.slice(5,7))/3)+' '+iso.slice(0,4);
+  return iso.slice(0,4);
+}
+function teamPeriodRange_(){
+  var p=teamPeriod_(), y=teamYear_(), pad=function(n){ return ('0'+n).slice(-2); };
+  if(p==='month'){ var m=teamMonth_(); return { from:y+'-'+pad(m)+'-01', to:calIso_(new Date(y, m, 0)) }; }
+  if(p==='quarter'){ var q=teamQ_(); return { from:y+'-'+pad(q*3-2)+'-01', to:calIso_(new Date(y, q*3, 0)) }; }
+  if(p==='ytd') return { from:y+'-01-01', to:y+'-'+todayStr().slice(5) };
+  return { from:y+'-01-01', to:y+'-12-31' };
+}
+/* "Arrived in Q1 — counted in Q2, when it left", for a team whose visit
+   crosses into another period of the kind on show */
+function teamCrossNote_(tr){
+  if(!tr.from || !tr.to || tr.status==='cancelled') return '';
+  var p=teamPeriod_(); if(p==='ytd') p='year';
+  if(teamPeriodKey_(tr.from, p)===teamPeriodKey_(tr.to, p)) return '';
+  return tripFinished_(tr) ? gpT('Arrived in {from} — counted in {to}, when it left',{from:teamPeriodName_(tr.from, p), to:teamPeriodName_(tr.to, p)})
+    : gpT('Arrived in {from} — will count in {to}, when it leaves',{from:teamPeriodName_(tr.from, p), to:teamPeriodName_(tr.to, p)});
+}
+/* teams here during the period on show that count in a later one (not the
+   ones still here or coming — they are listed below anyway) */
+function tripsAlsoHere_(trips){
+  var r=teamPeriodRange_(), shown=tripsShown_(trips), today=todayStr();
+  return trips.filter(function(tr){
+    return tr.status!=='cancelled' && !tr.pending && tr.from && tr.to && tr.to<today && tr.from<=r.to && tr.to>=r.from && shown.indexOf(tr)===-1;
+  }).sort(function(a,b){ return a.from<b.from ? -1 : 1; });
+}
 function tripsShown_(trips){
   var p=teamPeriod_(), n = p==='month' ? teamMonth_() : teamQ_();
   return trips.filter(function(tr){ return tripInPeriod_(tr, teamYear_(), p, n); });
@@ -7361,7 +7401,8 @@ function teamCardHtml_(tr, canEdit, campus){
       (tr.pending ? ' <span class="teamStat pending" data-fromportal data-pending title="'+esc(candStageLabel_(tr.portalStage))+'">⏳ '+esc(t('Pending'))+'</span>' : '')+
       (tr.status==='cancelled'?' <span class="teamStat">'+esc(t('Cancelled'))+'</span>':'')+'</div>'+
       '<div class="rowSub">📅 '+(tr.from && tr.to ? esc(teamDate_(tr.from))+' → '+esc(teamDate_(tr.to))+' · '+esc(gpT('{n} days',{n:n})) : esc(t('Dates not set yet')))+'</div>'+
-      '<div class="rowSub">👥 '+esc(teamPeopleLine_(tr))+'</div></div>'+
+      '<div class="rowSub">👥 '+esc(teamPeopleLine_(tr))+'</div>'+
+      (teamCrossNote_(tr) ? '<div class="rowSub teamCross">↪ '+esc(teamCrossNote_(tr))+'</div>' : '')+'</div>'+
     (canEdit?'<button class="linkbtn inline" data-teamedit="'+esc(tr.id)+'">'+esc(t('Edit'))+'</button>':'')+'</div>';
   if(tripFinished_(tr)){
     var any=Object.keys(tr.metrics||{}).some(function(m){ return tr.metrics[m]!=null; });
@@ -7498,6 +7539,12 @@ function teamsMinistryHtml_(campus){
   h+='<h3>'+esc(gpT('Teams · {period}',{period:teamPeriodLabel_()}))+' <small>· '+shown.length+'</small></h3>';
   if(!shown.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No teams finished in this period.'))+'</p></div>';
   shown.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
+  var also=tripsAlsoHere_(c.trips);
+  if(also.length){
+    h+='<h3 id="teamsAlso">'+esc(gpT('Also here in {period}',{period:teamPeriodLabel_()}))+' <small>· '+also.length+'</small></h3>'+
+      '<p class="sub" style="margin:0 0 8px">'+esc(t('These teams were here during this time but left after it, so they count in the period they left — not here. Each team counts once.'))+'</p>';
+    also.forEach(function(tr){ h+=teamCardHtml_(tr, c.canEdit, campus); });
+  }
   var now=todayStr(), coming=c.trips.filter(function(tr){ return tr.status!=='cancelled' && (tr.to>=now || tr.pending || !tr.to); })
     .sort(function(a,b){ if(!a.from) return 1; if(!b.from) return -1; return a.from<b.from?-1:1; });
   if(coming.length){
