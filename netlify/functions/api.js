@@ -5791,6 +5791,63 @@ async function portalUpdateContact(username, pin, payload) {
 }
 
 /* ==================== dispatcher ==================== */
+/* ==================== loose ends (Admin) ====================
+   The small gaps that quietly make the base's totals wrong, on one page
+   (Admin → Loose ends). The page builds the list — the department / ministry
+   structure lives in taxonomy.js, not here — from the facts this returns: who is
+   set to enter each ministry's numbers, the last week each ministry has numbers
+   for this year, when each person last opened the app, and this quarter's
+   objectives with when they were last edited.
+
+   lastSeen: { started, seen: { staffId: 'YYYY-MM-DD' } }, written by markSeen —
+   its own call, which the page makes at most once a day after a good boot (the
+   boot itself writes nothing, on purpose; test-boot.mjs holds it to that), so "not opened in 30 days"
+   means something only 30 days after 'started' — the page says so until then. A
+   lost write when two people open the app at once only costs a day. Only the
+   date: never what they did. */
+async function touchLastSeen_(s) {
+  const today = baseToday_();
+  const rec = await readJSON('lastSeen', {});
+  const seen = (rec.seen && typeof rec.seen === 'object') ? rec.seen : {};
+  if (seen[s.id] === today) return;
+  seen[s.id] = today;
+  await writeJSON('lastSeen', { started: rec.started || today, seen: seen });
+}
+async function markSeen(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  await touchLastSeen_(s);
+  return { ok: true };
+}
+async function adminLooseEnds(username, pin) {
+  const s = await adminGate_(username, pin);
+  if (!s) return { ok: false, err: 'not_authorized' };
+  const [np, entries, okrs, seenRec] = await Promise.all([getNumbersPeople_(), getEntries_(), getOkrs_(), readJSON('lastSeen', {})]);
+  const yr = currentYear_(), today = baseToday_(), wk = isoWeek_(today);
+  const lastWeek = {};
+  entries.forEach(function (r) {
+    if (yearOf_(r) !== yr || r.value === null || r.value === undefined) return;
+    const k = r.campus + '|' + r.dept + '|' + r.ministry, w = Number(r.week);
+    if (w <= wk && !(lastWeek[k] >= w)) lastWeek[k] = w;
+  });
+  const people = {};
+  Object.keys(np).forEach(function (k) { people[k] = { main: np[k].main || '', backup: np[k].backup || '' }; });
+  const quarter = Math.floor((Number(today.slice(5, 7)) - 1) / 3) + 1;
+  const objectives = {};
+  okrs.forEach(function (r) {
+    if (yearOf_(r) !== yr || Number(r.quarter) !== quarter) return;
+    const k = r.campus + '|' + r.dept + '|' + r.id;
+    const o = objectives[k] || (objectives[k] = { campus: r.campus, dept: r.dept, objective: r.objective, updated: '', fed: false });
+    if ((r.updated || '') > o.updated) o.updated = r.updated || '';
+    if (r.metricKey) o.fed = true;   // fed by a ministry's numbers: it moves without anyone editing it
+  });
+  return {
+    ok: true, today: today, week: wk, quarter: quarter, lastWeek: lastWeek, people: people,
+    seenSince: seenRec.started || '', seen: (seenRec.seen && typeof seenRec.seen === 'object') ? seenRec.seen : {},
+    objectives: Object.keys(objectives).map(function (k) { return objectives[k]; })
+  };
+}
+
 /* ==================== Khmer review ====================
    A native speaker (kmReviewer, admin-assigned — or an admin) goes through the
    strings still in PENDING_KM one at a time on the Khmer review page: correct as
@@ -5870,6 +5927,8 @@ const HANDLERS = {
   getStaffDebt: function (a) { return getStaffDebt(a[0], a[1]); },
   saveStaffDebt: function (a) { return saveStaffDebt(a[0], a[1], a[2]); },
   getKmReviews: function (a) { return getKmReviews(a[0], a[1]); },
+  adminLooseEnds: function (a) { return adminLooseEnds(a[0], a[1]); },
+  markSeen: function (a) { return markSeen(a[0], a[1]); },
   saveKmReview: function (a) { return saveKmReview(a[0], a[1], a[2], a[3], a[4]); },
   saveMyKpiDay: function (a) { return saveMyKpiDay(a[0], a[1], a[2], a[3]); },
   getMinistryFor: function (a) { return getMinistryFor(a[0], a[1], a[2], a[3]); },

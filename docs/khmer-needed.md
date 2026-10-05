@@ -2670,3 +2670,45 @@ The page Sreilea and Leakha use to check the app's Khmer, one line at a time.
 | For whoever updates the app: the reviews as a file, for scripts/km-apply-reviews.mjs. | សម្រាប់អ្នកដែលធ្វើបច្ចុប្បន្នភាពកម្មវិធី៖ ការពិនិត្យជាឯកសារ សម្រាប់ scripts/km-apply-reviews.mjs។ |
 | Download {n} reviews | ទាញយកការពិនិត្យ {n} |
 | Write it in Khmer, please. | សូមសរសេរវាជាភាសាខ្មែរ។ |
+
+## 60. Admin → Loose ends
+
+An admin-only page listing small gaps to fix: ministries with nobody set to enter
+numbers, people who have not opened the app in a month, and so on. "Loose ends"
+means small unfinished things, not anything broken.
+
+| English | Khmer (pending) |
+|---|---|
+| Loose ends | ចំណុចដែលនៅខ្វះ |
+| Small gaps that quietly make the totals wrong — and who to nudge | ចន្លោះតូចៗដែលធ្វើឱ្យតួលេខសរុបខុសដោយស្ងាត់ៗ — និងអ្នកដែលត្រូវរំលឹក |
+| Nothing here | គ្មានអ្វីនៅទីនេះទេ |
+| someone | នរណាម្នាក់ |
+| {name} is set to enter these but is no longer active | {name} ត្រូវបានកំណត់ឱ្យបញ្ចូលលេខទាំងនេះ ប៉ុន្តែលែងសកម្មហើយ |
+| nobody set — {name} covers it as its leader | មិនទាន់កំណត់នរណាម្នាក់ — {name} ទទួលខុសត្រូវជាអ្នកដឹកនាំ |
+| nobody set, and no leader to cover it | មិនទាន់កំណត់នរណាម្នាក់ ហើយគ្មានអ្នកដឹកនាំទទួលខុសត្រូវ |
+| Nobody set to enter the numbers | មិនទាន់មាននរណាម្នាក់ត្រូវបានកំណត់ឱ្យបញ្ចូលលេខ |
+| Each ministry needs a main person for its Friday numbers. Open the ministry and choose one. | ក្រសួងបម្រើនីមួយៗត្រូវការអ្នកទទួលខុសត្រូវចម្បងសម្រាប់លេខថ្ងៃសុក្រ។ សូមបើកក្រសួងបម្រើនោះ ហើយជ្រើសរើសម្នាក់។ |
+| last numbers: week {wk} | លេខចុងក្រោយ៖ សប្តាហ៍ទី {wk} |
+| no numbers yet this year | មិនទាន់មានលេខនៅឆ្នាំនេះទេ |
+| No numbers for three weeks or more | គ្មានលេខរយៈពេលបីសប្តាហ៍ ឬច្រើនជាងនេះ |
+| The base’s totals are missing these ministries. | តួលេខសរុបរបស់មូលដ្ឋាន ខ្វះក្រសួងបម្រើទាំងនេះ។ |
+| last opened {date} | បើកចុងក្រោយ {date} |
+| not since {date} | មិនបានបើកតាំងពី {date} |
+| Counting since {date} — this fills in from {date2}. | កំពុងរាប់តាំងពី {date} — ផ្នែកនេះនឹងបង្ហាញចាប់ពី {date2}។ |
+| Counting starts the next time someone opens the app. | ការរាប់ចាប់ផ្តើមនៅពេលបន្ទាប់ដែលនរណាម្នាក់បើកកម្មវិធី។ |
+| Not opened the app in 30 days | មិនបានបើកកម្មវិធីរយៈពេល 30 ថ្ងៃ |
+| They may have a new phone, a forgotten PIN, or have left. | ពួកគេប្រហែលជាមានទូរស័ព្ទថ្មី ភ្លេចលេខ PIN ឬបានចាកចេញ។ |
+| no department | គ្មាននាយកដ្ឋាន |
+| no ministry | គ្មានក្រសួងបម្រើ |
+| No department or ministry | គ្មាននាយកដ្ឋាន ឬក្រសួងបម្រើ |
+| Their numbers and check-ins count for nobody until this is set. | លេខ និងការឆែកសុខភាពរបស់ពួកគេ មិនត្រូវបានរាប់សម្រាប់នរណាទេ រហូតដល់ចំណុចនេះត្រូវបានកំណត់។ |
+| No mentor | គ្មានអ្នកណែនាំ |
+| Everyone should have someone walking with them. | មនុស្សគ្រប់គ្នាគួរតែមាននរណាម្នាក់ដើរជាមួយពួកគេ។ |
+| Open Mentors | បើកអ្នកណែនាំ |
+| last edited {date} | កែចុងក្រោយ {date} |
+| never edited | មិនដែលកែ |
+| Q{q} objectives nobody has touched in 30 days | គោលបំណងត្រីមាសទី {q} ដែលគ្មាននរណាកែរយៈពេល 30 ថ្ងៃ |
+| Ones fed by a ministry’s numbers move by themselves and are not listed. | គោលបំណងដែលទទួលលេខពីក្រសួងបម្រើ ផ្លាស់ទីដោយខ្លួនឯង ហើយមិនត្រូវបានរាយបញ្ជីទេ។ |
+| {n} loose ends at {campus} | ចំណុចខ្វះ {n} នៅ {campus} |
+| Nothing loose at {campus} | គ្មានចំណុចខ្វះនៅ {campus} ទេ |
+| Show all {n} | បង្ហាញទាំងអស់ {n} |

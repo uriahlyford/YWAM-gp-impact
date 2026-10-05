@@ -643,6 +643,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .kmrBtns { display:flex; gap:8px; flex-wrap:wrap; } .kmrBtns .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .kmrBar { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; margin:8px 0 4px; } .kmrBar div { height:100%; background:var(--good); }
 .kmrRecent .row { align-items:flex-start; }
+.looseWhy { font-size:13px; color:var(--muted); line-height:1.4; margin:2px 0 6px; }
+.looseRow { border-top:1px solid var(--line); padding:6px 0; font-size:14px; overflow-wrap:anywhere; }
+.looseCard .adminBadge { margin-left:6px; vertical-align:middle; }
+.looseMore summary { cursor:pointer; font-size:13.5px; font-weight:700; color:var(--accent); padding:8px 0 2px; }
 .backupLine { padding:10px 14px; } .backupLate { color:var(--bad); font-size:14px; }
 .pulseGrid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
 @media (min-width:560px){ .pulseGrid { grid-template-columns:repeat(3,1fr); } }
@@ -2332,6 +2336,14 @@ function gpOfflineBannerHtml_(){
   return '<div class="banner offlineBanner" id="offlineBanner">📴 '+esc(gpT('No connection — this is your page as it was on {date}. Numbers, goals and check-ins you save will send when you’re back online.',{date:when}))+'</div>';
 }
 
+/* Once a day, after a good boot: "opened the app today", for Admin → Loose
+   ends. Its own call because the boot writes nothing; the date only. */
+function gpMarkSeen_(){
+  var day=todayStr();
+  if(lsGet('gp-seen-day')===day+'|'+S.auth.user) return;
+  run('markSeen',[S.auth.user,S.auth.pin],function(d){ if(d && d.ok) lsSet('gp-seen-day', day+'|'+S.auth.user); }, function(){});
+}
+
 /* ---------- boot ---------- */
 function boot(){
   /* The dashboard's front door links straight here: ?reg=1 opens the create
@@ -2404,7 +2416,7 @@ function afterLogin(){
 /* Everything a boot payload carries, in one place, because two entry points use
    it: a remembered session and a fresh login. */
 function applyBoot(d, fromCache){
-  if(!fromCache){ S.offlineSince = null; gpBootCacheSave_(d); }
+  if(!fromCache){ S.offlineSince = null; gpBootCacheSave_(d); gpMarkSeen_(); }
   S.roster = d.roster || [];
   S.logs = d.logs || [];
   adoptHabits(d.habits);
@@ -5765,7 +5777,8 @@ var ADMIN_SUBS = [
   { id:'portal', label:'Portal access', emoji:'🛂', blurb:'Who works in applications — grant or remove access to the YWAM GP Portal' },
   { id:'kpis', label:'Ministry KPIs', emoji:'🗂️', blurb:'What each ministry tracks — add, rename, remove, re-time' },
   { id:'broadcast', label:'Announcements', emoji:'📣', blurb:'A message to everyone’s notification bell' },
-  { id:'merge', label:'Merge duplicates', emoji:'🔀', blurb:'Two profiles that are really one person' }
+  { id:'merge', label:'Merge duplicates', emoji:'🔀', blurb:'Two profiles that are really one person' },
+  { id:'loose', label:'Loose ends', emoji:'🧵', blurb:'Small gaps that quietly make the totals wrong — and who to nudge' }
 ];
 function adminBackHtml_(to, label){
   return '<button class="linkbtn" id="adminBack" data-adminback="'+to+'" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(label)+'</button>';
@@ -5935,6 +5948,7 @@ function adminHtml(){
   if(sub==='leave') return h+adminLeaveHtml_();
   if(sub==='portal') return h+adminPortalHtml_();
   if(sub==='merge') return h+adminMergeHtml_();
+  if(sub==='loose') return h+adminLooseHtml_();
   return h+adminAccountsHtml_();
 }
 function adminHomeHtml_(){
@@ -5955,6 +5969,119 @@ function adminHomeHtml_(){
       '<span class="accChevron" style="transform:rotate(-90deg)">'+ACC_CHEVRON+'</span></button>';
   }).join('')+'</div>';
   return h;
+}
+/* Admin → Loose ends: the small gaps that quietly make the base's totals wrong,
+   one campus at a time, each with who or what to tap. Built here from
+   adminLooseEnds' facts and taxonomy.js's structure (the server has no copy of
+   it): ministries with nobody set to enter numbers (or someone no longer
+   active), ministries with no numbers for three weeks or more, people who have
+   not opened the app in 30 days (once 30 days of counting exist), people with
+   no department or ministry, people with no mentor, and this quarter's
+   objectives nobody has edited in 30 days (not ones fed by a ministry's
+   numbers — those move on their own). Reloaded each visit. */
+S.adminLoose=null; S.adminLooseLoading=false;
+var LOOSE_SHOW = 5;   // a long list shows its first five; the rest fold away
+function looseDays_(a, b){ return Math.round((Date.parse(a+'T00:00:00Z')-Date.parse(b+'T00:00:00Z'))/864e5); }
+function looseAddDays_(d, n){ var x=new Date(Date.parse(d+'T00:00:00Z')+n*864e5); return shortDay_(new Date(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate())); }
+function looseDay_(d){ var x=new Date(d+'T00:00:00'); return shortDay_(x); }
+function loosePersonBtn_(x, sub){
+  return '<button class="linkbtn" style="width:auto;margin:0;padding:6px 0;text-align:left" data-adminperson="'+esc(x.id)+'">'+esc(x.name)+'</button>'+
+    (sub ? ' <span class="rowSub">· '+esc(sub)+'</span>' : '');
+}
+function looseSection_(emoji, title, why, rows, extra){
+  /* rows === null: not countable yet — no badge, no "Nothing here", just the note in extra */
+  var h='<div class="card looseCard"><div class="goalCardTitle">'+emoji+' '+esc(title)+(rows===null ? '' : rows.length ? ' <span class="adminBadge hot">'+rows.length+'</span>' : ' <span class="adminBadge">0</span>')+'</div>'+
+    '<p class="looseWhy">'+esc(why)+'</p>';
+  if(rows===null) {}
+  else if(rows.length){
+    var row=function(r){ return '<div class="looseRow">'+r+'</div>'; };
+    h+=rows.slice(0, LOOSE_SHOW).map(row).join('');
+    if(rows.length>LOOSE_SHOW) h+='<details class="looseMore"><summary>'+esc(gpT('Show all {n}',{n:rows.length}))+'</summary>'+rows.slice(LOOSE_SHOW).map(row).join('')+'</details>';
+  }
+  else h+='<div class="rowSub">✓ '+esc(t('Nothing here'))+'</div>';
+  return h+(extra||'')+'</div>';
+}
+function adminLooseHtml_(){
+  var L=S.adminLoose;
+  if(L===null || S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
+  if(!L.ok) return '<div class="card"><p class="sub" style="margin:0">'+esc(t('Couldn’t load this — pull down to try again.'))+'</p></div>';
+  var C = CAMPUSES.some(function(c){ return c.id===S.adminCampusTab; }) ? S.adminCampusTab : S.me.campus;
+  S.adminCampusTab=C;
+  var h='<div class="deptChips">'+CAMPUSES.map(function(c){
+    return '<button class="deptChip'+(c.id===C?' on':'')+'" data-admincampustab="'+esc(c.id)+'">'+esc(c.short)+'</button>';
+  }).join('')+'</div>';
+  var staff=(S.adminStaff||[]).filter(function(x){ return x.campus===C && x.active && !x.archived; });
+  var byId={}; (S.adminStaff||[]).forEach(function(x){ byId[x.id]=x; });
+  var mine = C===S.me.campus;
+  var minBtn=function(dept, min){
+    var label=esc(t(min))+' <span class="rowSub">· '+esc(t(dept))+'</span>';
+    return mine ? '<button class="linkbtn" style="width:auto;margin:0;padding:6px 0;text-align:left" data-gonumbers="'+esc(dept+'|'+min)+'">'+esc(t(min))+'</button> <span class="rowSub">· '+esc(t(dept))+'</span>' : label;
+  };
+  var D=(typeof getDepartments==='function') ? getDepartments(C) : {};
+  var mins=[]; Object.keys(D).forEach(function(dept){ if(dept===BL_DEPT) return; Object.keys(D[dept]).forEach(function(m){ if(!numbersExempt_(dept, m)) mins.push({dept:dept, min:m}); }); });
+  var total=0, out='';
+
+  // 1. nobody set to enter the numbers
+  var r1=[];
+  mins.forEach(function(x){
+    var p=L.people[C+'|'+x.dept+'|'+x.min];
+    var gone=function(id){ var who=byId[id]; return id && (!who || !who.active || who.archived) ? (who ? who.name : t('someone')) : ''; };
+    if(p && p.main){
+      var g=gone(p.main) || gone(p.backup);
+      if(g) r1.push(minBtn(x.dept, x.min)+'<div class="rowSub">'+esc(gpT('{name} is set to enter these but is no longer active',{name:g}))+'</div>');
+      return;
+    }
+    var leads=staff.filter(function(s2){ return (s2.leads||[]).indexOf(x.dept+'|'+x.min)>-1; });
+    r1.push(minBtn(x.dept, x.min)+'<div class="rowSub">'+esc(leads.length ? gpT('nobody set — {name} covers it as its leader',{name:leads[0].name}) : t('nobody set, and no leader to cover it'))+'</div>');
+  });
+  out+=looseSection_('👤', t('Nobody set to enter the numbers'), t('Each ministry needs a main person for its Friday numbers. Open the ministry and choose one.'), r1);
+  total+=r1.length;
+
+  // 2. no numbers for three weeks or more
+  var r2=[];
+  if(L.week>3) mins.forEach(function(x){
+    var lw=L.lastWeek[C+'|'+x.dept+'|'+x.min];
+    if(lw && lw>=L.week-2) return;
+    r2.push(minBtn(x.dept, x.min)+'<div class="rowSub">'+esc(lw ? gpT('last numbers: week {wk}',{wk:lw}) : t('no numbers yet this year'))+'</div>');
+  });
+  out+=looseSection_('📉', t('No numbers for three weeks or more'), t('The base’s totals are missing these ministries.'), r2);
+  total+=r2.length;
+
+  // 3. not opened in 30 days
+  var r3=[], extra='';
+  var counted = L.seenSince && looseDays_(L.today, L.seenSince)>=30;
+  if(counted){
+    staff.forEach(function(x){
+      var d=L.seen[x.id];
+      if(d && looseDays_(L.today, d)<30) return;
+      r3.push(loosePersonBtn_(x, d ? gpT('last opened {date}',{date:looseDay_(d)}) : gpT('not since {date}',{date:looseDay_(L.seenSince)})));
+    });
+  } else {
+    extra='<div class="rowSub" style="margin-top:6px">'+esc(L.seenSince ? gpT('Counting since {date} — this fills in from {date2}.',{date:looseDay_(L.seenSince), date2:looseAddDays_(L.seenSince, 30)}) : t('Counting starts the next time someone opens the app.'))+'</div>';
+  }
+  out+=looseSection_('💤', t('Not opened the app in 30 days'), t('They may have a new phone, a forgotten PIN, or have left.'), counted ? r3 : null, counted ? '' : extra);
+  total+=r3.length;
+
+  // 4. no department or ministry
+  var r4=staff.filter(function(x){ return !x.dept || !x.ministry; }).map(function(x){ return loosePersonBtn_(x, !x.dept ? t('no department') : t('no ministry')); });
+  out+=looseSection_('🧭', t('No department or ministry'), t('Their numbers and check-ins count for nobody until this is set.'), r4);
+  total+=r4.length;
+
+  // 5. no mentor (the Mentors page has the detail)
+  var r5=staff.filter(function(x){ return !x.mentorId; }).map(function(x){ return loosePersonBtn_(x, ''); });
+  out+=looseSection_('🤝', t('No mentor'), t('Everyone should have someone walking with them.'), r5,
+    r5.length ? '<button class="linkbtn" style="width:auto;margin-top:6px" data-adminsub="mentors">'+esc(t('Open Mentors'))+'</button>' : '');
+  total+=r5.length;
+
+  // 6. objectives nobody has edited in 30 days
+  var r6=(L.objectives||[]).filter(function(o){
+    return o.campus===C && !o.fed && (!o.updated || looseDays_(L.today, o.updated.slice(0,10))>=30);
+  }).map(function(o){ return esc(o.objective)+'<div class="rowSub">'+esc(t(o.dept))+' · '+esc(o.updated ? gpT('last edited {date}',{date:looseDay_(o.updated.slice(0,10))}) : t('never edited'))+'</div>'; });
+  out+=looseSection_('🎯', gpT('Q{q} objectives nobody has touched in 30 days',{q:L.quarter}), t('Ones fed by a ministry’s numbers move by themselves and are not listed.'), r6);
+  total+=r6.length;
+
+  h+='<p class="sub" style="margin:10px 0">'+esc(total ? gpT('{n} loose ends at {campus}',{n:total, campus:campusName(C)}) : gpT('Nothing loose at {campus}',{campus:campusName(C)}))+'</p>';
+  return h+out;
 }
 function adminApprovalsHtml_(){
   if(S.adminStaff===null) return '<p class="sub">'+esc(t('Loading…'))+'</p>';
@@ -6747,7 +6874,7 @@ function bindAdmin(){
   });
 
   document.querySelectorAll('[data-adminsub]').forEach(function(b){
-    b.onclick=function(){ gpTap(); S.adminSub=b.getAttribute('data-adminsub'); render(); };
+    b.onclick=function(){ gpTap(); S.adminSub=b.getAttribute('data-adminsub'); if(S.adminSub==='loose') S.adminLoose=null; render(); };
   });
 
   document.querySelectorAll('[data-admincampustab]').forEach(function(b){
@@ -6867,6 +6994,14 @@ function bindAdmin(){
     });
   };
 
+  if(S.adminSub==='loose' && S.adminLoose===null && !S.adminLooseLoading){
+    S.adminLooseLoading=true;
+    run('adminLooseEnds',[S.auth.user,S.auth.pin],function(d){
+      S.adminLooseLoading=false;
+      S.adminLoose=(d && d.ok) ? d : { ok:false };
+      if(S.view==='admin') render();
+    }, function(){ S.adminLooseLoading=false; S.adminLoose={ ok:false }; if(S.view==='admin') render(); });
+  }
   if(S.adminStaff===null){
     if(S.adminLoading) return;
     S.adminLoading=true;

@@ -1005,6 +1005,22 @@ results saved then are still in `staff.strengths` but nothing reads them.)
   localStorage (`gp_gstr_draft`) until saved.
 - **Khmer:** all ~515 strings in `PENDING_KM` (docs/khmer-needed.md §53).
 
+## Admin → Loose ends
+One page of the small gaps that quietly make the base's totals wrong, one campus at
+a time (`adminLooseHtml_`), each row a tap away from the person (Admin → person) or
+the ministry (My Ministry): ministries with nobody set to enter numbers or someone
+no longer active; no numbers for three weeks or more; not opened the app in 30 days;
+no department or ministry; no mentor; this quarter's objectives nobody has edited in
+30 days (not ones a ministry's numbers feed — `metricKey` — which move by
+themselves). Long lists show five and fold the rest.
+- **The page builds it** from `adminLooseEnds` (admin only: last week with numbers per
+  ministry this year, numbers people, last-seen dates, this quarter's objectives) and
+  taxonomy.js's structure, which the server has no copy of.
+- **Last seen is the date only** (`lastSeen` blob: `{started, seen:{id:date}}`),
+  written by `markSeen` — the page calls it at most once a day per phone after a good
+  boot. **The boot itself still writes nothing** (test-boot.mjs). "Not opened in 30
+  days" lists nobody until 30 days after `started`; it says when it fills in.
+
 ## Khmer review (the review page and scripts/km-apply-reviews.mjs)
 The ~3,000 strings in `PENDING_KM` are machine-drafted Khmer nobody has checked.
 The Khmer review page (menu → Admin → Khmer review; `S.view='kmreview'`) lets a
