@@ -51,6 +51,9 @@ const TRIPS = [
   // applied on the portal and not arrived yet: pending — one still coming, one whose dates have passed
   { ...trip({ id: 't6', name: 'Foxtrot Team', from: Y + '-08-20', to: Y + '-09-02', size: 15 }), candidateId: 'cd_six', pending: true, portalStage: 'docs' },
   { ...trip({ id: 't7', name: 'Golf Team', from: Y + '-07-01', to: Y + '-07-10', size: 4, metrics: { 'People Served': 999 } }), candidateId: 'cd_seven', pending: true, portalStage: 'call2' },
+  // last year: one before today's date, one after — so last year's "to date" is one team
+  trip({ id: 't8', name: 'Hotel Team', from: (Y - 1) + '-03-01', to: (Y - 1) + '-03-15', size: 10 }),
+  trip({ id: 't9', name: 'India Team', from: (Y - 1) + '-09-20', to: (Y - 1) + '-10-01', size: 7 }),
   { ...trip({ id: 't5', name: 'Echo Team', from: (Y + 1) + '-01-05', to: (Y + 1) + '-01-25', size: 9 }), candidateId: 'cd_echo' },   // applied on the portal
 ];
 const WK = weekOf(NOW);
@@ -145,6 +148,25 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   await page.click('[data-teamq="2"]');
   await page.waitForTimeout(400);
   ok('Quarter → Q2: the one that left in May', await tileOf(page, 'Teams Hosted') === '1' && await tileOf(page, 'People Served') === '30');
+  await page.click('[data-teamperiod="ytd"]'); await page.waitForTimeout(400);
+  ok('YTD: this year up to today — three teams, 26 people', await tileOf(page, 'Teams Hosted') === '3' && await tileOf(page, 'Team Members') === '26' && /2026 to Aug 12 at a glance/.test(await page.evaluate(() => document.querySelector('h3').textContent)));
+  const bars = await page.$$eval('.teamYearBar', b => b.map(x => x.querySelector('.teamYearN').textContent + (x.classList.contains('future') ? 'f' : '')));
+  ok('the year month by month: two teams in Feb, one in May; months still to come are faded', bars.length === 12 && bars[1] === '2' && bars[4] === '1' && bars[0] === '' && bars[8] === 'f' && bars[7] === '', bars.join(','));
+  ok('… with the people under each month', await page.$eval('[data-teamym="2"] .teamYearP', e => e.textContent) === '20');
+  const qs = await page.$$eval('.teamYearQ', q => q.map(x => [].map.call(x.children, c => c.textContent).join(' ').replace(/\s+/g, ' ').trim()));
+  ok('the four quarters', qs.length === 4 && /^Q1 2 teams 20 people/.test(qs[0]) && /^Q2 1 teams 6 people/.test(qs[1]) && /^Q3 0 teams/.test(qs[2]), qs.join(' | '));
+  ok('compared with last year over the same stretch (its October team not counted)', /vs 2025 over the same stretch: 1 teams \(▲ 2\), 10 people \(▲ 16\)/.test(await page.$eval('#teamYearVs', e => e.textContent)), await page.$eval('#teamYearVs', e => e.textContent));
+  ok('nothing scrolls sideways with the bars', !(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)));
+  await page.selectOption('#teamYearSel', String(Y - 1)); await page.waitForTimeout(400);
+  ok('YTD for last year: only what had finished by this date', await tileOf(page, 'Teams Hosted') === '1');
+  await page.click('[data-teamperiod="year"]'); await page.waitForTimeout(400);
+  ok('Year for last year: the whole year', await tileOf(page, 'Teams Hosted') === '2' && !!(await page.$('#teamYear')) && (await page.$$eval('.teamYearBar.future', b => b.length)) === 0);
+  await page.selectOption('#teamYearSel', String(Y)); await page.waitForTimeout(400);
+  await page.click('[data-teamym="2"]'); await page.waitForTimeout(400);
+  ok('tapping a month opens that month', await page.$eval('[data-teamperiod="month"]', b => b.classList.contains('on')) && await page.$eval('#teamMonthSel', s => s.value) === '2' && await tileOf(page, 'Teams Hosted') === '2' && !(await page.$('#teamYear')));
+  await page.click('[data-teamperiod="year"]'); await page.waitForTimeout(300);
+  await page.click('[data-teamyq="2"]'); await page.waitForTimeout(400);
+  ok('tapping a quarter opens that quarter', await page.$eval('[data-teamq="2"]', b => b.classList.contains('on')) && await tileOf(page, 'Teams Hosted') === '1');
   const emptyFirst = await page.evaluate(() => [].map.call(document.querySelectorAll('.mmTile'), x => x.classList.contains('empty')));
   ok('tiles with numbers come before empty ones', emptyFirst.indexOf(true) === -1 || emptyFirst.lastIndexOf(false) < emptyFirst.indexOf(true), emptyFirst.join(','));
 
