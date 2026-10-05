@@ -834,6 +834,13 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .schedMine { margin-top:10px; font-size:13.5px; }
 .schedMine ul { margin:4px 0 0; padding-left:18px; }
 .schedTitle { font-weight:800; font-size:17px; margin:4px 0 8px; }
+.schedMineCard { border-left:4px solid var(--accent); margin-bottom:10px; }
+.schedMineHead { font-weight:800; font-size:13px; color:var(--accent); margin-bottom:4px; }
+.schedMineRow { padding:3px 0; }
+.schedMineRow + .schedMineRow { border-top:1px solid var(--line); padding-top:6px; margin-top:3px; }
+.schedViewBar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:0 0 8px; }
+.schedViewBar .schedWho { margin:0; flex:0 0 170px; }
+.schedViewBar .linkbtn { flex:0 0 auto; font-size:13px; }
 .schedState { border-radius:12px; padding:10px 12px; margin-bottom:10px; font-weight:700; font-size:14px; border:1px solid var(--border); }
 .schedState.pub { background:var(--goodSoft); border-color:var(--good); }
 .schedState.draft { background:var(--banner); border-color:var(--bannerBorder); color:var(--bannerInk); }
@@ -8937,7 +8944,12 @@ function schedHomeHtml_(){
     if(s) mine+=dutyMine(s, me, t).length;
     return '<button class="'+(s?'':'notOut')+'" data-schedopen="'+k[0]+'"'+(d && !s?' title="'+esc(t('Not out yet'))+'"':'')+'>'+k[1]+' '+esc(k[0]==='kitchen' ? t('Cooking') : t('Chores'))+'</button>';
   }).join('')+'</div>';
-  if(mine) h+='<button class="heroSchedMine" data-schedopen="'+(d.now.kitchen && dutyMine(d.now.kitchen, me, t).length ? 'kitchen' : 'chores')+'">'+esc(gpT(mine===1?'You have {n} duty this week':'You have {n} duties this week',{n:mine}))+' ›</button>';
+  if(mine){
+    /* the chore by name — "🧹 Your chore: Rooftop" — and the cooking as a count */
+    var ch=d.now.chores ? dutyMine(d.now.chores, me, t) : [], ck=d.now.kitchen ? dutyMine(d.now.kitchen, me, t) : [];
+    if(ch.length) h+='<button class="heroSchedMine" data-schedopen="chores" id="schedMineChore">🧹 '+esc(gpT(ch.length===1?'Your chore: {what}':'Your chores: {what}',{what:ch.join(', ')}))+' ›</button>';
+    if(ck.length) h+='<button class="heroSchedMine" data-schedopen="kitchen">🍲 '+esc(ck.length<=2 ? gpT('Cooking: {what}',{what:ck.join(', ')}) : gpT('You have {n} cooking duties this week',{n:ck.length}))+' ›</button>';
+  }
   return h+'</div>';
 }
 function schedLoad_(kind, week, edit){
@@ -8974,7 +8986,23 @@ function schedHtml(){
       h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('This week’s schedule isn’t out yet.'))+'</p></div>';
     } else {
       h+='<div class="schedTitle">'+(s.km?'<span class="dutyKm">'+esc(s.km)+'</span>':'')+esc(s.title)+'</div>';
-      h+=dutyHtml(s, { t:t, esc:esc, me:schedMyName_() });
+      var me=schedMyName_(), mineRows=dutyMineRows(s, me), mineLines=dutyMine(s, me, t);
+      /* your own part first, so it's there without looking through the list */
+      if(mineLines.length){
+        h+='<div class="card slim schedMineCard" id="schedMine"><div class="schedMineHead">'+(kind==='chores' ? '🧹 '+esc(t(mineRows.length===1?'Your chore this week':'Your chores this week')) : '🍲 '+esc(t('Your cooking this week')))+'</div>';
+        if(mineRows.length) h+=mineRows.map(function(r){ return '<div class="schedMineRow"><b>'+esc(r.place)+'</b>'+(r.duty?'<div class="rowSub">'+esc(r.duty)+'</div>':'')+
+          (r.with.length?'<div class="rowSub">👥 '+esc(gpT('With {names}',{names:r.with.join(', ')}))+'</div>':'')+'</div>'; }).join('');
+        else h+='<div class="schedMineRow">'+mineLines.map(function(l){ return '<div><b>'+esc(l)+'</b></div>'; }).join('')+'</div>';
+        h+='</div>';
+      }
+      var only=S.schedOnlyMine && mineLines.length && s.layout!=='grid';
+      if(s.layout!=='grid'){
+        h+='<div class="schedViewBar">'+(mineLines.length ? '<div class="leadFilters schedWho">'+
+          '<button class="leadSeg'+(only?'':' on')+'" data-schedonly="0">'+esc(t('Everyone'))+'</button>'+
+          '<button class="leadSeg'+(only?' on':'')+'" data-schedonly="1">'+esc(t('Mine'))+'</button></div>' : '<span></span>')+
+          '<button class="linkbtn inline" id="schedDetails">'+esc(S.schedDetails ? t('Hide what to do') : t('Show what to do'))+'</button></div>';
+      }
+      h+=dutyHtml(s, { t:t, esc:esc, me:me, compact: s.layout!=='grid' && !S.schedDetails, only: only ? me : '' });
       if(s.notes) h+='<p class="hint" style="white-space:pre-line">'+esc(s.notes)+'</p>';
       h+='<button class="btn" id="schedShare">📤 '+esc(t('Share as image'))+'</button>';
     }
@@ -9082,6 +9110,8 @@ function bindSched_(){
   var stw=document.getElementById('schedThis'); if(stw) stw.onclick=function(){ gpTap(); S.schedWeek=null; S.schedDirty=false; render(); };
   var sr=document.getElementById('schedRetry'); if(sr) sr.onclick=function(){ S.schedErr=''; S.schedData=null; render(); };
   var se=document.getElementById('schedEditBtn'); if(se) se.onclick=function(){ gpTap(); S.schedEdit=true; render(); };
+  document.querySelectorAll('[data-schedonly]').forEach(function(b){ b.onclick=function(){ gpTap(); S.schedOnlyMine=b.getAttribute('data-schedonly')==='1'; render(); }; });
+  var sdt=document.getElementById('schedDetails'); if(sdt) sdt.onclick=function(){ gpTap(); S.schedDetails=!S.schedDetails; render(); };
   var sde=document.getElementById('schedDoneEdit'); if(sde) sde.onclick=function(){ if(S.schedDirty && !confirm(t('Leave without saving your changes?'))) return; S.schedEdit=false; S.schedPick=null; S.schedRows=false; S.schedDirty=false; S.schedData=null; render(); };
   var sh=document.getElementById('schedShare');
   if(sh) sh.onclick=function(){

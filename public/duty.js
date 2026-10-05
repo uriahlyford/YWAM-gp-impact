@@ -50,11 +50,19 @@ function dutyAddDays(iso, n){ var d=new Date(iso+'T12:00:00'); d.setDate(d.getDa
     '.dutyPlace{font-weight:700;font-size:14px}'+
     '.dutyWhat{font-size:12.5px;color:var(--muted);margin-top:2px;white-space:pre-line}'+
     '.dutyWho{font-size:13.5px;font-weight:700;text-align:right}'+
-    '.dutyWho .dutyName.me{display:inline-block;margin-top:1px}';
+    '.dutyWho .dutyName.me{display:inline-block;margin-top:1px}'+
+    '.dutyList.compact .dutyItem{padding:7px 12px;align-items:center}'+
+    '.dutyList.compact .dutyPlace{font-size:13.5px;font-weight:600}'+
+    '.dutyList.compact .dutyWho{font-size:13px}'+
+    '.dutyList.compact .dutyWho .dutyName{display:inline}'+
+    '.dutyList.compact .dutyWho .dutyName+.dutyName:before{content:", "}'+
+    '.dutyList.compact .dutyWho .dutyName.me+.dutyName:before,.dutyList.compact .dutyWho .dutyName+.dutyName.me:before{content:" "}';
   document.head.appendChild(st);
 })();
 
-/* The schedule as HTML. o: { t, esc, me: a name to pick out, edit: true for tappable cells } */
+/* The schedule as HTML. o: { t, esc, me: a name to pick out, edit: true for
+   tappable cells, compact: true to leave out what each place's duty is (one
+   line a place, the names beside it), only: a name — just that person's } */
 function dutyHtml(s, o){
   var t=o.t, esc=o.esc;
   var names=function(list, attr){
@@ -85,12 +93,13 @@ function dutyHtml(s, o){
   }
   var out='';
   (s.sections||[]).forEach(function(sec){
-    if(!sec.rows.length && !o.edit) return;
+    var rows=o.only ? sec.rows.filter(function(r){ return (r.people||[]).indexOf(o.only)>-1; }) : sec.rows;
+    if(!rows.length && !o.edit) return;
     if(sec.title) out+='<div class="dutySec">'+esc(sec.title)+(sec.km?' · '+esc(sec.km):'')+'</div>';
-    out+='<div class="dutyList" data-duty="list">'+sec.rows.map(function(r){
+    out+='<div class="dutyList'+(o.compact?' compact':'')+'" data-duty="list">'+rows.map(function(r){
       var tag=o.edit?'button':'div';
       return '<'+tag+' class="dutyItem'+(o.edit?' dutyCell':'')+'"'+(o.edit?' data-dcell="'+esc(sec.id)+'|'+esc(r.id)+'"':'')+'><div><div class="dutyPlace">'+esc(r.place)+(r.km?' <span class="dutyKm" style="display:inline">'+esc(r.km)+'</span>':'')+'</div>'+
-        (r.duty?'<div class="dutyWhat">'+esc(r.duty)+'</div>':'')+'</div><div class="dutyWho">'+names(r.people)+'</div></'+tag+'>';
+        (r.duty && !o.compact?'<div class="dutyWhat">'+esc(r.duty)+'</div>':'')+'</div><div class="dutyWho">'+names(r.people)+'</div></'+tag+'>';
     }).join('')+'</div>';
   });
   return out;
@@ -105,6 +114,17 @@ function dutyMine(s, me, t){
     s.days.forEach(function(d){ if((s.cells[r.id+'|'+d]||[]).indexOf(me)>-1) out.push(t(DUTY_DAY_SHORT[d])+' · '+r.label); });
   });
   else (s.sections||[]).forEach(function(sec){ sec.rows.forEach(function(r){ if((r.people||[]).indexOf(me)>-1) out.push(r.place); }); });
+  return out;
+}
+
+/* The places that name `me` in a list schedule, with what to do and who else
+   is on it — for "your chore this week". */
+function dutyMineRows(s, me){
+  var out=[];
+  if(!s || !me || s.layout==='grid') return out;
+  (s.sections||[]).forEach(function(sec){ sec.rows.forEach(function(r){
+    if((r.people||[]).indexOf(me)>-1) out.push({ section:sec.title||'', place:r.place, duty:r.duty||'', with:(r.people||[]).filter(function(n){ return n!==me; }) });
+  }); });
   return out;
 }
 
