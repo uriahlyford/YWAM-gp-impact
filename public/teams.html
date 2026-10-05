@@ -7224,7 +7224,11 @@ function pulseLoad_(dept){
   S.pulseLoading[dept]=true;
   run('getDeptPulse',[S.auth.user,S.auth.pin,dept],function(d){
     S.pulseLoading[dept]=false;
-    S.pulse[dept] = (d && d.ok) ? d : { ok:false };
+    S.pulse[dept] = (d && d.ok && d.week) ? {
+      ok:true, week:d.week, staff:d.staff||0, away:d.away||[], oneOnOnes:d.oneOnOnes||0, staffDebt:d.staffDebt||null,
+      health:(d.health && d.health.length) ? d.health : [{ week:d.week, answered:0, total:0 }],
+      numbers:d.numbers||{ logged:{} }
+    } : { ok:false };
     if(S.view==='ministry') render();
   });
 }
