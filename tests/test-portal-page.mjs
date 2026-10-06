@@ -852,10 +852,17 @@ async function open(viewport, query, seed) {
   await page.click('[data-pvstage="accepted"]');
   await page.waitForTimeout(300);
   const k = sent.filter(b => b.fn === 'portalViewAs').pop();
+  ok('a student has no guide tab', !(await page.$('[data-pvscreen="guide"]')));
   ok('Khmer + Accepted re-asks with those and the frame follows (accepted pill, no visa guide)', k.args[2].audience === 'khmer' && k.args[2].stage === 'accepted' && /Accepted/.test(await page.$eval('#pvFrame #statusPill', e => e.textContent)) && !/e-visa/.test(await page.$eval('#pvFrame', e => e.textContent)));
   await page.click('[data-pvkey="team"]');
   await page.waitForTimeout(300);
   ok('Team hides the Khmer / International switch and shows the team dashboard', !(await page.$('[data-pvaud]')) && /Sample Team/.test(await page.$eval('#pvFrame', e => e.textContent)) && /team photo/i.test(await page.$eval('#pvFrame', e => e.textContent)));
+  ok('for a team there is a Their guide tab', !!(await page.$('[data-pvscreen="guide"]')));
+  await page.click('[data-pvscreen="guide"]'); await page.waitForTimeout(250);
+  const pg = await page.$eval('#pvGuide', e => e.textContent);
+  ok('Their guide shows the whole Outreach Leader’s Guide, readable (not behind the read-only frame), with print', /Outreach Leader’s Guide to Cambodia/.test(pg) && /\$14\/tuktuk/.test(pg) && /Debriefing Time/.test(pg) && !(await page.$('#pvFrame')) && !!(await page.$('#pvGuide #guidePrint')));
+  await page.click('[data-pvscreen="me"]'); await page.waitForTimeout(200);
+  ok('… and back to their dashboard', !!(await page.$('#pvFrame')) && !(await page.$('#pvGuide')));
   await page.click('[data-pvscreen="form"]');
   await page.waitForTimeout(200);
   ok('Their form shows the team form section by section, with section chips to move through it', /Section 1 of/.test(await page.$eval('#pvFrame', e => e.textContent)) && (await page.$$eval('[data-pvsec]', b => b.length)) > 1 && !!(await page.$('#pvFrame [data-ans]')));
