@@ -109,9 +109,10 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
   ok('… with the photo and colour option behind the gear', !!(await page.$('#dashCustomizeBtn')));
   ok('no quick-jump strip, no "My week" heading', !(await page.$('.quickBar')) && !/My week \d/.test(await page.$eval('#main', e => e.innerText)));
   const upd = await page.$$eval('#main .card .row', rs => rs.map(r => r.innerText).filter(x => /Announcement|leave request/.test(x)));
-  ok('Updates shows three, with See all', upd.length === 3 && !!(await page.$('#notifSeeAll')), upd.length + ' shown');
-  await page.click('#notifSeeAll'); await page.waitForTimeout(300);
-  ok('See all opens the bell', await page.evaluate(() => S.bellOpen === true));
+  ok('no Updates card on My Home — the bell has them, with its red dot', upd.length === 0 && !(await page.$('#notifSeeAll')) && !!(await page.$('#bellBtn .notifDot')));
+  await page.click('#bellBtn'); await page.waitForTimeout(300);
+  const bell = await page.$$eval('#notifRoot .row', rs => rs.map(r => r.innerText).filter(x => /Announcement|leave request/.test(x)));
+  ok('the bell lists them all', bell.length >= 3 && await page.evaluate(() => S.bellOpen === true), bell.length + ' in the bell');
   await page.evaluate(() => { S.bellOpen = false; renderNotifPanel(); });
   ok('Weekly Goals: no arrows on top, no Share my week', !(await page.$('#goalsPrevWeek, #goalsNextWeek, .weekNavRow, #shareWeek')));
   ok('… a small Last week / This week switch under the goals', (await page.$$eval('.goalsWeekSwitch [data-goalswk]', bs => bs.map(b => b.innerText + (b.classList.contains('on') ? '*' : '')))).join() === 'Last week,This week*');
@@ -128,12 +129,21 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
   await page.click('#smartToggle'); await page.waitForTimeout(300);
   ok('“You’re mentoring” is not shown to someone who mentors nobody', !/YOU'RE MENTORING|You're not mentoring/i.test(await page.$eval('#sec-mentor + .card', e => e.innerText)));
   ok('About me: personality and strengths side by side', !!(await page.$('.homeTiles #pSeeMine')) && !!(await page.$('.homeTiles #gsStart')));
-  ok('Leave and Profile at the bottom', !!(await page.$('.homeTiles #goLeaveFromMe')) && !!(await page.$('.homeTiles #goProfileFromMe')));
+  ok('no Leave / Profile tiles at the bottom — they are in the menu', !(await page.$('.homeTiles #goLeaveFromMe')) && !(await page.$('#goProfileFromMe')));
+  await page.click('#menuBtn'); await page.waitForTimeout(300);
+  ok('the menu has Leave Request and Profile & settings', !!(await page.$('[data-menu-item="leave"]')) && !!(await page.$('[data-menu-item="profile"]')));
+  await page.click('[data-menu-item="profile"]'); await page.waitForTimeout(400);
+  ok('Profile & settings in the menu opens the profile page', await page.evaluate(() => S.view === 'profile' && !S.menuOpen));
+  await page.click('nav.bottom button[data-tab="week"]'); await page.waitForTimeout(300);
+  await page.click('#menuBtn'); await page.waitForTimeout(300);
+  await page.click('[data-menu-item="leave"]'); await page.waitForTimeout(400);
+  ok('Leave Request in the menu opens the leave page', await page.evaluate(() => S.view === 'leave' && !S.menuOpen));
+  await page.click('nav.bottom button[data-tab="week"]'); await page.waitForTimeout(300);
   await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
   ok('the summary card’s My Ministry opens My Ministry', await page.evaluate(() => S.view === 'ministry'));
   await page.click('nav.bottom button[data-tab="week"]'); await page.waitForTimeout(300);
   await page.click('#goLeaveFromMe'); await page.waitForTimeout(400);
-  ok('the tiles still go where they did', await page.evaluate(() => S.view === 'leave'));
+  ok('the summary card’s time-off row opens the Leave Request page', await page.evaluate(() => S.view === 'leave'));
   await ctx.close();
 }
 {

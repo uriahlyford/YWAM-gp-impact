@@ -142,6 +142,7 @@ await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
 ok('My Ministry has the button', !!(await page.$('#goHosp')));
 await page.click('#goHosp'); await page.waitForTimeout(500);
 ok('it loads the book once', sent.filter(b => b.fn === 'getHospitality').length === 1);
+ok('the overview has a New booking button for quick access', !!(await page.$('[data-hosptab="dash"].on')) && !!(await page.$('#hospNewBtn')));
 ok('tonight: one here, of seven beds in use (one is out)', await tile(page, 'tonight') === '1' && await tile(page, 'free') === '6', [await tile(page, 'tonight'), await tile(page, 'free')].join());
 ok('two team requests waiting', await tile(page, 'requests') === '2');
 ok('the Requests tab carries the count', /2/.test(await page.$eval('[data-hosptab="req"]', b => b.textContent)));
