@@ -636,10 +636,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .homeTileSub { font-size:12.5px; color:var(--muted); line-height:1.35; overflow-wrap:anywhere; }
 .homeTileChips { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; } .homeTileChips .sChip { font-size:11.5px; padding:2px 7px; }
 .homeFold { display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit; color:var(--ink); cursor:pointer; }
-.goalsWeekHead { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-.goalsWeekMid { flex:1; min-width:0; text-align:center; }
+.goalsWeekSwitch { display:flex; justify-content:center; gap:4px; margin:12px auto 0; background:var(--surface2); border-radius:999px; padding:3px; width:max-content; max-width:100%; }
+.goalsWeekSwitch button { border:0; background:none; border-radius:999px; padding:5px 14px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; }
+.goalsWeekSwitch button.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(23,21,15,.12); }
 .goalLink.unlinked { color:var(--faint); font-size:12.5px; } .goalLink.unlinked select { font-size:12.5px !important; }
-.lastWeekLine { font-size:13px; color:var(--muted); background:var(--surface2); border-radius:10px; padding:8px 10px; margin-bottom:10px; overflow-wrap:anywhere; }
 .updatesFoot { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
 .btnRow { display:flex; gap:8px; flex-wrap:wrap; } .btnRow .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .grpRow { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer; }
@@ -4032,23 +4032,34 @@ function miniDashboardHtml(){
      the big streak number read as an afterthought in the middle of the card. */
   h+='<div class="hero myHero'+(custom?' custom':'')+'"'+
     (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
-    /* Three rings in a row — the week at a glance, each a tap to its section —
-       then the four things people come here to do most. The big streak number,
-       the goal list and the mentor and time-off rows moved to their own
-       sections below, where they are not said twice. */
-    '<div class="heroRings">'+
-      '<button class="heroRing" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
-        '<span class="heroRingFig">'+goalsDone+'/'+written.length+'</span><span class="heroRingLabel">'+esc(t('Weekly Goals'))+'</span></button>'+
-      '<button class="heroRing" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
-        '<span class="heroRingFig">'+habitsDone+'/'+list.length+(st>1?' · 🔥'+st:'')+'</span><span class="heroRingLabel">'+esc(t('Habits Today'))+'</span></button>'+
-      '<button class="heroRing" data-jump="sec-health">'+gpRingHtml(healthPct,'sm',t('My Health'))+
-        '<span class="heroRingFig">'+(score!==null?score.toFixed(1):'—')+' '+healthTrend+'</span><span class="heroRingLabel">'+esc(t('My Health'))+'</span></button>'+
-    '</div>'+
+    '<button class="heroRow'+(written.length?' withList':'')+'" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
+      '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div>'+
+      (written.length?'<div class="heroGoalsPreview">'+written.map(function(g){
+        return '<div><span class="heroGoalDot" style="background:'+gpRingColor(goalItemPct(g))+'"></span>'+esc(g.text)+'</div>';
+      }).join('')+'</div>':'')+
+    '</button>'+
     '<div class="heroQuick">'+
       '<button id="dashToHealth">💚 '+esc(t('Health check-in'))+'</button>'+
-      '<button id="dashToMinistry">📊 '+esc(t('My Ministry'))+'</button>'+
+      '<button id="goMinistryFromMe">📊 '+esc(t('My Ministry'))+'</button>'+
     '</div>'+
     (typeof dutyHtml==='function' ? schedHomeHtml_() : '')+
+    '<div class="heroDivider"></div>'+
+    '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
+    '<div class="heroNum" data-count="'+st+'">0</div>'+
+    '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('DAY STREAK'))+'</div>'+
+    '<button class="heroRow" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
+      '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+
+      (habitBest>0?'</div><div class="heroSubtext">🔥 '+esc(gpT('best {n}d streak',{n:habitBest}))+'</div>':'</div>')+'</button>'+
+    '<button class="heroRow" data-gohealth="1">'+gpRingHtml(healthPct,'sm',t('My Health'))+
+      '<div class="heroTrend">'+esc(t('My Health'))+' <b class="heroFig">'+(score!==null?score.toFixed(1):'—')+'</b>/10 '+healthTrend+'</div></button>'+
+    '<button class="heroRow" data-jump="sec-mentor">'+gpRingHtml(mentorPct,'sm',t('Mentor'))+
+      '<div class="heroTrend">'+esc(t('Mentor'))+' <b class="heroFig">'+(mentorId?esc(mentorName):esc(t('Not set')))+'</b></div></button>'+
+    '<div class="heroSub">'+
+      '<button class="heroSubRow" data-jump="sec-leave">'+
+        '<span class="heroSubLabel">'+esc(t('PERSONAL TIME OFF DAYS LEFT'))+'</span>'+
+        '<span class="heroSubNum">'+ptoLeft+'</span>'+
+      '</button>'+
+    '</div>'+
   '</div>';
 
   if(open){
@@ -4329,15 +4340,10 @@ function aboutMeHtml_(){
   }
   return tiles ? '<h3 id="sec-ptype">🧭 '+esc(t('About me'))+'</h3><div class="homeTiles" id="sec-strengths">'+tiles+'</div>' : '';
 }
-/* The two doors at the bottom: leave (with the days still free this year — the
-   figure the summary card used to carry) and profile & settings. */
+/* The two doors at the bottom: leave and profile & settings. */
 function homeDoorsHtml_(){
-  var year=String(new Date().getFullYear());
-  var yt=(S.trips && S.trips.totals && S.trips.totals[year]) || {personal:0};
-  var cap=(S.trips && S.trips.ptoCap) || 30;
-  var left=Math.max(0, cap-yt.personal);
   return '<div class="homeTiles" id="sec-leave" style="margin-top:18px">'+
-    homeTile_('goLeaveFromMe', '🗓️', t('Leave Request'), esc(gpT('{n} days off left this year',{n:left})))+
+    homeTile_('goLeaveFromMe', '🗓️', t('Leave Request'), '')+
     homeTile_('goProfileFromMe', '👤', t('Profile & settings'), '')+
   '</div>';
 }
@@ -5042,19 +5048,17 @@ function homeHtml(){
   var phase=weekPhase();
   /* Reorganised Oct 2026 (Uriah: "clean up, improve and reorganise"). One idea
      per section, most-used first, nothing said twice: the summary card on top
-     (three rings and the four quick buttons), what needs you (Updates), then
-     this week — goals, habits, health — then your ministry, the longer view
-     (annual goals, mentorship), about you (personality, strengths), and the
-     two doors at the bottom (leave, profile). The quick-jump chip strip is gone:
-     the page is short enough now, and the rings on top still jump. */
+     (the week at a glance, with Health check-in and My Ministry — so neither
+     has a section of its own below), what needs you (Updates), this week's
+     goals and habits, the longer view (annual goals, mentorship), about you
+     (personality, strengths), and the two doors at the bottom (leave,
+     profile). The quick-jump chip strip is gone; the summary card's rows jump. */
   var h=miniDashboardHtml();
   h+=gpQueueBannerHtml_();
   h+=notificationsHtml();
   h+=phaseBanner(phase, wk);
   h += goalsCardHtml(goalsViewWeek());
   h += habitsCardHtml();
-  h += weekSummaryHtml(wk);
-  h += myWorkHtml_();
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
   h += aboutMeHtml_();
@@ -5062,33 +5066,14 @@ function homeHtml(){
   return h;
 }
 
-/* My Home's health card: the weekly check-in, nothing else (Uriah, Oct 2026 —
-   the daily inputs and the days-logged view are gone). This week's score once
-   it is answered, last week's until then, and a way in to answer. */
+/* The weekly check-in only (Uriah, Oct 2026): this week's once answered, last
+   week's until then, never a week rolled up from days — for the summary card. */
 function weeklyCheckin_(wk){ var c=checkinForWeek(wk); return (c && c.source==='weekly') ? c : null; }
 function homeHealth_(){
   var cur=thisWeek(), row=weeklyCheckin_(cur), wk=cur;
   if(!row && cur>1 && weeklyCheckin_(cur-1)){ wk=cur-1; row=weeklyCheckin_(wk); }
   var prev=row ? weeklyCheckin_(wk-1) : null;
   return { cur:cur, wk:wk, row:row, score: row ? compositeOf(row) : null, prevScore: prev ? compositeOf(prev) : null };
-}
-function weekSummaryHtml(){
-  var H=homeHealth_();
-  var h='<h3>💚 '+esc(t('Health'))+'</h3><div class="card slim" id="sec-health">';
-  if(H.score!==null){
-    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>'+esc(gpT('Week {n}',{n:H.wk}))+'</strong>'+
-      '<div class="pmeta">'+esc(t('From your weekly check-in'))+' · '+esc(gpT('feeds the base total for {campus}',{campus:t(campusName(S.me.campus))}))+'</div></span>'+
-      '<span class="pctBig">'+H.score.toFixed(1)+(H.prevScore!==null ? trendBadge(pctChange(H.prevScore,H.score), true) : '')+'</span></div>'+
-      '<div class="bar" style="margin-top:8px"><div class="barFill'+(H.score>=8?' done':'')+'" style="width:'+Math.round(H.score*10)+'%"></div></div>';
-  } else {
-    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>'+esc(t('No score yet'))+'</strong>'+
-      '<div class="pmeta">'+esc(t('Your score comes from the weekly check-in.'))+'</div></span></div>';
-  }
-  if(H.wk!==H.cur || H.score===null)
-    h+='<button class="btn" id="toHealthTab" style="margin-top:10px">'+esc(t('Fill out this week’s check-in'))+'</button>';
-  else
-    h+='<button class="linkbtn" id="toHealthTab" style="margin:6px 0 0">'+esc(t('Open Health'))+'</button>';
-  return h+'</div>';
 }
 
 /* --- today's habits: the daily tool --- */
@@ -5192,9 +5177,6 @@ function ringHtml(p, big){ return gpRingHtml(p, big ? 'lg' : ''); }
 
 function goalsCardHtml(wk){
   var isCur = Number(wk)===Number(thisWeek());
-  var lastWk = Number(wk)-1;
-  var lastRec = lastWk>=1 ? goalsForWeek(lastWk) : null;
-  var lastWritten = lastRec ? lastRec.items.filter(function(i){ return i && i.text; }) : [];
 
   var rec=goalsForWeek(wk);
   var items = (rec && rec.items && rec.items.length) ? rec.items : [];
@@ -5202,17 +5184,14 @@ function goalsCardHtml(wk){
 
   var h='<h3 id="sec-goals">🎯 '+esc(t('Weekly Goals'))+'</h3>';
 
-  /* One card: the week and its arrows in the header (no separate week card),
-     and last week's goals as one quiet line, only when there were some. */
+  /* One card for the week being looked at; the only other week anyone opens is
+     last week, to mark how it went — so a small This week / Last week switch
+     sits under the goals (goalsWeekSwitchHtml_) instead of arrows on top. */
+  var cur=thisWeek(), isLast = Number(wk)===cur-1;
   h+='<div class="card">'+
-    '<div class="goalsWeekHead">'+
-      '<button class="weekArrow" id="goalsPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
-      '<div class="goalsWeekMid"><div class="goalCardTitle">'+esc(isCur ? t('This week') : gpT('Week {n}',{n:wk}))+'</div>'+
-        '<div class="goalCardDate">'+esc(weekRangeLabel_(wk))+'</div></div>'+
-      '<button class="weekArrow" id="goalsNextWeek" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
-    '</div>'+
-    (isCur?'':'<button class="linkbtn" style="padding:0 0 8px" id="goalsJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
-    (lastWritten.length ? '<div class="lastWeekLine"><b>'+esc(t('Last week'))+':</b> '+lastWritten.map(function(i){ return esc(i.text); }).join(' · ')+'</div>' : '');
+    '<div class="goalCardHead"><span class="goalCardTitle">'+esc(isCur ? t('This week') : isLast ? t('Last week') : gpT('Week {n}',{n:wk}))+'</span>'+
+    '<span class="goalCardDate">'+esc(weekRangeLabel_(wk))+'</span></div>'+
+    (isLast ? '<p class="hint" style="margin:0 0 8px">'+esc(t('How did last week go? Move each slider to where it ended.'))+'</p>' : '');
 
   if(written.length){
     /* Said plainly at the point of writing, not buried in settings. Goals are
@@ -5251,14 +5230,10 @@ function goalsCardHtml(wk){
     });
   } else {
     h+='<p class="sub" style="margin:4px 0 10px">'+
-       esc(t('No goals set for this week yet. Three is the whole point — pick the three that matter.'))+'</p>';
+       esc(isCur ? t('No goals set for this week yet. Three is the whole point — pick the three that matter.') : t('You didn’t set goals that week.'))+'</p>';
   }
 
-  if(written.length && rec && rec.pct!==null){
-    h+='<button class="linkbtn" id="shareWeek">'+esc(t('Share my week'))+'</button>';
-  }
-
-  if(written.length<3){
+  if(written.length<3 && isCur){
     h+='<div class="addGoalRow">'+
       '<input type="text" class="addGoalInput" id="newGoalText" maxlength="200" placeholder="'+esc(t('Add a goal for this week…'))+'">'+
       '<button class="addGoalBtn" id="addGoalBtn" aria-label="'+esc(t('Add goal'))+'">'+
@@ -5266,8 +5241,21 @@ function goalsCardHtml(wk){
     '</div>';
   }
 
+  h+=goalsWeekSwitchHtml_(wk);
   h+='</div>';
   return h;
+}
+
+/* This week / Last week, small, under the goals. Another week (a link from the
+   bell, say) shows its own name and a way back to this one. */
+function goalsWeekSwitchHtml_(wk){
+  var cur=thisWeek();
+  if(Number(wk)!==cur && Number(wk)!==cur-1)
+    return '<button class="linkbtn" style="margin:6px 0 0" id="goalsJumpCurrent">'+esc(t('Jump back to this week'))+'</button>';
+  if(cur<=1) return '';
+  return '<div class="goalsWeekSwitch">'+
+    '<button data-goalswk="last" class="'+(Number(wk)===cur-1?'on':'')+'">'+esc(t('Last week'))+'</button>'+
+    '<button data-goalswk="this" class="'+(Number(wk)===cur?'on':'')+'">'+esc(t('This week'))+'</button></div>';
 }
 
 /* --- your ministry's KPIs, editable without leaving this page --- */
@@ -5654,26 +5642,10 @@ function ovWeekRowsHtml_(dept, ministry, data, wk){
    Generic label for everyone ("My Ministry"), personalized subtitle once
    opened — same shape as Leave Request's card always saying "Leave
    Request" while the page behind it is about your own days off. */
-/* Your ministry: its numbers and its OKRs, side by side under one heading —
-   they used to be two headings each over one button with the same name. The
-   ids are the ones the rest of the app (and the tests) already use. */
+/* A tile on My Home: icon, title, a line under it. */
 function homeTile_(id, icon, title, sub){
   return '<button class="card homeTile" id="'+id+'"><span class="homeTileIcon">'+icon+'</span>'+
     '<span class="homeTileTitle">'+esc(title)+'</span>'+(sub?'<span class="homeTileSub">'+sub+'</span>':'')+'</button>';
-}
-function myWorkHtml_(){
-  var min=S.me.ministry ? t(S.me.ministry) : t('Choose my ministry');
-  var due='';
-  var duty=(S.numbers && S.numbers.duty) || [];
-  var mine=duty.filter(function(x){ return x.dept===S.me.dept && x.ministry===S.me.ministry; })[0];
-  if(mine && typeof numLogged_==='function'){
-    var wk=thisWeek();
-    due = numLogged_(mine, wk) ? '✓ '+esc(gpT('Week {wk} numbers are in',{wk:wk})) : esc(gpT('Week {wk} numbers due Friday',{wk:wk}));
-  }
-  return '<h3 id="sec-kpi">📊 '+esc(t('My Ministry'))+'</h3><div class="homeTiles" id="sec-okr">'+
-    homeTile_('goMinistryFromMe', '📊', t('Numbers'), esc(min)+(due?'<br>'+due:''))+
-    homeTile_('goOkrFromMe', '🎯', t('OKRs'), esc(gpT('Q{q} goals',{q:Math.floor(new Date().getMonth()/3)+1})))+
-  '</div>';
 }
 function myMinistryEntryHtml(){
   return '<h3 id="sec-kpi">'+esc(t('My Ministry'))+'</h3>'+
@@ -12460,14 +12432,10 @@ function bindAway(){
   var mb=document.getElementById('ministryBack');
   if(mb) mb.onclick=function(){ S.view='week'; render(); };
   var gm=document.getElementById('goMinistryFromMe');
-  if(gm) gm.onclick=function(){ S.view='ministry'; S.mmTab='ministry'; render(); };
-  var dtm=document.getElementById('dashToMinistry');
-  if(dtm) dtm.onclick=function(){ gpTap(); S.view='ministry'; S.mmTab='ministry'; render(); };
+  if(gm) gm.onclick=function(){ gpTap(); S.view='ministry'; S.mmTab='ministry'; render(); };
+  document.querySelectorAll('[data-gohealth]').forEach(function(b){ b.onclick=function(){ gpTap(); S.view='health'; render(); }; });
   var dth=document.getElementById('dashToHealth');
   if(dth) dth.onclick=function(){ gpTap(); S.view='health'; render(); };
-  // Same page as My Ministry, opened on its OKR tab.
-  var go=document.getElementById('goOkrFromMe');
-  if(go) go.onclick=function(){ S.view='ministry'; S.mmTab='okr'; render(); };
 
   document.querySelectorAll('[data-mmtab]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.mmTab=b.getAttribute('data-mmtab'); render(); };
@@ -12851,10 +12819,9 @@ function bindHome(){
     };
   });
   // --- goals ---
-  var gpw=document.getElementById('goalsPrevWeek');
-  if(gpw) gpw.onclick=function(){ if(goalsViewWeek()<=1) return; gpTap(); S.goalsWeek=goalsViewWeek()-1; S.goalEditIdx=null; render(); };
-  var gnw=document.getElementById('goalsNextWeek');
-  if(gnw) gnw.onclick=function(){ if(goalsViewWeek()>=52) return; gpTap(); S.goalsWeek=goalsViewWeek()+1; S.goalEditIdx=null; render(); };
+  document.querySelectorAll('[data-goalswk]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.goalsWeek = b.getAttribute('data-goalswk')==='last' ? thisWeek()-1 : null; S.goalEditIdx=null; render(); };
+  });
   var gjc=document.getElementById('goalsJumpCurrent');
   if(gjc) gjc.onclick=function(){ gpTap(); S.goalsWeek=null; S.goalEditIdx=null; render(); };
   document.querySelectorAll('[data-theme-set]').forEach(function(b){
@@ -12871,27 +12838,7 @@ function bindHome(){
       else showMsg('Wrong admin code');
     });
   };
-  var sw=document.getElementById('shareWeek');
-  if(sw) sw.onclick=function(){
-    var wk=goalsViewWeek();
-    var rec=goalsForWeek(wk);
-    if(!rec || rec.pct===null) return;
-    gpTap();
-    sw.disabled=true;
-    gpShareCard({
-      pct: rec.pct,
-      label: t('WEEK')+' '+wk,
-      sub: rec.items.filter(function(i){return i.text;}).length+' '+t('goals'),
-      file: 'gp-week-'+wk
-    }).then(function(how){
-      sw.disabled=false;
-      /* Say what happened rather than claiming success: a dismissed share sheet
-         and a blocked pop-up look identical from here otherwise. */
-      if(how==='blocked') showMsg(t('Allow pop-ups to save the card.'));
-      else if(how==='unsupported') showMsg(t('This browser cannot make the card.'));
-      else if(how==='opened') showMsg(t('Card opened — press and hold to save it.'));
-    });
-  };
+
   var agb=document.getElementById('addGoalBtn');
   if(agb) agb.onclick=function(){
     if(S.busy) return;
@@ -13358,8 +13305,6 @@ function bind(){
       d[inp.getAttribute('data-wnum')] = inp.value===''?undefined:Number(inp.value);
     };
   });
-  var tht=document.getElementById('toHealthTab');
-  if(tht) tht.onclick=function(){ S.view='health'; render(); };
   var wsb=document.getElementById('weekSubmit');
   if(wsb) wsb.onclick=function(){ weekSubmit(wsb); };
   var wed=document.getElementById('weekEdit');

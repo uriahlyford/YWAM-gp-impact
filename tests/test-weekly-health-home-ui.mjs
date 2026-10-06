@@ -93,35 +93,33 @@ mem.survey = [
   Object.assign(ans('tok_a3', WK), { source: '' })            // an old row the daily roll-up wrote
 ];
 mem.dailyLogs = [{ staffId: 'a3', date: NOW, week: WK, langHours: 3, minHours: 2, workout: true, quietTime: false, bible: true, habits: { bible: true } }];
-const card = page => page.$eval('#sec-health', e => e.innerText.replace(/\s+/g, ' ').trim()).catch(() => '');
-const hero = page => page.$eval('[data-jump="sec-health"]', e => e.innerText.replace(/\s+/g, ' ').trim()).catch(() => '');
+const hero = page => page.$eval('[data-gohealth]', e => e.innerText.replace(/\s+/g, ' ').trim()).catch(() => '');
+const card = hero;   // My Home's health lives on the summary card now (Oct 2026)
 
 {
   const { ctx, page } = await open('anow');
-  const c = await card(page), hv = await hero(page);
-  ok('answered this week: My Home shows this week’s weekly score', new RegExp('Week ' + WK).test(c) && /From your weekly check-in/.test(c) && /\d\.\d/.test(c), c);
-  ok('… with the same score up top', (hv.match(/\d+\.\d/) || [])[0] === (c.match(/\d+\.\d/) || [])[0], hv);
+  const hv = await hero(page);
+  ok('answered this week: the summary card shows this week’s weekly score', /My Health 9\.4\/10/.test(hv), hv);
   const main = await page.$eval('#main', e => e.innerText);
   ok('no “This week” totals from daily logging', !/Language hrs|Workout days|Quiet-time days/.test(main));
   ok('no days-logged count, and no daily check-in', !/days logged|log a day|Daily check-in/i.test(main) && !(await page.$('#moreToday, #saveDayBtn')));
+  ok('no separate health section lower down — the summary card has it', !(await page.$('#sec-health')));
   ok('the Habit Tracker is still there', !!(await page.$('[data-habit]')));
-  await (await page.$('#sec-health')).scrollIntoViewIfNeeded(); await page.waitForTimeout(200);
-  await page.screenshot({ path: OUT + '/home-health.png' });
-  await page.click('#toHealthTab'); await page.waitForTimeout(400);
-  ok('Open Health goes to the Health tab', await page.evaluate(() => S.view === 'health'));
+  await page.click('[data-gohealth]'); await page.waitForTimeout(400);
+  ok('tapping My Health goes to the Health tab', await page.evaluate(() => S.view === 'health'));
   await ctx.close();
 }
 {
+  mem.survey = mem.survey.map(r => r.device === 'tok_a2' ? Object.assign({}, r, { clarity: 5 }) : r);
   const { ctx, page } = await open('alast');
-  const c = await card(page);
-  ok('only last week answered: its score, and a button to answer this week', new RegExp('Week ' + (WK - 1)).test(c) && /Fill out this week’s check-in/.test(c), c);
+  const hv = await hero(page);
+  ok('only last week answered: last week’s score until this week is answered', /My Health \d\.\d\/10/.test(hv), hv);
   await ctx.close();
 }
 {
   const { ctx, page } = await open('adaily');
-  const c = await card(page), hv = await hero(page);
-  ok('a week only rolled up from days shows no score — it asks for the weekly check-in', !/\d\.\d/.test(c) && /No score yet/.test(c) && /Your score comes from the weekly check-in/.test(c) && /Fill out this week’s check-in/.test(c), c);
-  ok('… and the top shows no score either', /—.*My Health/.test(hv) && !/\d\.\d/.test(hv), hv);
+  const hv = await hero(page);
+  ok('a week only rolled up from days shows no score', /My Health —\/10/.test(hv) && !/\d\.\d/.test(hv), hv);
   const before = JSON.stringify(mem.survey);
   await page.click('[data-habit="quietTime"]'); await page.waitForTimeout(1200);
   ok('tapping a habit saves the day', mem.dailyLogs.some(l => l.staffId === 'a3' && l.habits && l.habits.quietTime), JSON.stringify(mem.dailyLogs.filter(l => l.staffId === 'a3')));

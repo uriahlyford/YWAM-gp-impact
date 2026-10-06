@@ -1,8 +1,9 @@
-/* My Home, reorganised (Oct 2026): the sections in order and said once; the
-   summary card's three rings; Updates capped at three with See all; Weekly Goals
-   as one card with no empty "last week"; Annual goals folded until opened;
-   "You're mentoring" only for a mentor; the tiles; no quick-jump strip; 320px
-   and Khmer. On the real backend. */
+/* My Home, reorganised (Oct 2026): the sections in order; the large summary card
+   (with Health check-in and My Ministry, so neither has a section below) and its
+   photo option; Updates capped at three with See all; Weekly Goals with a small
+   Last week / This week switch under it and no Share my week; Annual goals folded
+   until opened; "You're mentoring" only for a mentor; the tiles; no quick-jump
+   strip; 320px and Khmer. On the real backend. */
 import { REPO, PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
 import { chromium, devices } from 'playwright';
 import http from 'node:http';
@@ -95,31 +96,42 @@ mem.trips = [{ id: 't1', staffId: 'me', campus: 'siemreap', from: YR + '-12-20',
 const OUT = tmpDir('home-layout-ui-out');
 mem.smartGoals = [{ id: 'sg1', staffId: 'me', year: YR, category: 'Faith', title: 'Read the whole Bible', pct: 70 }, { id: 'sg2', staffId: 'me', year: YR, category: 'Health', title: 'Run 5k', pct: 30 }];
 mem.broadcasts = [1, 2, 3, 4].map(i => ({ id: 'b' + i, campus: 'siemreap', text: 'Announcement ' + i, created: new Date(Date.now() - i * 60000).toISOString(), by: 'mt' }));
+mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit three families', pct: 40 }], updated: '' });
 {
   const { ctx, page } = await open('sreilea');
   await page.waitForTimeout(800);
   const heads = await page.$$eval('#main h3', hs => hs.map(h => h.innerText.trim()));
-  ok('the sections, in order', JSON.stringify(heads) === JSON.stringify(['🎯 Weekly Goals', '✅ Daily', '💚 Health', '📊 My Ministry', 'Annual Goals · SMART', 'Mentorship', '🧭 About me']), heads.join(' | '));
-  const rings = await page.$$eval('.myHero .heroRing', rs => rs.map(r => r.innerText.replace(/\s+/g, ' ').trim()));
-  ok('the summary card: three rings — goals, habits, health', rings.length === 3 && /1\/3 Weekly Goals/.test(rings[0]) && /2\/3/.test(rings[1]) && /9\.2/.test(rings[2]), rings.join(' | '));
-  ok('… and no big streak number, mentor row or time-off row', !(await page.$('.myHero .heroNum, .myHero .heroSub')) && !/DAY STREAK|TIME OFF|Mentor/.test(await page.$eval('.myHero', e => e.innerText)));
+  ok('the sections, in order — no Health or My Ministry below the summary card', JSON.stringify(heads) === JSON.stringify(['🎯 Weekly Goals', '✅ Daily', 'Annual Goals · SMART', 'Mentorship', '🧭 About me']), heads.join(' | '));
+  const card = await page.$eval('.myHero', e => e.innerText.replace(/\s+/g, ' '));
+  ok('the large summary card: goals and their list, Health check-in, My Ministry, streak, habits, health, mentor, time off',
+    /Weekly Goals 1\/3/.test(card) && /Plan the cafe menu/.test(card) && /Health check-in/.test(card) && /My Ministry/.test(card) &&
+    /DAY STREAK/.test(card) && /Habits Today/.test(card) && /My Health 9\.2\/10/.test(card) && /Mentor Mealea Sok/.test(card) && /TIME OFF DAYS LEFT 29/.test(card), card.slice(0, 220));
+  ok('… with the photo and colour option behind the gear', !!(await page.$('#dashCustomizeBtn')));
   ok('no quick-jump strip, no "My week" heading', !(await page.$('.quickBar')) && !/My week \d/.test(await page.$eval('#main', e => e.innerText)));
   const upd = await page.$$eval('#main .card .row', rs => rs.map(r => r.innerText).filter(x => /Announcement|leave request/.test(x)));
   ok('Updates shows three, with See all', upd.length === 3 && !!(await page.$('#notifSeeAll')), upd.length + ' shown');
   await page.click('#notifSeeAll'); await page.waitForTimeout(300);
   ok('See all opens the bell', await page.evaluate(() => S.bellOpen === true));
   await page.evaluate(() => { S.bellOpen = false; renderNotifPanel(); });
-  ok('Weekly Goals is one card, the week arrows in its head', !!(await page.$('.goalsWeekHead #goalsPrevWeek')) && !(await page.$('.weekNavRow')));
-  ok('… with no "last week" when there were none', !(await page.$('.lastWeekLine')) && !/didn’t set goals last week/.test(await page.$eval('#main', e => e.innerText)));
+  ok('Weekly Goals: no arrows on top, no Share my week', !(await page.$('#goalsPrevWeek, #goalsNextWeek, .weekNavRow, #shareWeek')));
+  ok('… a small Last week / This week switch under the goals', (await page.$$eval('.goalsWeekSwitch [data-goalswk]', bs => bs.map(b => b.innerText + (b.classList.contains('on') ? '*' : '')))).join() === 'Last week,This week*');
+  await page.click('[data-goalswk="last"]'); await page.waitForTimeout(300);
+  let gc = await page.$eval('#sec-goals + .card', e => e.innerText.replace(/\s+/g, ' '));
+  ok('Last week shows last week’s goals to mark how they went', /^Last week/.test(gc) && /Visit three families/.test(gc) && /How did last week go/.test(gc) && !(await page.$('#newGoalText')), gc.slice(0, 120));
+  await page.click('[data-goalswk="this"]'); await page.waitForTimeout(300);
+  gc = await page.$eval('#sec-goals + .card', e => e.innerText.replace(/\s+/g, ' '));
+  ok('… and This week brings this week back', /^This week/.test(gc) && /Plan the cafe menu/.test(gc));
   ok('an unlinked goal says "Link to a KPI" quietly', (await page.$$('.goalLink.unlinked')).length === 3);
   ok('Annual goals folded to one line', /2 goals · 50% on average/.test(await page.$eval('#smartToggle', e => e.innerText)) && !(await page.$('[data-smartcat]')));
   await page.click('#smartToggle'); await page.waitForTimeout(300);
   ok('… opens to the full editor, and closes again', !!(await page.$('[data-smartcat]')) && !!(await page.$('#smartToggle')));
   await page.click('#smartToggle'); await page.waitForTimeout(300);
   ok('“You’re mentoring” is not shown to someone who mentors nobody', !/YOU'RE MENTORING|You're not mentoring/i.test(await page.$eval('#sec-mentor + .card', e => e.innerText)));
-  ok('My Ministry: Numbers and OKRs side by side', !!(await page.$('.homeTiles #goMinistryFromMe')) && !!(await page.$('.homeTiles #goOkrFromMe')));
   ok('About me: personality and strengths side by side', !!(await page.$('.homeTiles #pSeeMine')) && !!(await page.$('.homeTiles #gsStart')));
-  ok('Leave (with days left) and Profile at the bottom', /29 days off left this year/.test(await page.$eval('#goLeaveFromMe', e => e.innerText)) && !!(await page.$('.homeTiles #goProfileFromMe')));
+  ok('Leave and Profile at the bottom', !!(await page.$('.homeTiles #goLeaveFromMe')) && !!(await page.$('.homeTiles #goProfileFromMe')));
+  await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
+  ok('the summary card’s My Ministry opens My Ministry', await page.evaluate(() => S.view === 'ministry'));
+  await page.click('nav.bottom button[data-tab="week"]'); await page.waitForTimeout(300);
   await page.click('#goLeaveFromMe'); await page.waitForTimeout(400);
   ok('the tiles still go where they did', await page.evaluate(() => S.view === 'leave'));
   await ctx.close();

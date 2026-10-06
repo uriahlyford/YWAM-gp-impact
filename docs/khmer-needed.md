@@ -2760,7 +2760,7 @@ The team's mix of personality types, added up from the types people share. The
 ## 64. My Home, reorganised
 
 Short labels for the reorganised home page: the tiles, the folded annual goals
-and the week card.
+and the Last week / This week switch on Weekly Goals.
 
 | English | Khmer (pending) |
 |---|---|
@@ -2779,3 +2779,5 @@ and the week card.
 | {n} days off left this year | នៅសល់ថ្ងៃឈប់សម្រាក {n} ថ្ងៃក្នុងឆ្នាំនេះ |
 | No score yet | មិនទាន់មានពិន្ទុ |
 | Link to a KPI | ភ្ជាប់ទៅ KPI |
+| How did last week go? Move each slider to where it ended. | សប្តាហ៍មុនទៅយ៉ាងម៉េចដែរ? សូមរំកិលគ្រាប់រំកិលនីមួយៗទៅកន្លែងដែលវាបានបញ្ចប់។ |
+| You didn’t set goals that week. | អ្នកមិនបានកំណត់គោលដៅសម្រាប់សប្តាហ៍នោះទេ។ |

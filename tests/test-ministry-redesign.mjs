@@ -151,7 +151,7 @@ console.log('\n=== an ordinary member ===');
   // the OKR entry card on My Home lands on the OKR tab of the same page
   await page.click('#ministryBack');
   await page.waitForTimeout(400);
-  await page.click('#goOkrFromMe');
+  await page.click('#goMinistryFromMe'); await page.waitForTimeout(400); await page.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
   await page.waitForTimeout(500);
   ok('the OKRs card on My Home opens My Ministry on its OKR tab', await page.evaluate(() => S.view === 'ministry' && S.mmTab === 'okr' && !!document.querySelector('[data-mmtab="okr"].on')));
   ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));

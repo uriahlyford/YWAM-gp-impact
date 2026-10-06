@@ -526,19 +526,21 @@ week strip / input: two tabs.
 - `test-lead-board.mjs` (server) and `test-lead-board-page.mjs` (browser) cover it.
 
 ## My Home — the layout (reorganised Oct 2026)
-`homeHtml` in this order, each idea said once: the summary card (name; three rings —
-Weekly Goals, Habits Today, My Health — each a `data-jump` to its section; Health
-check-in / My Ministry; Cooking / Chores), Updates (three at most, "See all" opens
-the bell), Weekly Goals (one card, week arrows in its head, last week as one line only
-when there were goals; an unlinked goal shows a quiet "Link to a KPI"), Daily habits
-("Show streaks" inside the card), Health (the weekly check-in), My Ministry (Numbers
-and OKRs tiles), Annual goals (folded to one line until `S.smartOpen`), Mentorship
-("You're mentoring" only for a mentor), About me (Personality and Strengths tiles) and
-Leave (days off left) / Profile & settings tiles. Gone: the quick-jump chip strip and
-its scroll guard, the big streak number, the goal preview, the mentor ring and the
-time-off row on the summary card. Ids are unchanged (`goMinistryFromMe`, `goOkrFromMe`,
-`pSeeMine`/`pStart`, `gsSeeMine`/`gsStart`, `goLeaveFromMe`, `goProfileFromMe`).
-tests/test-home-layout-ui.mjs holds the order.
+`homeHtml` in this order, each idea said once: the **large summary card** (kept large on
+purpose, with the background photo / colour option behind ⚙️: goals and their list,
+Health check-in, My Ministry — `#goMinistryFromMe` — Cooking / Chores, the streak,
+habits, My Health — `[data-gohealth]` opens the Health tab — mentor and time off),
+Updates (three at most, "See all" opens the bell), Weekly Goals, Daily habits ("Show
+streaks" inside the card), Annual goals (folded to one line until `S.smartOpen`),
+Mentorship ("You're mentoring" only for a mentor), About me (Personality and Strengths
+tiles) and Leave / Profile & settings tiles. **Health and My Ministry have no section
+below** — the summary card has both (Uriah). OKRs are My Ministry's second tab.
+- **Weekly Goals:** one card titled This week (or Last week); a small **Last week / This
+  week** switch under the goals (`goalsWeekSwitchHtml_`, `data-goalswk`) — the only other
+  week anyone opens is last week, to mark how it went; no adding goals to a past week.
+  No week arrows, no "Share my week". An unlinked goal shows a quiet "Link to a KPI".
+- Gone: the quick-jump chip strip and its scroll guard. tests/test-home-layout-ui.mjs
+  holds the order.
 
 ## My Home: no daily health inputs
 The daily check-in (hours, mood, the private questions), the "This week" totals built from
