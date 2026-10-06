@@ -3564,7 +3564,9 @@ async function deleteTeamTrip(username, pin, id) {
      buildings [{id, name}]
      rooms     [{id, buildingId, name, style, notes, beds:[{id, label, out}]}]
      bookings  [{id, category, name, from, to, males, females, count, family,
-                 bedIds, bedNames, notes, tripId, permanent}]
+                 bedIds, bedNames, people, notes, tripId, permanent}]
+   people ([{name, sex:'m'|'f'|''}]) is everyone in a group booking — a school's
+   students, a team's members — typed in or added from the team's portal.
    bedNames ({bedId: name}) says who of a team (or family) sleeps in which of
    its beds; the board shows them as "Name (Team)". A team's names come from
    its portal — leader, co-leaders and the members listed — with each
@@ -3687,12 +3689,17 @@ function cleanHospBooking_(k) {
   const males = hospCount_(k.males), females = hospCount_(k.females);
   const bedIds = [];
   (Array.isArray(k.bedIds) ? k.bedIds : []).forEach(function (b) { const id = str_(b, 60); if (id && bedIds.indexOf(id) === -1) bedIds.push(id); });
-  const count = Math.max(hospCount_(k.count), males + females, bedIds.length, 1);
+  const people = [], seenP = {};
+  (Array.isArray(k.people) ? k.people : []).slice(0, 300).forEach(function (p) {
+    const n = str_(p && p.name, 80); if (!n || seenP[n.toLowerCase()]) return;
+    seenP[n.toLowerCase()] = 1; people.push({ name: n, sex: p.sex === 'm' || p.sex === 'f' ? p.sex : '' });
+  });
+  const count = Math.max(hospCount_(k.count), males + females, bedIds.length, people.length, 1);
   const bedNames = {}, kept = bedIds.slice(0, count), rawNames = k.bedNames && typeof k.bedNames === 'object' ? k.bedNames : {};
   kept.forEach(function (id) { const n = str_(rawNames[id], 80); if (n) bedNames[id] = n; });
   return {
     id: str_(k.id, 60) || hospId_('hk'), category: category, name: name, from: from, to: to, permanent: permanent,
-    males: males, females: females, count: count, family: !!k.family, bedIds: kept, bedNames: bedNames,
+    males: males, females: females, count: count, family: !!k.family, bedIds: kept, bedNames: bedNames, people: people,
     notes: str_(k.notes, 1000) || '', tripId: str_(k.tripId, 60) || ''
   };
 }
@@ -4207,7 +4214,8 @@ async function dutyPeople_(campus, week, extras) {
   const put = function (list, n) { n = dutyText_(n, DUTY_MAX.name); if (n && list.indexOf(n) === -1) list.push(n); };
   (await getHosp_(campus)).bookings.forEach(function (k) {
     if (k.category === 'staff' || !(k.from < weekEnd && (k.permanent || k.to > week))) return;
-    const named = Object.keys(k.bedNames || {}).map(function (id) { return k.bedNames[id]; }).filter(Boolean);
+    const named = Object.keys(k.bedNames || {}).map(function (id) { return k.bedNames[id]; }).filter(Boolean)
+      .concat((k.people || []).map(function (p) { return p && p.name; }).filter(Boolean));
     if (k.category === 'team') {
       if (!named.length) return;   // the team's own list (above) has them
       let g = groups.filter(function (x) { return k.tripId && x.id === 'team_' + k.tripId; })[0];

@@ -933,6 +933,18 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .hospKind { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); border-radius:999px; padding:6px 12px 6px 9px; font-size:13.5px; font-weight:600; text-transform:none; letter-spacing:0; color:var(--ink); background:var(--surface); margin:0; cursor:pointer; }
 .hospKind.on { border-color:var(--accent); background:var(--banner); }
 .hospKind input { width:17px; height:17px; margin:0; }
+.hospPeople { display:grid; grid-template-columns:1fr; gap:6px; }
+.hospPerson { display:flex; align-items:center; gap:6px; }
+.hospPerson input { flex:1; min-width:0; margin:0; padding:7px 10px; font-size:14px; }
+.hospSex { display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; flex:0 0 auto; }
+.hospSex button { border:0; background:var(--surface); padding:7px 10px; font:inherit; font-size:13px; font-weight:700; color:var(--muted); cursor:pointer; }
+.hospSex button.on { background:var(--accent); color:var(--accentInk); }
+.hospPeopleBtns { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; }
+.hospPeopleBtns .btn.small { width:auto; margin:0; padding:7px 12px; font-size:13px; }
+.hospPasteBox { margin:6px 0; }
+.hospPasteBox textarea { margin:0 0 6px; }
+.hospPasteBox .btn.small { width:auto; margin:0 8px 0 0; }
+@media (min-width:720px){ .hospPeople { grid-template-columns:1fr 1fr; } }
 .hospWhoList { display:grid; grid-template-columns:1fr; gap:6px; }
 .hospWhoRow { display:flex; align-items:center; gap:8px; margin:0; font-size:13px; text-transform:none; letter-spacing:0; font-weight:600; color:var(--muted); }
 .hospWhoRow span { flex:0 0 92px; }
@@ -8832,7 +8844,7 @@ function hospBookingCardHtml_(H, k, idx){
   var h='<button class="card slim hospBooking hospCat '+c[0]+'" data-hospedit="'+esc(k.id)+'">';
   h+='<div class="rowName"><b>'+esc(k.name)+'</b> <span class="teamStat">'+c[2]+' '+esc(t(c[1]))+'</span></div>';
   h+='<div class="rowSub">📅 '+esc(hospRange_(k))+'</div>';
-  h+='<div class="rowSub">👥 '+esc(hospPeople_(k))+'</div>';
+  h+='<div class="rowSub">👥 '+esc(hospPeople_(k))+((k.people||[]).length ? ' · '+esc(gpT('{n} named',{n:k.people.length})) : '')+'</div>';
   h+='<div class="rowSub">🛏 '+(names.length ? esc(names.join(', ')) : '')+
     (names.length<k.count ? (names.length?' · ':'')+'<span class="hospToPick">'+esc(gpT('{n} beds to pick',{n:k.count-names.length}))+'</span>' : '')+'</div>';
   return h+'</button>';
@@ -8878,6 +8890,7 @@ function hospFormHtml_(H){
     return '<label class="hospKind'+(on?' on':'')+'"><input type="checkbox" data-hfcat="'+o.ids[0]+'"'+(on?' checked':'')+'> '+o.icon+' '+esc(t(o.label))+'</label>'; }).join('')+'</div>';
   if(['staff','student','volunteer'].indexOf(f.category)>-1) h+='<label class="hospCheck"><input type="checkbox" data-hfchk="permanent"'+(f.permanent?' checked':'')+'> '+esc(t('Permanent (no leaving date)'))+'</label>';
   h+='<div class="teamGrid2">'+inp('from', t('Arriving'), 'date')+(f.permanent?'':inp('to', t('Leaving'), 'date'))+'</div>';
+  h+=hospPeopleSecHtml_(H, f);
   h+='<div class="teamGrid3">'+inp('males', t('Men'), 'number')+inp('females', t('Women'), 'number')+inp('count', t('Beds'), 'number')+'</div>';
   h+='<label class="hospCheck"><input type="checkbox" data-hfchk="family"'+(f.family?' checked':'')+'> '+esc(t('A family or couple (keep them together)'))+'</label>';
   var need=hospFormCount_(f);
@@ -8942,9 +8955,40 @@ function hospKindOpts_(cur){
 }
 /* The people a booking can name in its beds: a team's from its portal (with
    the team's request), anyone already named. */
+/* A group booking's people — a school's students, a team's members — typed
+   in one by one (with man / woman, so beds can follow the rooms), pasted as
+   a list, or for a team taken from its portal. The men / women / beds
+   numbers follow the list. */
+function hospPortalPeople_(H, f){ var q=f.tripId && (H.requests||[]).filter(function(x){ return x.tripId===f.tripId; })[0]; return (q && q.people) || []; }
+function hospPeopleSecHtml_(H, f){
+  if(f.category!=='student' && f.category!=='team') return '';
+  var list=f.people||[], portal=hospPortalPeople_(H, f), have={};
+  list.forEach(function(p){ have[String(p.name).toLowerCase()]=1; });
+  var fromPortal=portal.filter(function(p){ return !have[String(p.name).toLowerCase()]; });
+  var isTeam=f.category==='team';
+  var h='<h4 style="margin:14px 0 2px">👥 '+esc(isTeam ? t('People in this team') : t('Students in this booking'))+(list.length?' · '+list.length:'')+'</h4>'+
+    '<p class="hint" style="margin:0 0 6px">'+esc(isTeam ? t('Add each person, or paste a list — one name per line. Leave it empty to book the beds only.') : t('Booking a school? Add each student, or paste a list — one name per line. For one student on their own, put their name above and leave this empty.'))+'</p>';
+  h+='<div class="hospPeople" id="hospPeople">'+list.map(function(p, i){
+    return '<div class="hospPerson"><input type="text" maxlength="80" data-hpname="'+i+'" value="'+esc(p.name)+'" placeholder="'+esc(t('Name'))+'" aria-label="'+esc(t('Name'))+'">'+
+      '<div class="hospSex"><button class="'+(p.sex==='m'?'on':'')+'" data-hpsex="'+i+'|m" aria-label="'+esc(t('Man'))+'">'+esc(t('M'))+'</button><button class="'+(p.sex==='f'?'on':'')+'" data-hpsex="'+i+'|f" aria-label="'+esc(t('Woman'))+'">'+esc(t('F'))+'</button></div>'+
+      '<button class="linkbtn inline teamDelete" data-hpdel="'+i+'" aria-label="'+esc(t('Remove'))+'">✕</button></div>'; }).join('')+'</div>';
+  h+='<div class="hospPeopleBtns"><button class="btn ghost small" id="hospPersonAdd">＋ '+esc(isTeam ? t('Add a person') : t('Add a student'))+'</button>'+
+    '<button class="btn ghost small" id="hospPasteOpen">📋 '+esc(t('Paste a list'))+'</button>'+
+    (fromPortal.length ? '<button class="btn ghost small" id="hospFromPortal">＋ '+esc(gpT('The {n} names from their portal',{n:fromPortal.length}))+'</button>' : '')+'</div>';
+  if(S.hospPaste) h+='<div class="hospPasteBox"><textarea id="hospPasteText" rows="5" placeholder="'+esc(t('One name per line. Add (m) or (f) after a name to say man or woman.'))+'"></textarea>'+
+    '<button class="btn small" id="hospPasteAdd">'+esc(t('Add these'))+'</button><button class="linkbtn inline" id="hospPasteCancel">'+esc(t('Cancel'))+'</button></div>';
+  return h;
+}
+/* the men / women / beds follow the list */
+function hospPeopleCount_(f){
+  var l=f.people||[]; if(!l.length) return;
+  var m=l.filter(function(p){ return p.sex==='m'; }).length, w=l.filter(function(p){ return p.sex==='f'; }).length;
+  f.males=m||''; f.females=w||''; f.count=Math.max(l.length, (f.bedIds||[]).length);
+}
 function hospPeopleFor_(H, f){
-  var q=f.tripId && (H.requests||[]).filter(function(x){ return x.tripId===f.tripId; })[0], out=[];
-  ((q && q.people) || []).forEach(function(p){ if(out.indexOf(p.name)===-1) out.push(p.name); });
+  var out=[];
+  (f.people||[]).forEach(function(p){ if(p.name && out.indexOf(p.name)===-1) out.push(p.name); });
+  hospPortalPeople_(H, f).forEach(function(p){ if(out.indexOf(p.name)===-1) out.push(p.name); });
   Object.keys(f.bedNames||{}).forEach(function(id){ var n=f.bedNames[id]; if(n && out.indexOf(n)===-1) out.push(n); });
   return out;
 }
@@ -8954,7 +8998,20 @@ function hospBedWho_(k, bedId){
   var n=k.bedNames && k.bedNames[bedId];
   return n ? n+' ('+k.name+')' : k.name;
 }
-function hospFormCount_(f){ return Math.max(Number(f.count)||0, (Number(f.males)||0)+(Number(f.females)||0), (f.bedIds||[]).length, 1); }
+/* Put the booking's people in its beds: men into men's rooms and women into
+   women's first, then anyone anywhere; beds already named keep theirs. */
+function hospFillNames_(f){
+  f.bedNames=f.bedNames||{}; var used={}; f.bedIds.forEach(function(id){ if(f.bedNames[id]) used[f.bedNames[id]]=1; });
+  var left=hospPeopleFor_(S.hosp, f).filter(function(n){ return !used[n]; });
+  /* men into men's rooms and women into women's first (as the portal says who is which), then anyone anywhere */
+  var sexOf={};
+  hospPortalPeople_(S.hosp, f).concat(f.people||[]).forEach(function(p){ if(p.sex) sexOf[p.name]=p.sex; });
+  var bi=hospBedIndex_(S.hosp), want=function(id){ var x=bi[id]; return x && x.room.style==='male' ? 'm' : x && x.room.style==='female' ? 'f' : ''; };
+  var take=function(pred){ var i=left.findIndex(pred); return i>-1 ? left.splice(i,1)[0] : ''; };
+  f.bedIds.forEach(function(id){ var w=want(id); if(!f.bedNames[id] && w){ var n=take(function(n){ return sexOf[n]===w; }); if(n) f.bedNames[id]=n; } });
+  f.bedIds.forEach(function(id){ var w=want(id); if(!f.bedNames[id] && left.length){ var n=take(function(n){ return !w || !sexOf[n] || sexOf[n]===w; }); if(n) f.bedNames[id]=n; } });
+}
+function hospFormCount_(f){ return Math.max(Number(f.count)||0, (Number(f.males)||0)+(Number(f.females)||0), (f.bedIds||[]).length, (f.people||[]).length, 1); }
 /* Pick beds for me: men into men's rooms first, women into women's, then
    anyone into mixed / family / guest rooms; staff rooms only for staff. */
 function hospAutoPick_(H, f){
@@ -9373,7 +9430,7 @@ function hospStaffHtml_(H){
     (dirty ? '<button class="linkbtn" id="hospStaffUndo">'+esc(t('Undo changes'))+'</button>' : '')+'</div>';
   return h;
 }
-function hospBlank_(){ return { id:'', category:'guest', name:'', from:'', to:'', males:'', females:'', count:'', family:false, permanent:false, bedIds:[], bedNames:{}, notes:'', tripId:'' }; }
+function hospBlank_(){ return { id:'', category:'guest', name:'', from:'', to:'', males:'', females:'', count:'', family:false, permanent:false, bedIds:[], bedNames:{}, people:[], notes:'', tripId:'' }; }
 function hospErr_(d){
   var e=d && d.err;
   if(e==='bed_taken') return gpT('That bed is already taken by {name} on those nights.',{name:d.with||''});
@@ -9463,16 +9520,7 @@ function bindHosp(){
     document.querySelectorAll('[data-hbname]').forEach(function(inp){ inp.oninput=function(){ f.bedNames=f.bedNames||{}; var v=inp.value.trim(); if(v) f.bedNames[inp.getAttribute('data-hbname')]=v; else delete f.bedNames[inp.getAttribute('data-hbname')]; };
       inp.onchange=function(){ setTimeout(function(){ var ae=document.activeElement, key=ae && ae.getAttribute && ae.getAttribute('data-hbname'); render(); if(key){ var nx=document.querySelector('[data-hbname="'+key+'"]'); if(nx) nx.focus(); } }, 0); }; });
     var na=document.getElementById('hospNamesAuto');
-    if(na) na.onclick=function(){ gpTap(); f.bedNames=f.bedNames||{}; var used={}; f.bedIds.forEach(function(id){ if(f.bedNames[id]) used[f.bedNames[id]]=1; });
-      var left=hospPeopleFor_(S.hosp, f).filter(function(n){ return !used[n]; });
-      /* men into men's rooms and women into women's first (as the portal says who is which), then anyone anywhere */
-      var q=(S.hosp.requests||[]).filter(function(x){ return x.tripId===f.tripId; })[0], sexOf={};
-      ((q && q.people) || []).forEach(function(p){ sexOf[p.name]=p.sex; });
-      var bi=hospBedIndex_(S.hosp), want=function(id){ var x=bi[id]; return x && x.room.style==='male' ? 'm' : x && x.room.style==='female' ? 'f' : ''; };
-      var take=function(pred){ var i=left.findIndex(pred); return i>-1 ? left.splice(i,1)[0] : ''; };
-      f.bedIds.forEach(function(id){ var w=want(id); if(!f.bedNames[id] && w){ var n=take(function(n){ return sexOf[n]===w; }); if(n) f.bedNames[id]=n; } });
-      f.bedIds.forEach(function(id){ var w=want(id); if(!f.bedNames[id] && left.length){ var n=take(function(n){ return !w || !sexOf[n] || sexOf[n]===w; }); if(n) f.bedNames[id]=n; } });
-      render(); };
+    if(na) na.onclick=function(){ gpTap(); hospFillNames_(f); render(); };
     document.querySelectorAll('[data-hbed]').forEach(function(b){ b.onclick=function(){
       var id=b.getAttribute('data-hbed'), i=f.bedIds.indexOf(id);
       gpTap(); if(i>-1){ f.bedIds.splice(i,1); if(f.bedNames) delete f.bedNames[id]; } else f.bedIds.push(id); render(); }; });
@@ -9481,7 +9529,33 @@ function bindHosp(){
       if(!f.from || (!f.permanent && (!f.to || f.to<=f.from))){ showMsg(t('Enter the dates first.')); return; }
       gpTap(); var before=f.bedIds.length; f.bedIds=hospAutoPick_(S.hosp, f);
       if(f.bedIds.length===before) showMsg(t('No more free beds for those nights.'));
+      if((f.people||[]).length) hospFillNames_(f);   // and puts the people in them
       render(); };
+    /* the people of a school or team */
+    var pplChanged=function(){ hospPeopleCount_(f); render(); };
+    document.querySelectorAll('[data-hpname]').forEach(function(inp){ var i=+inp.getAttribute('data-hpname');
+      inp.oninput=function(){ if(f.people[i]) f.people[i].name=inp.value; };
+      inp.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); f.people.push({ name:'', sex:'' }); pplChanged(); var all=document.querySelectorAll('[data-hpname]'); if(all.length) all[all.length-1].focus(); } }; });
+    document.querySelectorAll('[data-hpsex]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-hpsex').split('|'), x=f.people[+p[0]]; if(!x) return; gpTap(); x.sex = x.sex===p[1] ? '' : p[1]; pplChanged(); }; });
+    document.querySelectorAll('[data-hpdel]').forEach(function(b){ b.onclick=function(){ var i=+b.getAttribute('data-hpdel'), x=f.people[i]; if(!x) return; gpTap();
+      f.people.splice(i,1); if(f.bedNames) Object.keys(f.bedNames).forEach(function(id){ if(f.bedNames[id]===x.name) delete f.bedNames[id]; }); pplChanged(); }; });
+    var pa=document.getElementById('hospPersonAdd'); if(pa) pa.onclick=function(){ gpTap(); f.people=f.people||[]; f.people.push({ name:'', sex:'' }); pplChanged(); var all=document.querySelectorAll('[data-hpname]'); if(all.length) all[all.length-1].focus(); };
+    var po=document.getElementById('hospPasteOpen'); if(po) po.onclick=function(){ gpTap(); S.hospPaste=!S.hospPaste; render(); var tx=document.getElementById('hospPasteText'); if(tx) tx.focus(); };
+    var pc=document.getElementById('hospPasteCancel'); if(pc) pc.onclick=function(){ S.hospPaste=false; render(); };
+    var pd=document.getElementById('hospPasteAdd'); if(pd) pd.onclick=function(){
+      var tx=document.getElementById('hospPasteText'), have={}; f.people=(f.people||[]).filter(function(p){ return String(p.name).trim(); });
+      f.people.forEach(function(p){ have[p.name.toLowerCase()]=1; });
+      String(tx ? tx.value : '').split(/\n|;/).forEach(function(line){
+        var l=line.replace(/^\s*(?:\d+[.)]\s*|[-*•]\s*)/, '').trim(), sex='';
+        var m=l.match(/\s*[\(\[]?\s*(m|f|male|female|man|woman)\s*[\)\]]?\s*$/i);
+        if(m && l.length>m[0].length){ sex=/^(f|female|woman)$/i.test(m[1]) ? 'f' : 'm'; l=l.slice(0, l.length-m[0].length).trim(); }
+        l=l.replace(/[,;]+$/, '').slice(0, 80);
+        if(l && !have[l.toLowerCase()]){ have[l.toLowerCase()]=1; f.people.push({ name:l, sex:sex }); }
+      });
+      S.hospPaste=false; gpTap(); pplChanged(); };
+    var fp=document.getElementById('hospFromPortal'); if(fp) fp.onclick=function(){ gpTap(); f.people=(f.people||[]).filter(function(p){ return String(p.name).trim(); }); var have={};
+      f.people.forEach(function(p){ have[p.name.toLowerCase()]=1; });
+      hospPortalPeople_(S.hosp, f).forEach(function(p){ if(!have[p.name.toLowerCase()]) f.people.push({ name:p.name, sex:p.sex||'' }); }); pplChanged(); };
     var cc=document.getElementById('hospCancelBtn'); if(cc) cc.onclick=function(){ S.hospForm=null; render(); };
     var sv=document.getElementById('hospSaveBtn');
     if(sv) sv.onclick=function(){
@@ -9490,7 +9564,7 @@ function bindHosp(){
       if(!f.permanent && (!f.to || f.to<=f.from)){ showMsg(t('The leaving date has to be after the arriving date.')); return; }
       var num=function(v){ return v===''||v==null ? 0 : Number(v); };
       var doc={ id:f.id||'', category:f.category, name:f.name.trim(), from:f.from, to:f.permanent?'':f.to, permanent:!!f.permanent,
-        males:num(f.males), females:num(f.females), count:hospFormCount_(f), family:!!f.family, bedIds:f.bedIds.slice(), bedNames:Object.assign({}, f.bedNames||{}), notes:f.notes||'', tripId:f.tripId||'' };
+        males:num(f.males), females:num(f.females), count:hospFormCount_(f), family:!!f.family, bedIds:f.bedIds.slice(), bedNames:Object.assign({}, f.bedNames||{}), people:(f.people||[]).filter(function(p){ return String(p.name||'').trim(); }).map(function(p){ return { name:String(p.name).trim(), sex:p.sex||'' }; }), notes:f.notes||'', tripId:f.tripId||'' };
       send('hospSave', ['booking', doc], function(){ S.hospForm=null; showMsg(t('Booking saved')); }, sv);
     };
     var dl=document.getElementById('hospDeleteBtn');
