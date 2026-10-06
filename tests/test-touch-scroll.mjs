@@ -4,7 +4,6 @@
    anywhere your thumb was likely to land. Two rules said so:
 
      .sliderWrap input[type=range]  touch-action: none    (every 1-10 question)
-     .quickBar                      touch-action: pan-x   (top of My Home)
 
    `none` forbids panning outright and `pan-x` permits only the horizontal axis,
    so a gesture starting on either could not scroll the page at all. Both are
@@ -138,9 +137,6 @@ ok('a health slider lets the page scroll vertically', /pan-y|^auto$|manipulation
 
 await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(900);
-const taBar = await ta('.quickBar');
-ok('the chip strip claims both axes, not just its own',
-  /pan-x/.test(taBar) && /pan-y/.test(taBar) || taBar === 'auto', taBar);
 const taGoal = await ta('.gSlide');
 ok('the goal slider lets the page scroll vertically', /pan-y|^auto$|manipulation/.test(taGoal) && taGoal !== 'none', taGoal);
 
@@ -253,15 +249,6 @@ if (!control || control.moved <= 40) {
     ' (control swipe over plain page moved ' + (control ? control.moved : 'null') + 'px)' +
     ' — the rules above are asserted from computed style instead');
 } else {
-  const barUp = await swipe('.quickBar', 0, -220);
-  ok('an upward swipe starting on the chip strip scrolls the page', barUp && barUp.moved > 40, 'moved ' + (barUp && barUp.moved) + 'px');
-
-  await page.evaluate(() => { document.querySelector('.quickBar').scrollLeft = 0; });
-  const barSide = await swipe('.quickBar', -220, 0);
-  const barLeft = await page.evaluate(() => Math.round(document.querySelector('.quickBar').scrollLeft));
-  ok('a sideways swipe still scrolls the chips', barLeft > 20, 'scrollLeft ' + barLeft);
-  ok('…without dragging the page with it', barSide && barSide.moved === 0, 'moved ' + (barSide && barSide.moved) + 'px');
-
   const goalUp = await swipe('.gSlide', 0, -220);
   ok('an upward swipe starting on a goal slider scrolls the page', goalUp && goalUp.moved > 40, 'moved ' + (goalUp && goalUp.moved) + 'px');
 

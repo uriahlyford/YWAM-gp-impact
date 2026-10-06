@@ -466,23 +466,6 @@ button.srBarRow:active { opacity:.72; }
 .chip { background:var(--banner); border:1px solid var(--bannerBorder); color:var(--ink); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:700; }
 .chip.blue { background:var(--accentSoft); border-color:var(--accentSoftBorder); }
 
-/* Quick-jump bar at the top of My Home — one tap to any section folded in
-   from the old My week / Me tabs, instead of scrolling past all of them. A
-   single scrolling row rather than wrapping onto several, so it reads as one
-   strip of chips instead of pushing everything else down the page. */
-.quickBar { display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; margin:0 0 14px; padding-bottom:2px;
-  scrollbar-width:none; -ms-overflow-style:none;
-  /* Both axes, named explicitly. `pan-x` alone reads as "this element permits
-     horizontal panning and nothing else", so a vertical swipe starting on the
-     strip was not allowed to scroll the page at all — the strip is full width
-     and sits at the top of My Home, so that was a dead band across the
-     first thing you touch. With both, the browser picks by direction: sideways
-     scrolls the chips, up and down scrolls the page. */
-  touch-action:pan-x pan-y; }
-.quickBar::-webkit-scrollbar { display:none; }
-.quickChip { background:var(--surface); border:1.5px solid var(--border2); color:var(--ink); border-radius:999px;
-  padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; flex:0 0 auto; white-space:nowrap; }
-
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
 .stat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px; }
 .statNum { font-family:'Koulen',sans-serif; font-size:26px; color:var(--accent); line-height:1.1; }
@@ -642,6 +625,22 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .staleBar::before { content:''; position:absolute; left:0; right:0; top:-2px; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); background-size:200% 100%; animation:staleSlide 1.1s linear infinite; }
 @keyframes staleSlide { from { background-position:200% 0; } to { background-position:-200% 0; } }
 @media (prefers-reduced-motion: reduce){ .staleBar::before { animation:none; } }
+.heroRings { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; margin-bottom:12px; }
+.heroRing { display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:0; color:inherit; font:inherit; cursor:pointer; padding:4px 2px; min-width:0; }
+.heroRingFig { font-size:15px; font-weight:800; color:var(--onDark); white-space:nowrap; }
+.heroRingLabel { font-size:11.5px; color:var(--onDarkFaint); text-align:center; line-height:1.25; }
+.homeTiles { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+.homeTile { display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; margin:0; padding:14px; min-width:0; cursor:pointer; font:inherit; color:var(--ink); }
+.homeTileIcon { font-size:22px; line-height:1; } .homeTileArt svg { width:40px; height:40px; display:block; }
+.homeTileTitle { font-size:14.5px; font-weight:800; line-height:1.25; overflow-wrap:anywhere; }
+.homeTileSub { font-size:12.5px; color:var(--muted); line-height:1.35; overflow-wrap:anywhere; }
+.homeTileChips { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; } .homeTileChips .sChip { font-size:11.5px; padding:2px 7px; }
+.homeFold { display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit; color:var(--ink); cursor:pointer; }
+.goalsWeekHead { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.goalsWeekMid { flex:1; min-width:0; text-align:center; }
+.goalLink.unlinked { color:var(--faint); font-size:12.5px; } .goalLink.unlinked select { font-size:12.5px !important; }
+.lastWeekLine { font-size:13px; color:var(--muted); background:var(--surface2); border-radius:10px; padding:8px 10px; margin-bottom:10px; overflow-wrap:anywhere; }
+.updatesFoot { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
 .btnRow { display:flex; gap:8px; flex-wrap:wrap; } .btnRow .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .grpRow { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer; }
 .grpRow input { width:auto; flex:0 0 auto; margin:0; }
@@ -3861,7 +3860,18 @@ function phaseBanner(phase, wk){
 function smartYear_(){ return S.smartYear==null ? new Date().getFullYear() : S.smartYear; }
 function annualGoalsHtml(){
   var year=smartYear_(), cat=S.smartCategory||'Faith';
-  var h='<h3 id="sec-annual">'+esc(t('Annual Goals · SMART'))+'</h3><div class="card">';
+  /* Folded to one line until opened: the editor (year, six categories, the
+     goals and their form) is for the few minutes a month someone updates it. */
+  var yearGoals=S.smartGoals.filter(function(g){ return Number(g.year)===Number(year); });
+  var avg=yearGoals.length ? Math.round(yearGoals.reduce(function(a,g){ return a+(Number(g.pct)||0); },0)/yearGoals.length) : 0;
+  var h='<h3 id="sec-annual">'+esc(t('Annual Goals · SMART'))+'</h3>';
+  if(!S.smartOpen){
+    return h+'<button class="card homeFold" id="smartToggle"><span style="flex:1;min-width:0"><b>'+esc(gpT('{year} goals',{year:year}))+'</b>'+
+      '<span class="pmeta" style="display:block">'+esc(yearGoals.length===1 ? gpT('1 goal · {pct}%',{pct:avg}) : yearGoals.length ? gpT('{n} goals · {pct}% on average',{n:yearGoals.length, pct:avg}) : t('No goals set for this year yet.'))+'</span>'+
+      (yearGoals.length?'<span class="bar" style="display:block;margin-top:6px"><span class="barFill" style="display:block;width:'+avg+'%"></span></span>':'')+'</span>'+
+      '<span class="chev">▾</span></button>';
+  }
+  h+='<div class="card"><button class="linkbtn" id="smartToggle" style="float:right;width:auto;margin:0;padding:2px 0">'+esc(t('Close'))+' ▴</button>';
   h+='<div class="yearPick"><button class="yearBtn" id="smartPrevYear" aria-label="'+esc(t('Previous year'))+'">‹</button>'+
      '<span class="yearNum">'+year+'</span>'+
      '<button class="yearBtn" id="smartNextYear" aria-label="'+esc(t('Next year'))+'">›</button></div>';
@@ -3919,8 +3929,9 @@ function oneOnOneBtnHtml(personId){
 function mentorshipCardHtml(){
   var h='<h3 id="sec-mentor">'+esc(t('Mentorship'))+'</h3>';
   h+='<div class="card">';
-  h+='<div class="mentorLabel">'+esc(t("You're Mentoring"))+'</div>';
-  if(S.mentees && S.mentees.length){
+  var mentoring = S.mentees && S.mentees.length;
+  if(mentoring) h+='<div class="mentorLabel">'+esc(t("You're Mentoring"))+'</div>';
+  if(mentoring){
     S.mentees.forEach(function(p){
       h+='<div class="mentorBlock">'+avatarHtml(p,'sm')+
         '<div style="flex:1"><div class="mentorName">'+esc(p.name)+'</div>'+
@@ -3929,10 +3940,8 @@ function mentorshipCardHtml(){
         '<button class="openBtn" data-openmentee="'+esc(p.id)+'" aria-label="'+esc(t('Open their database'))+'">'+
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>';
     });
-  } else {
-    h+='<div class="emptyLine">'+esc(t("You're not mentoring anyone yet."))+'</div>';
+    h+='<div class="mentorDivider"></div>';
   }
-  h+='<div class="mentorDivider"></div>';
   h+='<div class="mentorLabel">'+esc(t('Your Mentor'))+'</div>';
   if(S.me.mentorId){
     var m=personOf(S.me.mentorId);
@@ -4023,34 +4032,23 @@ function miniDashboardHtml(){
      the big streak number read as an afterthought in the middle of the card. */
   h+='<div class="hero myHero'+(custom?' custom':'')+'"'+
     (custom?' style="'+(color?'background-color:'+esc(color)+';':'')+(bg?'background-image:url(\''+esc(bg)+'\');':'')+'"':'')+'>'+
-    '<button class="heroRow'+(written.length?' withList':'')+'" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
-      '<div class="heroTrend">'+esc(t('Weekly Goals'))+' <b class="heroFig">'+goalsDone+'</b>/'+written.length+'</div>'+
-      (written.length?'<div class="heroGoalsPreview">'+written.map(function(g){
-        return '<div><span class="heroGoalDot" style="background:'+gpRingColor(goalItemPct(g))+'"></span>'+esc(g.text)+'</div>';
-      }).join('')+'</div>':'')+
-    '</button>'+
+    /* Three rings in a row — the week at a glance, each a tap to its section —
+       then the four things people come here to do most. The big streak number,
+       the goal list and the mentor and time-off rows moved to their own
+       sections below, where they are not said twice. */
+    '<div class="heroRings">'+
+      '<button class="heroRing" data-jump="sec-goals">'+gpRingHtml(goalsPct,'sm',t('Weekly Goals'))+
+        '<span class="heroRingFig">'+goalsDone+'/'+written.length+'</span><span class="heroRingLabel">'+esc(t('Weekly Goals'))+'</span></button>'+
+      '<button class="heroRing" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
+        '<span class="heroRingFig">'+habitsDone+'/'+list.length+(st>1?' · 🔥'+st:'')+'</span><span class="heroRingLabel">'+esc(t('Habits Today'))+'</span></button>'+
+      '<button class="heroRing" data-jump="sec-health">'+gpRingHtml(healthPct,'sm',t('My Health'))+
+        '<span class="heroRingFig">'+(score!==null?score.toFixed(1):'—')+' '+healthTrend+'</span><span class="heroRingLabel">'+esc(t('My Health'))+'</span></button>'+
+    '</div>'+
     '<div class="heroQuick">'+
       '<button id="dashToHealth">💚 '+esc(t('Health check-in'))+'</button>'+
       '<button id="dashToMinistry">📊 '+esc(t('My Ministry'))+'</button>'+
     '</div>'+
     (typeof dutyHtml==='function' ? schedHomeHtml_() : '')+
-    '<div class="heroDivider"></div>'+
-    '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
-    '<div class="heroNum" data-count="'+st+'">0</div>'+
-    '<div class="heroLabel" style="letter-spacing:2px">'+esc(t('DAY STREAK'))+'</div>'+
-    '<button class="heroRow" data-jump="sec-habits">'+gpRingHtml(habitsPct,'sm',t('Habits Today'))+
-      '<div class="heroTrend">'+esc(t('Habits Today'))+' <b class="heroFig">'+habitsDone+'</b>/'+list.length+
-      (habitBest>0?'</div><div class="heroSubtext">🔥 '+esc(gpT('best {n}d streak',{n:habitBest}))+'</div>':'</div>')+'</button>'+
-    '<button class="heroRow" data-jump="sec-health">'+gpRingHtml(healthPct,'sm',t('My Health'))+
-      '<div class="heroTrend">'+esc(t('My Health'))+' <b class="heroFig">'+(score!==null?score.toFixed(1):'—')+'</b>/10 '+healthTrend+'</div></button>'+
-    '<button class="heroRow" data-jump="sec-mentor">'+gpRingHtml(mentorPct,'sm',t('Mentor'))+
-      '<div class="heroTrend">'+esc(t('Mentor'))+' <b class="heroFig">'+(mentorId?esc(mentorName):esc(t('Not set')))+'</b></div></button>'+
-    '<div class="heroSub">'+
-      '<button class="heroSubRow" data-jump="sec-leave">'+
-        '<span class="heroSubLabel">'+esc(t('PERSONAL TIME OFF DAYS LEFT'))+'</span>'+
-        '<span class="heroSubNum">'+ptoLeft+'</span>'+
-      '</button>'+
-    '</div>'+
   '</div>';
 
   if(open){
@@ -4251,10 +4249,11 @@ function notificationsHtml(){
   var items=visibleNotifItems_().filter(function(it){ return !it.bellOnly; });
   if(!items.length) return '';
   var h='<div class="card"><div class="goalCardTitle" style="margin-bottom:8px">🔔 '+esc(t('Updates'))+'</div>';
-  items.slice(0,5).forEach(function(it){
+  items.slice(0,3).forEach(function(it){
     h+='<div class="row"><span class="rowName">'+esc(it.text)+'</span>'+(it.actions||'')+'</div>';
   });
-  h+='<button class="linkbtn" id="notifClearBtn" style="margin-top:4px">'+esc(t('Clear all'))+'</button>';
+  h+='<div class="updatesFoot">'+(items.length>3 ? '<button class="linkbtn inline" id="notifSeeAll">'+esc(gpT('See all {n}',{n:items.length}))+'</button>' : '<span></span>')+
+    '<button class="linkbtn inline" id="notifClearBtn">'+esc(t('Clear all'))+'</button></div>';
   return h+'</div>';
 }
 
@@ -4311,6 +4310,36 @@ function personalityCardHtml(){
     '<span style="flex:1"><div class="pCode" style="color:'+gpPGroupOf(p.type).ink+'">'+esc(p.type)+'</div>'+
     '<div style="font-size:16px;font-weight:800">'+esc(pTheName(p.type))+'</div>'+
     '<div class="pmeta">'+esc(t(ty.tagline))+'</div></span>'+PCHEV+'</button>';
+}
+/* About you: personality and strengths side by side, with the same ids
+   (pStart / pSeeMine, gsStart / gsSeeMine) their screens already listen for. */
+function aboutMeHtml_(){
+  var tiles='';
+  if(pOK()){
+    var p=myPType();
+    tiles += p
+      ? homeTile_('pSeeMine', '<span class="homeTileArt">'+gpPAvatar(p.type, mySex(), 40)+'</span>', pTheName(p.type), '<b style="color:'+gpPGroupOf(p.type).ink+'">'+esc(p.type)+'</b> · '+esc(t('Personality')))
+      : homeTile_('pStart', '🧭', t('Personality'), esc(t('Discover your personality type')));
+  }
+  if(gsOK()){
+    var g=myGS();
+    tiles += g
+      ? homeTile_('gsSeeMine', '💪', t('Strengths'), '<span class="sChips homeTileChips">'+g.top.map(function(id,i){ return gsChipHtml(id,i+1); }).join('')+'</span>')
+      : homeTile_('gsStart', '💪', t('Strengths'), esc(t('Find your top 5 strengths')));
+  }
+  return tiles ? '<h3 id="sec-ptype">🧭 '+esc(t('About me'))+'</h3><div class="homeTiles" id="sec-strengths">'+tiles+'</div>' : '';
+}
+/* The two doors at the bottom: leave (with the days still free this year — the
+   figure the summary card used to carry) and profile & settings. */
+function homeDoorsHtml_(){
+  var year=String(new Date().getFullYear());
+  var yt=(S.trips && S.trips.totals && S.trips.totals[year]) || {personal:0};
+  var cap=(S.trips && S.trips.ptoCap) || 30;
+  var left=Math.max(0, cap-yt.personal);
+  return '<div class="homeTiles" id="sec-leave" style="margin-top:18px">'+
+    homeTile_('goLeaveFromMe', '🗓️', t('Leave Request'), esc(gpT('{n} days off left this year',{n:left})))+
+    homeTile_('goProfileFromMe', '👤', t('Profile & settings'), '')+
+  '</div>';
 }
 var PCHEV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>';
 
@@ -5011,59 +5040,26 @@ function bindGStrengths(){
 function homeHtml(){
   var wk=thisWeek();
   var phase=weekPhase();
-
-  /* My week and Me used to be separate tabs; they're folded into one "My
-     Database" tab now, so the quick-jump bar below is what replaces the old
-     tab bar for getting straight to one section. The day streak used to
-     repeat here as its own chip right under the hero — the hero already
-     leads with it, so this was just noise on a page Uriah wants decluttered. */
+  /* Reorganised Oct 2026 (Uriah: "clean up, improve and reorganise"). One idea
+     per section, most-used first, nothing said twice: the summary card on top
+     (three rings and the four quick buttons), what needs you (Updates), then
+     this week — goals, habits, health — then your ministry, the longer view
+     (annual goals, mentorship), about you (personality, strengths), and the
+     two doors at the bottom (leave, profile). The quick-jump chip strip is gone:
+     the page is short enough now, and the rings on top still jump. */
   var h=miniDashboardHtml();
   h+=gpQueueBannerHtml_();
   h+=notificationsHtml();
-  h+='<h3 style="margin-top:8px">'+esc(t('My week'))+' '+wk+'</h3>';
-
-  h += quickJumpHtml();
-
   h+=phaseBanner(phase, wk);
-
-  /* Fixed order: Weekly Goals, Habit Tracker, My Ministry, OKR, Annual
-     Goals, Mentorship, Health, Leave, Account. Weekly Goals leads — that's
-     the section Uriah wants staff prioritizing, so it's the first thing
-     under the quick-jump bar rather than a mid-page card. My Ministry
-     sits right under it — both are "what am I aiming at," one personal,
-     one for the ministry. */
   h += goalsCardHtml(goalsViewWeek());
   h += habitsCardHtml();
-  h += myMinistryEntryHtml();
-  h += myOkrEntryHtml();
+  h += weekSummaryHtml(wk);
+  h += myWorkHtml_();
   h += annualGoalsHtml();
   h += mentorshipCardHtml();
-  h += personalityCardHtml();
-  h += strengthsCardHtml();
-  h += weekSummaryHtml(wk);
-  h += leaveEntryHtml();
-
-  // Profile and settings live under My Home now rather than owning a tab of their own.
-  h+='<button class="card leaveEntry" id="goProfileFromMe">'+
-    '<span class="leaveEntryIcon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-7 8-7s7 2.5 8 7"/></svg></span>'+
-    '<span style="flex:1"><div style="font-size:13.5px;font-weight:700">'+esc(t('Profile & settings'))+'</div></span>'+
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg></button>';
+  h += aboutMeHtml_();
+  h += homeDoorsHtml_();
   return h;
-}
-
-/* One tap to any section on this tab, instead of scrolling past everything
-   above it. Same order as the sections themselves. Account has no section of
-   its own to scroll to — it's a card at the very bottom that opens the
-   profile screen — so that chip still navigates rather than scrolling. */
-function quickJumpHtml(){
-  var jumps=[['sec-goals','Weekly Goals'],['sec-habits','Daily'],['sec-kpi','My Ministry'],['sec-okr','OKRs'],
-    ['sec-annual','Annual Goals'],['sec-mentor','Mentorship'],['sec-health','My Health'],['sec-leave','Leave']];
-  var h='<div class="quickBar">';
-  jumps.forEach(function(j){
-    h+='<button class="quickChip" data-jump="'+j[0]+'">'+esc(t(j[1]))+'</button>';
-  });
-  h+='<button class="quickChip" id="jumpAccount">'+esc(t('Account'))+'</button>';
-  return h+'</div>';
 }
 
 /* My Home's health card: the weekly check-in, nothing else (Uriah, Oct 2026 —
@@ -5078,14 +5074,14 @@ function homeHealth_(){
 }
 function weekSummaryHtml(){
   var H=homeHealth_();
-  var h='<div class="card slim" id="sec-health">';
+  var h='<h3>💚 '+esc(t('Health'))+'</h3><div class="card slim" id="sec-health">';
   if(H.score!==null){
-    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>💚 '+esc(t('My health'))+' · '+esc(t('week'))+' '+H.wk+'</strong>'+
+    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>'+esc(gpT('Week {n}',{n:H.wk}))+'</strong>'+
       '<div class="pmeta">'+esc(t('From your weekly check-in'))+' · '+esc(gpT('feeds the base total for {campus}',{campus:t(campusName(S.me.campus))}))+'</div></span>'+
       '<span class="pctBig">'+H.score.toFixed(1)+(H.prevScore!==null ? trendBadge(pctChange(H.prevScore,H.score), true) : '')+'</span></div>'+
       '<div class="bar" style="margin-top:8px"><div class="barFill'+(H.score>=8?' done':'')+'" style="width:'+Math.round(H.score*10)+'%"></div></div>';
   } else {
-    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>💚 '+esc(t('My health'))+'</strong>'+
+    h+='<div class="row" style="border:0;padding:0"><span class="rowName"><strong>'+esc(t('No score yet'))+'</strong>'+
       '<div class="pmeta">'+esc(t('Your score comes from the weekly check-in.'))+'</div></span></div>';
   }
   if(H.wk!==H.cur || H.score===null)
@@ -5137,16 +5133,12 @@ function habitsCardHtml(){
 
   h+='<button class="linkbtn" id="editHabits" style="margin:8px 0 4px">'+esc(t('Choose my habits'))+'</button>';
 
-  h += '</div>';
-
   /* Streaks are a look-back, not something anyone needs open every visit —
-     behind one button so the page settles sooner. No button when there are none. */
+     behind one button, inside the card, so the page settles sooner. */
   var runs=streaksHtml();
-  if(runs){
-    h += '<button class="linkbtn" id="habitLoadMore" style="margin:4px 0 10px">'+
-      esc(t(S.habitMore ? 'Show less' : 'Load more'))+'</button>';
-    if(S.habitMore) h += runs;
-  }
+  if(runs) h += '<button class="linkbtn" id="habitLoadMore" style="margin:0">'+esc(t(S.habitMore ? 'Hide streaks' : 'Show streaks'))+'</button>';
+  h += '</div>';
+  if(runs && S.habitMore) h += runs;
   return h;
 }
 
@@ -5210,29 +5202,17 @@ function goalsCardHtml(wk){
 
   var h='<h3 id="sec-goals">🎯 '+esc(t('Weekly Goals'))+'</h3>';
 
+  /* One card: the week and its arrows in the header (no separate week card),
+     and last week's goals as one quiet line, only when there were some. */
   h+='<div class="card">'+
-    '<div class="weekNavLabel">'+esc(t('Week'))+'</div>'+
-    '<div class="weekNavRow">'+
+    '<div class="goalsWeekHead">'+
       '<button class="weekArrow" id="goalsPrevWeek" aria-label="'+esc(t('Previous week'))+'"'+(wk<=1?' disabled':'')+'>‹</button>'+
-      '<div class="weekPill">'+esc(weekRangeLabel_(wk))+
-        '<span class="currentTag'+(isCur?' on':'')+'">'+esc(t('Current Week'))+'</span></div>'+
+      '<div class="goalsWeekMid"><div class="goalCardTitle">'+esc(isCur ? t('This week') : gpT('Week {n}',{n:wk}))+'</div>'+
+        '<div class="goalCardDate">'+esc(weekRangeLabel_(wk))+'</div></div>'+
       '<button class="weekArrow" id="goalsNextWeek" aria-label="'+esc(t('Next week'))+'"'+(wk>=52?' disabled':'')+'>›</button>'+
     '</div>'+
-    '<p class="weekCaption">'+esc(t('Review last week, plan this week.'))+'</p>'+
-    (isCur?'':'<button class="linkbtn" style="padding:6px 0 0" id="goalsJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
-  '</div>';
-
-  h+='<div class="card muted">'+
-    '<div class="goalCardHead"><span class="goalCardTitle">'+esc(t('Last week'))+'</span>'+
-    '<span class="goalCardDate">'+esc(weekRangeLabel_(lastWk))+'</span></div>'+
-    (lastWritten.length
-      ? lastWritten.map(function(i){ return '<div class="lastGoalRow">'+esc(i.text)+'</div>'; }).join('')
-      : '<p class="emptyLine" style="padding:2px 0 0">'+esc(t('You didn’t set goals last week.'))+'</p>')+
-  '</div>';
-
-  h+='<div class="card">'+
-    '<div class="goalCardHead"><span class="goalCardTitle">'+esc(t('This week'))+'</span>'+
-    '<span class="goalCardDate">'+esc(weekRangeLabel_(wk))+'</span></div>';
+    (isCur?'':'<button class="linkbtn" style="padding:0 0 8px" id="goalsJumpCurrent">'+esc(t('Jump back to this week'))+'</button>')+
+    (lastWritten.length ? '<div class="lastWeekLine"><b>'+esc(t('Last week'))+':</b> '+lastWritten.map(function(i){ return esc(i.text); }).join(' · ')+'</div>' : '');
 
   if(written.length){
     /* Said plainly at the point of writing, not buried in settings. Goals are
@@ -5250,9 +5230,9 @@ function goalsCardHtml(wk){
             ? '<div class="wgTop"><input type="text" class="addGoalInput" id="editGoalText" maxlength="200" value="'+esc(g.text)+'" style="flex:1"></div>'
             : '<div class="wgTop"><span class="wgText">'+esc(g.text)+'</span>'+
               '<span class="wgPct" style="color:'+pctColor(gp)+'">'+gp+'% · '+esc(pctWord(gp))+'</span></div>')+
-          '<label class="goalLink" style="display:flex;align-items:center;gap:4px">📊 '+
+          '<label class="goalLink'+(g.metricKey?'':' unlinked')+'" style="display:flex;align-items:center;gap:4px">📊 '+
             '<select class="goalLinkSel" data-goallink="'+i+'" style="border:0;background:none;color:inherit;font:inherit;padding:0">'+
-            okrMetricOptions(g.metricKey, 'Not linked to a KPI')+
+            okrMetricOptions(g.metricKey, g.metricKey ? 'Not linked to a KPI' : 'Link to a KPI')+
             '</select></label>'+
           '<input type="range" class="gSlide" min="0" max="100" step="5" value="'+gp+'" data-goalpct="'+i+'"'+
             ' style="'+ringVars(gp)+'"'+
@@ -5674,6 +5654,27 @@ function ovWeekRowsHtml_(dept, ministry, data, wk){
    Generic label for everyone ("My Ministry"), personalized subtitle once
    opened — same shape as Leave Request's card always saying "Leave
    Request" while the page behind it is about your own days off. */
+/* Your ministry: its numbers and its OKRs, side by side under one heading —
+   they used to be two headings each over one button with the same name. The
+   ids are the ones the rest of the app (and the tests) already use. */
+function homeTile_(id, icon, title, sub){
+  return '<button class="card homeTile" id="'+id+'"><span class="homeTileIcon">'+icon+'</span>'+
+    '<span class="homeTileTitle">'+esc(title)+'</span>'+(sub?'<span class="homeTileSub">'+sub+'</span>':'')+'</button>';
+}
+function myWorkHtml_(){
+  var min=S.me.ministry ? t(S.me.ministry) : t('Choose my ministry');
+  var due='';
+  var duty=(S.numbers && S.numbers.duty) || [];
+  var mine=duty.filter(function(x){ return x.dept===S.me.dept && x.ministry===S.me.ministry; })[0];
+  if(mine && typeof numLogged_==='function'){
+    var wk=thisWeek();
+    due = numLogged_(mine, wk) ? '✓ '+esc(gpT('Week {wk} numbers are in',{wk:wk})) : esc(gpT('Week {wk} numbers due Friday',{wk:wk}));
+  }
+  return '<h3 id="sec-kpi">📊 '+esc(t('My Ministry'))+'</h3><div class="homeTiles" id="sec-okr">'+
+    homeTile_('goMinistryFromMe', '📊', t('Numbers'), esc(min)+(due?'<br>'+due:''))+
+    homeTile_('goOkrFromMe', '🎯', t('OKRs'), esc(gpT('Q{q} goals',{q:Math.floor(new Date().getMonth()/3)+1})))+
+  '</div>';
+}
 function myMinistryEntryHtml(){
   return '<h3 id="sec-kpi">'+esc(t('My Ministry'))+'</h3>'+
     '<button class="card leaveEntry" id="goMinistryFromMe">'+
@@ -12767,9 +12768,6 @@ function bindHome(){
       if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
     };
   });
-  var ja=document.getElementById('jumpAccount');
-  if(ja) ja.onclick=function(){ S.view='profile'; render(); };
-  gpHscrollGuard(document.querySelector('.quickBar'));
 
   /* Personal dashboard customize panel, hidden behind the gear icon. The
      color wheel saves on change (one control, no separate Save button);
@@ -13224,6 +13222,10 @@ function bind(){
   var bellBtn=document.getElementById('bellBtn');
   if(bellBtn) bellBtn.onclick=function(){ gpTap(); S.bellOpen=!S.bellOpen; renderNotifPanel(); };
   renderNotifPanel();
+  var nsa=document.getElementById('notifSeeAll');
+  if(nsa) nsa.onclick=function(){ gpTap(); S.bellOpen=true; renderNotifPanel(); };
+  var stg=document.getElementById('smartToggle');
+  if(stg) stg.onclick=function(){ gpTap(); S.smartOpen=!S.smartOpen; if(!S.smartOpen) S.smartDraft=null; render(); };
   var notifClearBtn=document.getElementById('notifClearBtn');
   if(notifClearBtn) notifClearBtn.onclick=clearNotifications;
 

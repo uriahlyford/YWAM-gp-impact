@@ -62,7 +62,6 @@ const BROWSER = [
   'test-pull-drill.mjs',    // the pull gesture on both pages, and which figures open
   'test-touch-scroll.mjs',  // a swipe over a slider or the chip strip scrolls the page, and answers nothing
   'test-number-entry.mjs',  // typing into a number box replaces what is in it, and no box starts at a 0 nobody typed
-  'test-wheel-scroll.mjs',  // a trackpad's wheel events still scroll the page past the quick-jump strip
   'test-habit-config.mjs',  // a habit list the server refused never stays on the grid
   'test-khmer.mjs',         // Khmer reaches the screen, and does not overflow when it does
   'test-theme.mjs',         // dark mode, and a WCAG contrast audit of every screen
@@ -95,6 +94,7 @@ const BROWSER = [
   'test-hr-candidates-page.mjs', // the Candidates tab and the bell: reminders open HR, tiles + follow-ups due, type/stage chips + search, add, move stage, next step, note, archive
   'test-habit-taps.mjs',    // habit tiles stay responsive on a slow or dead connection
   'test-personality-ui.mjs', // the test, the type page and the directory avatars, driven for real
+  'test-home-layout-ui.mjs',  // My Home: sections in order, said once; Updates capped; annual goals folded; tiles; 320px Khmer
   'test-team-personality-ui.mjs',  // Team → Personalities: the team's mix from shared types only, by campus / department / ministry
   'test-weekly-health-home-ui.mjs',  // My Home health is the weekly check-in only; no daily inputs; habits stay
   'test-groups-ui.mjs',  // Arrivals & departures: the invite link through to a sign-up, archiving several with a confirm

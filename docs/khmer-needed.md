@@ -2756,3 +2756,26 @@ The team's mix of personality types, added up from the types people share. The
 | Mostly Judging — organised, plans ahead and finishes. Leave a little room for the unexpected, and for people who need it. | ភាគច្រើនជាអ្នករៀបចំផែនការ — មានរបៀបរៀបរយ គិតទុកជាមុន និងបញ្ចប់ការងារ។ សូមទុកកន្លែងបន្តិចសម្រាប់រឿងដែលមិននឹកស្មានដល់ និងសម្រាប់មនុស្សដែលត្រូវការវា។ |
 | Mostly Perceiving — flexible and quick to adapt. Agree deadlines and who owns what, so things get finished. | ភាគច្រើនជាអ្នកបត់បែន — បត់បែន និងសម្របខ្លួនបានលឿន។ សូមព្រមព្រៀងគ្នាលើថ្ងៃផុតកំណត់ និងអ្នកទទួលខុសត្រូវលើអ្វី ដើម្បីឱ្យការងារបានបញ្ចប់។ |
 | Evenly mixed — the team has both. Let each side lead where it is strongest. | លាយស្មើគ្នា — ក្រុមមានទាំងពីរ។ សូមឱ្យភាគីនីមួយៗដឹកនាំនៅកន្លែងដែលខ្លួនខ្លាំងបំផុត។ |
+
+## 64. My Home, reorganised
+
+Short labels for the reorganised home page: the tiles, the folded annual goals
+and the week card.
+
+| English | Khmer (pending) |
+|---|---|
+| See all {n} | មើលទាំងអស់ {n} |
+| Week {n} | សប្តាហ៍ទី {n} |
+| Show streaks | បង្ហាញការធ្វើជាប់ៗគ្នា |
+| Hide streaks | លាក់ការធ្វើជាប់ៗគ្នា |
+| Q{q} goals | គោលដៅត្រីមាសទី {q} |
+| Week {wk} numbers are in | លេខសប្តាហ៍ទី {wk} បានបញ្ចូលរួច |
+| Week {wk} numbers due Friday | លេខសប្តាហ៍ទី {wk} ត្រូវបញ្ចូលនៅថ្ងៃសុក្រ |
+| {year} goals | គោលដៅឆ្នាំ {year} |
+| 1 goal · {pct}% | គោលដៅ 1 · {pct}% |
+| {n} goals · {pct}% on average | គោលដៅ {n} · ជាមធ្យម {pct}% |
+| No goals set for this year yet. | មិនទាន់មានគោលដៅសម្រាប់ឆ្នាំនេះនៅឡើយទេ។ |
+| About me | អំពីខ្ញុំ |
+| {n} days off left this year | នៅសល់ថ្ងៃឈប់សម្រាក {n} ថ្ងៃក្នុងឆ្នាំនេះ |
+| No score yet | មិនទាន់មានពិន្ទុ |
+| Link to a KPI | ភ្ជាប់ទៅ KPI |

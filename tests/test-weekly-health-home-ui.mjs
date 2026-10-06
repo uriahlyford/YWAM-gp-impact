@@ -99,7 +99,7 @@ const hero = page => page.$eval('[data-jump="sec-health"]', e => e.innerText.rep
 {
   const { ctx, page } = await open('anow');
   const c = await card(page), hv = await hero(page);
-  ok('answered this week: My Home shows this week’s weekly score', new RegExp('My health · week ' + WK).test(c) && /From your weekly check-in/.test(c) && /\d\.\d/.test(c), c);
+  ok('answered this week: My Home shows this week’s weekly score', new RegExp('Week ' + WK).test(c) && /From your weekly check-in/.test(c) && /\d\.\d/.test(c), c);
   ok('… with the same score up top', (hv.match(/\d+\.\d/) || [])[0] === (c.match(/\d+\.\d/) || [])[0], hv);
   const main = await page.$eval('#main', e => e.innerText);
   ok('no “This week” totals from daily logging', !/Language hrs|Workout days|Quiet-time days/.test(main));
@@ -114,14 +114,14 @@ const hero = page => page.$eval('[data-jump="sec-health"]', e => e.innerText.rep
 {
   const { ctx, page } = await open('alast');
   const c = await card(page);
-  ok('only last week answered: its score, and a button to answer this week', new RegExp('week ' + (WK - 1)).test(c) && /Fill out this week’s check-in/.test(c), c);
+  ok('only last week answered: its score, and a button to answer this week', new RegExp('Week ' + (WK - 1)).test(c) && /Fill out this week’s check-in/.test(c), c);
   await ctx.close();
 }
 {
   const { ctx, page } = await open('adaily');
   const c = await card(page), hv = await hero(page);
-  ok('a week only rolled up from days shows no score — it asks for the weekly check-in', !/\d\.\d/.test(c) && /Your score comes from the weekly check-in/.test(c) && /Fill out this week’s check-in/.test(c), c);
-  ok('… and the top shows no score either', /My Health —\/10/.test(hv), hv);
+  ok('a week only rolled up from days shows no score — it asks for the weekly check-in', !/\d\.\d/.test(c) && /No score yet/.test(c) && /Your score comes from the weekly check-in/.test(c) && /Fill out this week’s check-in/.test(c), c);
+  ok('… and the top shows no score either', /—.*My Health/.test(hv) && !/\d\.\d/.test(hv), hv);
   const before = JSON.stringify(mem.survey);
   await page.click('[data-habit="quietTime"]'); await page.waitForTimeout(1200);
   ok('tapping a habit saves the day', mem.dailyLogs.some(l => l.staffId === 'a3' && l.habits && l.habits.quietTime), JSON.stringify(mem.dailyLogs.filter(l => l.staffId === 'a3')));

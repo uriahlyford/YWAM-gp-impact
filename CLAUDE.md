@@ -525,6 +525,21 @@ week strip / input: two tabs.
   phone they scroll across in their own row.
 - `test-lead-board.mjs` (server) and `test-lead-board-page.mjs` (browser) cover it.
 
+## My Home — the layout (reorganised Oct 2026)
+`homeHtml` in this order, each idea said once: the summary card (name; three rings —
+Weekly Goals, Habits Today, My Health — each a `data-jump` to its section; Health
+check-in / My Ministry; Cooking / Chores), Updates (three at most, "See all" opens
+the bell), Weekly Goals (one card, week arrows in its head, last week as one line only
+when there were goals; an unlinked goal shows a quiet "Link to a KPI"), Daily habits
+("Show streaks" inside the card), Health (the weekly check-in), My Ministry (Numbers
+and OKRs tiles), Annual goals (folded to one line until `S.smartOpen`), Mentorship
+("You're mentoring" only for a mentor), About me (Personality and Strengths tiles) and
+Leave (days off left) / Profile & settings tiles. Gone: the quick-jump chip strip and
+its scroll guard, the big streak number, the goal preview, the mentor ring and the
+time-off row on the summary card. Ids are unchanged (`goMinistryFromMe`, `goOkrFromMe`,
+`pSeeMine`/`pStart`, `gsSeeMine`/`gsStart`, `goLeaveFromMe`, `goProfileFromMe`).
+tests/test-home-layout-ui.mjs holds the order.
+
 ## My Home: no daily health inputs
 The daily check-in (hours, mood, the private questions), the "This week" totals built from
 daily logs, the days-logged health view and "Recent days" are removed — code and all (Uriah,
