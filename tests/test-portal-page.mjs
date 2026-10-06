@@ -356,6 +356,7 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'srey.k', pin: '2468' })));
   await page.waitForSelector('#statusPill');
   const txt = await page.$eval('#main', e => e.textContent);
+  ok('the Outreach Leader’s Guide is for teams only', !(await page.$('#guideCard')));
   ok('a Khmer student sees no visa card and no leader reference', !/e-visa|visa for Cambodia/.test(txt) && !/Leader reference/.test(txt) && (await page.$$eval('#timeline .subItems li', li => li.length)) === 1);
   await ctx.close();
 }
@@ -370,6 +371,17 @@ async function open(viewport, query, seed) {
   const cur = await page.$eval('#timeline .step.current', e => e.textContent);
   ok('the step says what it is and who does it', /Letter of invitation & supporting documents/.test(cur) && /Us/.test(cur) && /once your passports, team photo and flights are in/.test(cur), cur);
   ok('the documents and the visa part are headed as groups', (await page.$$eval('#timeline .stepGroup', g => g.map(x => x.textContent).join(','))) === 'Awaiting documents,Visa');
+  ok('a team leader has the Outreach Leader’s Guide on their page', /Outreach Leader’s Guide/.test(await page.$eval('#guideCard', e => e.textContent)));
+  await page.click('#openGuide'); await page.waitForTimeout(300);
+  const guide = await page.$eval('#outreachGuide', e => e.textContent);
+  ok('it opens over the page: the whole guide — arrival, travel, budget, tips', await page.$eval('#guideOverlay', e => getComputedStyle(e).position === 'fixed') && /Pre-Arrival & Arrival in Cambodia/.test(guide) && /Travel → Siem Reap/.test(guide) && /Budget/.test(guide) && /Additional Tips/.test(guide) && /Debriefing Time/.test(guide), [await page.$eval('#guideOverlay', e => getComputedStyle(e).position), /Pre-Arrival & Arrival in Cambodia/.test(guide), /Travel → Siem Reap/.test(guide), /Additional Tips/.test(guide), /Debriefing Time/.test(guide)].join());
+  ok('the e-visa steps are not in it — they are in the portal — and it says so', !/evisa\.gov\.kh/.test(guide) && !/Click apply now/.test(guide) && /are in your portal, under Visa/.test(guide));
+  ok('the tuktuk prices: $14 and $17', /Villages 30–40 min away: \$14\/tuktuk/.test(guide) && /Villages 50–60 min away: \$17\/tuktuk/.test(guide) && !/\$12\/tuktuk|\$15\/tuktuk/.test(guide));
+  ok('the accommodation table is there', (await page.$$('#outreachGuide .ogTable tbody tr')).length === 3);
+  ok('it can be printed or saved as a PDF', !!(await page.$('#guidePrint')));
+  ok('the guide fits a phone', !(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)));
+  await page.click('#guideClose'); await page.waitForTimeout(200);
+  ok('Back closes it', !(await page.$('#guideOverlay')) && !!(await page.$('#guideCard')));
   ok('before they have arrived, the team sees no numbers card', !(await page.$('#teamNumbers')));
   TEAM_APP.stage = 'arrived';
   await page.reload(); await page.waitForSelector('#statusPill');

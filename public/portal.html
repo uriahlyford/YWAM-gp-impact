@@ -281,6 +281,11 @@ a.staffNavBtn { text-decoration:none; text-align:center; }
   .panel { position:sticky; top:16px; }
 }
 @media (max-width:899px) { .trow .desk { display:none; } }
+.guideOverlay { position:fixed; inset:0; z-index:80; overflow-y:auto; background:var(--bg); -webkit-overflow-scrolling:touch; }
+.guideBar { position:sticky; top:0; z-index:1; display:flex; justify-content:space-between; gap:10px; padding:10px 16px; background:var(--bg); border-bottom:1px solid var(--border); }
+.guideBody { max-width:760px; margin:0 auto; padding:16px 16px 40px; }
+body.guideOn { overflow:hidden; }
+@media print { body.guideOn { overflow:visible; } .guideOverlay { position:static; overflow:visible; background:#fff; } .guideBar { display:none; } .guideBody { padding:0; max-width:none; } }
 </style>
 </head>
 <body class="gate">
@@ -297,6 +302,7 @@ a.staffNavBtn { text-decoration:none; text-align:center; }
 <script src="km.js"></script>
 <script src="taxonomy.js"></script>
 <script src="duty.js"></script>
+<script src="outreach-guide.js"></script>
 <script>
 /* ==================== YWAM GP Portal ====================
    Two sides of one page. An applicant signs up (or arrives from the public
@@ -465,7 +471,9 @@ function render(){
   var staffView = P.auth && P.boot && P.boot.role!=='applicant' && (v==='crm'||v==='forms'||v==='accounts'||v==='preview');
   try { m.innerHTML = (staffView ? staffNavHtml_(v) : '') + (v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
     : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='accounts' ? accountsHtml_() : v==='preview' ? previewHtml_()
-    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_());
+    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_())
+    + (P.guideOpen && P.boot && typeof outreachGuideHtml==='function' ? guideOverlayHtml_() : '');
+  document.body.classList.toggle('guideOn', !!(P.guideOpen && P.boot));
   bind_();
   } catch (e) {
     /* A dead screen where nothing responds is the worst outcome — show what
@@ -674,6 +682,7 @@ function meHtml_(){
       '</div></li>';
   }).join('')+'</ol></div>';
   h+='</div><div>';
+  h+=guideCardHtml_(app);
   h+=schedulesCardHtml_();
   var submitted = !!app.submittedAt;
   var total = d.form ? askedAll_(d.form, app.audience).length : 0, done = d.form ? askedAll_(d.form, app.audience).filter(function(q){ return answered_(q, P.answers[q.id]); }).length : 0;
@@ -1161,6 +1170,20 @@ function readTeamNumbers_(pre){
    here. Once the team has arrived, those schedules — this week's, published
    — show here too (portalBoot's `schedules`), drawn by duty.js, and can be
    sent round the team as a picture. */
+/* A team's leader gets the Outreach Leader's Guide (outreach-guide.js) —
+   visas, getting here, the budget and tips — from the day they sign up. It
+   opens over the page, with a button to print it or save it as a PDF. */
+function guideCardHtml_(app){
+  if(app.type!=='team' || typeof outreachGuideHtml!=='function') return '';
+  return '<div class="card" id="guideCard"><h3 style="margin-top:0">📘 '+esc(t('Outreach Leader’s Guide'))+'</h3>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('Everything to plan your team’s trip: getting here, border crossings, arrival, what things cost, and tips.'))+'</p>'+
+    '<button class="btn small" id="openGuide">'+esc(t('Open the guide'))+'</button></div>';
+}
+function guideOverlayHtml_(){
+  return '<div class="guideOverlay" id="guideOverlay" role="dialog" aria-label="'+esc(t('Outreach Leader’s Guide'))+'"><div class="guideBar">'+
+    '<button class="hbtn" id="guideClose">← '+esc(t('Back'))+'</button><button class="hbtn" id="guidePrint">🖨 '+esc(t('Print or save as PDF'))+'</button></div>'+
+    '<div class="guideBody">'+outreachGuideHtml(esc)+'</div></div>';
+}
 function membersCardHtml_(app){
   if(app.type!=='team' || !app.submittedAt) return '';
   var list=P.members || app.members || [];
@@ -1750,6 +1773,10 @@ function bindPanelExtras_(){
 /* ---- bindings ---- */
 function on_(id, fn){ var el=document.getElementById(id); if(el) el.onclick=fn; }
 function bind_(){
+  on_('openGuide', function(){ P.guideOpen=true; render(); var o=document.getElementById('guideOverlay'); if(o) o.scrollTop=0; });
+  on_('guideClose', function(){ P.guideOpen=false; render(); });
+  on_('guidePrint', function(){ window.print(); });
+  document.querySelectorAll('#outreachGuide .ogToc a').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var el=document.querySelector(a.getAttribute('href')); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
   if(P.boot && P.boot.role==='applicant') bindMembersAndSchedules_();
   var flip=function(){ LANG = LANG==='km' ? 'en' : 'km'; lsSet('gp-lang', LANG); render(); };
   on_('langBtn', flip); on_('langBtn2', flip);
