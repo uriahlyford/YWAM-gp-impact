@@ -161,5 +161,33 @@ ok('deleting it again says it is gone', r.body.ok === false && r.body.err === 'n
 r = await call('deleteTeamTrip', ['sok', '1234', newId]);
 ok('and its own new team can be deleted', r.body.ok === true && r.body.trips.length === seed.length - 1);
 
+console.log('\n=== numbers recovered for YWAM Dalat and Church on the Rock ===');
+{
+  const keep = mem.teamTrips;
+  mem.teamTrips = [];
+  let list = (await call('getTeamTrips', ['sok', '1234', 'siemreap'])).body.trips;
+  const dalat = list.find(t => t.id === 'sd_ywam_dalat_2026'), rock = list.find(t => t.id === 'sd_church_on_the_rock_2026');
+  ok('with neither in the Teams Database, both are there as teams with the numbers logged the week each left', dalat && dalat.metrics['Gospel Presentations Given'] === 40 && dalat.metrics['People Connected to Local Church'] === 23 && rock && rock.metrics['People Heard the Gospel'] === 240 && rock.metrics['Volunteers Mobilized'] === 9);
+  let d26 = (await call('getData', ['leadercode', 2026])).body.entries.siemreap || {};
+  ok('the dashboards count each once, in the week it left (31 and 32)', d26['Community Service|Outreach Teams|Teams Hosted'][wkOf('2026-08-01')] === 1 && d26['Community Service|Outreach Teams|Teams Hosted'][wkOf('2026-08-07')] === 1 && d26['Community Service|Outreach Teams|People Served'][wkOf('2026-08-07')] === 240);
+  // Dalat already entered by hand, without numbers
+  mem.teamTrips = [{ ...TRIP, campus: 'siemreap', id: 'tt_dalat', name: 'YWAM Dalat DTS', from: '2026-07-27', to: '2026-08-01', size: 14, metrics: {} }];
+  list = (await call('getTeamTrips', ['sok', '1234', 'siemreap'])).body.trips;
+  const mine = list.find(t => t.id === 'tt_dalat');
+  ok('if Dalat is already in the Teams Database without numbers, the numbers fill it in — no second Dalat', mine && mine.metrics['Gospel Presentations Given'] === 40 && mine.size === 14 && !list.some(t => t.id === 'sd_ywam_dalat_2026'));
+  d26 = (await call('getData', ['leadercode', 2026])).body.entries.siemreap || {};
+  ok('… and it still counts once', d26['Community Service|Outreach Teams|Teams Hosted'][wkOf('2026-08-01')] === 1 && d26['Community Service|Outreach Teams|Gospel Presentations Given'][wkOf('2026-08-01')] === 40);
+  mem.teamTrips = [{ ...TRIP, campus: 'siemreap', id: 'tt_dalat', name: 'YWAM Dalat DTS', from: '2026-07-27', to: '2026-08-01', size: 14, metrics: { 'People Served': 99 } }];
+  list = (await call('getTeamTrips', ['sok', '1234', 'siemreap'])).body.trips;
+  ok('a Dalat that already has numbers keeps its own, and still no second Dalat', list.find(t => t.id === 'tt_dalat').metrics['People Served'] === 99 && !('Gospel Presentations Given' in list.find(t => t.id === 'tt_dalat').metrics) && !list.some(t => t.id === 'sd_ywam_dalat_2026'));
+  mem.teamTrips = [{ ...TRIP, campus: 'siemreap', id: 'tt_other', name: 'Another Team', from: '2026-07-27', to: '2026-08-01', metrics: {} }];
+  list = (await call('getTeamTrips', ['sok', '1234', 'siemreap'])).body.trips;
+  ok('another team leaving that week is left alone, and Dalat is its own team', !Object.keys(list.find(t => t.id === 'tt_other').metrics).length && list.some(t => t.id === 'sd_ywam_dalat_2026'));
+  mem.teamTrips = [{ ...dalat, metrics: { ...dalat.metrics, 'People Served': 81 } }];
+  list = (await call('getTeamTrips', ['sok', '1234', 'siemreap'])).body.trips;
+  ok('an edit to the recovered Dalat is what shows', list.filter(t => /Dalat/.test(t.name)).length === 1 && list.find(t => t.id === 'sd_ywam_dalat_2026').metrics['People Served'] === 81);
+  mem.teamTrips = keep;
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

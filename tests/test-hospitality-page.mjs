@@ -49,7 +49,7 @@ const FIXTURE = () => ({
     { id: 'k1', category: 'speaker', name: 'Pastor Example', from: day(-1), to: day(3), males: 1, females: 0, count: 1, family: false, bedIds: ['m0'], notes: '', tripId: '', permanent: false },
   ],
   trips: [
-    { tripId: 'tt1', name: 'Example Church', country: 'Nowhere', from: day(1), to: day(6), size: 4, males: 2, females: 2, pending: true, portalStage: 'docs', candidateId: 'cd1' },
+    { tripId: 'tt1', name: 'Example Church', country: 'Nowhere', from: day(1), to: day(6), size: 4, males: 2, females: 2, pending: true, portalStage: 'docs', candidateId: 'cd1', people: [{ name: 'Lee Leader', sex: '' }, { name: 'Max Member', sex: 'm' }, { name: 'Fay Member', sex: 'f' }, { name: 'Gia Member', sex: 'f' }] },
     { tripId: 'tt2', name: 'Huge Example Base', country: '', from: day(20), to: day(30), size: 30, males: 15, females: 15, pending: false, portalStage: '', candidateId: '' },
   ],
 });
@@ -83,6 +83,15 @@ async function open(who, opts) {
       if (kind === 'room') rec.beds = rec.beds.map((x, i) => ({ ...x, id: x.id || rec.id + '_' + i }));
       const i = list.findIndex(x => x.id === rec.id); if (i > -1) list[i] = rec; else list.push(rec);
       out = { ...hospOut(), saved: rec };
+    }
+    else if (b.fn === 'hospStaffBeds') {
+      const map = b.args[2];
+      Object.keys(map).forEach(id => {
+        const i = H.bookings.findIndex(k => k.category === 'staff' && k.permanent && k.bedIds.length === 1 && k.bedIds[0] === id);
+        if (i > -1 && H.bookings[i].name !== map[id]) H.bookings.splice(i, 1);
+        if (map[id] && !H.bookings.some(k => k.category === 'staff' && k.permanent && k.bedIds[0] === id)) H.bookings.push({ id: 'ks' + (++n), category: 'staff', name: map[id], from: day(0), to: '', permanent: true, males: 0, females: 0, count: 1, family: false, bedIds: [id], bedNames: {}, notes: '', tripId: '' });
+      });
+      out = hospOut();
     }
     else if (b.fn === 'hospMoveBed') {
       const [id, from, to] = b.args.slice(2), A = H.bookings.find(k => k.id === id);
@@ -153,7 +162,7 @@ ok('the small team fits and is pending; the big one is short', fits[0].id === 't
 ok('the short one says by how much', /Short by 23 beds/.test(await page.$eval('[data-hospreq="tt2"]', c => c.textContent)), await page.$eval('[data-hospreq="tt2"] [data-fit]', c => c.textContent));
 await page.click('[data-hospbookreq="tt1"]'); await page.waitForTimeout(300);
 const form = await page.evaluate(() => ({ name: document.querySelector('[data-hf="name"]').value, from: document.querySelector('[data-hf="from"]').value,
-  to: document.querySelector('[data-hf="to"]').value, males: document.querySelector('[data-hf="males"]').value, cat: document.querySelector('[data-hfcat].on').dataset.hfcat }));
+  to: document.querySelector('[data-hf="to"]').value, males: document.querySelector('[data-hf="males"]').value, cat: document.querySelector('[data-hfcat]:checked').dataset.hfcat }));
 ok('Book beds fills the booking from the team', form.name === 'Example Church' && form.from === day(1) && form.to === day(6) && form.males === '2' && form.cat === 'team', JSON.stringify(form));
 ok('the speaker’s bed is taken those nights', await page.$eval('[data-hbed="m0"]', b => b.disabled && b.classList.contains('taken')));
 ok('the bed out of use can’t be picked', await page.$eval('[data-hbed="f3"]', b => b.disabled && b.classList.contains('out')));
@@ -161,10 +170,25 @@ await page.click('#hospAutoBtn'); await page.waitForTimeout(200);
 const picked = await page.$$eval('.hospBed.sel', bs => bs.map(b => b.dataset.hbed));
 ok('Pick beds for me: two men in 101, two women in 102', picked.length === 4 && picked.filter(id => id[0] === 'm').length === 2 && picked.filter(id => id[0] === 'f').length === 2 && !picked.includes('m0'), picked.join());
 ok('no gender warning', !(await page.$('#hospWarn')));
+const kinds = await page.$$eval('.hospKind', k => k.map(x => x.textContent.trim().replace(/^\S+ /, '') + (x.querySelector('input').checked ? '*' : '')));
+ok('beside the name, tick-boxes: Staff, Student, Team (ticked), Guest / speaker', kinds.join(' | ') === 'Staff | Student | Team* | Guest / speaker', kinds.join(' | '));
+ok('Who sleeps where: a box for each picked bed, with the team’s names from the portal to choose from', (await page.$$('[data-hbname]')).length === 4 && (await page.$$eval('#hospPeopleList option', o => o.map(x => x.value))).join() === 'Lee Leader,Max Member,Fay Member,Gia Member' && /Not in a bed yet: Lee Leader, Max Member, Fay Member, Gia Member/.test(await page.$eval('#hospNamesLeft', e => e.textContent)));
+await page.fill('[data-hbname="' + picked[0] + '"]', 'Max Member'); await page.dispatchEvent('[data-hbname="' + picked[0] + '"]', 'change'); await page.waitForTimeout(150);
+ok('a name typed in a bed is taken off the waiting list', /Not in a bed yet: Lee Leader, Fay Member, Gia Member$/.test(await page.$eval('#hospNamesLeft', e => e.textContent.trim())));
+await page.click('#hospNamesAuto'); await page.waitForTimeout(150);
+ok('Fill the beds in order puts everyone else in a bed', !(await page.$('#hospNamesLeft')) && (await page.$$eval('[data-hbname]', i => i.filter(x => x.value).length)) === 4);
+const placed = await page.$$eval('[data-hbname]', i => Object.fromEntries(i.map(x => [x.dataset.hbname, x.value])));
+ok('… women in the women’s room', ['Fay Member', 'Gia Member'].every(n => Object.keys(placed).filter(id => id[0] === 'f').map(id => placed[id]).includes(n)), JSON.stringify(placed));
 ok('no sideways scroll on the booking form', !(await overflow(page)));
 await page.click('#hospSaveBtn'); await page.waitForTimeout(400);
 const save = sent.filter(b => b.fn === 'hospSave').pop();
 ok('it saves a team booking linked to the request', save && save.args[2] === 'booking' && save.args[3].tripId === 'tt1' && save.args[3].bedIds.length === 4 && save.args[3].count === 4, JSON.stringify(save && save.args[3]));
+ok('… with who sleeps in each bed', Object.keys(save.args[3].bedNames).length === 4 && save.args[3].bedNames[picked[0]] === 'Max Member' && Object.values(save.args[3].bedNames).sort().join() === 'Fay Member,Gia Member,Lee Leader,Max Member', JSON.stringify(save.args[3].bedNames));
+await page.click('[data-hosptab="cal"]'); await page.waitForTimeout(200);
+await page.click('[data-hospcalmode="board"]'); await page.waitForTimeout(200);
+await page.fill('#hospBoardDay', day(2)); await page.dispatchEvent('#hospBoardDay', 'change'); await page.waitForTimeout(250);
+ok('on the bed board each of them shows as “Name (Team)”', /Max Member \(Example Church\)/.test(await page.$eval('[data-hboard="' + picked[0] + '"]', e => e.textContent)), await page.$eval('[data-hboard="' + picked[0] + '"]', e => e.textContent));
+await page.click('[data-hospcalmode="cal"]').catch(() => {}); await page.click('[data-hosptab="req"]'); await page.waitForTimeout(200);
 ok('the request now says booked', !!(await page.$('[data-hospreq="tt1"] [data-booked]')));
 ok('one request left waiting', /1/.test(await page.$eval('[data-hosptab="req"]', b => b.textContent)));
 
@@ -172,7 +196,10 @@ console.log('=== a new booking by hand ===');
 await page.click('[data-hosptab="book"]'); await page.waitForTimeout(200);
 ok('the bookings list shows here-and-coming', (await page.$$('[data-hospedit]')).length === 2);
 await page.click('#hospNewBtn'); await page.waitForTimeout(200);
+await page.click('[data-hfcat="staff"]'); await page.waitForTimeout(100);
+ok('ticking Staff makes it a staff booking (and offers Permanent)', await page.$eval('[data-hfcat="staff"]', i => i.checked) && !(await page.$eval('[data-hfcat="guest"]', i => i.checked)) && !!(await page.$('[data-hfchk="permanent"]')));
 await page.click('[data-hfcat="guest"]'); await page.waitForTimeout(100);
+ok('ticking another moves the tick — one at a time', await page.$eval('[data-hfcat="guest"]', i => i.checked) && !(await page.$eval('[data-hfcat="staff"]', i => i.checked)));
 await page.fill('[data-hf="name"]', 'Guest Example');
 await page.fill('[data-hf="from"]', day(2)); await page.dispatchEvent('[data-hf="from"]', 'change'); await page.waitForTimeout(100);
 await page.fill('[data-hf="to"]', day(4)); await page.dispatchEvent('[data-hf="to"]', 'change'); await page.waitForTimeout(100);
@@ -324,6 +351,34 @@ console.log('=== desktop ===');
   await page.click('#hospBack'); await page.waitForTimeout(300);
   ok('desktop: the rest of the app keeps its column', await page.$eval('main', m => !m.classList.contains('wide')));
   ok('no errors (desktop)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+console.log('=== staff beds ===');
+{
+  const { ctx, page, errors, sent, H } = await open(HANA, { extra: [{ id: 'kst', category: 'staff', name: 'Kim Example', from: day(-100), to: '', permanent: true, males: 0, females: 0, count: 1, family: false, bedIds: ['m3'], notes: '', tripId: '' }] });
+  await page.click('#goMinistryFromMe'); await page.waitForTimeout(300);
+  await page.click('#goHosp'); await page.waitForTimeout(500);
+  await page.click('[data-hosptab="staff"]'); await page.waitForTimeout(300);
+  ok('a Staff beds tab: every bed with a name box; staff already living here are filled in', (await page.$$('[data-hstaff]')).length >= 5 && await page.$eval('[data-hstaff="m3"]', i => i.value) === 'Kim Example');
+  ok('a bed someone else has shows who, and can’t be typed in', /Pastor Example/.test(await page.$eval('[data-staffheld="m0"]', e => e.textContent)) && !(await page.$('[data-hstaff="m0"]')));
+  ok('the names to pick from are the campus staff', (await page.$$eval('#hospStaffList option', o => o.map(x => x.value))).includes('Hana Example'));
+  ok('nothing to save yet', await page.$eval('#hospStaffSave', b => b.disabled));
+  await page.fill('[data-hstaff="f0"]', 'Hana Example');
+  await page.fill('[data-hstaff="m3"]', '');
+  ok('typing a name lets you save', !(await page.$eval('#hospStaffSave', b => b.disabled)));
+  await page.click('#hospStaffSave'); await page.waitForTimeout(400);
+  const sv = sent.filter(b => b.fn === 'hospStaffBeds').pop();
+  ok('Save sends who is in every bed it shows (and the one emptied)', sv && sv.args[2].f0 === 'Hana Example' && sv.args[2].m3 === '' && !('m0' in sv.args[2]), JSON.stringify(sv && sv.args[2]));
+  ok('… and the beds show it', await page.$eval('[data-hstaff="f0"]', i => i.value) === 'Hana Example' && await page.$eval('[data-hstaff="m3"]', i => i.value) === '' && await page.$eval('#hospStaffSave', b => b.disabled));
+  await page.click('[data-hosptab="cal"]'); await page.waitForTimeout(200);
+  await page.click('[data-hospcalmode="board"]'); await page.waitForTimeout(250);
+  ok('the staff bed is taken on the bed board', /Hana Example/.test(await page.$eval('[data-hboard="f0"]', e => e.textContent)));
+  await page.click('[data-hosptab="book"]'); await page.click('#hospNewBtn'); await page.waitForTimeout(200);
+  await page.fill('[data-hf="name"]', 'Guest'); await page.fill('[data-hf="from"]', day(40)); await page.dispatchEvent('[data-hf="from"]', 'change'); await page.waitForTimeout(100);
+  await page.fill('[data-hf="to"]', day(42)); await page.dispatchEvent('[data-hf="to"]', 'change'); await page.waitForTimeout(200);
+  ok('… and in the bed picker, even months ahead', await page.$eval('[data-hbed="f0"]', b => b.disabled && b.classList.contains('taken')));
+  ok('no sideways scroll; no errors', !(await overflow(page)) && errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 

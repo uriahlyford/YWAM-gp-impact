@@ -908,6 +908,11 @@ forms, documents and references follow.
     Teams Database form (`teamInputMetrics_`) nor the portal's numbers boxes have an input for it.
     Earlier teams keep the number logged for them. YWAM Nelson is in `team-seed.js` (Alexis's
     week-37 entries, 17 people), so it keeps its 29.
+  - **Recovered numbers** (`recover` on a `team-seed.js` row): YWAM Dalat (week-31 entries) and
+    Church on the Rock (week-32 entries) carry the Outreach Teams figures logged by hand for the
+    week each left. `getTeamTrips_` gives them to a saved team that is the same team (same campus,
+    name has the `recover` word, left within 7 days) when it has no numbers yet, and drops the
+    seed row; otherwise the seed row is the team. Either way it counts once.
   - **Calendar** (`teamCalHtml_`, `S.teamView='cal'`, `S.teamCalYm`, `S.teamCalSel`) is a
     month grid with weeks starting on Monday. Each team is a bar across its days, split at
     the week edge (`.cont` / `.more`) and laned when teams overlap. Bars are coloured pending,
