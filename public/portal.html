@@ -284,6 +284,9 @@ a.staffNavBtn { text-decoration:none; text-align:center; }
 .guideOverlay { position:fixed; inset:0; z-index:80; overflow-y:auto; background:var(--bg); -webkit-overflow-scrolling:touch; }
 .guideBar { position:sticky; top:0; z-index:1; display:flex; justify-content:space-between; gap:10px; padding:10px 16px; background:var(--bg); border-bottom:1px solid var(--border); }
 .guideBody { max-width:760px; margin:0 auto; padding:16px 16px 40px; }
+.pvGuide { padding:0 0 40px; }
+.pvGuideBar { position:static; border:0; padding:0 0 10px; background:none; }
+@media print { .pvGuideBar { display:none; } }
 body.guideOn { overflow:hidden; }
 @media print { body.guideOn { overflow:visible; } .guideOverlay { position:static; overflow:visible; background:#fff; } .guideBar { display:none; } .guideBody { padding:0; max-width:none; } }
 </style>
@@ -957,8 +960,12 @@ function previewHtml_(){
   /* which screen of theirs */
   var form=b.form, aud=b.application.audience;
   var secs=form ? (form.sections||[]).filter(function(sec){ return askedIn_(sec, aud).length; }) : [];
+  /* a team's leader has the Outreach Leader's Guide — staff can read it here as they do */
+  var hasGuide = !!(b.application && b.application.type==='team' && typeof outreachGuideHtml==='function');
+  if(pv.screen==='guide' && !hasGuide) pv.screen='me';
   h+='<div class="pvBar"><span class="pvWho">'+esc(gpT('Seeing what {name} sees',{name:b.me.name}))+(b.preview==='sample' ? ' · '+esc(t('sample data')) : '')+'</span>'+
-    '<div class="seg" style="max-width:360px"><button data-pvscreen="me" class="'+(pv.screen==='me'?'on':'')+'">'+esc(t('Their dashboard'))+'</button><button data-pvscreen="form" class="'+(pv.screen==='form'?'on':'')+'"'+(secs.length?'':' disabled')+'>'+esc(t('Their form'))+'</button></div></div>';
+    '<div class="seg" style="max-width:'+(hasGuide?'480':'360')+'px"><button data-pvscreen="me" class="'+(pv.screen==='me'?'on':'')+'">'+esc(t('Their dashboard'))+'</button><button data-pvscreen="form" class="'+(pv.screen==='form'?'on':'')+'"'+(secs.length?'':' disabled')+'>'+esc(t('Their form'))+'</button>'+
+    (hasGuide ? '<button data-pvscreen="guide" class="'+(pv.screen==='guide'?'on':'')+'">📘 '+esc(t('Their guide'))+'</button>' : '')+'</div></div>';
   if(pv.screen==='form' && secs.length){
     if(pv.sec>=secs.length) pv.sec=secs.length-1;
     h+='<div class="chips" style="margin:0 0 10px">'+secs.map(function(sec, i){ return '<button class="chip'+(pv.sec===i?' on':'')+'" data-pvsec="'+i+'">'+(i+1)+'. '+esc(lt_(sec.title))+'</button>'; }).join('')+'</div>';
@@ -969,6 +976,7 @@ function previewHtml_(){
   var inner='';
   try { inner = pv.screen==='form' ? formHtml_() : meHtml_(); } catch(e){ inner='<p class="sub">'+esc(String(e && e.message || e))+'</p>'; }
   P.boot=saved.boot; P.answers=saved.answers; P.formSec=saved.formSec; P.formMissing=saved.formMissing; P.showAnswers=saved.showAnswers; P.editContact=saved.editContact; P.refLink=saved.refLink; P.editMine=saved.editMine;
+  if(pv.screen==='guide') return h+'<div class="guideBody pvGuide" id="pvGuide"><div class="guideBar pvGuideBar"><span></span><button class="hbtn" id="guidePrint">🖨 '+esc(t('Print or save as PDF'))+'</button></div>'+outreachGuideHtml(esc)+'</div>';
   h+='<div class="pvFrame" id="pvFrame" inert>'+inner+'</div>';
   return h;
 }
