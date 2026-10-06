@@ -95,6 +95,7 @@ mem['hosp:siemreap'] = { buildings: [], rooms: [], bookings: [
   { id: 'k2', category: 'guest', name: 'Long Gone', from: addD(W0, -20), to: addD(W0, -10), count: 1, bedIds: [] },
   { id: 'k3', category: 'team', name: 'Example Church', from: W0, to: addD(W0, 10), count: 4, bedIds: [] },
   { id: 'k4', category: 'student', name: 'DTS Example', from: addD(W0, -30), to: addD(W0, 60), count: 3, bedIds: ['b1', 'b2', 'b3'], bedNames: { b1: 'Stu One', b2: 'Stu Two' } },
+  { id: 'k9', category: 'student', name: 'School Two', from: addD(W0, -3), to: addD(W0, 30), count: 2, bedIds: [], people: [{ name: 'Pia Listed', sex: 'f' }, { name: 'Stu One', sex: 'm' }] },
   { id: 'k5', category: 'student', name: 'Solo Student', from: addD(W0, -5), to: '', permanent: true, count: 1, bedIds: [] },
   { id: 'k6', category: 'staff', name: 'Kara Staff-Bed', from: addD(W0, -100), to: '', permanent: true, count: 1, bedIds: ['b9'] },
   { id: 'k7', category: 'team', name: 'Walk-in Team', from: W0, to: addD(W0, 5), count: 2, bedIds: ['b4', 'b5'], bedNames: { b4: 'Wally One', b5: 'Wanda Two' } },
@@ -107,7 +108,7 @@ ok('other staff in their own group; nobody from another campus, no applicants', 
 ok('a team here that week brings its leader, co-leaders and members', g.team_ta_cd_t && g.team_ta_cd_t.label === 'Example Church' && g.team_ta_cd_t.names.slice(0, 3).join() === 'Lee Leader,Co Leader,Member One', JSON.stringify(g.team_ta_cd_t));
 ok('a team that comes later does not', !g.team_tt_later);
 ok('guests booked that week are on offer; ones who left, and team bookings, are not', g.guests && g.guests.names.join() === 'Pastor Example');
-ok('students booked into SR Hospitality are on offer by the names in their beds (not the school’s booking name), or the student’s own booking', g.students && g.students.label === 'Students' && g.students.names.join() === 'Stu One,Stu Two,Solo Student', JSON.stringify(g.students));
+ok('students booked into SR Hospitality are on offer by the names in their beds or on the booking’s list (not the school’s booking name, no one twice), or the student’s own booking', g.students && g.students.label === 'Students' && g.students.names.join() === 'Stu One,Stu Two,Pia Listed,Solo Student', JSON.stringify(g.students));
 ok('a staff bed adds nobody — staff come from the staff list', !JSON.stringify(r.people).includes('Staff-Bed'));
 ok('names Hospitality typed in for a team join that team; a team with no portal list gets a group of its own', g.team_ta_cd_t.names.join() === 'Lee Leader,Co Leader,Member One,Extra Person' && g['hteam_k7'] && g['hteam_k7'].label === 'Walk-in Team' && g['hteam_k7'].names.join() === 'Wally One,Wanda Two', JSON.stringify([g.team_ta_cd_t, g.hteam_k7]));
 

@@ -264,6 +264,10 @@ const nq = r.requests.find(q => q.tripId === 'tt_names');
 ok('a team’s request carries everyone on its portal list — leader, co-leaders, members — once each', nq && nq.people.map(p => p.name + ':' + p.sex).join() === 'Lee Leader:,Co Leader:f,Max Member:m,Fay Member:f', JSON.stringify(nq && nq.people));
 ok('… and nobody outside Hospitality gets them', (await call('getHospitality', ['tom', '1234'])).requests === undefined);
 
+console.log('=== a group’s people ===');
+r = await call('hospSave', [...H, 'booking', { category: 'student', name: 'DTS Example', from: day(1), to: day(60), count: 1, bedIds: [], people: [{ name: ' Sam Student ', sex: 'm' }, { name: 'sam student', sex: 'f' }, { name: '', sex: 'f' }, { name: 'Tia Student', sex: 'x' }] }]);
+ok('a booking keeps its people — trimmed, one each, no blanks, a sex only if m or f — and holds a bed for each', r.ok && r.saved.people.map(p => p.name + ':' + p.sex).join() === 'Sam Student:m,Tia Student:' && r.saved.count === 2, JSON.stringify(r.saved.people));
+
 console.log('=== staff beds ===');
 mem['hosp:siemreap'] = { buildings: [{ id: 'b1', name: 'House' }],
   rooms: [{ id: 'r1', buildingId: 'b1', name: '1', style: 'mixed', notes: '', beds: [{ id: 's1', label: 'A' }, { id: 's2', label: 'B' }, { id: 's3', label: 'C' }, { id: 's4', label: 'D', out: true }] }],

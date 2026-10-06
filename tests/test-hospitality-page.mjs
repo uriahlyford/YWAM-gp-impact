@@ -354,6 +354,45 @@ console.log('=== desktop ===');
   await ctx.close();
 }
 
+console.log('=== a school: its students, in their beds ===');
+{
+  const { ctx, page, errors, sent } = await open(HANA);
+  await page.click('#goMinistryFromMe'); await page.waitForTimeout(300);
+  await page.click('#goHosp'); await page.waitForTimeout(500);
+  await page.click('[data-hosptab="book"]'); await page.click('#hospNewBtn'); await page.waitForTimeout(200);
+  ok('a guest booking has no people list', !(await page.$('#hospPeople')));
+  await page.click('[data-hfcat="student"]'); await page.waitForTimeout(150);
+  ok('ticking Student opens a people list for a school', !!(await page.$('#hospPeople')) && /Students in this booking/.test(await page.$eval('#hospFormCard', e => e.textContent)));
+  await page.fill('[data-hf="name"]', 'DTS Example');
+  await page.fill('[data-hf="from"]', day(-3)); await page.dispatchEvent('[data-hf="from"]', 'change'); await page.waitForTimeout(100);
+  await page.fill('[data-hf="to"]', day(80)); await page.dispatchEvent('[data-hf="to"]', 'change'); await page.waitForTimeout(150);
+  await page.click('#hospPersonAdd'); await page.waitForTimeout(100);
+  await page.fill('[data-hpname="0"]', 'Sam Student'); await page.click('[data-hpsex="0|m"]'); await page.waitForTimeout(100);
+  await page.click('#hospPasteOpen'); await page.waitForTimeout(100);
+  await page.fill('#hospPasteText', '1. Tia Student (f)\n- Uma Student f\nVic Student, M\n\nSam Student');
+  await page.click('#hospPasteAdd'); await page.waitForTimeout(150);
+  const ppl = await page.$$eval('.hospPerson', r => r.map(x => x.querySelector('input').value + ':' + ((x.querySelector('.hospSex .on') || {}).textContent || '')));
+  ok('students are added one by one or pasted as a list — numbers, dashes and (f)/M marks read, repeats dropped', ppl.join() === 'Sam Student:M,Tia Student:F,Uma Student:F,Vic Student:M', ppl.join());
+  ok('the men / women / beds follow the list', await page.$eval('[data-hf="males"]', i => i.value) === '2' && await page.$eval('[data-hf="females"]', i => i.value) === '2' && await page.$eval('[data-hf="count"]', i => i.value) === '4');
+  await page.click('#hospAutoBtn'); await page.waitForTimeout(200);
+  const names = await page.$$eval('[data-hbname]', i => Object.fromEntries(i.map(x => [x.dataset.hbname, x.value])));
+  ok('Pick beds for me picks four beds and puts the students in them — men in the men’s room, women in the women’s', Object.keys(names).length === 4 && Object.keys(names).filter(id => id[0] === 'm').map(id => names[id]).sort().join() === 'Sam Student,Vic Student' && Object.keys(names).filter(id => id[0] === 'f').map(id => names[id]).sort().join() === 'Tia Student,Uma Student', JSON.stringify(names));
+  await page.click('[data-hpdel="3"]'); await page.waitForTimeout(150);
+  ok('taking a student off the list takes them out of their bed', !(await page.$$eval('[data-hbname]', i => i.map(x => x.value))).includes('Vic Student') && await page.$eval('[data-hf="males"]', i => i.value) === '1');
+  await page.click('#hospSaveBtn'); await page.waitForTimeout(300);
+  const sv = sent.filter(b => b.fn === 'hospSave').pop().args[3];
+  ok('the school is saved with its students and who is in which bed', sv.category === 'student' && sv.name === 'DTS Example' && sv.people.map(p => p.name + ':' + p.sex).join() === 'Sam Student:m,Tia Student:f,Uma Student:f' && Object.values(sv.bedNames).sort().join() === 'Sam Student,Tia Student,Uma Student', JSON.stringify(sv));
+  ok('the booking says how many are named', /3 named/.test(await page.$eval('#hospList', e => e.textContent)));
+  // a team: the names from its portal in one tap
+  await page.click('[data-hosptab="req"]'); await page.waitForTimeout(200);
+  await page.click('[data-hospbookreq="tt1"]'); await page.waitForTimeout(250);
+  ok('a team gets the same list, with its portal names a tap away', /The 4 names from their portal/.test(await page.$eval('#hospFromPortal', e => e.textContent)));
+  await page.click('#hospFromPortal'); await page.waitForTimeout(150);
+  ok('… which adds them, with man / woman where the portal says', (await page.$$eval('.hospPerson', r => r.map(x => x.querySelector('input').value + ':' + ((x.querySelector('.hospSex .on') || {}).textContent || '')))).join() === 'Lee Leader:,Max Member:M,Fay Member:F,Gia Member:F' && !(await page.$('#hospFromPortal')));
+  ok('no sideways scroll; no errors', !(await overflow(page)) && errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
 console.log('=== staff beds ===');
 {
   const { ctx, page, errors, sent, H } = await open(HANA, { extra: [{ id: 'kst', category: 'staff', name: 'Kim Example', from: day(-100), to: '', permanent: true, males: 0, females: 0, count: 1, family: false, bedIds: ['m3'], notes: '', tripId: '' }] });
