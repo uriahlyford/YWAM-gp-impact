@@ -3273,10 +3273,32 @@ async function saveStructure(username, pin, campus, year, quarter) {
 const TEAM_DEPT = 'Community Service', TEAM_MIN = 'Outreach Teams';
 const TEAM_COUNTS = ['size', 'males', 'females', 'couples', 'families'];
 async function getTeamTripsRaw_() { return readJSON('teamTrips', []); }
+/* A seed row marked `recover` carries numbers found in the hand-logged
+   weekly rows for a team that may already be in the Teams Database without
+   them. If a saved team is that team — same campus, its name has the
+   seed's `recover` word, it left within a week of the seed's date — and
+   has no numbers yet, the numbers go to it and the seed row stands down;
+   otherwise the seed row is the team. Either way the team counts once. */
+function recoverInto_(seedRow, saved) {
+  const word = String(seedRow.recover || '').toLowerCase(), to = new Date(seedRow.to + 'T00:00:00Z');
+  return saved.filter(function (t) {
+    if (!t || t.deleted || t.campus !== seedRow.campus || !t.to || String(t.name || '').toLowerCase().indexOf(word) === -1) return false;
+    return Math.abs(new Date(t.to + 'T00:00:00Z') - to) <= 7 * 86400000;
+  })[0] || null;
+}
+function hasNumbers_(t) { return Object.keys((t && t.metrics) || {}).some(function (k) { return t.metrics[k] != null && t.metrics[k] !== ''; }); }
 async function getTeamTrips_() {
-  const byId = {};
-  TEAM_SEED.forEach(function (t) { byId[t.id] = t; });
-  (await getTeamTripsRaw_()).forEach(function (t) { if (t && t.id) byId[t.id] = t; });
+  const byId = {}, saved = (await getTeamTripsRaw_()).filter(function (t) { return t && t.id; });
+  const savedIds = {}, filled = {}; saved.forEach(function (t) { savedIds[t.id] = 1; });
+  TEAM_SEED.forEach(function (t) {
+    if (t.recover && !savedIds[t.id]) {
+      const twin = recoverInto_(t, saved);
+      if (twin) { if (!hasNumbers_(twin)) { byId[twin.id] = Object.assign({}, twin, { metrics: Object.assign({}, t.metrics) }); filled[twin.id] = 1; } return; }
+    }
+    byId[t.id] = t;
+  });
+  // what has been saved wins (an edit to a seeded team is saved under its id) — except a team just filled in above
+  saved.forEach(function (t) { if (!filled[t.id]) byId[t.id] = t; });
   return Object.keys(byId).map(function (k) { return byId[k]; }).filter(function (t) { return !t.deleted; });
 }
 function isoDate_(v) { const s = str_(v, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }

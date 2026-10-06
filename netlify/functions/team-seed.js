@@ -9,7 +9,13 @@
    held them, they were not invented here; edit them in the app.
    YWAM Nelson (29 Aug – 13 Sep 2026, 17 people) was added on 2026-10-01: its
    numbers are the Outreach Teams figures Alexis logged for the week of 11 Sep,
-   before the Teams Database existed, which had no team of their own. */
+   before the Teams Database existed, which had no team of their own.
+   YWAM Dalat (27 Jul – 1 Aug 2026) and Church on the Rock (31 Jul – 7 Aug
+   2026) were added on 2026-10-06 the same way: Dalat's numbers are the
+   Outreach Teams figures logged for week 31, Church on the Rock's those for
+   week 32 (the week each left). They are marked `recover`: if either is
+   already in the Teams Database without numbers, these fill that team in
+   instead of adding a second one (getTeamTrips_ in api.js). */
 export default [
  {
   "id": "lv_5c43edf9",
@@ -917,5 +923,80 @@ export default [
   "notes": "",
   "src": "week-37-entries",
   "updated": "2026-10-01T00:00:00.000Z"
+ },
+ {
+  "id": "sd_ywam_dalat_2026",
+  "recover": "dalat",
+  "campus": "siemreap",
+  "name": "YWAM Dalat",
+  "org": "YWAM Dalat",
+  "country": "Vietnam",
+  "from": "2026-07-27",
+  "to": "2026-08-01",
+  "size": null,
+  "males": null,
+  "females": null,
+  "couples": null,
+  "families": null,
+  "staff": "",
+  "focus": "",
+  "status": "active",
+  "metrics": {
+   "Gospel Presentations Given": 40,
+   "People Heard the Gospel": 40,
+   "People Served": 80,
+   "Community Service Hours": 25,
+   "Healings": 0,
+   "Kids Classes Run": 6,
+   "Total Kids": 40,
+   "Salvations": 0,
+   "Baptisms": 0,
+   "People Connected to Local Church": 23
+  },
+  "reached": {
+   "male": null,
+   "female": null
+  },
+  "notes": "",
+  "src": "week-31-entries",
+  "updated": "2026-10-06T00:00:00.000Z"
+ },
+ {
+  "id": "sd_church_on_the_rock_2026",
+  "recover": "rock",
+  "campus": "siemreap",
+  "name": "Church on the Rock",
+  "org": "Church on the Rock",
+  "country": "",
+  "from": "2026-07-31",
+  "to": "2026-08-07",
+  "size": null,
+  "males": null,
+  "females": null,
+  "couples": null,
+  "families": null,
+  "staff": "",
+  "focus": "",
+  "status": "active",
+  "metrics": {
+   "Gospel Presentations Given": 8,
+   "People Heard the Gospel": 240,
+   "People Served": 240,
+   "Volunteers Mobilized": 9,
+   "Community Service Hours": 36,
+   "Healings": 0,
+   "Kids Classes Run": 8,
+   "Total Kids": 105,
+   "Salvations": 0,
+   "Baptisms": 0,
+   "People Connected to Local Church": 180
+  },
+  "reached": {
+   "male": null,
+   "female": null
+  },
+  "notes": "",
+  "src": "week-32-entries",
+  "updated": "2026-10-06T00:00:00.000Z"
  }
 ];
