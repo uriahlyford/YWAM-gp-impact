@@ -94,14 +94,22 @@ mem['hosp:siemreap'] = { buildings: [], rooms: [], bookings: [
   { id: 'k1', category: 'speaker', name: 'Pastor Example', from: addD(W0, 2), to: addD(W0, 4), count: 1, bedIds: [] },
   { id: 'k2', category: 'guest', name: 'Long Gone', from: addD(W0, -20), to: addD(W0, -10), count: 1, bedIds: [] },
   { id: 'k3', category: 'team', name: 'Example Church', from: W0, to: addD(W0, 10), count: 4, bedIds: [] },
+  { id: 'k4', category: 'student', name: 'DTS Example', from: addD(W0, -30), to: addD(W0, 60), count: 3, bedIds: ['b1', 'b2', 'b3'], bedNames: { b1: 'Stu One', b2: 'Stu Two' } },
+  { id: 'k5', category: 'student', name: 'Solo Student', from: addD(W0, -5), to: '', permanent: true, count: 1, bedIds: [] },
+  { id: 'k6', category: 'staff', name: 'Kara Staff-Bed', from: addD(W0, -100), to: '', permanent: true, count: 1, bedIds: ['b9'] },
+  { id: 'k7', category: 'team', name: 'Walk-in Team', from: W0, to: addD(W0, 5), count: 2, bedIds: ['b4', 'b5'], bedNames: { b4: 'Wally One', b5: 'Wanda Two' } },
+  { id: 'k8', category: 'team', name: 'Example Church', from: W0, to: addD(W0, 10), count: 2, tripId: 'ta_cd_t', bedIds: ['b6'], bedNames: { b6: 'Extra Person' } },
 ] };
 r = await call('getDuty', [...K, 'kitchen', W0]);
 const g = Object.fromEntries(r.people.map(x => [x.id, x]));
 ok('campus staff come first, by first name; two with one first name get an initial', r.people[0].id === 'campus' && g.campus.names.includes('Kara') && g.campus.names.includes('Sam O.') && g.campus.names.includes('Sam T.') && !g.campus.names.includes('Gone'), JSON.stringify(g.campus));
 ok('other staff in their own group; nobody from another campus, no applicants', g.staff && g.staff.names.join() === 'Cafe' && !JSON.stringify(r.people).includes('Poipet') && !g.campus.names.includes('Team'));
-ok('a team here that week brings its leader, co-leaders and members', g.team_ta_cd_t && g.team_ta_cd_t.label === 'Example Church' && g.team_ta_cd_t.names.join() === 'Lee Leader,Co Leader,Member One', JSON.stringify(g.team_ta_cd_t));
+ok('a team here that week brings its leader, co-leaders and members', g.team_ta_cd_t && g.team_ta_cd_t.label === 'Example Church' && g.team_ta_cd_t.names.slice(0, 3).join() === 'Lee Leader,Co Leader,Member One', JSON.stringify(g.team_ta_cd_t));
 ok('a team that comes later does not', !g.team_tt_later);
 ok('guests booked that week are on offer; ones who left, and team bookings, are not', g.guests && g.guests.names.join() === 'Pastor Example');
+ok('students booked into SR Hospitality are on offer by the names in their beds (not the school’s booking name), or the student’s own booking', g.students && g.students.label === 'Students' && g.students.names.join() === 'Stu One,Stu Two,Solo Student', JSON.stringify(g.students));
+ok('a staff bed adds nobody — staff come from the staff list', !JSON.stringify(r.people).includes('Staff-Bed'));
+ok('names Hospitality typed in for a team join that team; a team with no portal list gets a group of its own', g.team_ta_cd_t.names.join() === 'Lee Leader,Co Leader,Member One,Extra Person' && g['hteam_k7'] && g['hteam_k7'].label === 'Walk-in Team' && g['hteam_k7'].names.join() === 'Wally One,Wanda Two', JSON.stringify([g.team_ta_cd_t, g.hteam_k7]));
 
 console.log('=== making a week ===');
 const sched = r.sched;

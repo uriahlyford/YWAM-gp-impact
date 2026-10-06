@@ -4198,13 +4198,28 @@ async function dutyPeople_(campus, week, extras) {
       ((c.portal && c.portal.members) || []).forEach(function (p) { add(p && p.name); });
       if (names.length) groups.push({ id: 'team_' + t.id, label: t.name, names: names });
     });
-  // guests, speakers, volunteers… booked into SR Hospitality that week (teams come in above)
-  const guests = [];
+  /* who is booked into SR Hospitality that week — by the names in their
+     beds (bedNames) where Hospitality has put them in, else the booking's name:
+     students in a group of their own; guests, speakers and volunteers as
+     "Staying with us"; names typed in for a team join that team's list.
+     Staff come in above, from the staff list, so a staff bed adds nobody. */
+  const students = [], guests = [];
+  const put = function (list, n) { n = dutyText_(n, DUTY_MAX.name); if (n && list.indexOf(n) === -1) list.push(n); };
   (await getHosp_(campus)).bookings.forEach(function (k) {
-    if (k.category === 'team' || !(k.from < weekEnd && (k.permanent || k.to > week))) return;
-    const n = dutyText_(k.name, DUTY_MAX.name);
-    if (n && guests.indexOf(n) === -1) guests.push(n);
+    if (k.category === 'staff' || !(k.from < weekEnd && (k.permanent || k.to > week))) return;
+    const named = Object.keys(k.bedNames || {}).map(function (id) { return k.bedNames[id]; }).filter(Boolean);
+    if (k.category === 'team') {
+      if (!named.length) return;   // the team's own list (above) has them
+      let g = groups.filter(function (x) { return k.tripId && x.id === 'team_' + k.tripId; })[0];
+      if (!g) { g = { id: 'hteam_' + k.id, label: k.name, names: [] }; groups.push(g); }
+      named.forEach(function (n) { put(g.names, n); });
+      return;
+    }
+    const list = k.category === 'student' ? students : guests;
+    if (named.length) named.forEach(function (n) { put(list, n); });
+    else if (!(k.category === 'student' && k.count > 1)) put(list, k.name);   // a school's booking name isn't a person
   });
+  if (students.length) groups.push({ id: 'students', label: 'Students', names: students });
   if (guests.length) groups.push({ id: 'guests', label: 'Staying with us', names: guests });
   const seen = {};
   groups.forEach(function (g) { g.names.forEach(function (n) { seen[n] = 1; }); });

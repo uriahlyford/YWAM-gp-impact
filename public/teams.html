@@ -2794,8 +2794,8 @@ function renderMenu(){
   var root = document.getElementById('menuRoot');
   if(!root) return;
   if(!S.menuOpen || !S.me){ root.innerHTML=''; return; }
-  /* Sections, so the menu stays short to read. Everyone: My Ministry and
-     Leave Request, then Operations (the weekly schedules; SR Hospitality for
+  /* Sections, so the menu stays short to read. Everyone: Leave Request (My
+     Ministry is on My Home's card, not here), then Operations (the weekly schedules; SR Hospitality for
      the Hospitality ministry and admins). Applications: the YWAM GP Portal,
      for admins, portal staff/admins and the Outreach Teams leader (S.me.portal,
      from the server). Admin: HR (admins, or anyone given hr) and the Admin
@@ -2805,7 +2805,7 @@ function renderMenu(){
   var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
   var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
   var sections=[
-    { title:'', items:[it('ministry', t('My Ministry')), it('leave', t('Leave Request'))] },
+    { title:'', items:[it('leave', t('Leave Request'))] },
     { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
     { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
     { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : []) }
