@@ -899,8 +899,8 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .schedRowBtns { display:flex; gap:14px; justify-content:flex-end; margin-top:4px; }
 .schedSecEdit { border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; }
 /* SR Hospitality */
-.hospTabs { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:4px; background:var(--surface2); border-radius:12px; padding:3px; margin-bottom:12px; }
-.hospTab { border:0; background:transparent; border-radius:9px; padding:7px 1px; font:inherit; font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
+.hospTabs { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:4px; background:var(--surface2); border-radius:12px; padding:3px; margin-bottom:12px; }
+.hospTab { border:0; background:transparent; border-radius:9px; padding:7px 1px; font:inherit; font-size:10px; letter-spacing:-.2px; overflow:hidden; white-space:nowrap; font-weight:700; color:var(--muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
 .hospTab span { font-size:17px; line-height:1.1; }
 .hospTab.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px var(--shadowSoft); }
 .hospBadge { display:inline-block; background:var(--amber); color:var(--amberInk); border-radius:999px; padding:0 6px; font-size:11px; margin-left:2px; }
@@ -930,6 +930,20 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .hospBooking { display:block; width:100%; text-align:left; font:inherit; color:var(--ink); cursor:pointer; margin-bottom:8px; }
 .hospToPick { color:var(--amberDeep); font-weight:700; }
 .hospChips { margin:4px 0 12px; }
+.hospKinds { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 4px; }
+.hospKind { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); border-radius:999px; padding:6px 12px 6px 9px; font-size:13.5px; font-weight:600; text-transform:none; letter-spacing:0; color:var(--ink); background:var(--surface); margin:0; cursor:pointer; }
+.hospKind.on { border-color:var(--accent); background:var(--banner); }
+.hospKind input { width:17px; height:17px; margin:0; }
+.hospWhoList { display:grid; grid-template-columns:1fr; gap:6px; }
+.hospWhoRow { display:flex; align-items:center; gap:8px; margin:0; font-size:13px; text-transform:none; letter-spacing:0; font-weight:600; color:var(--muted); }
+.hospWhoRow span { flex:0 0 92px; }
+.hospStaffRow { margin:5px 0 0; }
+.hospStaffRow span { flex:0 0 22px; font-weight:800; color:var(--ink); }
+.hospStaffRow em { flex:1; font-size:12.5px; }
+.hospStaffBar { display:flex; align-items:center; gap:10px; }
+.hospStaffBar .btn { margin-top:8px; }
+.hospWhoRow input { flex:1; min-width:0; margin:0; padding:7px 10px; font-size:14px; }
+@media (min-width:720px){ .hospWhoList { grid-template-columns:1fr 1fr; } }
 .hospChip { border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:999px; padding:7px 12px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
 .hospChip.on { background:var(--accent); border-color:var(--accent); color:var(--accentInk); }
 .hospCheck { display:flex; align-items:center; gap:8px; font-size:14px; margin:10px 0 4px; cursor:pointer; }
@@ -2780,8 +2794,8 @@ function renderMenu(){
   var root = document.getElementById('menuRoot');
   if(!root) return;
   if(!S.menuOpen || !S.me){ root.innerHTML=''; return; }
-  /* Sections, so the menu stays short to read. Everyone: My Ministry and
-     Leave Request, then Operations (the weekly schedules; SR Hospitality for
+  /* Sections, so the menu stays short to read. Everyone: Leave Request (My
+     Ministry is on My Home's card, not here), then Operations (the weekly schedules; SR Hospitality for
      the Hospitality ministry and admins). Applications: the YWAM GP Portal,
      for admins, portal staff/admins and the Outreach Teams leader (S.me.portal,
      from the server). Admin: HR (admins, or anyone given hr) and the Admin
@@ -2791,7 +2805,7 @@ function renderMenu(){
   var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
   var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
   var sections=[
-    { title:'', items:[it('ministry', t('My Ministry')), it('leave', t('Leave Request'))] },
+    { title:'', items:[it('leave', t('Leave Request'))] },
     { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
     { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
     { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : []) }
@@ -8841,7 +8855,7 @@ function hospReqsHtml_(H){
 }
 function hospBookingCardHtml_(H, k, idx){
   var c=hospCat_(k.category);
-  var names=k.bedIds.map(function(id){ var x=idx[id]; return x ? x.room.name+' '+x.bed.label : ''; }).filter(Boolean);
+  var names=k.bedIds.map(function(id){ var x=idx[id]; return x ? x.room.name+' '+x.bed.label+(k.bedNames && k.bedNames[id] ? ' · '+k.bedNames[id] : '') : ''; }).filter(Boolean);
   var h='<button class="card slim hospBooking hospCat '+c[0]+'" data-hospedit="'+esc(k.id)+'">';
   h+='<div class="rowName"><b>'+esc(k.name)+'</b> <span class="teamStat">'+c[2]+' '+esc(t(c[1]))+'</span></div>';
   h+='<div class="rowSub">📅 '+esc(hospRange_(k))+'</div>';
@@ -8882,11 +8896,13 @@ function hospFormHtml_(H){
   var f=S.hospForm, isNew=!f.id, taken=hospTaken_(H, f);
   var h='<div class="card" id="hospFormCard"><h3 style="margin-top:0">'+esc(isNew?t('New booking'):t('Edit booking'))+'</h3>';
   if(f.tripId) h+='<p class="hint" style="margin:0 0 8px">👥 '+esc(t('A team from the Teams Database — its dates and head count came with it.'))+'</p>';
-  h+='<label class="f">'+esc(t('Who is coming?'))+'</label><div class="chips hospChips">'+HOSP_CATS.map(function(c){
-    return '<button class="hospChip'+(f.category===c[0]?' on':'')+'" data-hfcat="'+c[0]+'">'+c[2]+' '+esc(t(c[1]))+'</button>'; }).join('')+'</div>';
   var inp=function(key, label, type, extra){ var v=f[key]; if(v==null) v='';
     return '<div><label class="f">'+esc(label)+'</label><input type="'+type+'"'+(type==='number'?' inputmode="numeric" min="0"':'')+' data-hf="'+key+'" value="'+esc(String(v))+'"'+(extra||'')+'></div>'; };
   h+=inp('name', t('Name'), 'text', ' maxlength="120" placeholder="'+esc(t('e.g. Pastor Sam, YWAM Example DTS'))+'"');
+  /* what they are, as tick-boxes right by the name — one at a time */
+  h+='<div class="hospKinds" role="radiogroup" aria-label="'+esc(t('Who is coming?'))+'">'+hospKindOpts_(f.category).map(function(o){
+    var on=o.ids.indexOf(f.category)>-1;
+    return '<label class="hospKind'+(on?' on':'')+'"><input type="checkbox" data-hfcat="'+o.ids[0]+'"'+(on?' checked':'')+'> '+o.icon+' '+esc(t(o.label))+'</label>'; }).join('')+'</div>';
   if(['staff','student','volunteer'].indexOf(f.category)>-1) h+='<label class="hospCheck"><input type="checkbox" data-hfchk="permanent"'+(f.permanent?' checked':'')+'> '+esc(t('Permanent (no leaving date)'))+'</label>';
   h+='<div class="teamGrid2">'+inp('from', t('Arriving'), 'date')+(f.permanent?'':inp('to', t('Leaving'), 'date'))+'</div>';
   h+='<div class="teamGrid3">'+inp('males', t('Men'), 'number')+inp('females', t('Women'), 'number')+inp('count', t('Beds'), 'number')+'</div>';
@@ -8923,11 +8939,47 @@ function hospFormHtml_(H){
     });
     if(warn.length) h+='<p class="hint hospWarn" id="hospWarn">⚠️ '+esc(gpT('Check the room: {rooms} is set for the other gender.',{rooms:warn.filter(function(v,i,a){ return a.indexOf(v)===i; }).join(', ')}))+'</p>';
   }
+  /* a team (or a family) can say who of them sleeps in each bed */
+  if(sel.length && (f.category==='team' || need>1)){
+    var ppl=hospPeopleFor_(H, f), bi=hospBedIndex_(H), nm=f.bedNames||{};
+    var used={}; sel.forEach(function(id){ if(nm[id]) used[nm[id]]=1; });
+    var left=ppl.filter(function(n){ return !used[n]; });
+    h+='<h4 style="margin:14px 0 2px">🧑‍🤝‍🧑 '+esc(t('Who sleeps where'))+'</h4><p class="hint" style="margin:0 0 6px">'+
+      esc(ppl.length ? (f.tripId ? t('The names come from the team’s portal. Pick who goes in each bed, or type a name.') : t('Pick or type who goes in each bed.')) : (f.tripId ? t('No names on the team’s portal yet — type them in, or come back once they have listed their team.') : t('Type who goes in each bed.')))+'</p>';
+    if(left.length && f.category==='team') h+='<button class="btn ghost small" id="hospNamesAuto" style="margin:0 0 6px">✨ '+esc(gpT('Fill the beds in order ({n} names)',{n:left.length}))+'</button>';
+    h+='<datalist id="hospPeopleList">'+ppl.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('')+'</datalist><div class="hospWhoList">'+
+      sel.map(function(id){ var x=bi[id]; return '<label class="hospWhoRow"><span>'+esc(x ? x.room.name+' '+x.bed.label : id)+'</span>'+
+        '<input type="text" list="hospPeopleList" maxlength="80" data-hbname="'+esc(id)+'" value="'+esc(nm[id]||'')+'" placeholder="'+esc(t('Name'))+'"></label>'; }).join('')+'</div>';
+    if(left.length) h+='<p class="hint" id="hospNamesLeft" style="margin:6px 0 0">'+esc(gpT('Not in a bed yet: {names}',{names:left.join(', ')}))+'</p>';
+  }
   h+='<label class="f">'+esc(t('Notes'))+'</label><textarea data-hf="notes" rows="2" maxlength="1000" placeholder="'+esc(t('Diet, arrival time, who to contact…'))+'">'+esc(f.notes||'')+'</textarea>';
   h+='<button class="btn" id="hospSaveBtn">'+esc(isNew?t('Save booking'):t('Save changes'))+'</button>';
   h+='<button class="btn ghost" id="hospCancelBtn">'+esc(t('Cancel'))+'</button>';
   if(!isNew) h+='<button class="linkbtn teamDelete" id="hospDeleteBtn">'+esc(t('Delete this booking'))+'</button>';
   return h+'</div>';
+}
+/* The tick-boxes by a booking's name: Staff, Student, Team, Guest / speaker
+   (a speaker ticks the same box as a guest). Volunteer shows only on a
+   booking that is one already. */
+function hospKindOpts_(cur){
+  var o=[{ ids:['staff'], icon:'🏠', label:'Staff' }, { ids:['student'], icon:'🎓', label:'Student' }, { ids:['team'], icon:'👥', label:'Team' },
+    { ids: cur==='speaker' ? ['speaker','guest'] : ['guest','speaker'], icon:'🧳', label:'Guest / speaker' }];
+  if(cur==='volunteer') o.push({ ids:['volunteer'], icon:'🤝', label:'Volunteer' });
+  return o;
+}
+/* The people a booking can name in its beds: a team's from its portal (with
+   the team's request), anyone already named. */
+function hospPeopleFor_(H, f){
+  var q=f.tripId && (H.requests||[]).filter(function(x){ return x.tripId===f.tripId; })[0], out=[];
+  ((q && q.people) || []).forEach(function(p){ if(out.indexOf(p.name)===-1) out.push(p.name); });
+  Object.keys(f.bedNames||{}).forEach(function(id){ var n=f.bedNames[id]; if(n && out.indexOf(n)===-1) out.push(n); });
+  return out;
+}
+/* The name a bed shows: the person in it — "Name (Team)" for a team or a
+   family — or else the booking's own name. */
+function hospBedWho_(k, bedId){
+  var n=k.bedNames && k.bedNames[bedId];
+  return n ? n+' ('+k.name+')' : k.name;
 }
 function hospFormCount_(f){ return Math.max(Number(f.count)||0, (Number(f.males)||0)+(Number(f.females)||0), (f.bedIds||[]).length, 1); }
 /* Pick beds for me: men into men's rooms first, women into women's, then
@@ -9224,7 +9276,7 @@ function hospBoardHtml_(H){
         var cls=x.out?'out':k?'held hospCat '+c[0]:'free';
         if(mv && !on && !x.out && who) cls+=' target';
         h+='<button class="hospBed board '+cls+(on?' moving':'')+'" data-hboard="'+esc(x.id)+'"'+(k?' data-hmove="'+esc(k.id)+'" data-hmovebed="'+esc(x.id)+'" draggable="true"':'')+(x.out?' disabled':'')+'>'+
-          '<span class="hospBedLab">'+esc(x.label)+'</span>'+(k?'<small>'+c[2]+' '+esc(k.name)+'</small>':x.out?'<small>'+esc(t('Out of use'))+'</small>':'<small>'+esc(t('Free'))+'</small>')+'</button>';
+          '<span class="hospBedLab">'+esc(x.label)+'</span>'+(k?'<small>'+c[2]+' '+esc(hospBedWho_(k, x.id))+'</small>':x.out?'<small>'+esc(t('Out of use'))+'</small>':'<small>'+esc(t('Free'))+'</small>')+'</button>';
       });
       h+='</div></div>';
     });
@@ -9295,18 +9347,60 @@ function hospHtml(){
   if(!H) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
   if(S.hospForm) return h+hospFormHtml_(H)+'</div>';
   if(S.hospRoom) return h+hospRoomFormHtml_(H)+'</div>';
-  var tab=['dash','req','cal','book','rooms'].indexOf(S.hospTab)>-1 ? S.hospTab : 'dash';
+  var tab=['dash','req','cal','book','staff','rooms'].indexOf(S.hospTab)>-1 ? S.hospTab : 'dash';
   var nReq=hospOpenReqs_(H).length;
-  h+='<div class="hospTabs">'+[['dash','📊','Dashboard'],['req','👥','Requests'],['cal','📅','Calendar'],['book','🛏','Bookings'],['rooms','🏠','Rooms']].map(function(x){
+  h+='<div class="hospTabs">'+[['dash','📊','Overview'],['req','👥','Requests'],['cal','📅','Calendar'],['book','🛏','Bookings'],['staff','🛌','Staff'],['rooms','🏠','Rooms']].map(function(x){
     return '<button class="hospTab'+(tab===x[0]?' on':'')+'" data-hosptab="'+x[0]+'"><span>'+x[1]+'</span>'+esc(t(x[2]))+(x[0]==='req'&&nReq?' <b class="hospBadge">'+nReq+'</b>':'')+'</button>'; }).join('')+'</div>';
   if(tab==='req') h+=hospReqsHtml_(H);
   else if(tab==='cal') h+=hospCalTabHtml_(H);
   else if(tab==='book') h+=hospBookingsHtml_(H);
   else if(tab==='rooms') h+=hospRoomsHtml_(H);
+  else if(tab==='staff') h+=hospStaffHtml_(H);
   else h+=hospDashHtml_(H);
   return h+'</div>';
 }
-function hospBlank_(){ return { id:'', category:'guest', name:'', from:'', to:'', males:'', females:'', count:'', family:false, permanent:false, bedIds:[], notes:'', tripId:'' }; }
+/* Staff who live here, bed by bed: a name box on every bed, saved together.
+   A name makes the bed taken from today on (a permanent staff booking —
+   hospStaffBeds in api.js); clearing it frees the bed from today. A bed
+   someone else has tonight or later shows who, and can't be given. */
+function hospStaffMap_(H){
+  var m={}, today=todayStr();
+  H.bookings.forEach(function(k){ if(k.category==='staff' && k.permanent && (k.bedIds||[]).length===1 && k.from<=hospAdd_(today, 3650)) m[k.bedIds[0]]=k.name; });
+  return m;
+}
+function hospStaffHtml_(H){
+  if(!H.rooms.length) return '<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No rooms set up yet'))+'</p></div>';
+  var cur=hospStaffMap_(H), d=S.hospStaffDraft || (S.hospStaffDraft=Object.assign({}, cur)), today=todayStr();
+  var other={};
+  H.bookings.forEach(function(k){ if(k.category==='staff' && k.permanent && (k.bedIds||[]).length===1) return; if(hospEnd_(k)>today) (k.bedIds||[]).forEach(function(id){ if(!other[id]) other[id]=k; }); });
+  var dirty=Object.keys(d).concat(Object.keys(cur)).some(function(id){ return (d[id]||'')!==(cur[id]||''); });
+  var people=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus; }).map(function(p){ return p.name; }).sort();
+  var n=Object.keys(cur).length;
+  var h='<p class="sub" style="margin:0 0 8px">'+esc(t('Type who lives in each bed. They stay there until you change it, and the bed shows as taken in every booking.'))+'</p>'+
+    '<p class="hint" style="margin:0 0 10px" id="hospStaffCount">'+esc(gpT('{n} staff beds',{n:n}))+'</p>'+
+    '<datalist id="hospStaffList">'+people.map(function(p){ return '<option value="'+esc(p)+'">'; }).join('')+'</datalist>';
+  H.buildings.forEach(function(b){
+    var rooms=H.rooms.filter(function(r){ return r.buildingId===b.id; });
+    if(!rooms.length) return;
+    h+='<div class="hospPickBld">'+esc(b.name)+'</div><div class="hospGrid">';
+    rooms.forEach(function(r){
+      h+='<div class="card slim hospStaffRoom"><div class="rowSub"><b>'+esc(r.name)+'</b> · '+esc(hospStyle_(r.style))+'</div>';
+      r.beds.forEach(function(x){
+        var o=other[x.id];
+        h+='<label class="hospWhoRow hospStaffRow"><span>'+esc(x.label)+'</span>'+
+          (x.out ? '<em class="hint">'+esc(t('Out of use'))+'</em>'
+          : o && !d[x.id] ? '<em class="hint hospStaffTaken" data-staffheld="'+esc(x.id)+'">'+esc(gpT('{name} until {date}',{name:hospBedWho_(o, x.id), date:o.permanent?'—':hospDate_(o.to)}))+'</em>'
+          : '<input type="text" list="hospStaffList" maxlength="120" data-hstaff="'+esc(x.id)+'" value="'+esc(d[x.id]||'')+'" placeholder="'+esc(t('Nobody'))+'">')+'</label>';
+      });
+      h+='</div>';
+    });
+    h+='</div>';
+  });
+  h+='<div class="schedActions hospStaffBar"><button class="btn" id="hospStaffSave"'+(dirty?'':' disabled')+'>'+esc(dirty ? t('Save staff beds') : t('Saved'))+'</button>'+
+    (dirty ? '<button class="linkbtn" id="hospStaffUndo">'+esc(t('Undo changes'))+'</button>' : '')+'</div>';
+  return h;
+}
+function hospBlank_(){ return { id:'', category:'guest', name:'', from:'', to:'', males:'', females:'', count:'', family:false, permanent:false, bedIds:[], bedNames:{}, notes:'', tripId:'' }; }
 function hospErr_(d){
   var e=d && d.err;
   if(e==='bed_taken') return gpT('That bed is already taken by {name} on those nights.',{name:d.with||''});
@@ -9367,6 +9461,19 @@ function bindHosp(){
     S.hospForm=Object.assign(hospBlank_(), { category:'team', name:q.name, from:q.from, to:q.to, males:q.males==null?'':q.males, females:q.females==null?'':q.females,
       count:hospReqNeed_(q)||'', tripId:q.tripId });
     render(); top('hospFormCard'); }; });
+  /* staff beds */
+  document.querySelectorAll('[data-hstaff]').forEach(function(inp){
+    inp.oninput=function(){ S.hospStaffDraft=S.hospStaffDraft||{}; var v=inp.value.trim(); if(v) S.hospStaffDraft[inp.getAttribute('data-hstaff')]=v; else delete S.hospStaffDraft[inp.getAttribute('data-hstaff')];
+      var sv=document.getElementById('hospStaffSave'); if(sv){ sv.disabled=false; sv.textContent=t('Save staff beds'); } };
+  });
+  var ssv=document.getElementById('hospStaffSave');
+  if(ssv) ssv.onclick=function(){
+    var cur=hospStaffMap_(S.hosp), d=S.hospStaffDraft||{}, map={};
+    document.querySelectorAll('[data-hstaff]').forEach(function(inp){ map[inp.getAttribute('data-hstaff')]=(d[inp.getAttribute('data-hstaff')]||'').trim(); });
+    Object.keys(cur).forEach(function(id){ if(!(id in map)) map[id]=d[id]||''; });
+    send('hospStaffBeds', [map], function(){ S.hospStaffDraft=null; showMsg(t('Staff beds saved')); }, ssv);
+  };
+  var sud=document.getElementById('hospStaffUndo'); if(sud) sud.onclick=function(){ S.hospStaffDraft=null; render(); };
   var f=S.hospForm;
   if(f){
     document.querySelectorAll('[data-hf]').forEach(function(inp){
@@ -9379,10 +9486,23 @@ function bindHosp(){
         render(); if(key){ var nx=document.querySelector('[data-hf="'+key+'"]'); if(nx) nx.focus(); } }, 0); };
     });
     document.querySelectorAll('[data-hfchk]').forEach(function(inp){ inp.onchange=function(){ f[inp.getAttribute('data-hfchk')]=inp.checked; render(); }; });
-    document.querySelectorAll('[data-hfcat]').forEach(function(b){ b.onclick=function(){ gpTap(); f.category=b.getAttribute('data-hfcat'); if(['staff','student','volunteer'].indexOf(f.category)===-1) f.permanent=false; render(); }; });
+    document.querySelectorAll('[data-hfcat]').forEach(function(b){ b.onchange=function(){ gpTap(); var c=b.getAttribute('data-hfcat'); if(!b.checked && f.category!==c && !(c==='guest' && f.category==='speaker')){ render(); return; } if(!(c==='guest' && f.category==='speaker')) f.category=c; if(['staff','student','volunteer'].indexOf(f.category)===-1) f.permanent=false; render(); }; });
+    document.querySelectorAll('[data-hbname]').forEach(function(inp){ inp.oninput=function(){ f.bedNames=f.bedNames||{}; var v=inp.value.trim(); if(v) f.bedNames[inp.getAttribute('data-hbname')]=v; else delete f.bedNames[inp.getAttribute('data-hbname')]; };
+      inp.onchange=function(){ setTimeout(function(){ var ae=document.activeElement, key=ae && ae.getAttribute && ae.getAttribute('data-hbname'); render(); if(key){ var nx=document.querySelector('[data-hbname="'+key+'"]'); if(nx) nx.focus(); } }, 0); }; });
+    var na=document.getElementById('hospNamesAuto');
+    if(na) na.onclick=function(){ gpTap(); f.bedNames=f.bedNames||{}; var used={}; f.bedIds.forEach(function(id){ if(f.bedNames[id]) used[f.bedNames[id]]=1; });
+      var left=hospPeopleFor_(S.hosp, f).filter(function(n){ return !used[n]; });
+      /* men into men's rooms and women into women's first (as the portal says who is which), then anyone anywhere */
+      var q=(S.hosp.requests||[]).filter(function(x){ return x.tripId===f.tripId; })[0], sexOf={};
+      ((q && q.people) || []).forEach(function(p){ sexOf[p.name]=p.sex; });
+      var bi=hospBedIndex_(S.hosp), want=function(id){ var x=bi[id]; return x && x.room.style==='male' ? 'm' : x && x.room.style==='female' ? 'f' : ''; };
+      var take=function(pred){ var i=left.findIndex(pred); return i>-1 ? left.splice(i,1)[0] : ''; };
+      f.bedIds.forEach(function(id){ var w=want(id); if(!f.bedNames[id] && w){ var n=take(function(n){ return sexOf[n]===w; }); if(n) f.bedNames[id]=n; } });
+      f.bedIds.forEach(function(id){ var w=want(id); if(!f.bedNames[id] && left.length){ var n=take(function(n){ return !w || !sexOf[n] || sexOf[n]===w; }); if(n) f.bedNames[id]=n; } });
+      render(); };
     document.querySelectorAll('[data-hbed]').forEach(function(b){ b.onclick=function(){
       var id=b.getAttribute('data-hbed'), i=f.bedIds.indexOf(id);
-      gpTap(); if(i>-1) f.bedIds.splice(i,1); else f.bedIds.push(id); render(); }; });
+      gpTap(); if(i>-1){ f.bedIds.splice(i,1); if(f.bedNames) delete f.bedNames[id]; } else f.bedIds.push(id); render(); }; });
     var ab=document.getElementById('hospAutoBtn');
     if(ab) ab.onclick=function(){
       if(!f.from || (!f.permanent && (!f.to || f.to<=f.from))){ showMsg(t('Enter the dates first.')); return; }
@@ -9397,7 +9517,7 @@ function bindHosp(){
       if(!f.permanent && (!f.to || f.to<=f.from)){ showMsg(t('The leaving date has to be after the arriving date.')); return; }
       var num=function(v){ return v===''||v==null ? 0 : Number(v); };
       var doc={ id:f.id||'', category:f.category, name:f.name.trim(), from:f.from, to:f.permanent?'':f.to, permanent:!!f.permanent,
-        males:num(f.males), females:num(f.females), count:hospFormCount_(f), family:!!f.family, bedIds:f.bedIds.slice(), notes:f.notes||'', tripId:f.tripId||'' };
+        males:num(f.males), females:num(f.females), count:hospFormCount_(f), family:!!f.family, bedIds:f.bedIds.slice(), bedNames:Object.assign({}, f.bedNames||{}), notes:f.notes||'', tripId:f.tripId||'' };
       send('hospSave', ['booking', doc], function(){ S.hospForm=null; showMsg(t('Booking saved')); }, sv);
     };
     var dl=document.getElementById('hospDeleteBtn');

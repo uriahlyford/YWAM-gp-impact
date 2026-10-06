@@ -241,5 +241,53 @@ ok('an empty import is refused', (await call('hospImport', [...H, []])).err === 
 r = await call('hospSave', [...H, 'booking', { category: 'student', name: 'Long Stay', from: day(1), permanent: true }]);
 ok('a student or volunteer can stay without a leaving date too; a guest can’t', r.ok && r.saved.permanent === true && (await call('hospSave', [...H, 'booking', { category: 'guest', name: 'X', from: day(1), permanent: true }])).err === 'bad_record');
 
+console.log('=== who of a team sleeps where ===');
+mem['hosp:siemreap'] = { buildings: [{ id: 'b1', name: 'House' }],
+  rooms: [{ id: 'r1', buildingId: 'b1', name: '1', style: 'mixed', notes: '', beds: [{ id: 'y1', label: 'A' }, { id: 'y2', label: 'B' }, { id: 'y3', label: 'C' }] }],
+  bookings: [{ id: 'kP', category: 'guest', name: 'Pia', from: day(1), to: day(4), count: 1, males: 0, females: 1, bedIds: ['y3'], tripId: '' }] };
+r = await call('hospSave', [...H, 'booking', { category: 'team', name: 'Example Team', from: day(1), to: day(4), count: 2, bedIds: ['y1'], bedNames: { y1: '  Max Member ', y9: 'Nobody', y3: 'Not theirs' } }]);
+const kT = r.saved;
+ok('a booking keeps who is in each of its beds — names for beds it doesn’t hold are dropped', r.ok && JSON.stringify(kT.bedNames) === JSON.stringify({ y1: 'Max Member' }), JSON.stringify(kT.bedNames));
+r = await call('hospMoveBed', [...H, kT.id, 'y1', 'y2']);
+ok('moving a person to another bed takes their name with them', r.ok && r.bookings.find(k => k.id === kT.id).bedNames.y2 === 'Max Member' && !r.bookings.find(k => k.id === kT.id).bedNames.y1, JSON.stringify(r.bookings.find(k => k.id === kT.id)));
+r = await call('hospSave', [...H, 'booking', { ...r.bookings.find(k => k.id === kT.id), bedIds: ['y1', 'y2'], bedNames: { y1: 'Fay Member', y2: 'Max Member' } }]);
+r = await call('hospMoveBed', [...H, kT.id, 'y2', 'y3']);
+const tb = r.bookings.find(k => k.id === kT.id), pb = r.bookings.find(k => k.id === 'kP');
+ok('a swap with someone else swaps the beds and keeps each name with its person', r.ok && tb.bedNames.y3 === 'Max Member' && tb.bedIds.includes('y3') && pb.bedIds.join() === 'y2', JSON.stringify([tb, pb]));
+r = await call('hospMoveBed', [...H, kT.id, 'y3', '']);
+ok('taking someone off a bed takes their name off it', r.ok && !r.bookings.find(k => k.id === kT.id).bedNames.y3 && r.bookings.find(k => k.id === kT.id).bedNames.y1 === 'Fay Member');
+// a team's people, from its portal, come with its request
+mem.teamTrips = [{ id: 'tt_names', campus: 'siemreap', name: 'Names Team', from: day(3), to: day(9), size: 4, status: 'active', candidateId: 'cdN', metrics: {}, reached: {} }];
+mem.candidates = [{ id: 'cdN', type: 'team', name: 'Lee Leader', campus: 'siemreap', stage: 'arrived', portal: { form: { answers: { teamName: 'Names Team', leaderName: 'Lee Leader', coLeaders: [{ name: 'Co Leader', sex: 'f' }] } }, members: [{ name: 'Max Member', sex: 'm' }, { name: 'Lee Leader', sex: 'm' }, { name: 'Fay Member', sex: 'f' }], docs: [] } }];
+r = await call('getHospitality', H);
+const nq = r.requests.find(q => q.tripId === 'tt_names');
+ok('a team’s request carries everyone on its portal list — leader, co-leaders, members — once each', nq && nq.people.map(p => p.name + ':' + p.sex).join() === 'Lee Leader:,Co Leader:f,Max Member:m,Fay Member:f', JSON.stringify(nq && nq.people));
+ok('… and nobody outside Hospitality gets them', (await call('getHospitality', ['tom', '1234'])).requests === undefined);
+
+console.log('=== staff beds ===');
+mem['hosp:siemreap'] = { buildings: [{ id: 'b1', name: 'House' }],
+  rooms: [{ id: 'r1', buildingId: 'b1', name: '1', style: 'mixed', notes: '', beds: [{ id: 's1', label: 'A' }, { id: 's2', label: 'B' }, { id: 's3', label: 'C' }, { id: 's4', label: 'D', out: true }] }],
+  bookings: [{ id: 'kS', category: 'student', name: 'DTS Oct', from: day(-10), to: day(60), count: 1, bedIds: ['s3'], tripId: '' },
+             { id: 'kOld', category: 'staff', name: 'Old Staff', from: day(-200), to: '', permanent: true, count: 1, bedIds: ['s2'], tripId: '' }] };
+const sb = (r) => Object.fromEntries(r.bookings.filter(k => k.category === 'staff' && k.permanent).map(k => [k.bedIds[0], k.name]));
+r = await call('hospStaffBeds', ['kim', '1234', { s1: 'Kim' }]);
+ok('only Hospitality can set staff beds', r.ok === false && r.err === 'not_authorized');
+r = await call('hospStaffBeds', [...H, { s1: '  Dara Pen ', s2: 'Old Staff' }]);
+ok('a name on a bed makes a permanent staff booking from today; one already there stays as it was', r.ok && JSON.stringify(sb(r)) === JSON.stringify({ s2: 'Old Staff', s1: 'Dara Pen' }) && r.bookings.find(k => k.id === 'kOld').from === day(-200) && r.bookings.find(k => k.name === 'Dara Pen').from === day(0), JSON.stringify(sb(r)));
+r = await call('hospStaffBeds', [...H, { s1: 'Old Staff', s2: 'Dara Pen' }]);
+ok('swapping two staff moves their bookings — Old Staff keeps the date they came', r.ok && JSON.stringify(sb(r)) === JSON.stringify({ s1: 'Old Staff', s2: 'Dara Pen' }) && r.bookings.find(k => k.id === 'kOld').bedIds[0] === 's1' && r.bookings.find(k => k.id === 'kOld').from === day(-200) && r.bookings.filter(k => k.category === 'staff').length === 2, JSON.stringify(r.bookings.filter(k => k.category === 'staff')));
+r = await call('hospStaffBeds', [...H, { s1: '', s2: 'Dara Pen' }]);
+const gone = r.bookings.find(k => k.id === 'kOld');
+ok('emptying a bed ends that staff booking today — the history stays', r.ok && !gone.permanent && gone.to === day(0) && JSON.stringify(sb(r)) === JSON.stringify({ s2: 'Dara Pen' }));
+r = await call('hospStaffBeds', [...H, { s2: '' }]);
+ok('a staff bed set today and emptied today just goes', r.ok && !r.bookings.some(k => k.name === 'Dara Pen'));
+r = await call('hospStaffBeds', [...H, { s3: 'Somebody' }]);
+ok('a bed someone else holds (the school) can’t be given to staff', r.ok === false && r.err === 'bed_taken' && r.with === 'DTS Oct');
+ok('… nor a bed out of use', (await call('hospStaffBeds', [...H, { s4: 'Somebody' }])).err === 'bed_out');
+ok('… nor a bed that isn’t there', (await call('hospStaffBeds', [...H, { zz: 'Somebody' }])).err === 'no_such_bed');
+r = await call('hospStaffBeds', [...H, { s1: 'Kara' }]);
+const kara = r.bookings.find(k => k.name === 'Kara');
+ok('a staff bed is taken in the booking book: a booking for that bed is refused', (await call('hospSave', [...H, 'booking', { category: 'guest', name: 'G', from: day(30), to: day(32), count: 1, bedIds: ['s1'] }])).err === 'bed_taken' && kara.permanent);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

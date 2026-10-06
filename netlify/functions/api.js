@@ -3564,7 +3564,11 @@ async function deleteTeamTrip(username, pin, id) {
      buildings [{id, name}]
      rooms     [{id, buildingId, name, style, notes, beds:[{id, label, out}]}]
      bookings  [{id, category, name, from, to, males, females, count, family,
-                 bedIds, notes, tripId, permanent}]
+                 bedIds, bedNames, notes, tripId, permanent}]
+   bedNames ({bedId: name}) says who of a team (or family) sleeps in which of
+   its beds; the board shows them as "Name (Team)". A team's names come from
+   its portal — leader, co-leaders and the members listed — with each
+   request (`people`).
    A booking holds `count` beds from `from` (first night) to `to` (the
    morning they leave — that night is free again); a staff booking can be
    permanent (no `to`). It may name its beds (bedIds) or just hold the
@@ -3684,17 +3688,32 @@ function cleanHospBooking_(k) {
   const bedIds = [];
   (Array.isArray(k.bedIds) ? k.bedIds : []).forEach(function (b) { const id = str_(b, 60); if (id && bedIds.indexOf(id) === -1) bedIds.push(id); });
   const count = Math.max(hospCount_(k.count), males + females, bedIds.length, 1);
+  const bedNames = {}, kept = bedIds.slice(0, count), rawNames = k.bedNames && typeof k.bedNames === 'object' ? k.bedNames : {};
+  kept.forEach(function (id) { const n = str_(rawNames[id], 80); if (n) bedNames[id] = n; });
   return {
     id: str_(k.id, 60) || hospId_('hk'), category: category, name: name, from: from, to: to, permanent: permanent,
-    males: males, females: females, count: count, family: !!k.family, bedIds: bedIds.slice(0, count),
+    males: males, females: females, count: count, family: !!k.family, bedIds: kept, bedNames: bedNames,
     notes: str_(k.notes, 1000) || '', tripId: str_(k.tripId, 60) || ''
   };
 }
 /* Every team in the Teams Database with dates that hasn't left yet is a bed
    request until a booking points at it. */
+/* Everyone a team's leader has listed on the portal: the leader, co-leaders
+   and the members — [{name, sex:'m'|'f'|''}]. */
+function teamPeople_(c) {
+  if (!c) return [];
+  const a = teamAnswers_(c), out = [], seen = {};
+  const add = function (n, sex) { n = str_(n, 80); if (!n || seen[n.toLowerCase()]) return; seen[n.toLowerCase()] = 1; out.push({ name: n, sex: sex === 'm' || sex === 'f' ? sex : '' }); };
+  add(a.leaderName || c.name, '');
+  (Array.isArray(a.coLeaders) ? a.coLeaders : []).forEach(function (p) { add(p && p.name, p && p.sex); });
+  ((c.portal && c.portal.members) || []).forEach(function (p) { add(p && p.name, p && p.sex); });
+  return out;
+}
 async function hospRequests_(campus, bookings) {
   const today = new Date().toISOString().slice(0, 10);
   const pend = await pendingTeamIds_();
+  const byCand = {};
+  (await getCandidates_()).forEach(function (c) { if (c && c.id) byCand[c.id] = c; });
   const booked = {};
   bookings.forEach(function (k) { if (k.tripId) booked[k.tripId] = k.id; });
   return (await getTeamTrips_()).filter(function (t) {
@@ -3705,7 +3724,8 @@ async function hospRequests_(campus, bookings) {
       size: t.size == null ? null : t.size, males: t.males == null ? null : t.males, females: t.females == null ? null : t.females,
       couples: t.couples == null ? null : t.couples,
       pending: !!(t.candidateId && pend[t.candidateId]), portalStage: (t.candidateId && pend[t.candidateId]) || '',
-      candidateId: t.candidateId || '', bookingId: booked[t.id] || ''
+      candidateId: t.candidateId || '', bookingId: booked[t.id] || '',
+      people: teamPeople_(t.candidateId && byCand[t.candidateId])
     };
   }).sort(function (a, b) { return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; });
 }
@@ -3759,6 +3779,72 @@ async function hospSave(username, pin, kind, rec) {
   out.saved = clean;
   return out;
 }
+/* Staff who live here, set bed by bed. A staff bed is a permanent staff
+   booking on one bed — so it is taken on every night from then on, in the
+   bed picker, the board and the numbers, with nothing else to keep in step.
+   The page sends who should be in each bed ({bedId: name}, '' for nobody)
+   for the beds it shows; this makes the bookings match:
+     same name as now      nothing changes
+     a name that was in another staff bed   that booking moves (keeps its start)
+     a new name            a new permanent booking from today
+     emptied / replaced    the old booking ends today (or goes, if it began today)
+   A bed someone else holds from today on can't be given to a staff member. */
+function isStaffBed_(k) { return k && k.category === 'staff' && k.permanent && (k.bedIds || []).length === 1; }
+async function hospStaffBeds(username, pin, map) {
+  const a = await hospAuth_(username, pin); if (a.out) return a.out;
+  if (!map || typeof map !== 'object') return { ok: false, err: 'bad_record' };
+  const campus = a.s.campus, d = await getHosp_(campus);
+  const today = new Date().toISOString().slice(0, 10), now = new Date().toISOString();
+  const beds = {};
+  d.rooms.forEach(function (r) { r.beds.forEach(function (b) { beds[b.id] = b; }); });
+  const want = {};
+  for (const id of Object.keys(map)) {
+    if (!beds[id]) return { ok: false, err: 'no_such_bed' };
+    const n = str_(map[id], 120) || '';
+    if (n && beds[id].out) return { ok: false, err: 'bed_out' };
+    want[id] = n;
+  }
+  const staff = d.bookings.filter(isStaffBed_), byBed = {}, byName = {};
+  staff.forEach(function (k) { byBed[k.bedIds[0]] = k; byName[k.name.toLowerCase()] = k; });
+  const end = function (k) { if (k.from >= today) d.bookings.splice(d.bookings.indexOf(k), 1); else { k.permanent = false; k.to = today; k.updated = now; k.updatedBy = a.s.id; } };
+  const moved = {}, add = [];
+  Object.keys(want).forEach(function (id) {
+    const n = want[id], cur = byBed[id];
+    if (cur && n && cur.name.toLowerCase() === n.toLowerCase()) { moved[cur.id] = 1; return; }
+    if (!n) return;
+    const other = byName[n.toLowerCase()];
+    // the same person, from a bed that is being given to someone else (or emptied)
+    if (other && other.bedIds[0] !== id && Object.prototype.hasOwnProperty.call(want, other.bedIds[0]) && (want[other.bedIds[0]] || '').toLowerCase() !== n.toLowerCase()) {
+      moved[other.id] = id; return;
+    }
+    add.push({ bed: id, name: n });
+  });
+  // what is in the way: someone not a staff bed holding the bed from today on
+  const check = function (bed) {
+    const clash = d.bookings.find(function (o) { return !isStaffBed_(o) && hospOverlap_(o, { from: today, permanent: true }) && (o.bedIds || []).indexOf(bed) > -1; });
+    return clash ? { ok: false, err: 'bed_taken', with: clash.name, bed: bed } : null;
+  };
+  for (const kId of Object.keys(moved)) { if (moved[kId] !== 1) { const c = check(moved[kId]); if (c) return c; } }
+  for (const x of add) { const c = check(x.bed); if (c) return c; }
+  // end the ones whose bed now has nobody or someone else, and who aren't moving
+  staff.forEach(function (k) {
+    const id = k.bedIds[0];
+    if (!Object.prototype.hasOwnProperty.call(want, id) || moved[k.id]) return;
+    end(k);
+  });
+  Object.keys(moved).forEach(function (kId) {
+    if (moved[kId] === 1) return;
+    const k = d.bookings.find(function (x) { return x.id === kId; });
+    k.bedIds = [moved[kId]]; k.bedNames = {}; k.updated = now; k.updatedBy = a.s.id;
+  });
+  add.forEach(function (x) {
+    if (d.bookings.length >= HOSP_MAX.bookings) return;
+    d.bookings.push({ id: hospId_('hk'), category: 'staff', name: x.name, from: today, to: '', permanent: true, males: 0, females: 0, count: 1, family: false,
+      bedIds: [x.bed], bedNames: {}, notes: '', tripId: '', created: now, createdBy: a.s.id, updated: now, updatedBy: a.s.id });
+  });
+  await writeJSON(hospKey_(campus), d);
+  return getHospitality(username, pin);
+}
 /* The bed board's one move, done in one write so a swap can't half-happen:
    booking `bookingId` gives up `fromBed` (or '' — a person not in a bed yet)
    and takes `toBed` (or '' — just take them off the bed). If someone else
@@ -3792,10 +3878,13 @@ async function hospMoveBed(username, pin, bookingId, fromBed, toBed) {
       if (third) return { ok: false, err: 'bed_taken', with: third.name };
       if (B.bedIds.indexOf(fromBed) > -1) return { ok: false, err: 'same_bed' };
       B.bedIds = B.bedIds.map(function (id) { return id === toBed ? fromBed : id; });
+      if (B.bedNames && B.bedNames[toBed]) { B.bedNames[fromBed] = B.bedNames[toBed]; delete B.bedNames[toBed]; }
       B.updated = now; B.updatedBy = a.s.id;
     }
   }
   A.bedIds = fromBed ? A.bedIds.map(function (id) { return id === fromBed ? toBed : id; }).filter(Boolean) : A.bedIds.concat([toBed]);
+  // the person in the bed goes with it (or comes off with it)
+  if (fromBed && A.bedNames && A.bedNames[fromBed]) { if (toBed) A.bedNames[toBed] = A.bedNames[fromBed]; delete A.bedNames[fromBed]; }
   A.updated = now; A.updatedBy = a.s.id;
   await writeJSON(hospKey_(campus), d);
   return getHospitality(username, pin);
@@ -4109,13 +4198,28 @@ async function dutyPeople_(campus, week, extras) {
       ((c.portal && c.portal.members) || []).forEach(function (p) { add(p && p.name); });
       if (names.length) groups.push({ id: 'team_' + t.id, label: t.name, names: names });
     });
-  // guests, speakers, volunteers… booked into SR Hospitality that week (teams come in above)
-  const guests = [];
+  /* who is booked into SR Hospitality that week — by the names in their
+     beds (bedNames) where Hospitality has put them in, else the booking's name:
+     students in a group of their own; guests, speakers and volunteers as
+     "Staying with us"; names typed in for a team join that team's list.
+     Staff come in above, from the staff list, so a staff bed adds nobody. */
+  const students = [], guests = [];
+  const put = function (list, n) { n = dutyText_(n, DUTY_MAX.name); if (n && list.indexOf(n) === -1) list.push(n); };
   (await getHosp_(campus)).bookings.forEach(function (k) {
-    if (k.category === 'team' || !(k.from < weekEnd && (k.permanent || k.to > week))) return;
-    const n = dutyText_(k.name, DUTY_MAX.name);
-    if (n && guests.indexOf(n) === -1) guests.push(n);
+    if (k.category === 'staff' || !(k.from < weekEnd && (k.permanent || k.to > week))) return;
+    const named = Object.keys(k.bedNames || {}).map(function (id) { return k.bedNames[id]; }).filter(Boolean);
+    if (k.category === 'team') {
+      if (!named.length) return;   // the team's own list (above) has them
+      let g = groups.filter(function (x) { return k.tripId && x.id === 'team_' + k.tripId; })[0];
+      if (!g) { g = { id: 'hteam_' + k.id, label: k.name, names: [] }; groups.push(g); }
+      named.forEach(function (n) { put(g.names, n); });
+      return;
+    }
+    const list = k.category === 'student' ? students : guests;
+    if (named.length) named.forEach(function (n) { put(list, n); });
+    else if (!(k.category === 'student' && k.count > 1)) put(list, k.name);   // a school's booking name isn't a person
   });
+  if (students.length) groups.push({ id: 'students', label: 'Students', names: students });
   if (guests.length) groups.push({ id: 'guests', label: 'Staying with us', names: guests });
   const seen = {};
   groups.forEach(function (g) { g.names.forEach(function (n) { seen[n] = 1; }); });
@@ -5950,6 +6054,7 @@ const HANDLERS = {
   hospSave: function (a) { return hospSave(a[0], a[1], a[2], a[3]); },
   hospDelete: function (a) { return hospDelete(a[0], a[1], a[2], a[3]); },
   hospMoveBed: function (a) { return hospMoveBed(a[0], a[1], a[2], a[3], a[4]); },
+  hospStaffBeds: function (a) { return hospStaffBeds(a[0], a[1], a[2]); },
   hospImport: function (a) { return hospImport(a[0], a[1], a[2]); },
   getLeadBoard: function (a) { return getLeadBoard(a[0], a[1]); },
   saveLeadCard: function (a) { return saveLeadCard(a[0], a[1], a[2]); },
