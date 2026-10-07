@@ -70,7 +70,8 @@ let TEAM_APP = null, NEW_TEAM_APP = null;
 const TEAM_SCHED = { week: '2026-10-04',
   kitchen: { kind: 'kitchen', week: '2026-10-04', layout: 'grid', title: 'Cooking schedule', km: '', notes: '', days: ['mon', 'tue'], rows: [{ id: 'bf', label: 'Breakfast 7:30', km: '', time: '', off: [], span: false }], cells: { 'bf|mon': ['Member One'] }, published: true },
   chores: null };
-let GOOGLE_ON = '';   // the mocked portalAuthConfig: Google's client id, or off
+let GOOGLE_ON = '';
+let TEAM_PHOTOS = {};   // the mocked team photo store, by person key   // the mocked portalAuthConfig: Google's client id, or off
 let CANDS0 = null;  // a fresh copy of the sample records, for blocks that run after others changed them
 const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: TEAM_FORM, reference: REF_FORM };
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
@@ -101,7 +102,14 @@ async function open(viewport, query, seed) {
   await ctx.route('**/.netlify/functions/api', r => {
     const b = JSON.parse(r.request().postData() || '{}'); sent.push(b); let out = { ok: false };
     const [u, pin] = b.args || [];
-    if (b.fn === 'portalAuthConfig') {
+    if (b.fn === 'portalTeamPhotos') {
+      const ppl = [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
+      out = { ok: true, people: ppl, photos: TEAM_PHOTOS, tally: { count: Object.keys(TEAM_PHOTOS).length, total: ppl.length } };
+    } else if (b.fn === 'portalSaveTeamPhoto') {
+      TEAM_PHOTOS[b.args[2]] = { data: b.args[3], at: '2026-10-07T01:00:00Z' };
+      const ppl = [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
+      out = { ok: true, people: ppl, photos: TEAM_PHOTOS, tally: { count: Object.keys(TEAM_PHOTOS).length, total: ppl.length }, application: { ...TEAM_APP, photos: { count: Object.keys(TEAM_PHOTOS).length, total: ppl.length } } };
+    } else if (b.fn === 'portalAuthConfig') {
       out = { ok: true, google: GOOGLE_ON };
     } else if (b.fn === 'portalRegister') {
       const p = b.args[0];
@@ -169,7 +177,7 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'portalStaffSaveTeamNumbers') {
       CANDS = CANDS.map(x => x.id === b.args[2] ? { ...x, teamTrip: { id: 'ta_' + x.id, metrics: b.args[3], reached: b.args[4] } } : x); out = { ok: true, candidate: CANDS.find(x => x.id === b.args[2]) };
     } else if (b.fn === 'portalSaveTeamMembers') {
-      TEAM_APP = { ...TEAM_APP, members: b.args[2] };
+      TEAM_APP = { ...TEAM_APP, members: b.args[2].map((m, i) => ({ ...m, id: m.id || ('m00000' + i) })) };
       out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [], schedules: TEAM_APP.stage === 'arrived' ? TEAM_SCHED : undefined };
     } else if (b.fn === 'portalSaveTeamNumbers') {
       TEAM_APP = { ...TEAM_APP, trip: { ...TEAM_APP.trip, metrics: b.args[2], reached: b.args[3] } };
@@ -231,7 +239,8 @@ async function open(viewport, query, seed) {
   await page.fill('#r_name', 'Anna Example'); await page.fill('#r_email', 'anna@example.org'); await page.fill('#r_phone', '+46 70 000 0000');
   await page.click('[data-msgr="whatsapp"]');
   await page.waitForTimeout(100);
-  await page.selectOption('#r_country', 'Sweden');
+  await page.fill('[data-countryq="r_country"]', 'swed'); await page.waitForTimeout(100);
+  ok('typing in the country box finds the country and picks it', (await page.$eval('#r_country', e => e.value)) === 'Sweden' && (await page.$$eval('#r_country option', os => os.filter(o => !o.hidden && o.value).length)) === 1);
   ok('no username or PIN to invent — a password, and the email is the sign-in', !(await page.$('#r_user')) && !(await page.$('#r_pin')) && !!(await page.$('#r_pw')) && /sign in with your email and this password/.test(await page.$eval('#main', e => e.textContent)));
   await page.fill('#r_pw', 'secret1'); await page.fill('#r_pw2', 'secret1');
   await page.click('#regBtn');
@@ -416,7 +425,7 @@ async function open(viewport, query, seed) {
   TEAM_APP.stage = 'docs';
   await page.reload(); await page.waitForSelector('#statusPill');
   ok('before arrival there are no schedules', !(await page.$('#teamSchedules')));
-  ok('the team is asked to list its members', /No one listed yet/.test(await page.$eval('#teamMembers', e => e.textContent)));
+  ok('the team is asked to list its members', /Add your team members/.test(await page.$eval('#editMembers', e => e.textContent)));
   await page.click('#editMembers'); await page.waitForTimeout(150);
   await page.fill('[data-mname="0"]', 'Member One'); await page.click('[data-msex="0|f"]'); await page.waitForTimeout(100);
   await page.click('#addMember'); await page.waitForTimeout(100);
@@ -424,8 +433,19 @@ async function open(viewport, query, seed) {
   await page.click('#addMember'); await page.waitForTimeout(100);   // left empty: not sent
   await page.click('#saveMembers'); await page.waitForTimeout(400);
   const mem = sent.filter(b => b.fn === 'portalSaveTeamMembers').pop();
-  ok('the member list is saved: names with man / woman, empty rows left out', mem && JSON.stringify(mem.args[2]) === JSON.stringify([{ name: 'Member One', sex: 'f' }, { name: 'Member Two', sex: 'm' }]), JSON.stringify(mem && mem.args[2]));
-  ok('and reads back as a list', (await page.$$eval('#teamMembers .memberList li', l => l.length)) === 2);
+  ok('the member list is saved: names with man / woman, empty rows left out', mem && JSON.stringify(mem.args[2].map(m => ({ name: m.name, sex: m.sex }))) === JSON.stringify([{ name: 'Member One', sex: 'f' }, { name: 'Member Two', sex: 'm' }]), JSON.stringify(mem && mem.args[2]));
+  await page.waitForSelector('#teamMembers .rosterRow', { timeout: 5000 });
+  const roster = await page.$$eval('#teamMembers .rosterRow', rs => rs.map(r => r.querySelector('.rosterName b').textContent + (r.querySelector('.avatar.ph') ? ':none' : ':photo')));
+  ok('and reads back as a roster — the leader first, then the members, each with a place for a photo', roster.join('|') === 'Lee Leader:none|Member One:none|Member Two:none' && /0 of 3 have a photo/.test(await page.$eval('#teamMembers', e => e.textContent)), roster.join('|'));
+  ok('the hint says photos here replace the team photo with names', /replaces the team photo with names/.test(await page.$eval('#teamMembers', e => e.textContent)));
+  /* take a photo: a tiny PNG stands in for the camera; the page shrinks it to a square JPEG and sends it for that person */
+  const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
+  await page.click('#teamMembers [data-tphoto="leader"]');
+  await page.setInputFiles('#tphotoInput', { name: 'lee.png', mimeType: 'image/png', buffer: PNG1 });
+  await page.waitForTimeout(700);
+  const ph = sent.filter(b => b.fn === 'portalSaveTeamPhoto').pop();
+  ok('tapping Photo and picking a picture sends a small JPEG for that person', ph && ph.args[2] === 'leader' && typeof ph.args[3] === 'string' && ph.args[3].length > 100 && ph.args[3].length < 160 * 1024 && /^\/9j\//.test(ph.args[3]), ph && ph.args[3].slice(0, 12));
+  ok('… and the face shows on the roster, with Retake and 1 of 3', !!(await page.$('#teamMembers [data-rosterkey="leader"] img.avatar')) && /Retake/.test(await page.$eval('#teamMembers [data-rosterkey="leader"]', e => e.textContent)) && /1 of 3 have a photo/.test(await page.$eval('#teamMembers', e => e.textContent)));
   ok('the steps still ahead that are theirs are marked You', /You/.test(await page.$eval('#timeline [data-step="evisa"]', e => e.textContent)));
   ok('the letter of invitation is listed as coming from us, with no upload for them', /Coming from us/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !(await page.$('[data-docup="invitation"]')) && !!(await page.$('[data-docup="evisa"]')));
   ok('the team is told passports are needed as soon as possible', /as soon as possible/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
@@ -840,6 +860,10 @@ async function open(viewport, query, seed) {
   await page.waitForFunction(() => /team\.pdf/.test((document.querySelector('[data-dockind="photo"]') || {}).textContent || ''), null, { timeout: 5000 });
   const su = sent.filter(b => b.fn === 'portalUploadDoc').pop();
   ok('staff can add a file a team emailed them, onto that record', su && su.args[2] === 'photo' && su.args[6] === 'cd_team');
+  await page.waitForSelector('#panelMembers .rosterRow', { timeout: 5000 });
+  ok('the record shows the team’s faces — leader and members, each with a Photo button staff can use too — and a Team photo sheet button', (await page.$$('#panelMembers .rosterRow')).length >= 2 && !!(await page.$('#panelMembers [data-tphoto][data-tphotocand="cd_team"]')) && !!(await page.$('#teamSheetBtn')));
+  await page.click('#teamSheetBtn'); await page.waitForTimeout(600);
+  ok('the sheet is drawn and offered as a picture without a page error', !!(await page.$('#teamSheetBtn')) && errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 

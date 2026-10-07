@@ -4516,13 +4516,18 @@ async function getMySchedules(username, pin, week) {
    it has — so the kitchen and hospitality can put them on the schedules
    while they are here. The leader keeps it up to date from the portal. */
 const MEMBERS_MAX = 120;
+/* Each member keeps a small id (Oct 2026) so a photo can follow a person
+   through a rename; one is made when a row has none. */
+const MEMBER_ID = /^m[a-z0-9]{6,24}$/;
 function cleanMembers_(v) {
-  const out = [];
+  const out = [], seen = {};
   (Array.isArray(v) ? v : []).slice(0, MEMBERS_MAX).forEach(function (p) {
     p = p && typeof p === 'object' ? p : { name: p };
     const name = dutyText_(p.name, 80).replace(/\s+/g, ' ');
     if (!name) return;
-    out.push({ name: name, sex: p.sex === 'm' || p.sex === 'f' ? p.sex : '' });
+    let id = typeof p.id === 'string' && MEMBER_ID.test(p.id) && !seen[p.id] ? p.id : ('m' + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 7));
+    seen[id] = 1;
+    out.push({ id: id, name: name, sex: p.sex === 'm' || p.sex === 'f' ? p.sex : '' });
   });
   return out;
 }
@@ -4531,9 +4536,83 @@ async function portalSaveTeamMembers(username, pin, members) {
   if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
   a.cand.portal = a.cand.portal || {};
   a.cand.portal.members = cleanMembers_(members);
+  await teamPhotoTally_(a.cand);   // who still needs a photo moves with the list
+  teamAutoStage_(a.cand, a.s.id);
   a.cand.updated = new Date().toISOString(); a.cand.updatedBy = a.s.id;
   await writeJSON('candidates', a.rows);
   return portalBoot(username, pin);
+}
+
+/* ==================== a team's photos (Oct 2026, Uriah) ====================
+   Instead of one team photo with names written on it, the leader takes a
+   photo of each person in the portal — the leader, the co-leaders from the
+   form, and every member listed. One blob per team, 'tphotos:<candidateId>',
+   holds them by key (leader | co|<n> | the member's id), as small JPEGs the
+   page already shrank. When everyone has one, the "team photo" document
+   counts as in. Staff see them on the record and can lay them out as one
+   picture for the staff group chat. */
+const TEAM_PHOTO_MAX_B64 = 160 * 1024;
+function teamPhotoPeople_(c) {
+  const a = teamAnswers_(c), out = [];
+  const leader = dutyText_(a.leaderName || c.name, 120);
+  if (leader) out.push({ key: 'leader', name: leader, role: 'leader' });
+  (Array.isArray(a.coLeaders) ? a.coLeaders : []).forEach(function (p, i) {
+    const n = dutyText_(p && p.name, 120); if (n) out.push({ key: 'co|' + i, name: n, role: 'co' });
+  });
+  ((c.portal && c.portal.members) || []).forEach(function (m) { if (m && m.id) out.push({ key: m.id, name: m.name, role: 'member', sex: m.sex || '' }); });
+  return out;
+}
+async function getTeamPhotos_(c) { return readJSON('tphotos:' + c.id, { photos: {} }); }
+/* How many of the people have a photo, kept on the record so the timeline
+   can read it without opening the photo blob. */
+async function teamPhotoTally_(c) {
+  const ppl = teamPhotoPeople_(c), store = await getTeamPhotos_(c);
+  const have = ppl.filter(function (p) { return store.photos && store.photos[p.key]; }).length;
+  c.portal = c.portal || {};
+  c.portal.photos = { count: have, total: ppl.length, at: new Date().toISOString() };
+  return c.portal.photos;
+}
+function photosDone_(c) { const p = c && c.portal && c.portal.photos; return !!(p && p.total > 0 && p.count >= p.total); }
+function hasPhotoDoc_(c) { return hasDoc_(c, 'photo') || photosDone_(c); }
+function teamPhotosOut_(c, store) {
+  const ppl = teamPhotoPeople_(c), out = {};
+  ppl.forEach(function (p) { const ph = store.photos && store.photos[p.key]; if (ph) out[p.key] = { data: ph.data, at: ph.at }; });
+  return { people: ppl, photos: out, tally: (c.portal && c.portal.photos) || { count: Object.keys(out).length, total: ppl.length } };
+}
+async function portalTeamPhotos(username, pin, candidateId) {
+  const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
+  if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
+  return Object.assign({ ok: true }, teamPhotosOut_(a.cand, await getTeamPhotos_(a.cand)));
+}
+async function portalSaveTeamPhoto(username, pin, key, base64, candidateId) {
+  const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
+  const cand = a.cand;
+  if (cand.type !== 'team') return { ok: false, err: 'not_team' };
+  key = str_(key, 40);
+  if (!key || !teamPhotoPeople_(cand).some(function (p) { return p.key === key; })) return { ok: false, err: 'bad_person' };
+  if (typeof base64 !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(base64) || base64.length < 100) return { ok: false, err: 'bad_file' };
+  if (base64.length > TEAM_PHOTO_MAX_B64) return { ok: false, err: 'too_large' };
+  const store = await getTeamPhotos_(cand);
+  store.photos = store.photos || {};
+  store.photos[key] = { data: base64, at: new Date().toISOString(), by: a.s.id };
+  await writeJSON('tphotos:' + cand.id, store);
+  await teamPhotoTally_(cand);
+  teamAutoStage_(cand, a.s.id);
+  cand.updated = new Date().toISOString(); cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return Object.assign({ ok: true, application: portalAppOut_(cand) }, teamPhotosOut_(cand, store));
+}
+async function portalDeleteTeamPhoto(username, pin, key, candidateId) {
+  const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
+  const cand = a.cand;
+  if (cand.type !== 'team') return { ok: false, err: 'not_team' };
+  const store = await getTeamPhotos_(cand);
+  if (store.photos) delete store.photos[str_(key, 40)];
+  await writeJSON('tphotos:' + cand.id, store);
+  await teamPhotoTally_(cand);
+  cand.updated = new Date().toISOString(); cand.updatedBy = a.s.id;
+  await writeJSON('candidates', a.rows);
+  return Object.assign({ ok: true, application: portalAppOut_(cand) }, teamPhotosOut_(cand, store));
 }
 
 /* ==================== the leadership meeting board ====================
@@ -5218,7 +5297,7 @@ function portalStatus_(c) {
 const TEAM_TICKS = ['call1', 'call2', 'arrived'];
 function teamFlags_(c) { return (c && c.portal && c.portal.team) || {}; }
 function hasDoc_(c, kind) { return docsOf_(c).some(function (d) { return d && d.kind === kind; }); }
-function teamDocsIn_(c) { return hasDoc_(c, 'passports') && hasDoc_(c, 'photo') && (hasDoc_(c, 'flights') || !!((c.portal && c.portal.visa) || {}).flightsConfirmed); }
+function teamDocsIn_(c) { return hasDoc_(c, 'passports') && hasPhotoDoc_(c) && (hasDoc_(c, 'flights') || !!((c.portal && c.portal.visa) || {}).flightsConfirmed); }
 function teamVisaDone_(c) { return !needsVisa_(c) || hasDoc_(c, 'evisa'); }
 function teamSteps_(c) {
   const idx = portalStageIdx_(c.stage, 'team');
@@ -5231,7 +5310,7 @@ function teamSteps_(c) {
     { id: 'form', done: submitted, who: 'you', auto: true },
     { id: 'call1', done: !!f.call1 || at('docs'), who: 'us', tick: true },
     { id: 'passports', done: past || hasDoc_(c, 'passports'), who: 'you', auto: true, group: 'docs' },
-    { id: 'photo', done: past || hasDoc_(c, 'photo'), who: 'you', auto: true, group: 'docs' },
+    { id: 'photo', done: past || hasPhotoDoc_(c), who: 'you', auto: true, group: 'docs' },
     { id: 'flights', done: past || hasDoc_(c, 'flights') || !!visa.flightsConfirmed, who: 'you', auto: true, group: 'docs' },
     intl && { id: 'invitation', done: past || hasDoc_(c, 'invitation') || !!visa.invitationSent, who: 'us', auto: true, group: 'visa' },
     intl && { id: 'evisa', done: past || hasDoc_(c, 'evisa'), who: 'you', auto: true, group: 'visa' },
@@ -5302,11 +5381,13 @@ function portalAppOut_(c) {
     archived: c.archived ? { at: c.archived.at } : null,
     audience: audienceOf_(c), needsVisa: needsVisa_(c), refNeeded: refNeeded_(c), formKey: formKeyOf_(c),
     visa: (c.portal && c.portal.visa) || {},
+    photos: c.type === 'team' ? ((c.portal && c.portal.photos) || null) : undefined,
     answers: (c.portal && c.portal.form && c.portal.form.answers) || (c.portal && c.portal.draft) || {},
     draftAt: (c.portal && c.portal.draftAt) || null,
     answersUpdatedAt: (c.portal && c.portal.form && c.portal.form.updatedAt) || null,
     docKinds: docKindsFor_(c), docs: docsOf_(c).map(docMeta_),
     members: c.type === 'team' ? ((c.portal && c.portal.members) || []) : undefined,
+    photos: c.type === 'team' ? ((c.portal && c.portal.photos) || null) : undefined,
     reference: (function (r) { delete r.answers; delete r.leaderEmail; return r; })(refState_(c)), // the applicant never reads the reference
     steps: portalSteps_(c)
   };
@@ -6402,6 +6483,9 @@ const HANDLERS = {
   getDuty: function (a) { return getDuty(a[0], a[1], a[2], a[3]); },
   saveDuty: function (a) { return saveDuty(a[0], a[1], a[2], a[3], a[4], a[5]); },
   getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },
+  portalTeamPhotos: function (a) { return portalTeamPhotos(a[0], a[1], a[2]); },
+  portalSaveTeamPhoto: function (a) { return portalSaveTeamPhoto(a[0], a[1], a[2], a[3], a[4]); },
+  portalDeleteTeamPhoto: function (a) { return portalDeleteTeamPhoto(a[0], a[1], a[2], a[3]); },
   portalSaveTeamMembers: function (a) { return portalSaveTeamMembers(a[0], a[1], a[2]); }
 };
 

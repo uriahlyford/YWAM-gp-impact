@@ -802,6 +802,21 @@ forms, documents and references follow.
   Share → Add to Home Screen hint on iPhone, dismissable, gone once installed). The portal is
   meant to be the first door into the community — an account a student keeps through their
   time here; staff / volunteer applications from inside it (landing in HR) are the next step.
+- **A team's photos (Oct 2026)**: instead of one team photo with names, the leader takes a photo
+  of each person in the portal — `teamPhotoPeople_(c)` is the leader (from the form), the
+  co-leaders (`co|<n>`) and every member (members now carry an `id`, kept through a rename —
+  `cleanMembers_`). Photos live in one blob per team, `tphotos:<candidateId>`, by key, as
+  small JPEGs the page shrank (`shrinkPhoto_`, 480px square; `TEAM_PHOTO_MAX_B64`). Handlers
+  `portalTeamPhotos` / `portalSaveTeamPhoto` / `portalDeleteTeamPhoto` (the team, or staff via
+  `docCand_`). `teamPhotoTally_` keeps `portal.photos {count,total}` on the record so
+  `photosDone_` → `hasPhotoDoc_` can mark the team-photo document in without opening the blob
+  (`teamDocsIn_`, the `photo` step). Page: `rosterHtml_` on the applicant's members card and the
+  staff record (`panelMembersHtml_`), `bindRoster_`, and `teamSheet_` — a canvas with every face
+  and name for the staff group chat (`#teamSheetBtn`, shared via `dutyShare`).
+- **Country fields** have a search box (`countryFieldHtml_`, `bindCountrySearch_`): typing
+  filters the select underneath and a single match picks itself.
+- **Forms feel**: `SECTION_ICON` by section id, a "Nice — next: …" nudge after Next,
+  `portalConfetti_` on a first submit.
 - **An applicant is a staff row with `kind:'applicant'`** (`portalRegister`: username +
   PIN, name, email, phone and messenger ∈ whatsapp|telegram required, type ∈
   `PORTAL_TYPES`, campus ∈ `PORTAL_CAMPUSES` — Poipet runs DTS + DBS, Siem Reap all four — and
