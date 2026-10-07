@@ -162,6 +162,54 @@ console.log('=== signing in with Google or an email and password (Oct 2026) ==='
   globalThis.fetch = realFetch;
 }
 
+console.log('=== a team’s photos: one per person, instead of a team photo with names ===');
+{
+  const base64Jpeg = Buffer.alloc(900, 7).toString('base64');   // the shape matters here, not the picture
+  mem.candidates = (mem.candidates || []).filter(c => c.id !== 'cd_photo');
+  mem.staff.push({ id: 'st_photo', username: 'photo.team', name: 'Pat Leader', email: 'pat@example.org', kind: 'applicant', campus: 'siemreap', active: true,
+    applicant: { type: 'team', school: '', candidateId: 'cd_photo' }, pinSalt: 'st_photo', pinHash: mkHash('2468', 'st_photo') });
+  mem.candidates.push({ id: 'cd_photo', campus: 'siemreap', name: 'Photo Church', type: 'team', stage: 'docs', staffId: 'st_photo', email: 'pat@example.org',
+    portal: { createdAt: '2026-09-01', submittedAt: '2026-09-02', form: { answers: { teamName: 'Photo Church', leaderName: 'Pat Leader', coLeaders: [{ name: 'Cora Co' }] } }, docs: [], members: [], team: { call1: true } },
+    log: [], archived: null });
+  let r = await call('portalSaveTeamMembers', ['photo.team', '2468', [{ name: 'Mia Member', sex: 'f' }, { name: 'Max Member', sex: 'm' }]]);
+  const mem1 = r.body.application.members;
+  ok('members get a small id each when saved', r.body && r.body.ok && mem1.length === 2 && mem1.every(m => /^m[a-z0-9]{6,24}$/.test(m.id)) && mem1[0].id !== mem1[1].id, JSON.stringify(mem1));
+  r = await call('portalSaveTeamMembers', ['photo.team', '2468', [{ id: mem1[0].id, name: 'Mia Renamed', sex: 'f' }, { name: 'Max Member', sex: 'm' }]]);
+  ok('an id given back is kept through a rename', r.body.application.members[0].id === mem1[0].id && r.body.application.members[0].name === 'Mia Renamed');
+  const mid = r.body.application.members[0].id, mid2 = r.body.application.members[1].id;
+  r = await call('portalTeamPhotos', ['photo.team', '2468']);
+  ok('the people to photograph: the leader, the co-leaders from the form, then the members, none with a photo yet',
+    r.body && r.body.ok && r.body.people.map(p => p.key + ':' + p.name + ':' + p.role).join('|') === 'leader:Pat Leader:leader|co|0:Cora Co:co|' + mid + ':Mia Renamed:member|' + mid2 + ':Max Member:member' && Object.keys(r.body.photos).length === 0 && r.body.tally.count === 0 && r.body.tally.total === 4, JSON.stringify(r.body && r.body.people));
+  r = await call('portalSaveTeamPhoto', ['photo.team', '2468', 'nobody', base64Jpeg]);
+  ok('a photo for someone not on the team is refused', r.body && r.body.err === 'bad_person');
+  r = await call('portalSaveTeamPhoto', ['photo.team', '2468', 'leader', 'x'.repeat(200 * 1024)]);
+  ok('a photo over the size limit is refused', r.body && r.body.err === 'too_large');
+  r = await call('portalSaveTeamPhoto', ['photo.team', '2468', 'leader', 'not base64!!']);
+  ok('junk is refused', r.body && r.body.err === 'bad_file');
+  r = await call('portalSaveTeamPhoto', ['photo.team', '2468', 'leader', base64Jpeg]);
+  ok('the leader’s photo saves, and the tally moves', r.body && r.body.ok && r.body.photos.leader && r.body.photos.leader.data === base64Jpeg && r.body.tally.count === 1 && r.body.application.photos.count === 1 && r.body.application.photos.total === 4, JSON.stringify(r.body && r.body.tally));
+  ok('the photo lives in its own blob, not on the candidate', mem['tphotos:cd_photo'] && mem['tphotos:cd_photo'].photos.leader && JSON.stringify(mem.candidates.find(c => c.id === 'cd_photo')).indexOf(base64Jpeg) === -1);
+  for (const k of ['co|0', mid]) await call('portalSaveTeamPhoto', ['photo.team', '2468', k, base64Jpeg]);
+  r = await call('portalBoot', ['photo.team', '2468']);
+  const photoStep = r.body.application.steps.find(st => st.id === 'photo');
+  ok('with one person still without a photo, the team photo step is not done', photoStep && !photoStep.done && r.body.application.photos.count === 3);
+  r = await call('portalSaveTeamPhoto', ['photo.team', '2468', mid2, base64Jpeg]);
+  ok('with everyone photographed, the team photo document counts as in', r.body.application.steps.find(st => st.id === 'photo').done === true && r.body.tally.count === 4);
+  r = await call('portalSaveTeamMembers', ['photo.team', '2468', [{ id: mid, name: 'Mia Renamed', sex: 'f' }, { id: mid2, name: 'Max Member', sex: 'm' }, { name: 'New Person', sex: '' }]]);
+  ok('adding a member reopens it: one more face to take', r.body.application.photos.count === 4 && r.body.application.photos.total === 5 && r.body.application.steps.find(st => st.id === 'photo').done === false);
+  r = await call('portalDeleteTeamPhoto', ['photo.team', '2468', 'co|0']);
+  ok('a photo can be removed', r.body && r.body.ok && !r.body.photos['co|0'] && r.body.tally.count === 3);
+  r = await call('portalTeamPhotos', ['dara', '1234', 'cd_photo']);
+  ok('portal staff read the team’s photos on the record', r.body && r.body.ok && r.body.photos.leader && r.body.people.length === 5);
+  r = await call('portalSaveTeamPhoto', ['dara', '1234', 'co|0', base64Jpeg, 'cd_photo']);
+  ok('… and can take one for a person', r.body && r.body.ok && r.body.photos['co|0']);
+  r = await call('portalTeamPhotos', ['bopha', '1234', 'cd_photo']);
+  ok('a staff member without portal access gets nothing', r.body && r.body.ok === false);
+  r = await call('portalTeamPhotos', ['anna@example.org', 'secret123']);
+  ok('another applicant cannot read them', !(r.body && r.body.ok && r.body.photos && r.body.photos.leader));
+  mem.staff = mem.staff.filter(x => x.id !== 'st_photo'); mem.candidates = mem.candidates.filter(c => c.id !== 'cd_photo'); delete mem['tphotos:cd_photo'];
+}
+
 console.log('=== signing up ===');
 let r = await call('portalRegister', [{ ...APP, username: 'A B' }]);
 ok('username must be the same shape as a staff username', r.body.ok === false && r.body.err === 'bad_username');

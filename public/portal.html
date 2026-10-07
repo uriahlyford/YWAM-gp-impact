@@ -113,6 +113,22 @@ textarea { min-height:80px; resize:vertical; }
 .memberRow input { flex:1; min-width:0; margin:0; }
 .memberSeg { flex:0 0 auto; margin:0; }
 .memberSeg button { padding:8px 10px; font-size:13px; }
+.roster { display:flex; flex-direction:column; gap:8px; margin:6px 0 4px; }
+.rosterRow { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); }
+.rosterRow:last-child { border-bottom:0; }
+.rosterRow.busy { opacity:.5; }
+.rosterName { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; font-size:14px; }
+.rosterName b { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rosterTally { font-size:12.5px; color:var(--muted); margin:0 0 4px; }
+.avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; flex:0 0 44px; background:var(--surface2); }
+.avatar.ph { display:inline-flex; align-items:center; justify-content:center; color:var(--muted); font-weight:700; font-size:14px; border:1px dashed var(--border2); }
+.avatar.big { width:64px; height:64px; flex-basis:64px; }
+.camBtn { border:1px solid var(--border2); background:transparent; color:var(--ink); border-radius:999px; padding:7px 11px; font-size:13px; cursor:pointer; white-space:nowrap; }
+.camBtn:hover { border-color:var(--ink); }
+.countryQ { margin-bottom:6px; }
+.secIcon { font-size:40px; line-height:1; margin-bottom:6px; }
+.confettiWrap { position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden; }
+.confettiBit { position:absolute; width:9px; height:9px; border-radius:2px; will-change:transform, opacity; }
 .pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 12px; font-size:12.5px; font-weight:600; border:1px solid var(--border2); background:var(--surface2); color:var(--muted); white-space:nowrap; }
 .pill.pending, .pill.in_review, .pill.interview { color:var(--warn); border-color:var(--warn); background:transparent; }
 .pill.accepted, .pill.practical, .pill.arrived { color:var(--good); border-color:var(--good); background:transparent; }
@@ -743,8 +759,7 @@ function registerHtml_(){
     '<label class="f">'+esc(t('Where can we message you?'))+'</label><div class="seg">'+
       '<button data-msgr="whatsapp" class="'+(r.messenger==='whatsapp'?'on':'')+'">WhatsApp</button><button data-msgr="telegram" class="'+(r.messenger==='telegram'?'on':'')+'">Telegram</button></div>'+
     '<p class="hint">'+esc(t('One of our team will message you there after you apply.'))+'</p>'+
-    '<label class="f">'+esc(t('Country'))+'</label><select id="r_country"><option value="">'+esc(t('— choose —'))+'</option>'+
-      (typeof COUNTRIES!=='undefined' ? COUNTRIES : ['Cambodia']).map(function(c){ return '<option value="'+esc(c)+'"'+(r.country===c?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+'</select>'+
+    '<label class="f">'+esc(t('Country'))+'</label>'+countryFieldHtml_('r_country', r.country||'')+
   '</div>';
   h+='<div class="card">'+
     (P.gtoken
@@ -809,7 +824,7 @@ function meHtml_(){
     var c=P.contact||{ phone:me.phone, messenger:me.messenger, country:me.country };
     h+='<label class="f">'+esc(t('Phone number (with country code)'))+'</label><input type="tel" id="c_phone" value="'+esc(c.phone||'')+'">'+
       '<label class="f">'+esc(t('Where can we message you?'))+'</label><div class="seg"><button data-cmsgr="whatsapp" class="'+(c.messenger==='whatsapp'?'on':'')+'">WhatsApp</button><button data-cmsgr="telegram" class="'+(c.messenger==='telegram'?'on':'')+'">Telegram</button></div>'+
-      '<label class="f">'+esc(t('Country'))+'</label><select id="c_country"><option value="">'+esc(t('— choose —'))+'</option>'+(typeof COUNTRIES!=='undefined' ? COUNTRIES : ['Cambodia']).map(function(x){ return '<option value="'+esc(x)+'"'+(c.country===x?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select>'+
+      '<label class="f">'+esc(t('Country'))+'</label>'+countryFieldHtml_('c_country', c.country||'')+
       '<button class="btn" id="saveContact"'+(P.busy?' disabled':'')+'>'+esc(t('Save'))+'</button><button class="linkbtn" id="cancelContact">'+esc(t('Cancel'))+'</button>';
   } else {
     h+='<div class="kv"><b>'+esc(t('Phone'))+'</b><span>'+esc(me.phone||'—')+'</span></div>'+
@@ -962,6 +977,24 @@ function attachHtml_(q, v, prefix){
   var app=P.boot.application;
   return '<div class="qAttach" data-attachfor="'+esc(q.id)+'">'+docsBodyHtml_([{ id:q.attach, required:false }], app.docs||[], 'form', '')+'</div>';
 }
+/* A face for each step of the forms — the team's especially (Uriah: make
+   applying feel less like a form). Keyed by section id; sections without one
+   simply have none. */
+var SECTION_ICON = { team:'🙌', trip:'✈️', hospitality:'🏠', about:'👋', church:'⛪', guardian:'👨‍👩‍👧', friend:'🤝', more:'📝', faith:'🙏', school:'🎓', health:'💚', serve:'🛠', work:'💼' };
+function portalConfetti_(){
+  try {
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var wrap=document.createElement('div'); wrap.className='confettiWrap'; wrap.setAttribute('aria-hidden','true'); document.body.appendChild(wrap);
+    var colors=['#FBBF24','#4ADE80','#60A5FA','#F87171','#ffffff','#a78bfa'];
+    for(var i=0;i<40;i++){
+      var p=document.createElement('span'); p.className='confettiBit'; p.style.background=colors[i%colors.length];
+      p.style.left=(10+Math.random()*80)+'vw'; p.style.top='-10px'; if(i%3===0) p.style.borderRadius='50%';
+      wrap.appendChild(p);
+      p.animate([{ transform:'translateY(0) rotate(0deg)', opacity:1 }, { transform:'translateY('+(60+Math.random()*40)+'vh) rotate('+(Math.random()*720-360)+'deg)', opacity:0 }], { duration:1600+Math.random()*900, easing:'cubic-bezier(.2,.6,.3,1)', fill:'forwards', delay:Math.random()*300 });
+    }
+    setTimeout(function(){ if(wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 3000);
+  } catch(e){}
+}
 function formHtml_(){
   var d=P.boot, app=d.application, form=d.form;
   if(!form){ return '<div class="center"><div class="card"><p class="sub">'+esc(t('Loading…'))+'</p><button class="linkbtn" id="formClose2">'+esc(t('Back to my application'))+'</button></div></div>'; }
@@ -971,7 +1004,8 @@ function formHtml_(){
   var sec=secs[P.formSec], qs=askedIn_(sec, app.audience);
   var h='<div class="wide"><div class="gateTitle"><div class="eyebrow">'+esc(lt_(form.title))+'</div>'+
     '<div class="formProgress"><span>'+esc(gpT('Section {i} of {n}',{i:P.formSec+1, n:secs.length}))+'</span><div class="bar"><div style="width:'+Math.round((P.formSec+1)/secs.length*100)+'%"></div></div></div></div>';
-  h+='<div class="card"><h2>'+esc(lt_(sec.title))+'</h2>'+(lt_(sec.help)?'<p class="sub">'+esc(lt_(sec.help))+'</p>':'')+
+  var icon=SECTION_ICON[sec.id]||'';
+  h+='<div class="card">'+(icon?'<div class="secIcon">'+icon+'</div>':'')+'<h2>'+esc(lt_(sec.title))+'</h2>'+(lt_(sec.help)?'<p class="sub">'+esc(lt_(sec.help))+'</p>':'')+
     qs.map(function(q){ return questionHtml_(q, P.answers[q.id], 'a_', P.formMissing && P.formMissing.indexOf(q.id)>-1); }).join('')+'</div>';
   /* Two modes: filling in (draft autosave, Submit on the last section) and,
      after submitting, updating — nothing autosaves, Save changes is on every
@@ -1016,7 +1050,7 @@ function bindForm_(){
     readAnswers_();
     var miss=sectionMissing_(secs[P.formSec], app.audience);
     if(miss.length){ P.formMissing=miss; render(); showMsg(t('Please answer the questions marked *')); var first=document.querySelector('.qBlock.missing'); if(first) first.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
-    saveDraft_(true); P.formSec++; P.formMissing=null; render(); window.scrollTo(0,0);
+    saveDraft_(true); P.formSec++; if(secs[P.formSec]) showMsg((SECTION_ICON[secs[P.formSec].id]||'👉')+' '+gpT('Nice — next: {step}',{step:lt_(secs[P.formSec].title)})); P.formMissing=null; render(); window.scrollTo(0,0);
   });
   on_('formSubmit', function(){
     readAnswers_();
@@ -1028,6 +1062,7 @@ function bindForm_(){
       P.busy=false;
       if(d && d.ok){
         P.boot=d; P.answers=d.application.answers||{}; P.editMine=false; P.view='me'; P.formSec=0; showMsg(updating ? t('Your changes are saved.') : t('Your application is in. We will be in touch!'));
+        if(!updating) portalConfetti_();
         /* The application is in — the next thing is the leader reference, so the
            link is made now and the dashboard opens on "send it to your leader". */
         var ra=d.application, rs=(ra.reference||{}).status||'none';
@@ -1159,7 +1194,7 @@ function accountFormHtml_(a){
     '<label class="f">'+esc(t('Email'))+'</label><input type="email" id="acc_email" value="'+esc(f.email||'')+'">'+
     '<label class="f">'+esc(t('Phone number (with country code)'))+'</label><input type="tel" id="acc_phone" placeholder="+855 …" value="'+esc(f.phone||'')+'">'+
     '<label class="f">'+esc(t('Where can we message you?'))+'</label><div class="seg"><button data-accmsgr="whatsapp" class="'+(f.messenger==='whatsapp'?'on':'')+'">WhatsApp</button><button data-accmsgr="telegram" class="'+(f.messenger==='telegram'?'on':'')+'">Telegram</button></div>'+
-    '<label class="f">'+esc(t('Country'))+'</label><select id="acc_country"><option value="">'+esc(t('— choose —'))+'</option>'+(typeof COUNTRIES!=='undefined' ? COUNTRIES : ['Cambodia']).map(function(c){ return '<option value="'+esc(c)+'"'+(f.country===c?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+'</select>'+
+    '<label class="f">'+esc(t('Country'))+'</label>'+countryFieldHtml_('acc_country', f.country||'')+
     (pinAcc ? '<label class="f">'+esc(isNew ? t('4-digit PIN') : t('New PIN (leave empty to keep the current one)'))+'</label><input type="text" id="acc_pin" inputmode="numeric" maxlength="4" autocomplete="off" value="'+esc(f.pin||'')+'">'
       : a.authKind==='google' ? '' : '<label class="f">'+esc(t('New password (leave empty to keep the current one)'))+'</label><input type="text" id="acc_pw" autocomplete="off" value="'+esc(f.pw||'')+'">');
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center"><button class="btn small" id="accSave"'+(P.busy?' disabled':'')+'>'+esc(P.busy ? t('Saving…') : (isNew ? t('Create the account') : t('Save')))+'</button>'+
@@ -1312,15 +1347,134 @@ function guideOverlayHtml_(){
     '<button class="hbtn" id="guideClose">← '+esc(t('Back'))+'</button><button class="hbtn" id="guidePrint">🖨 '+esc(t('Print or save as PDF'))+'</button></div>'+
     '<div class="guideBody">'+outreachGuideHtml(esc)+'</div></div>';
 }
+/* ---- a team's people, each with a photo (Oct 2026, Uriah) ----
+   The leader takes a photo of each person right here — the leader, the
+   co-leaders from the form and every member listed — instead of uploading
+   one team photo with names written on it. The page shrinks each shot to a
+   small square JPEG before it goes up; when everyone has one, the "team
+   photo" document counts as in. */
+function initials_(n){ return String(n||'').trim().split(/\s+/).slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase(); }
+function avatarHtml_(name, photo, big){
+  return photo ? '<img class="avatar'+(big?' big':'')+'" src="data:image/jpeg;base64,'+photo.data+'" alt="'+esc(name)+'">'
+    : '<span class="avatar ph'+(big?' big':'')+'">'+esc(initials_(name)||'?')+'</span>';
+}
+/* Square, 480px, JPEG — small enough to keep, sharp enough to recognise a face. */
+function shrinkPhoto_(file, size){
+  return new Promise(function(res, rej){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      try {
+        var c=document.createElement('canvas'); c.width=size; c.height=size;
+        var ctx=c.getContext('2d'), m=Math.min(img.naturalWidth, img.naturalHeight), sx=(img.naturalWidth-m)/2, sy=(img.naturalHeight-m)/2;
+        ctx.drawImage(img, sx, sy, m, m, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        res(c.toDataURL('image/jpeg', 0.82).split(',')[1]);
+      } catch(e){ rej(e); }
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('bad image')); };
+    img.src=url;
+  });
+}
+function roleLabel_(p){ return p.role==='leader' ? t('Team leader') : p.role==='co' ? t('Co-leader') : (p.sex==='m' ? t('Man') : p.sex==='f' ? t('Woman') : ''); }
+/* The roster: everyone, their photo or a camera to take one. canEdit — the
+   team itself, or staff on the record (candId set). */
+function rosterHtml_(tp, canEdit, candId){
+  if(!tp) return '<p class="sub" style="margin:0 0 8px">'+esc(t('Loading…'))+'</p>';
+  var ppl=tp.people||[], photos=tp.photos||{}, have=ppl.filter(function(p){ return photos[p.key]; }).length;
+  var h='<div class="rosterTally">'+(ppl.length ? (have>=ppl.length ? '✅ '+esc(t('Everyone has a photo.')) : esc(gpT('{have} of {n} have a photo',{have:have, n:ppl.length}))) : esc(t('No one listed yet.')))+'</div>';
+  h+='<div class="roster">'+ppl.map(function(p){
+    var ph=photos[p.key];
+    return '<div class="rosterRow" data-rosterkey="'+esc(p.key)+'">'+avatarHtml_(p.name, ph)+
+      '<div class="rosterName"><b>'+esc(p.name)+'</b>'+(roleLabel_(p)?'<span class="hint">'+esc(roleLabel_(p))+'</span>':'')+'</div>'+
+      (canEdit ? '<button type="button" class="camBtn" data-tphoto="'+esc(p.key)+'"'+(candId?' data-tphotocand="'+esc(candId)+'"':'')+' aria-label="'+esc(ph ? t('Retake the photo') : t('Take a photo'))+'">📷 '+esc(ph ? t('Retake') : t('Photo'))+'</button>'+
+        (ph ? '<button type="button" class="linkbtn inline danger" data-tphotodel="'+esc(p.key)+'" aria-label="'+esc(t('Remove the photo'))+'">✕</button>' : '') : '')+
+      '</div>';
+  }).join('')+'</div>';
+  if(canEdit) h+='<input type="file" accept="image/*" capture="user" id="tphotoInput" hidden>';
+  return h;
+}
+function bindRoster_(onDone){
+  var inp=document.getElementById('tphotoInput'); if(!inp) return;
+  document.querySelectorAll('[data-tphoto]').forEach(function(b){ b.onclick=function(){ P.tphotoKey=b.getAttribute('data-tphoto'); P.tphotoCand=b.getAttribute('data-tphotocand')||''; inp.click(); }; });
+  inp.onchange=function(){
+    var f=inp.files && inp.files[0]; inp.value=''; if(!f || !P.tphotoKey) return;
+    var key=P.tphotoKey, cand=P.tphotoCand, row=document.querySelector('[data-rosterkey="'+key+'"]');
+    if(row) row.classList.add('busy');
+    shrinkPhoto_(f, 480).then(function(b64){
+      run('portalSaveTeamPhoto', [P.auth.user, P.auth.pin, key, b64, cand||undefined], function(d){
+        if(d && d.ok){ onDone(d); showMsg(t('Photo saved')); } else showMsg(d && d.err==='too_large' ? t('That photo is too big — try again.') : t('Could not save the photo — try again.'));
+        render();
+      }, function(){ showMsg(t('Connection problem — try again.')); render(); });
+    }, function(){ if(row) row.classList.remove('busy'); showMsg(t('That file is not a photo.')); });
+  };
+  document.querySelectorAll('[data-tphotodel]').forEach(function(b){ b.onclick=function(){
+    if(!confirm(t('Remove this photo?'))) return;
+    var cand=(document.querySelector('[data-tphotocand]')||{}).getAttribute ? (document.querySelector('[data-tphotocand]').getAttribute('data-tphotocand')||'') : '';
+    run('portalDeleteTeamPhoto', [P.auth.user, P.auth.pin, b.getAttribute('data-tphotodel'), cand||undefined], function(d){ if(d && d.ok) onDone(d); render(); });
+  }; });
+}
+/* One picture of the whole team for the staff group chat: the team's name,
+   when they are here, and every face with its name. */
+function teamSheet_(c, tp){
+  var ppl=(tp.people||[]), photos=tp.photos||{}, cols=Math.min(4, Math.max(2, Math.ceil(Math.sqrt(ppl.length||1))));
+  var W=1080, pad=48, gap=24, cell=Math.floor((W-pad*2-gap*(cols-1))/cols), nameH=64, headH=170, rows=Math.ceil(ppl.length/cols);
+  var H=headH+rows*(cell+nameH+gap)+pad;
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=H; var ctx=cv.getContext('2d');
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#fff'; ctx.font='bold 46px Inter, system-ui, sans-serif'; ctx.textBaseline='top';
+  ctx.fillText(String(c.name||''), pad, pad);
+  ctx.fillStyle='#a3a3a3'; ctx.font='26px Inter, system-ui, sans-serif';
+  var tt=c.teamTrip||{}, when = tt.from && tt.to ? fmtDate_(tt.from)+' – '+fmtDate_(tt.to) : '';
+  var sub=[ppl.length===1 ? t('1 person') : gpT('{n} people',{n:ppl.length}), when].filter(Boolean).join(' · ');
+  ctx.fillText(sub, pad, pad+62);
+  var imgs=ppl.map(function(p){ var ph=photos[p.key]; if(!ph) return null; var im=new Image(); im.src='data:image/jpeg;base64,'+ph.data; return im; });
+  return Promise.all(imgs.map(function(im){ return im ? new Promise(function(r){ im.onload=function(){ r(); }; im.onerror=function(){ r(); }; if(im.complete) r(); }) : Promise.resolve(); })).then(function(){
+    ppl.forEach(function(p, i){
+      var x=pad+(i%cols)*(cell+gap), y=headH+Math.floor(i/cols)*(cell+nameH+gap), im=imgs[i];
+      ctx.save(); ctx.beginPath(); roundRect_(ctx, x, y, cell, cell, 28); ctx.clip();
+      if(im && im.naturalWidth){ ctx.drawImage(im, x, y, cell, cell); }
+      else { ctx.fillStyle='#1a1a1a'; ctx.fillRect(x,y,cell,cell); ctx.fillStyle='#737373'; ctx.font='bold '+Math.floor(cell/3)+'px Inter, system-ui, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(initials_(p.name)||'?', x+cell/2, y+cell/2); }
+      ctx.restore();
+      ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.font='bold 24px Inter, system-ui, sans-serif';
+      ctx.fillText(fitText_(ctx, p.name, cell), x+cell/2, y+cell+10);
+      var rl=roleLabel_(p); if(rl){ ctx.fillStyle='#a3a3a3'; ctx.font='20px Inter, system-ui, sans-serif'; ctx.fillText(rl, x+cell/2, y+cell+40); }
+      ctx.textAlign='left';
+    });
+    return new Promise(function(r){ cv.toBlob(r, 'image/png'); });
+  });
+}
+function roundRect_(ctx, x, y, w, h, r){ ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function fitText_(ctx, s, max){ s=String(s||''); while(s.length>3 && ctx.measureText(s).width>max-8) s=s.slice(0,-2); return s===String(s) && ctx.measureText(String(s)).width>max-8 ? s+'…' : s; }
+/* Country: type to find it — the list is long. The select stays underneath,
+   filtered as you type; one match left picks itself. */
+function countryFieldHtml_(id, value){
+  var list=(typeof COUNTRIES!=='undefined' ? COUNTRIES : ['Cambodia']);
+  return '<input type="search" class="countryQ" data-countryq="'+esc(id)+'" placeholder="'+esc(t('Type to find your country…'))+'" autocomplete="off" aria-label="'+esc(t('Search countries'))+'">'+
+    '<select id="'+esc(id)+'"><option value="">'+esc(t('— choose —'))+'</option>'+list.map(function(c){ return '<option value="'+esc(c)+'"'+(value===c?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+'</select>';
+}
+function bindCountrySearch_(){
+  document.querySelectorAll('[data-countryq]').forEach(function(inp){
+    var sel=document.getElementById(inp.getAttribute('data-countryq')); if(!sel) return;
+    inp.oninput=function(){
+      var q=inp.value.trim().toLowerCase(), left=[];
+      [].forEach.call(sel.options, function(o, i){ if(!i) return; var hit=!q || o.value.toLowerCase().indexOf(q)>-1; o.hidden=!hit; o.disabled=!hit; if(hit) left.push(o); });
+      var exact=left.filter(function(o){ return o.value.toLowerCase()===q; })[0];
+      if(exact) sel.value=exact.value; else if(left.length===1 && q) sel.value=left[0].value;
+      else if(q && sel.selectedOptions[0] && sel.selectedOptions[0].hidden) sel.value='';
+      sel.dispatchEvent(new Event('change', { bubbles:true }));
+    };
+  });
+}
+
 function membersCardHtml_(app){
   if(app.type!=='team' || !app.submittedAt) return '';
   var list=P.members || app.members || [];
   var h='<div class="card" id="teamMembers"><h3 style="margin-top:0">👥 '+esc(t('Your team members'))+'</h3>'+
     '<p class="sub" style="margin:0 0 8px">'+esc(t('Everyone coming, so we can put them on the cooking and chores schedules while you are here. Keep it up to date as your team changes.'))+'</p>';
   if(!P.members){
-    h+=list.length ? '<ol class="memberList">'+list.map(function(m){ return '<li>'+esc(m.name)+(m.sex?' <span class="hint">· '+esc(m.sex==='m'?t('Man'):t('Woman'))+'</span>':'')+'</li>'; }).join('')+'</ol>'
-      : '<p class="sub" style="margin:0 0 8px">'+esc(t('No one listed yet.'))+'</p>';
-    return h+'<button class="btn small" id="editMembers">'+esc(list.length?t('Edit the list'):t('Add your team members'))+'</button></div>';
+    h+='<p class="hint" style="margin:0 0 8px">📷 '+esc(t('Take a photo of each person here — that replaces the team photo with names.'))+'</p>';
+    h+=rosterHtml_(P.tphotos, true, '');
+    return h+'<button class="btn small" id="editMembers" style="margin-top:8px">'+esc(list.length?t('Edit the list'):t('Add your team members'))+'</button></div>';
   }
   h+=list.map(function(m,i){
     return '<div class="memberRow"><input type="text" data-mname="'+i+'" maxlength="80" value="'+esc(m.name)+'" placeholder="'+esc(t('Full name'))+'" aria-label="'+esc(t('Full name'))+'">'+
@@ -1347,7 +1501,13 @@ function schedulesCardHtml_(){
 }
 function bindMembersAndSchedules_(){
   var app=P.boot && P.boot.application;
-  on_('editMembers', function(){ var l=(app.members||[]).map(function(m){ return { name:m.name, sex:m.sex||'' }; }); if(!l.length) l=[{ name:'', sex:'' }]; P.members=l; render(); });
+  on_('editMembers', function(){ var l=(app.members||[]).map(function(m){ return { id:m.id||'', name:m.name, sex:m.sex||'' }; }); if(!l.length) l=[{ name:'', sex:'' }]; P.members=l; render(); });
+  /* the photos, once, for a submitted team */
+  if(app && app.type==='team' && app.submittedAt && !P.tphotos && !P.tphotosLoading){
+    P.tphotosLoading=true;
+    run('portalTeamPhotos', [P.auth.user, P.auth.pin], function(d){ P.tphotosLoading=false; P.tphotos = d && d.ok ? d : { people:[], photos:{} }; render(); }, function(){ P.tphotosLoading=false; P.tphotos={ people:[], photos:{} }; render(); });
+  }
+  bindRoster_(function(d){ P.tphotos=d; if(d.application) P.boot.application=d.application; });
   on_('cancelMembers', function(){ P.members=null; render(); });
   document.querySelectorAll('[data-mname]').forEach(function(inp){ inp.oninput=function(){ P.members[Number(inp.getAttribute('data-mname'))].name=inp.value; }; });
   document.querySelectorAll('[data-msex]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-msex').split('|'), m=P.members[Number(p[0])]; m.sex = m.sex===p[1] ? '' : p[1]; render(); }; });
@@ -1358,7 +1518,7 @@ function bindMembersAndSchedules_(){
     P.busy=true; render();
     run('portalSaveTeamMembers', [P.auth.user, P.auth.pin, list], function(d){
       P.busy=false;
-      if(d && d.ok){ P.boot=d; P.members=null; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.'));
+      if(d && d.ok){ P.boot=d; P.members=null; P.tphotos=null; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.'));
       render();
     }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
   });
@@ -1385,9 +1545,12 @@ function panelMembersHtml_(c){
   if(c.type!=='team') return '';
   var l=(c.portal && c.portal.members) || [];
   var men=l.filter(function(m){ return m.sex==='m'; }).length, women=l.filter(function(m){ return m.sex==='f'; }).length;
-  return '<h3>👥 '+esc(t('Team members'))+' <small>· '+l.length+(men||women ? ' · '+esc(gpT('{m} men, {w} women',{m:men,w:women})) : '')+'</small></h3>'+
-    (l.length ? '<ol class="memberList" id="panelMembers">'+l.map(function(m){ return '<li>'+esc(m.name)+(m.sex?' <span class="hint">· '+esc(m.sex==='m'?t('Man'):t('Woman'))+'</span>':'')+'</li>'; }).join('')+'</ol>'
-      : '<p class="sub" style="margin:0 0 8px" id="panelMembers">'+esc(t('The team hasn’t listed its members yet.'))+'</p>');
+  var tp = P.tphotosFor===c.id ? P.tphotosStaff : null;
+  var h='<h3>👥 '+esc(t('Team members'))+' <small>· '+l.length+(men||women ? ' · '+esc(gpT('{m} men, {w} women',{m:men,w:women})) : '')+'</small></h3>';
+  if(!l.length) h+='<p class="sub" style="margin:0 0 8px" id="panelMembers">'+esc(t('The team hasn’t listed its members yet.'))+'</p>';
+  h+='<div id="panelMembers">'+rosterHtml_(tp, true, c.id)+'</div>';
+  if(tp && (tp.people||[]).length) h+='<button class="btn ghost small" id="teamSheetBtn" style="margin-top:8px">🖼 '+esc(t('Team photo sheet'))+'</button><p class="hint">'+esc(t('One picture with every face and name — for the staff group chat.'))+'</p>';
+  return h;
 }
 function panelTeamNumbersHtml_(c){
   if(c.type!=='team') return '';
@@ -1868,6 +2031,17 @@ function panelVisaHtml_(c){
 }
 function bindPanelExtras_(){
   var c=selected_(); if(!c) return;
+  if(c.type==='team' && P.tphotosFor!==c.id && !P.tphotosLoading){
+    P.tphotosLoading=true;
+    run('portalTeamPhotos', [P.auth.user, P.auth.pin, c.id], function(d){ P.tphotosLoading=false; P.tphotosFor=c.id; P.tphotosStaff = d && d.ok ? d : { people:[], photos:{} }; render(); }, function(){ P.tphotosLoading=false; P.tphotosFor=c.id; P.tphotosStaff={ people:[], photos:{} }; render(); });
+  }
+  bindRoster_(function(d){ P.tphotosStaff=d; P.tphotosFor=c.id; if(d.application){ var cur=selected_(); if(cur){ cur.photos=d.application.photos; cur.steps=d.application.steps; cur.stage=d.application.stage; } } });
+  on_('teamSheetBtn', function(){
+    var tp=P.tphotosStaff; if(!tp) return;
+    var b=document.getElementById('teamSheetBtn'); b.disabled=true;
+    teamSheet_(c, tp).then(function(blob){ b.disabled=false; return dutyShare(blob, String(c.name||'team').replace(/[^\w\-]+/g,'_')+'-team.png', c.name||''); })
+      .then(function(how){ if(how==='downloaded') showMsg(t('Saved as a picture')); }, function(){ b.disabled=false; showMsg(t('Could not make the picture')); });
+  });
   document.querySelectorAll('[data-teamstep]').forEach(function(cb){ cb.onchange=function(){ P.busy=true; cb.disabled=true;
     run('portalTeamStep', [P.auth.user, P.auth.pin, c.id, cb.getAttribute('data-teamstep'), cb.checked], function(d){ P.busy=false; if(putCand_(d)) showMsg(t('Saved')); else showMsg(t('Could not save — try again.')); render(); }); }; });
   document.querySelectorAll('[data-visaflag]').forEach(function(cb){ cb.onchange=function(){ var flags={}; flags[cb.getAttribute('data-visaflag')]=cb.checked; cb.disabled=true;
@@ -1901,6 +2075,7 @@ function bindPanelExtras_(){
 /* ---- bindings ---- */
 function on_(id, fn){ var el=document.getElementById(id); if(el) el.onclick=fn; }
 function bind_(){
+  bindCountrySearch_();
   on_('openGuide', function(){ P.guideOpen=true; render(); var o=document.getElementById('guideOverlay'); if(o) o.scrollTop=0; });
   on_('guideClose', function(){ P.guideOpen=false; render(); });
   on_('guidePrint', function(){ window.print(); });
