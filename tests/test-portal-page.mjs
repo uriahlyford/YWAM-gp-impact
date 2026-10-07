@@ -71,7 +71,11 @@ const TEAM_SCHED = { week: '2026-10-04',
   kitchen: { kind: 'kitchen', week: '2026-10-04', layout: 'grid', title: 'Cooking schedule', km: '', notes: '', days: ['mon', 'tue'], rows: [{ id: 'bf', label: 'Breakfast 7:30', km: '', time: '', off: [], span: false }], cells: { 'bf|mon': ['Member One'] }, published: true },
   chores: null };
 let GOOGLE_ON = '';
-let TEAM_PHOTOS = {};   // the mocked team photo store, by person key   // the mocked portalAuthConfig: Google's client id, or off
+let TEAM_PHOTOS = {};   // the mocked team photo store, by person key
+let STRENGTHS = {};     // the mocked personality results, by person key
+const STRENGTH_PEOPLE = () => [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
+let RESOURCES = [{ id: 'r_leaders', kind: 'guide', title: 'Outreach Leader’s Guide', note: 'Getting here and more.', value: 'outreach' }, { id: 'r_police', kind: 'phone', title: 'Police', note: 'Emergency — Cambodia', value: '117' },
+  { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes we like.', value: '' }, { id: 'r_teams', kind: 'link', title: 'Guide for Short-Term Teams', note: '', value: 'https://example.org/teams.pdf' }];   // the mocked portalAuthConfig: Google's client id, or off
 let CANDS0 = null;  // a fresh copy of the sample records, for blocks that run after others changed them
 const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: TEAM_FORM, reference: REF_FORM };
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
@@ -102,7 +106,20 @@ async function open(viewport, query, seed) {
   await ctx.route('**/.netlify/functions/api', r => {
     const b = JSON.parse(r.request().postData() || '{}'); sent.push(b); let out = { ok: false };
     const [u, pin] = b.args || [];
-    if (b.fn === 'portalTeamPhotos') {
+    if (b.fn === 'portalMeetTeam') {
+      out = { ok: true, campus: 'siemreap', staff: [{ id: 'st_dara', name: 'Dara Pen', role: 'Host', ministry: 'Hospitality', dept: 'Campus Leadership', hasPhoto: true }, { id: 'st_yan', name: 'Yan Yap', role: 'YAP', ministry: 'Cafe', dept: 'Community Service', hasPhoto: false }] };
+    } else if (b.fn === 'portalStaffPhoto') {
+      out = { ok: true, id: b.args[2], photo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==' };
+    } else if (b.fn === 'portalStrengths') {
+      out = { ok: true, people: STRENGTH_PEOPLE(), results: STRENGTHS };
+    } else if (b.fn === 'portalSaveStrength') {
+      STRENGTHS[b.args[2]] = { type: b.args[3].type, scores: b.args[3].scores || null, source: b.args[3].source, at: '2026-10-07T01:00:00Z' };
+      out = { ok: true, people: STRENGTH_PEOPLE(), results: STRENGTHS };
+    } else if (b.fn === 'portalResources') {
+      out = { ok: true, isDefault: true, items: RESOURCES };
+    } else if (b.fn === 'portalSaveResources') {
+      RESOURCES = b.args[2].map((r, i) => ({ ...r, id: r.id || ('r_new' + i) })); out = { ok: true, isDefault: false, items: RESOURCES };
+    } else if (b.fn === 'portalTeamPhotos') {
       const ppl = [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
       out = { ok: true, people: ppl, photos: TEAM_PHOTOS, tally: { count: Object.keys(TEAM_PHOTOS).length, total: ppl.length } };
     } else if (b.fn === 'portalSaveTeamPhoto') {
@@ -707,7 +724,7 @@ async function open(viewport, query, seed) {
   await page.waitForTimeout(600);
   ok('when Google’s script cannot load, it says so and leaves the email way in', /could not load/.test(await page.$eval('#gsiBtn', e => e.textContent)) && !!(await page.$('#loginBtn')));
   await page.click('#toChoose'); await page.waitForTimeout(100); await page.click('[data-apply="dts"]'); await page.waitForTimeout(150);
-  ok('sign-up still asks for a password when you did not come through Google', !!(await page.$('#r_pw')) && /Continue with Google instead/.test(await page.$eval('#main', e => e.textContent)));
+  ok('sign-up offers Continue with Google on top, or a password', !!(await page.$('#r_pw')) && !!(await page.$('#gsiBtn')) && /or make a password/.test(await page.$eval('.orRow', e => e.textContent)));
   /* straight from Google with no account: sign-up opens with the email filled in and no password to make */
   await page.evaluate(() => { P.gtoken = 'g.token'; P.reg.email = 'gus@example.org'; P.reg.name = 'Gus Google'; render(); });
   await page.waitForTimeout(100);
@@ -738,6 +755,66 @@ async function open(viewport, query, seed) {
   await page.waitForSelector('#formSubmit, #formNext', { timeout: 10000 });
   const reg = sent.filter(b => b.fn === 'portalRegister').pop();
   ok('sign-up sends the team name, and opens the application straight away with it filled in', reg && reg.args[0].teamName === 'Example Church' && reg.args[0].name === 'Pat Leader' && /Section 1 of/.test(await page.$eval('#main', e => e.textContent)) && await page.$eval('#a_teamName', i => i.value) === 'Example Church', JSON.stringify(reg && reg.args[0]));
+  await ctx.close();
+}
+
+/* ---------- the portal as a tool: four tabs for an applicant ---------- */
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
+  await page.waitForSelector('#applicantNav');
+  const tabs = await page.$$eval('#applicantNav [data-aview]', bs => bs.map(b => b.getAttribute('data-aview') + (b.classList.contains('on') ? '*' : '')));
+  ok('four tabs on top: Application (open), Meet our team, Team strengths, Resources', tabs.join() === 'status*,team,strengths,resources', tabs.join());
+  /* 👥 */
+  await page.click('[data-aview="team"]'); await page.waitForSelector('.meetGrid', { timeout: 5000 });
+  ok('Meet our team: "YWAM Siem Reap Campus Staff", one list, each with name and role', /YWAM Siem Reap Campus Staff/.test(await page.$eval('#main h2', e => e.textContent)) && (await page.$$eval('.meetCard .meetName', ns => ns.map(n => n.textContent))).join() === 'Dara Pen,Yan Yap' && /Host · Hospitality/.test(await page.$eval('.meetCard', e => e.textContent)));
+  await page.waitForFunction(() => !!document.querySelector('.meetCard img'), null, { timeout: 5000 });
+  ok('… the photos arrive one by one from the GP app; someone without one shows their initials', !!(await page.$('.meetCard img')) && /YY/.test(await page.$eval('.meetCard:nth-child(2) .meetPhoto', e => e.textContent)));
+  /* 🧭 */
+  await page.click('[data-aview="strengths"]'); await page.waitForSelector('[data-ptake]', { timeout: 5000 });
+  ok('Team strengths lists the team — leader and members — each with Take the test or I know my type', (await page.$$('[data-ptake]')).length === 3 && (await page.$$('[data-ppickfor]')).length === 3 && /Team strengths/.test(await page.$eval('#main h2', e => e.textContent)));
+  await page.click('[data-ptake="leader"]'); await page.waitForSelector('[data-pans]');
+  ok('the questionnaire opens for that person: forty statements, eight a page, a seven-dot scale, Next off until the page is answered', /Lee Leader — the questionnaire/.test(await page.$eval('#main', e => e.textContent)) && (await page.$$('.pStmt')).length === 8 && (await page.$$('.pStmt:first-child .pDot')).length === 7 && await page.$eval('#pNext', b => b.disabled));
+  for (let pg = 0; pg < 5; pg++) {
+    const ids = await page.$$eval('.pStmt', ss => ss.map(x => x.id.replace('pq_', '')));
+    for (const id of ids) await page.click('[data-pans="' + id + '|' + (Number(id.slice(1)) % 2 ? 3 : -2) + '"]');
+    if (pg < 4) { await page.click('#pNext'); await page.waitForTimeout(100); }
+  }
+  await page.click('#pFinish'); await page.waitForTimeout(500);
+  const sv = sent.filter(b => b.fn === 'portalSaveStrength').pop();
+  ok('finishing scores it and saves the type with its four scores for the leader', sv && sv.args[2] === 'leader' && /^[EI][SN][TF][JP]$/.test(sv.args[3].type) && sv.args[3].source === 'test' && Object.keys(sv.args[3].scores).sort().join() === 'E,J,S,T', JSON.stringify(sv && sv.args[3]));
+  ok('… and the result opens: the type, its group, strengths and watch-outs', !!(await page.$('.pResult')) && /Strengths/.test(await page.$eval('.pResult', e => e.textContent)) && /Watch out for/.test(await page.$eval('.pResult', e => e.textContent)));
+  await page.click('#pviewClose'); await page.waitForTimeout(100);
+  await page.click('[data-ppickfor="' + (await page.$eval('[data-ppickfor]', b => b.getAttribute('data-ppickfor'))) + '"]'); await page.waitForTimeout(100);
+  ok('I know my type offers the sixteen', (await page.$$('[data-ppick]')).length === 16);
+  await page.click('[data-ppick="ISTJ"]'); await page.waitForTimeout(400);
+  ok('picking one saves it as "picked" and the team view appears: the four groups and the balance', sent.filter(b => b.fn === 'portalSaveStrength').pop().args[3].source === 'picked' && /How your team is put together \(2 of 3\)/.test(await page.$eval('#main', e => e.textContent)) && (await page.$$('.pGroup')).length === 4 && /The balance/i.test(await page.$eval('#main', e => e.textContent)) && /Still to take it:/.test(await page.$eval('#main', e => e.textContent)));
+  /* 📚 */
+  await page.click('[data-aview="resources"]'); await page.waitForSelector('.resRow', { timeout: 5000 });
+  const res = await page.$eval('#main', e => e.textContent);
+  ok('Resources: the guide with Open, the emergency numbers to tap and call, the places list marked coming soon until it has an address, the teams booklet as a link', /Outreach Leader’s Guide/.test(res) && !!(await page.$('#openGuide')) && (await page.$eval('a.resRow[href="tel:117"]', e => e.textContent)).indexOf('Police') > -1 && /Coming soon/.test(res) && !!(await page.$('a.resRow[href="https://example.org/teams.pdf"][target="_blank"]')));
+  await page.click('#openGuide'); await page.waitForTimeout(300);
+  ok('the guide opens from Resources', !!(await page.$('#guideOverlay')));
+  await page.click('#guideClose'); await page.waitForTimeout(100);
+  await page.click('[data-aview="status"]'); await page.waitForSelector('#statusPill');
+  ok('Application brings the dashboard back', !!(await page.$('#timeline')));
+  ok('no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await ctx.close();
+}
+
+/* ---------- the portal admin edits Resources ---------- */
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('#toResources');
+  await page.click('#toResources'); await page.waitForSelector('[data-resf]', { timeout: 5000 });
+  ok('a portal admin has a Resources tab with the list to edit', (await page.$$('.resEdit')).length === 4 && /shipped defaults/.test(await page.$eval('#main', e => e.textContent)));
+  await page.fill('[data-resf="2|value"]', 'maps.app.goo.gl/list1');
+  await page.click('#resAdd'); await page.waitForTimeout(100);
+  const n = (await page.$$('.resEdit')).length - 1;
+  await page.selectOption('[data-resf="' + n + '|kind"]', 'phone'); await page.waitForTimeout(100);
+  await page.fill('[data-resf="' + n + '|title"]', 'Tourist police'); await page.fill('[data-resf="' + n + '|value"]', '+855 12 345 678');
+  await page.click('#resSave'); await page.waitForTimeout(400);
+  const rs = sent.filter(b => b.fn === 'portalSaveResources').pop();
+  ok('Save sends the list — the maps link filled in, a tourist police number added', rs && rs.args[2][2].value === 'maps.app.goo.gl/list1' && rs.args[2][4].kind === 'phone' && rs.args[2][4].title === 'Tourist police' && !/shipped defaults/.test(await page.$eval('#main', e => e.textContent)), JSON.stringify(rs && rs.args[2]));
   await ctx.close();
 }
 
@@ -888,7 +965,7 @@ async function open(viewport, query, seed) {
     noScroll: document.documentElement.scrollWidth <= innerWidth + 1
   }));
   ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
-  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, View as applicant, Link for applicants', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toPreview', 'toLink']), JSON.stringify(bar.nav));
+  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, Resources, View as applicant, Link for applicants', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toResources', 'toPreview', 'toLink']), JSON.stringify(bar.nav));
   ok('and the bar starts with a way back to the GP app home', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent)));
   ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll && await page.$eval('#toGpApp', a => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }));
   await page.click('#toPreview');

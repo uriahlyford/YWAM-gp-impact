@@ -5496,6 +5496,129 @@ async function portalSetPassword(username, pin, newPassword) {
   return out && out.ok ? { ok: true, user: user } : (out || { ok: false });
 }
 
+/* ==================== the portal as a tool (Oct 2026, Uriah) ====================
+   Four tabs for an applicant: their application, Meet our team, Team
+   strengths and Resources. */
+
+/* Meet our team: the campus staff of the applicant's campus — campus staff
+   and YAP as one group, "YWAM <Campus> Campus Staff" — name, role and
+   ministry, with photos fetched one by one (portalStaffPhoto) so the list
+   itself stays light. Nothing else about a staff member leaves here. */
+async function portalMeetTeam(username, pin) {
+  const s = await verifyStaff_(username, pin, true);
+  if (!s) return { ok: false, err: 'auth' };
+  const campus = s.campus || PORTAL_DEFAULT_CAMPUS;
+  const list = (await getStaff_()).filter(function (r) {
+    const st = cleanStaffType_(r.staffType);
+    return r && r.active !== false && !r.archived && !isApplicant_(r) && r.campus === campus && (st === 'campus' || st === 'yap');
+  }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); })
+    .map(function (r) { return { id: r.id, name: r.name, role: r.role || '', ministry: r.ministry || '', dept: deptOf_(r) || '', hasPhoto: !!r.photo }; });
+  return { ok: true, campus: campus, staff: list };
+}
+async function portalStaffPhoto(username, pin, staffId) {
+  const s = await verifyStaff_(username, pin, true);
+  if (!s) return { ok: false, err: 'auth' };
+  const r = (await getStaff_()).find(function (x) { return x.id === str_(staffId, 60); });
+  const st = r && cleanStaffType_(r.staffType);
+  if (!r || r.active === false || r.archived || isApplicant_(r) || r.campus !== (s.campus || PORTAL_DEFAULT_CAMPUS) || !(st === 'campus' || st === 'yap')) return { ok: false, err: 'not_found' };
+  return { ok: true, id: r.id, photo: r.photo || '' };
+}
+
+/* Team strengths: the personality questionnaire from the staff app, taken
+   (or the type typed in) by each person on a team — the leader, co-leaders
+   and members, the same keys as the photos — or by a lone applicant ('me').
+   One blob per application, 'tpers:<candidateId>', so the team can see and
+   compare. The type is checked against the sixteen; scores are 0–100 per
+   axis or absent (a type someone already knew). */
+const P_TYPES = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'];
+function strengthsPeople_(c) {
+  if (c.type === 'team') return teamPhotoPeople_(c);
+  return [{ key: 'me', name: c.name, role: 'me' }];
+}
+async function getStrengths_(c) { return readJSON('tpers:' + c.id, { people: {} }); }
+function strengthsOut_(c, store) {
+  const ppl = strengthsPeople_(c), out = {};
+  ppl.forEach(function (p) { const r = store.people && store.people[p.key]; if (r) out[p.key] = { type: r.type, scores: r.scores || null, source: r.source || 'test', at: r.at || '' }; });
+  return { people: ppl, results: out };
+}
+async function portalStrengths(username, pin, candidateId) {
+  const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
+  return Object.assign({ ok: true }, strengthsOut_(a.cand, await getStrengths_(a.cand)));
+}
+async function portalSaveStrength(username, pin, key, result, candidateId) {
+  const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
+  const cand = a.cand;
+  key = str_(key, 40);
+  if (!key || !strengthsPeople_(cand).some(function (p) { return p.key === key; })) return { ok: false, err: 'bad_person' };
+  result = result && typeof result === 'object' ? result : {};
+  const type = String(result.type || '').toUpperCase();
+  if (P_TYPES.indexOf(type) === -1) return { ok: false, err: 'bad_type' };
+  let scores = null;
+  if (result.scores && typeof result.scores === 'object') {
+    scores = {};
+    ['E', 'S', 'T', 'J'].forEach(function (k) { const n = finiteNum_(result.scores[k], 0, 100); if (n != null) scores[k] = Math.round(n); });
+    if (Object.keys(scores).length !== 4) scores = null;
+  }
+  const store = await getStrengths_(cand);
+  store.people = store.people || {};
+  store.people[key] = { type: type, scores: scores, source: result.source === 'picked' ? 'picked' : 'test', at: new Date().toISOString(), by: a.s.id };
+  await writeJSON('tpers:' + cand.id, store);
+  return Object.assign({ ok: true }, strengthsOut_(cand, store));
+}
+async function portalDeleteStrength(username, pin, key, candidateId) {
+  const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
+  const store = await getStrengths_(a.cand);
+  if (store.people) delete store.people[str_(key, 40)];
+  await writeJSON('tpers:' + a.cand.id, store);
+  return Object.assign({ ok: true }, strengthsOut_(a.cand, store));
+}
+
+/* Resources: what a team or applicant may need in Cambodia — guides,
+   emergency numbers, places. A list a portal admin edits (blob
+   'portalResources'); these are the defaults until someone does. */
+const RESOURCE_KINDS = ['guide', 'link', 'phone', 'note'];
+const RESOURCES_MAX = 60;
+const PORTAL_RESOURCES_DEFAULT = [
+  { id: 'r_leaders', kind: 'guide', title: 'Outreach Leader’s Guide', note: 'Getting here, border crossings, arrival, what things cost, and tips — for teams.', value: 'outreach' },
+  { id: 'r_teams', kind: 'link', title: 'Guide for Short-Term Teams', note: 'The booklet to read with your team before you come.', value: '' },
+  { id: 'r_police', kind: 'phone', title: 'Police', note: 'Emergency — Cambodia', value: '117' },
+  { id: 'r_fire', kind: 'phone', title: 'Fire', note: 'Emergency — Cambodia', value: '118' },
+  { id: 'r_ambulance', kind: 'phone', title: 'Ambulance', note: 'Emergency — Cambodia', value: '119' },
+  { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes, shops and restaurants we like — a Google Maps list.', value: '' }
+];
+function cleanResources_(list) {
+  const out = [], seen = {};
+  (Array.isArray(list) ? list : []).slice(0, RESOURCES_MAX).forEach(function (r) {
+    if (!r || typeof r !== 'object') return;
+    const kind = RESOURCE_KINDS.indexOf(r.kind) > -1 ? r.kind : 'link';
+    const title = str_(r.title, 120); if (!title) return;
+    let value = str_(r.value, 500) || '';
+    if (kind === 'link' && value && !/^https?:\/\//i.test(value)) value = 'https://' + value;
+    if (kind === 'phone') value = value.replace(/[^\d+ ]/g, '').trim();
+    let id = typeof r.id === 'string' && /^r_[a-z0-9]{1,30}$/.test(r.id) && !seen[r.id] ? r.id : ('r_' + Math.random().toString(36).slice(2, 10));
+    seen[id] = 1;
+    out.push({ id: id, kind: kind, title: title, note: str_(r.note, 300) || '', value: value });
+  });
+  return out;
+}
+async function getResources_() {
+  const saved = await readJSON('portalResources', null);
+  return saved && Array.isArray(saved.items) ? { items: cleanResources_(saved.items), isDefault: false, updated: saved.updated || '' } : { items: PORTAL_RESOURCES_DEFAULT.slice(), isDefault: true, updated: '' };
+}
+async function portalResources(username, pin) {
+  const s = await verifyStaff_(username, pin, true);
+  if (!s) return { ok: false, err: 'auth' };
+  return Object.assign({ ok: true }, await getResources_());
+}
+async function portalSaveResources(username, pin, items) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  const saved = { items: cleanResources_(items), updated: new Date().toISOString(), by: me.id };
+  await writeJSON('portalResources', saved);
+  return Object.assign({ ok: true }, await getResources_());
+}
+
 /* Validate and create an applicant account + its candidate record. `by` is
    who made it: the applicant themself (sign-up) or a portal admin (Accounts →
    Add). Answers {ok:false, err} or {ok:true, rec, cand}. */
@@ -6483,6 +6606,13 @@ const HANDLERS = {
   getDuty: function (a) { return getDuty(a[0], a[1], a[2], a[3]); },
   saveDuty: function (a) { return saveDuty(a[0], a[1], a[2], a[3], a[4], a[5]); },
   getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },
+  portalMeetTeam: function (a) { return portalMeetTeam(a[0], a[1]); },
+  portalStaffPhoto: function (a) { return portalStaffPhoto(a[0], a[1], a[2]); },
+  portalStrengths: function (a) { return portalStrengths(a[0], a[1], a[2]); },
+  portalSaveStrength: function (a) { return portalSaveStrength(a[0], a[1], a[2], a[3], a[4]); },
+  portalDeleteStrength: function (a) { return portalDeleteStrength(a[0], a[1], a[2], a[3]); },
+  portalResources: function (a) { return portalResources(a[0], a[1]); },
+  portalSaveResources: function (a) { return portalSaveResources(a[0], a[1], a[2]); },
   portalTeamPhotos: function (a) { return portalTeamPhotos(a[0], a[1], a[2]); },
   portalSaveTeamPhoto: function (a) { return portalSaveTeamPhoto(a[0], a[1], a[2], a[3], a[4]); },
   portalDeleteTeamPhoto: function (a) { return portalDeleteTeamPhoto(a[0], a[1], a[2], a[3]); },
