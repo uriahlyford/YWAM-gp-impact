@@ -455,16 +455,16 @@ var SUBITEM_LABEL = { documents:'Documents', reference:'Leader reference' };
 /* A team's own journey (teamSteps_ in api.js): what each step is called, a
    line on what it means while it is still ahead, and who does it. */
 var TEAM_STEP_LABEL = { account:'Create your account', form:'Send your application', call1:'1st call — getting to know each other',
-  passports:'Passport copies for the whole team', photo:'A team photo with everyone’s names', flights:'Flight itineraries',
+  passports:'Passport copies for the whole team', photo:'Your team’s names and photos', flights:'Flight itineraries',
   invitation:'Letter of invitation & supporting documents', evisa:'E-visas approved', call2:'2nd call — cultural orientation with your team',
   practical:'Getting ready to travel', arrived:'Arrival at the base' };
 var TEAM_STEP_NOTE = {
   form:'Your answers save as a draft — come back any time.',
   call1:'A video call to get to know each other and go over the logistics. We message you to find a time.',
   passports:'A copy of the photo page of every team member’s passport. Upload them under Documents.',
-  photo:'Write each person’s name on it, or send a list of names with it.',
+  photo:'Under Your team members, add everyone coming and take a photo of each. We use the names for the cooking and morning chores schedules while you are here.',
   flights:'Important — we need them to start your visa process, and we arrange your airport pick-up from them.',
-  invitation:'We send these once your passports, team photo and flights are in. They appear under Documents for you to download.',
+  invitation:'We send these once your passports, your team’s names and photos, and flights are in. They appear under Documents for you to download.',
   evisa:'Apply at evisa.gov.kh with the letter of invitation. Once the e-visas are approved, upload them under Documents.',
   call2:'A call with your whole team to prepare for Cambodian culture and serving here.',
   practical:'Pack, pray and get ready. Message us with any last questions.'
@@ -1748,7 +1748,7 @@ function membersCardHtml_(app){
   var h='<div class="card" id="teamMembers"><h3 style="margin-top:0">👥 '+esc(t('Your team members'))+'</h3>'+
     '<p class="sub" style="margin:0 0 8px">'+esc(t('Everyone coming, so we can put them on the cooking and chores schedules while you are here. Keep it up to date as your team changes.'))+'</p>';
   if(!P.members){
-    h+='<p class="hint" style="margin:0 0 8px">📷 '+esc(t('Take a photo of each person here — that replaces the team photo with names.'))+'</p>';
+    h+='<p class="hint" style="margin:0 0 8px">📷 '+esc(t('Add everyone coming and take a photo of each. These names go on the cooking and morning chores schedules while you are here, and the photos are your team photo.'))+'</p>';
     h+=rosterHtml_(P.tphotos, true, '');
     return h+'<button class="btn small" id="editMembers" style="margin-top:8px">'+esc(list.length?t('Edit the list'):t('Add your team members'))+'</button></div>';
   }
@@ -1785,6 +1785,7 @@ function bindMembersAndSchedules_(){
   }
   bindRoster_(function(d){ P.tphotos=d; if(d.application) P.boot.application=d.application; });
   on_('cancelMembers', function(){ P.members=null; render(); });
+  document.querySelectorAll('[data-gomembers]').forEach(function(b){ b.onclick=function(){ var el=document.getElementById('teamMembers'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
   document.querySelectorAll('[data-mname]').forEach(function(inp){ inp.oninput=function(){ P.members[Number(inp.getAttribute('data-mname'))].name=inp.value; }; });
   document.querySelectorAll('[data-msex]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-msex').split('|'), m=P.members[Number(p[0])]; m.sex = m.sex===p[1] ? '' : p[1]; render(); }; });
   document.querySelectorAll('[data-mdel]').forEach(function(b){ b.onclick=function(){ P.members.splice(Number(b.getAttribute('data-mdel')),1); render(); }; });
@@ -1861,9 +1862,9 @@ function visaCardHtml_(app){
    (teams for now). The applicant uploads once their application is in;
    staff see the same list on the record, open files and can add one a team
    emailed them. Pictures are shrunk on the phone before they go up. */
-var DOC_LABEL = { passports:'Passport copies — one for each team member', photo:'A team photo with each member’s name', flights:'Flight itineraries',
+var DOC_LABEL = { passports:'Passport copies — one for each team member', photo:'Your team’s names and photos', flights:'Flight itineraries',
   evisa:'E-visas — one for each team member', invitation:'Letter of invitation & supporting documents — from us' };
-var DOC_HINT = { passports:'A clear photo or scan of the photo page of each passport. We need these as soon as possible for your letter of invitation.', photo:'Write the names on the photo, or send a list of names with it.',
+var DOC_HINT = { passports:'A clear photo or scan of the photo page of each passport. We need these as soon as possible for your letter of invitation.', photo:'Add everyone under Your team members and take a photo of each — that is this document. We use the names for the cooking and morning chores schedules while you are here. A team photo with the names written on it works too.',
   evisa:'Apply at evisa.gov.kh with your letter of invitation, then upload each approved e-visa here.', invitation:'We add these here once your passports, team photo and flights are in. Open them to download.',
   flights:'Important — we need them to start your visa process. Not booked yet? Upload them once you have them.' };
 function docsBodyHtml_(kinds, docs, mode, candId){
@@ -1877,7 +1878,7 @@ function docsBodyHtml_(kinds, docs, mode, candId){
       : mode==='form' ? '' : fromUs ? '<span class="pill" style="font-size:11px">'+esc(mode==='staff' ? t('You send this') : t('Coming from us'))+'</span>'
       : k.required ? '<span class="pill pending" style="font-size:11px">'+esc(t('Needed'))+'</span>' : '<span class="pill" style="font-size:11px">'+esc(t('When you have them'))+'</span>';
     return '<div class="docKind" data-dockind="'+esc(k.id)+'"><div class="panelHead"><b>'+esc(t(DOC_LABEL[k.id]||k.id))+'</b>'+chip+'</div>'+
-      (DOC_HINT[k.id] && mode==='me' ? '<p class="hint" style="margin:4px 0 6px">'+esc(t(DOC_HINT[k.id]))+'</p>' : '')+
+      (DOC_HINT[k.id] && mode==='me' ? '<p class="hint" style="margin:4px 0 6px">'+esc(t(DOC_HINT[k.id]))+(k.id==='photo' ? ' <button type="button" class="linkbtn inline" data-gomembers="1">'+esc(t('Go to your team members'))+' →</button>' : '')+'</p>' : '')+
       (mine.length ? '<ul class="docList">'+mine.map(function(d){ return '<li><span class="docName">📄 '+esc(d.name)+'</span><span class="docWhen">'+esc(fmtDate_(d.added))+'</span>'+
         '<button type="button" class="linkbtn inline" data-docopen="'+esc(d.id)+'">'+esc(t('Open'))+'</button>'+(readOnly ? '' : ' <button type="button" class="linkbtn inline danger" data-docdel="'+esc(d.id)+'">'+esc(t('Remove'))+'</button>')+'</li>'; }).join('')+'</ul>' : '')+
       (readOnly ? '' : '<label class="btn ghost small docUp">⬆ '+esc(mine.length ? t('Add more') : t('Upload'))+'<input type="file" multiple accept="application/pdf,image/*" data-docup="'+esc(k.id)+'"'+(candId?' data-doccand="'+esc(candId)+'"':'')+' hidden></label>')+'</div>';
