@@ -1716,7 +1716,8 @@ function teamSheet_(c, tp){
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H; var ctx=cv.getContext('2d');
   ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#fff'; ctx.font='bold 46px Inter, system-ui, sans-serif'; ctx.textBaseline='top';
-  ctx.fillText(String(c.name||''), pad, pad);
+  var teamTitle=(typeof candName_==='function' ? candName_(c) : '') || c.name || '';
+  ctx.fillText(String(teamTitle), pad, pad);
   ctx.fillStyle='#a3a3a3'; ctx.font='26px Inter, system-ui, sans-serif';
   var tt=c.teamTrip||{}, when = tt.from && tt.to ? fmtDate_(tt.from)+' – '+fmtDate_(tt.to) : '';
   var sub=[ppl.length===1 ? t('1 person') : gpT('{n} people',{n:ppl.length}), when].filter(Boolean).join(' · ');
@@ -2334,7 +2335,7 @@ function bindPanelExtras_(){
   on_('teamSheetBtn', function(){
     var tp=P.tphotosStaff; if(!tp) return;
     var b=document.getElementById('teamSheetBtn'); b.disabled=true;
-    teamSheet_(c, tp).then(function(blob){ b.disabled=false; return dutyShare(blob, String(c.name||'team').replace(/[^\w\-]+/g,'_')+'-team.png', c.name||''); })
+    teamSheet_(c, tp).then(function(blob){ b.disabled=false; var nm=(typeof candName_==='function' ? candName_(c) : '') || c.name || 'team'; return dutyShare(blob, String(nm).replace(/[^\w\-]+/g,'_')+'-team.png', nm); })
       .then(function(how){ if(how==='downloaded') showMsg(t('Saved as a picture')); }, function(){ b.disabled=false; showMsg(t('Could not make the picture')); });
   });
   document.querySelectorAll('[data-teamstep]').forEach(function(cb){ cb.onchange=function(){ P.busy=true; cb.disabled=true;
