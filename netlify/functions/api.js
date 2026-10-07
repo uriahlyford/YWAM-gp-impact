@@ -5397,15 +5397,22 @@ async function portalSetPassword(username, pin, newPassword) {
   const pw = String(newPassword || '');
   if (pw.length < 8 || pw.length > 200) return { ok: false, err: 'bad_password' };
   const salt = pinSalt_() + pinSalt_();
+  let user = s.username;
   const out = await mutateStaff_(function (all) {
     const idx = all.findIndex(function (r) { return r.id === s.id; });
     if (idx === -1) return { abort: true, ok: false };
-    all[idx].secretSalt = salt; all[idx].secretHash = hashSecret_(pw, salt);
-    delete all[idx].pinHash; delete all[idx].pinSalt;
-    all[idx].updated = new Date().toISOString();
+    const rec = all[idx];
+    /* An older username + PIN account switching over: from now on the email
+       is the username, like every other email account — unless another
+       account already holds that email as its username. */
+    if (authKindOf_(rec) === 'pin' && rec.email && !all.some(function (r) { return r.id !== rec.id && r.username === rec.email; })) rec.username = rec.email;
+    rec.secretSalt = salt; rec.secretHash = hashSecret_(pw, salt);
+    delete rec.pinHash; delete rec.pinSalt;
+    rec.updated = new Date().toISOString();
+    user = rec.username;
     return { ok: true };
   });
-  return out && out.ok ? { ok: true } : (out || { ok: false });
+  return out && out.ok ? { ok: true, user: user } : (out || { ok: false });
 }
 
 /* Validate and create an applicant account + its candidate record. `by` is

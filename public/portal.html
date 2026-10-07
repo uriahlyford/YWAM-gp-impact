@@ -619,6 +619,8 @@ function refCardHtml_(app){
   }
   return h+'</div>';
 }
+function gpTapSafe_(){ try { if(typeof gpTap==='function') gpTap(); } catch(e){} }
+function scrollToRef_(){ var el=document.getElementById('refCard'); if(el) try { el.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){ el.scrollIntoView(); } }
 function makeRefLink_(candidateId, after){
   P.busy=true; render();
   run('portalReferenceLink', candidateId ? [P.auth.user, P.auth.pin, candidateId] : [P.auth.user, P.auth.pin], function(d){
@@ -764,6 +766,9 @@ function meHtml_(){
   var appName = MESSENGER_LABEL[me.messenger] || t('WhatsApp or Telegram');
   var h='<div class="two"><div>';
   h+=installCardHtml_();
+  var refOpen = app.refNeeded && ((app.reference||{}).status||'none')!=='received' && app.status!=='closed';
+  if(P.refNext && refOpen) h+='<div class="banner" id="refNext"><b>✅ '+esc(t('Your application is in.'))+'</b><br>'+esc(t('Next: send the reference link to your pastor or leader — it is ready below.'))+
+    '<div style="margin-top:8px"><button class="btn small" id="refGo">'+esc(t('Send the link to my leader'))+'</button></div></div>';
   h+='<div class="card hero"><div class="eyebrow">'+esc(t('Your application'))+'</div>'+
     '<h1 style="font-size:26px">'+esc(me.name)+'</h1><p class="sub" style="margin:2px 0 12px">'+esc(t('Applying for'))+': <b style="color:var(--ink)">'+esc(applyLabel_(app.type, app.school))+'</b>'+(app.campus?' · '+esc(campusName_(app.campus)):'')+'</p>'+
     '<span class="pill big '+esc(app.status)+'" id="statusPill">'+esc(t(STATUS_LABEL[app.status]||app.status))+'</span>'+
@@ -776,7 +781,8 @@ function meHtml_(){
     return '<li class="step '+st.state+'" data-step="'+st.id+'"><span class="dot">'+(st.state==='done'?'✓':(i+1))+'</span><div>'+grp+
       '<div class="stepName">'+esc(t(LBL[stepKey_(st, isTeam, app)]||st.id))+(isTeam && st.state!=='done' && st.who ? ' <span class="whoTag '+esc(st.who)+'">'+esc(st.who==='you' ? t('You') : t('Us'))+'</span>' : '')+'</div>'+
       (NOTE[st.id] && st.state!=='done' ? '<div class="stepNote">'+esc(t(NOTE[st.id]))+'</div>' : '')+
-      (st.items ? '<ul class="subItems">'+st.items.map(function(it){ return '<li class="'+(it.done?'done':'')+'">'+(it.done?'✓':'○')+' '+esc(t(SUBITEM_LABEL[it.id]||it.id))+(it.done?'':' · <i>'+esc(t('pending'))+'</i>')+'</li>'; }).join('')+'</ul>' : '')+
+      (st.items ? '<ul class="subItems">'+st.items.map(function(it){ return '<li class="'+(it.done?'done':'')+'">'+(it.done?'✓':'○')+' '+esc(t(SUBITEM_LABEL[it.id]||it.id))+(it.done?'':' · <i>'+esc(t('pending'))+'</i>')+
+        (it.id==='reference' && !it.done && app.submittedAt && app.status!=='closed' ? ' <button class="linkbtn inline" data-refgo="1">'+esc(t('Send the link to my leader'))+' →</button>' : '')+'</li>'; }).join('')+'</ul>' : '')+
       '</div></li>';
   }).join('')+'</ol></div>';
   h+='</div><div>';
@@ -811,7 +817,9 @@ function meHtml_(){
       '<div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(me.email||'—')+'</span></div>'+
       '<div class="kv"><b>'+esc(t('Country'))+'</b><span>'+esc(me.country||'—')+'</span></div>'+
       '<div class="kv"><b>'+esc(t('Sign-in'))+'</b><span>'+esc(me.authKind==='google' ? 'Google' : me.authKind==='password' ? t('Email and password') : t('Username and PIN'))+
-        (me.authKind==='password' && !P.changePw ? ' · <button class="linkbtn inline" id="changePw">'+esc(t('Change password'))+'</button>' : '')+'</span></div>';
+        (me.authKind==='password' && !P.changePw ? ' · <button class="linkbtn inline" id="changePw">'+esc(t('Change password'))+'</button>' : '')+
+        (me.authKind==='pin' && !P.changePw ? ' · <button class="linkbtn inline" id="changePw">'+esc(t('Switch to email and password'))+'</button>' : '')+'</span></div>';
+    if(me.authKind==='pin' && P.changePw) h+='<p class="hint" style="margin:8px 0 0">'+esc(gpT('From then on you sign in with {email} and this password instead of your username and PIN.',{email:me.email||''}))+'</p>';
     if(P.changePw) h+='<div class="pwBox"><label class="f">'+esc(t('New password'))+'</label><input type="password" id="cp_new" autocomplete="new-password">'+
       '<label class="f">'+esc(t('Repeat the password'))+'</label><input type="password" id="cp_new2" autocomplete="new-password">'+
       '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><button class="btn small" id="savePw"'+(P.busy?' disabled':'')+'>'+esc(t('Save'))+'</button><button class="linkbtn inline" id="cancelPw">'+esc(t('Cancel'))+'</button></div></div>';
@@ -1018,7 +1026,13 @@ function bindForm_(){
     var updating=!!app.submittedAt;
     run(updating ? 'portalUpdateAnswers' : 'portalSubmit', [P.auth.user, P.auth.pin, P.answers], function(d){
       P.busy=false;
-      if(d && d.ok){ P.boot=d; P.answers=d.application.answers||{}; P.editMine=false; P.view='me'; P.formSec=0; showMsg(updating ? t('Your changes are saved.') : t('Your application is in. We will be in touch!')); render(); return; }
+      if(d && d.ok){
+        P.boot=d; P.answers=d.application.answers||{}; P.editMine=false; P.view='me'; P.formSec=0; showMsg(updating ? t('Your changes are saved.') : t('Your application is in. We will be in touch!'));
+        /* The application is in — the next thing is the leader reference, so the
+           link is made now and the dashboard opens on "send it to your leader". */
+        var ra=d.application, rs=(ra.reference||{}).status||'none';
+        if(!updating && ra.refNeeded && rs!=='received' && rs!=='pending'){ P.refNext=true; makeRefLink_(null, function(link, rd){ P.refLink=link; if(P.boot.application) P.boot.application.reference=rd.reference; render(); scrollToRef_(); }); return; }
+        render(); return; }
       if(d && d.err==='missing' && d.missing){
         P.formMissing=d.missing;
         for(var i=0;i<secs.length;i++){ if(askedIn_(secs[i], app.audience).some(function(q){ return d.missing.indexOf(q.id)>-1; })){ P.formSec=i; break; } }
@@ -1942,6 +1956,9 @@ function bind_(){
   on_('openFormTop', openForm_);
   on_('viewAnswers', function(){ P.showAnswers=!P.showAnswers; render(); });
   on_('refNew', function(){ makeRefLink_(null, function(link, d){ P.refLink=link; if(P.boot.application) P.boot.application.reference=d.reference; render(); }); });
+  var goRef=function(){ gpTapSafe_(); P.refNext=false; if(!P.refLink){ var r=(P.boot.application && P.boot.application.reference)||{}; if(r.status!=='received'){ makeRefLink_(null, function(link, d){ P.refLink=link; if(P.boot.application) P.boot.application.reference=d.reference; render(); scrollToRef_(); }); return; } } render(); scrollToRef_(); };
+  on_('refGo', goRef);
+  document.querySelectorAll('[data-refgo]').forEach(function(b){ b.onclick=goRef; });
   on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('toForms', function(){ if(P.view==='forms') return; P.view='forms'; render(); });
@@ -2116,7 +2133,12 @@ function savePassword_(){
   P.busy=true; render();
   run('portalSetPassword', [P.auth.user, P.auth.pin, a], function(d){
     P.busy=false;
-    if(d && d.ok){ P.auth.pin=a; lsSet('gp-portal', JSON.stringify(P.auth)); P.changePw=false; showMsg(t('Password changed')); }
+    if(d && d.ok){
+      var switched = P.boot && P.boot.me && P.boot.me.authKind==='pin';
+      P.auth.pin=a; if(d.user) P.auth.user=d.user; lsSet('gp-portal', JSON.stringify(P.auth)); P.changePw=false;
+      if(P.boot && P.boot.me){ P.boot.me.authKind='password'; if(d.user) P.boot.me.username=d.user; }
+      showMsg(switched ? t('Done — you now sign in with your email and password.') : t('Password changed'));
+    }
     else showMsg(t('Could not change the password — try again.'));
     render();
   });

@@ -80,6 +80,17 @@ console.log('=== signing in with Google or an email and password (Oct 2026) ==='
   ok('… and the new one signs in', r.body && r.body.ok);
   r = await call('portalBoot', ['eve@example.org', 'correct horse']);
   ok('… the old one no longer does', r.body && r.body.ok === false);
+  /* an older username + PIN applicant switches over */
+  r = await call('portalRegister', [{ username: 'old.pin', pin: '2468', name: 'Old Pin', email: 'old@example.org', phone: '+46 70 000 0001', messenger: 'whatsapp', type: 'student', school: 'dts', country: 'Sweden', campus: 'siemreap' }]);
+  ok('a username + PIN account can still be made (portal admins do), and signs in with the PIN', r.body && r.body.ok && r.body.me.authKind === 'pin' && (await call('portalBoot', ['old.pin', '2468'])).body.ok);
+  r = await call('portalSetPassword', ['old.pin', '2468', 'my new password']);
+  ok('setting a password switches it over: the email becomes the username', r.body && r.body.ok && r.body.user === 'old@example.org', JSON.stringify(r.body));
+  r = await call('portalBoot', ['old@example.org', 'my new password']);
+  ok('… and they sign in with the email and password', r.body && r.body.ok && r.body.me.authKind === 'password' && r.body.me.username === 'old@example.org');
+  r = await call('portalBoot', ['old.pin', '2468']);
+  ok('… the username and PIN no longer work', r.body && r.body.ok === false);
+  const oldRec = mem.staff.find(x => x.username === 'old@example.org');
+  mem.staff = mem.staff.filter(x => x.id !== oldRec.id); mem.candidates = (mem.candidates || []).filter(c => c.staffId !== oldRec.id);
   r = await call('portalSetPassword', ['andrew-not-here', '1234', 'whatever 1234']);
   ok('a stranger cannot set a password', r.body && r.body.ok === false);
   r = await call('portalSetPassword', ['uriah', '1234', 'whatever 1234']);
