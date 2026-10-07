@@ -109,6 +109,45 @@ textarea { min-height:80px; resize:vertical; }
 .chip.on { background:var(--ink); border-color:var(--ink); color:var(--accentInk); font-weight:600; }
 .chip:disabled { opacity:.5; cursor:default; }
 .memberList { margin:0 0 8px; padding-left:22px; line-height:1.6; }
+/* the applicant's tabs, meet our team, strengths, resources */
+.anav .staffNavBtn { flex:1 1 0; min-width:0; font-size:12.5px; padding:9px 6px; }
+.meetGrid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+@media (min-width:600px) { .meetGrid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+@media (min-width:900px) { .meetGrid { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+.meetCard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:12px; text-align:center; }
+.meetPhoto { width:96px; height:96px; border-radius:50%; margin:0 auto 10px; overflow:hidden; background:var(--surface2); display:flex; align-items:center; justify-content:center; }
+.meetPhoto img { width:100%; height:100%; object-fit:cover; }
+.meetInitials { font-size:28px; font-weight:700; color:var(--muted); }
+.meetName { font-weight:600; font-size:14.5px; }
+.meetRole { font-size:12px; color:var(--muted); margin-top:2px; line-height:1.35; }
+.pAv svg { display:block; } .pAv { flex:0 0 auto; }
+.pResultHead { display:flex; gap:12px; align-items:center; margin-bottom:8px; }
+.pAxes { display:flex; flex-direction:column; gap:8px; margin:10px 0; }
+.pAxis { display:grid; grid-template-columns:1fr 2fr 1fr; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+.pAxA { text-align:right; } .pAxB { text-align:left; }
+.pAxBar { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; } .pAxBar div { height:100%; background:var(--ink); }
+.pAxBar.split { background:var(--border2); } .pAxBar.split div { background:#fff; }
+.pCols { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:8px 0; } .pCols ul, .pResult ul { margin:4px 0 8px; padding-left:18px; font-size:13.5px; line-height:1.5; }
+@media (max-width:520px) { .pCols { grid-template-columns:1fr; } }
+.pGroups { display:grid; grid-template-columns:1fr 1fr; gap:10px; } @media (max-width:520px) { .pGroups { grid-template-columns:1fr; } }
+.pGroup { border:1px solid var(--border2); border-left-width:4px; border-radius:var(--rSm); padding:10px 12px; }
+.pGroupHead { display:flex; justify-content:space-between; align-items:center; } .pGroupN { font-weight:700; font-size:18px; }
+.pGroupPeople { display:flex; flex-wrap:wrap; gap:6px; } .pChip { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border2); border-radius:999px; padding:3px 9px 3px 4px; font-size:12.5px; }
+.pChip svg { display:block; border-radius:50%; }
+.pPick { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-bottom:10px; } @media (min-width:600px) { .pPick { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+.pPickBtn { display:flex; flex-direction:column; align-items:center; gap:2px; border:1px solid var(--border2); background:transparent; color:var(--ink); border-radius:var(--rSm); padding:10px 6px; cursor:pointer; font:inherit; } .pPickBtn span { font-size:11px; color:var(--muted); } .pPickBtn:hover { border-color:var(--ink); }
+.pStmt { padding:16px 4px 18px; border-bottom:1px solid var(--border); } .pStmt:last-child { border-bottom:0; } .pStmt.done { opacity:.6; }
+.pStmt .pText { font-size:15.5px; font-weight:600; text-align:center; line-height:1.4; margin-bottom:12px; }
+.pScale { display:flex; align-items:center; justify-content:space-between; max-width:300px; margin:0 auto; }
+.pScaleEnds { display:flex; justify-content:space-between; max-width:300px; margin:8px auto 0; font-size:11.5px; color:var(--muted); }
+.pDot { border-radius:50%; background:transparent; cursor:pointer; padding:0; flex:0 0 auto; border:2px solid var(--border2); }
+.pDot.s3 { width:38px; height:38px; } .pDot.s2 { width:32px; height:32px; } .pDot.s1 { width:26px; height:26px; } .pDot.s0 { width:22px; height:22px; }
+.pDot.ag { border-color:#4ADE80; } .pDot.dis { border-color:#60A5FA; } .pDot.on.ag { background:#4ADE80; } .pDot.on.dis { background:#60A5FA; } .pDot.on.mid { background:var(--muted); }
+.resRow { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); color:var(--ink); text-decoration:none; }
+.resRow:last-child { border-bottom:0; } .resRow.dim { opacity:.6; }
+.resIcon { font-size:22px; flex:0 0 auto; } .resBody { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; font-size:14.5px; } .resBody .hint { margin:0; }
+.resPhone { font-weight:700; font-size:18px; letter-spacing:1px; } .resGo { color:var(--muted); } .resNote { font-size:13.5px; white-space:pre-line; }
+.resEdit { padding:10px 0 12px; border-bottom:1px solid var(--border); }
 .memberRow { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
 .memberRow input { flex:1; min-width:0; margin:0; }
 .memberSeg { flex:0 0 auto; margin:0; }
@@ -332,6 +371,7 @@ body.guideOn { overflow:hidden; }
 <script src="taxonomy.js"></script>
 <script src="duty.js"></script>
 <script src="outreach-guide.js"></script>
+<script src="personality.js"></script>
 <script>
 /* ==================== YWAM GP Portal ====================
    Two sides of one page. An applicant signs up (or arrives from the public
@@ -443,7 +483,7 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
-var P = { authCfg:null, pinLogin:false, gtoken:'', changePw:false, pw:{}, installEvt:null, a2hsOff:!!lsGet('gp-portal-a2hs'), auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, cal:null, pv:{ mode:'sample', key:'dts', aud:'international', stage:'new', candId:null, q:'', screen:'me', sec:0, boot:null, busy:false }, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
+var P = { aview:'status', meet:null, staffPhotos:{}, strengths:null, ptest:null, pview:null, ppickFor:null, resources:null, resDraft:null, authCfg:null, pinLogin:false, gtoken:'', changePw:false, pw:{}, installEvt:null, a2hsOff:!!lsGet('gp-portal-a2hs'), auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, cal:null, pv:{ mode:'sample', key:'dts', aud:'international', stage:'new', candId:null, q:'', screen:'me', sec:0, boot:null, busy:false }, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
   if(qs.lang==='km' || qs.lang==='en'){ LANG=qs.lang; lsSet('gp-lang', LANG); }
@@ -497,7 +537,7 @@ function boot_(){
     P.view='login'; P.err='boot'; render();
   }, function(e){ P.view='login'; P.err='boot'; render(); showMsg(t('Connection problem — try again.')); });
 }
-function signOut_(){ lsDel('gp-portal'); P.auth=null; P.boot=null; P.sel=null; P.view='login'; render(); }
+function signOut_(){ lsDel('gp-portal'); P.auth=null; P.boot=null; P.sel=null; P.view='login'; P.aview='status'; P.meet=null; P.staffPhotos={}; P.strengths=null; P.ptest=null; P.resources=null; P.resDraft=null; render(); }
 
 /* ---- the logo ----
    PORTAL_LOGO is the YWAM mark for the top of the page — drop the file into
@@ -520,10 +560,11 @@ function render(){
   var v=P.view;
   /* The gate — everything before you are signed in — is the portal's name
      and logo on top and one card underneath; signed in, the bar goes slim. */
-  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts' && v!=='preview');
-  var staffView = P.auth && P.boot && P.boot.role!=='applicant' && (v==='crm'||v==='forms'||v==='accounts'||v==='preview');
-  try { m.innerHTML = (staffView ? staffNavHtml_(v) : '') + (v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
-    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='accounts' ? accountsHtml_() : v==='preview' ? previewHtml_()
+  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts' && v!=='preview' && v!=='resources');
+  var staffView = P.auth && P.boot && P.boot.role!=='applicant' && (v==='crm'||v==='forms'||v==='accounts'||v==='preview'||v==='resources');
+  var applicantTabs = P.auth && P.boot && P.boot.role==='applicant' && v==='me';
+  try { m.innerHTML = (staffView ? staffNavHtml_(v) : applicantTabs ? applicantNavHtml_() : '') + (v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
+    : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meTabHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='resources' ? resourcesAdminHtml_() : v==='accounts' ? accountsHtml_() : v==='preview' ? previewHtml_()
     : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_())
     + (P.guideOpen && P.boot && typeof outreachGuideHtml==='function' ? guideOverlayHtml_() : '');
   document.body.classList.toggle('guideOn', !!(P.guideOpen && P.boot));
@@ -544,7 +585,7 @@ function render(){
 function staffNavHtml_(v){
   var admin=P.boot.role==='portal-admin';
   var items=[['crm','navCrm','📋 '+t('Applications')]];
-  if(admin){ items.push(['forms','toForms','📝 '+t('Forms')]); items.push(['accounts','toAccounts','👤 '+t('Accounts')]); }
+  if(admin){ items.push(['forms','toForms','📝 '+t('Forms')]); items.push(['accounts','toAccounts','👤 '+t('Accounts')]); items.push(['resources','toResources','📚 '+t('Resources')]); }
   items.push(['preview','toPreview','👁 '+t('View as applicant')]);
   /* Staff come here from the GP app; this takes them back to its home. */
   return '<nav class="staffNav" id="staffNav"><a class="staffNavBtn home" id="toGpApp" href="teams.html">🏠 '+esc(t('GP app home'))+'</a>'+
@@ -764,9 +805,11 @@ function registerHtml_(){
   h+='<div class="card">'+
     (P.gtoken
       ? '<div class="eyebrow" style="margin-top:0">'+esc(t('Signing up with Google'))+'</div><p class="sub" style="margin:4px 0 0">'+esc(gpT('You will sign in with Google as {email} — no password to remember.',{email:r.email||''}))+'</p>'
-      : '<label class="f" style="margin-top:0">'+esc(t('Choose a password'))+'</label><input type="password" id="r_pw" autocomplete="new-password" minlength="8">'+
+      : (P.authCfg && P.authCfg.google ? '<div class="gsiWrap" id="gsiBtn"><button class="btn ghost gsiFallback" id="gsiFallback" style="margin-top:0" disabled>'+esc(t('Loading Google sign-in…'))+'</button></div>'+
+          '<p class="hint" style="text-align:center;margin:4px 0 0">'+esc(t('Sign up with Google and there is no password to remember.'))+'</p><div class="orRow"><span>'+esc(t('or make a password'))+'</span></div>' : '')+
+        '<label class="f"'+(P.authCfg && P.authCfg.google ? '' : ' style="margin-top:0"')+'>'+esc(t('Choose a password'))+'</label><input type="password" id="r_pw" autocomplete="new-password" minlength="8">'+
         '<label class="f">'+esc(t('Repeat the password'))+'</label><input type="password" id="r_pw2" autocomplete="new-password">'+
-        '<p class="hint">'+esc(t('At least 8 characters. You will sign in with your email and this password.'))+(P.authCfg && P.authCfg.google ? ' '+esc(t('Or go back and tap Continue with Google instead.')) : '')+'</p>')+
+        '<p class="hint">'+esc(t('At least 8 characters. You will sign in with your email and this password.'))+'</p>')+
     '<button class="btn" id="regBtn"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Creating…'):t('Create my account'))+'</button>'+
     '<button class="linkbtn" id="toLogin">'+esc(t('I already have an account'))+'</button></div>'+langRowHtml_()+'</div>';
   return h;
@@ -776,6 +819,223 @@ function stepKey_(st, isTeam, app){ return !isTeam && st.id==='received' && app.
 function statusNote_(app){ return (app.type===TEAM_TYPE && TEAM_STATUS_NOTE[app.status]) || STATUS_NOTE[app.status] || ''; }
 var TEAM_TYPE='team';
 /* ---- the applicant's dashboard ---- */
+/* ==================== the portal as a tool (Oct 2026, Uriah) ====================
+   An applicant's portal is more than the application: four tabs on top.
+   📋 Application — where they are (the dashboard as it was).
+   👥 Meet our team — the campus staff, faces and roles, from the GP app.
+   🧭 Team strengths — the staff app's personality questionnaire, taken by
+      everyone on the team, side by side.
+   📚 Resources — the guides, emergency numbers and places to know. */
+var AVIEWS=[['status','📋','Application'],['team','👥','Meet our team'],['strengths','🧭','Team strengths'],['resources','📚','Resources']];
+function applicantNavHtml_(){
+  var cur=P.aview||'status', app=P.boot && P.boot.application;
+  return '<nav class="staffNav anav" id="applicantNav">'+AVIEWS.map(function(x){
+    var label = x[0]==='strengths' && app && app.type!=='team' ? t('Your strengths') : t(x[2]);
+    return '<button class="staffNavBtn'+(cur===x[0]?' on':'')+'" data-aview="'+x[0]+'">'+x[1]+' '+esc(label)+'</button>'; }).join('')+'</nav>';
+}
+function meTabHtml_(){
+  var v=P.aview||'status';
+  return v==='team' ? meetTeamHtml_() : v==='strengths' ? strengthsHtml_() : v==='resources' ? resourcesHtml_() : meHtml_();
+}
+/* ---- 👥 Meet our team ---- */
+function meetTeamHtml_(){
+  var d=P.meet;
+  var h='<div class="wide">';
+  if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  var campus=campusName_(d.campus||DEFAULT_CAMPUS);
+  h+='<div class="gateTitle"><h2>'+esc(gpT('YWAM {campus} Campus Staff',{campus:campus}))+'</h2><p class="sub">'+esc(t('The people who will welcome you, cook with you, and serve alongside you. Say hi when you arrive!'))+'</p></div>';
+  if(!(d.staff||[]).length) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Our team will show here soon.'))+'</p></div></div>';
+  h+='<div class="meetGrid">'+d.staff.map(function(s){
+    var ph=P.staffPhotos[s.id];
+    return '<div class="meetCard"><div class="meetPhoto">'+(ph ? '<img src="'+esc(ph)+'" alt="'+esc(s.name)+'" loading="lazy">' : '<span class="meetInitials" data-staffphoto="'+esc(s.id)+'">'+esc(initials_(s.name)||'?')+'</span>')+'</div>'+
+      '<div class="meetName">'+esc(s.name)+'</div><div class="meetRole">'+esc([s.role, s.ministry].filter(Boolean).join(' · ')||s.dept||'')+'</div></div>';
+  }).join('')+'</div>';
+  return h+'</div>';
+}
+/* the photos come one by one, after the names are on screen */
+function loadStaffPhotos_(){
+  if(P.photoBusy || !P.meet) return;
+  var next=(P.meet.staff||[]).filter(function(s){ return s.hasPhoto && P.staffPhotos[s.id]===undefined; })[0];
+  if(!next) return;
+  P.photoBusy=true;
+  run('portalStaffPhoto', [P.auth.user, P.auth.pin, next.id], function(d){
+    P.photoBusy=false; P.staffPhotos[next.id] = (d && d.ok && d.photo) ? d.photo : '';
+    var el=document.querySelector('[data-staffphoto="'+next.id+'"]');
+    if(el && P.staffPhotos[next.id]) el.outerHTML='<img src="'+esc(P.staffPhotos[next.id])+'" alt="'+esc(next.name)+'">';
+    loadStaffPhotos_();
+  }, function(){ P.photoBusy=false; P.staffPhotos[next.id]=''; loadStaffPhotos_(); });
+}
+/* ---- 🧭 Team strengths ---- */
+var P_PAGE_=8;
+function pSexOf_(p){ return p.sex==='m' ? 'male' : p.sex==='f' ? 'female' : 'female'; }
+function pTypeName_(code){ var ty=(typeof GP_PTYPES!=='undefined') && GP_PTYPES[code]; if(!ty) return code; var key='The '+ty.name; return t(key); }
+function strengthsHtml_(){
+  var app=P.boot.application, team=app.type==='team', d=P.strengths;
+  var h='<div class="wide">';
+  if(typeof GP_PQUESTIONS==='undefined') return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('The questionnaire could not load — pull down to refresh.'))+'</p></div></div>';
+  if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  if(P.ptest) return h+pTestHtml_()+'</div>';
+  var ppl=d.people||[], res=d.results||{}, done=ppl.filter(function(p){ return res[p.key]; });
+  h+='<div class="gateTitle"><h2>'+esc(team ? t('Team strengths') : t('Your strengths'))+'</h2><p class="sub">'+
+    esc(team ? t('Forty short statements each. See how your team is put together — who brings energy, who brings order, who brings heart — before you even land.') : t('Forty short statements. See what comes naturally to you, and what we will love about having you here.'))+'</p></div>';
+  /* everyone, with a type or a way to get one */
+  h+='<div class="card"><div class="roster">'+ppl.map(function(p){
+    var r=res[p.key], g=r && gpPGroupOf(r.type);
+    return '<div class="rosterRow" data-pkey="'+esc(p.key)+'">'+(r ? '<span class="pAv">'+gpPAvatar(r.type, pSexOf_(p), 44)+'</span>' : '<span class="avatar ph">'+esc(initials_(p.name)||'?')+'</span>')+
+      '<div class="rosterName"><b>'+esc(p.name)+'</b><span class="hint">'+esc(r ? pTypeName_(r.type)+(g ? ' · '+t(g.name) : '') : (roleLabel_(p)||t('Not taken yet')))+'</span></div>'+
+      (r ? '<button type="button" class="camBtn" data-pview="'+esc(p.key)+'">'+esc(t('See'))+'</button><button type="button" class="linkbtn inline" data-pretake="'+esc(p.key)+'">'+esc(t('Retake'))+'</button>'
+         : '<button type="button" class="camBtn" data-ptake="'+esc(p.key)+'">'+esc(t('Take the test'))+'</button><button type="button" class="linkbtn inline" data-ppickfor="'+esc(p.key)+'">'+esc(t('I know my type'))+'</button>')+
+      '</div>';
+  }).join('')+'</div></div>';
+  /* one person's result, opened */
+  if(P.pview && res[P.pview]){
+    var pp=ppl.filter(function(x){ return x.key===P.pview; })[0]||{}, rr=res[P.pview], ty=GP_PTYPES[rr.type], gg=gpPGroupOf(rr.type);
+    h+='<div class="card pResult" style="border-color:'+gg.color+'"><div class="pResultHead"><span class="pAv big">'+gpPAvatar(rr.type, pSexOf_(pp), 72)+'</span><div><div class="eyebrow" style="color:'+gg.color+'">'+esc(t(gg.name))+' · '+esc(rr.type)+'</div><h3 style="margin:2px 0 4px">'+esc(pp.name)+' — '+esc(pTypeName_(rr.type))+'</h3><p class="sub" style="margin:0">'+esc(t(ty.tagline))+'</p></div></div>'+
+      '<p style="font-size:14px;line-height:1.55">'+esc(t(ty.about))+'</p>';
+    if(rr.scores) h+='<div class="pAxes">'+GP_PAXES.map(function(ax){ var v=rr.scores[ax.id]; return '<div class="pAxis"><span class="pAxA">'+esc(t(ax.aName))+'</span><div class="pAxBar"><div style="width:'+v+'%;background:'+gg.color+'"></div></div><span class="pAxB">'+esc(t(ax.bName))+'</span></div>'; }).join('')+'</div>';
+    h+='<div class="pCols"><div><div class="eyebrow">'+esc(t('Strengths'))+'</div><ul>'+ty.strengths.map(function(x){ return '<li>'+esc(t(x))+'</li>'; }).join('')+'</ul></div>'+
+      '<div><div class="eyebrow">'+esc(t('Watch out for'))+'</div><ul>'+ty.watch.map(function(x){ return '<li>'+esc(t(x))+'</li>'; }).join('')+'</ul></div></div>'+
+      '<div class="eyebrow">'+esc(t('Working with them'))+'</div><ul>'+ty.workWith.map(function(x){ return '<li>'+esc(t(x))+'</li>'; }).join('')+'</ul>'+
+      '<button class="linkbtn inline" id="pviewClose">'+esc(t('Close'))+'</button></div>';
+  }
+  /* the team, side by side */
+  if(team && done.length>=2){
+    var groups={}; Object.keys(GP_PGROUPS).forEach(function(k){ groups[k]=[]; });
+    done.forEach(function(p){ var g=gpPGroupOf(res[p.key].type); if(g) groups[g.id].push(p); });
+    h+='<div class="card"><h3 style="margin-top:0">'+esc(gpT('How your team is put together ({n} of {total})',{n:done.length, total:ppl.length}))+'</h3><div class="pGroups">'+
+      Object.keys(GP_PGROUPS).map(function(k){ var g=GP_PGROUPS[k], m=groups[k]; return '<div class="pGroup" style="border-color:'+g.color+'"><div class="pGroupHead"><b style="color:'+g.color+'">'+esc(t(g.name))+'</b><span class="pGroupN">'+m.length+'</span></div><p class="hint" style="margin:2px 0 6px">'+esc(t(g.blurb))+'</p>'+
+        (m.length ? '<div class="pGroupPeople">'+m.map(function(p){ return '<span class="pChip">'+gpPAvatar(res[p.key].type, pSexOf_(p), 22)+' '+esc(p.name.split(' ')[0])+'</span>'; }).join('')+'</div>' : '<p class="hint" style="margin:0">'+esc(t('Nobody here yet'))+'</p>')+'</div>'; }).join('')+'</div>';
+    h+='<div class="eyebrow" style="margin-top:14px">'+esc(t('The balance'))+'</div><div class="pAxes">'+GP_PAXES.map(function(ax){
+      var a=done.filter(function(p){ return res[p.key].type.charAt(GP_PAXES.indexOf(ax))===ax.a; }).length, b=done.length-a;
+      return '<div class="pAxis"><span class="pAxA">'+esc(t(ax.aName))+' <b>'+a+'</b></span><div class="pAxBar split"><div style="width:'+Math.round(a/done.length*100)+'%"></div></div><span class="pAxB"><b>'+b+'</b> '+esc(t(ax.bName))+'</span></div>'; }).join('')+'</div>';
+    var missing=ppl.filter(function(p){ return !res[p.key]; });
+    h+='<p class="hint" style="margin:10px 0 0">'+esc(missing.length ? gpT('Still to take it: {names}',{names:missing.map(function(p){ return p.name; }).join(', ')}) : t('Everyone is in — talk about this together before you come: who leads, who notices, who keeps the peace.'))+'</p></div>';
+  }
+  if(P.ppickFor){
+    var who=ppl.filter(function(x){ return x.key===P.ppickFor; })[0]||{};
+    h+='<div class="card"><h3 style="margin-top:0">'+esc(gpT('{name}’s type',{name:who.name||''}))+'</h3><p class="sub">'+esc(t('Took it before? Pick the four letters.'))+'</p><div class="pPick">'+GP_PTYPE_CODES.map(function(c){ return '<button type="button" class="pPickBtn" data-ppick="'+c+'">'+gpPAvatar(c, pSexOf_(who), 40)+'<b>'+c+'</b><span>'+esc(pTypeName_(c))+'</span></button>'; }).join('')+'</div>'+
+      '<button class="linkbtn inline" id="ppickCancel">'+esc(t('Cancel'))+'</button></div>';
+  }
+  h+='<p class="hint" style="text-align:center">'+esc(t('Uses the same four letters as Myers–Briggs®. This is GP’s own short questionnaire, not the official MBTI® assessment.'))+'</p>';
+  return h+'</div>';
+}
+function pTestHtml_(){
+  var T=P.ptest, who=(P.strengths.people||[]).filter(function(x){ return x.key===T.key; })[0]||{};
+  var pages=Math.ceil(GP_PQUESTIONS.length/P_PAGE_), page=Math.max(0, Math.min(pages-1, T.page||0));
+  var answered=GP_PQUESTIONS.filter(function(q){ return T.answers[q.id]!==undefined; }).length;
+  var h='<div class="gateTitle"><div class="eyebrow">'+esc(gpT('{name} — the questionnaire',{name:who.name||''}))+'</div>'+
+    '<div class="formProgress"><span>'+esc(gpT('{n} of {total}',{n:answered,total:GP_PQUESTIONS.length}))+'</span><div class="bar"><div style="width:'+Math.round(answered/GP_PQUESTIONS.length*100)+'%"></div></div></div></div>';
+  if(page===0 && !answered) h+='<div class="card"><p style="margin:0 0 6px;font-size:15px;line-height:1.5">'+esc(t('Forty short statements. Answer how you really are — not how you wish you were.'))+'</p><p class="sub" style="margin:0">'+esc(t('There are no right answers, and no type is better than another.'))+'</p></div>';
+  var qs=GP_PQUESTIONS.slice(page*P_PAGE_, page*P_PAGE_+P_PAGE_), pageDone=qs.every(function(q){ return T.answers[q.id]!==undefined; });
+  h+='<div class="card">'+qs.map(function(q){
+    var v=T.answers[q.id];
+    return '<div class="pStmt'+(v!==undefined?' done':'')+'" id="pq_'+q.id+'"><div class="pText">'+esc(t(q.text))+'</div><div class="pScale" role="radiogroup">'+
+      [3,2,1,0,-1,-2,-3].map(function(n){ return '<button type="button" class="pDot s'+Math.abs(n)+' '+(n>0?'ag':n<0?'dis':'mid')+(v===n?' on':'')+'" data-pans="'+q.id+'|'+n+'" role="radio" aria-checked="'+(v===n?'true':'false')+'" aria-label="'+esc(t(['Strongly disagree','Disagree','Slightly disagree','Neutral','Slightly agree','Agree','Strongly agree'][n+3]))+'"></button>'; }).join('')+
+      '</div><div class="pScaleEnds"><span class="ag">'+esc(t('Agree'))+'</span><span class="dis">'+esc(t('Disagree'))+'</span></div></div>';
+  }).join('')+'</div>';
+  var last=page===pages-1;
+  h+='<div class="formNav">'+(page>0 ? '<button class="btn ghost small" id="pPrev">← '+esc(t('Back'))+'</button>' : '<button class="btn ghost small" id="pQuit">'+esc(t('Cancel'))+'</button>')+
+    (last ? '<button class="btn small" id="pFinish"'+(answered===GP_PQUESTIONS.length && !P.busy ?'':' disabled')+'>'+esc(t('See the type'))+'</button>' : '<button class="btn small" id="pNext"'+(pageDone?'':' disabled')+'>'+esc(t('Next'))+' →</button>')+'</div>';
+  return h;
+}
+/* ---- 📚 Resources ---- */
+var RES_KIND_ICON={ guide:'📘', link:'🔗', phone:'📞', note:'📝' };
+function resourcesHtml_(){
+  var d=P.resources;
+  var h='<div class="wide"><div class="gateTitle"><h2>'+esc(t('Resources'))+'</h2><p class="sub">'+esc(t('What to read before you come, who to call, and where to go.'))+'</p></div>';
+  if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  var items=d.items||[], guides=items.filter(function(r){ return r.kind==='guide'; }), phones=items.filter(function(r){ return r.kind==='phone'; }), links=items.filter(function(r){ return r.kind==='link'; }), notes=items.filter(function(r){ return r.kind==='note'; });
+  var row=function(r){
+    if(r.kind==='guide') return '<div class="resRow"><span class="resIcon">📘</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div>'+(typeof outreachGuideHtml==='function' ? '<button class="btn small" id="openGuide">'+esc(t('Open'))+'</button>' : '')+'</div>';
+    if(r.kind==='phone') return '<a class="resRow" href="tel:'+esc(r.value.replace(/\s+/g,''))+'"><span class="resIcon">📞</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div><span class="resPhone">'+esc(r.value)+'</span></a>';
+    if(r.kind==='link') return r.value ? '<a class="resRow" href="'+esc(r.value)+'" target="_blank" rel="noopener"><span class="resIcon">🔗</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div><span class="resGo">↗</span></a>'
+      : '<div class="resRow dim"><span class="resIcon">🔗</span><div class="resBody"><b>'+esc(r.title)+'</b><span class="hint">'+esc(r.note||'')+(r.note?' · ':'')+esc(t('Coming soon'))+'</span></div></div>';
+    return '<div class="resRow"><span class="resIcon">📝</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+(r.value?'<span class="resNote">'+esc(r.value)+'</span>':'')+'</div></div>';
+  };
+  if(guides.length) h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Guides'))+'</h3>'+guides.map(row).join('')+'</div>';
+  if(phones.length) h+='<div class="card"><h3 style="margin-top:0">🚨 '+esc(t('Emergency numbers in Cambodia'))+'</h3><p class="hint" style="margin:0 0 6px">'+esc(t('Tap to call. Tell them where you are first.'))+'</p>'+phones.map(row).join('')+'</div>';
+  if(links.length) h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Places and links'))+'</h3>'+links.map(row).join('')+'</div>';
+  if(notes.length) h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Good to know'))+'</h3>'+notes.map(row).join('')+'</div>';
+  if(!items.length) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Nothing here yet.'))+'</p></div>';
+  return h+'</div>';
+}
+/* the editor (staff side, portal admins) */
+function resourcesAdminHtml_(){
+  var d=P.resources;
+  var h='<div class="wide"><div class="panelHead"><div><h1 style="font-size:28px">📚 '+esc(t('Resources'))+'</h1><p class="sub">'+esc(t('What applicants and teams see under Resources: guides, emergency numbers, links and notes.'))+'</p></div></div>';
+  if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  var items=P.resDraft||d.items;
+  h+='<div class="card">'+items.map(function(r, i){
+    return '<div class="resEdit" data-resrow="'+i+'"><div class="teamGrid2"><div><label class="f" style="margin-top:0">'+esc(t('Kind'))+'</label><select data-resf="'+i+'|kind">'+['guide','link','phone','note'].map(function(k){ return '<option value="'+k+'"'+(r.kind===k?' selected':'')+'>'+RES_KIND_ICON[k]+' '+esc(t({guide:'Guide (in the portal)', link:'Link', phone:'Phone number', note:'Note'}[k]))+'</option>'; }).join('')+'</select></div>'+
+      '<div><label class="f" style="margin-top:0">'+esc(t('Title'))+'</label><input type="text" data-resf="'+i+'|title" value="'+esc(r.title)+'" maxlength="120"></div></div>'+
+      '<label class="f">'+esc(r.kind==='phone' ? t('Number') : r.kind==='link' ? t('Web address') : r.kind==='guide' ? t('Which guide') : t('Text'))+'</label><input type="text" data-resf="'+i+'|value" value="'+esc(r.value||'')+'" maxlength="500" placeholder="'+esc(r.kind==='link' ? 'https://…' : r.kind==='phone' ? '117' : '')+'">'+
+      '<label class="f">'+esc(t('Short note'))+'</label><input type="text" data-resf="'+i+'|note" value="'+esc(r.note||'')+'" maxlength="300">'+
+      '<div class="schedRowBtns"><button class="linkbtn inline" data-resup="'+i+'">↑</button><button class="linkbtn inline" data-resdown="'+i+'">↓</button><button class="linkbtn inline danger" data-resdel="'+i+'">'+esc(t('Remove'))+'</button></div></div>';
+  }).join('')+'<button class="btn ghost small" id="resAdd">＋ '+esc(t('Add one'))+'</button></div>';
+  h+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn small" id="resSave"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>'+
+    (d.isDefault ? '<span class="hint">'+esc(t('These are the shipped defaults — edit and save to make them yours.'))+'</span>' : '')+'</div>';
+  return h+'</div>';
+}
+function bindTabs_(){
+  document.querySelectorAll('[data-aview]').forEach(function(b){ b.onclick=function(){ P.aview=b.getAttribute('data-aview'); P.ptest=null; P.pview=null; P.ppickFor=null; render(); window.scrollTo(0,0); }; });
+  if(!(P.auth && P.boot)) return;
+  var applicant=P.boot.role==='applicant';
+  /* meet our team */
+  if(applicant && P.view==='me' && P.aview==='team'){
+    if(!P.meet && !P.meetLoading){ P.meetLoading=true; run('portalMeetTeam', [P.auth.user, P.auth.pin], function(d){ P.meetLoading=false; P.meet = d && d.ok ? d : { staff:[] }; render(); }, function(){ P.meetLoading=false; P.meet={ staff:[] }; render(); }); }
+    else loadStaffPhotos_();
+  }
+  /* strengths */
+  var strengthsOn = applicant && P.view==='me' && P.aview==='strengths';
+  if(strengthsOn && !P.strengths && !P.strengthsLoading){
+    P.strengthsLoading=true;
+    run('portalStrengths', [P.auth.user, P.auth.pin], function(d){ P.strengthsLoading=false; P.strengths = d && d.ok ? d : { people:[], results:{} }; render(); }, function(){ P.strengthsLoading=false; P.strengths={ people:[], results:{} }; render(); });
+  }
+  var saveStrength=function(key, result){
+    P.busy=true; render();
+    run('portalSaveStrength', [P.auth.user, P.auth.pin, key, result], function(d){ P.busy=false; if(d && d.ok){ P.strengths=d; P.ptest=null; P.ppickFor=null; P.pview=key; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  };
+  document.querySelectorAll('[data-ptake], [data-pretake]').forEach(function(b){ b.onclick=function(){ P.ptest={ key:b.getAttribute('data-ptake')||b.getAttribute('data-pretake'), answers:{}, page:0 }; P.pview=null; P.ppickFor=null; render(); window.scrollTo(0,0); }; });
+  document.querySelectorAll('[data-pview]').forEach(function(b){ b.onclick=function(){ P.pview = P.pview===b.getAttribute('data-pview') ? null : b.getAttribute('data-pview'); P.ppickFor=null; render(); }; });
+  on_('pviewClose', function(){ P.pview=null; render(); });
+  document.querySelectorAll('[data-ppickfor]').forEach(function(b){ b.onclick=function(){ P.ppickFor=b.getAttribute('data-ppickfor'); P.pview=null; render(); }; });
+  on_('ppickCancel', function(){ P.ppickFor=null; render(); });
+  document.querySelectorAll('[data-ppick]').forEach(function(b){ b.onclick=function(){ if(!P.ppickFor) return; saveStrength(P.ppickFor, { type:b.getAttribute('data-ppick'), source:'picked' }); }; });
+  if(P.ptest){
+    var T=P.ptest;
+    document.querySelectorAll('[data-pans]').forEach(function(b){ b.onclick=function(){ var p=b.getAttribute('data-pans').split('|'); T.answers[p[0]]=Number(p[1]);
+      var st=document.getElementById('pq_'+p[0]); if(st){ st.classList.add('done'); st.querySelectorAll('.pDot').forEach(function(x){ x.classList.toggle('on', x===b); x.setAttribute('aria-checked', x===b ? 'true' : 'false'); }); }
+      var qs=GP_PQUESTIONS.slice(T.page*P_PAGE_, T.page*P_PAGE_+P_PAGE_), pageDone=qs.every(function(q){ return T.answers[q.id]!==undefined; });
+      var nx=document.getElementById('pNext'); if(nx) nx.disabled=!pageDone;
+      var fin=document.getElementById('pFinish'); if(fin) fin.disabled=GP_PQUESTIONS.some(function(q){ return T.answers[q.id]===undefined; });
+      var nextStmt=st && st.nextElementSibling; if(nextStmt && nextStmt.classList.contains('pStmt')) nextStmt.scrollIntoView({ behavior:'smooth', block:'center' }); }; });
+    on_('pNext', function(){ T.page++; render(); window.scrollTo(0,0); });
+    on_('pPrev', function(){ T.page--; render(); window.scrollTo(0,0); });
+    on_('pQuit', function(){ P.ptest=null; render(); });
+    on_('pFinish', function(){ var r=gpPScore(T.answers); if(!r){ showMsg(t('A few statements are still unanswered.')); return; } saveStrength(T.key, { type:r.type, scores:r.scores, source:'test' }); });
+  }
+  /* resources */
+  var resOn = (applicant && P.view==='me' && P.aview==='resources') || (!applicant && P.view==='resources');
+  if(resOn && !P.resources && !P.resLoading){
+    P.resLoading=true;
+    run('portalResources', [P.auth.user, P.auth.pin], function(d){ P.resLoading=false; P.resources = d && d.ok ? d : { items:[] }; render(); }, function(){ P.resLoading=false; P.resources={ items:[] }; render(); });
+  }
+  if(!applicant && P.view==='resources' && P.resources){
+    var draft=function(){ if(!P.resDraft) P.resDraft=JSON.parse(JSON.stringify(P.resources.items)); return P.resDraft; };
+    document.querySelectorAll('[data-resf]').forEach(function(el){ el.oninput=el.onchange=function(){ var p=el.getAttribute('data-resf').split('|'); draft()[Number(p[0])][p[1]]=el.value; if(p[1]==='kind') render(); }; });
+    document.querySelectorAll('[data-resdel]').forEach(function(b){ b.onclick=function(){ draft().splice(Number(b.getAttribute('data-resdel')),1); render(); }; });
+    var mv=function(i, n){ var l=draft(), j=i+n; if(j<0||j>=l.length) return; var x=l[i]; l[i]=l[j]; l[j]=x; render(); };
+    document.querySelectorAll('[data-resup]').forEach(function(b){ b.onclick=function(){ mv(Number(b.getAttribute('data-resup')), -1); }; });
+    document.querySelectorAll('[data-resdown]').forEach(function(b){ b.onclick=function(){ mv(Number(b.getAttribute('data-resdown')), 1); }; });
+    on_('resAdd', function(){ draft().push({ id:'', kind:'link', title:'', note:'', value:'' }); render(); });
+    on_('resSave', function(){
+      var items=draft().filter(function(r){ return String(r.title||'').trim(); });
+      P.busy=true; render();
+      run('portalSaveResources', [P.auth.user, P.auth.pin, items], function(d){ P.busy=false; if(d && d.ok){ P.resources=d; P.resDraft=null; showMsg(t('Saved')); } else showMsg(d && d.err==='not_authorized' ? t('Only a portal admin can do this') : t('Could not save — try again.')); render(); });
+    });
+  }
+}
+
 function meHtml_(){
   var d=P.boot, me=d.me, app=d.application;
   var appName = MESSENGER_LABEL[me.messenger] || t('WhatsApp or Telegram');
@@ -2137,6 +2397,8 @@ function bind_(){
   on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
   on_('toForms', function(){ if(P.view==='forms') return; P.view='forms'; render(); });
+  on_('toResources', function(){ if(P.view==='resources') return; P.view='resources'; P.resDraft=null; render(); });
+  bindTabs_();
   on_('navCrm', function(){ if(P.view==='crm') return; P.view='crm'; render(); });
   on_('toLink', function(){ P.linkOpen=!P.linkOpen; render(); });
   on_('closeLink', function(){ P.linkOpen=false; render(); });

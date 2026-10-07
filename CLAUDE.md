@@ -802,6 +802,19 @@ forms, documents and references follow.
   Share → Add to Home Screen hint on iPhone, dismissable, gone once installed). The portal is
   meant to be the first door into the community — an account a student keeps through their
   time here; staff / volunteer applications from inside it (landing in HR) are the next step.
+- **The portal as a tool (Oct 2026)**: an applicant's dashboard has four tabs on top
+  (`applicantNavHtml_`, `P.aview`): 📋 Application (`meHtml_`), 👥 Meet our team
+  (`portalMeetTeam` — the campus's campus-staff **and YAP as one list, "YWAM <Campus> Campus
+  Staff"**; name, role, ministry, department only; photos one at a time via
+  `portalStaffPhoto`, `loadStaffPhotos_`), 🧭 Team strengths (the staff app's questionnaire —
+  `personality.js` is loaded by portal.html — taken by each person on the team, the same keys as
+  the photos, or `me` for a lone applicant; blob `tpers:<candidateId>`; `portalStrengths` /
+  `portalSaveStrength` {type, scores, source test|picked} / `portalDeleteStrength`; the page shows
+  each result, the four groups and the E/I S/N T/F J/P balance) and 📚 Resources
+  (`portalResources` — a list a portal admin edits on the staff side's Resources tab,
+  `portalSaveResources`, blob `portalResources`, kinds guide|link|phone|note,
+  `PORTAL_RESOURCES_DEFAULT`: the Outreach Leader's Guide, the teams booklet, 117/118/119, the
+  places list). tests/test-portal.mjs and test-portal-page.mjs cover all four.
 - **A team's photos (Oct 2026)**: instead of one team photo with names, the leader takes a photo
   of each person in the portal — `teamPhotoPeople_(c)` is the leader (from the form), the
   co-leaders (`co|<n>`) and every member (members now carry an `id`, kept through a rename —

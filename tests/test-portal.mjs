@@ -210,6 +210,73 @@ console.log('=== a team’s photos: one per person, instead of a team photo with
   mem.staff = mem.staff.filter(x => x.id !== 'st_photo'); mem.candidates = mem.candidates.filter(c => c.id !== 'cd_photo'); delete mem['tphotos:cd_photo'];
 }
 
+console.log('=== the portal as a tool: meet our team, team strengths, resources ===');
+{
+  mem.staff.push(
+    { id: 'st_cs1', name: 'Chan Campus', username: 'chan', campus: 'siemreap', dept: 'Campus Leadership', ministry: 'Hospitality', role: 'Host', staffType: 'campus', active: true, photo: 'data:image/jpeg;base64,/9j/AAAA', pinSalt: 'st_cs1', pinHash: mkHash('1234', 'st_cs1') },
+    { id: 'st_yap1', name: 'Yan Yap', username: 'yan', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', role: 'YAP', staffType: 'yap', active: true, pinSalt: 'st_yap1', pinHash: mkHash('1234', 'st_yap1') },
+    { id: 'st_min1', name: 'Mina Ministry', username: 'mina', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', role: 'Barista', staffType: 'ministry', active: true, pinSalt: 'st_min1', pinHash: mkHash('1234', 'st_min1') },
+    { id: 'st_pp1', name: 'Pat Poipet', username: 'ppat', campus: 'poipet', dept: 'Campus Leadership', ministry: 'Hospitality', role: 'Host', staffType: 'campus', active: true, pinSalt: 'st_pp1', pinHash: mkHash('1234', 'st_pp1') },
+    { id: 'st_gone', name: 'Gone Away', username: 'gonex', campus: 'siemreap', dept: 'Campus Leadership', ministry: 'Hospitality', role: 'Host', staffType: 'campus', active: false, pinSalt: 'st_gone', pinHash: mkHash('1234', 'st_gone') },
+    { id: 'st_tool', username: 'tool.team', name: 'Tia Leader', email: 'tia@example.org', kind: 'applicant', campus: 'siemreap', active: true, applicant: { type: 'team', school: '', candidateId: 'cd_tool' }, pinSalt: 'st_tool', pinHash: mkHash('2468', 'st_tool') },
+    { id: 'st_solo', username: 'solo.app', name: 'Sol Solo', email: 'sol@example.org', kind: 'applicant', campus: 'siemreap', active: true, applicant: { type: 'volunteer', school: '', candidateId: 'cd_solo' }, pinSalt: 'st_solo', pinHash: mkHash('2468', 'st_solo') });
+  mem.candidates = (mem.candidates || []).concat([
+    { id: 'cd_tool', campus: 'siemreap', name: 'Tool Church', type: 'team', stage: 'docs', staffId: 'st_tool', email: 'tia@example.org', portal: { createdAt: '2026-09-01', submittedAt: '2026-09-02', form: { answers: { teamName: 'Tool Church', leaderName: 'Tia Leader', coLeaders: [] } }, docs: [], members: [{ id: 'mabc1234', name: 'Mo Member', sex: 'm' }] }, log: [], archived: null },
+    { id: 'cd_solo', campus: 'siemreap', name: 'Sol Solo', type: 'volunteer', stage: 'new', staffId: 'st_solo', email: 'sol@example.org', portal: { createdAt: '2026-09-01', submittedAt: null, form: null, docs: [] }, log: [], archived: null }]);
+  let r = await call('portalMeetTeam', ['tool.team', '2468']);
+  ok('Meet our team: the campus staff and YAP of the applicant’s campus, as one list — no ministry staff, nobody inactive, nobody from Poipet, no applicants',
+    r.body && r.body.ok && r.body.campus === 'siemreap' && r.body.staff.map(x => x.name).join('|') === 'Chan Campus|Yan Yap' && r.body.staff[0].hasPhoto === true && r.body.staff[1].hasPhoto === false, JSON.stringify(r.body && r.body.staff));
+  ok('… only a name, role, ministry and department leave — no username, email or phone', r.body && Object.keys(r.body.staff[0]).sort().join() === 'dept,hasPhoto,id,ministry,name,role');
+  r = await call('portalStaffPhoto', ['tool.team', '2468', 'st_cs1']);
+  ok('a staff photo comes one at a time', r.body && r.body.ok && r.body.photo === 'data:image/jpeg;base64,/9j/AAAA');
+  r = await call('portalStaffPhoto', ['tool.team', '2468', 'st_min1']);
+  ok('… not for ministry staff', r.body && r.body.ok === false);
+  r = await call('portalStaffPhoto', ['tool.team', '2468', 'st_pp1']);
+  ok('… nor another campus', r.body && r.body.ok === false);
+  r = await call('portalMeetTeam', ['nobody', '0000']);
+  ok('a stranger gets nothing', r.body && r.body.ok === false);
+
+  r = await call('portalStrengths', ['tool.team', '2468']);
+  ok('Team strengths: the same people as the photos, none with a type yet', r.body && r.body.ok && r.body.people.map(p => p.key).join() === 'leader,mabc1234' && Object.keys(r.body.results).length === 0, JSON.stringify(r.body && r.body.people));
+  r = await call('portalSaveStrength', ['tool.team', '2468', 'leader', { type: 'XXXX' }]);
+  ok('a made-up type is refused', r.body && r.body.err === 'bad_type');
+  r = await call('portalSaveStrength', ['tool.team', '2468', 'stranger', { type: 'ENFJ' }]);
+  ok('a type for someone not on the team is refused', r.body && r.body.err === 'bad_person');
+  r = await call('portalSaveStrength', ['tool.team', '2468', 'leader', { type: 'enfj', scores: { E: 70, S: 40, T: 30, J: 65 }, source: 'test' }]);
+  ok('the leader’s result saves, type upper-cased with its scores', r.body && r.body.ok && r.body.results.leader.type === 'ENFJ' && r.body.results.leader.scores.E === 70 && r.body.results.leader.source === 'test');
+  r = await call('portalSaveStrength', ['tool.team', '2468', 'mabc1234', { type: 'ISTJ', source: 'picked', scores: { E: 1 } }]);
+  ok('a member who knows their type: no scores kept when they are not all four', r.body && r.body.ok && r.body.results.mabc1234.type === 'ISTJ' && r.body.results.mabc1234.scores === null && r.body.results.mabc1234.source === 'picked');
+  ok('the results live in their own blob', mem['tpers:cd_tool'] && mem['tpers:cd_tool'].people.leader.type === 'ENFJ');
+  r = await call('portalStrengths', ['dara', '1234', 'cd_tool']);
+  ok('portal staff read them on the record', r.body && r.body.ok && r.body.results.leader.type === 'ENFJ');
+  r = await call('portalDeleteStrength', ['tool.team', '2468', 'mabc1234']);
+  ok('a result can be removed to retake', r.body && r.body.ok && !r.body.results.mabc1234);
+  r = await call('portalStrengths', ['solo.app', '2468']);
+  ok('a lone applicant has just themselves ("me")', r.body && r.body.ok && r.body.people.length === 1 && r.body.people[0].key === 'me' && r.body.people[0].name === 'Sol Solo');
+  r = await call('portalSaveStrength', ['solo.app', '2468', 'me', { type: 'INFP', source: 'test', scores: { E: 20, S: 30, T: 25, J: 40 } }]);
+  ok('… and their result saves', r.body && r.body.ok && r.body.results.me.type === 'INFP');
+  r = await call('portalStrengths', ['solo.app', '2468', 'cd_tool']);
+  ok('one applicant cannot read another’s', !(r.body && r.body.ok && r.body.results && r.body.results.leader));
+
+  r = await call('portalResources', ['solo.app', '2468']);
+  ok('Resources: the shipped defaults until an admin edits — the leaders’ guide, the teams booklet, 117 / 118 / 119, the places list',
+    r.body && r.body.ok && r.body.isDefault === true && r.body.items.map(x => x.kind + ':' + x.title).join('|') === 'guide:Outreach Leader’s Guide|link:Guide for Short-Term Teams|phone:Police|phone:Fire|phone:Ambulance|link:Our favourite places in Siem Reap' && r.body.items[2].value === '117', JSON.stringify(r.body && r.body.items.map(x => x.title)));
+  r = await call('portalSaveResources', ['dara', '1234', [{ kind: 'link', title: 'x', value: 'y' }]]);
+  ok('portal staff (not admin) cannot edit them', r.body && r.body.err === 'not_authorized');
+  r = await call('portalSaveResources', ['sina', '1234', [
+    { id: 'r_maps', kind: 'link', title: 'Our favourite places', note: 'Cafes and more', value: 'maps.app.goo.gl/abc' },
+    { kind: 'phone', title: 'Tourist police', value: '+855 12 345 678 ext' },
+    { kind: 'nonsense', title: 'A note', value: 'Drink bottled water.' },
+    { kind: 'link', title: '   ', value: 'https://dropped.example' }]]);
+  ok('a portal admin saves the list: links get https, phone numbers keep digits, an unknown kind becomes a link, a blank title is dropped',
+    r.body && r.body.ok && r.body.isDefault === false && r.body.items.length === 3 && r.body.items[0].id === 'r_maps' && r.body.items[0].value === 'https://maps.app.goo.gl/abc' && r.body.items[1].value === '+855 12 345 678' && r.body.items[2].kind === 'link', JSON.stringify(r.body && r.body.items));
+  r = await call('portalResources', ['tool.team', '2468']);
+  ok('… and every applicant sees the saved list', r.body && r.body.items.length === 3 && r.body.items[1].title === 'Tourist police');
+  delete mem.portalResources; delete mem['tpers:cd_tool']; delete mem['tpers:cd_solo'];
+  mem.staff = mem.staff.filter(x => ['st_cs1', 'st_yap1', 'st_min1', 'st_pp1', 'st_gone', 'st_tool', 'st_solo'].indexOf(x.id) === -1);
+  mem.candidates = mem.candidates.filter(c => c.id !== 'cd_tool' && c.id !== 'cd_solo');
+}
+
 console.log('=== signing up ===');
 let r = await call('portalRegister', [{ ...APP, username: 'A B' }]);
 ok('username must be the same shape as a staff username', r.body.ok === false && r.body.err === 'bad_username');
