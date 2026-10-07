@@ -428,12 +428,15 @@ async function open(viewport, query, seed) {
   ok('before they have arrived, the team sees no numbers card', !(await page.$('#teamNumbers')));
   TEAM_APP.stage = 'arrived';
   await page.reload(); await page.waitForSelector('#statusPill');
+  ok('the numbers live on their own Metrics tab now, not on the Application tab', !(await page.$('#teamNumbers')));
+  await page.click('[data-aview="metrics"]'); await page.waitForSelector('#teamNumbers');
   ok('once arrived, the team’s numbers card shows, with what is saved', /Your team’s numbers/.test(await page.$eval('#teamNumbers', e => e.textContent)) && (await page.$eval('[data-tnum="People Served"]', i => i.value)) === '30' && !(await page.$('[data-tnum="Teams Hosted"]')));
   await page.fill('[data-tnum="Salvations"]', '3');
   await page.fill('[data-treach="female"]', '7');
   await page.click('#saveTeamNums');
   await page.waitForTimeout(400);
   const tn = sent.filter(b => b.fn === 'portalSaveTeamNumbers').pop();
+  await page.click('[data-aview="status"]'); await page.waitForSelector('#statusPill');
   ok('saving sends the numbers into the Teams Database', tn && tn.args[2]['People Served'] === 30 && tn.args[2]['Salvations'] === 3 && tn.args[3].female === 7 && tn.args[3].male === 5, JSON.stringify(tn && tn.args.slice(2)));
   ok('once arrived, this week’s schedules show, with the chores not out yet', /This week at the base/.test(await page.$eval('#teamSchedules', e => e.textContent)) && await page.$eval('[data-pschedshow="chores"]', b => b.disabled));
   await page.click('[data-pschedshow="kitchen"]'); await page.waitForTimeout(200);
@@ -764,7 +767,9 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
   await page.waitForSelector('#applicantNav');
   const tabs = await page.$$eval('#applicantNav [data-aview]', bs => bs.map(b => b.getAttribute('data-aview') + (b.classList.contains('on') ? '*' : '')));
-  ok('four tabs on top: Application (open), Meet our team, Team strengths, Resources', tabs.join() === 'status*,team,strengths,resources', tabs.join());
+  ok('a team has five tabs on top: Application (open), Our team, Strengths, Metrics, Resources — icons over short labels, none squashed', tabs.join() === 'status*,team,strengths,metrics,resources' && await page.$$eval('#applicantNav .aLabel', ls => ls.every(l => l.scrollWidth <= l.clientWidth + 1)), tabs.join());
+  await page.click('[data-aview="metrics"]'); await page.waitForTimeout(200);
+  ok('Team metrics has its own tab; before arrival it says the numbers open on arrival', /Team metrics/.test(await page.$eval('#main h2', e => e.textContent)) && /open on arrival/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('#teamNumbers')));
   /* 👥 */
   await page.click('[data-aview="team"]'); await page.waitForSelector('.meetGrid', { timeout: 5000 });
   ok('Meet our team: "YWAM Siem Reap Campus Staff", one list, each with name and role', /YWAM Siem Reap Campus Staff/.test(await page.$eval('#main h2', e => e.textContent)) && (await page.$$eval('.meetCard .meetName', ns => ns.map(n => n.textContent))).join() === 'Dara Pen,Yan Yap' && /Host · Hospitality/.test(await page.$eval('.meetCard', e => e.textContent)));
@@ -772,7 +777,7 @@ async function open(viewport, query, seed) {
   ok('… the photos arrive one by one from the GP app; someone without one shows their initials', !!(await page.$('.meetCard img')) && /YY/.test(await page.$eval('.meetCard:nth-child(2) .meetPhoto', e => e.textContent)));
   /* 🧭 */
   await page.click('[data-aview="strengths"]'); await page.waitForSelector('[data-ptake]', { timeout: 5000 });
-  ok('Team strengths lists the team — leader and members — each with Take the test or I know my type', (await page.$$('[data-ptake]')).length === 3 && (await page.$$('[data-ppickfor]')).length === 3 && /Team strengths/.test(await page.$eval('#main h2', e => e.textContent)));
+  ok('Team strengths lists the team the leader added — leader and members — each with Take the test or I know my type', (await page.$$('[data-ptake]')).length === 3 && (await page.$$('[data-ppickfor]')).length === 3 && /Team strengths/.test(await page.$eval('#main h2', e => e.textContent)) && !(await page.$('#strengthsAddTeam')));
   await page.click('[data-ptake="leader"]'); await page.waitForSelector('[data-pans]');
   ok('the questionnaire opens for that person: forty statements, eight a page, a seven-dot scale, Next off until the page is answered', /Lee Leader — the questionnaire/.test(await page.$eval('#main', e => e.textContent)) && (await page.$$('.pStmt')).length === 8 && (await page.$$('.pStmt:first-child .pDot')).length === 7 && await page.$eval('#pNext', b => b.disabled));
   for (let pg = 0; pg < 5; pg++) {

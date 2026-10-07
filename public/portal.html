@@ -112,7 +112,10 @@ textarea { min-height:80px; resize:vertical; }
 .chip:disabled { opacity:.5; cursor:default; }
 .memberList { margin:0 0 8px; padding-left:22px; line-height:1.6; }
 /* the applicant's tabs, meet our team, strengths, resources */
-.anav .staffNavBtn { flex:1 1 0; min-width:0; font-size:12.5px; padding:9px 6px; }
+.anav { display:grid; gap:4px; }
+.anav .staffNavBtn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-width:0; padding:8px 2px 7px; font-size:11.5px; line-height:1.15; white-space:normal; text-align:center; }
+.anav .aIcon { font-size:18px; line-height:1; } .anav .aLabel { overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+@media (min-width:600px) { .anav .staffNavBtn { flex-direction:row; gap:7px; font-size:13.5px; padding:9px 10px; } }
 .meetGrid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
 @media (min-width:600px) { .meetGrid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
 @media (min-width:900px) { .meetGrid { grid-template-columns:repeat(4, minmax(0,1fr)); } }
@@ -842,16 +845,29 @@ var TEAM_TYPE='team';
    🧭 Team strengths — the staff app's personality questionnaire, taken by
       everyone on the team, side by side.
    📚 Resources — the guides, emergency numbers and places to know. */
-var AVIEWS=[['status','📋','Application'],['team','👥','Meet our team'],['strengths','🧭','Team strengths'],['resources','📚','Resources']];
+var AVIEWS=[['status','📋','Application'],['team','👥','Our team'],['strengths','🧭','Strengths'],['metrics','📊','Metrics'],['resources','📚','Resources']];
 function applicantNavHtml_(){
-  var cur=P.aview||'status', app=P.boot && P.boot.application;
-  return '<nav class="staffNav anav" id="applicantNav">'+AVIEWS.map(function(x){
-    var label = x[0]==='strengths' && app && app.type!=='team' ? t('Your strengths') : t(x[2]);
-    return '<button class="staffNavBtn'+(cur===x[0]?' on':'')+'" data-aview="'+x[0]+'">'+x[1]+' '+esc(label)+'</button>'; }).join('')+'</nav>';
+  var cur=P.aview||'status', app=P.boot && P.boot.application, team=app && app.type==='team';
+  var tabs=AVIEWS.filter(function(x){ return x[0]!=='metrics' || team; });
+  return '<nav class="staffNav anav" id="applicantNav" style="grid-template-columns:repeat('+tabs.length+',minmax(0,1fr))">'+tabs.map(function(x){
+    return '<button class="staffNavBtn'+(cur===x[0]?' on':'')+'" data-aview="'+x[0]+'"><span class="aIcon">'+x[1]+'</span><span class="aLabel">'+esc(t(x[2]))+'</span></button>'; }).join('')+'</nav>';
 }
 function meTabHtml_(){
   var v=P.aview||'status';
-  return v==='team' ? meetTeamHtml_() : v==='strengths' ? strengthsHtml_() : v==='resources' ? resourcesHtml_() : meHtml_();
+  return v==='team' ? meetTeamHtml_() : v==='strengths' ? strengthsHtml_() : v==='resources' ? resourcesHtml_() : v==='metrics' ? metricsTabHtml_() : meHtml_();
+}
+/* ---- 📊 Team metrics: the team's outreach numbers, straight into the Teams Database ---- */
+function metricsTabHtml_(){
+  var app=P.boot.application;
+  var h='<div class="wide"><div class="gateTitle"><h2>'+esc(t('Team metrics'))+'</h2><p class="sub">'+esc(t('What your team saw God do here — people served, salvations, and more. They go straight into our Outreach Teams figures.'))+'</p></div>';
+  if(app.type!=='team') return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Metrics are for outreach teams.'))+'</p></div></div>';
+  if(!app.submittedAt) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Send in your application first — your numbers open once you have arrived.'))+'</p></div></div>';
+  if(app.stage!=='arrived'){
+    var tr=app.trip||{};
+    return h+'<div class="card"><p class="sub" style="margin:0 0 6px">🗓 '+esc(tr.from && tr.to ? gpT('Your numbers open on arrival — your dates with us are {from} to {to}.',{from:fmtDate_(tr.from), to:fmtDate_(tr.to)}) : t('Your numbers open on arrival.'))+'</p>'+
+      '<p class="hint" style="margin:0">'+esc(t('Keep a simple tally as you go: people you served, people who heard the gospel, salvations, and anything else we ask for. You fill it in here during and after your outreach.'))+'</p></div></div>';
+  }
+  return h+teamNumbersHtml_(app)+'</div>';
 }
 /* ---- 👥 Meet our team ---- */
 function meetTeamHtml_(){
@@ -894,6 +910,8 @@ function strengthsHtml_(){
   var ppl=d.people||[], res=d.results||{}, done=ppl.filter(function(p){ return res[p.key]; });
   h+='<div class="gateTitle"><h2>'+esc(team ? t('Team strengths') : t('Your strengths'))+'</h2><p class="sub">'+
     esc(team ? t('Forty short statements each. See how your team is put together — who brings energy, who brings order, who brings heart — before you even land.') : t('Forty short statements. See what comes naturally to you, and what we will love about having you here.'))+'</p></div>';
+  if(team && !(app.members||[]).length) h+='<div class="banner"><b>👥 '+esc(t('Add your team first'))+'</b><br>'+esc(t('List everyone coming under Your team members, and they all appear here to take the test together.'))+
+    '<div style="margin-top:8px"><button class="btn small" id="strengthsAddTeam">'+esc(t('Add your team members'))+'</button></div></div>';
   /* everyone, with a type or a way to get one */
   h+='<div class="card"><div class="roster">'+ppl.map(function(p){
     var r=res[p.key], g=r && gpPGroupOf(r.type);
@@ -915,7 +933,7 @@ function strengthsHtml_(){
       '<button class="linkbtn inline" id="pviewClose">'+esc(t('Close'))+'</button></div>';
   }
   /* the team, side by side */
-  if(team && done.length>=2){
+  if(team && done.length>=1){
     var groups={}; Object.keys(GP_PGROUPS).forEach(function(k){ groups[k]=[]; });
     done.forEach(function(p){ var g=gpPGroupOf(res[p.key].type); if(g) groups[g.id].push(p); });
     h+='<div class="card"><h3 style="margin-top:0">'+esc(gpT('How your team is put together ({n} of {total})',{n:done.length, total:ppl.length}))+'</h3><div class="pGroups">'+
@@ -1014,6 +1032,7 @@ function bindTabs_(){
   document.querySelectorAll('[data-ptake], [data-pretake]').forEach(function(b){ b.onclick=function(){ P.ptest={ key:b.getAttribute('data-ptake')||b.getAttribute('data-pretake'), answers:{}, page:0 }; P.pview=null; P.ppickFor=null; render(); window.scrollTo(0,0); }; });
   document.querySelectorAll('[data-pview]').forEach(function(b){ b.onclick=function(){ P.pview = P.pview===b.getAttribute('data-pview') ? null : b.getAttribute('data-pview'); P.ppickFor=null; render(); }; });
   on_('pviewClose', function(){ P.pview=null; render(); });
+  on_('strengthsAddTeam', function(){ P.aview='status'; var app=P.boot.application; if(app.submittedAt && !P.members){ P.members=[{ name:'', sex:'' }]; } render(); var el=document.getElementById('teamMembers'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' }); });
   document.querySelectorAll('[data-ppickfor]').forEach(function(b){ b.onclick=function(){ P.ppickFor=b.getAttribute('data-ppickfor'); P.pview=null; render(); }; });
   on_('ppickCancel', function(){ P.ppickFor=null; render(); });
   document.querySelectorAll('[data-ppick]').forEach(function(b){ b.onclick=function(){ if(!P.ppickFor) return; saveStrength(P.ppickFor, { type:b.getAttribute('data-ppick'), source:'picked' }); }; });
@@ -1089,7 +1108,6 @@ function meHtml_(){
       : '<p class="sub" style="margin:0 0 8px">'+esc(done ? gpT('{done} of {total} answered — pick up where you left off.',{done:done,total:total}) : t('A few sections about you, your faith and what you are applying for. Your answers save as you go.'))+'</p>'+
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
   if(app.refNeeded) h+='<div class="card" id="refCard"><h3 style="margin-top:0">🙏 '+esc(t('Leader reference'))+'</h3>'+refCardHtml_(app)+'</div>';
-  h+=teamNumbersHtml_(app);
   h+=membersCardHtml_(app);
   h+=visaCardHtml_(app);
   h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
@@ -1795,7 +1813,7 @@ function bindMembersAndSchedules_(){
     P.busy=true; render();
     run('portalSaveTeamMembers', [P.auth.user, P.auth.pin, list], function(d){
       P.busy=false;
-      if(d && d.ok){ P.boot=d; P.members=null; P.tphotos=null; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.'));
+      if(d && d.ok){ P.boot=d; P.members=null; P.tphotos=null; P.strengths=null; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.'));
       render();
     }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
   });
