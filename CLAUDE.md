@@ -549,6 +549,15 @@ below** — the summary card has both (Uriah). OKRs are My Ministry's second tab
 - Gone: the quick-jump chip strip and its scroll guard. tests/test-home-layout-ui.mjs
   holds the order.
 
+## Hospitality bed picker: no over-booking (Oct 2026)
+In the booking form's bed picker, once the booking has all the beds it needs
+(`hospFormCount_`) every other free bed greys out (`.hospBed.full`, disabled, `#hospBedsFull`).
+When **both** Men and Women are filled in, the men's rooms grey once their quota is picked and
+the women's rooms once theirs (`#hospBedsQuota` says "Men's beds a of b · Women's beds c of d");
+beds beyond men + women (the Beds box) can go in either. With only one of the two filled in,
+nothing greys by gender — the "set for the other gender" warning does that job. Taken and
+out-of-use beds are as before. tests/test-hospitality-page.mjs covers it.
+
 ## Habits with a schedule (Oct 2026)
 A habit row is `{id, mentorVisible, days?, label?, icon?}`: `days` is the weekdays it is due
 (0 Sunday … 6 Saturday; absent = every day), and a habit of your own has id `c_<slug>` with

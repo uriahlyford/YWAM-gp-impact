@@ -171,6 +171,12 @@ await page.click('#hospAutoBtn'); await page.waitForTimeout(200);
 const picked = await page.$$eval('.hospBed.sel', bs => bs.map(b => b.dataset.hbed));
 ok('Pick beds for me: two men in 101, two women in 102', picked.length === 4 && picked.filter(id => id[0] === 'm').length === 2 && picked.filter(id => id[0] === 'f').length === 2 && !picked.includes('m0'), picked.join());
 ok('no gender warning', !(await page.$('#hospWarn')));
+ok('with all four beds picked, the other free beds grey out so nobody over-books', !!(await page.$('#hospBedsFull')) &&
+  await page.$eval('[data-hbed="m3"]', b => b.disabled && b.classList.contains('full')) && await page.$eval('[data-hbed="f2"]', b => b.disabled && b.classList.contains('full')));
+await page.click('[data-hbed="' + picked.filter(id => id[0] === 'f')[0] + '"]'); await page.waitForTimeout(100);
+ok('… take one woman’s bed off and the women’s beds open again, the men’s stay grey (2 of 2 men picked)', /Men’s beds 2 of 2 · Women’s beds 1 of 2/.test(await page.$eval('#hospBedsQuota', e => e.textContent)) &&
+  await page.$eval('[data-hbed="f2"]', b => !b.disabled && b.classList.contains('free')) && await page.$eval('[data-hbed="m3"]', b => b.disabled && b.classList.contains('full')), await page.$eval('#hospBedsQuota', e => e.textContent));
+await page.click('[data-hbed="' + picked.filter(id => id[0] === 'f')[0] + '"]'); await page.waitForTimeout(100);
 const kinds = await page.$$eval('.hospKind', k => k.map(x => x.textContent.trim().replace(/^\S+ /, '') + (x.querySelector('input').checked ? '*' : '')));
 ok('beside the name, tick-boxes: Staff, Student, Team (ticked), Guest / speaker', kinds.join(' | ') === 'Staff | Student | Team* | Guest / speaker', kinds.join(' | '));
 ok('Who sleeps where: a box for each picked bed, with the team’s names from the portal to choose from', (await page.$$('[data-hbname]')).length === 4 && (await page.$$eval('#hospPeopleList option', o => o.map(x => x.value))).join() === 'Lee Leader,Max Member,Fay Member,Gia Member' && /Not in a bed yet: Lee Leader, Max Member, Fay Member, Gia Member/.test(await page.$eval('#hospNamesLeft', e => e.textContent)));
@@ -210,6 +216,12 @@ await page.click('[data-hbed="m3"]'); await page.waitForTimeout(100);
 ok('a woman in the men’s room gets a warning', !!(await page.$('#hospWarn')));
 await page.click('[data-hbed="m3"]'); await page.click('[data-hbed="f2"]'); await page.waitForTimeout(100);
 ok('… which goes when she’s moved', !(await page.$('#hospWarn')));
+ok('with only Women filled in, nothing greys by gender — just the total: her one bed is picked, the rest grey', !(await page.$('#hospBedsQuota')) && !!(await page.$('#hospBedsFull')) &&
+  await page.$eval('[data-hbed="m3"]', b => b.disabled && b.classList.contains('full')));
+await page.fill('[data-hf="males"]', '1'); await page.dispatchEvent('[data-hf="males"]', 'change'); await page.waitForTimeout(150);
+ok('Men 1 and Women 1: her bed fills the women’s quota and the men’s room opens up', /Men’s beds 0 of 1 · Women’s beds 1 of 1/.test(await page.$eval('#hospBedsQuota', e => e.textContent)) &&
+  await page.$eval('[data-hbed="m3"]', b => !b.disabled && b.classList.contains('free')), await page.$eval('#hospBedsQuota', e => e.textContent));
+await page.fill('[data-hf="males"]', ''); await page.dispatchEvent('[data-hf="males"]', 'change'); await page.waitForTimeout(150);
 await page.click('#hospSaveBtn'); await page.waitForTimeout(300);
 const g = sent.filter(b => b.fn === 'hospSave').pop().args[3];
 ok('the guest is saved with her bed', g.category === 'guest' && g.name === 'Guest Example' && g.bedIds.join() === 'f2' && g.count === 1, JSON.stringify(g));
