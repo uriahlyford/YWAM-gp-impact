@@ -1007,6 +1007,7 @@ async function adminMergeStaff(username, pin, keepId, mergeId) {
   // leave behind.
   await reassignById_('trips', function (r) { return r.id; });
   await reassignById_('smartGoals', function (r) { return r.id; });
+  await reassignById_('tasks', function (r) { return r.id; });
 
   // The weekly health check-in is anonymous by device token, not staffId —
   // move the duplicate's rows onto the KEPT account's own token instead.
@@ -1432,6 +1433,7 @@ async function getMenteeLogs(username, pin, menteeId) {
   const menteeTrips = (await getTrips_()).filter(function (r) { return r.staffId === m.id; })
     .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
   const menteeSmart = (await getSmartGoals_()).filter(function (r) { return r.staffId === m.id; });
+  const menteeTasks = (await getTasks_()).filter(function (r) { return r.staffId === m.id; });
   return {
     ok: true, mentee: publicStaff_(m),
     logs: logsFor_(dailyRows, m.id),
@@ -1441,7 +1443,7 @@ async function getMenteeLogs(username, pin, menteeId) {
     profile: { debt: m.debt },
     ministry: await ministryDataFor_(m),
     trips: { trips: menteeTrips.map(tripOut_), totals: awayTotals_(menteeTrips), ptoCap: PTO_ANNUAL_CAP, holidays: holidayList_() },
-    smartGoals: menteeSmart.map(smartGoalOut_)
+    smartGoals: smartGoalsOut_(menteeSmart, menteeTasks)
   };
 }
 async function getMyMentorRequests(username, pin) {
@@ -2945,18 +2947,68 @@ async function sendBroadcast(username, pin, text) {
    drift out of sync with what a saved goal actually holds. */
 const SMART_CATEGORIES = ['Faith', 'Health', 'Finance', 'Language', 'Skills', 'Fun'];
 const MAX_SMART_GOALS_PER_YEAR = 30;
+/* Oct 2026 (Uriah): a goal is written out as a SMART goal — five short
+   answers (Specific, Measurable, Achievable, Relevant, Time-bound) — and
+   broken into the quarterly and monthly steps that lead up to it, each one
+   ticked off when done. Alongside, a Google-Tasks-like to-do list where each
+   task can belong to a goal. Once a goal has steps or tasks its progress is
+   what's ticked off over what's there; until then it is the percent typed in. */
+const SMART_KEYS = ['s', 'm', 'a', 'r', 't'];
+const MAX_SMART_FIELD = 300;
+const MAX_STEPS_PER_GOAL = 24;
+const MAX_OPEN_TASKS = 300;
 
 async function getSmartGoals_() { return readJSON('smartGoals', []); }
+async function getTasks_() { return readJSON('tasks', []); }
 
-function smartGoalOut_(r) {
-  return { id: r.id, year: r.year, category: r.category, title: r.title, meta: r.meta || '', pct: r.pct };
+function smartFieldsOf_(v) {
+  const o = {}; const src = (v && typeof v === 'object') ? v : {};
+  SMART_KEYS.forEach(function (k) { o[k] = str_(src[k], MAX_SMART_FIELD) || ''; });
+  return o;
+}
+/* The steps come back whole with every save (the client holds the goal), so a
+   bad one is dropped rather than failing the save; ids are kept across saves
+   so a tick on the phone and a rename on another never swap places. */
+function stepsOf_(v) {
+  if (!Array.isArray(v)) return [];
+  const out = [];
+  v.forEach(function (x) {
+    if (!x || typeof x !== 'object' || out.length >= MAX_STEPS_PER_GOAL) return;
+    const kind = x.kind === 'quarter' ? 'quarter' : (x.kind === 'month' ? 'month' : null);
+    const period = finiteNum_(x.period, 1, kind === 'quarter' ? 4 : 12);
+    const title = str_(x.title, 200);
+    if (!kind || period == null || !title || Math.round(period) !== period) return;
+    out.push({ id: str_(x.id, 40) || ('ss' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+      kind: kind, period: period, title: title, done: !!x.done });
+  });
+  return out;
+}
+/* Progress: ticked steps and done tasks over all of them when the goal has
+   any; the percent the owner typed in otherwise. */
+function smartPct_(r, tasks) {
+  const steps = r.steps || [];
+  const total = steps.length + tasks.length;
+  if (!total) return Math.max(0, Math.min(100, Math.round(Number(r.pct)) || 0));
+  const done = steps.filter(function (x) { return x.done; }).length + tasks.filter(function (x) { return x.done; }).length;
+  return Math.round(done / total * 100);
+}
+function smartGoalOut_(r, allTasks) {
+  const tasks = (allTasks || []).filter(function (x) { return x.goalId === r.id; });
+  return { id: r.id, year: r.year, category: r.category, title: r.title, meta: r.meta || '',
+    smart: smartFieldsOf_(r.smart), steps: (r.steps || []).slice(),
+    pct: smartPct_(r, tasks), pctManual: Math.max(0, Math.min(100, Math.round(Number(r.pct)) || 0)),
+    tasksTotal: tasks.length, tasksDone: tasks.filter(function (x) { return x.done; }).length };
+}
+function smartGoalsOut_(rows, allTasks) {
+  return rows.map(function (r) { return smartGoalOut_(r, allTasks); });
 }
 
 async function getMySmartGoals(username, pin) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   const mine = (await getSmartGoals_()).filter(function (r) { return r.staffId === s.id; });
-  return { ok: true, smartGoals: mine.map(smartGoalOut_) };
+  const tasks = (await getTasks_()).filter(function (r) { return r.staffId === s.id; });
+  return { ok: true, smartGoals: smartGoalsOut_(mine, tasks) };
 }
 
 async function saveSmartGoal(username, pin, goal) {
@@ -2980,6 +3032,7 @@ async function saveSmartGoal(username, pin, goal) {
   const rec = {
     id: existingIdx > -1 ? rows[existingIdx].id : ('sg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
     staffId: s.id, year: year, category: g.category, title: title, meta: str_(g.meta, 200) || '', pct: pct,
+    smart: smartFieldsOf_(g.smart), steps: stepsOf_(g.steps),
     created: existingIdx > -1 ? rows[existingIdx].created : now, updated: now
   };
   if (existingIdx > -1) rows[existingIdx] = rec; else rows.push(rec);
@@ -2991,9 +3044,89 @@ async function deleteSmartGoal(username, pin, goalId) {
   const s = await verifyStaff_(username, pin);
   if (!s) return { ok: false };
   let rows = await getSmartGoals_();
+  const had = rows.some(function (r) { return r.id === goalId && r.staffId === s.id; });
   rows = rows.filter(function (r) { return !(r.id === goalId && r.staffId === s.id); });
   await writeJSON('smartGoals', rows);
+  /* Its tasks stay — as "Other tasks" — rather than vanishing with the goal. */
+  if (had) {
+    const tasks = await getTasks_();
+    let moved = false;
+    tasks.forEach(function (x) { if (x.goalId === goalId && x.staffId === s.id) { x.goalId = ''; moved = true; } });
+    if (moved) await writeJSON('tasks', tasks);
+  }
   return getMySmartGoals(username, pin);
+}
+
+/* ==================== tasks ====================
+   One flat list per person (Google Tasks-like): a title, an optional due
+   date and note, done or not, and which goal it belongs to — or none. Only
+   ever your own rows, by the same rule as the goals. */
+function taskOut_(r) {
+  return { id: r.id, goalId: r.goalId || '', title: r.title, notes: r.notes || '', due: r.due || '',
+    done: !!r.done, doneAt: r.doneAt || '', order: Number(r.order) || 0, created: r.created || '' };
+}
+async function getMyTasks(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const mine = (await getTasks_()).filter(function (r) { return r.staffId === s.id; });
+  return { ok: true, tasks: mine.map(taskOut_) };
+}
+/* Saving a task also hands back the goals, since a goal's progress moves
+   with its tasks — the page swaps both in one go. */
+async function tasksAndGoals_(username, pin) {
+  const tk = await getMyTasks(username, pin);
+  const sg = await getMySmartGoals(username, pin);
+  return { ok: true, tasks: tk.tasks || [], smartGoals: sg.smartGoals || [] };
+}
+async function saveTask(username, pin, task) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const x = task || {};
+  const title = str_(x.title, 200);
+  if (!title) return { ok: false, err: 'bad_title' };
+  const due = x.due ? isoDate_(x.due) : '';
+  if (x.due && !due) return { ok: false, err: 'bad_due' };
+  const notes = str_(x.notes, 500) || '';
+  const rows = await getTasks_();
+  const goals = await getSmartGoals_();
+  /* A task can only hang off one of your own goals — anyone else's id is
+     dropped to "no goal" rather than letting a row point into their list. */
+  const goalId = (x.goalId && goals.some(function (g) { return g.id === x.goalId && g.staffId === s.id; })) ? x.goalId : '';
+  const now = new Date().toISOString();
+  const idx = x.id ? rows.findIndex(function (r) { return r.id === x.id && r.staffId === s.id; }) : -1;
+  if (idx === -1) {
+    const open = rows.filter(function (r) { return r.staffId === s.id && !r.done; });
+    if (open.length >= MAX_OPEN_TASKS) return { ok: false, err: 'too_many' };
+  }
+  const prev = idx > -1 ? rows[idx] : null;
+  const done = !!x.done;
+  const rec = {
+    id: prev ? prev.id : ('tk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    staffId: s.id, goalId: goalId, title: title, notes: notes, due: due, done: done,
+    doneAt: done ? ((prev && prev.done && prev.doneAt) || now) : '',
+    order: finiteNum_(x.order, 0, 1e12) != null ? Number(x.order) : (prev ? (Number(prev.order) || 0) : Date.now()),
+    created: prev ? prev.created : now, updated: now
+  };
+  if (prev) rows[idx] = rec; else rows.push(rec);
+  await writeJSON('tasks', rows);
+  return tasksAndGoals_(username, pin);
+}
+async function deleteTask(username, pin, taskId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  let rows = await getTasks_();
+  rows = rows.filter(function (r) { return !(r.id === taskId && r.staffId === s.id); });
+  await writeJSON('tasks', rows);
+  return tasksAndGoals_(username, pin);
+}
+/* Clear every finished task in one go — the tidy-up Google Tasks has. */
+async function clearDoneTasks(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  let rows = await getTasks_();
+  rows = rows.filter(function (r) { return !(r.staffId === s.id && r.done); });
+  await writeJSON('tasks', rows);
+  return tasksAndGoals_(username, pin);
 }
 
 /* ==================== a teammate's public profile ====================
@@ -3084,7 +3217,7 @@ async function backupStatus_() {
    It deliberately does NOT fail as a unit: each section is caught on its own, so
    a problem reading trips cannot stop the page from having the base's figures. */
 const BOOT_KEYS = ['entries', 'survey', 'okrs', 'dailyLogs', 'goals', 'holidays', 'smartGoals', 'broadcasts',
-  'personalKpi', 'trips', 'kpiDaily', 'oneOnOnes', 'numbersPeople', 'metricOverrides', 'teamTrips'];
+  'personalKpi', 'trips', 'kpiDaily', 'oneOnOnes', 'numbersPeople', 'metricOverrides', 'teamTrips', 'tasks'];
 async function getMyBoot(username, pin) {
   prefetch_(['staff', 'loginThrottle'].concat(BOOT_KEYS));   // before the PIN check, so they travel together
   const s = await verifyStaff_(username, pin);
@@ -3095,7 +3228,7 @@ async function getMyBoot(username, pin) {
   const part = async function (fn) {
     try { return await fn(); } catch (e) { return null; }
   };
-  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal, teamTrips, candRows] =
+  const [staffRows, logs, mentees, requests, weekly, trips, tripReqs, ministry, base, smart, oneOnOnes, broadcasts, personal, teamTrips, candRows, tasks] =
     await Promise.all([
       part(function () { return getStaff_(); }),
       part(function () { return getMyLogs(username, pin); }),
@@ -3113,7 +3246,8 @@ async function getMyBoot(username, pin) {
       part(function () { return getMyPersonal(username, pin); }),
       // Outreach Teams staff open on their teams page — bring the teams along
       part(function () { return (s.dept === TEAM_DEPT && s.ministry === TEAM_MIN) ? getTeamTrips(username, pin, s.campus) : null; }),
-      part(function () { return canHR_(s) ? getCandidates_() : null; })
+      part(function () { return canHR_(s) ? getCandidates_() : null; }),
+      part(function () { return getMyTasks(username, pin); })
     ]);
 
   return {
@@ -3136,6 +3270,7 @@ async function getMyBoot(username, pin) {
     tripRequests: (tripReqs && tripReqs.requests) || [],
     ministry: ministry || null,
     smartGoals: (smart && smart.smartGoals) || [],
+    tasks: (tasks && tasks.tasks) || [],
     oneOnOnes: (oneOnOnes && oneOnOnes.oneOnOnes) || [],
     broadcasts: (broadcasts && broadcasts.broadcasts) || [],
     personal: personal || null,
@@ -6022,6 +6157,10 @@ const HANDLERS = {
   getMySmartGoals: function (a) { return getMySmartGoals(a[0], a[1]); },
   saveSmartGoal: function (a) { return saveSmartGoal(a[0], a[1], a[2]); },
   deleteSmartGoal: function (a) { return deleteSmartGoal(a[0], a[1], a[2]); },
+  getMyTasks: function (a) { return getMyTasks(a[0], a[1]); },
+  saveTask: function (a) { return saveTask(a[0], a[1], a[2]); },
+  deleteTask: function (a) { return deleteTask(a[0], a[1], a[2]); },
+  clearDoneTasks: function (a) { return clearDoneTasks(a[0], a[1]); },
   getMyOneOnOnes: function (a) { return getMyOneOnOnes(a[0], a[1]); },
   requestOneOnOne: function (a) { return requestOneOnOne(a[0], a[1], a[2], a[3]); },
   respondToOneOnOne: function (a) { return respondToOneOnOne(a[0], a[1], a[2], a[3]); },
