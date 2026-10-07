@@ -538,7 +538,7 @@ purpose, with the background photo / colour option behind ⚙️: goals and thei
 Health check-in, My Ministry — `#goMinistryFromMe` — Cooking / Chores, the streak,
 habits, My Health — `[data-gohealth]` opens the Health tab — mentor and time off),
 Updates (three at most, "See all" opens the bell), Weekly Goals, Daily habits ("Show
-streaks" inside the card), Annual goals (folded to one line until `S.smartOpen`),
+streaks" inside the card), Annual goals (one card, `#goGoalsFromMe`, opens the Goals & Tasks page),
 Mentorship ("You're mentoring" only for a mentor), About me (Personality and Strengths
 tiles) and Leave / Profile & settings tiles. **Health and My Ministry have no section
 below** — the summary card has both (Uriah). OKRs are My Ministry's second tab.
@@ -548,6 +548,25 @@ below** — the summary card has both (Uriah). OKRs are My Ministry's second tab
   No week arrows, no "Share my week". An unlinked goal shows a quiet "Link to a KPI".
 - Gone: the quick-jump chip strip and its scroll guard. tests/test-home-layout-ui.mjs
   holds the order.
+
+## Goals & Tasks (Oct 2026)
+Annual goals open into their own page, `S.view==='goals'` (`goalsPageHtml`, back to My
+Home), two tabs (`S.goalsTab`): **🎯 Goals** — year and category as before, "What is a
+SMART goal?" folded (`SMART_HELP`: the five letters explained), each goal written out as a
+SMART goal (`smart:{s,m,a,r,t}`, 300 chars each) with its **quarterly and monthly steps**
+(`steps:[{id,kind:'quarter'|'month',period,title,done}]`, 24 at most) ticked off in place;
+**✅ Tasks** — a Google-Tasks-like list, blob `tasks` (`{id,staffId,goalId,title,notes,due,
+done,doneAt,order}`): add with Enter, tick off, a due date, a goal; Overdue / Today /
+Upcoming / No date, Completed folded, Clear completed; chips filter by goal, "Other tasks"
+for the unlinked.
+- **Progress:** once a goal has steps or tasks, `pct` = ticked steps + done tasks over all of
+  them (`smartPct_`); until then the typed percent (`pctManual`). The form hides the percent
+  box once that is so. Every save sends the goal whole, steps included (`goalPayload_`).
+- Handlers `getMyTasks` / `saveTask` / `deleteTask` / `clearDoneTasks` — own rows only; a
+  task can only point at your own goal (anyone else's id saves as no goal). Deleting a goal
+  leaves its tasks under Other tasks. Boot carries `tasks`; `saveTask` answers with tasks
+  and goals both. The mentee view shows the same progress line.
+- tests/test-smart-goals.mjs (server) and tests/test-goals-page.mjs (browser).
 
 ## My Home: no daily health inputs
 The daily check-in (hours, mood, the private questions), the "This week" totals built from

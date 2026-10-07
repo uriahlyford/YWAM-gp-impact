@@ -1538,6 +1538,53 @@ textarea { resize:vertical; min-height:64px; }
 .smartMeta { font-size:11.5px; color:var(--muted); margin-bottom:8px; }
 .smartActions { display:flex; align-items:center; gap:12px; margin-top:8px; }
 .smartPct { font-size:12px; font-weight:700; color:var(--muted); flex:1; }
+/* Goals & Tasks page */
+.gTabs { grid-template-columns:1fr 1fr; }
+.gTabs .hospTab { font-size:12px; }
+.smartCard { padding-bottom:10px; }
+.smartHelp .smartRow { padding:6px 0; }
+.smartGrid { margin-top:10px; border-top:1px solid var(--border); padding-top:6px; }
+.smartRow { display:flex; gap:10px; align-items:flex-start; padding:5px 0; font-size:12.5px; line-height:1.45; }
+.smartLetter { flex:0 0 22px; width:22px; height:22px; border-radius:7px; background:var(--accent); color:var(--accentInk); font-size:12px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; font-family:'Koulen',sans-serif; }
+label.f.smartF { display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:12.5px; margin:12px 0 4px; }
+label.f.smartF .smartLetter { flex:0 0 20px; width:20px; height:20px; font-size:11px; }
+.stepsHead { font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:12px 0 6px; }
+.stepRow { display:flex; align-items:center; gap:9px; padding:6px 0; border-top:1px solid var(--line); }
+.stepRow.done .stepTitle { text-decoration:line-through; color:var(--muted); }
+.stepPeriod { flex:0 0 auto; font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:999px; background:var(--surface2); color:var(--muted); min-width:32px; text-align:center; }
+.stepPeriod.q { background:var(--banner); color:var(--bannerInk); }
+.stepTitle { flex:1; min-width:0; font-size:13px; }
+.stepDel { background:none; border:none; color:var(--faint); font-size:18px; line-height:1; padding:2px 6px; cursor:pointer; }
+.stepAdd { display:flex; gap:8px; align-items:center; margin-top:8px; }
+.stepAdd select, .stepAdd input[type=text] { flex:1; min-width:0; padding:9px 10px; font-size:14px; }
+.stepNew { margin-top:8px; display:inline-block; }
+.btn.small { width:auto; margin:0; padding:9px 14px; font-size:15px; flex:0 0 auto; }
+.goalTasksRow { margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
+.goalTasksRow .linkbtn { text-decoration:none; font-weight:700; }
+.tkCheck { flex:0 0 22px; width:22px; height:22px; border-radius:50%; border:2px solid var(--border2); background:var(--bg); color:var(--accentInk); font-size:13px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+.tkCheck.on { background:var(--accent); border-color:var(--accent); }
+.tkAddCard { padding:10px 14px; }
+.tkAdd { display:flex; align-items:center; gap:8px; }
+.tkAdd input[type=text] { flex:1; min-width:0; border:0; border-bottom:1.5px solid var(--border2); border-radius:0; padding:9px 4px; background:transparent; }
+.tkAdd input[type=text]:focus { outline:none; border-bottom-color:var(--accent); }
+.tkPlus { color:var(--accent); font-size:22px; line-height:1; }
+.tkEditRow { display:flex; gap:8px; align-items:center; margin-top:8px; }
+.tkEditRow input[type=date], .tkEditRow select { flex:1; min-width:0; padding:8px 10px; font-size:14px; }
+.tkList { padding:8px 14px 12px; }
+.tkSecHead { font-size:11px; letter-spacing:1.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:10px 0 2px; display:flex; gap:6px; align-items:center; }
+.tkSecHead.late { color:var(--bad); }
+.tkCount { font-weight:600; color:var(--faint); letter-spacing:0; }
+.tkRow { display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-top:1px solid var(--line); }
+.tkRow .tkCheck { margin-top:1px; }
+.tkBody { flex:1; min-width:0; background:none; border:0; text-align:left; font:inherit; color:var(--ink); padding:0; cursor:pointer; display:flex; flex-direction:column; gap:2px; }
+.tkTitle { font-size:14px; line-height:1.35; word-break:break-word; }
+.tkRow.done .tkTitle { text-decoration:line-through; color:var(--muted); }
+.tkMeta { font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:0 4px; }
+.tkDue.late { color:var(--bad); font-weight:700; }
+.tkEdit { border-top:1px solid var(--line); padding:10px 0; }
+.tkEdit textarea { margin-top:8px; min-height:48px; }
+.tkDoneToggle { width:100%; background:none; border:0; border-top:1px solid var(--line); margin-top:8px; padding:10px 0 2px; text-align:left; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; display:flex; justify-content:space-between; }
+.tkGoalHead .pmeta { font-size:11.5px; }
 
 /* the profile card that leads the Base tab */
 .baseMe { display:flex; align-items:center; gap:14px; }
@@ -2499,6 +2546,7 @@ function applyBoot(d, fromCache){
   S.hrFollowUps = (d.hrFollowUps===undefined) ? null : d.hrFollowUps;
   if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
   S.smartGoals = d.smartGoals || [];
+  S.tasks = d.tasks || [];
   S.oneOnOnes = d.oneOnOnes || [];
   S.broadcasts = d.broadcasts || [];
   if(d.base && d.base.entries) S.base = d.base;
@@ -2537,6 +2585,7 @@ function logout(){
   S.cands=null; S.candsLoading=false; S.candsError=''; S.candForm=null; S.candPersonId=null; S.candNoteDraft='';
   S.teamMode='dir'; S.structYear=null; S.structQ=null; S.structCache={}; S.structLoading={}; S.structError={};
   S.smartGoals=[]; S.smartYear=null; S.smartCategory='Faith'; S.smartDraft=null;
+  S.tasks=[]; S.goalsTab='goals'; S.taskFilter='all'; S.taskEdit=null; S.taskEditDraft=null; S.taskNew=null; S.tasksDoneOpen=false; S.smartHelpOpen=false; S.stepAdd=null; S.stepDraft=null;
   S.dbCustomize=false; S.oneOnOnes=[]; S.broadcasts=[];
   S.oversee={}; S.ovWeek={}; S.ovWeekDraft={}; S.ovAcc={}; S.ovLoading={}; S.ovError={}; S.ovInputOpen={};
   S.adminStaff=null; S.adminLoading=false; S.adminAcc={}; S.adminEditId=null; S.adminEditDraft=null; S.adminPinDraft={}; S.adminCode=''; S.adminCampusTab=null; S.adminSub=null;
@@ -2621,6 +2670,7 @@ function render(){
   else if(S.view==='team') m.innerHTML=teamHtml();
   else if(S.view==='mentor') m.innerHTML=mentorHtml();
   else if(S.view==='leave') m.innerHTML=leaveHtml();
+  else if(S.view==='goals') m.innerHTML=goalsPageHtml();
   else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
   else if(S.view==='teamsdb') m.innerHTML=teamsDbHtml();
   else if(S.view==='hr') m.innerHTML=hrHtml();
@@ -3880,63 +3930,284 @@ function phaseBanner(phase, wk){
   return '';
 }
 
-/* --- annual goals (SMART) ---
-   A personal list, by year and category — nothing here feeds the base's own
-   figures the way a ministry KPI or a weekly check-in does. Six fixed
-   categories from the mockup; the chips are a filter, not a per-goal field,
-   so switching category only changes what's showing, never what's saved. */
 function smartYear_(){ return S.smartYear==null ? new Date().getFullYear() : S.smartYear; }
+/* --- the Goals & Tasks page (Oct 2026, Uriah) ---
+   Annual goals open into a page of their own, with two tabs. 🎯 Goals: the
+   year and category, each goal written out as a SMART goal with a plain
+   explanation of what that means, and the quarterly and monthly steps that
+   lead up to it, ticked off as they're done. ✅ Tasks: a Google-Tasks-like
+   list — add a line and press Enter, tick it off, give it a date, link it
+   to a goal — so the goal's progress follows what actually gets done. */
+var SMART_HELP = [
+  ['s','Specific','Say exactly what you will do — who, what, where. “Read the whole New Testament” rather than “read more”.'],
+  ['m','Measurable','How will you know it’s done? A number or a clear finish line: “27 books, one every two weeks”.'],
+  ['a','Achievable','Stretching but possible with the time and resources you have. What makes this doable for you?'],
+  ['r','Relevant','Why this, why now? How does it serve your walk with God, your ministry, your family?'],
+  ['t','Time-bound','By when? Give it a deadline, then break the year into quarterly and monthly steps.']
+];
+var SMART_PLACEHOLDER = {
+  s:'What exactly will you do?', m:'How will you know it’s done? A number, a finish line.',
+  a:'What makes it doable for you this year?', r:'Why this, why now?', t:'By when? e.g. by 30 November'
+};
+function tkToday_(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function tkAddDays_(iso, n){ var d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function tkDateLabel_(iso){
+  if(!iso) return '';
+  var today=tkToday_();
+  if(iso===today) return t('Today');
+  if(iso===tkAddDays_(today,1)) return t('Tomorrow');
+  if(iso===tkAddDays_(today,-1)) return t('Yesterday');
+  var d=new Date(iso+'T00:00:00');
+  return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB',{weekday:'short', day:'numeric', month:'short'});
+}
+function tkMonthShort_(n){ return new Date(2026, n-1, 1).toLocaleDateString(LANG==='km'?'km-KH':'en-GB',{month:'short'}); }
+function stepLabel_(st){ return st.kind==='quarter' ? 'Q'+st.period : tkMonthShort_(st.period); }
+/* Quarters first, each in order, then the months — the way a year reads. */
+function stepsSorted_(steps){
+  return (steps||[]).slice().sort(function(a,b){
+    if(a.kind!==b.kind) return a.kind==='quarter' ? -1 : 1;
+    return a.period-b.period;
+  });
+}
+function goalById_(id){ return S.smartGoals.filter(function(x){ return x.id===id; })[0]; }
+function goalTasks_(id){ return (S.tasks||[]).filter(function(x){ return x.goalId===id; }); }
+function openTasksDue_(){
+  var today=tkToday_();
+  return (S.tasks||[]).filter(function(x){ return !x.done && x.due && x.due<=today; }).length;
+}
+
+/* The My Home card: the year at a glance, and a tap opens the page. */
 function annualGoalsHtml(){
-  var year=smartYear_(), cat=S.smartCategory||'Faith';
-  /* Folded to one line until opened: the editor (year, six categories, the
-     goals and their form) is for the few minutes a month someone updates it. */
+  var year=smartYear_();
   var yearGoals=S.smartGoals.filter(function(g){ return Number(g.year)===Number(year); });
   var avg=yearGoals.length ? Math.round(yearGoals.reduce(function(a,g){ return a+(Number(g.pct)||0); },0)/yearGoals.length) : 0;
+  var due=openTasksDue_();
+  var line=yearGoals.length===1 ? gpT('1 goal · {pct}%',{pct:avg}) : yearGoals.length ? gpT('{n} goals · {pct}% on average',{n:yearGoals.length, pct:avg}) : t('No goals set for this year yet.');
+  if(due) line+=' · '+(due===1 ? t('1 task due') : gpT('{n} tasks due',{n:due}));
   var h='<h3 id="sec-annual">'+esc(t('Annual Goals · SMART'))+'</h3>';
-  if(!S.smartOpen){
-    return h+'<button class="card homeFold" id="smartToggle"><span style="flex:1;min-width:0"><b>'+esc(gpT('{year} goals',{year:year}))+'</b>'+
-      '<span class="pmeta" style="display:block">'+esc(yearGoals.length===1 ? gpT('1 goal · {pct}%',{pct:avg}) : yearGoals.length ? gpT('{n} goals · {pct}% on average',{n:yearGoals.length, pct:avg}) : t('No goals set for this year yet.'))+'</span>'+
-      (yearGoals.length?'<span class="bar" style="display:block;margin-top:6px"><span class="barFill" style="display:block;width:'+avg+'%"></span></span>':'')+'</span>'+
-      '<span class="chev">▾</span></button>';
-  }
-  h+='<div class="card"><button class="linkbtn" id="smartToggle" style="float:right;width:auto;margin:0;padding:2px 0">'+esc(t('Close'))+' ▴</button>';
+  return h+'<button class="card homeFold" id="goGoalsFromMe"><span style="flex:1;min-width:0"><b>'+esc(gpT('{year} goals',{year:year}))+'</b>'+
+    '<span class="pmeta" style="display:block">'+esc(line)+'</span>'+
+    (yearGoals.length?'<span class="bar" style="display:block;margin-top:6px"><span class="barFill" style="display:block;width:'+avg+'%"></span></span>':'')+'</span>'+
+    '<span class="chev">›</span></button>';
+}
+
+function goalsPageHtml(){
+  var tab=S.goalsTab||'goals';
+  var open=(S.tasks||[]).filter(function(x){ return !x.done; }).length;
+  var h='<button class="linkbtn" id="goalsBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+  h+='<h2>'+esc(t('Goals & Tasks'))+'</h2>';
+  h+='<div class="hospTabs gTabs">'+
+    '<button class="hospTab'+(tab==='goals'?' on':'')+'" data-gtab="goals"><span>🎯</span>'+esc(t('Goals'))+'</button>'+
+    '<button class="hospTab'+(tab==='tasks'?' on':'')+'" data-gtab="tasks"><span>✅</span>'+esc(t('Tasks'))+(open?' <span class="hospBadge">'+open+'</span>':'')+'</button></div>';
+  return h+(tab==='tasks' ? tasksTabHtml_() : goalsTabHtml_());
+}
+
+function smartHelpHtml_(){
+  var h='<button class="card homeFold slim" id="smartHelpToggle"><span style="flex:1"><b>'+esc(t('What is a SMART goal?'))+'</b>'+
+    (S.smartHelpOpen?'':'<span class="pmeta" style="display:block">'+esc(t('Specific · Measurable · Achievable · Relevant · Time-bound'))+'</span>')+'</span>'+
+    '<span class="chev">'+(S.smartHelpOpen?'▴':'▾')+'</span></button>';
+  if(!S.smartHelpOpen) return h;
+  h+='<div class="card smartHelp">';
+  h+='<p class="sub" style="margin:0 0 10px">'+esc(t('A SMART goal is written so clearly that you can tell, any month of the year, whether you are on track. Five short answers do it:'))+'</p>';
+  SMART_HELP.forEach(function(r){
+    h+='<div class="smartRow"><b class="smartLetter">'+r[0].toUpperCase()+'</b><span><b>'+esc(t(r[1]))+'</b> — '+esc(t(r[2]))+'</span></div>';
+  });
+  h+='<p class="sub" style="margin:10px 0 0">'+esc(t('Then break the year down: what has to be true by the end of each quarter, and what gets done each month? Tick the steps off as you go and the goal’s progress follows.'))+'</p>';
+  return h+'</div>';
+}
+
+function goalsTabHtml_(){
+  var year=smartYear_(), cat=S.smartCategory||'Faith';
+  var h='<div class="card">';
   h+='<div class="yearPick"><button class="yearBtn" id="smartPrevYear" aria-label="'+esc(t('Previous year'))+'">‹</button>'+
      '<span class="yearNum">'+year+'</span>'+
      '<button class="yearBtn" id="smartNextYear" aria-label="'+esc(t('Next year'))+'">›</button></div>';
   h+='<div class="catChips">'+SMART_CATEGORIES.map(function(c){
-    return '<button class="catChip'+(cat===c?' on':'')+'" data-smartcat="'+c+'">'+esc(t(c))+'</button>';
+    var n=S.smartGoals.filter(function(g){ return Number(g.year)===Number(year) && g.category===c; }).length;
+    return '<button class="catChip'+(cat===c?' on':'')+'" data-smartcat="'+c+'">'+esc(t(c))+(n?' · '+n:'')+'</button>';
   }).join('')+'</div>';
+  h+='</div>';
+  h+=smartHelpHtml_();
 
   var mine=S.smartGoals.filter(function(g){ return Number(g.year)===Number(year) && g.category===cat; });
   if(!mine.length && !(S.smartDraft && !S.smartDraft.id)){
-    h+='<p class="sub" style="margin:4px 0 10px">'+esc(t('No goals set for this category yet.'))+'</p>';
+    h+='<div class="card"><p class="sub" style="margin:4px 0 0">'+esc(t('No goals set for this category yet.'))+'</p></div>';
   }
   mine.forEach(function(g){
-    if(S.smartDraft && S.smartDraft.id===g.id){ h+=smartGoalFormHtml(S.smartDraft); return; }
-    h+='<div class="smartGoal"><div class="smartTitle">'+esc(g.title)+'</div>'+
-      (g.meta?'<div class="smartMeta">'+esc(g.meta)+'</div>':'')+
-      '<div class="bar"><div class="barFill'+(g.pct>=100?' done':'')+'" style="width:'+g.pct+'%"></div></div>'+
-      '<div class="smartActions"><span class="smartPct">'+g.pct+'%</span>'+
-        '<button class="linkbtn inline" data-smartedit="'+esc(g.id)+'">'+esc(t('Edit'))+'</button>'+
-        '<button class="danger" data-smartdel="'+esc(g.id)+'">'+esc(t('Delete'))+'</button></div></div>';
+    if(S.smartDraft && S.smartDraft.id===g.id){ h+='<div class="card">'+smartGoalFormHtml(S.smartDraft)+'</div>'; return; }
+    h+=smartGoalCardHtml_(g);
   });
+  if(S.smartDraft && !S.smartDraft.id) h+='<div class="card">'+smartGoalFormHtml(S.smartDraft)+'</div>';
+  else if(!S.smartDraft) h+='<button class="btn ghost" id="smartNewBtn" style="margin-top:4px">+ '+esc(t('New goal'))+'</button>';
+  return h;
+}
 
-  if(S.smartDraft && !S.smartDraft.id) h+=smartGoalFormHtml(S.smartDraft);
-  else if(!S.smartDraft) h+='<button class="btn ghost" id="smartNewBtn">+ '+esc(t('New goal'))+'</button>';
+function smartProgressLine_(g){
+  var steps=g.steps||[], doneSteps=steps.filter(function(x){ return x.done; }).length;
+  var bits=[g.pct+'%'];
+  if(steps.length) bits.push(gpT('{done} of {n} steps',{done:doneSteps, n:steps.length}));
+  if(g.tasksTotal) bits.push(gpT('{done} of {n} tasks',{done:g.tasksDone||0, n:g.tasksTotal}));
+  return bits.join(' · ');
+}
+
+function smartGoalCardHtml_(g){
+  var h='<div class="card smartCard" data-goalcard="'+esc(g.id)+'">';
+  h+='<div class="smartTitle">'+esc(g.title)+'</div>'+(g.meta?'<div class="smartMeta">'+esc(g.meta)+'</div>':'');
+  h+='<div class="bar"><div class="barFill'+(g.pct>=100?' done':'')+'" style="width:'+g.pct+'%"></div></div>';
+  h+='<div class="smartActions"><span class="smartPct">'+esc(smartProgressLine_(g))+'</span>'+
+    '<button class="linkbtn inline" data-smartedit="'+esc(g.id)+'">'+esc(t('Edit'))+'</button>'+
+    '<button class="danger" data-smartdel="'+esc(g.id)+'">'+esc(t('Delete'))+'</button></div>';
+  var sm=g.smart||{}, filled=SMART_HELP.filter(function(r){ return sm[r[0]]; });
+  if(filled.length){
+    h+='<div class="smartGrid">'+filled.map(function(r){
+      return '<div class="smartRow"><b class="smartLetter" title="'+esc(t(r[1]))+'">'+r[0].toUpperCase()+'</b><span>'+esc(sm[r[0]])+'</span></div>';
+    }).join('')+'</div>';
+  } else {
+    h+='<p class="hint" style="margin:8px 0 0">'+esc(t('Not written as a SMART goal yet — tap Edit to fill in the five answers.'))+'</p>';
+  }
+  /* the steps that lead up to it */
+  var steps=stepsSorted_(g.steps);
+  h+='<div class="stepsHead">'+esc(t('Steps to get there'))+'</div>';
+  if(!steps.length) h+='<p class="hint" style="margin:0 0 6px">'+esc(t('Break it down: what must be true by the end of each quarter, and what gets done each month?'))+'</p>';
+  steps.forEach(function(st){
+    h+='<div class="stepRow'+(st.done?' done':'')+'">'+
+      '<button class="tkCheck'+(st.done?' on':'')+'" data-stepdone="'+esc(g.id)+'|'+esc(st.id)+'" aria-label="'+esc(t(st.done?'Not done yet':'Done'))+'">'+(st.done?'✓':'')+'</button>'+
+      '<span class="stepPeriod'+(st.kind==='quarter'?' q':'')+'">'+esc(stepLabel_(st))+'</span>'+
+      '<span class="stepTitle">'+esc(st.title)+'</span>'+
+      '<button class="stepDel" data-stepdel="'+esc(g.id)+'|'+esc(st.id)+'" aria-label="'+esc(t('Remove step'))+'">×</button></div>';
+  });
+  if(S.stepAdd===g.id){
+    var sd=S.stepDraft||{kind:'quarter', period:1, title:''};
+    var periods=sd.kind==='quarter' ? [1,2,3,4] : [1,2,3,4,5,6,7,8,9,10,11,12];
+    h+='<div class="stepAdd">'+
+      '<select id="stepKind" aria-label="'+esc(t('Quarterly or monthly'))+'"><option value="quarter"'+(sd.kind==='quarter'?' selected':'')+'>'+esc(t('Quarter'))+'</option><option value="month"'+(sd.kind==='month'?' selected':'')+'>'+esc(t('Month'))+'</option></select>'+
+      '<select id="stepPeriod" aria-label="'+esc(t('Which one'))+'">'+periods.map(function(p){ return '<option value="'+p+'"'+(Number(sd.period)===p?' selected':'')+'>'+esc(sd.kind==='quarter'?'Q'+p:tkMonthShort_(p))+'</option>'; }).join('')+'</select>'+
+      '</div><div class="stepAdd">'+
+      '<input type="text" id="stepTitle" maxlength="200" value="'+esc(sd.title||'')+'" placeholder="'+esc(sd.kind==='quarter'?t('By the end of this quarter…'):t('This month…'))+'">'+
+      '<button class="btn small" id="stepSaveBtn">'+esc(t('Add'))+'</button>'+
+      '<button class="linkbtn inline" id="stepCancelBtn">'+esc(t('Cancel'))+'</button></div>';
+  } else if(steps.length<24){
+    h+='<button class="linkbtn inline stepNew" data-stepnew="'+esc(g.id)+'">+ '+esc(t('Add a quarterly or monthly step'))+'</button>';
+  }
+  /* its tasks, on the other tab */
+  var n=g.tasksTotal||0;
+  h+='<div class="goalTasksRow"><button class="linkbtn inline" data-goaltasks="'+esc(g.id)+'">✅ '+
+    esc(n ? (n===1 ? gpT('1 task · {done} done',{done:g.tasksDone||0}) : gpT('{n} tasks · {done} done',{n:n, done:g.tasksDone||0})) : t('Add tasks for this goal'))+' ›</button></div>';
   return h+'</div>';
 }
+
 function smartGoalFormHtml(draft){
-  return '<div class="smartGoal">'+
+  var g=draft.id ? goalById_(draft.id) : null;
+  var auto=g && ((g.steps||[]).length || g.tasksTotal);
+  var sm=draft.smart||{};
+  var h='<div class="smartGoal">'+
     '<label class="f">'+esc(t('Goal'))+'</label>'+
     '<input type="text" id="sg_title" maxlength="200" value="'+esc(draft.title||'')+'" placeholder="'+esc(t('What are you aiming for this year?'))+'">'+
     '<label class="f">'+esc(t('Detail (optional)'))+'</label>'+
-    '<input type="text" id="sg_meta" maxlength="200" value="'+esc(draft.meta||'')+'" placeholder="'+esc(t('e.g. Measurable · by Dec 2026'))+'">'+
-    '<label class="f">'+esc(t('Progress'))+'</label>'+
-    '<input type="number" id="sg_pct" min="0" max="100" placeholder="0" value="'+
-      (draft.pct ? draft.pct : '')+'"> %'+
-    '<button class="btn" id="smartSaveBtn">'+esc(t(draft.id?'Save changes':'Add goal'))+'</button>'+
+    '<input type="text" id="sg_meta" maxlength="200" value="'+esc(draft.meta||'')+'" placeholder="'+esc(t('e.g. Measurable · by Dec 2026'))+'">';
+  h+='<div class="stepsHead" style="margin-top:14px">'+esc(t('Write it as a SMART goal'))+'</div>';
+  SMART_HELP.forEach(function(r){
+    h+='<label class="f smartF" for="sg_'+r[0]+'"><b class="smartLetter">'+r[0].toUpperCase()+'</b> '+esc(t(r[1]))+'</label>'+
+      '<textarea id="sg_'+r[0]+'" maxlength="300" rows="2" placeholder="'+esc(t(SMART_PLACEHOLDER[r[0]]))+'">'+esc(sm[r[0]]||'')+'</textarea>';
+  });
+  if(auto){
+    h+='<p class="hint" style="margin-top:12px">'+esc(gpT('Progress follows your steps and tasks: {pct}%',{pct:g.pct}))+'</p>';
+  } else {
+    h+='<label class="f">'+esc(t('Progress'))+'</label>'+
+      '<input type="number" id="sg_pct" min="0" max="100" placeholder="0" value="'+(draft.pct ? draft.pct : '')+'"> %'+
+      '<p class="hint">'+esc(t('Once the goal has steps or tasks, progress follows what you tick off.'))+'</p>';
+  }
+  h+='<button class="btn" id="smartSaveBtn">'+esc(t(draft.id?'Save changes':'Add goal'))+'</button>'+
     '<button class="btn ghost" id="smartCancelBtn">'+esc(t('Cancel'))+'</button>'+
   '</div>';
+  return h;
+}
+
+/* ✅ Tasks — the Google-Tasks-like list. */
+function taskGoalOptions_(sel){
+  var year=new Date().getFullYear();
+  var goals=S.smartGoals.filter(function(g){ return Number(g.year)===year; });
+  var h='<option value=""'+(!sel?' selected':'')+'>'+esc(t('No goal'))+'</option>';
+  goals.forEach(function(g){ h+='<option value="'+esc(g.id)+'"'+(sel===g.id?' selected':'')+'>'+esc(g.title)+'</option>'; });
+  return h;
+}
+function taskRowHtml_(x){
+  var g=x.goalId ? goalById_(x.goalId) : null;
+  var today=tkToday_();
+  var meta=[];
+  if(x.due) meta.push('<span class="tkDue'+(!x.done && x.due<today?' late':'')+'">'+esc(tkDateLabel_(x.due))+'</span>');
+  if(g) meta.push('<span class="tkGoal">🎯 '+esc(g.title)+'</span>');
+  if(x.notes) meta.push('<span class="tkNote">'+esc(x.notes)+'</span>');
+  return '<div class="tkRow'+(x.done?' done':'')+'" data-taskrow="'+esc(x.id)+'">'+
+    '<button class="tkCheck'+(x.done?' on':'')+'" data-taskdone="'+esc(x.id)+'" aria-label="'+esc(t(x.done?'Not done yet':'Done'))+'">'+(x.done?'✓':'')+'</button>'+
+    '<button class="tkBody" data-taskedit="'+esc(x.id)+'"><span class="tkTitle">'+esc(x.title)+'</span>'+
+    (meta.length?'<span class="tkMeta">'+meta.join(' · ')+'</span>':'')+'</button></div>';
+}
+function taskFormHtml_(d){
+  return '<div class="tkEdit">'+
+    '<input type="text" id="tk_title" maxlength="200" value="'+esc(d.title||'')+'" placeholder="'+esc(t('Task'))+'">'+
+    '<textarea id="tk_notes" maxlength="500" rows="2" placeholder="'+esc(t('Details (optional)'))+'">'+esc(d.notes||'')+'</textarea>'+
+    '<div class="tkEditRow"><input type="date" id="tk_due" value="'+esc(d.due||'')+'" aria-label="'+esc(t('Due date'))+'">'+
+    '<select id="tk_goal" aria-label="'+esc(t('Goal'))+'">'+taskGoalOptions_(d.goalId||'')+'</select></div>'+
+    '<div class="tkEditRow"><button class="btn small" id="tkSaveBtn">'+esc(t('Save'))+'</button>'+
+    '<button class="linkbtn inline" id="tkCancelBtn">'+esc(t('Cancel'))+'</button>'+
+    '<span style="flex:1"></span><button class="danger" id="tkDeleteBtn">'+esc(t('Delete'))+'</button></div></div>';
+}
+function tasksTabHtml_(){
+  var year=new Date().getFullYear();
+  var filter=S.taskFilter||'all';
+  var goals=S.smartGoals.filter(function(g){ return Number(g.year)===year; });
+  if(filter!=='all' && filter!=='other' && !goalById_(filter)) filter='all';
+  var all=S.tasks||[];
+  var h='<div class="catChips tkChips">'+
+    '<button class="catChip'+(filter==='all'?' on':'')+'" data-taskfilter="all">'+esc(t('All'))+'</button>'+
+    goals.map(function(g){ return '<button class="catChip'+(filter===g.id?' on':'')+'" data-taskfilter="'+esc(g.id)+'">🎯 '+esc(g.title.length>22?g.title.slice(0,21)+'…':g.title)+'</button>'; }).join('')+
+    (all.some(function(x){ return !x.goalId; }) ? '<button class="catChip'+(filter==='other'?' on':'')+'" data-taskfilter="other">'+esc(t('Other tasks'))+'</button>' : '')+
+    '</div>';
+  var list=all.filter(function(x){
+    if(filter==='all') return true;
+    if(filter==='other') return !x.goalId;
+    return x.goalId===filter;
+  });
+  var fg=goalById_(filter);
+  if(fg) h+='<div class="card slim tkGoalHead"><div class="smartTitle" style="margin:0">🎯 '+esc(fg.title)+'</div><div class="bar" style="margin-top:6px"><div class="barFill'+(fg.pct>=100?' done':'')+'" style="width:'+fg.pct+'%"></div></div><div class="pmeta">'+esc(smartProgressLine_(fg))+'</div></div>';
+
+  /* add a task: type and press Enter — the date and goal are there if you want them */
+  var nd=S.taskNew||{title:'', due:'', goalId:(fg?fg.id:'')};
+  h+='<div class="card tkAddCard"><div class="tkAdd"><span class="tkPlus">＋</span>'+
+    '<input type="text" id="taskNewTitle" maxlength="200" value="'+esc(nd.title||'')+'" placeholder="'+esc(t('Add a task'))+'" autocomplete="off">'+
+    '<button class="btn small" id="taskAddBtn">'+esc(t('Add'))+'</button></div>'+
+    '<div class="tkEditRow"><input type="date" id="taskNewDue" value="'+esc(nd.due||'')+'" aria-label="'+esc(t('Due date'))+'">'+
+    (fg ? '' : '<select id="taskNewGoal" aria-label="'+esc(t('Goal'))+'">'+taskGoalOptions_(nd.goalId||'')+'</select>')+'</div></div>';
+
+  var today=tkToday_();
+  var open=list.filter(function(x){ return !x.done; });
+  var done=list.filter(function(x){ return x.done; }).sort(function(a,b){ return (b.doneAt||'')<(a.doneAt||'') ? -1 : 1; });
+  var byDue=function(a,b){ if((a.due||'')!==(b.due||'')) return (a.due||'')<(b.due||'') ? -1 : 1; return (a.order||0)-(b.order||0); };
+  var secs=[
+    [t('Overdue'), open.filter(function(x){ return x.due && x.due<today; }).sort(byDue), 'late'],
+    [t('Today'), open.filter(function(x){ return x.due===today; }).sort(byDue), ''],
+    [t('Upcoming'), open.filter(function(x){ return x.due && x.due>today; }).sort(byDue), ''],
+    [t('No date'), open.filter(function(x){ return !x.due; }).sort(byDue), '']
+  ];
+  var any=false;
+  h+='<div class="card tkList">';
+  secs.forEach(function(sec){
+    if(!sec[1].length) return;
+    any=true;
+    h+='<div class="tkSecHead'+(sec[2]?' '+sec[2]:'')+'">'+esc(sec[0])+' <span class="tkCount">'+sec[1].length+'</span></div>';
+    sec[1].forEach(function(x){ h+= S.taskEdit===x.id ? taskFormHtml_(S.taskEditDraft||x) : taskRowHtml_(x); });
+  });
+  if(!any) h+='<p class="sub" style="margin:4px 0">'+esc(all.length ? t('All done here. Add the next thing above.') : t('Nothing here yet. Add a task above — link it to a goal and the goal moves as you tick it off.'))+'</p>';
+  if(done.length){
+    h+='<button class="tkDoneToggle" id="tasksDoneToggle">'+esc(gpT('Completed ({n})',{n:done.length}))+' <span class="chev">'+(S.tasksDoneOpen?'▴':'▾')+'</span></button>';
+    if(S.tasksDoneOpen){
+      done.forEach(function(x){ h+= S.taskEdit===x.id ? taskFormHtml_(S.taskEditDraft||x) : taskRowHtml_(x); });
+      h+='<button class="linkbtn inline" id="tasksClearDone" style="margin-top:8px">'+esc(t('Clear completed'))+'</button>';
+    }
+  }
+  h+='</div>';
+  return h;
 }
 
 /* Who you mentor, and who mentors you — from the redesign mockup. The data
@@ -12214,7 +12485,7 @@ function mentorHtml(){
         h+='<div class="smartGoal"><div class="smartTitle">'+esc(g.title)+'</div>'+
           (g.meta?'<div class="smartMeta">'+esc(g.meta)+'</div>':'')+
           '<div class="bar"><div class="barFill'+(g.pct>=100?' done':'')+'" style="width:'+g.pct+'%"></div></div>'+
-          '<div class="smartActions"><span class="smartPct">'+g.pct+'%</span></div></div>';
+          '<div class="smartActions"><span class="smartPct">'+esc(smartProgressLine_(g))+'</span></div></div>';
       });
       h+='</div>';
     }
@@ -13345,8 +13616,6 @@ function bind(){
   var bellBtn=document.getElementById('bellBtn');
   if(bellBtn) bellBtn.onclick=function(){ gpTap(); S.bellOpen=!S.bellOpen; renderNotifPanel(); };
   renderNotifPanel();
-  var stg=document.getElementById('smartToggle');
-  if(stg) stg.onclick=function(){ gpTap(); S.smartOpen=!S.smartOpen; if(!S.smartOpen) S.smartDraft=null; render(); };
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; render(); };
@@ -13572,22 +13841,30 @@ function bind(){
     };
   });
 
-  /* --- Annual Goals (SMART) --- */
+  /* --- Goals & Tasks page --- */
+  var ggm=document.getElementById('goGoalsFromMe');
+  if(ggm) ggm.onclick=function(){ gpTap(); S.view='goals'; S.goalsTab='goals'; render(); };
+  var gb=document.getElementById('goalsBack');
+  if(gb) gb.onclick=function(){ S.view='week'; S.smartDraft=null; S.taskEdit=null; render(); };
+  document.querySelectorAll('[data-gtab]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.goalsTab=b.getAttribute('data-gtab'); S.smartDraft=null; S.taskEdit=null; S.stepAdd=null; render(); };
+  });
+  var sht=document.getElementById('smartHelpToggle');
+  if(sht) sht.onclick=function(){ gpTap(); S.smartHelpOpen=!S.smartHelpOpen; render(); };
   var spy=document.getElementById('smartPrevYear');
-  if(spy) spy.onclick=function(){ S.smartYear=smartYear_()-1; render(); };
+  if(spy) spy.onclick=function(){ S.smartYear=smartYear_()-1; S.smartDraft=null; S.stepAdd=null; render(); };
   var sny=document.getElementById('smartNextYear');
-  if(sny) sny.onclick=function(){ S.smartYear=smartYear_()+1; render(); };
+  if(sny) sny.onclick=function(){ S.smartYear=smartYear_()+1; S.smartDraft=null; S.stepAdd=null; render(); };
   document.querySelectorAll('[data-smartcat]').forEach(function(b){
-    b.onclick=function(){ gpTap(); S.smartCategory=b.getAttribute('data-smartcat'); S.smartDraft=null; render(); };
+    b.onclick=function(){ gpTap(); S.smartCategory=b.getAttribute('data-smartcat'); S.smartDraft=null; S.stepAdd=null; render(); };
   });
   var snb=document.getElementById('smartNewBtn');
-  if(snb) snb.onclick=function(){ S.smartDraft={ id:null, title:'', meta:'', pct:0 }; render(); };
+  if(snb) snb.onclick=function(){ S.smartDraft={ id:null, title:'', meta:'', pct:0, smart:{} }; S.stepAdd=null; render(); };
   document.querySelectorAll('[data-smartedit]').forEach(function(b){
     b.onclick=function(){
-      var id=b.getAttribute('data-smartedit');
-      var g=S.smartGoals.filter(function(x){ return x.id===id; })[0];
-      if(g) S.smartDraft={ id:g.id, title:g.title, meta:g.meta, pct:g.pct };
-      render();
+      var g=goalById_(b.getAttribute('data-smartedit'));
+      if(g) S.smartDraft={ id:g.id, title:g.title, meta:g.meta, pct:g.pctManual!=null?g.pctManual:g.pct, smart:Object.assign({}, g.smart||{}) };
+      S.stepAdd=null; render();
     };
   });
   var scb=document.getElementById('smartCancelBtn');
@@ -13598,35 +13875,180 @@ function bind(){
   if(sgm) sgm.oninput=function(){ if(S.smartDraft) S.smartDraft.meta=sgm.value; };
   var sgp=document.getElementById('sg_pct');
   if(sgp) sgp.oninput=function(){ if(S.smartDraft) S.smartDraft.pct=sgp.value; };
+  ['s','m','a','r','t'].forEach(function(k){
+    var el=document.getElementById('sg_'+k);
+    if(el) el.oninput=function(){ if(S.smartDraft){ S.smartDraft.smart=S.smartDraft.smart||{}; S.smartDraft.smart[k]=el.value; } };
+  });
+  /* Every save sends the goal whole (steps included), so a tick and an edit
+     can never half-overwrite each other. */
+  function smartSend_(payload, after){
+    if(S.busy) return;
+    S.busy=true;
+    run('saveSmartGoal',[S.auth.user,S.auth.pin,payload],function(r){
+      S.busy=false;
+      if(r && r.ok){ S.smartGoals=r.smartGoals||[]; if(after) after(true); }
+      else { showMsg(t('That didn’t save — try again.')); if(after) after(false); }
+      render();
+    });
+  }
+  function goalPayload_(g){
+    return { id:g.id, year:g.year, category:g.category, title:g.title, meta:g.meta||'', pct:g.pctManual!=null?g.pctManual:g.pct, smart:g.smart||{}, steps:(g.steps||[]).slice() };
+  }
   var ssb=document.getElementById('smartSaveBtn');
   if(ssb) ssb.onclick=function(){
     if(S.busy) return;
-    var d=S.smartDraft;
+    var d=S.smartDraft, g=d.id ? goalById_(d.id) : null;
     var title=(document.getElementById('sg_title').value||'').trim();
     if(!title){ showMsg(t('Give the goal a title first.')); return; }
-    var payload={ id:d.id, year:smartYear_(), category:S.smartCategory, title:title,
+    var smart={};
+    ['s','m','a','r','t'].forEach(function(k){ var el=document.getElementById('sg_'+k); smart[k]=el ? el.value.trim() : ''; });
+    var pctEl=document.getElementById('sg_pct');
+    var payload={ id:d.id, year:g?g.year:smartYear_(), category:g?g.category:S.smartCategory, title:title,
       meta:(document.getElementById('sg_meta').value||'').trim(),
-      pct:Number(document.getElementById('sg_pct').value)||0 };
-    S.busy=true; ssb.disabled=true;
-    run('saveSmartGoal',[S.auth.user,S.auth.pin,payload],function(r){
-      S.busy=false;
-      if(r && r.ok){ S.smartGoals=r.smartGoals||[]; S.smartDraft=null; showMsg(t('Saved')); }
-      else showMsg(t('That didn’t save — try again.'));
-      render();
-    });
+      pct: pctEl ? (Number(pctEl.value)||0) : (g ? (g.pctManual!=null?g.pctManual:g.pct) : 0),
+      smart:smart, steps:g?(g.steps||[]).slice():[] };
+    ssb.disabled=true;
+    smartSend_(payload, function(okk){ if(okk){ S.smartDraft=null; showMsg(t('Saved')); } });
   };
   document.querySelectorAll('[data-smartdel]').forEach(function(b){
     b.onclick=function(){
       if(S.busy) return;
-      if(!confirm(t('Delete this goal?'))) return;
+      if(!confirm(t('Delete this goal? Its tasks stay under Other tasks.'))) return;
       S.busy=true;
       run('deleteSmartGoal',[S.auth.user,S.auth.pin,b.getAttribute('data-smartdel')],function(r){
         S.busy=false;
-        if(r && r.ok) S.smartGoals=r.smartGoals||[];
+        if(r && r.ok){ S.smartGoals=r.smartGoals||[]; (S.tasks||[]).forEach(function(x){ if(x.goalId===b.getAttribute('data-smartdel')) x.goalId=''; }); }
         render();
       });
     };
   });
+  /* steps */
+  document.querySelectorAll('[data-stepnew]').forEach(function(b){
+    b.onclick=function(){ S.stepAdd=b.getAttribute('data-stepnew'); S.stepDraft={kind:'quarter', period:1, title:''}; render(); var el=document.getElementById('stepTitle'); if(el) el.focus(); };
+  });
+  var stk=document.getElementById('stepKind');
+  if(stk) stk.onchange=function(){ S.stepDraft.kind=stk.value; S.stepDraft.period=1; render(); var el=document.getElementById('stepPeriod'); if(el) el.focus(); };
+  var stp=document.getElementById('stepPeriod');
+  if(stp) stp.onchange=function(){ S.stepDraft.period=Number(stp.value); };
+  var stt=document.getElementById('stepTitle');
+  if(stt){
+    stt.oninput=function(){ S.stepDraft.title=stt.value; };
+    stt.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); var sb=document.getElementById('stepSaveBtn'); if(sb) sb.click(); } };
+  }
+  var stc=document.getElementById('stepCancelBtn');
+  if(stc) stc.onclick=function(){ S.stepAdd=null; S.stepDraft=null; render(); };
+  var sts=document.getElementById('stepSaveBtn');
+  if(sts) sts.onclick=function(){
+    var g=goalById_(S.stepAdd); if(!g) return;
+    var title=(document.getElementById('stepTitle').value||'').trim();
+    if(!title){ showMsg(t('Write the step first.')); return; }
+    var p=goalPayload_(g);
+    p.steps.push({ kind:S.stepDraft.kind, period:Number(S.stepDraft.period)||1, title:title, done:false });
+    smartSend_(p, function(okk){ if(okk){ S.stepDraft={kind:S.stepDraft.kind, period:S.stepDraft.period, title:''}; } });
+  };
+  document.querySelectorAll('[data-stepdone]').forEach(function(b){
+    b.onclick=function(){
+      var parts=b.getAttribute('data-stepdone').split('|'), g=goalById_(parts[0]); if(!g) return;
+      var p=goalPayload_(g);
+      p.steps=p.steps.map(function(st){ return st.id===parts[1] ? Object.assign({}, st, {done:!st.done}) : st; });
+      b.classList.toggle('on');
+      smartSend_(p);
+    };
+  });
+  document.querySelectorAll('[data-stepdel]').forEach(function(b){
+    b.onclick=function(){
+      var parts=b.getAttribute('data-stepdel').split('|'), g=goalById_(parts[0]); if(!g) return;
+      if(!confirm(t('Remove this step?'))) return;
+      var p=goalPayload_(g);
+      p.steps=p.steps.filter(function(st){ return st.id!==parts[1]; });
+      smartSend_(p);
+    };
+  });
+  document.querySelectorAll('[data-goaltasks]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.goalsTab='tasks'; S.taskFilter=b.getAttribute('data-goaltasks'); S.taskNew=null; S.smartDraft=null; S.stepAdd=null; render(); };
+  });
+
+  /* tasks */
+  function taskSend_(fn, args, after){
+    if(S.busy) return;
+    S.busy=true;
+    run(fn, [S.auth.user,S.auth.pin].concat(args), function(r){
+      S.busy=false;
+      if(r && r.ok){ S.tasks=r.tasks||[]; S.smartGoals=r.smartGoals||S.smartGoals; if(after) after(true); }
+      else { showMsg(t('That didn’t save — try again.')); if(after) after(false); }
+      render();
+    });
+  }
+  document.querySelectorAll('[data-taskfilter]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.taskFilter=b.getAttribute('data-taskfilter'); S.taskNew=null; S.taskEdit=null; render(); };
+  });
+  var tnt=document.getElementById('taskNewTitle');
+  var tnd=document.getElementById('taskNewDue');
+  var tng=document.getElementById('taskNewGoal');
+  function taskNewDraft_(){
+    S.taskNew=S.taskNew||{title:'', due:'', goalId:''};
+    S.taskNew.title=tnt?tnt.value:''; S.taskNew.due=tnd?tnd.value:'';
+    S.taskNew.goalId=tng ? tng.value : (goalById_(S.taskFilter) ? S.taskFilter : '');
+    return S.taskNew;
+  }
+  if(tnt){
+    tnt.oninput=taskNewDraft_;
+    tnt.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); var ab=document.getElementById('taskAddBtn'); if(ab) ab.click(); } };
+  }
+  if(tnd) tnd.onchange=taskNewDraft_;
+  if(tng) tng.onchange=taskNewDraft_;
+  var tab=document.getElementById('taskAddBtn');
+  if(tab) tab.onclick=function(){
+    var d=taskNewDraft_();
+    var title=(d.title||'').trim();
+    if(!title){ if(tnt) tnt.focus(); return; }
+    taskSend_('saveTask', [{ title:title, due:d.due||'', goalId:d.goalId||'', done:false }], function(okk){
+      if(okk){ S.taskNew={title:'', due:'', goalId:d.goalId||''}; }
+    });
+    /* Back to the box straight away — the next task is usually right behind */
+    setTimeout(function(){ var el=document.getElementById('taskNewTitle'); if(el) el.focus(); }, 50);
+  };
+  document.querySelectorAll('[data-taskdone]').forEach(function(b){
+    b.onclick=function(){
+      var x=(S.tasks||[]).filter(function(y){ return y.id===b.getAttribute('data-taskdone'); })[0]; if(!x) return;
+      b.classList.toggle('on');
+      taskSend_('saveTask', [Object.assign({}, x, {done:!x.done})]);
+    };
+  });
+  document.querySelectorAll('[data-taskedit]').forEach(function(b){
+    b.onclick=function(){
+      var x=(S.tasks||[]).filter(function(y){ return y.id===b.getAttribute('data-taskedit'); })[0]; if(!x) return;
+      S.taskEdit=x.id; S.taskEditDraft=Object.assign({}, x); render();
+      var el=document.getElementById('tk_title'); if(el) el.focus();
+    };
+  });
+  ['tk_title','tk_notes','tk_due','tk_goal'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.oninput=el.onchange=function(){ if(S.taskEditDraft) S.taskEditDraft[{tk_title:'title', tk_notes:'notes', tk_due:'due', tk_goal:'goalId'}[id]]=el.value; };
+  });
+  var tkc=document.getElementById('tkCancelBtn');
+  if(tkc) tkc.onclick=function(){ S.taskEdit=null; S.taskEditDraft=null; render(); };
+  var tks=document.getElementById('tkSaveBtn');
+  if(tks) tks.onclick=function(){
+    var d=S.taskEditDraft; if(!d) return;
+    var title=(document.getElementById('tk_title').value||'').trim();
+    if(!title){ showMsg(t('Give the task a name first.')); return; }
+    d.title=title; d.notes=document.getElementById('tk_notes').value; d.due=document.getElementById('tk_due').value; d.goalId=document.getElementById('tk_goal').value;
+    taskSend_('saveTask', [d], function(okk){ if(okk){ S.taskEdit=null; S.taskEditDraft=null; } });
+  };
+  var tkd=document.getElementById('tkDeleteBtn');
+  if(tkd) tkd.onclick=function(){
+    if(!S.taskEdit) return;
+    if(!confirm(t('Delete this task?'))) return;
+    taskSend_('deleteTask', [S.taskEdit], function(){ S.taskEdit=null; S.taskEditDraft=null; });
+  };
+  var tdt=document.getElementById('tasksDoneToggle');
+  if(tdt) tdt.onclick=function(){ gpTap(); S.tasksDoneOpen=!S.tasksDoneOpen; render(); };
+  var tcd=document.getElementById('tasksClearDone');
+  if(tcd) tcd.onclick=function(){
+    if(!confirm(t('Clear all completed tasks?'))) return;
+    taskSend_('clearDoneTasks', [], function(){ S.tasksDoneOpen=false; });
+  };
 
   bindHome();
   bindMinistrySelects();

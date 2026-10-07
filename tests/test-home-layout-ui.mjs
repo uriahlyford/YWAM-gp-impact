@@ -1,8 +1,8 @@
 /* My Home, reorganised (Oct 2026): the sections in order; the large summary card
    (with Health check-in and My Ministry, so neither has a section below) and its
    photo option; Updates capped at three with See all; Weekly Goals with a small
-   Last week / This week switch under it and no Share my week; Annual goals folded
-   until opened; "You're mentoring" only for a mentor; the tiles; no quick-jump
+   Last week / This week switch under it and no Share my week; Annual goals one card
+   that opens the Goals & Tasks page; "You're mentoring" only for a mentor; the tiles; no quick-jump
    strip; 320px and Khmer. On the real backend. */
 import { REPO, PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
 import { chromium, devices } from 'playwright';
@@ -123,10 +123,10 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
   gc = await page.$eval('#sec-goals + .card', e => e.innerText.replace(/\s+/g, ' '));
   ok('… and This week brings this week back', /^This week/.test(gc) && /Plan the cafe menu/.test(gc));
   ok('an unlinked goal says "Link to a KPI" quietly', (await page.$$('.goalLink.unlinked')).length === 3);
-  ok('Annual goals folded to one line', /2 goals · 50% on average/.test(await page.$eval('#smartToggle', e => e.innerText)) && !(await page.$('[data-smartcat]')));
-  await page.click('#smartToggle'); await page.waitForTimeout(300);
-  ok('… opens to the full editor, and closes again', !!(await page.$('[data-smartcat]')) && !!(await page.$('#smartToggle')));
-  await page.click('#smartToggle'); await page.waitForTimeout(300);
+  ok('Annual goals: one card summing the year up, no editor on My Home', /2 goals · 50% on average/.test(await page.$eval('#goGoalsFromMe', e => e.innerText)) && !(await page.$('[data-smartcat]')));
+  await page.click('#goGoalsFromMe'); await page.waitForTimeout(300);
+  ok('… opens the Goals & Tasks page, and ← My Home comes back', await page.evaluate(() => S.view === 'goals') && !!(await page.$('[data-smartcat]')) && !!(await page.$('#goalsBack')));
+  await page.click('#goalsBack'); await page.waitForTimeout(300);
   ok('“You’re mentoring” is not shown to someone who mentors nobody', !/YOU'RE MENTORING|You're not mentoring/i.test(await page.$eval('#sec-mentor + .card', e => e.innerText)));
   ok('About me: personality and strengths side by side', !!(await page.$('.homeTiles #pSeeMine')) && !!(await page.$('.homeTiles #gsStart')));
   ok('no Leave / Profile tiles at the bottom — they are in the menu', !(await page.$('.homeTiles #goLeaveFromMe')) && !(await page.$('#goProfileFromMe')));

@@ -129,6 +129,77 @@ seed();
 r = await call('saveSmartGoal', ['andrew', '9999', { year: 2026, category: 'Faith', title: 'nope', pct: 0 }]);
 ok('a wrong PIN is refused', r.body && r.body.ok === false && (mem.smartGoals || []).length === 0);
 
+/* ---------- 8. SMART answers and the steps that lead up to the goal ---------- */
+seed();
+r = await call('saveSmartGoal', ['andrew', '1234', { year: 2026, category: 'Faith', title: 'Read the New Testament', pct: 10,
+  smart: { s: 'Read all 27 books', m: 'One book every two weeks', a: 'Twenty minutes each morning', r: 'To know Jesus better', t: 'By 30 November', junk: 'x' },
+  steps: [
+    { kind: 'quarter', period: 1, title: 'Gospels', done: true },
+    { kind: 'month', period: 4, title: 'Acts', done: false },
+    { kind: 'week', period: 1, title: 'not a real kind' },
+    { kind: 'quarter', period: 9, title: 'no ninth quarter' },
+    { kind: 'month', period: 5, title: '' }
+  ] }]);
+g = r.body && r.body.smartGoals[0];
+ok('the five SMART answers are kept, nothing else', g && g.smart.s === 'Read all 27 books' && g.smart.t === 'By 30 November' &&
+  Object.keys(g.smart).sort().join() === 'a,m,r,s,t', JSON.stringify(g && g.smart));
+ok('only well-formed steps are kept (a kind, a period in range, a title)', g && g.steps.length === 2 &&
+  g.steps[0].title === 'Gospels' && g.steps[1].kind === 'month' && g.steps[1].period === 4, JSON.stringify(g && g.steps));
+ok('each step gets an id', g && g.steps.every(function (x) { return typeof x.id === 'string' && x.id; }));
+ok('with steps, progress is what is ticked off — not the typed percent', g && g.pct === 50 && g.pctManual === 10, 'pct=' + (g && g.pct));
+const stepIds = g.steps.map(function (x) { return x.id; });
+r = await call('saveSmartGoal', ['andrew', '1234', { id: g.id, year: 2026, category: 'Faith', title: g.title, pct: 10, smart: g.smart,
+  steps: g.steps.map(function (x) { return Object.assign({}, x, { done: true }); }) }]);
+g = r.body.smartGoals[0];
+ok('ticking the steps keeps their ids and moves progress to 100', g.steps.map(function (x) { return x.id; }).join() === stepIds.join() && g.pct === 100);
+r = await call('saveSmartGoal', ['andrew', '1234', { id: g.id, year: 2026, category: 'Faith', title: g.title, pct: 10, steps: [] }]);
+ok('with no steps or tasks the typed percent is the progress again', r.body.smartGoals[0].pct === 10);
+r = await call('saveSmartGoal', ['andrew', '1234', { year: 2026, category: 'Faith', title: 'Too many steps',
+  steps: Array.from({ length: 40 }, function (_, i) { return { kind: 'month', period: (i % 12) + 1, title: 'step ' + i }; }) }]);
+ok('steps are capped at 24', r.body.ok && r.body.smartGoals.filter(function (x) { return x.title === 'Too many steps'; })[0].steps.length === 24);
+ok('a goal saved without SMART answers still reads with the five keys, empty',
+  JSON.stringify(r.body.smartGoals.filter(function (x) { return x.title === 'Too many steps'; })[0].smart) === JSON.stringify({ s: '', m: '', a: '', r: '', t: '' }));
+
+/* ---------- 9. tasks: your own list, each one on a goal or not ---------- */
+seed([{ id: 'sgMine', staffId: 'st_me', year: 2026, category: 'Health', title: 'Run a 10k', pct: 0 },
+      { id: 'sgTheirs', staffId: 'st_other', year: 2026, category: 'Health', title: 'Theirs', pct: 0 }]);
+r = await call('saveTask', ['andrew', '1234', { title: 'Buy running shoes', due: '2026-10-10', goalId: 'sgMine', notes: 'size 42' }]);
+ok('saveTask adds a task and answers with tasks and goals', r.body && r.body.ok && r.body.tasks.length === 1 && Array.isArray(r.body.smartGoals), JSON.stringify(r.body));
+let tk = r.body.tasks[0];
+ok('the task keeps its title, date, note and goal', tk.title === 'Buy running shoes' && tk.due === '2026-10-10' && tk.notes === 'size 42' && tk.goalId === 'sgMine' && tk.done === false);
+ok('the goal now counts it', r.body.smartGoals[0].tasksTotal === 1 && r.body.smartGoals[0].tasksDone === 0 && r.body.smartGoals[0].pct === 0);
+r = await call('saveTask', ['andrew', '1234', Object.assign({}, tk, { done: true })]);
+tk = r.body.tasks[0];
+ok('ticking it off records when, and the goal moves to 100%', tk.done === true && /^\d{4}-/.test(tk.doneAt) && r.body.smartGoals[0].pct === 100 && r.body.smartGoals[0].tasksDone === 1);
+r = await call('saveTask', ['andrew', '1234', { title: 'Run twice this week', goalId: 'sgTheirs' }]);
+ok('a task cannot hang off someone else’s goal — it saves with no goal', r.body.ok && r.body.tasks.filter(function (x) { return x.title === 'Run twice this week'; })[0].goalId === '');
+r = await call('saveTask', ['andrew', '1234', { title: 'x', due: 'next tuesday' }]);
+ok('a bad date is refused', r.body && r.body.ok === false && r.body.err === 'bad_due');
+r = await call('saveTask', ['andrew', '1234', { title: '' }]);
+ok('a blank task is refused', r.body && r.body.ok === false && r.body.err === 'bad_title');
+r = await call('getMyTasks', ['sokha', '1234']);
+ok('someone else sees none of my tasks', r.body && r.body.ok && r.body.tasks.length === 0);
+r = await call('saveTask', ['sokha', '1234', { id: tk.id, title: 'Hijacked', done: false }]);
+ok('editing by my id from another account makes their own row, mine is untouched',
+  r.body.ok && r.body.tasks.length === 1 && r.body.tasks[0].id !== tk.id && mem.tasks.filter(function (x) { return x.id === tk.id; })[0].title === 'Buy running shoes');
+r = await call('deleteTask', ['sokha', '1234', tk.id]);
+ok('deleting my task from another account is a no-op', r.body.ok && mem.tasks.some(function (x) { return x.id === tk.id; }));
+r = await call('deleteSmartGoal', ['andrew', '1234', 'sgMine']);
+ok('deleting a goal leaves its tasks, now under no goal', mem.tasks.filter(function (x) { return x.id === tk.id; })[0].goalId === '');
+r = await call('clearDoneTasks', ['andrew', '1234']);
+ok('clearDoneTasks removes only my finished tasks', r.body.ok && r.body.tasks.length === 1 && r.body.tasks[0].title === 'Run twice this week' &&
+  mem.tasks.some(function (x) { return x.staffId === 'st_other'; }));
+r = await call('deleteTask', ['andrew', '1234', r.body.tasks[0].id]);
+ok('deleteTask removes my task', r.body.ok && r.body.tasks.length === 0);
+r = await call('saveTask', ['andrew', '9999', { title: 'nope' }]);
+ok('a wrong PIN writes no task', r.body && r.body.ok === false && !mem.tasks.some(function (x) { return x.title === 'nope'; }));
+
+/* ---------- 10. boot carries the tasks along ---------- */
+seed();
+mem.tasks = [{ id: 'tk1', staffId: 'st_me', title: 'Mine', done: false, order: 1 }, { id: 'tk2', staffId: 'st_other', title: 'Theirs', done: false, order: 1 }];
+r = await call('getMyBoot', ['andrew', '1234']);
+ok('getMyBoot has my tasks and only mine', r.body && r.body.ok && r.body.tasks.length === 1 && r.body.tasks[0].title === 'Mine', JSON.stringify(r.body && r.body.tasks));
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 fs.rmSync(TMP, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);

@@ -143,9 +143,9 @@ await page.waitForTimeout(400);
 {
   await page.click('nav.bottom button[data-tab="week"]');
   await page.waitForTimeout(300);
-  const fold = await page.$('button#smartToggle.homeFold');   // Annual Goals is folded on My Home until opened
-  if (fold) { await fold.click(); await page.waitForTimeout(300); }
-  const sg = await page.$('[data-smartedit], #smartAddBtn, [data-sgedit]');
+  const card = await page.$('#goGoalsFromMe');   // Annual Goals open into the Goals & Tasks page from My Home
+  if (card) { await card.click(); await page.waitForTimeout(300); }
+  const sg = await page.$('[data-smartedit], #smartNewBtn, [data-sgedit]');
   if (sg) { await sg.click(); await page.waitForTimeout(350); }
   const pct = await page.$('#sg_pct');
   ok('an annual goal\'s progress box is empty, not 0',
