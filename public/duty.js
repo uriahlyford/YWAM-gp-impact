@@ -67,7 +67,7 @@ function dutyHtml(s, o){
   var t=o.t, esc=o.esc;
   var names=function(list, attr){
     var l=list||[];
-    var inner = l.length ? l.map(function(n){ return '<span class="dutyName'+(o.me && n===o.me?' me':'')+'">'+esc(n)+'</span>'; }).join('')
+    var inner = l.length ? l.map(function(n){ return '<span class="dutyName'+(dutyIsMe_(n, o.me)?' me':'')+'">'+esc(n)+'</span>'; }).join('')
       : (o.edit ? '<span class="dutyEmpty">＋</span>' : '');
     return inner;
   };
@@ -93,7 +93,7 @@ function dutyHtml(s, o){
   }
   var out='';
   (s.sections||[]).forEach(function(sec){
-    var rows=o.only ? sec.rows.filter(function(r){ return (r.people||[]).indexOf(o.only)>-1; }) : sec.rows;
+    var rows=o.only ? sec.rows.filter(function(r){ return (r.people||[]).some(function(n){ return dutyIsMe_(n, o.only); }); }) : sec.rows;
     if(!rows.length && !o.edit) return;
     if(sec.title) out+='<div class="dutySec">'+esc(sec.title)+(sec.km?' · '+esc(sec.km):'')+'</div>';
     out+='<div class="dutyList'+(o.compact?' compact':'')+'" data-duty="list">'+rows.map(function(r){
@@ -106,14 +106,20 @@ function dutyHtml(s, o){
 }
 
 /* Every cell that names `me`, as short lines: "Mon · Lunch 12:30". */
+/* "Me" on a schedule: the full name now, the first-name short form on older
+   weeks — so `me` may be one name or a list of the names that are mine. */
+function dutyIsMe_(n, me){
+  if(!me) return false;
+  return Array.isArray(me) ? me.indexOf(n)>-1 : n===me;
+}
 function dutyMine(s, me, t){
   var out=[];
   if(!s || !me) return out;
   if(s.layout==='grid') s.rows.forEach(function(r){
-    if(r.span){ if((s.cells[r.id+'|all']||[]).indexOf(me)>-1) out.push(t('All week')+' · '+r.label); return; }
-    s.days.forEach(function(d){ if((s.cells[r.id+'|'+d]||[]).indexOf(me)>-1) out.push(t(DUTY_DAY_SHORT[d])+' · '+r.label); });
+    if(r.span){ if((s.cells[r.id+'|all']||[]).some(function(n){ return dutyIsMe_(n, me); })) out.push(t('All week')+' · '+r.label); return; }
+    s.days.forEach(function(d){ if((s.cells[r.id+'|'+d]||[]).some(function(n){ return dutyIsMe_(n, me); })) out.push(t(DUTY_DAY_SHORT[d])+' · '+r.label); });
   });
-  else (s.sections||[]).forEach(function(sec){ sec.rows.forEach(function(r){ if((r.people||[]).indexOf(me)>-1) out.push(r.place); }); });
+  else (s.sections||[]).forEach(function(sec){ sec.rows.forEach(function(r){ if((r.people||[]).some(function(n){ return dutyIsMe_(n, me); })) out.push(r.place); }); });
   return out;
 }
 
@@ -123,7 +129,7 @@ function dutyMineRows(s, me){
   var out=[];
   if(!s || !me || s.layout==='grid') return out;
   (s.sections||[]).forEach(function(sec){ sec.rows.forEach(function(r){
-    if((r.people||[]).indexOf(me)>-1) out.push({ section:sec.title||'', place:r.place, duty:r.duty||'', with:(r.people||[]).filter(function(n){ return n!==me; }) });
+    if((r.people||[]).some(function(n){ return dutyIsMe_(n, me); })) out.push({ section:sec.title||'', place:r.place, duty:r.duty||'', with:(r.people||[]).filter(function(n){ return !dutyIsMe_(n, me); }) });
   }); });
   return out;
 }

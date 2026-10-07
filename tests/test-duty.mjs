@@ -45,7 +45,7 @@ const PEOPLE = [
   st({ id: 'st_a', name: 'Adam Admin', username: 'adam', dept: 'Campus Leadership', ministry: 'Campus Director', isAdmin: true }),
   st({ id: 'st_c', name: 'Cafe Kim', username: 'kim', dept: 'Community Service', ministry: 'Cafe', staffType: 'ministry' }),
   st({ id: 'st_s1', name: 'Sam One', username: 'sam1', dept: 'Community Service', ministry: 'Cafe' }),
-  st({ id: 'st_s2', name: 'Sam Two', username: 'sam2', dept: 'Community Service', ministry: 'Cafe' }),
+  st({ id: 'st_s2', name: 'Sam Two', username: 'sam2', dept: 'Community Service', ministry: 'Cafe', staffType: 'yap' }),
   st({ id: 'st_off', name: 'Gone Away', username: 'gone', dept: 'Community Service', ministry: 'Cafe', active: false }),
   st({ id: 'st_pp', name: 'Poipet Pat', username: 'pat', campus: 'poipet', dept: 'Skills Training', ministry: 'Culinary' }),
   st({ id: 'st_app', name: 'Team Leader', username: 'lead', dept: '', ministry: '', kind: 'applicant', applicant: { type: 'team', school: '', candidateId: 'cd_t' } }),
@@ -103,8 +103,8 @@ mem['hosp:siemreap'] = { buildings: [], rooms: [], bookings: [
 ] };
 r = await call('getDuty', [...K, 'kitchen', W0]);
 const g = Object.fromEntries(r.people.map(x => [x.id, x]));
-ok('campus staff come first, by first name; two with one first name get an initial', r.people[0].id === 'campus' && g.campus.names.includes('Kara') && g.campus.names.includes('Sam O.') && g.campus.names.includes('Sam T.') && !g.campus.names.includes('Gone'), JSON.stringify(g.campus));
-ok('other staff in their own group; nobody from another campus, no applicants', g.staff && g.staff.names.join() === 'Cafe' && !JSON.stringify(r.people).includes('Poipet') && !g.campus.names.includes('Team'));
+ok('campus staff and YAP come first, as one group, by full name', r.people[0].id === 'campus' && r.people[0].label === 'Campus staff & YAP' && g.campus.names.includes('Kara Cook') && g.campus.names.includes('Sam One') && g.campus.names.includes('Sam Two') && !g.campus.names.includes('Gone Away'), g.campus.names.join());
+ok('ministry staff in their own group; nobody from another campus, no applicants', g.staff && g.staff.names.join() === 'Cafe Kim' && !JSON.stringify(r.people).includes('Poipet') && !g.campus.names.includes('Team Leader'));
 ok('a team here that week brings its leader, co-leaders and members', g.team_ta_cd_t && g.team_ta_cd_t.label === 'Example Church' && g.team_ta_cd_t.names.slice(0, 3).join() === 'Lee Leader,Co Leader,Member One', JSON.stringify(g.team_ta_cd_t));
 ok('a team that comes later does not', !g.team_tt_later);
 ok('guests booked that week are on offer; ones who left, and team bookings, are not', g.guests && g.guests.names.join() === 'Pastor Example');

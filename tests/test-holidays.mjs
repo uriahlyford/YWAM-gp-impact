@@ -101,11 +101,11 @@ mem.trips = [
 ];
 r = await call('getDuty', ['kara', '1234', 'kitchen', '2026-11-01']);
 const names = r.people.flatMap(g => g.names);
-ok('someone on leave the whole working week isn’t on offer', !names.includes('Ana'), names.join());
-ok('someone away part of the week is, with the days they are gone', names.includes('Ben') && r.away.Ben === 'Tue, Wed', JSON.stringify(r.away));
-ok('a declined request keeps nobody off', names.includes('Cal') && !r.away.Cal);
+ok('someone on leave the whole working week isn’t on offer', !names.includes('Ana Example'), names.join());
+ok('someone away part of the week is, with the days they are gone', names.includes('Ben Example') && r.away['Ben Example'] === 'Tue, Wed', JSON.stringify(r.away));
+ok('a declined request keeps nobody off', names.includes('Cal Example') && !r.away['Cal Example']);
 r = await call('getDuty', ['kara', '1234', 'kitchen', '2026-11-08']);
-ok('the week after, Ana is back', r.people.flatMap(g => g.names).includes('Ana') && !r.away.Ana);
+ok('the week after, Ana is back', r.people.flatMap(g => g.names).includes('Ana Example') && !r.away['Ana Example']);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
