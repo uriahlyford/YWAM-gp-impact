@@ -1,0 +1,16 @@
+{
+  "id": "./portal.html",
+  "name": "YWAM GP Portal",
+  "short_name": "GP Portal",
+  "description": "Apply to YWAM GP, follow your application, and once you are here, everything for your time with us.",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "start_url": "./portal.html",
+  "scope": "./",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -70,6 +70,7 @@ let TEAM_APP = null, NEW_TEAM_APP = null;
 const TEAM_SCHED = { week: '2026-10-04',
   kitchen: { kind: 'kitchen', week: '2026-10-04', layout: 'grid', title: 'Cooking schedule', km: '', notes: '', days: ['mon', 'tue'], rows: [{ id: 'bf', label: 'Breakfast 7:30', km: '', time: '', off: [], span: false }], cells: { 'bf|mon': ['Member One'] }, published: true },
   chores: null };
+let GOOGLE_ON = '';   // the mocked portalAuthConfig: Google's client id, or off
 let CANDS0 = null;  // a fresh copy of the sample records, for blocks that run after others changed them
 const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: TEAM_FORM, reference: REF_FORM };
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
@@ -95,15 +96,19 @@ async function open(viewport, query, seed) {
   const ctx = await browser.newContext({ viewport });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(String(e)));
-  page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION/.test(m.text())) errors.push('console: ' + m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION|ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });
+  await ctx.route('**accounts.google.com/**', r => r.abort());
   await ctx.route('**/.netlify/functions/api', r => {
     const b = JSON.parse(r.request().postData() || '{}'); sent.push(b); let out = { ok: false };
     const [u, pin] = b.args || [];
-    if (b.fn === 'portalRegister') {
+    if (b.fn === 'portalAuthConfig') {
+      out = { ok: true, google: GOOGLE_ON };
+    } else if (b.fn === 'portalRegister') {
       const p = b.args[0];
-      out = p.username === 'taken' ? { ok: false, err: 'taken' } : { ok: true, role: 'applicant', me: { ...ME_APP, name: p.name, username: p.username, phone: p.phone, messenger: p.messenger, type: p.type, school: p.school }, application: { ...ANNA, type: p.type, school: p.school, answers: p.teamName ? { teamName: p.teamName } : {} }, form: p.type === 'team' ? TEAM_FORM : undefined };   // a team reply carries its form, as the server does now
+      out = p.email === 'taken@example.org' ? { ok: false, err: 'email_taken' } : { ok: true, role: 'applicant', user: p.email, token: p.googleToken ? 'a'.repeat(48) : '', me: { ...ME_APP, name: p.name, username: p.email, phone: p.phone, messenger: p.messenger, type: p.type, school: p.school }, application: { ...ANNA, type: p.type, school: p.school, answers: p.teamName ? { teamName: p.teamName } : {} }, form: p.type === 'team' ? TEAM_FORM : undefined };   // a team reply carries its form, as the server does now
     } else if (b.fn === 'portalBoot') {
       if (u === 'anna.b' && pin === '2468') out = { ok: true, role: 'applicant', me: ME_APP, application: ANNA, form: FORM };
+      else if (u === 'anna@example.org' && pin === 'secret123') out = { ok: true, role: 'applicant', me: { ...ME_APP, username: 'anna@example.org', authKind: 'password' }, application: ANNA, form: FORM };
       else if (u === 'srey.k' && pin === '2468') out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Srey Khmer', username: 'srey.k', country: 'Cambodia' }, application: { ...ANNA, name: 'Srey Khmer', stage: 'accepted', status: 'accepted', audience: 'khmer', needsVisa: false, refNeeded: false, steps: STEPS('practical').map(s => s.id === 'docs' ? { ...s, items: [{ id: 'documents', done: true }] } : s), submittedAt: '2026-09-01T00:00:00Z' }, form: FORM };
       else if (u === 'team.au' && pin === '2468') { TEAM_APP = TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'docs', status: 'docs', refNeeded: false, formKey: 'team', steps: TEAM_STEPS('invitation'), trip: { id: 'ta_cd_team', from: '2026-09-01', to: '2026-09-20', metrics: { 'People Served': 30 }, reached: { male: 5, female: null } }, submittedAt: '2026-09-01T00:00:00Z', visa: { flightsConfirmed: true, invitationSent: false }, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'Grace Team', username: 'team.au', country: 'Australia', type: 'team', school: '' }, application: TEAM_APP, form: TEAM_FORM, metricOverrides: [], schedules: TEAM_APP.stage === 'arrived' ? TEAM_SCHED : undefined }; }
       else if (u === 'team.new' && pin === '2468') { NEW_TEAM_APP = NEW_TEAM_APP || { ...ANNA, type: 'team', school: '', stage: 'new', status: 'draft', submittedAt: null, refNeeded: false, formKey: 'team', answers: {}, docKinds: TEAM_DOCS, docs: [] }; out = { ok: true, role: 'applicant', me: { ...ME_APP, name: 'New Team', username: 'team.new', country: 'Australia', type: 'team', school: '' }, application: NEW_TEAM_APP, form: TEAM_FORM }; }
@@ -227,15 +232,21 @@ async function open(viewport, query, seed) {
   await page.click('[data-msgr="whatsapp"]');
   await page.waitForTimeout(100);
   await page.selectOption('#r_country', 'Sweden');
-  await page.fill('#r_user', 'anna.b'); await page.fill('#r_pin', '2468'); await page.fill('#r_pin2', '2400');
+  ok('no username or PIN to invent — a password, and the email is the sign-in', !(await page.$('#r_user')) && !(await page.$('#r_pin')) && !!(await page.$('#r_pw')) && /sign in with your email and this password/.test(await page.$eval('#main', e => e.textContent)));
+  await page.fill('#r_pw', 'secret1'); await page.fill('#r_pw2', 'secret1');
   await page.click('#regBtn');
-  ok('mismatched PINs are stopped', /match/.test(await page.$eval('#msg', e => e.textContent)) && !sent.some(b => b.fn === 'portalRegister'));
-  await page.fill('#r_pin2', '2468');
+  ok('a short password is stopped', /at least 8/.test(await page.$eval('#msg', e => e.textContent)) && !sent.some(b => b.fn === 'portalRegister'));
+  await page.fill('#r_pw', 'secret123'); await page.fill('#r_pw2', 'secret124');
+  await page.click('#regBtn');
+  ok('mismatched passwords are stopped', /match/.test(await page.$eval('#msg', e => e.textContent)) && !sent.some(b => b.fn === 'portalRegister'));
+  await page.fill('#r_pw2', 'secret123');
   await page.click('#regBtn');
   // straight into the application — the sign-up mock answers without a form, as the server did before, so the page fetches it
   await page.waitForSelector('#formSubmit, #formNext', { timeout: 10000 });
   const reg = sent.find(b => b.fn === 'portalRegister');
-  ok('sign-up sends what the server needs — campus, type, school, phone, messenger', reg && reg.args[0].campus === 'siemreap' && reg.args[0].type === 'student' && reg.args[0].school === 'dts' && reg.args[0].messenger === 'whatsapp' && reg.args[0].phone === '+46 70 000 0000' && reg.args[0].username === 'anna.b' && reg.args[0].teamName === undefined);
+  ok('sign-up sends the email and password, no username or PIN', reg && reg.args[0].email === 'anna@example.org' && reg.args[0].password === 'secret123' && !reg.args[0].username && !reg.args[0].pin && !reg.args[0].googleToken, JSON.stringify(reg && reg.args[0]));
+  ok('… and the page signs in as the email from then on', await page.evaluate(() => JSON.parse(localStorage.getItem('gp-portal')).user === 'anna@example.org'));
+  ok('sign-up sends what the server needs — campus, type, school, phone, messenger', reg && reg.args[0].campus === 'siemreap' && reg.args[0].type === 'student' && reg.args[0].school === 'dts' && reg.args[0].messenger === 'whatsapp' && reg.args[0].phone === '+46 70 000 0000' && reg.args[0].teamName === undefined);
   ok('and opens the application straight away (fetching the form when the sign-up reply had none)', /Section 1 of/.test(await page.$eval('#main', e => e.textContent)) && !/Something went wrong/.test(await page.$eval('#main', e => e.textContent)) && sent.some(b => b.fn === 'portalBoot'));
   await page.click('#formClose');
   await page.waitForSelector('#statusPill');
@@ -444,15 +455,26 @@ async function open(viewport, query, seed) {
 /* ---------- the staff side ---------- */
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '');
-  await page.fill('#l_user', 'bopha'); await page.fill('#l_pin', '1234'); await page.click('#loginBtn');
+  ok('sign-in opens on email and password, no Google button while Google is off, and a way to the username-and-PIN door', !!(await page.$('#l_email')) && !!(await page.$('#l_pw')) && !(await page.$('#gsiBtn')) && !(await page.$('#l_user')) && /Staff, or a username and PIN/.test(await page.$eval('#toPinLogin', e => e.textContent)));
+  await page.fill('#l_email', 'anna@example.org'); await page.fill('#l_pw', 'wrong'); await page.click('#loginBtn');
+  await page.waitForTimeout(400);
+  ok('a wrong password stays on sign-in with a message', /Wrong email or password/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#loginBtn')));
+  await page.fill('#l_pw', 'secret123'); await page.keyboard.press('Enter');
+  await page.waitForSelector('#statusPill');
+  ok('an applicant signs in with her email and password and lands on her dashboard, which says how she signs in', /Email and password/.test(await page.$eval('#main', e => e.textContent)) && !!(await page.$('#changePw')));
+  await page.click('#outBtn'); await page.waitForTimeout(150);
+  await page.click('#toPinLogin'); await page.waitForTimeout(100);
+  ok('the username-and-PIN door is for staff and older accounts', !!(await page.$('#l_user')) && /YWAM staff sign in with their My GP username and PIN/.test(await page.$eval('#main', e => e.textContent)));
+  await page.fill('#l_user', 'bopha'); await page.fill('#l_pin', '1234'); await page.click('#pinLoginBtn');
   await page.waitForTimeout(400);
   ok('a staff member without portal access is told so and sees no applicants', /No portal access/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('.trow')));
   await page.click('#outBtn2');
   await page.waitForTimeout(150);
-  await page.fill('#l_user', 'anna.b'); await page.fill('#l_pin', '0000'); await page.click('#loginBtn');
+  if (!(await page.$('#l_user'))) { await page.click('#toPinLogin'); await page.waitForTimeout(100); }
+  await page.fill('#l_user', 'anna.b'); await page.fill('#l_pin', '0000'); await page.click('#pinLoginBtn');
   await page.waitForTimeout(400);
-  ok('a wrong PIN stays on sign-in with a message', /Wrong username or PIN/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#loginBtn')));
-  await page.fill('#l_pin', '1234'); await page.fill('#l_user', 'dara'); await page.click('#loginBtn');
+  ok('a wrong PIN stays on sign-in with a message', /Wrong username or PIN/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#pinLoginBtn')));
+  await page.fill('#l_pin', '1234'); await page.fill('#l_user', 'dara'); await page.click('#pinLoginBtn');
   await page.waitForSelector('.trow');
   ok('portal staff land on Applications with every open applicant of their campus', /Applications/.test(await page.$eval('#main h1', e => e.textContent)) && (await page.$$eval('.trow', r => r.length)) === 3 && !/Poipet Person/.test(await page.$eval('.tbl', e => e.textContent)));
   ok('a tab row toggles through All, DTS, DBS, BCS, SMS, Staff, Volunteer, Teams — with counts', (await page.$$eval('.whatTab', b => b.map(x => x.getAttribute('data-whatfilter')).join(','))) === ',dts,dbs,bcs,sms,staff,volunteer,team' && /Teams\s*1/.test(await page.$eval('[data-whatfilter="team"]', e => e.textContent)) && /DTS\s*1/.test(await page.$eval('[data-whatfilter="dts"]', e => e.textContent)));
@@ -650,6 +672,30 @@ async function open(viewport, query, seed) {
   await ctx.close();
 }
 
+/* ---------- Google sign-in is offered when the server has a client id ---------- */
+{
+  GOOGLE_ON = 'test-client.apps.googleusercontent.com';
+  const { ctx, page } = await open({ width: 390, height: 844 }, '');
+  await page.waitForSelector('#gsiBtn', { timeout: 5000 });
+  ok('with Google on, the sign-in has the Google button area above “or” and the email form', !!(await page.$('#gsiBtn')) && /\bor\b/.test(await page.$eval('.orRow', e => e.textContent)) && !!(await page.$('#l_email')));
+  await page.waitForTimeout(600);
+  ok('when Google’s script cannot load, it says so and leaves the email way in', /could not load/.test(await page.$eval('#gsiBtn', e => e.textContent)) && !!(await page.$('#loginBtn')));
+  await page.click('#toChoose'); await page.waitForTimeout(100); await page.click('[data-apply="dts"]'); await page.waitForTimeout(150);
+  ok('sign-up still asks for a password when you did not come through Google', !!(await page.$('#r_pw')) && /Continue with Google instead/.test(await page.$eval('#main', e => e.textContent)));
+  /* straight from Google with no account: sign-up opens with the email filled in and no password to make */
+  await page.evaluate(() => { P.gtoken = 'g.token'; P.reg.email = 'gus@example.org'; P.reg.name = 'Gus Google'; render(); });
+  await page.waitForTimeout(100);
+  ok('coming from Google, the email is filled in and read-only, the name filled in, and there is no password box', (await page.$eval('#r_email', e => e.value + (e.readOnly ? '*' : ''))) === 'gus@example.org*' && (await page.$eval('#r_name', e => e.value)) === 'Gus Google' && !(await page.$('#r_pw')) && /Signing up with Google/.test(await page.$eval('#main', e => e.textContent)));
+  await page.fill('#r_phone', '+1 555 0100'); await page.click('[data-msgr="whatsapp"]'); await page.waitForTimeout(100); await page.selectOption('#r_country', 'United States');
+  await page.click('#regBtn');
+  await page.waitForSelector('#formSubmit, #formNext, #statusPill', { timeout: 10000 });
+  const greg = sent.filter(b => b.fn === 'portalRegister').pop();
+  ok('sign-up sends the Google token instead of a password, and the page keeps the device token as its sign-in', greg && greg.args[0].googleToken === 'g.token' && !greg.args[0].password &&
+    await page.evaluate(() => { const a = JSON.parse(localStorage.getItem('gp-portal')); return a.user === 'gus@example.org' && a.pin === 'a'.repeat(48); }));
+  GOOGLE_ON = '';
+  await ctx.close();
+}
+
 /* ---------- a team signs up: its sending church first ---------- */
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '?apply=team&lang=en');
@@ -657,7 +703,7 @@ async function open(viewport, query, seed) {
   await page.fill('#r_name', 'Pat Leader'); await page.fill('#r_email', 'pat@example.org'); await page.fill('#r_phone', '+61 400 000 001');
   await page.click('[data-msgr="telegram"]'); await page.waitForTimeout(100);
   await page.selectOption('#r_country', 'Australia');
-  await page.fill('#r_user', 'pat.team'); await page.fill('#r_pin', '2468'); await page.fill('#r_pin2', '2468');
+  await page.fill('#r_pw', 'secret123'); await page.fill('#r_pw2', 'secret123');
   const regsBefore = sent.filter(b => b.fn === 'portalRegister').length;
   await page.click('#regBtn');
   ok('a team without its church named is stopped', /sending church/i.test(await page.$eval('#msg', e => e.textContent)) && sent.filter(b => b.fn === 'portalRegister').length === regsBefore, await page.$eval('#msg', e => e.textContent));

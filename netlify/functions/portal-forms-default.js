@@ -115,11 +115,11 @@ const dtsForm = () => ({
       q('guardianPhone', 'phone', 'Parent or guardian’s phone number', 'លេខទូរស័ព្ទឪពុកម្តាយ ឬអាណាព្យាបាល', { required: true })
     ]
   }, {
-    id: 'friend', title: T('Friend reference', 'ព័ត៌មានមិត្តភក្តិ'), help: T('Someone who knows you well.', 'នរណាម្នាក់ដែលស្គាល់អ្នកច្បាស់។'),
+    id: 'friend', title: T('Leader reference', 'អ្នកដឹកនាំផ្តល់យោបល់'), help: T('A pastor or leader who knows you well — not a friend. We will ask them for a short reference.', 'គ្រូគង្វាល ឬអ្នកដឹកនាំដែលស្គាល់អ្នកច្បាស់ — មិនមែនមិត្តភក្តិទេ។ យើងនឹងសុំយោបល់ខ្លីពីគាត់។'),
     questions: [
       q('friendRelation', 'short', 'What is their relationship to you?', 'តើគាត់ត្រូវជាអ្វីនឹងអ្នក?', { required: true }),
-      q('friendName', 'short', 'Friend’s name', 'ឈ្មោះមិត្តភក្តិ', { required: true }),
-      q('friendPhone', 'phone', 'Friend’s phone number', 'លេខទូរស័ព្ទមិត្តភក្តិ', { required: true })
+      q('friendName', 'short', 'Leader’s name', 'ឈ្មោះអ្នកដឹកនាំ', { required: true }),
+      q('friendPhone', 'phone', 'Leader’s phone number', 'លេខទូរស័ព្ទអ្នកដឹកនាំ', { required: true })
     ]
   }, {
     id: 'more', title: T('Additional personal information', 'ព័ត៌មានផ្ទាល់ខ្លួនបន្ថែម'), help: T('Please be honest with your answers so we can better help you.', 'សូមឆ្លើយដោយស្មោះត្រង់ ដើម្បីឱ្យយើងអាចជួយអ្នកបានល្អជាងមុន។'),

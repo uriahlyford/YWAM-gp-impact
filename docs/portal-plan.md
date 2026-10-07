@@ -106,6 +106,24 @@ name typed back to confirm) — applicant accounts live nowhere else.
   (`public/portal-forms.js`): section titles, questions, help text, options,
   each with `en` and `km` — so wording changes never touch logic.
 
+## Where this is going (Uriah, Oct 2026)
+
+The portal is more than a place to submit an application: it is the **first door into the
+community**, and the account someone makes here is the one they keep through their time
+with us. So:
+
+- **Sign in with Google or with an email and password** (done). An applicant's username is
+  their email. Staff keep their My GP username and PIN. Google needs `GP_GOOGLE_CLIENT_ID`
+  on Netlify (Google Cloud → Credentials → OAuth client, type Web, with the portal's origin
+  as an authorised JavaScript origin); without it the sign-in is email + password only.
+- **Installable like the GP app** (done): `portal-manifest.json`, the shared service worker,
+  an install card on the dashboard.
+- **Next**: a student (or anyone with a portal account) applies to serve — staff or
+  volunteer — from inside the portal, and that application lands on the **HR page of the
+  GP app** as a candidate of that type (a second candidate record on the same account,
+  `staffId` shared), with their student record kept. Then, over time, the tools they use
+  while here: schedules, the outreach guide, notices, their own numbers.
+
 ## Milestones
 
 1. **Accounts, roles, admin access screen, applicant dashboard shell**

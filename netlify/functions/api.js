@@ -190,6 +190,40 @@ function isLeader_(code) {
 function hashPin_(pin, salt) {
   return crypto.createHash('sha256').update(salt + ':' + String(pin), 'utf8').digest('hex');
 }
+/* Portal applicants (Oct 2026) sign in with Google or an email and password,
+   and their username is their email. A password is hashed with PBKDF2 (a PIN
+   is four digits behind a login throttle; a password is worth more work). A
+   Google sign-in leaves no password: the server mints a long random device
+   token instead, kept hashed on the account (a few, one per phone), and the
+   page holds it the way it holds a PIN — so every handler's (username, pin)
+   stays as it is. credOk_ is the one place all three are checked. */
+const SECRET_ITER = 30000;
+const MAX_DEVICE_TOKENS = 8;
+function hashSecret_(secret, salt) {
+  return crypto.pbkdf2Sync(String(secret), String(salt), SECRET_ITER, 32, 'sha256').toString('hex');
+}
+function safeEq_(a, b) {
+  const x = Buffer.from(String(a || ''), 'utf8'), y = Buffer.from(String(b || ''), 'utf8');
+  return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
+}
+function credOk_(s, pin) {
+  if (!s) return false;
+  if (s.secretHash) {
+    if (safeEq_(hashSecret_(pin, s.secretSalt), s.secretHash)) return true;
+  } else if (s.pinHash && safeEq_(hashPin_(pin, s.pinSalt), s.pinHash)) return true;
+  // a device token (Google sign-in): long and random, so a plain salted hash is enough
+  if (Array.isArray(s.tokens) && /^[a-f0-9]{40,}$/.test(String(pin || ''))) {
+    return s.tokens.some(function (t) { return t && safeEq_(hashPin_(pin, t.salt), t.hash); });
+  }
+  return false;
+}
+function newDeviceToken_() { return crypto.randomBytes(24).toString('hex'); }
+function addDeviceToken_(rec) {
+  const tok = newDeviceToken_(), salt = pinSalt_();
+  rec.tokens = (Array.isArray(rec.tokens) ? rec.tokens : []).concat([{ hash: hashPin_(tok, salt), salt: salt, created: new Date().toISOString() }]).slice(-MAX_DEVICE_TOKENS);
+  return tok;
+}
+function authKindOf_(s) { return s.secretHash ? 'password' : (s.pinHash ? 'pin' : 'google'); }
 function pinSalt_() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
 }
@@ -313,7 +347,7 @@ async function verifyStaff_(username, pin, allowApplicant) {
   if (await isLoginLocked_(username)) return null;
   const rows = await getStaff_();
   const s = findStaff_(rows, username);
-  if (!s || hashPin_(pin, s.pinSalt) !== s.pinHash) {
+  if (!s || !credOk_(s, pin)) {
     await recordFailedLogin_(username);
     return null;
   }
@@ -699,11 +733,11 @@ async function staffLogin(username, pin) {
   if (!(await isLoginLocked_(username))) {
     const rows = await getStaff_();
     const raw = findStaff_(rows, username);
-    if (raw && raw.active === false && hashPin_(pin, raw.pinSalt) === raw.pinHash) {
+    if (raw && raw.active === false && credOk_(raw, pin)) {
       return { ok: false, err: 'pending' };
     }
     // A portal applicant signing in on the staff app: right PIN, wrong door.
-    if (raw && isApplicant_(raw) && hashPin_(pin, raw.pinSalt) === raw.pinHash) {
+    if (raw && isApplicant_(raw) && credOk_(raw, pin)) {
       return { ok: false, err: 'applicant' };
     }
   }
@@ -5299,19 +5333,110 @@ async function candidateFor_(rows, s) {
   return rows.find(function (r) { return r && (r.id === cid || r.staffId === s.id); }) || null;
 }
 
+/* ---- Sign in with Google ----
+   The page gets an ID token from Google Identity Services and sends it here.
+   Google's tokeninfo endpoint checks the signature; this checks that it was
+   issued for OUR client id (GP_GOOGLE_CLIENT_ID, set on Netlify), that the
+   email is verified and that it has not expired. Without the env var there
+   is no Google button and every token is refused. Answers {email, name} or
+   null. globalThis.fetch so a test can stand in for Google. */
+const GOOGLE_ISS = ['accounts.google.com', 'https://accounts.google.com'];
+function googleClientId_() { return String(process.env.GP_GOOGLE_CLIENT_ID || '').trim(); }
+async function verifyGoogleToken_(idToken) {
+  const cid = googleClientId_();
+  if (!cid || !idToken || typeof idToken !== 'string' || idToken.length > 4096) return null;
+  let info = null;
+  try {
+    const res = await globalThis.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
+    if (!res || !res.ok) return null;
+    info = await res.json();
+  } catch (e) { return null; }
+  if (!info || info.aud !== cid || GOOGLE_ISS.indexOf(info.iss) === -1) return null;
+  if (String(info.email_verified) !== 'true') return null;
+  if (!(Number(info.exp) * 1000 > Date.now())) return null;
+  const email = cleanEmail_(info.email);
+  if (!email) return null;
+  return { email: email, name: str_(info.name, 120) || '', sub: String(info.sub || '') };
+}
+/* What the page needs before it can draw the sign-in: whether Google is on. */
+async function portalAuthConfig() {
+  return { ok: true, google: googleClientId_() };
+}
+/* Sign in with Google: a verified token for an email that has an applicant
+   account signs them in — a fresh device token comes back, which the page
+   keeps as its "pin". An email without an account gets 'new' with the name
+   and email, and the page opens sign-up with those filled in. A staff
+   member's email is told to use the staff door. */
+async function portalLoginGoogle(idToken) {
+  const g = await verifyGoogleToken_(idToken);
+  if (!g) return { ok: false, err: 'google' };
+  const rows = await getStaff_();
+  const rec = rows.find(function (r) { return r.email === g.email || r.username === g.email; });
+  if (!rec) return { ok: false, err: 'new', email: g.email, name: g.name };
+  if (!isApplicant_(rec)) return { ok: false, err: 'staff' };
+  if (rec.active === false) return { ok: false, err: 'auth' };
+  let tok = '';
+  const out = await mutateStaff_(function (all) {
+    const idx = all.findIndex(function (r) { return r.id === rec.id; });
+    if (idx === -1) return { abort: true, ok: false };
+    tok = addDeviceToken_(all[idx]);
+    all[idx].google = { sub: g.sub, lastAt: new Date().toISOString() };
+    all[idx].updated = new Date().toISOString();
+    return { ok: true };
+  });
+  if (!out || !out.ok) return { ok: false };
+  await clearLoginThrottle_(rec.username);
+  const boot = await portalBoot(rec.username, tok);
+  if (!boot.ok) return boot;
+  return Object.assign(boot, { user: rec.username, token: tok });
+}
+/* An applicant with an email and password changes it here (their own only). */
+async function portalSetPassword(username, pin, newPassword) {
+  const s = await verifyStaff_(username, pin, true);
+  if (!s) return { ok: false };
+  if (!isApplicant_(s)) return { ok: false, err: 'not_applicant' };
+  const pw = String(newPassword || '');
+  if (pw.length < 8 || pw.length > 200) return { ok: false, err: 'bad_password' };
+  const salt = pinSalt_() + pinSalt_();
+  const out = await mutateStaff_(function (all) {
+    const idx = all.findIndex(function (r) { return r.id === s.id; });
+    if (idx === -1) return { abort: true, ok: false };
+    all[idx].secretSalt = salt; all[idx].secretHash = hashSecret_(pw, salt);
+    delete all[idx].pinHash; delete all[idx].pinSalt;
+    all[idx].updated = new Date().toISOString();
+    return { ok: true };
+  });
+  return out && out.ok ? { ok: true } : (out || { ok: false });
+}
+
 /* Validate and create an applicant account + its candidate record. `by` is
    who made it: the applicant themself (sign-up) or a portal admin (Accounts →
    Add). Answers {ok:false, err} or {ok:true, rec, cand}. */
 async function createApplicant_(payload, by) {
   payload = payload && typeof payload === 'object' ? payload : {};
-  const u = normUser_(payload.username);
-  if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { ok: false, err: 'bad_username' };
-  if (!/^\d{4}$/.test(String(payload.pin))) return { ok: false, err: 'bad_pin' };
-  const name = str_(payload.name, 120);
-  if (!name) return { ok: false, err: 'name_required' };
-  const email = cleanEmail_(payload.email);
+  /* Three ways to make the account: with Google (a verified token — the email
+     is Google's, the username is the email, no password), with an email and a
+     password (username = email), or the older username + 4-digit PIN (portal
+     admins adding someone by hand still use it). */
+  let google = null;
+  if (payload.googleToken) {
+    google = await verifyGoogleToken_(payload.googleToken);
+    if (!google) return { ok: false, err: 'google' };
+  }
+  const email = google ? google.email : cleanEmail_(payload.email);
   if (email === null) return { ok: false, err: 'bad_email' };
   if (!email) return { ok: false, err: 'email_required' };
+  const password = payload.password !== undefined && payload.password !== null && payload.password !== '' ? String(payload.password) : '';
+  const byEmail = !!google || !!password;
+  let u = byEmail ? email : normUser_(payload.username);
+  if (byEmail) {
+    if (password && (password.length < 8 || password.length > 200)) return { ok: false, err: 'bad_password' };
+  } else {
+    if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { ok: false, err: 'bad_username' };
+    if (!/^\d{4}$/.test(String(payload.pin))) return { ok: false, err: 'bad_pin' };
+  }
+  const name = str_(payload.name, 120) || (google && google.name) || null;
+  if (!name) return { ok: false, err: 'name_required' };
   const phone = cleanPhone_(payload.phone);
   if (!phone) return { ok: false, err: 'phone_required' };
   const messenger = PORTAL_MESSENGERS.indexOf(payload.messenger) > -1 ? payload.messenger : '';
@@ -5330,19 +5455,23 @@ async function createApplicant_(payload, by) {
      the form opens with it filled in (it is the form's first question). */
   const teamName = type === 'team' ? (str_(payload.teamName, 120) || '') : '';
   const rows = await getStaff_();
-  if (findStaff_(rows, u)) return { ok: false, err: 'taken' };
   if (rows.some(function (r) { return r.email && r.email === email; })) return { ok: false, err: 'email_taken' };
+  if (findStaff_(rows, u)) return { ok: false, err: byEmail ? 'email_taken' : 'taken' };
   const cands = await getCandidates_();
   if (cands.length >= CAND_MAX) return { ok: false, err: 'too_many' };
   const salt = pinSalt_(), now = new Date().toISOString();
   const id = newStaffId_(), candId = hrId_('cd');
   const rec = {
-    id: id, username: u, name: name, email: email, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
+    id: id, username: u, name: name, email: email,
     kind: 'applicant', campus: campus, dept: '', ministry: '', role: '', photo: '',
     phone: phone, messenger: messenger, country: country,
     applicant: { type: type, school: school, candidateId: candId },
     active: true, isAdmin: false, created: now, updated: now
   };
+  let token = '';
+  if (google) { rec.google = { sub: google.sub, lastAt: now }; token = addDeviceToken_(rec); }
+  else if (password) { rec.secretSalt = salt + pinSalt_(); rec.secretHash = hashSecret_(password, rec.secretSalt); }
+  else { rec.pinHash = hashPin_(payload.pin, salt); rec.pinSalt = salt; }
   const cand = {
     id: candId, campus: campus, name: name, type: type, stage: 'new',
     subtype: school ? school.toUpperCase() : '', school: school,
@@ -5356,8 +5485,8 @@ async function createApplicant_(payload, by) {
   // staff can see and clean up; an account without its candidate would be a
   // person who signed up and sees nothing.
   const made = await mutateStaff_(function (all) {
-    if (findStaff_(all, u)) return { abort: true, ok: false, err: 'taken' };
     if (all.some(function (r) { return r.email && r.email === email; })) return { abort: true, ok: false, err: 'email_taken' };
+    if (findStaff_(all, u)) return { abort: true, ok: false, err: byEmail ? 'email_taken' : 'taken' };
     all.push(rec);
     return { ok: true };
   });
@@ -5365,13 +5494,16 @@ async function createApplicant_(payload, by) {
   const fresh = await getCandidates_();
   fresh.push(cand);
   await writeJSON('candidates', fresh);
-  return { ok: true, rec: rec, cand: cand };
+  return { ok: true, rec: rec, cand: cand, token: token };
 }
 async function portalRegister(payload) {
   const made = await createApplicant_(payload, null);
   if (!made.ok) return made;
-  // the same shape portalBoot gives, form included — the dashboard opens the form straight away
-  return { ok: true, role: 'applicant', me: portalMeOut_(made.rec), application: portalAppOut_(made.cand), form: (await getForms_())[formKeyOf_(made.cand)] };
+  // the same shape portalBoot gives, form included — the dashboard opens the form straight away;
+  // `user` is what the page signs in as from now on (the email, for the new ways in), and
+  // `token` the device token a Google sign-up holds in place of a password
+  return { ok: true, role: 'applicant', me: portalMeOut_(made.rec), application: portalAppOut_(made.cand), form: (await getForms_())[formKeyOf_(made.cand)],
+    user: made.rec.username, token: made.token || '' };
 }
 
 /* ==================== accounts (staff side, portal admins) ====================
@@ -5383,7 +5515,7 @@ function portalAccountOut_(s, cand) {
   return { id: s.id, username: s.username, name: s.name, email: s.email || '', phone: s.phone || '', messenger: s.messenger || '', country: s.country || '',
     campus: s.campus || '', type: s.applicant ? s.applicant.type : '', school: s.applicant ? s.applicant.school : '',
     candidateId: (s.applicant && s.applicant.candidateId) || (cand && cand.id) || '', stage: cand ? cand.stage : '', status: cand ? portalStatus_(cand) : 'none',
-    created: s.created || '', updated: s.updated || '' };
+    authKind: authKindOf_(s), created: s.created || '', updated: s.updated || '' };
 }
 async function portalListAccounts(username, pin) {
   const me = await verifyStaff_(username, pin);
@@ -5413,6 +5545,7 @@ async function portalUpdateAccount(username, pin, staffId, payload) {
     const rec = rows[idx];
     if (!isApplicant_(rec)) return { abort: true, ok: false, err: 'not_applicant' };
     if (payload.name !== undefined) { const nm = str_(payload.name, 120); if (!nm) return { abort: true, ok: false, err: 'name_required' }; rec.name = nm; }
+    if (payload.username !== undefined && authKindOf_(rec) !== 'pin') return { abort: true, ok: false, err: 'username_is_email' };
     if (payload.username !== undefined) {
       const u = normUser_(payload.username);
       if (!/^[a-z0-9._-]{2,20}$/.test(u)) return { abort: true, ok: false, err: 'bad_username' };
@@ -5423,12 +5556,21 @@ async function portalUpdateAccount(username, pin, staffId, payload) {
       const email = cleanEmail_(payload.email);
       if (email === null || !email) return { abort: true, ok: false, err: 'bad_email' };
       if (rows.some(function (r) { return r.id !== rec.id && r.email && r.email === email; })) return { abort: true, ok: false, err: 'email_taken' };
+      if (rows.some(function (r) { return r.id !== rec.id && r.username === email; })) return { abort: true, ok: false, err: 'email_taken' };
       rec.email = email;
+      if (authKindOf_(rec) !== 'pin') rec.username = email;   // their username IS their email
+    }
+    if (payload.newPassword !== undefined && payload.newPassword !== '') {
+      const pw = String(payload.newPassword);
+      if (pw.length < 8 || pw.length > 200) return { abort: true, ok: false, err: 'bad_password' };
+      rec.secretSalt = pinSalt_() + pinSalt_(); rec.secretHash = hashSecret_(pw, rec.secretSalt);
+      delete rec.pinHash; delete rec.pinSalt;
     }
     if (payload.phone !== undefined) { const ph = cleanPhone_(payload.phone); if (!ph) return { abort: true, ok: false, err: 'phone_required' }; rec.phone = ph; }
     if (payload.messenger !== undefined) { if (PORTAL_MESSENGERS.indexOf(payload.messenger) === -1) return { abort: true, ok: false, err: 'messenger_required' }; rec.messenger = payload.messenger; }
     if (payload.country !== undefined) { const co = cleanCountry_(payload.country); if (!co) return { abort: true, ok: false, err: 'country_required' }; rec.country = co; }
     if (payload.newPin !== undefined && payload.newPin !== '') {
+      if (authKindOf_(rec) !== 'pin') return { abort: true, ok: false, err: 'no_pin_account' };
       if (!/^\d{4}$/.test(String(payload.newPin))) return { abort: true, ok: false, err: 'bad_pin' };
       rec.pinSalt = pinSalt_(); rec.pinHash = hashPin_(payload.newPin, rec.pinSalt);
     }
@@ -5450,7 +5592,7 @@ async function portalUpdateAccount(username, pin, staffId, payload) {
 }
 function portalMeOut_(s) {
   return { id: s.id, name: s.name, username: s.username, email: s.email || '', phone: s.phone || '', messenger: s.messenger || '', country: s.country || '',
-    campus: s.campus || '', type: s.applicant ? s.applicant.type : '', school: s.applicant ? s.applicant.school : '' };
+    campus: s.campus || '', type: s.applicant ? s.applicant.type : '', school: s.applicant ? s.applicant.school : '', authKind: authKindOf_(s) };
 }
 /* One call per page open, same as getMyBoot: who you are, and either your own
    application or — for portal staff — everyone's. A bad PIN is 'auth' so the
@@ -6210,6 +6352,9 @@ const HANDLERS = {
   getMyBroadcasts: function (a) { return getMyBroadcasts(a[0], a[1]); },
   sendBroadcast: function (a) { return sendBroadcast(a[0], a[1], a[2]); },
   portalRegister: function (a) { return portalRegister(a[0]); },
+  portalAuthConfig: function () { return portalAuthConfig(); },
+  portalLoginGoogle: function (a) { return portalLoginGoogle(a[0]); },
+  portalSetPassword: function (a) { return portalSetPassword(a[0], a[1], a[2]); },
   portalBoot: function (a) { return portalBoot(a[0], a[1]); },
   portalSetAccess: function (a) { return portalSetAccess(a[0], a[1], a[2], a[3]); },
   portalUpdateContact: function (a) { return portalUpdateContact(a[0], a[1], a[2]); },
