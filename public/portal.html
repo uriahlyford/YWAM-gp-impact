@@ -80,6 +80,8 @@ h3 { font-size:13px; font-weight:600; letter-spacing:1.4px; text-transform:upper
 .linkbtn.danger { color:var(--bad); }
 .gsiWrap { display:flex; justify-content:center; min-height:44px; margin:4px 0 2px; }
 .gsiWrap .gsiFallback { font-size:13px; opacity:.8; }
+.googleBtn { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:12px 16px; border-radius:999px; border:1px solid var(--border2); background:var(--surface2); color:var(--ink); font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+.googleBtn:hover { border-color:var(--ink); } .googleBtn:disabled { opacity:.6; cursor:default; } .googleBtn svg { flex:0 0 auto; }
 .orRow { display:flex; align-items:center; gap:10px; color:var(--faint); font-size:12.5px; margin:12px 0 2px; }
 .orRow:before, .orRow:after { content:''; flex:1; border-top:1px solid var(--border); }
 .installCard { margin-bottom:14px; }
@@ -726,7 +728,7 @@ function loginHtml_(){
   var h='<div class="center">';
   if(!P.pinLogin){
     h+='<div class="card"><h2>'+esc(t('Sign in'))+'</h2><p class="sub">'+esc(t('With Google, or with your email and password.'))+'</p>'+
-      (g ? '<div class="gsiWrap" id="gsiBtn"><button class="btn ghost gsiFallback" id="gsiFallback" style="margin-top:0" disabled>'+esc(t('Loading Google sign-in…'))+'</button></div>'+
+      (g ? googleBtnHtml_()+
            '<div class="orRow"><span>'+esc(t('or'))+'</span></div>' : '')+
       '<label class="f"'+(g?'':' style="margin-top:0"')+'>'+esc(t('Email'))+'</label><input type="email" id="l_email" autocomplete="username" autocapitalize="none" inputmode="email" value="'+esc(P.reg.email||'')+'">'+
       '<label class="f">'+esc(t('Password'))+'</label><input type="password" id="l_pw" autocomplete="current-password">'+
@@ -746,30 +748,44 @@ function loginHtml_(){
 /* Google Identity Services: loaded once the server says Google is on, and
    its button drawn into #gsiBtn on every render of the sign-in. The token it
    hands back goes to portalLoginGoogle. */
-var _gsi={ loading:false, ready:false };
-function gsiLoad_(){
-  if(_gsi.loading || _gsi.ready || !(P.authCfg && P.authCfg.google)) return;
+var _gsi={ loading:false, ready:false, client:null };
+/* Our own black button (Google's drawn one carries a white box that fights
+   the portal's dark page). It opens Google's popup through the OAuth token
+   client and hands the access token to portalLoginGoogle. */
+function googleBtnHtml_(){
+  return '<div class="gsiWrap" id="gsiBtn"><button type="button" class="googleBtn" id="googleBtn"'+(P.gBusy?' disabled':'')+'>'+
+    '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.7 1.2 9.2 3.6l6.9-6.9C35.9 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l8 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.4-4.6 7.1l7.4 5.7c4.3-4 6.9-9.9 6.9-17.3z"/><path fill="#FBBC05" d="M10.6 28.6A14.5 14.5 0 0 1 9.8 24c0-1.6.3-3.1.8-4.5l-8-6.2A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>'+
+    '<span>'+esc(P.gBusy ? t('Opening Google…') : t('Continue with Google'))+'</span></button></div>';
+}
+function gsiLoad_(after){
+  if(!(P.authCfg && P.authCfg.google)) return;
+  if(_gsi.ready){ if(after) after(); return; }
+  _gsi.after = after || _gsi.after;
+  if(_gsi.loading) return;
   _gsi.loading=true;
   var sc=document.createElement('script'); sc.src='https://accounts.google.com/gsi/client'; sc.async=true; sc.defer=true;
   sc.onload=function(){
     try {
-      google.accounts.id.initialize({ client_id:P.authCfg.google, callback:onGoogleCred_, ux_mode:'popup', auto_select:false, itp_support:true });
-      _gsi.ready=true; gsiRender_();
+      _gsi.client=google.accounts.oauth2.initTokenClient({ client_id:P.authCfg.google, scope:'openid email profile', callback:onGoogleCred_,
+        error_callback:function(){ P.gBusy=false; render(); } });
+      _gsi.ready=true; _gsi.loading=false;
+      if(_gsi.after){ var f=_gsi.after; _gsi.after=null; f(); }
     } catch(e){ _gsi.loading=false; gsiFail_(); }
   };
   sc.onerror=function(){ _gsi.loading=false; gsiFail_(); };
   document.head.appendChild(sc);
 }
-function gsiFail_(){ var fb=document.getElementById('gsiFallback'); if(fb){ fb.disabled=false; fb.textContent=t('Google sign-in could not load — use your email, or try again later.'); fb.onclick=function(){ _gsi.loading=false; gsiLoad_(); }; } }
-function gsiRender_(){
-  var el=document.getElementById('gsiBtn'); if(!el || !_gsi.ready) return;
-  try {
-    el.innerHTML='';
-    google.accounts.id.renderButton(el, { theme:'filled_black', size:'large', text:'continue_with', shape:'pill', width: Math.min(360, Math.max(240, el.clientWidth||300)), logo_alignment:'left' });
-  } catch(e){}
+function gsiFail_(){ P.gBusy=false; render(); showMsg(t('Google sign-in could not load — use your email, or try again later.')); }
+function gsiRender_(){}
+function googleGo_(){
+  if(P.gBusy) return;
+  P.gBusy=true; render();
+  gsiLoad_(function(){ try { _gsi.client.requestAccessToken({ prompt:'select_account' }); } catch(e){ gsiFail_(); } });
+  /* if Google's script never answers, let go of the button */
+  setTimeout(function(){ if(P.gBusy && !_gsi.ready){ P.gBusy=false; render(); } }, 12000);
 }
 function onGoogleCred_(resp){
-  var tok=resp && resp.credential; if(!tok) return;
+  var tok=resp && (resp.access_token || resp.credential); P.gBusy=false; if(!tok){ render(); return; }
   P.busy=true; render();
   run('portalLoginGoogle', [tok], function(d){
     P.busy=false;
@@ -805,7 +821,7 @@ function registerHtml_(){
   h+='<div class="card">'+
     (P.gtoken
       ? '<div class="eyebrow" style="margin-top:0">'+esc(t('Signing up with Google'))+'</div><p class="sub" style="margin:4px 0 0">'+esc(gpT('You will sign in with Google as {email} — no password to remember.',{email:r.email||''}))+'</p>'
-      : (P.authCfg && P.authCfg.google ? '<div class="gsiWrap" id="gsiBtn"><button class="btn ghost gsiFallback" id="gsiFallback" style="margin-top:0" disabled>'+esc(t('Loading Google sign-in…'))+'</button></div>'+
+      : (P.authCfg && P.authCfg.google ? googleBtnHtml_()+
           '<p class="hint" style="text-align:center;margin:4px 0 0">'+esc(t('Sign up with Google and there is no password to remember.'))+'</p><div class="orRow"><span>'+esc(t('or make a password'))+'</span></div>' : '')+
         '<label class="f"'+(P.authCfg && P.authCfg.google ? '' : ' style="margin-top:0"')+'>'+esc(t('Choose a password'))+'</label><input type="password" id="r_pw" autocomplete="new-password" minlength="8">'+
         '<label class="f">'+esc(t('Repeat the password'))+'</label><input type="password" id="r_pw2" autocomplete="new-password">'+
@@ -2361,7 +2377,7 @@ function bind_(){
   var lp=document.getElementById('l_pin'); if(lp) lp.onkeydown=function(e){ if(e.key==='Enter') pinLogin_(); };
   var lpw=document.getElementById('l_pw'); if(lpw) lpw.onkeydown=function(e){ if(e.key==='Enter') login_(); };
   var lem=document.getElementById('l_email'); if(lem) lem.oninput=function(){ P.reg.email=lem.value; };
-  if(document.getElementById('gsiBtn')){ if(_gsi.ready) gsiRender_(); else gsiLoad_(); }
+  on_('googleBtn', googleGo_);
   on_('installBtn', function(){ var ev=P.installEvt; if(!ev) return; P.installEvt=null; try { ev.prompt(); } catch(e){} render(); });
   on_('installLater', function(){ lsSet('gp-portal-a2hs','1'); P.a2hsOff=true; render(); });
   on_('changePw', function(){ P.changePw=true; render(); });

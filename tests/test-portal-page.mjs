@@ -720,9 +720,9 @@ async function open(viewport, query, seed) {
   GOOGLE_ON = 'test-client.apps.googleusercontent.com';
   const { ctx, page } = await open({ width: 390, height: 844 }, '');
   await page.waitForSelector('#gsiBtn', { timeout: 5000 });
-  ok('with Google on, the sign-in has the Google button area above “or” and the email form', !!(await page.$('#gsiBtn')) && /\bor\b/.test(await page.$eval('.orRow', e => e.textContent)) && !!(await page.$('#l_email')));
-  await page.waitForTimeout(600);
-  ok('when Google’s script cannot load, it says so and leaves the email way in', /could not load/.test(await page.$eval('#gsiBtn', e => e.textContent)) && !!(await page.$('#loginBtn')));
+  ok('with Google on, the sign-in has our own black Continue with Google button above “or” and the email form', /Continue with Google/.test(await page.$eval('#googleBtn', e => e.textContent)) && (await page.$$('#gsiBtn iframe')).length === 0 && /\bor\b/.test(await page.$eval('.orRow', e => e.textContent)) && !!(await page.$('#l_email')));
+  await page.click('#googleBtn'); await page.waitForTimeout(600);
+  ok('when Google’s script cannot load, tapping it says so and leaves the email way in', /could not load/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#loginBtn')) && !(await page.$eval('#googleBtn', b => b.disabled)));
   await page.click('#toChoose'); await page.waitForTimeout(100); await page.click('[data-apply="dts"]'); await page.waitForTimeout(150);
   ok('sign-up offers Continue with Google on top, or a password', !!(await page.$('#r_pw')) && !!(await page.$('#gsiBtn')) && /or make a password/.test(await page.$eval('.orRow', e => e.textContent)));
   /* straight from Google with no account: sign-up opens with the email filled in and no password to make */
