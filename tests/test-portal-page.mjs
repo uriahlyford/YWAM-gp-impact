@@ -728,7 +728,7 @@ async function open(viewport, query, seed) {
   await page.click('#googleBtn'); await page.waitForTimeout(600);
   ok('when Google’s script cannot load, tapping it says so and leaves the email way in', /could not load/.test(await page.$eval('#msg', e => e.textContent)) && !!(await page.$('#loginBtn')) && !(await page.$eval('#googleBtn', b => b.disabled)));
   await page.click('#toChoose'); await page.waitForTimeout(100); await page.click('[data-apply="dts"]'); await page.waitForTimeout(150);
-  ok('sign-up offers Continue with Google on top, or a password', !!(await page.$('#r_pw')) && !!(await page.$('#gsiBtn')) && /or make a password/.test(await page.$eval('.orRow', e => e.textContent)));
+  ok('sign-up has Continue with Google at the very top, then the details, then a password', !!(await page.$('#r_pw')) && !!(await page.$('#gsiBtn')) && /or fill in your details below/.test(await page.$eval('.orRow', e => e.textContent)) && await page.evaluate(() => document.querySelector('#gsiBtn').getBoundingClientRect().top < document.querySelector('#r_name').getBoundingClientRect().top));
   /* straight from Google with no account: sign-up opens with the email filled in and no password to make */
   await page.evaluate(() => { P.gtoken = 'g.token'; P.reg.email = 'gus@example.org'; P.reg.name = 'Gus Google'; render(); });
   await page.waitForTimeout(100);
