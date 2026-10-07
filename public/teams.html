@@ -890,6 +890,11 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .schedAdd { display:flex; gap:8px; align-items:center; margin:6px 0 4px; }
 .schedAdd input { flex:1; margin:0; }
 .schedAway { font-weight:600; color:var(--amberDeep); }
+.schedN { display:inline-block; min-width:18px; padding:0 5px; border-radius:999px; background:var(--surface2); color:var(--muted); font-size:11px; font-weight:800; text-align:center; margin-left:2px; }
+.schedN.zero { background:var(--goodSoft); color:var(--good); }
+.hospChip.on .schedN { background:rgba(255,255,255,.25); color:inherit; }
+.schedAssigned { font-size:12.5px; color:var(--muted); margin:6px 0 2px; }
+.schedAssigned .linkbtn { text-decoration:none; font-weight:700; }
 .hospChip.on .schedAway { color:inherit; }
 .schedGroupLabel { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-top:10px; }
 .schedRowEdit { border-top:1px solid var(--line); padding:8px 0; }
@@ -10141,11 +10146,24 @@ function schedWeekLabel_(w, short){
   return short ? m(w)+' – '+m(e) : gpT('Week of {a} – {b}',{a:m(w), b:m(e)+', '+e.slice(0,4)});
 }
 /* My name as the schedules write it: the first name, with an initial when two campus staff share it (dutyShortNames_ in api.js). */
+/* The names a schedule may hold for me: the full name (schedules since Oct
+   2026) and the first-name short form older weeks were made with. */
 function schedMyName_(){
-  if(!S.me) return '';
-  var parts=String(S.me.name||'').trim().split(/\s+/), f=parts[0]||'';
+  if(!S.me) return [];
+  var full=String(S.me.name||'').replace(/\s+/g,' ').trim();
+  var parts=full.split(/\s+/), f=parts[0]||'';
   var same=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus && String(p.name||'').trim().split(/\s+/)[0].toLowerCase()===f.toLowerCase(); }).length;
-  return same>1 && parts.length>1 ? f+' '+parts[parts.length-1][0]+'.' : f;
+  var short=same>1 && parts.length>1 ? f+' '+parts[parts.length-1][0]+'.' : f;
+  return full ? (short && short!==full ? [full, short] : [full]) : [];
+}
+/* How many places each name holds on this schedule — every cell of the
+   grid (a whole-week row counts once), every place of the list. */
+function schedAssignCounts_(s){
+  var n={};
+  var add=function(list){ (list||[]).forEach(function(x){ n[x]=(n[x]||0)+1; }); };
+  if(s.layout==='grid') Object.keys(s.cells||{}).forEach(function(k){ add(s.cells[k]); });
+  else (s.sections||[]).forEach(function(sec){ (sec.rows||[]).forEach(function(r){ add(r.people); }); });
+  return n;
 }
 /* This week's schedules, as one small row inside My Home's dashboard card:
    a button for each (dimmed until it is out) and, when your name is on one,
@@ -10261,13 +10279,27 @@ function schedPickerHtml_(d, s){
   h+='<div class="chips" id="schedCur">'+(cur.length ? cur.map(function(n){ return '<button class="hospChip on" data-dunpick="'+esc(n)+'">'+esc(n)+' ✕</button>'; }).join('') : '<span class="rowSub">'+esc(t('Nobody yet — tap names below.'))+'</span>')+'</div>';
   h+='<div class="schedAdd"><input type="text" id="schedQ" placeholder="'+esc(t('Search, or type a new name'))+'" value="'+esc(S.schedQ||'')+'" maxlength="40" autocomplete="off">'+
     '<button class="btn small" id="schedAddName">'+esc(t('Add'))+'</button></div>';
+  /* Every name carries how many things it already has this week (0 until it
+     has one) — the cooking spreads people over many slots, so the number is
+     what keeps it fair. The morning chores are one responsibility each: a
+     name that has one steps out of the list until everyone has one, unless
+     "Show everyone" is on. */
+  var counts=schedAssignCounts_(s), chores=s.layout!=='grid';
+  var all=[]; (d.people||[]).forEach(function(g){ g.names.forEach(function(n){ if(all.indexOf(n)===-1) all.push(n); }); });
+  var placed=all.filter(function(n){ return counts[n]>0; }).length, everyone=all.length>0 && placed>=all.length;
+  var hide = chores && !everyone && !S.schedShowAll;
+  if(chores && all.length) h+='<div class="schedAssigned" id="schedAssigned">'+esc(everyone ? t('Everyone has a chore — the numbers show who has more than one.') : gpT('{placed} of {n} have a chore',{placed:placed, n:all.length}))+
+    (!everyone ? ' · <button class="linkbtn inline" id="schedShowAll">'+esc(S.schedShowAll ? t('Hide the ones already placed') : t('Show everyone'))+'</button>' : '')+'</div>';
   h+='<div class="schedGroups">';
   (d.people||[]).forEach(function(g){
-    var names=g.names.filter(function(n){ return !q || n.toLowerCase().indexOf(q)>-1; });
+    var names=g.names.filter(function(n){ return (!q || n.toLowerCase().indexOf(q)>-1) && (!hide || !counts[n] || cur.indexOf(n)>-1); });
     if(!names.length) return;
+    /* the ones with the least first — the next name to call */
+    names=names.slice().sort(function(a,b){ return (counts[a]||0)-(counts[b]||0); });
     h+='<div class="schedGroupLabel">'+esc(t(g.label))+'</div><div class="chips" style="margin-top:2px">'+names.map(function(n){
-      var aw=(d.away||{})[n];
-      return '<button class="hospChip'+(cur.indexOf(n)>-1?' on':'')+'" data-dpick="'+esc(n)+'"'+(aw?' title="'+esc(gpT('On leave: {days}',{days:aw}))+'"':'')+'>'+esc(n)+(aw?' <small class="schedAway">'+esc(gpT('away {days}',{days:aw}))+'</small>':'')+'</button>'; }).join('')+'</div>';
+      var aw=(d.away||{})[n], c=counts[n]||0;
+      return '<button class="hospChip'+(cur.indexOf(n)>-1?' on':'')+'" data-dpick="'+esc(n)+'" data-dcount="'+c+'"'+(aw?' title="'+esc(gpT('On leave: {days}',{days:aw}))+'"':'')+'>'+esc(n)+
+        ' <small class="schedN'+(c?'':' zero')+'" aria-label="'+esc(gpT('{n} this week',{n:c}))+'">'+c+'</small>'+(aw?' <small class="schedAway">'+esc(gpT('away {days}',{days:aw}))+'</small>':'')+'</button>'; }).join('')+'</div>';
   });
   return h+'</div></div>';
 }
@@ -10338,10 +10370,11 @@ function bindSched_(){
   };
   if(!s || !S.schedEdit) return;
   var notes=document.getElementById('schedNotes'); if(notes) notes.oninput=function(){ s.notes=notes.value; mark(); };
-  document.querySelectorAll('[data-dcell]').forEach(function(c){ c.onclick=function(){ gpTap(); S.schedPick=c.getAttribute('data-dcell'); S.schedQ=''; render(); var q=document.getElementById('schedQ'); if(q && window.innerWidth>700) q.focus(); }; });
+  document.querySelectorAll('[data-dcell]').forEach(function(c){ c.onclick=function(){ gpTap(); S.schedPick=c.getAttribute('data-dcell'); S.schedQ=''; S.schedShowAll=false; render(); var q=document.getElementById('schedQ'); if(q && window.innerWidth>700) q.focus(); }; });
   var closePick=function(){ S.schedPick=null; S.schedQ=''; render(); };
   var scr=document.getElementById('schedScrim'); if(scr) scr.onclick=closePick;
   var pd=document.getElementById('schedPickDone'); if(pd) pd.onclick=closePick;
+  var ssa=document.getElementById('schedShowAll'); if(ssa) ssa.onclick=function(){ gpTap(); S.schedShowAll=!S.schedShowAll; render(); };
   var toggle=function(n){ var l=schedCellNames_(s, S.schedPick), i=l.indexOf(n); if(i>-1) l.splice(i,1); else l.push(n); mark(); };
   document.querySelectorAll('[data-dpick]').forEach(function(b){ b.onclick=function(){ gpTap(); toggle(b.getAttribute('data-dpick')); render(); }; });
   document.querySelectorAll('[data-dunpick]').forEach(function(b){ b.onclick=function(){ gpTap(); toggle(b.getAttribute('data-dunpick')); render(); }; });

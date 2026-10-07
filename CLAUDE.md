@@ -661,6 +661,14 @@ names, a `span` row (Pray – Announcements) has one `cells['row|all']`, `off` d
   man / woman; "👥 Your team members" card; staff see them on the record). Once the team has
   **arrived**, `portalBoot` carries `schedules` (this week's published ones) and the
   dashboard shows "📋 This week at the base" with Share as image — never before arrival.
+- **Oct 2026 (Uriah)**: names on the schedules are **full names** (`dutyShortNames_` now returns
+  the full name; older weeks hold the first-name form, and `schedMyName_` answers both so
+  `dutyIsMe_` matches either — `me` may be a list). **Campus staff and YAP are one group**
+  ("Campus staff & YAP", id `campus`); ministry staff are "Other staff". The picker shows each
+  name's **count** for the week (`schedAssignCounts_`, `.schedN`, 0 in green), fewest first;
+  on the **morning chores** a name that already has a chore steps out of the list until
+  everyone has one (`#schedAssigned` "x of N have a chore", `#schedShowAll` to see them all);
+  the cooking hides nobody.
 - `test-duty.mjs` (server) and `test-duty-page.mjs` (browser) cover it; the portal side is
   in `test-portal-page.mjs`.
 

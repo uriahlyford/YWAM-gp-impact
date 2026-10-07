@@ -4357,14 +4357,10 @@ function dutyAllNames_(sch) {
   return out;
 }
 /* A first name is what the sheet uses; two campus staff with the same one get an initial. */
+/* Full names on the schedules (Uriah, Oct 2026) — "Sam Oun", not "Sam O.".
+   Older weeks still hold the short form; the page matches either. */
 function dutyShortNames_(people) {
-  const first = function (n) { return String(n || '').trim().split(/\s+/)[0] || ''; };
-  const count = {};
-  people.forEach(function (p) { const f = first(p.name).toLowerCase(); count[f] = (count[f] || 0) + 1; });
-  return people.map(function (p) {
-    const parts = String(p.name || '').trim().split(/\s+/), f = parts[0] || '';
-    return count[f.toLowerCase()] > 1 && parts.length > 1 ? f + ' ' + parts[parts.length - 1][0] + '.' : f;
-  });
+  return people.map(function (p) { return String(p.name || '').replace(/\s+/g, ' ').trim().slice(0, DUTY_MAX.name); });
 }
 /* The days of the week starting `week` (Sun … Sat) each staff member is
    away on leave — any request not declined, whatever its type: on a break or
@@ -4394,9 +4390,12 @@ async function dutyPeople_(campus, week, extras) {
     const g = gone[s.id];
     if (g && [1, 2, 3, 4, 5].every(function (d) { return g[d]; })) return;   // away all week
     if (g) away[shorts[i]] = Object.keys(g).sort().map(function (d) { return DUTY_DAY_SHORT[d]; }).join(', ');
-    (cleanStaffType_(s.staffType) === 'campus' ? campusNames : otherNames).push(shorts[i]);
+    /* Campus staff and YAP share the chores and the cooking (Uriah), so they are one group;
+       ministry staff — and anyone whose type is not set — are the other. */
+    const st = cleanStaffType_(s.staffType);
+    (st === 'campus' || st === 'yap' ? campusNames : otherNames).push(shorts[i]);
   });
-  if (campusNames.length) groups.push({ id: 'campus', label: 'Campus staff', names: campusNames });
+  if (campusNames.length) groups.push({ id: 'campus', label: 'Campus staff & YAP', names: campusNames });
   if (otherNames.length) groups.push({ id: 'staff', label: 'Other staff', names: otherNames });
   // teams whose dates cover any of the week, with everyone their leader listed on the portal
   const cands = await getCandidates_(), byCand = {};
