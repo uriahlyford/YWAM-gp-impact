@@ -537,7 +537,7 @@ week strip / input: two tabs.
 purpose, with the background photo / colour option behind ⚙️: goals and their list,
 Health check-in, My Ministry — `#goMinistryFromMe` — Cooking / Chores, the streak,
 habits, My Health — `[data-gohealth]` opens the Health tab — mentor and time off),
-Updates (three at most, "See all" opens the bell), Weekly Goals, Daily habits ("Show
+Updates (three at most, "See all" opens the bell), Weekly Goals (headed by the week itself, no 👀 line), Habits ("Show
 streaks" inside the card), Annual goals (one card, `#goGoalsFromMe`, opens the Goals & Tasks page),
 Mentorship ("You're mentoring" only for a mentor), About me (Personality and Strengths
 tiles) and Leave / Profile & settings tiles. **Health and My Ministry have no section
@@ -548,6 +548,18 @@ below** — the summary card has both (Uriah). OKRs are My Ministry's second tab
   No week arrows, no "Share my week". An unlinked goal shows a quiet "Link to a KPI".
 - Gone: the quick-jump chip strip and its scroll guard. tests/test-home-layout-ui.mjs
   holds the order.
+
+## Habits with a schedule (Oct 2026)
+A habit row is `{id, mentorVisible, days?, label?, icon?}`: `days` is the weekdays it is due
+(0 Sunday … 6 Saturday; absent = every day), and a habit of your own has id `c_<slug>` with
+its `label` (40 chars) and `icon` (emoji, ⭐ by default) — `cleanHabitConfig_` in api.js,
+`MAX_HABITS` 8 in both copies. The card (`habitsCardHtml`) asks only about what is due today
+(`habitDue`, `myHabitsToday`), lists the rest under "n more on other days", and the hero
+counts today's. Streaks walk the due days alone (`habitStreak`, `habitBest`) — a Mon/Wed/Fri
+habit is not broken by a Tuesday. The picker has Every day / Weekdays / Pick days per habit
+and an "Add your own" row. Ticking a tile pops confetti (`gpConfetti`, skipped under
+prefers-reduced-motion). `habitMeta(hb)` takes the row (or an id) so custom labels show.
+tests/test-habit-schedule.mjs covers the server rules and the page.
 
 ## Goals & Tasks (Oct 2026)
 Annual goals open into their own page, `S.view==='goals'` (`goalsPageHtml`, back to My

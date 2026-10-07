@@ -1221,15 +1221,32 @@ const DEFAULT_HABITS = [
   { id: 'quietTime', mentorVisible: true },
   { id: 'workout',   mentorVisible: true }
 ];
-const MAX_HABITS = 6;
+const MAX_HABITS = 8;
+/* Oct 2026 (Uriah): a habit can be your own ("c_" + a slug, with its label and
+   emoji), and each one has a schedule — `days` is the weekdays it is due
+   (0 Sunday … 6 Saturday); absent means every day. The page only asks about
+   a habit on its days, and its streak counts those days alone. */
+const CUSTOM_HABIT_ID = /^c_[a-z0-9]{1,24}$/;
+function cleanHabitDays_(v) {
+  if (!Array.isArray(v)) return null;
+  const out = [];
+  v.forEach(function (d) { const n = Number(d); if (Number.isInteger(n) && n >= 0 && n <= 6 && out.indexOf(n) === -1) out.push(n); });
+  out.sort(function (a, b) { return a - b; });
+  return (out.length === 0 || out.length === 7) ? null : out;
+}
 
 function cleanHabitConfig_(list) {
   const seen = {};
   return (Array.isArray(list) ? list : []).filter(function (h) {
-    if (!h || HABIT_IDS.indexOf(h.id) === -1 || seen[h.id]) return false;
+    if (!h || typeof h.id !== 'string' || seen[h.id]) return false;
+    if (HABIT_IDS.indexOf(h.id) === -1 && !(CUSTOM_HABIT_ID.test(h.id) && str_(h.label, 40))) return false;
     seen[h.id] = 1; return true;
   }).slice(0, MAX_HABITS).map(function (h) {
-    return { id: h.id, mentorVisible: !!h.mentorVisible };
+    const out = { id: h.id, mentorVisible: !!h.mentorVisible };
+    if (HABIT_IDS.indexOf(h.id) === -1) { out.label = str_(h.label, 40); out.icon = str_(h.icon, 8) || '⭐'; }
+    const days = cleanHabitDays_(h.days);
+    if (days) out.days = days;
+    return out;
   });
 }
 function habitsOf_(s) {
