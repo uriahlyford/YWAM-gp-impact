@@ -966,6 +966,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .hospBed.sel { background:var(--accent); border-color:var(--accent); color:var(--accentInk); }
 .hospBed.taken { background:var(--surface2); color:var(--muted); cursor:default; }
 .hospBed.out { background:var(--surface2); color:var(--faint); border-style:dashed; cursor:default; }
+.hospBed.full { background:var(--surface2); color:var(--faint); border-color:var(--border); cursor:default; opacity:.75; }
 .hospWarn { color:var(--bad); }
 .hospRoomRow { display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:11px 0; font:inherit; color:var(--ink); cursor:pointer; }
 .hospBedEdit { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
@@ -9313,6 +9314,21 @@ function hospFormHtml_(H){
   else {
     h+='<p class="hint" style="margin:0 0 6px">'+esc(t('Tap a bed to give it to this booking. You can leave beds to pick later.'))+'</p>';
     h+='<button class="btn ghost small" id="hospAutoBtn" style="margin:0 0 6px">✨ '+esc(t('Pick beds for me'))+'</button>';
+    /* So nobody over-books (Uriah, Oct 2026): once the booking has all the
+       beds it needs, every other free bed greys out; and when it says how
+       many men and how many women, the men's rooms grey out once their beds
+       are picked, the women's rooms once theirs are — any beds beyond the
+       men and women (the Beds box) can go in either. */
+    var pIdx=hospBedIndex_(H), picks={ male:0, female:0, any:0 };
+    sel.forEach(function(id){ var x=pIdx[id]; if(!x) return; picks[x.room.style==='male'?'male':x.room.style==='female'?'female':'any']++; });
+    var caps=null;
+    if(f.males!=='' && f.males!=null && f.females!=='' && f.females!=null){
+      var mN=Number(f.males)||0, wN=Number(f.females)||0, spare=Math.max(0, need-mN-wN);
+      caps={ male:mN+spare, female:wN+spare };
+    }
+    var totalFull = sel.length>=need;
+    if(totalFull) h+='<p class="hint" id="hospBedsFull" style="margin:0 0 6px">✅ '+esc(gpT('All {n} beds picked — the other beds are greyed so you don’t over-book.',{n:need}))+'</p>';
+    else if(caps) h+='<p class="hint" id="hospBedsQuota" style="margin:0 0 6px">'+esc(gpT('Men’s beds {a} of {b} · Women’s beds {c} of {d}',{a:picks.male, b:caps.male, c:picks.female, d:caps.female}))+'</p>';
     var warn=[];
     H.buildings.forEach(function(b){
       var rooms=H.rooms.filter(function(r){ return r.buildingId===b.id; });
@@ -9323,9 +9339,11 @@ function hospFormHtml_(H){
         h+='<div class="hospPickRoom"><div class="rowSub"><b>'+esc(r.name)+'</b> · '+esc(hospStyle_(r.style))+' · '+esc(gpT('{n} free',{n:free}))+'</div><div class="hospBeds">';
         r.beds.forEach(function(x){
           var on=sel.indexOf(x.id)>-1, who=taken[x.id];
-          var cls=on?'sel':x.out?'out':who?'taken':'free';
+          var full = !on && !x.out && !who && (totalFull || (caps && (r.style==='male'||r.style==='female') && picks[r.style]>=caps[r.style]));
+          var cls=on?'sel':x.out?'out':who?'taken':full?'full':'free';
           if(on && ((r.style==='male' && Number(f.females)>0 && !Number(f.males)) || (r.style==='female' && Number(f.males)>0 && !Number(f.females)))) warn.push(r.name);
-          h+='<button class="hospBed '+cls+'" data-hbed="'+esc(x.id)+'"'+((x.out||who)&&!on?' disabled':'')+' title="'+esc(who||(x.out?t('Out of use'):''))+'">'+
+          var fullWhy = full ? (totalFull ? t('All the beds this booking needs are picked') : r.style==='male' ? t('All the men’s beds this booking needs are picked') : t('All the women’s beds this booking needs are picked')) : '';
+          h+='<button class="hospBed '+cls+'" data-hbed="'+esc(x.id)+'"'+((x.out||who||full)&&!on?' disabled':'')+' title="'+esc(who||(x.out?t('Out of use'):fullWhy))+'">'+
             esc(x.label)+(who&&!on?'<small>'+esc(who)+'</small>':x.out?'<small>'+esc(t('Out of use'))+'</small>':'')+'</button>';
         });
         h+='</div></div>';
