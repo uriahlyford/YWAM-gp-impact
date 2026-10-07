@@ -412,7 +412,7 @@ async function open(viewport, query, seed) {
   const tl = await page.$$eval('#timeline .step', li => li.map(x => x.getAttribute('data-step') + ':' + x.className.replace('step ', '')));
   ok('the team follows its own steps, on the letter of invitation now', tl.join(',') === 'account:done,form:done,call1:done,passports:done,photo:done,flights:done,invitation:current,evisa:todo,call2:todo,practical:todo,arrived:todo', tl.join(','));
   const cur = await page.$eval('#timeline .step.current', e => e.textContent);
-  ok('the step says what it is and who does it', /Letter of invitation & supporting documents/.test(cur) && /Us/.test(cur) && /once your passports, team photo and flights are in/.test(cur), cur);
+  ok('the step says what it is and who does it', /Letter of invitation & supporting documents/.test(cur) && /Us/.test(cur) && /once your passports, your team’s names and photos, and flights are in/.test(cur), cur);
   ok('the documents and the visa part are headed as groups', (await page.$$eval('#timeline .stepGroup', g => g.map(x => x.textContent).join(','))) === 'Awaiting documents,Visa');
   ok('a team leader has the Outreach Leader’s Guide on their page', /Outreach Leader’s Guide/.test(await page.$eval('#guideCard', e => e.textContent)));
   await page.click('#openGuide'); await page.waitForTimeout(300);
@@ -428,12 +428,15 @@ async function open(viewport, query, seed) {
   ok('before they have arrived, the team sees no numbers card', !(await page.$('#teamNumbers')));
   TEAM_APP.stage = 'arrived';
   await page.reload(); await page.waitForSelector('#statusPill');
+  ok('the numbers live on their own Metrics tab now, not on the Application tab', !(await page.$('#teamNumbers')));
+  await page.click('[data-aview="metrics"]'); await page.waitForSelector('#teamNumbers');
   ok('once arrived, the team’s numbers card shows, with what is saved', /Your team’s numbers/.test(await page.$eval('#teamNumbers', e => e.textContent)) && (await page.$eval('[data-tnum="People Served"]', i => i.value)) === '30' && !(await page.$('[data-tnum="Teams Hosted"]')));
   await page.fill('[data-tnum="Salvations"]', '3');
   await page.fill('[data-treach="female"]', '7');
   await page.click('#saveTeamNums');
   await page.waitForTimeout(400);
   const tn = sent.filter(b => b.fn === 'portalSaveTeamNumbers').pop();
+  await page.click('[data-aview="status"]'); await page.waitForSelector('#statusPill');
   ok('saving sends the numbers into the Teams Database', tn && tn.args[2]['People Served'] === 30 && tn.args[2]['Salvations'] === 3 && tn.args[3].female === 7 && tn.args[3].male === 5, JSON.stringify(tn && tn.args.slice(2)));
   ok('once arrived, this week’s schedules show, with the chores not out yet', /This week at the base/.test(await page.$eval('#teamSchedules', e => e.textContent)) && await page.$eval('[data-pschedshow="chores"]', b => b.disabled));
   await page.click('[data-pschedshow="kitchen"]'); await page.waitForTimeout(200);
@@ -454,7 +457,7 @@ async function open(viewport, query, seed) {
   await page.waitForSelector('#teamMembers .rosterRow', { timeout: 5000 });
   const roster = await page.$$eval('#teamMembers .rosterRow', rs => rs.map(r => r.querySelector('.rosterName b').textContent + (r.querySelector('.avatar.ph') ? ':none' : ':photo')));
   ok('and reads back as a roster — the leader first, then the members, each with a place for a photo', roster.join('|') === 'Lee Leader:none|Member One:none|Member Two:none' && /0 of 3 have a photo/.test(await page.$eval('#teamMembers', e => e.textContent)), roster.join('|'));
-  ok('the hint says photos here replace the team photo with names', /replaces the team photo with names/.test(await page.$eval('#teamMembers', e => e.textContent)));
+  ok('the hint says these names go on the cooking and chores schedules and the photos are the team photo', /cooking and morning chores schedules/.test(await page.$eval('#teamMembers', e => e.textContent)) && /photos are your team photo/.test(await page.$eval('#teamMembers', e => e.textContent)));
   /* take a photo: a tiny PNG stands in for the camera; the page shrinks it to a square JPEG and sends it for that person */
   const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
   await page.click('#teamMembers [data-tphoto="leader"]');
@@ -466,6 +469,7 @@ async function open(viewport, query, seed) {
   ok('the steps still ahead that are theirs are marked You', /You/.test(await page.$eval('#timeline [data-step="evisa"]', e => e.textContent)));
   ok('the letter of invitation is listed as coming from us, with no upload for them', /Coming from us/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !(await page.$('[data-docup="invitation"]')) && !!(await page.$('[data-docup="evisa"]')));
   ok('the team is told passports are needed as soon as possible', /as soon as possible/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
+  ok('the team photo document points to the roster: names for the cooking and chores schedules, photos of each, with a way there', /cooking and morning chores schedules/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && !!(await page.$('[data-dockind="photo"] [data-gomembers]')));
   ok('the documents card lists what a team sends: passport copies, a team photo and flights needed; with those in, the e-visas — the letter comes from us', /Passport copies/.test(txt) && /team photo/i.test(txt) && /Flight itineraries/.test(txt) && (await page.$$eval('[data-docup]', i => i.map(x => x.getAttribute('data-docup')).join(','))) === 'passports,photo,flights,evisa' && /Needed/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
   ok('and says flights are needed to start the visa process, and can come once booked', /start your visa process/.test(txt) && /Upload them once you have them/.test(txt));
   await page.setInputFiles('[data-docup="passports"]', [{ name: 'passports.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 fake') }, { name: 'more.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 two') }]);
@@ -763,7 +767,9 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
   await page.waitForSelector('#applicantNav');
   const tabs = await page.$$eval('#applicantNav [data-aview]', bs => bs.map(b => b.getAttribute('data-aview') + (b.classList.contains('on') ? '*' : '')));
-  ok('four tabs on top: Application (open), Meet our team, Team strengths, Resources', tabs.join() === 'status*,team,strengths,resources', tabs.join());
+  ok('a team has five tabs on top: Application (open), Our team, Strengths, Metrics, Resources — icons over short labels, none squashed', tabs.join() === 'status*,team,strengths,metrics,resources' && await page.$$eval('#applicantNav .aLabel', ls => ls.every(l => l.scrollWidth <= l.clientWidth + 1)), tabs.join());
+  await page.click('[data-aview="metrics"]'); await page.waitForTimeout(200);
+  ok('Team metrics has its own tab; before arrival it says the numbers open on arrival', /Team metrics/.test(await page.$eval('#main h2', e => e.textContent)) && /open on arrival/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('#teamNumbers')));
   /* 👥 */
   await page.click('[data-aview="team"]'); await page.waitForSelector('.meetGrid', { timeout: 5000 });
   ok('Meet our team: "YWAM Siem Reap Campus Staff", one list, each with name and role', /YWAM Siem Reap Campus Staff/.test(await page.$eval('#main h2', e => e.textContent)) && (await page.$$eval('.meetCard .meetName', ns => ns.map(n => n.textContent))).join() === 'Dara Pen,Yan Yap' && /Host · Hospitality/.test(await page.$eval('.meetCard', e => e.textContent)));
@@ -771,7 +777,7 @@ async function open(viewport, query, seed) {
   ok('… the photos arrive one by one from the GP app; someone without one shows their initials', !!(await page.$('.meetCard img')) && /YY/.test(await page.$eval('.meetCard:nth-child(2) .meetPhoto', e => e.textContent)));
   /* 🧭 */
   await page.click('[data-aview="strengths"]'); await page.waitForSelector('[data-ptake]', { timeout: 5000 });
-  ok('Team strengths lists the team — leader and members — each with Take the test or I know my type', (await page.$$('[data-ptake]')).length === 3 && (await page.$$('[data-ppickfor]')).length === 3 && /Team strengths/.test(await page.$eval('#main h2', e => e.textContent)));
+  ok('Team strengths lists the team the leader added — leader and members — each with Take the test or I know my type', (await page.$$('[data-ptake]')).length === 3 && (await page.$$('[data-ppickfor]')).length === 3 && /Team strengths/.test(await page.$eval('#main h2', e => e.textContent)) && !(await page.$('#strengthsAddTeam')));
   await page.click('[data-ptake="leader"]'); await page.waitForSelector('[data-pans]');
   ok('the questionnaire opens for that person: forty statements, eight a page, a seven-dot scale, Next off until the page is answered', /Lee Leader — the questionnaire/.test(await page.$eval('#main', e => e.textContent)) && (await page.$$('.pStmt')).length === 8 && (await page.$$('.pStmt:first-child .pDot')).length === 7 && await page.$eval('#pNext', b => b.disabled));
   for (let pg = 0; pg < 5; pg++) {

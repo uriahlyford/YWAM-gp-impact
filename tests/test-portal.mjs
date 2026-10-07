@@ -179,7 +179,13 @@ console.log('=== a team’s photos: one per person, instead of a team photo with
   mem.candidates.push({ id: 'cd_photo', campus: 'siemreap', name: 'Photo Church', type: 'team', stage: 'docs', staffId: 'st_photo', email: 'pat@example.org',
     portal: { createdAt: '2026-09-01', submittedAt: '2026-09-02', form: { answers: { teamName: 'Photo Church', leaderName: 'Pat Leader', coLeaders: [{ name: 'Cora Co' }] } }, docs: [], members: [], team: { call1: true } },
     log: [], archived: null });
-  let r = await call('portalSaveTeamMembers', ['photo.team', '2468', [{ name: 'Mia Member', sex: 'f' }, { name: 'Max Member', sex: 'm' }]]);
+  /* a list saved before members had ids (YWAM Montana's) still counts: ids are made on read */
+  mem.candidates.find(c => c.id === 'cd_photo').portal.members = [{ name: 'Old One', sex: 'f' }, { name: 'Old Two', sex: 'm' }];
+  let r = await call('portalTeamPhotos', ['photo.team', '2468']);
+  ok('members listed before ids existed still appear, with a steady id each', r.body && r.body.ok && r.body.people.filter(p => p.role === 'member').map(p => p.name).join() === 'Old One,Old Two' && r.body.people.filter(p => p.role === 'member').every(p => /^mh[a-z0-9]+$/.test(p.key)));
+  const oldKey = r.body.people.filter(p => p.role === 'member')[0].key;
+  ok('… the same id on every read', (await call('portalStrengths', ['photo.team', '2468'])).body.people.filter(p => p.role === 'member')[0].key === oldKey);
+  r = await call('portalSaveTeamMembers', ['photo.team', '2468', [{ name: 'Mia Member', sex: 'f' }, { name: 'Max Member', sex: 'm' }]]);
   const mem1 = r.body.application.members;
   ok('members get a small id each when saved', r.body && r.body.ok && mem1.length === 2 && mem1.every(m => /^m[a-z0-9]{6,24}$/.test(m.id)) && mem1[0].id !== mem1[1].id, JSON.stringify(mem1));
   r = await call('portalSaveTeamMembers', ['photo.team', '2468', [{ id: mem1[0].id, name: 'Mia Renamed', sex: 'f' }, { name: 'Max Member', sex: 'm' }]]);

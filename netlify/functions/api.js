@@ -5097,9 +5097,20 @@ const TEAM_STAGE_FROM = { contacted: 'call1', interview: 'call1', accepted: 'doc
 function stagesFor_(type) { return type === 'team' ? TEAM_STAGES : CAND_STAGES; }
 function teamStage_(stage) { return TEAM_STAGE_FROM[stage] || stage; }
 const CAND_FOLLOWUP_DAYS = 7, CAND_MAX = 2000, CAND_LOG_MAX = 300;
+/* A member listed before members carried ids (Oct 2026) gets one on read, made
+   from the name so it is the same every time until the list is next saved —
+   then the photos and the strengths know them too. */
+function memberKeyFor_(name, i) {
+  let h = 5381; const str = String(name || '').toLowerCase() + '|' + i;
+  for (let k = 0; k < str.length; k++) h = ((h << 5) + h + str.charCodeAt(k)) >>> 0;
+  return 'mh' + h.toString(36);
+}
 async function getCandidates_() {
   return (await readJSON('candidates', [])).map(function (c) {
     if (c && c.type === 'team' && TEAM_STAGE_FROM[c.stage]) c.stage = TEAM_STAGE_FROM[c.stage];
+    if (c && c.type === 'team' && c.portal && Array.isArray(c.portal.members)) {
+      c.portal.members.forEach(function (m, i) { if (m && typeof m === 'object' && !m.id) m.id = memberKeyFor_(m.name, i); });
+    }
     return c;
   });
 }
