@@ -37,7 +37,7 @@ const mk = o => Object.assign({ active: true, campus: 'siemreap', dept: 'Communi
   role: 'Staff', staffType: 'campus', country: 'Cambodia', surveyToken: 'tok_' + o.id }, o, { pinSalt: o.id, pinHash: H('1234', o.id) });
 mem.staff = [
   mk({ id: 'ad', name: 'Uriah Admin', username: 'uriah', email: 'u@e.com', dept: 'Campus Leadership', ministry: 'Campus Director', isAdmin: true, mentorId: 'dr' }),
-  mk({ id: 'dr', name: 'Dara Pen', username: 'dara', email: 'd@e.com', mentorId: 'ad', leads: ['Community Service|Intercession'] }),
+  mk({ id: 'dr', name: 'Dara Pen', username: 'dara', email: 'd@e.com', mentorId: 'ad', leads: ['Community Service|Ponlork School'] }),
   mk({ id: 'ml', name: 'Mealea Sok', username: 'mealea', email: 'm@e.com', ministry: '', mentorId: 'ad' }),
   mk({ id: 'od', name: 'Old Timer', username: 'old', email: 'o@e.com', mentorId: 'ad' }),
   mk({ id: 'gh', name: 'Gone Ghost', username: 'ghost', email: 'g@e.com', active: false }),
@@ -93,11 +93,11 @@ const isoWeek = ds => { const d = new Date(ds + 'T00:00:00'), y = d.getFullYear(
   m = new Date(y, 0, 1 - ((j.getDay() + 6) % 7)); return Math.max(1, Math.min(52, Math.floor((d - m) / (7 * 86400000)) + 1)); };
 const WK = isoWeek(TODAY), Q = Math.floor((Number(TODAY.slice(5, 7)) - 1) / 3) + 1;
 mem.lastSeen = { started: day(60), seen: { dr: day(1), od: day(40) } };
-mem.numbersPeople = { 'siemreap|Community Service|Cafe': { main: 'dr', backup: '' }, 'siemreap|Community Service|Intercession': { main: 'gh', backup: '' } };
+mem.numbersPeople = { 'siemreap|Community Service|Cafe': { main: 'dr', backup: '' }, 'siemreap|Community Service|Ponlork School': { main: 'gh', backup: '' } };
 mem.entries = [{ campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', metric: 'Cups Sold', week: WK, year: YR, value: 9, updated: '' }];
 mem.okrs = [
   { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: YR, id: 'o1', objective: 'Open a second cafe', kr: 'a', metricKey: '', target: 1, updated: day(45) + 'T00:00:00Z' },
-  { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: YR, id: 'o2', objective: 'Pray every day', kr: 'b', metricKey: 'Community Service|Intercession|Hours', target: 10, updated: day(45) + 'T00:00:00Z' },
+  { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: YR, id: 'o2', objective: 'Pray every day', kr: 'b', metricKey: 'Community Service|Ponlork School|Hours', target: 10, updated: day(45) + 'T00:00:00Z' },
   { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: YR, id: 'o3', objective: 'Fresh this week', kr: 'c', metricKey: '', target: 1, updated: day(2) + 'T00:00:00Z' }
 ];
 const toLoose = async page => {
@@ -116,9 +116,9 @@ const section = (page, emoji) => page.$$eval('.looseCard', (cs, e) => { cs.forEa
 
   const s1 = await section(page, '👤');
   ok('a ministry with nobody set is listed', /Spiritual|GP Education|Hospitality|nobody set/.test(s1) && !/Cafe/.test(s1.split('\n').slice(2).join('\n')));
-  ok('… one whose set person is no longer active says so', /Intercession[\s\S]*Gone Ghost is set to enter these but is no longer active/.test(s1));
+  ok('… one whose set person is no longer active says so', /Ponlork School[\s\S]*Gone Ghost is set to enter these but is no longer active/.test(s1));
   const s2 = await section(page, '📉');
-  ok('ministries with no numbers for three weeks are listed, not the one with numbers this week', /Intercession/.test(s2) && !/^Cafe/m.test(s2), s2.slice(0, 160));
+  ok('ministries with no numbers for three weeks are listed, not the one with numbers this week', /Ponlork School/.test(s2) && !/^Cafe/m.test(s2), s2.slice(0, 160));
   const s3 = await section(page, '💤');
   ok('not opened in 30 days: the one last seen 40 days ago, and the one never seen', /Old Timer · last opened/.test(s3) && /Mealea Sok · not since/.test(s3));
   ok('… not the one seen yesterday, the inactive one, or another campus', !/Dara Pen/.test(s3) && !/Gone Ghost/.test(s3) && !/Poipet Person/.test(s3));
@@ -137,8 +137,8 @@ const section = (page, emoji) => page.$$eval('.looseCard', (cs, e) => { cs.forEa
   await page.click('.looseCard [data-adminperson="od"]'); await page.waitForTimeout(500);
   ok('tapping a person opens them in Admin', await page.evaluate(() => S.adminSub === 'person' && S.adminPersonId === 'od'));
   await toLoose(page);
-  await page.click('.looseCard [data-gonumbers="Community Service|Intercession"]'); await page.waitForTimeout(800);
-  ok('tapping a ministry opens it on My Ministry', await page.evaluate(() => S.view === 'ministry' && S.mmBrowseMinistry === 'Intercession'));
+  await page.click('.looseCard [data-gonumbers="Community Service|Ponlork School"]'); await page.waitForTimeout(800);
+  ok('tapping a ministry opens it on My Ministry', await page.evaluate(() => S.view === 'ministry' && S.mmBrowseMinistry === 'Ponlork School'));
 
   await toLoose(page);
   await page.click('[data-admincampustab="poipet"]'); await page.waitForTimeout(400);

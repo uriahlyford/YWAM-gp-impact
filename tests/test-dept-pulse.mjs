@@ -35,7 +35,7 @@ const mk = o => Object.assign({ active: true, campus: 'siemreap', dept: 'Communi
   role: 'Staff', surveyToken: 'tok_' + o.id }, o, { pinSalt: o.id, pinHash: H('1234', o.id) });
 mem.staff = [
   mk({ id: 'st1', name: 'Sreilea Chan', username: 'sreilea', email: 's@e.com' }),
-  mk({ id: 'st2', name: 'Mealea Sok', username: 'mealea', email: 'm@e.com', ministry: 'Intercession', mentorId: 'st1', mentorStatus: 'approved' }),
+  mk({ id: 'st2', name: 'Mealea Sok', username: 'mealea', email: 'm@e.com', ministry: 'Ponlork School', mentorId: 'st1', mentorStatus: 'approved' }),
   mk({ id: 'st3', name: 'Dara Pen', username: 'dara', email: 'd@e.com', ministry: 'GP Education' }),
   mk({ id: 'st4', name: 'Vuthy Lim', username: 'vuthy', email: 'v@e.com', dept: 'Youth Education', ministry: 'Sports' }),
   mk({ id: 'cs', name: 'Chea Leader', username: 'chea', email: 'c@e.com', dept: 'Campus Leadership', ministry: 'Community Service' }),

@@ -37,7 +37,7 @@ mem.staff = [
   mk({ id: 'st1', name: 'Sreilea Chan', username: 'sreilea', email: 's@e.com' }),                       // on the Cafe
   mk({ id: 'st2', name: 'Mealea Sok', username: 'mealea', email: 'm@e.com', leads: ['Community Service|Cafe'] }),   // leads the Cafe
   mk({ id: 'st3', name: 'Dara Pen', username: 'dara', email: 'd@e.com', dept: 'Campus Leadership', ministry: 'Community Service' }), // overseer
-  mk({ id: 'st4', name: 'Vuthy Lim', username: 'vuthy', email: 'v@e.com', ministry: 'Intercession' }),
+  mk({ id: 'st4', name: 'Vuthy Lim', username: 'vuthy', email: 'v@e.com', ministry: 'Ponlork School' }),
   mk({ id: 'st5', name: 'Bopha Keo', username: 'bopha', email: 'b@e.com', campus: 'poipet' }),
   mk({ id: 'st6', name: 'Admin One', username: 'admin', email: 'a@e.com', ministry: 'GP Education', isAdmin: true })
 ];
@@ -62,7 +62,7 @@ const set = (u, dept, min, p) => call('setNumbersPeople', [u, '1234', dept, min,
   ok('an ordinary member cannot choose the numbers people', r.ok === false && r.err === 'not_authorized', JSON.stringify(r));
   r = await set('mealea', 'Community Service', 'Cafe', { main: 'st1', backup: 'st4' });
   ok('the ministry\'s leader can', r.ok === true && r.numbers.main.name === 'Sreilea Chan' && r.numbers.backup.name === 'Vuthy Lim', JSON.stringify(r.numbers));
-  r = await set('dara', 'Community Service', 'Intercession', { main: 'st4' });
+  r = await set('dara', 'Community Service', 'Ponlork School', { main: 'st4' });
   ok('so can the department\'s overseer, for any ministry in it', r.ok === true && r.numbers.main.id === 'st4');
   r = await set('admin', 'Community Service', 'GP Education', { main: 'st6' });
   ok('and an admin', r.ok === true);
@@ -114,11 +114,11 @@ const set = (u, dept, min, p) => call('setNumbersPeople', [u, '1234', dept, min,
 /* ---------- 4. what the reminders need ---------- */
 {
   let b = await call('getMyBoot', ['vuthy', '1234']);
-  const cafe = b.numbers.duty.find(x => x.ministry === 'Cafe'), inter = b.numbers.duty.find(x => x.ministry === 'Intercession');
+  const cafe = b.numbers.duty.find(x => x.ministry === 'Cafe'), inter = b.numbers.duty.find(x => x.ministry === 'Ponlork School');
   ok('the backup is responsible for the Cafe', cafe && cafe.role === 'backup');
-  ok('and the main for Intercession', inter && inter.role === 'main');
+  ok('and the main for Ponlork School', inter && inter.role === 'main');
   ok('the Cafe is in this week', cafe.logged[WK] === true, JSON.stringify(cafe.logged));
-  ok('Intercession is not', inter.logged[WK] === false);
+  ok('Ponlork School is not', inter.logged[WK] === false);
   b = await call('getMyBoot', ['sreilea', '1234']);
   ok('the main person has the Cafe too', b.numbers.duty.some(x => x.ministry === 'Cafe' && x.role === 'main'));
   b = await call('getMyBoot', ['mealea', '1234']);
@@ -131,11 +131,26 @@ const set = (u, dept, min, p) => call('setNumbersPeople', [u, '1234', dept, min,
   b = await call('getMyBoot', ['dara', '1234']);
   const D = b.numbers.dept;
   ok('the overseer gets the department\'s list', D && D.dept === 'Community Service');
-  ok('with which ministries are in this week', D.logged[WK].indexOf('Cafe') > -1 && D.logged[WK].indexOf('Intercession') === -1, JSON.stringify(D.logged));
-  ok('and who is responsible for each', D.people.Cafe.main.name === 'Sreilea Chan' && D.people.Intercession.main.name === 'Vuthy Lim');
+  ok('with which ministries are in this week', D.logged[WK].indexOf('Cafe') > -1 && D.logged[WK].indexOf('Ponlork School') === -1, JSON.stringify(D.logged));
+  ok('and who is responsible for each', D.people.Cafe.main.name === 'Sreilea Chan' && D.people['Ponlork School'].main.name === 'Vuthy Lim');
   ok('and the leaders, for ministries nobody is set on', D.leaders.Cafe.map(p => p.name).join() === 'Mealea Sok');
   b = await call('getMyBoot', ['sreilea', '1234']);
   ok('an ordinary member gets no department list', b.numbers.dept === null);
+}
+
+/* ---------- 5. Intercession moved from Community Service to Youth Education (Oct 2026) ---------- */
+{
+  // rows written under the old department read as the new one — nothing in the store is rewritten
+  mem.staff.push(mk({ id: 'st7', name: 'Legacy Pray', username: 'legacy', email: 'l@e.com', ministry: 'Intercession' }));   // dept: Community Service, as stored
+  mem.numbersPeople['siemreap|Community Service|Intercession'] = { main: 'st7', backup: '' };
+  mem.entries.push({ campus: 'siemreap', dept: 'Community Service', ministry: 'Intercession', metric: 'Prayer Hours Covered', week: WK, year: new Date().getFullYear(), value: 7, updated: '' });
+  const b = await call('getMyBoot', ['legacy', '1234']);
+  ok('a staff row stored under Community Service / Intercession reads as Youth Education', b.ok && b.staff.dept === 'Youth Education' && b.staff.ministry === 'Intercession', b.staff && b.staff.dept);
+  const d = b.numbers.duty.find(x => x.ministry === 'Intercession');
+  ok('their numbers-person key moved with it', d && d.dept === 'Youth Education' && d.role === 'main', JSON.stringify(b.numbers.duty));
+  const m = await call('getMinistryFor', ['legacy', '1234', 'Youth Education', 'Intercession']);
+  ok('and the numbers logged under the old department are theirs under the new one', m.ok && JSON.stringify(m.entries || m).includes('"Prayer Hours Covered"'), JSON.stringify(m).slice(0, 200));
+  ok('the old department no longer answers for it', (await call('getMinistryFor', ['legacy', '1234', 'Community Service', 'Intercession'])).ok === false);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

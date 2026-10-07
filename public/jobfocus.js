@@ -28,7 +28,7 @@ var JOB_FOCUS = {
     focus: "You lead this school that educates children and disciples them — watch enrollment, the students you support, and those growing in faith." },
   "Sry Noi": { dept: "Community Service",
     focus: "You lead this school that educates children and disciples them — watch enrollment, the students you support, and those growing in faith." },
-  "Intercession": { dept: "Community Service",
+  "Intercession": { dept: "Youth Education",
     focus: "You hold the spiritual foundation of the base in prayer — covering ministries in prayer hours and meetings, and celebrating answered-prayer testimonies." },
   "Sports": { dept: "Youth Education",
     focus: "You use sport to reach and disciple young people — grow participation, raise up coaches, and walk players toward Jesus." },

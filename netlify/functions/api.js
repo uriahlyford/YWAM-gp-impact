@@ -237,22 +237,33 @@ async function clearLoginThrottle_(username) {
    of this file and the client (which only ever sees normalised names) have a
    single name to compare against, and each ordinary write then persists the
    current name. Incoming payloads are normalised too, for a client still
-   running the old taxonomy. */
+   running the old taxonomy.
+
+   A ministry that moved department is handled the same way (MINISTRY_MOVES,
+   old 'dept|ministry' → the department it is in now): Intercession was under
+   Community Service and is under Youth Education (Oct 2026). Rows, keys,
+   leads and ministries lists written under the old department read as the
+   new one, so its numbers, OKRs and people come along without a rewrite. */
 const LEADERSHIP_DEPT = 'Campus Leadership';
 const OLD_LEADERSHIP_DEPTS = ['Base Director', 'Base Leadership'];
-function normDept_(d) { return OLD_LEADERSHIP_DEPTS.indexOf(d) > -1 ? LEADERSHIP_DEPT : d; }
+const MINISTRY_MOVES = { 'Community Service|Intercession': 'Youth Education' };
+function normDept_(d, ministry) {
+  const dept = OLD_LEADERSHIP_DEPTS.indexOf(d) > -1 ? LEADERSHIP_DEPT : d;
+  if (ministry !== undefined && ministry !== null) { const to = MINISTRY_MOVES[dept + '|' + ministry]; if (to) return to; }
+  return dept;
+}
 function normMinistry_(dept, m) {
   return (normDept_(dept) === LEADERSHIP_DEPT && m === 'Campus Leadership') ? 'Campus Director' : m;
 }
 function normKey_(key, parts) {
   const p = String(key || '').split('|');
   if (p.length !== parts) return key;
-  p[1] = normMinistry_(p[0], p[1]); p[0] = normDept_(p[0]);
+  p[1] = normMinistry_(p[0], p[1]); p[0] = normDept_(p[0], p[1]);
   return p.join('|');
 }
 function normRow_(r) {
   if (!r || typeof r !== 'object') return r;
-  if (r.dept !== undefined) { const d = normDept_(r.dept); r.ministry = normMinistry_(r.dept, r.ministry); r.dept = d; }
+  if (r.dept !== undefined) { r.ministry = normMinistry_(r.dept, r.ministry); r.dept = normDept_(r.dept, r.ministry); }
   // an OKR row is one key result: its metricKey is dept|ministry|metric
   if (typeof r.metricKey === 'string' && r.metricKey) r.metricKey = normKey_(r.metricKey, 3);
   if (Array.isArray(r.leads)) r.leads = r.leads.map(function (k) { return normKey_(k, 2); });
@@ -650,7 +661,7 @@ async function staffRegister(payload) {
   const pending = needsApproval_(payload.dept);
   const rec = {
     id: id, username: u, name: payload.name || u, email: email, pinHash: hashPin_(payload.pin, salt), pinSalt: salt,
-    campus: payload.campus || '', dept: normDept_(payload.dept || ''), ministry: normMinistry_(payload.dept || '', payload.ministry || ''),
+    campus: payload.campus || '', dept: normDept_(payload.dept || '', payload.ministry || ''), ministry: normMinistry_(payload.dept || '', payload.ministry || ''),
     role: payload.role || '', photo: '',
     // Asked for at sign-up, changed from Profile & settings later.
     staffType: cleanStaffType_(payload.staffType), country: cleanCountry_(payload.country),
@@ -887,6 +898,7 @@ async function adminUpdateStaff(username, pin, staffId, payload) {
     if (payload.campus !== undefined) rec.campus = payload.campus;
     if (payload.dept !== undefined) rec.dept = normDept_(payload.dept);
     if (payload.ministry !== undefined) rec.ministry = normMinistry_(rec.dept, payload.ministry);
+    rec.dept = normDept_(rec.dept, rec.ministry);   // a ministry that moved department goes where it is now
     if (payload.role !== undefined) rec.role = payload.role;
     if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
     if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
@@ -1047,6 +1059,7 @@ async function updateProfile(username, pin, payload) {
   if (payload.campus !== undefined) rec.campus = payload.campus;
   if (payload.dept !== undefined) rec.dept = normDept_(payload.dept);
   if (payload.ministry !== undefined) rec.ministry = normMinistry_(rec.dept, payload.ministry);
+  rec.dept = normDept_(rec.dept, rec.ministry);   // a ministry that moved department goes where it is now
   if (payload.role !== undefined) rec.role = payload.role;
   if (payload.staffType !== undefined) rec.staffType = cleanStaffType_(payload.staffType);
   if (payload.country !== undefined) rec.country = cleanCountry_(payload.country);
@@ -1929,7 +1942,15 @@ function isTeamsMinistry_(dept, ministry) { return dept === TEAM_DEPT && ministr
 function numbersExempt_(dept, ministry) { return isTeamsMinistry_(dept, ministry) || dept === 'Campus Leadership'; }
 async function getNumbersPeople_() {
   const v = await readJSON('numbersPeople', {});
-  return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  if (!(v && typeof v === 'object' && !Array.isArray(v))) return {};
+  // keys are campus|dept|ministry — a ministry that moved department reads under the new one
+  const out = {};
+  Object.keys(v).forEach(function (k) {
+    const p = k.split('|');
+    const nk = p.length === 3 ? p[0] + '|' + normKey_(p[1] + '|' + p[2], 2) : k;
+    if (!out[nk]) out[nk] = v[k];
+  });
+  return out;
 }
 function canSetNumbers_(s, dept, ministry) {
   if (numbersExempt_(dept, ministry)) return false;
@@ -3177,7 +3198,7 @@ function cleanPlace_(place, here) {
     const v = place[id];
     if (!here[id] || !v || typeof v !== 'object') return;
     const dept = str_(v.dept, 80), ministry = str_(v.ministry, 80);
-    if (dept) out[id] = { dept: normDept_(dept), ministry: ministry || '' };
+    if (dept) out[id] = { dept: normDept_(dept, ministry), ministry: ministry || '' };
   });
   return out;
 }

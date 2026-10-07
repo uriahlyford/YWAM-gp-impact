@@ -37,11 +37,11 @@ mem.staff = [
   mk({ id: 'st1', name: 'Sreilea Chan', username: 'sreilea', email: 's@e.com' }),                                  // on the Cafe
   mk({ id: 'st2', name: 'Mealea Sok', username: 'mealea', email: 'm@e.com', leads: ['Community Service|Cafe'] }),   // leads it
   mk({ id: 'st3', name: 'Dara Pen', username: 'dara', email: 'd@e.com', dept: 'Campus Leadership', ministry: 'Community Service' }),
-  mk({ id: 'st4', name: 'Vuthy Lim', username: 'vuthy', email: 'v@e.com', ministry: 'Intercession' })
+  mk({ id: 'st4', name: 'Vuthy Lim', username: 'vuthy', email: 'v@e.com', ministry: 'Ponlork School' })
 ];
 mem.numbersPeople = {
   'siemreap|Community Service|Cafe': { main: 'st1', backup: 'st4' },
-  'siemreap|Community Service|Intercession': { main: 'st4', backup: '' }
+  'siemreap|Community Service|Ponlork School': { main: 'st4', backup: '' }
 };
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png' };
 const srv = http.createServer(async (req, res) => {
@@ -93,7 +93,7 @@ const mon = (() => { const j = new Date(Date.UTC(Y, 0, 1)); return new Date(Date
 const dayOf = n => { const d = new Date(mon); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const AT = n => new Date(dayOf(n) + 'T10:00:00+07:00');
 const TUE = AT(1), FRI = AT(4), SAT = AT(5);
-/* last week: the Cafe's numbers are in, Intercession's are not */
+/* last week: the Cafe's numbers are in, Ponlork School's are not */
 if (WK > 1) mem.entries = [{ campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', metric: 'Cups Sold', week: WK - 1, year: Y, value: 10, updated: '' }];
 const bellText = async page => {
   await page.click('#bellBtn'); await page.waitForTimeout(250);
@@ -128,8 +128,9 @@ const toMinistry = async page => { await page.click('#goMinistryFromMe'); await 
   let bell = await bellText(page);
   ok('Friday: the main person is told the Cafe numbers are due today', new RegExp('Cafe numbers for week ' + WK + ' are due today').test(bell), bell.slice(0, 200));
   const home = await page.$eval('#main', e => e.innerText);
-  ok('and it is on My Home too', /Cafe numbers for week \d+ are due today/.test(home));
-  await page.click('[data-gonumbers="Community Service|Cafe"]'); await page.waitForTimeout(700);
+  ok('My Home itself is quiet — the bell (with its red dot) is where reminders live now', !/Cafe numbers for week \d+ are due today/.test(home) && !!(await page.$('#bellBtn .notifDot')));
+  await page.click('#bellBtn'); await page.waitForTimeout(250);
+  await page.click('#notifRoot [data-gonumbers="Community Service|Cafe"]'); await page.waitForTimeout(700);
   ok('"Enter them" opens the Cafe\'s boxes', !!(await page.$('[data-kpi="Cups Sold"]')));
   await page.fill('[data-kpi="Cups Sold"]', '40');
   await page.click('#saveKpiBtn'); await page.waitForTimeout(700);
@@ -144,9 +145,9 @@ const toMinistry = async page => { await page.click('#goMinistryFromMe'); await 
 {
   const { ctx, page } = await open('vuthy', { at: SAT });
   const bell = await bellText(page);
-  ok('Saturday: Intercession is overdue for its main person', new RegExp('Intercession numbers for week ' + WK + ' are overdue').test(bell), bell.slice(0, 300));
+  ok('Saturday: Ponlork School is overdue for its main person', new RegExp('Ponlork School numbers for week ' + WK + ' are overdue').test(bell), bell.slice(0, 300));
   ok('the Cafe (already in) is not, though he is its backup', !/Cafe numbers for week/.test(bell));
-  if (WK > 1) ok('last week\'s missing numbers keep reminding until they are in', new RegExp('Intercession numbers for week ' + (WK - 1) + ' are overdue').test(bell));
+  if (WK > 1) ok('last week\'s missing numbers keep reminding until they are in', new RegExp('Ponlork School numbers for week ' + (WK - 1) + ' are overdue').test(bell));
   await ctx.close();
 }
 
@@ -173,13 +174,15 @@ const toMinistry = async page => { await page.click('#goMinistryFromMe'); await 
 {
   const { ctx, page } = await open('dara', { at: SAT });
   const bell = await bellText(page);
-  ok('the department leader is told how many are in', new RegExp('Community Service week ' + WK + ': 1 of 6 ministries have their numbers in').test(bell), bell.slice(0, 300));
-  ok('and which are not, with whose they are', /Not yet: .*Intercession \(Vuthy Lim\)/.test(bell) && !/Not yet:[^\n]*Cafe/.test(bell), bell.slice(0, 400));
-  await page.click('[data-gonumdept="Community Service"]'); await page.waitForTimeout(700);
+  ok('the department leader is told how many are in', new RegExp('Community Service week ' + WK + ': 1 of 4 ministries have their numbers in').test(bell), bell.slice(0, 300));
+  ok('and which are not, with whose they are', /Not yet: .*Ponlork School \(Vuthy Lim\)/.test(bell) && !/Not yet:[^\n]*Cafe/.test(bell), bell.slice(0, 400));
+  await page.click('#bellBtn'); await page.waitForTimeout(250);
+  await page.click('#notifRoot [data-gonumdept="Community Service"]'); await page.waitForTimeout(700);
   const card = await page.$eval('.numDeptCard', e => e.innerText);
-  ok('"See them" opens the department\'s done / not done list', /✅ Cafe/.test(card) && /⚠️ Intercession/.test(card) && /Vuthy Lim/.test(card), card.slice(0, 300));
-  await page.click('[data-numgo="Community Service|Intercession"]'); await page.waitForTimeout(900);
-  ok('tapping a ministry opens it', /Intercession/.test(await page.$eval('#mmBanner', e => e.innerText)));
+  ok('"See them" opens the department\'s done / not done list', /✅ Cafe/.test(card) && /⚠️ Ponlork School/.test(card) && /Vuthy Lim/.test(card), card.slice(0, 300));
+  ok('Outreach Teams is listed with Community Service too — from the Teams Database, not in the weekly count', /Outreach Teams/.test(card) && /from the Teams Database/.test(card) && !/Intercession|GP Education/.test(card), card.slice(0, 400));
+  await page.click('[data-numgo="Community Service|Ponlork School"]'); await page.waitForTimeout(900);
+  ok('tapping a ministry opens it', /Ponlork School/.test(await page.$eval('#mmBanner', e => e.innerText)));
   await ctx.close();
 }
 
