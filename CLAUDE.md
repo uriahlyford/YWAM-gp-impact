@@ -763,6 +763,35 @@ deep links: **`docs/portal-plan.md`**. Milestone 1 is built (accounts, roles, th
 access screen, the applicant dashboard shell with the timeline, a first staff view);
 forms, documents and references follow.
 
+- **Sign-in (Oct 2026): Google or email + password for applicants; staff keep username + PIN.**
+  An applicant's **username is their email**. `createApplicant_` takes one of three:
+  `{googleToken}` (a Google ID token — `verifyGoogleToken_` asks Google's tokeninfo and checks
+  `aud` = `GP_GOOGLE_CLIENT_ID`, verified email, not expired; the name and email are Google's),
+  `{email, password}` (8–200 chars, PBKDF2 in `secretHash`/`secretSalt`, `hashSecret_`), or the
+  older `{username, pin}` (portal admins adding by hand). A Google account has no password: the
+  server mints a **device token** (`addDeviceToken_`, 48 hex chars, hashed in `rec.tokens[]`, up
+  to 8) that the page keeps as its "pin" — so every handler's `(username, pin)` is unchanged;
+  `credOk_` is the one place PIN / password / token are checked (used by `verifyStaff_` and the
+  staff login's re-checks). Handlers: `portalAuthConfig` (is Google on — the page draws the
+  button only then), `portalLoginGoogle` (token → boot + `user` + `token`; `err:'new'` with the
+  email and name when there is no account yet, `err:'staff'` for a staff email),
+  `portalSetPassword` (own, applicants). `portalRegister` answers `user` and `token` too.
+  `portalMeOut_` / `portalAccountOut_` carry `authKind` google|password|pin;
+  `portalUpdateAccount` sets `newPassword` on an email account (`newPin` → `no_pin_account`,
+  username → `username_is_email`; changing the email moves the username with it).
+  **Set `GP_GOOGLE_CLIENT_ID` on Netlify** (a Web OAuth client in Google Cloud with the portal's
+  origin as an authorised JavaScript origin); without it the sign-in is email + password only.
+  Page: `loginHtml_` (Google button via GIS `gsiLoad_`/`gsiRender_`/`onGoogleCred_`, email +
+  password, "Staff, or a username and PIN?" → `P.pinLogin`), `registerHtml_` (password boxes, or
+  "Signing up with Google" when `P.gtoken`), `signIn_`, `savePassword_` (the dashboard's contact
+  card shows how you sign in and Change password). There is no email sending, so a forgotten
+  password is reset by a portal admin on Accounts.
+- **The portal installs as an app**: `portal-manifest.json` (its own `id`/`start_url`), the same
+  `sw.js` (portal.html, its manifest and outreach-guide.js are in the shell, `gp-shell-v2`),
+  `installCardHtml_` on the dashboard (the browser's install prompt where there is one, the
+  Share → Add to Home Screen hint on iPhone, dismissable, gone once installed). The portal is
+  meant to be the first door into the community — an account a student keeps through their
+  time here; staff / volunteer applications from inside it (landing in HR) are the next step.
 - **An applicant is a staff row with `kind:'applicant'`** (`portalRegister`: username +
   PIN, name, email, phone and messenger ∈ whatsapp|telegram required, type ∈
   `PORTAL_TYPES`, campus ∈ `PORTAL_CAMPUSES` — Poipet runs DTS + DBS, Siem Reap all four — and
@@ -825,7 +854,8 @@ forms, documents and references follow.
   username, email, phone, messenger, country, optional new 4-digit PIN; unique username /
   email; the CRM record's contact facts follow; refuses staff accounts with
   `not_applicant`), delete = `portalDeleteApplicant`. Portal staff get `not_authorized`.
-- **The leader reference** (everyone but Khmer students and teams, `refNeeded_`): the applicant
+- **The leader reference** (everyone but Khmer students and teams, `refNeeded_`) — it is a *leader*
+  (pastor or leader) reference, never a friend's; the DTS form's contact section says so too: the applicant
   (dashboard, `refCardHtml_`) or staff (record panel, `panelReferenceHtml_`) makes a link with
   `portalReferenceLink` → `portal.html?ref=<token>`. The token is random, stored only as a
   sha256 hash in `cand.portal.references[]` (`refHash_`), expires after `REF_TTL_DAYS`

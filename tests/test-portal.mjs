@@ -53,6 +53,104 @@ function ok(name, cond, extra) {
 }
 const APP = { username: 'anna.b', pin: '2468', name: 'Anna Example', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', type: 'student', school: 'dts', country: 'Sweden', campus: 'siemreap' };
 
+console.log('=== signing in with Google or an email and password (Oct 2026) ===');
+{
+  /* Google's tokeninfo stands in: whatever the test says the token means. */
+  let INFO = null;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => ({ ok: !!INFO, json: async () => INFO });
+  const EMAIL_APP = { name: 'Eve Example', email: 'Eve@Example.org', password: 'correct horse', phone: '+44 7700 900000', messenger: 'telegram', type: 'student', school: 'dts', country: 'United Kingdom', campus: 'siemreap' };
+  let r = await call('portalRegister', [{ ...EMAIL_APP, password: 'short' }]);
+  ok('a password under 8 characters is refused', r.body && r.body.err === 'bad_password', JSON.stringify(r.body));
+  r = await call('portalRegister', [EMAIL_APP]);
+  ok('sign-up with an email and password works, the username is the (lower-cased) email', r.body && r.body.ok && r.body.user === 'eve@example.org' && r.body.me.username === 'eve@example.org' && r.body.me.authKind === 'password' && r.body.token === '', JSON.stringify(r.body && r.body.me));
+  const eve = mem.staff.find(x => x.username === 'eve@example.org');
+  ok('the password is kept hashed (PBKDF2), no PIN, no plain text anywhere', eve && eve.secretHash && eve.secretSalt && !eve.pinHash && JSON.stringify(eve).indexOf('correct horse') === -1);
+  r = await call('portalBoot', ['eve@example.org', 'correct horse']);
+  ok('portalBoot signs in with the email and password', r.body && r.body.ok && r.body.role === 'applicant' && r.body.me.name === 'Eve Example');
+  r = await call('portalBoot', ['Eve@Example.org', 'correct horse']);
+  ok('… however the email is capitalised', r.body && r.body.ok);
+  r = await call('portalBoot', ['eve@example.org', 'wrong horse']);
+  ok('a wrong password is refused', r.body && r.body.ok === false && r.body.err === 'auth');
+  r = await call('portalRegister', [{ ...EMAIL_APP, password: 'another one' }]);
+  ok('the same email cannot sign up twice', r.body && r.body.err === 'email_taken');
+  r = await call('portalSetPassword', ['eve@example.org', 'correct horse', 'new horse 2026']);
+  ok('she can change her password', r.body && r.body.ok);
+  r = await call('portalBoot', ['eve@example.org', 'new horse 2026']);
+  ok('… and the new one signs in', r.body && r.body.ok);
+  r = await call('portalBoot', ['eve@example.org', 'correct horse']);
+  ok('… the old one no longer does', r.body && r.body.ok === false);
+  r = await call('portalSetPassword', ['andrew-not-here', '1234', 'whatever 1234']);
+  ok('a stranger cannot set a password', r.body && r.body.ok === false);
+  r = await call('portalSetPassword', ['uriah', '1234', 'whatever 1234']);
+  ok('nor can a staff member turn their PIN into a password here', r.body && r.body.ok === false && r.body.err === 'not_applicant');
+
+  /* Google */
+  r = await call('portalAuthConfig', []);
+  ok('with no client id, Google is off', r.body && r.body.ok && r.body.google === '');
+  r = await call('portalLoginGoogle', ['sometoken']);
+  ok('… and a Google token is refused', r.body && r.body.ok === false && r.body.err === 'google');
+  process.env.GP_GOOGLE_CLIENT_ID = 'test-client.apps.googleusercontent.com';
+  r = await call('portalAuthConfig', []);
+  ok('with the client id set, the page is told Google is on', r.body && r.body.google === 'test-client.apps.googleusercontent.com');
+  const soon = Math.floor(Date.now() / 1000) + 600;
+  INFO = { aud: 'someone-else.apps.googleusercontent.com', iss: 'https://accounts.google.com', email: 'gus@example.org', email_verified: 'true', exp: soon, name: 'Gus Google', sub: '1001' };
+  r = await call('portalLoginGoogle', ['tok']);
+  ok('a token issued for another app is refused', r.body && r.body.err === 'google');
+  INFO = { aud: 'test-client.apps.googleusercontent.com', iss: 'https://accounts.google.com', email: 'gus@example.org', email_verified: 'false', exp: soon, name: 'Gus Google', sub: '1001' };
+  r = await call('portalLoginGoogle', ['tok']);
+  ok('an unverified email is refused', r.body && r.body.err === 'google');
+  INFO = { aud: 'test-client.apps.googleusercontent.com', iss: 'https://accounts.google.com', email: 'gus@example.org', email_verified: 'true', exp: soon - 1200, name: 'Gus Google', sub: '1001' };
+  r = await call('portalLoginGoogle', ['tok']);
+  ok('an expired token is refused', r.body && r.body.err === 'google');
+  INFO = { aud: 'test-client.apps.googleusercontent.com', iss: 'https://accounts.google.com', email: 'Gus@Example.org', email_verified: 'true', exp: soon, name: 'Gus Google', sub: '1001' };
+  r = await call('portalLoginGoogle', ['tok']);
+  ok('a good token for an email with no account answers "new" with the name and email, so sign-up opens filled in', r.body && r.body.ok === false && r.body.err === 'new' && r.body.email === 'gus@example.org' && r.body.name === 'Gus Google', JSON.stringify(r.body));
+  r = await call('portalRegister', [{ googleToken: 'tok', phone: '+1 555 0100', messenger: 'whatsapp', type: 'volunteer', school: '', country: 'United States', campus: 'siemreap' }]);
+  ok('sign-up with Google: the email and name are Google’s, there is no password, and a device token comes back', r.body && r.body.ok && r.body.user === 'gus@example.org' && r.body.me.name === 'Gus Google' && r.body.me.authKind === 'google' && /^[a-f0-9]{48}$/.test(r.body.token), JSON.stringify(r.body && { user: r.body.user, token: r.body.token, me: r.body.me }));
+  const gusTok1 = r.body.token;
+  const gus = mem.staff.find(x => x.username === 'gus@example.org');
+  ok('the account holds the token hashed only, no PIN, no password', gus && gus.tokens.length === 1 && !gus.pinHash && !gus.secretHash && JSON.stringify(gus).indexOf(gusTok1) === -1 && gus.google.sub === '1001');
+  r = await call('portalBoot', ['gus@example.org', gusTok1]);
+  ok('the device token signs in like a PIN', r.body && r.body.ok && r.body.role === 'applicant');
+  r = await call('portalLoginGoogle', ['tok']);
+  ok('signing in with Google again (another phone) mints another token and boots', r.body && r.body.ok && r.body.user === 'gus@example.org' && r.body.token && r.body.token !== gusTok1 && r.body.application);
+  const gusTok2 = r.body.token;
+  r = await call('portalBoot', ['gus@example.org', gusTok1]);
+  ok('… the first phone still works', r.body && r.body.ok);
+  r = await call('portalBoot', ['gus@example.org', gusTok2]);
+  ok('… and so does the second', r.body && r.body.ok);
+  r = await call('portalBoot', ['gus@example.org', 'a'.repeat(48)]);
+  ok('a made-up token does not', r.body && r.body.ok === false);
+  r = await call('portalBoot', ['gus@example.org', '']);
+  ok('nor an empty one', r.body && r.body.ok === false);
+  INFO = { aud: 'test-client.apps.googleusercontent.com', iss: 'https://accounts.google.com', email: 'u@x.org', email_verified: 'true', exp: soon, name: 'Uriah', sub: '77' };
+  r = await call('portalLoginGoogle', ['tok']);
+  ok('a staff member’s email is sent to the staff door, not signed in', r.body && r.body.ok === false && r.body.err === 'staff' && !mem.staff.find(x => x.username === 'uriah').tokens);
+  r = await call('getMyBoot', ['gus@example.org', gusTok1]);
+  ok('an applicant’s token opens nothing on the staff side', r.body && r.body.ok === false);
+  /* Accounts (portal admin) */
+  r = await call('portalListAccounts', ['sina', '1234']);
+  const accs = (r.body && r.body.accounts) || [];
+  ok('the accounts list says how each one signs in', accs.find(a => a.username === 'eve@example.org').authKind === 'password' && accs.find(a => a.username === 'gus@example.org').authKind === 'google');
+  r = await call('portalUpdateAccount', ['sina', '1234', eve.id, { newPin: '1234' }]);
+  ok('a PIN cannot be set on an email account', r.body && r.body.err === 'no_pin_account');
+  r = await call('portalUpdateAccount', ['sina', '1234', eve.id, { username: 'eve.x' }]);
+  ok('nor its username changed — it is the email', r.body && r.body.err === 'username_is_email');
+  r = await call('portalUpdateAccount', ['sina', '1234', eve.id, { newPassword: 'reset by admin' }]);
+  ok('a portal admin can set a new password', r.body && r.body.ok);
+  r = await call('portalBoot', ['eve@example.org', 'reset by admin']);
+  ok('… which signs in', r.body && r.body.ok);
+  r = await call('portalUpdateAccount', ['sina', '1234', eve.id, { email: 'eve.new@example.org' }]);
+  ok('changing the email changes the username with it', r.body && r.body.ok && r.body.account.username === 'eve.new@example.org');
+  r = await call('portalBoot', ['eve.new@example.org', 'reset by admin']);
+  ok('… and she signs in with the new email', r.body && r.body.ok);
+  mem.staff = mem.staff.filter(x => x.id !== eve.id && x.id !== gus.id);
+  mem.candidates = (mem.candidates || []).filter(c => c.staffId !== eve.id && c.staffId !== gus.id);
+  delete process.env.GP_GOOGLE_CLIENT_ID;
+  globalThis.fetch = realFetch;
+}
+
 console.log('=== signing up ===');
 let r = await call('portalRegister', [{ ...APP, username: 'A B' }]);
 ok('username must be the same shape as a staff username', r.body.ok === false && r.body.err === 'bad_username');
