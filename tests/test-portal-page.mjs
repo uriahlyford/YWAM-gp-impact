@@ -343,6 +343,12 @@ async function open(viewport, query, seed) {
   const sub = sent.find(b => b.fn === 'portalSubmit');
   ok('Submit sends every answer to portalSubmit', sub && sub.args[2].testimony === 'I met Jesus at a youth camp.' && JSON.stringify(sub.args[2].gifts) === '["Music"]' && sub.args[2].leaderContact === '+46 70 111 2222');
   ok('and the dashboard now reads Application pending with the form submitted', /Application pending/.test(await page.$eval('#statusPill', e => e.textContent)) && /Submitted/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('#openForm')));
+  await page.waitForSelector('#refCopy', { timeout: 5000 });
+  ok('straight after submitting, the reference link is made and the dashboard says: next, send it to your leader', !!(await page.$('#refNext')) && /Send the link to my leader/.test(await page.$eval('#refNext', e => e.textContent)) &&
+    sent.some(b => b.fn === 'portalReferenceLink') && !!(await page.$('#refCard #refCopy')) && (await page.$$eval('#refCard .chatBtn', a => a.length)) === 3);
+  ok('the timeline’s Leader reference item has the button too', !!(await page.$('#timeline [data-refgo]')));
+  await page.click('#refGo'); await page.waitForTimeout(200);
+  ok('tapping it closes the banner and keeps the link on the card', !(await page.$('#refNext')) && !!(await page.$('#refCopy')));
   await page.click('#viewAnswers');
   await page.waitForTimeout(150);
   ok('View my answers shows them read-only', /I met Jesus at a youth camp/.test(await page.$eval('#main', e => e.textContent)) && /Music/.test(await page.$eval('#main', e => e.textContent)));
