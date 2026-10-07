@@ -88,11 +88,10 @@ function getBaselineDepartments(campusId){
         'Kids Classes Run','Total Kids','Salvations','Baptisms','People Connected to Local Church'],
       'Cafe': ['Days Open','Cups Sold','Customers Served','Gospel Conversations','Salvations',
         'Weekly Profit ($)','Weekly Expenses ($)','Total in Bank Account ($)'],
-      'GP Education': CS_SCHOOL_METRICS.slice(),
-      'Intercession': ['Prayer Hours Covered','Prayer Meetings Held','Ministries Covered in Prayer',
-        'Answered-Prayer Testimonies','Director Weekly Score (1-10)']
     },
     'Youth Education': {
+      'Intercession': ['Prayer Hours Covered','Prayer Meetings Held','Ministries Covered in Prayer',
+        'Answered-Prayer Testimonies','Director Weekly Score (1-10)'],
       'Sports': ['Sessions / Leagues Run','Games Played','Games Won','Youth Participating',
         'Current Coaches','Coaches in Training','Salvations','Players Being Discipled'],
       'GP Media': mediaMetrics(),
@@ -145,10 +144,14 @@ function getBaselineDepartments(campusId){
     'People Reached with Gospel','Salvations','Baptisms','People Connected to Local Church'];
   LD['Church Partnerships'] = ['Partner Churches Supported','Churches Being Led',
     'Combined Congregation Attendance','Salvations','Baptisms','New Churches Planted'];
+  /* The community schools differ by campus: Poipet runs GP Education; Siem
+     Reap runs Ponlork, LTN and Sry Noi (no GP Education there — Oct 2026). */
   if (campusId === 'siemreap') {
     d['Community Service']['Ponlork School'] = CS_SCHOOL_METRICS.slice();
     d['Community Service']['LTN'] = CS_SCHOOL_METRICS.slice();
     d['Community Service']['Sry Noi'] = CS_SCHOOL_METRICS.slice();
+  } else {
+    d['Community Service']['GP Education'] = CS_SCHOOL_METRICS.slice();
   }
   return d;
 }
@@ -192,7 +195,7 @@ var LATEST_SET = ['Total Staff','Staff Debt ($)','Base Finances ($)','Total in B
     while YDC counts 'Youth Enrolled' — one school either way.
 
     Poipet therefore runs two community schools (GP Education + YDC); Siem Reap
-    runs five (GP Education, Ponlork, LTN, Sry Noi + YDC). A ministry that
+    runs four (Ponlork, LTN, Sry Noi + YDC). A ministry that
     reports its own 'Schools' number contributes that instead of 1, so a
     multi-site ministry is counted honestly. */
 var LD_SCHOOL_MINISTRIES = ['GPDTS','DTS','DBS','SMS','BCS','SOMD'];

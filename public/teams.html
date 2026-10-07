@@ -3060,7 +3060,8 @@ function baseHtml(){
      dashboard. Schools is a count of ministries reporting; Total Volunteer Hours
      is Σ(hours × volunteers). */
   h+=accRowHtml('baseAcc', 'cs', '📚 '+esc(t('Community Schools')),
-    CS_SCHOOL_MINISTRIES.concat(YE_SCHOOL_MINISTRIES).map(function(m){ return esc(t(m)); }).join(' · '),
+    CS_SCHOOL_MINISTRIES.filter(function(m){ return ids.some(function(cid){ return !!(getDepartments(cid)['Community Service']||{})[m]; }); })
+      .concat(YE_SCHOOL_MINISTRIES).map(function(m){ return esc(t(m)); }).join(' · '),
     function(){
       return '<div class="grid">'+
         bstat('Schools', R.communitySchools(ids))+
@@ -7616,6 +7617,11 @@ function numbersDeptListHtml_(D){
       h+='<button class="numDeptRow" data-numgo="'+esc(D.dept+'|'+m)+'"><span>'+(ok?'✅':'⚠️')+' '+esc(t(m))+'</span>'+
         '<span class="numDeptWho">'+esc(numbersWhoFor_(D, m))+'</span></button>';
     });
+    /* Outreach Teams is in Community Service too — its numbers come from the
+       Teams Database, team by team, so it isn't one of the weekly "in" count */
+    if(D.dept===TEAM_DEPT && (getDepartments(S.me.campus)[TEAM_DEPT]||{})[TEAM_MIN])
+      h+='<button class="numDeptRow" data-numgo="'+esc(TEAM_DEPT+'|'+TEAM_MIN)+'"><span>🙌 '+esc(t(TEAM_MIN))+'</span>'+
+        '<span class="numDeptWho">'+esc(t('from the Teams Database'))+'</span></button>';
   });
   return h+'</div>';
 }

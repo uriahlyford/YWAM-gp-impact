@@ -40,13 +40,13 @@ mem.entries = [
   { campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', metric: 'Cups Sold', week: 30, year: Y, value: 5 },
   { campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', metric: 'Cups Sold', week: 33, year: Y, value: 6 },
   { campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', metric: 'Cups Sold', week: 35, year: Y, value: null },
-  { campus: 'siemreap', dept: 'Community Service', ministry: 'Intercession', metric: 'Hours', week: 50, year: Y - 1, value: 2 },
+  { campus: 'siemreap', dept: 'Community Service', ministry: 'Ponlork School', metric: 'Hours', week: 50, year: Y - 1, value: 2 },
 ];
 mem.numbersPeople = { 'siemreap|Community Service|Cafe': { main: 'st_dara', backup: '' } };
 mem.okrs = [
   { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: Y, id: 'o1', objective: 'Grow the cafe', kr: 'a', metricKey: '', updated: '2000-01-01T00:00:00Z' },
   { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: Y, id: 'o1', objective: 'Grow the cafe', kr: 'b', metricKey: '', updated: Y + '-01-05T00:00:00Z' },
-  { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: Y, id: 'o2', objective: 'Pray more', kr: 'c', metricKey: 'Community Service|Intercession|Hours', updated: '2000-01-01T00:00:00Z' },
+  { campus: 'siemreap', dept: 'Community Service', quarter: Q, year: Y, id: 'o2', objective: 'Pray more', kr: 'c', metricKey: 'Community Service|Ponlork School|Hours', updated: '2000-01-01T00:00:00Z' },
   { campus: 'siemreap', dept: 'Community Service', quarter: Q === 4 ? 1 : Q + 1, year: Y, id: 'o3', objective: 'Another quarter', kr: 'd', metricKey: '', updated: '' },
 ];
 async function call(fn, args) {
@@ -83,7 +83,7 @@ console.log('\n=== the facts ===');
 r = await call('adminLooseEnds', ['uriah', '1234']);
 const L = r.body;
 ok('the last week with numbers this year, per ministry — a blank value does not count', L.ok && L.lastWeek['siemreap|Community Service|Cafe'] === 33, JSON.stringify(L.lastWeek));
-ok('… and last year’s numbers do not count', !('siemreap|Community Service|Intercession' in L.lastWeek));
+ok('… and last year’s numbers do not count', !('siemreap|Community Service|Ponlork School' in L.lastWeek));
 ok('who is set to enter numbers', L.people['siemreap|Community Service|Cafe'].main === 'st_dara');
 ok('when each person last opened the app, and since when that is counted', L.seen.st_dara === TODAY && L.seenSince === '2026-01-01');
 const o1 = L.objectives.find((o) => o.objective === 'Grow the cafe'), o2 = L.objectives.find((o) => o.objective === 'Pray more');

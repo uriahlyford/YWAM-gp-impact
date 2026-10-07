@@ -35,7 +35,7 @@ const mk = o => Object.assign({ active: true, campus: 'siemreap', dept: 'Communi
   role: 'Staff', staffType: 'campus', country: 'Cambodia', surveyToken: 'tok_' + o.id }, o, { pinSalt: o.id, pinHash: H('1234', o.id) });
 mem.staff = [
   mk({ id: 'st1', name: 'Sreilea Chan', username: 'sreilea', email: 's@e.com' }),
-  mk({ id: 'st2', name: 'Mealea Sok', username: 'mealea', email: 'm@e.com', ministry: 'Intercession' }),
+  mk({ id: 'st2', name: 'Mealea Sok', username: 'mealea', email: 'm@e.com', ministry: 'Ponlork School' }),
   mk({ id: 'st3', name: 'Dara Pen', username: 'dara', email: 'd@e.com', ministry: 'GP Education' }),
   mk({ id: 'cs', name: 'Chea Leader', username: 'chea', email: 'c@e.com', dept: 'Campus Leadership', ministry: 'Community Service' }),
   mk({ id: 'cd', name: 'Dir Ector', username: 'director', email: 'x@e.com', dept: 'Campus Leadership', ministry: 'Campus Director' }),
@@ -103,7 +103,7 @@ const tiles = page => page.$$eval('.pulseCard .pulseTile', ts => ts.map(t => t.i
   await toMinistry(page);
   const t = await tiles(page);
   ok('a department leader\'s page leads with the department, six figures, nothing to type', t.length === 6 && !(await page.$('.pulseCard input')), JSON.stringify(t));
-  ok('numbers in on time', /Numbers in 1 \/ 6/.test(t[0]), t[0]);
+  ok('numbers in on time', /Numbers in 1 \/ 4/.test(t[0]), t[0]);
   ok('staff, and who is away', /Staff 3 1 away this week/.test(t[1]) && /Away: Sreilea/.test(await page.$eval('.pulseCard', e => e.innerText)), t[1]);
   ok('the department\'s health score, from three check-ins', /Health \d\.\d 3 of 3 answered/.test(t[2]), t[2]);
   ok('staff debt not entered yet', /Staff debt — not entered yet/.test(t[5]), t[5]);
