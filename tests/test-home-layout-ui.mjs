@@ -101,11 +101,11 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
   const { ctx, page } = await open('sreilea');
   await page.waitForTimeout(800);
   const heads = await page.$$eval('#main h3', hs => hs.map(h => h.innerText.trim()));
-  ok('the sections, in order — no Health or My Ministry below the summary card', JSON.stringify(heads) === JSON.stringify(['🎯 Weekly Goals', '✅ Daily', 'Annual Goals · SMART', 'Mentorship', '🧭 About me']), heads.join(' | '));
+  ok('the sections, in order — no Health or My Ministry below the summary card', JSON.stringify(heads) === JSON.stringify(['🎯 Weekly Goals', '✅ Habits', 'Annual Goals · SMART', 'Mentorship', '🧭 About me']), heads.join(' | '));
   const card = await page.$eval('.myHero', e => e.innerText.replace(/\s+/g, ' '));
   ok('the large summary card: goals and their list, Health check-in, My Ministry, streak, habits, health, mentor, time off',
     /Weekly Goals 1\/3/.test(card) && /Plan the cafe menu/.test(card) && /Health check-in/.test(card) && /My Ministry/.test(card) &&
-    /DAY STREAK/.test(card) && /Habits Today/.test(card) && /My Health 9\.2\/10/.test(card) && /Mentor Mealea Sok/.test(card) && /TIME OFF DAYS LEFT 29/.test(card), card.slice(0, 220));
+    /DAY STREAK/.test(card) && /Habits Today/.test(card) && /My Health 9\.2\/10/.test(card) && /Mentor Mealea Sok/.test(card) && /PERSONAL DAYS OFF LEFT 29/.test(card), card.slice(0, 220));
   ok('… with the photo and colour option behind the gear', !!(await page.$('#dashCustomizeBtn')));
   ok('no quick-jump strip, no "My week" heading', !(await page.$('.quickBar')) && !/My week \d/.test(await page.$eval('#main', e => e.innerText)));
   const upd = await page.$$eval('#main .card .row', rs => rs.map(r => r.innerText).filter(x => /Announcement|leave request/.test(x)));
@@ -121,7 +121,7 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
   ok('Last week shows last week’s goals to mark how they went', /^Last week/.test(gc) && /Visit three families/.test(gc) && /How did last week go/.test(gc) && !(await page.$('#newGoalText')), gc.slice(0, 120));
   await page.click('[data-goalswk="this"]'); await page.waitForTimeout(300);
   gc = await page.$eval('#sec-goals + .card', e => e.innerText.replace(/\s+/g, ' '));
-  ok('… and This week brings this week back', /^This week/.test(gc) && /Plan the cafe menu/.test(gc));
+  ok('… and This week brings this week back, headed by the week itself', /^Week \d+/.test(gc) && /Plan the cafe menu/.test(gc) && !/👀|Your team can see these/.test(gc), gc.slice(0, 60));
   ok('an unlinked goal says "Link to a KPI" quietly', (await page.$$('.goalLink.unlinked')).length === 3);
   ok('Annual goals: one card summing the year up, no editor on My Home', /2 goals · 50% on average/.test(await page.$eval('#goGoalsFromMe', e => e.innerText)) && !(await page.$('[data-smartcat]')));
   await page.click('#goGoalsFromMe'); await page.waitForTimeout(300);
