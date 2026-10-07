@@ -558,6 +558,17 @@ beds beyond men + women (the Beds box) can go in either. With only one of the tw
 nothing greys by gender — the "set for the other gender" warning does that job. Taken and
 out-of-use beds are as before. tests/test-hospitality-page.mjs covers it.
 
+## Hospitality bed picker: who sleeps where is in it (Oct 2026)
+There is no separate "Who sleeps where" section any more. When a booking names people (a team
+or a school, anything with a people list, or more than one bed — `hospNamesMode_`), tapping a
+bed takes it and opens a chooser under the room (`#hospWho`, `S.hospBedPick`): the names the
+room is for (`hospNamesForRoom_` — men in a men's room, women in a women's, anyone whose sex
+is unknown in either; not-yet-placed first, placed ones dimmed with their bed), a typed-name
+box (`[data-hbname]`, the datalist), Clear the name, Remove this bed, Done. Tapping a name puts
+them in the bed (one bed each) and closes it. A selected bed shows its name, or "who?". A lone
+guest's bed still just toggles. "Fill the beds in order" and "Not in a bed yet" stay above /
+below the rooms. tests/test-hospitality-page.mjs covers it.
+
 ## Habits with a schedule (Oct 2026)
 A habit row is `{id, mentorVisible, days?, label?, icon?}`: `days` is the weekdays it is due
 (0 Sunday … 6 Saturday; absent = every day), and a habit of your own has id `c_<slug>` with
