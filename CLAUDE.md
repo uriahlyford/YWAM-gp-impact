@@ -299,6 +299,13 @@ ever see the current names, and ordinary writes persist them. `test-leadership-r
 seeds the store with the old names and checks every read and every department-keyed right.
 Do not add a fourth name without extending `OLD_LEADERSHIP_DEPTS`.
 
+**A ministry that moved department** rides the same layer: `MINISTRY_MOVES` in api.js maps
+old `'dept|ministry'` to the department it is in now, and `normDept_(dept, ministry)` applies
+it everywhere `normRows_`/`normKey_` run (rows, OKR `metricKey`s, `leads`, `ministries`,
+`numbersPeople` keys on read, incoming payloads). Intercession: Community Service → Youth
+Education (Oct 2026). Move a ministry in taxonomy.js AND add it to `MINISTRY_MOVES`, or its
+history is orphaned (`test-numbers-people.mjs` §5 covers the move).
+
 ## My Ministry — one ministry at a time
 One page (`myMinistryHtml`), two tabs — **Numbers** and **OKRs** (`S.mmTab`). Numbers is
 built around ONE ministry, picked at the top and named in a banner (`#mmBanner`) so there
@@ -1269,7 +1276,8 @@ section is a roll-up over existing weekly entries, nothing new is stored:
 3. **Community schools** — `CS_SCHOOL_MINISTRIES` (GP Education, Ponlork, LTN,
    Sry Noi) counting `Students Enrolled` + `YE_SCHOOL_MINISTRIES` (YDC) counting
    `Youth Enrolled`. **Poipet runs two** (GP Education = GP Kids, YDC); **Siem Reap
-   five**. A ministry reporting its own `Schools` number contributes that instead of 1,
+   four** (Ponlork, LTN, Sry Noi, YDC — GP Education is Poipet's only, since Oct 2026;
+   the dashboard label names only the schools the campus on show has). A ministry reporting its own `Schools` number contributes that instead of 1,
    so a multi-site ministry counts honestly; otherwise any ministry with data at all
    counts as the one school it is — nobody should have to log "1" every week for YDC.
 4. **Outreach teams** — `Teams Hosted`, volunteers, volunteer hours, people served,
