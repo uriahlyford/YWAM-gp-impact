@@ -292,10 +292,13 @@ for (const file of ['index.html', 'teams.html', 'help.html']) {
     await p.waitForSelector('nav.bottom button', { timeout: 15000 });
     await p.click('nav.bottom button:nth-child(1)');          // My Home
     await p.waitForTimeout(400);
-    await p.click('#goProfileFromMe').catch(function () { });
+    // Profile & settings is in the menu (the tile on My Home is gone)
+    await p.click('#menuBtn').catch(function () { });
+    await p.waitForTimeout(300);
+    await p.click('[data-menu-item="profile"]').catch(function () { });
     await p.waitForSelector('[data-theme-set]', { timeout: 8000 }).catch(function () { });
     const have = await p.$$eval('[data-theme-set]', function (b) { return b.length; }).catch(function () { return 0; });
-    if (!have) { ok('Appearance control is reachable from My Home', false, 'no buttons found'); await ctx.close(); break; }
+    if (!have) { ok('Appearance control is reachable from the menu', false, 'no buttons found'); await ctx.close(); break; }
     await p.click('[data-theme-set="' + pick + '"]');
     await p.waitForTimeout(400);
     const st = await p.evaluate(`(function(){
