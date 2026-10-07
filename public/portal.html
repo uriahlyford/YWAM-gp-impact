@@ -806,6 +806,10 @@ function registerHtml_(){
   var a=applyByKey_(P.apply), r=P.reg;
   var h='<div class="center"><div class="gateTitle"><h2>'+esc(t('Create your account'))+'</h2>';
   h+='<p class="sub">'+esc(t('A few details so we can reach you, then your application. Nothing here is shared outside our applications team.'))+'</p></div>';
+  /* Google first (Uriah): one tap fills the email and name and there is no password to make */
+  if(P.gtoken) h+='<div class="card" style="text-align:center"><div class="eyebrow" style="margin-top:0">'+esc(t('Signing up with Google'))+'</div><p class="sub" style="margin:4px 0 0">'+esc(gpT('You will sign in with Google as {email} — no password to remember.',{email:r.email||''}))+'</p></div>';
+  else if(P.authCfg && P.authCfg.google) h+='<div class="card">'+googleBtnHtml_()+'<p class="hint" style="text-align:center;margin:6px 0 0">'+esc(t('One tap: your email and name fill in, and there is no password to remember.'))+'</p>'+
+    '<div class="orRow" style="margin-bottom:0"><span>'+esc(t('or fill in your details below'))+'</span></div></div>';
   var here=P.campus||DEFAULT_CAMPUS;
   h+='<div class="card">'+(openCampuses_().length>1 ? '<label class="f" style="margin-top:0">'+esc(t('Where'))+'</label>'+campusSegHtml_('data-campus', here) : '')+
     '<label class="f"'+(openCampuses_().length>1?'':' style="margin-top:0"')+'>'+esc(t('Applying for'))+'</label><div class="chips" style="margin-bottom:0">'+APPLY.filter(function(x){ return offeredAt_(x, here); }).map(function(x){ return '<button class="chip'+(a&&a.key===x.key?' on':'')+'" data-pick="'+x.key+'">'+esc(x.label)+'</button>'; }).join('')+'</div>'+
@@ -823,10 +827,8 @@ function registerHtml_(){
   '</div>';
   h+='<div class="card">'+
     (P.gtoken
-      ? '<div class="eyebrow" style="margin-top:0">'+esc(t('Signing up with Google'))+'</div><p class="sub" style="margin:4px 0 0">'+esc(gpT('You will sign in with Google as {email} — no password to remember.',{email:r.email||''}))+'</p>'
-      : (P.authCfg && P.authCfg.google ? googleBtnHtml_()+
-          '<p class="hint" style="text-align:center;margin:4px 0 0">'+esc(t('Sign up with Google and there is no password to remember.'))+'</p><div class="orRow"><span>'+esc(t('or make a password'))+'</span></div>' : '')+
-        '<label class="f"'+(P.authCfg && P.authCfg.google ? '' : ' style="margin-top:0"')+'>'+esc(t('Choose a password'))+'</label><input type="password" id="r_pw" autocomplete="new-password" minlength="8">'+
+      ? '<p class="sub" style="margin:0">'+esc(t('Nothing more to set up — Google is your sign-in.'))+'</p>'
+      : '<label class="f" style="margin-top:0">'+esc(t('Choose a password'))+'</label><input type="password" id="r_pw" autocomplete="new-password" minlength="8">'+
         '<label class="f">'+esc(t('Repeat the password'))+'</label><input type="password" id="r_pw2" autocomplete="new-password">'+
         '<p class="hint">'+esc(t('At least 8 characters. You will sign in with your email and this password.'))+'</p>')+
     '<button class="btn" id="regBtn"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Creating…'):t('Create my account'))+'</button>'+
