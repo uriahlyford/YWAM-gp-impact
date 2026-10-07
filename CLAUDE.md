@@ -791,7 +791,9 @@ forms, documents and references follow.
   username → `username_is_email`; changing the email moves the username with it).
   **Set `GP_GOOGLE_CLIENT_ID` on Netlify** (a Web OAuth client in Google Cloud with the portal's
   origin as an authorised JavaScript origin); without it the sign-in is email + password only.
-  Page: `loginHtml_` (Google button via GIS `gsiLoad_`/`gsiRender_`/`onGoogleCred_`, email +
+  Page: `loginHtml_` (our own black **Continue with Google** button, `googleBtnHtml_` / `googleGo_` —
+  Google's drawn button carries a white box on the dark page — over the GIS OAuth token client,
+  `gsiLoad_`, `onGoogleCred_`; the server takes an access token or an ID token; email +
   password, "Staff, or a username and PIN?" → `P.pinLogin`), `registerHtml_` (password boxes, or
   "Signing up with Google" when `P.gtoken`), `signIn_`, `savePassword_` (the dashboard's contact
   card shows how you sign in and Change password). There is no email sending, so a forgotten

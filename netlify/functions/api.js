@@ -5422,21 +5422,34 @@ async function candidateFor_(rows, s) {
    null. globalThis.fetch so a test can stand in for Google. */
 const GOOGLE_ISS = ['accounts.google.com', 'https://accounts.google.com'];
 function googleClientId_() { return String(process.env.GP_GOOGLE_CLIENT_ID || '').trim(); }
-async function verifyGoogleToken_(idToken) {
+async function verifyGoogleToken_(token) {
   const cid = googleClientId_();
-  if (!cid || !idToken || typeof idToken !== 'string' || idToken.length > 4096) return null;
+  if (!cid || !token || typeof token !== 'string' || token.length > 4096) return null;
+  /* Two shapes: an ID token (a JWT, from Google's own button) or an access
+     token from the page's own black button (google.accounts.oauth2) — the
+     tokeninfo endpoint checks either; an access token's name comes from
+     userinfo, and is optional. */
+  const isJwt = token.split('.').length === 3;
   let info = null;
   try {
-    const res = await globalThis.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
+    const res = await globalThis.fetch('https://oauth2.googleapis.com/tokeninfo?' + (isJwt ? 'id_token=' : 'access_token=') + encodeURIComponent(token));
     if (!res || !res.ok) return null;
     info = await res.json();
   } catch (e) { return null; }
-  if (!info || info.aud !== cid || GOOGLE_ISS.indexOf(info.iss) === -1) return null;
-  if (String(info.email_verified) !== 'true') return null;
-  if (!(Number(info.exp) * 1000 > Date.now())) return null;
+  if (!info || info.aud !== cid) return null;
+  if (isJwt && GOOGLE_ISS.indexOf(info.iss) === -1) return null;
+  if (String(info.email_verified) !== 'true' && String(info.verified_email) !== 'true') return null;
+  if (isJwt ? !(Number(info.exp) * 1000 > Date.now()) : !(Number(info.expires_in) > 0)) return null;
   const email = cleanEmail_(info.email);
   if (!email) return null;
-  return { email: email, name: str_(info.name, 120) || '', sub: String(info.sub || '') };
+  let name = str_(info.name, 120) || '';
+  if (!isJwt && !name) {
+    try {
+      const ui = await globalThis.fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: 'Bearer ' + token } });
+      if (ui && ui.ok) { const u = await ui.json(); name = str_(u && u.name, 120) || ''; }
+    } catch (e) { /* the name is a nicety */ }
+  }
+  return { email: email, name: name, sub: String(info.sub || '') };
 }
 /* What the page needs before it can draw the sign-in: whether Google is on. */
 async function portalAuthConfig() {
