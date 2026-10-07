@@ -783,7 +783,9 @@ forms, documents and references follow.
   staff login's re-checks). Handlers: `portalAuthConfig` (is Google on — the page draws the
   button only then), `portalLoginGoogle` (token → boot + `user` + `token`; `err:'new'` with the
   email and name when there is no account yet, `err:'staff'` for a staff email),
-  `portalSetPassword` (own, applicants). `portalRegister` answers `user` and `token` too.
+  `portalSetPassword` (own, applicants; on an older username + PIN account it also makes the
+  email the username — the dashboard's "Switch to email and password" — and answers `user`).
+  `portalRegister` answers `user` and `token` too.
   `portalMeOut_` / `portalAccountOut_` carry `authKind` google|password|pin;
   `portalUpdateAccount` sets `newPassword` on an email account (`newPin` → `no_pin_account`,
   username → `username_is_email`; changing the email moves the username with it).

@@ -817,7 +817,9 @@ function meHtml_(){
       '<div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(me.email||'—')+'</span></div>'+
       '<div class="kv"><b>'+esc(t('Country'))+'</b><span>'+esc(me.country||'—')+'</span></div>'+
       '<div class="kv"><b>'+esc(t('Sign-in'))+'</b><span>'+esc(me.authKind==='google' ? 'Google' : me.authKind==='password' ? t('Email and password') : t('Username and PIN'))+
-        (me.authKind==='password' && !P.changePw ? ' · <button class="linkbtn inline" id="changePw">'+esc(t('Change password'))+'</button>' : '')+'</span></div>';
+        (me.authKind==='password' && !P.changePw ? ' · <button class="linkbtn inline" id="changePw">'+esc(t('Change password'))+'</button>' : '')+
+        (me.authKind==='pin' && !P.changePw ? ' · <button class="linkbtn inline" id="changePw">'+esc(t('Switch to email and password'))+'</button>' : '')+'</span></div>';
+    if(me.authKind==='pin' && P.changePw) h+='<p class="hint" style="margin:8px 0 0">'+esc(gpT('From then on you sign in with {email} and this password instead of your username and PIN.',{email:me.email||''}))+'</p>';
     if(P.changePw) h+='<div class="pwBox"><label class="f">'+esc(t('New password'))+'</label><input type="password" id="cp_new" autocomplete="new-password">'+
       '<label class="f">'+esc(t('Repeat the password'))+'</label><input type="password" id="cp_new2" autocomplete="new-password">'+
       '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><button class="btn small" id="savePw"'+(P.busy?' disabled':'')+'>'+esc(t('Save'))+'</button><button class="linkbtn inline" id="cancelPw">'+esc(t('Cancel'))+'</button></div></div>';
@@ -2131,7 +2133,12 @@ function savePassword_(){
   P.busy=true; render();
   run('portalSetPassword', [P.auth.user, P.auth.pin, a], function(d){
     P.busy=false;
-    if(d && d.ok){ P.auth.pin=a; lsSet('gp-portal', JSON.stringify(P.auth)); P.changePw=false; showMsg(t('Password changed')); }
+    if(d && d.ok){
+      var switched = P.boot && P.boot.me && P.boot.me.authKind==='pin';
+      P.auth.pin=a; if(d.user) P.auth.user=d.user; lsSet('gp-portal', JSON.stringify(P.auth)); P.changePw=false;
+      if(P.boot && P.boot.me){ P.boot.me.authKind='password'; if(d.user) P.boot.me.username=d.user; }
+      showMsg(switched ? t('Done — you now sign in with your email and password.') : t('Password changed'));
+    }
     else showMsg(t('Could not change the password — try again.'));
     render();
   });
