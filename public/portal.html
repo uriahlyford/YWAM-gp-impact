@@ -160,6 +160,8 @@ textarea { min-height:80px; resize:vertical; }
 .resRow:last-child { border-bottom:0; } .resRow.dim { opacity:.6; }
 .resIcon { font-size:22px; flex:0 0 auto; } .resBody { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; font-size:14.5px; } .resBody .hint { margin:0; }
 .resPhone { font-weight:700; font-size:18px; letter-spacing:1px; } .resGo { color:var(--muted); } .resNote { font-size:13.5px; white-space:pre-line; }
+.resLogo { width:40px; height:40px; border-radius:10px; background:#fff; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:20px; }
+.resLogo img { width:28px; height:28px; object-fit:contain; } .resGet { color:var(--accent, var(--ink)); font-weight:600; font-size:13.5px; white-space:nowrap; }
 .resEdit { padding:10px 0 12px; border-bottom:1px solid var(--border); }
 .memberRow { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
 .memberRow input { flex:1; min-width:0; margin:0; }
@@ -1033,21 +1035,29 @@ function pTestHtml_(){
   return h;
 }
 /* ---- 📚 Resources ---- */
-var RES_KIND_ICON={ guide:'📘', link:'🔗', phone:'📞', note:'📝' };
+var RES_KIND_ICON={ guide:'📘', link:'🔗', phone:'📞', note:'📝', app:'📱' };
+/* an app's logo: the favicon of the site it is got from, with 📱 if that never arrives */
+function appLogoHtml_(url){
+  var host=''; try { host=new URL(url).hostname; } catch(e){}
+  return host ? '<span class="resIcon resLogo"><img src="https://www.google.com/s2/favicons?domain='+esc(host)+'&sz=64" alt="" loading="lazy" onerror="this.parentNode.textContent=\'📱\'"></span>' : '<span class="resIcon">📱</span>';
+}
 function resourcesHtml_(){
   var d=P.resources;
   var h='<div class="wide"><div class="gateTitle"><h2>'+esc(t('Resources'))+'</h2><p class="sub">'+esc(t('What to read before you come, who to call, and where to go.'))+'</p></div>';
   if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
-  var items=d.items||[], guides=items.filter(function(r){ return r.kind==='guide'; }), phones=items.filter(function(r){ return r.kind==='phone'; }), links=items.filter(function(r){ return r.kind==='link'; }), notes=items.filter(function(r){ return r.kind==='note'; });
+  var items=d.items||[], guides=items.filter(function(r){ return r.kind==='guide'; }), phones=items.filter(function(r){ return r.kind==='phone'; }), links=items.filter(function(r){ return r.kind==='link'; }), notes=items.filter(function(r){ return r.kind==='note'; }), apps=items.filter(function(r){ return r.kind==='app'; });
   var row=function(r){
     if(r.kind==='guide') return '<div class="resRow"><span class="resIcon">📘</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div>'+(typeof outreachGuideHtml==='function' ? '<button class="btn small" id="openGuide">'+esc(t('Open'))+'</button>' : '')+'</div>';
     if(r.kind==='phone') return '<a class="resRow" href="tel:'+esc(r.value.replace(/\s+/g,''))+'"><span class="resIcon">📞</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div><span class="resPhone">'+esc(r.value)+'</span></a>';
+    if(r.kind==='app') return r.value ? '<a class="resRow resApp" href="'+esc(r.value)+'" target="_blank" rel="noopener">'+appLogoHtml_(r.value)+'<div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div><span class="resGet">'+esc(t('Get it'))+' ↗</span></a>'
+      : '<div class="resRow dim"><span class="resIcon">📱</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div></div>';
     if(r.kind==='link') return r.value ? '<a class="resRow" href="'+esc(r.value)+'" target="_blank" rel="noopener"><span class="resIcon">🔗</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+'</div><span class="resGo">↗</span></a>'
       : '<div class="resRow dim"><span class="resIcon">🔗</span><div class="resBody"><b>'+esc(r.title)+'</b><span class="hint">'+esc(r.note||'')+(r.note?' · ':'')+esc(t('Coming soon'))+'</span></div></div>';
     return '<div class="resRow"><span class="resIcon">📝</span><div class="resBody"><b>'+esc(r.title)+'</b>'+(r.note?'<span class="hint">'+esc(r.note)+'</span>':'')+(r.value?'<span class="resNote">'+esc(r.value)+'</span>':'')+'</div></div>';
   };
   if(guides.length) h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Guides'))+'</h3>'+guides.map(row).join('')+'</div>';
   if(phones.length) h+='<div class="card"><h3 style="margin-top:0">🚨 '+esc(t('Emergency numbers in Cambodia'))+'</h3><p class="hint" style="margin:0 0 6px">'+esc(t('Tap to call. Tell them where you are first.'))+'</p>'+phones.map(row).join('')+'</div>';
+  if(apps.length) h+='<div class="card"><h3 style="margin-top:0">📱 '+esc(t('Apps to get before you come'))+'</h3><p class="hint" style="margin:0 0 6px">'+esc(t('Download them at home — the tuk-tuk apps are how everyone gets around.'))+'</p>'+apps.map(row).join('')+'</div>';
   if(links.length) h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Places and links'))+'</h3>'+links.map(row).join('')+'</div>';
   if(notes.length) h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Good to know'))+'</h3>'+notes.map(row).join('')+'</div>';
   if(!items.length) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Nothing here yet.'))+'</p></div>';
@@ -1056,13 +1066,13 @@ function resourcesHtml_(){
 /* the editor (staff side, portal admins) */
 function resourcesAdminHtml_(){
   var d=P.resources;
-  var h='<div class="wide"><div class="panelHead"><div><h1 style="font-size:28px">📚 '+esc(t('Resources'))+'</h1><p class="sub">'+esc(t('What applicants and teams see under Resources: guides, emergency numbers, links and notes.'))+'</p></div></div>';
+  var h='<div class="wide"><div class="panelHead"><div><h1 style="font-size:28px">📚 '+esc(t('Resources'))+'</h1><p class="sub">'+esc(t('What applicants and teams see under Resources: guides, emergency numbers, apps to download, links and notes. Anything we ship later is added to your list on its own.'))+'</p></div></div>';
   if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
   var items=P.resDraft||d.items;
   h+='<div class="card">'+items.map(function(r, i){
-    return '<div class="resEdit" data-resrow="'+i+'"><div class="teamGrid2"><div><label class="f" style="margin-top:0">'+esc(t('Kind'))+'</label><select data-resf="'+i+'|kind">'+['guide','link','phone','note'].map(function(k){ return '<option value="'+k+'"'+(r.kind===k?' selected':'')+'>'+RES_KIND_ICON[k]+' '+esc(t({guide:'Guide (in the portal)', link:'Link', phone:'Phone number', note:'Note'}[k]))+'</option>'; }).join('')+'</select></div>'+
+    return '<div class="resEdit" data-resrow="'+i+'"><div class="teamGrid2"><div><label class="f" style="margin-top:0">'+esc(t('Kind'))+'</label><select data-resf="'+i+'|kind">'+['guide','link','phone','note','app'].map(function(k){ return '<option value="'+k+'"'+(r.kind===k?' selected':'')+'>'+RES_KIND_ICON[k]+' '+esc(t({guide:'Guide (in the portal)', link:'Link', phone:'Phone number', note:'Note', app:'App to download'}[k]))+'</option>'; }).join('')+'</select></div>'+
       '<div><label class="f" style="margin-top:0">'+esc(t('Title'))+'</label><input type="text" data-resf="'+i+'|title" value="'+esc(r.title)+'" maxlength="120"></div></div>'+
-      '<label class="f">'+esc(r.kind==='phone' ? t('Number') : r.kind==='link' ? t('Web address') : r.kind==='guide' ? t('Which guide') : t('Text'))+'</label><input type="text" data-resf="'+i+'|value" value="'+esc(r.value||'')+'" maxlength="500" placeholder="'+esc(r.kind==='link' ? 'https://…' : r.kind==='phone' ? '117' : '')+'">'+
+      '<label class="f">'+esc(r.kind==='phone' ? t('Number') : r.kind==='link' ? t('Web address') : r.kind==='app' ? t('Where to get it (the app’s page)') : r.kind==='guide' ? t('Which guide') : t('Text'))+'</label><input type="text" data-resf="'+i+'|value" value="'+esc(r.value||'')+'" maxlength="500" placeholder="'+esc(r.kind==='link' || r.kind==='app' ? 'https://…' : r.kind==='phone' ? '117' : '')+'">'+
       '<label class="f">'+esc(t('Short note'))+'</label><input type="text" data-resf="'+i+'|note" value="'+esc(r.note||'')+'" maxlength="300">'+
       '<div class="schedRowBtns"><button class="linkbtn inline" data-resup="'+i+'">↑</button><button class="linkbtn inline" data-resdown="'+i+'">↓</button><button class="linkbtn inline danger" data-resdel="'+i+'">'+esc(t('Remove'))+'</button></div></div>';
   }).join('')+'<button class="btn ghost small" id="resAdd">＋ '+esc(t('Add one'))+'</button></div>';

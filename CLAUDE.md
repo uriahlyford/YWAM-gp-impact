@@ -815,8 +815,12 @@ forms, documents and references follow.
   each result, the four groups and the E/I S/N T/F J/P balance) and 📚 Resources
   (`portalResources` — a list a portal admin edits on the staff side's Resources tab,
   `portalSaveResources`, blob `portalResources`, kinds guide|link|phone|note,
-  `PORTAL_RESOURCES_DEFAULT`: the Outreach Leader's Guide, the teams booklet, 117/118/119, the
-  places list). tests/test-portal.mjs and test-portal-page.mjs cover all four.
+  `PORTAL_RESOURCES_DEFAULT`: the Outreach Leader's Guide, the teams booklet, 117/118/119, the campus
+  address and the places list (Google Maps), and kind `app` — Grab, PassApp, foodpanda — drawn with
+  the app site's favicon via Google's s2 service (`appLogoHtml_`, 📱 fallback) and a Get it link.
+  A saved list is merged with the shipped one on read (`mergeResources_`): items shipped later are
+  appended, ids the admin removed stay out (`dropped`, written on save), an empty saved value takes
+  the shipped one). tests/test-portal.mjs and test-portal-page.mjs cover all four.
   The heading is `'{campus} Campus Staff'` — `campusName_` already says YWAM, so never prefix it
   again. **Our team, staff side** (portal admins; nav `toTeam`, `P.view==='team'`,
   `teamAdminHtml_` / `bindTeamAdmin_`): the same cards with Edit — name, role and photo go

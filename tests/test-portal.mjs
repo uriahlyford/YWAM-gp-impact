@@ -273,8 +273,8 @@ console.log('=== the portal as a tool: meet our team, team strengths, resources 
   ok('one applicant cannot read another’s', !(r.body && r.body.ok && r.body.results && r.body.results.leader));
 
   r = await call('portalResources', ['solo.app', '2468']);
-  ok('Resources: the shipped defaults until an admin edits — the leaders’ guide, the teams booklet, 117 / 118 / 119, the places list',
-    r.body && r.body.ok && r.body.isDefault === true && r.body.items.map(x => x.kind + ':' + x.title).join('|') === 'guide:Outreach Leader’s Guide|link:Guide for Short-Term Teams|phone:Police|phone:Fire|phone:Ambulance|link:Our favourite places in Siem Reap' && r.body.items[2].value === '117', JSON.stringify(r.body && r.body.items.map(x => x.title)));
+  ok('Resources: the shipped defaults until an admin edits — the leaders’ guide, the teams booklet, 117 / 118 / 119, the campus and the places list, the three apps',
+    r.body && r.body.ok && r.body.isDefault === true && r.body.items.map(x => x.kind + ':' + x.title).join('|') === 'guide:Outreach Leader’s Guide|link:Guide for Short-Term Teams|phone:Police|phone:Fire|phone:Ambulance|link:Our campus — YWAM Siem Reap|link:Our favourite places in Siem Reap|app:Grab|app:PassApp|app:foodpanda' && r.body.items[2].value === '117' && /maps\.app\.goo\.gl/.test(r.body.items[5].value) && /google\.com\/maps/.test(r.body.items[6].value) && /grab\.com/.test(r.body.items[7].value), JSON.stringify(r.body && r.body.items.map(x => x.title)));
   r = await call('portalSaveResources', ['dara', '1234', [{ kind: 'link', title: 'x', value: 'y' }]]);
   ok('portal staff (not admin) cannot edit them', r.body && r.body.err === 'not_authorized');
   r = await call('portalSaveResources', ['sina', '1234', [
@@ -285,7 +285,13 @@ console.log('=== the portal as a tool: meet our team, team strengths, resources 
   ok('a portal admin saves the list: links get https, phone numbers keep digits, an unknown kind becomes a link, a blank title is dropped',
     r.body && r.body.ok && r.body.isDefault === false && r.body.items.length === 3 && r.body.items[0].id === 'r_maps' && r.body.items[0].value === 'https://maps.app.goo.gl/abc' && r.body.items[1].value === '+855 12 345 678' && r.body.items[2].kind === 'link', JSON.stringify(r.body && r.body.items));
   r = await call('portalResources', ['tool.team', '2468']);
-  ok('… and every applicant sees the saved list', r.body && r.body.items.length === 3 && r.body.items[1].title === 'Tourist police');
+  ok('… and every applicant sees the saved list — the shipped items they left out stay out', r.body && r.body.items.length === 3 && r.body.items[1].title === 'Tourist police' && mem.portalResources.dropped.indexOf('r_grab') > -1);
+  /* a list saved before the apps shipped: they join it on their own, and an empty address takes the shipped one */
+  mem.portalResources = { items: [{ id: 'r_maps', kind: 'link', title: 'Our favourite places', note: '', value: '' }, { id: 'r_police', kind: 'phone', title: 'Police', value: '117' }], dropped: ['r_leaders', 'r_teams', 'r_fire', 'r_ambulance', 'r_campus'], updated: '2026-10-01T00:00:00Z' };
+  r = await call('portalResources', ['tool.team', '2468']);
+  ok('things shipped after an admin saved are added to their list; what they removed stays removed; an empty address takes the shipped one', r.body && r.body.items.map(x => x.id).join() === 'r_maps,r_police,r_grab,r_passapp,r_foodpanda' && /google\.com\/maps/.test(r.body.items[0].value), JSON.stringify(r.body && r.body.items.map(x => x.id)));
+  r = await call('portalSaveResources', ['sina', '1234', [{ id: 'r_grab', kind: 'app', title: 'Grab', note: 'Tuk-tuks', value: 'grab.com/kh/download' }]]);
+  ok('an app is a kind of its own, its link made https', r.body && r.body.ok && r.body.items[0].kind === 'app' && r.body.items[0].value === 'https://grab.com/kh/download');
 
   /* a portal admin fixes the cards from the portal */
   const jpg = 'x'.repeat(200);

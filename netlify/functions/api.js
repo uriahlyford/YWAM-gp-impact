@@ -5656,7 +5656,7 @@ async function portalDeleteStrength(username, pin, key, candidateId) {
 /* Resources: what a team or applicant may need in Cambodia — guides,
    emergency numbers, places. A list a portal admin edits (blob
    'portalResources'); these are the defaults until someone does. */
-const RESOURCE_KINDS = ['guide', 'link', 'phone', 'note'];
+const RESOURCE_KINDS = ['guide', 'link', 'phone', 'note', 'app'];
 const RESOURCES_MAX = 60;
 const PORTAL_RESOURCES_DEFAULT = [
   { id: 'r_leaders', kind: 'guide', title: 'Outreach Leader’s Guide', note: 'Getting here, border crossings, arrival, what things cost, and tips — for teams.', value: 'outreach' },
@@ -5664,8 +5664,25 @@ const PORTAL_RESOURCES_DEFAULT = [
   { id: 'r_police', kind: 'phone', title: 'Police', note: 'Emergency — Cambodia', value: '117' },
   { id: 'r_fire', kind: 'phone', title: 'Fire', note: 'Emergency — Cambodia', value: '118' },
   { id: 'r_ambulance', kind: 'phone', title: 'Ambulance', note: 'Emergency — Cambodia', value: '119' },
-  { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes, shops and restaurants we like — a Google Maps list.', value: '' }
+  { id: 'r_campus', kind: 'link', title: 'Our campus — YWAM Siem Reap', note: 'The address on Google Maps. Show it to any tuk-tuk driver.', value: 'https://maps.app.goo.gl/Mkg26hR8LP61Sp1q7' },
+  { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes, shops and restaurants we like — a Google Maps list.', value: 'https://www.google.com/maps/@13.3667762,103.8419852,14z/data=!4m2!11m1!2sV30E-H3vTvO8Wrt-cPzXUg?entry=ttu' },
+  { id: 'r_grab', kind: 'app', title: 'Grab', note: 'Essential: tuk-tuks and rides anywhere in the city — like Uber, but way cheaper. Works with your own number, no Cambodian SIM needed.', value: 'https://www.grab.com/kh/download/' },
+  { id: 'r_passapp', kind: 'app', title: 'PassApp', note: 'The other tuk-tuk app, essential too — like Uber, but way cheaper. Needs a Cambodian phone number to sign up.', value: 'https://www.passapp.com.kh/' },
+  { id: 'r_foodpanda', kind: 'app', title: 'foodpanda', note: 'Food delivered to the base — most restaurants in town are on it.', value: 'https://www.foodpanda.com.kh/' }
 ];
+/* The list a portal admin saved, plus anything shipped since: a shipped item
+   they never saw is added at the end, one they removed stays removed
+   ('dropped' is written on save), and a saved item with no address yet takes
+   the shipped one once there is one (the places list, the campus address). */
+function mergeResources_(saved) {
+  const items = cleanResources_(saved.items), have = {}, dropped = Array.isArray(saved.dropped) ? saved.dropped : [];
+  items.forEach(function (r) { have[r.id] = r; });
+  PORTAL_RESOURCES_DEFAULT.forEach(function (d) {
+    if (have[d.id]) { if (!have[d.id].value && d.value) have[d.id].value = d.value; return; }
+    if (dropped.indexOf(d.id) === -1) items.push(Object.assign({}, d));
+  });
+  return items;
+}
 function cleanResources_(list) {
   const out = [], seen = {};
   (Array.isArray(list) ? list : []).slice(0, RESOURCES_MAX).forEach(function (r) {
@@ -5673,7 +5690,7 @@ function cleanResources_(list) {
     const kind = RESOURCE_KINDS.indexOf(r.kind) > -1 ? r.kind : 'link';
     const title = str_(r.title, 120); if (!title) return;
     let value = str_(r.value, 500) || '';
-    if (kind === 'link' && value && !/^https?:\/\//i.test(value)) value = 'https://' + value;
+    if ((kind === 'link' || kind === 'app') && value && !/^https?:\/\//i.test(value)) value = 'https://' + value;
     if (kind === 'phone') value = value.replace(/[^\d+ ]/g, '').trim();
     let id = typeof r.id === 'string' && /^r_[a-z0-9]{1,30}$/.test(r.id) && !seen[r.id] ? r.id : ('r_' + Math.random().toString(36).slice(2, 10));
     seen[id] = 1;
@@ -5683,7 +5700,7 @@ function cleanResources_(list) {
 }
 async function getResources_() {
   const saved = await readJSON('portalResources', null);
-  return saved && Array.isArray(saved.items) ? { items: cleanResources_(saved.items), isDefault: false, updated: saved.updated || '' } : { items: PORTAL_RESOURCES_DEFAULT.slice(), isDefault: true, updated: '' };
+  return saved && Array.isArray(saved.items) ? { items: mergeResources_(saved), isDefault: false, updated: saved.updated || '' } : { items: PORTAL_RESOURCES_DEFAULT.slice(), isDefault: true, updated: '' };
 }
 async function portalResources(username, pin) {
   const s = await verifyStaff_(username, pin, true);
@@ -5694,7 +5711,8 @@ async function portalSaveResources(username, pin, items) {
   const me = await verifyStaff_(username, pin);
   if (!me) return { ok: false };
   if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
-  const saved = { items: cleanResources_(items), updated: new Date().toISOString(), by: me.id };
+  const clean = cleanResources_(items), ids = clean.map(function (r) { return r.id; });
+  const saved = { items: clean, dropped: PORTAL_RESOURCES_DEFAULT.map(function (d) { return d.id; }).filter(function (id) { return ids.indexOf(id) === -1; }), updated: new Date().toISOString(), by: me.id };
   await writeJSON('portalResources', saved);
   return Object.assign({ ok: true }, await getResources_());
 }
