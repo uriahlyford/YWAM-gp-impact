@@ -834,6 +834,16 @@ forms, documents and references follow.
   `P.aview/strengths/tphotos` in with the boot and draws `applicantNavHtml_('data-pvaview')`
   outside the inert frame (`P.pv.aview`); Our team and Resources load with the staff member's own
   creds (`meetOn` / `resOn` in `bindTabs_`).
+- **Staff side bar and menu (Oct 2026)**: the bar is GP app home · Applications · ☰ (`staffNavHtml_`,
+  `P.menuOpen`, `#navMenu`); the menu (`#staffMenu`, drawn only when open) has two groups — Staff
+  access (View as applicant, Link for applicants) and Admin access (Forms, Accounts, Our team,
+  Resources, Who has access). The ids (`toForms`…) are unchanged, so tests open the menu first when
+  a button is missing. **Who has access** (`P.view==='access'`, `accessHtml_` / `bindAccess_`): every
+  active staff member from `portalAccessList` (portal admins) with Staff access / Admin access
+  checkboxes that call `portalSetAccess`; only a GP app admin can switch admin access
+  (`canGrantAdmin`), and GP app admins / Outreach Teams leaders are marked as having it anyway.
+  **Teams tab order** (`teamOrder_`, `teamTrip_`): here now, then soonest to come, then no dates
+  yet, then already gone; every other tab stays latest change first.
 - **A team's photos (Oct 2026)**: instead of one team photo with names, the leader takes a photo
   of each person in the portal — `teamPhotoPeople_(c)` is the leader (from the form), the
   co-leaders (`co|<n>`) and every member (members now carry an `id`, kept through a rename —

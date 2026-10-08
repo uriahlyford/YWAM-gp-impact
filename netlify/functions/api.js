@@ -5963,6 +5963,19 @@ async function portalSetAccess(username, pin, staffId, flags) {
     return { ok: true, staff: adminStaffOut_(rec) };
   });
 }
+/* Who on staff has the portal — the Who has access page (portal admins):
+   every active staff member with the two flags, and whether they have it
+   anyway (a GP app admin; whoever leads Outreach Teams sees teams). Only a
+   GP app admin can give or take admin access (portalSetAccess checks). */
+async function portalAccessList(username, pin) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  const rows = (await getStaff_()).filter(function (r) { return r && r.active !== false && !r.archived && !isApplicant_(r); })
+    .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); })
+    .map(function (r) { return { id: r.id, name: r.name, campus: r.campus || '', dept: deptOf_(r) || '', ministry: r.ministry || '', portalStaff: !!r.portalStaff, portalAdmin: !!r.portalAdmin, isAdmin: !!r.isAdmin, leadsTeams: leadsTeams_(r) }; });
+  return { ok: true, canGrantAdmin: !!me.isAdmin, staff: rows };
+}
 /* The staff side's writes go through the CRM's own handlers (hrSaveCandidate,
    hrCandidateNote, hrArchiveCandidate — hrGate_ admits portal staff). This
    one is the applicant's: their contact details, which they own. */
@@ -6666,6 +6679,7 @@ const HANDLERS = {
   portalSetPassword: function (a) { return portalSetPassword(a[0], a[1], a[2]); },
   portalBoot: function (a) { return portalBoot(a[0], a[1]); },
   portalSetAccess: function (a) { return portalSetAccess(a[0], a[1], a[2], a[3]); },
+  portalAccessList: function (a) { return portalAccessList(a[0], a[1]); },
   portalUpdateContact: function (a) { return portalUpdateContact(a[0], a[1], a[2]); },
   portalDeleteApplicant: function (a) { return portalDeleteApplicant(a[0], a[1], a[2]); },
   portalSaveForm: function (a) { return portalSaveForm(a[0], a[1], a[2], a[3]); },
