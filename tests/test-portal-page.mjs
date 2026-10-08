@@ -77,7 +77,8 @@ const MEET_STAFF0 = [{ id: 'st_dara', name: 'Dara Pen', role: 'Host', ministry: 
 const MEET_STAFF = MEET_STAFF0.map(x => ({ ...x }));
 const STRENGTH_PEOPLE = () => [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
 let RESOURCES = [{ id: 'r_leaders', kind: 'guide', title: 'Outreach Leader’s Guide', note: 'Getting here and more.', value: 'outreach' }, { id: 'r_police', kind: 'phone', title: 'Police', note: 'Emergency — Cambodia', value: '117' },
-  { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes we like.', value: '' }, { id: 'r_teams', kind: 'link', title: 'Guide for Short-Term Teams', note: '', value: 'https://example.org/teams.pdf' }];   // the mocked portalAuthConfig: Google's client id, or off
+  { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes we like.', value: '' }, { id: 'r_teams', kind: 'link', title: 'Guide for Short-Term Teams', note: '', value: 'https://example.org/teams.pdf' },
+  { id: 'r_grab', kind: 'app', title: 'Grab', note: 'Tuk-tuks — like Uber, but way cheaper.', value: 'https://www.grab.com/kh/download/' }];   // the mocked portalAuthConfig: Google's client id, or off
 let CANDS0 = null;  // a fresh copy of the sample records, for blocks that run after others changed them
 const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' }, bcs: { ...FORM, key: 'bcs' }, sms: { ...FORM, key: 'sms' }, staff: { ...FORM, key: 'staff' }, volunteer: { ...FORM, key: 'volunteer' }, team: TEAM_FORM, reference: REF_FORM };
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
@@ -105,6 +106,7 @@ async function open(viewport, query, seed) {
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_CERT|ERR_CONNECTION|ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });
   await ctx.route('**accounts.google.com/**', r => r.abort());
+  await ctx.route('**/s2/favicons**', r => r.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64') }));
   await ctx.route('**/.netlify/functions/api', r => {
     const b = JSON.parse(r.request().postData() || '{}'); sent.push(b); let out = { ok: false };
     const [u, pin] = b.args || [];
@@ -809,6 +811,7 @@ async function open(viewport, query, seed) {
   await page.click('[data-aview="resources"]'); await page.waitForSelector('.resRow', { timeout: 5000 });
   const res = await page.$eval('#main', e => e.textContent);
   ok('Resources: the guide with Open, the emergency numbers to tap and call, the places list marked coming soon until it has an address, the teams booklet as a link', /Outreach Leader’s Guide/.test(res) && !!(await page.$('#openGuide')) && (await page.$eval('a.resRow[href="tel:117"]', e => e.textContent)).indexOf('Police') > -1 && /Coming soon/.test(res) && !!(await page.$('a.resRow[href="https://example.org/teams.pdf"][target="_blank"]')));
+  ok('apps to download have their own card: the logo (the app site’s icon), the note, Get it opening the app’s page', /Apps to get before you come/.test(res) && !!(await page.$('a.resApp[href="https://www.grab.com/kh/download/"][target="_blank"]')) && /favicons\?domain=www\.grab\.com/.test(await page.$eval('a.resApp img', i => i.getAttribute('src'))) && /way cheaper/.test(await page.$eval('a.resApp', e => e.textContent)) && /Get it/.test(await page.$eval('a.resApp .resGet', e => e.textContent)));
   await page.click('#openGuide'); await page.waitForTimeout(300);
   ok('the guide opens from Resources', !!(await page.$('#guideOverlay')));
   await page.click('#guideClose'); await page.waitForTimeout(100);
@@ -854,7 +857,7 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
   await page.waitForSelector('#toResources');
   await page.click('#toResources'); await page.waitForSelector('[data-resf]', { timeout: 5000 });
-  ok('a portal admin has a Resources tab with the list to edit', (await page.$$('.resEdit')).length === 4 && /shipped defaults/.test(await page.$eval('#main', e => e.textContent)));
+  ok('a portal admin has a Resources tab with the list to edit', (await page.$$('.resEdit')).length === 5 && (await page.$$eval('[data-resf="0|kind"] option', os => os.map(o => o.value).join())) === 'guide,link,phone,note,app' && /shipped defaults/.test(await page.$eval('#main', e => e.textContent)));
   await page.fill('[data-resf="2|value"]', 'maps.app.goo.gl/list1');
   await page.click('#resAdd'); await page.waitForTimeout(100);
   const n = (await page.$$('.resEdit')).length - 1;
@@ -862,7 +865,7 @@ async function open(viewport, query, seed) {
   await page.fill('[data-resf="' + n + '|title"]', 'Tourist police'); await page.fill('[data-resf="' + n + '|value"]', '+855 12 345 678');
   await page.click('#resSave'); await page.waitForTimeout(400);
   const rs = sent.filter(b => b.fn === 'portalSaveResources').pop();
-  ok('Save sends the list — the maps link filled in, a tourist police number added', rs && rs.args[2][2].value === 'maps.app.goo.gl/list1' && rs.args[2][4].kind === 'phone' && rs.args[2][4].title === 'Tourist police' && !/shipped defaults/.test(await page.$eval('#main', e => e.textContent)), JSON.stringify(rs && rs.args[2]));
+  ok('Save sends the list — the maps link filled in, a tourist police number added', rs && rs.args[2][2].value === 'maps.app.goo.gl/list1' && rs.args[2][5].kind === 'phone' && rs.args[2][5].title === 'Tourist police' && !/shipped defaults/.test(await page.$eval('#main', e => e.textContent)), JSON.stringify(rs && rs.args[2]));
   await ctx.close();
 }
 
