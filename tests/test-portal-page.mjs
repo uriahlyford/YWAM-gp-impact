@@ -84,6 +84,11 @@ const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' },
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
 const ME_APP = { id: 'st_anna', name: 'Anna Example', username: 'anna.b', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', type: 'student', school: 'dts' };
 const STAFF = [{ id: 'st_dara', name: 'Dara Pen', username: 'dara', campus: 'siemreap', isAdmin: false, portalAdmin: false, portalStaff: true, role: 'portal-staff' }, { id: 'st_sina', name: 'Sina Sok', username: 'sina', campus: 'siemreap', isAdmin: false, portalAdmin: true, portalStaff: false, role: 'portal-admin' }];
+let ACCESS_STAFF = [{ id: 'st_sina', name: 'Sina Sok', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', portalStaff: false, portalAdmin: true, isAdmin: false, leadsTeams: false },
+  { id: 'st_dara', name: 'Dara Pen', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', portalStaff: true, portalAdmin: false, isAdmin: false, leadsTeams: false },
+  { id: 'st_rithy', name: 'Rithy Team', campus: 'siemreap', dept: 'Community Service', ministry: 'Outreach Teams', portalStaff: false, portalAdmin: false, isAdmin: false, leadsTeams: true },
+  { id: 'st_uriah', name: 'Uriah Admin', campus: 'siemreap', dept: 'Campus Leadership', ministry: '', portalStaff: false, portalAdmin: false, isAdmin: true, leadsTeams: false },
+  { id: 'st_plain', name: 'Plain Staff', campus: 'poipet', dept: 'Community Service', ministry: 'Cafe', portalStaff: false, portalAdmin: false, isAdmin: false, leadsTeams: false }];
 let ACCOUNTS = [
   { id: 'st_anna', username: 'anna.b', name: 'Anna Example', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', campus: 'siemreap', type: 'student', school: 'dts', candidateId: 'cd_anna', stage: 'new', status: 'draft', created: '2026-09-20T10:00:00Z' },
   { id: 'st_team', username: 'team.au', name: 'Grace Team', email: 'team@example.org', phone: '+61 400 000 000', messenger: 'telegram', country: 'Australia', campus: 'siemreap', type: 'team', school: '', candidateId: 'cd_team', stage: 'accepted', status: 'accepted', created: '2026-09-01T10:00:00Z' }
@@ -190,6 +195,10 @@ async function open(viewport, query, seed) {
       const o = b.args[2] || {};
       if (o.candidateId) { const c = CANDS.find(x => x.id === o.candidateId); out = c ? { ok: true, preview: 'record', role: 'applicant', me: { ...ME_APP, name: c.name, type: c.type, school: c.school }, application: { ...ANNA, id: c.id, name: c.name, type: c.type, school: c.school, stage: c.stage, status: c.status, submittedAt: c.stage === 'new' ? null : '2026-09-20T10:00:00Z', answers: (c.portal && c.portal.form && c.portal.form.answers) || {}, refNeeded: c.type !== 'team', formKey: c.type === 'student' ? c.school : c.type }, form: FORMS[c.type === 'student' ? c.school : c.type], strengths: c.type === 'team' ? { people: STRENGTH_PEOPLE(), results: STRENGTHS } : { people: [{ key: 'me', name: c.name, role: 'me' }], results: {} } } : { ok: false, err: 'not_found' }; }
       else out = { ok: true, preview: 'sample', role: 'applicant', me: { ...ME_APP, name: o.type === 'team' ? 'Sample Team' : 'Sample Applicant', type: o.type, school: o.school, country: o.audience === 'khmer' ? 'Cambodia' : 'Australia' }, application: { ...ANNA, id: 'preview', type: o.type, school: o.school, stage: o.stage, status: o.stage === 'new' ? 'draft' : o.stage === 'applied' ? 'pending' : o.stage, submittedAt: o.stage === 'new' ? null : '2026-09-20T10:00:00Z', audience: o.audience === 'khmer' ? 'khmer' : 'international', needsVisa: o.audience !== 'khmer', refNeeded: !(o.type === 'team' || (o.type === 'student' && o.audience === 'khmer')), formKey: o.type === 'student' ? o.school : o.type, docKinds: o.type === 'team' ? TEAM_DOCS : [], docs: [], members: o.type === 'team' && o.stage !== 'new' ? [{ id: 'msample01', name: 'Sam Sample', sex: 'm' }, { id: 'msample02', name: 'Mia Sample', sex: 'f' }] : [], steps: STEPS(o.stage === 'new' ? 'form' : 'contact') }, form: FORMS[o.type === 'student' ? o.school : o.type], strengths: { people: o.type === 'team' ? [{ key: 'leader', name: 'Sample Team', role: 'leader' }, { key: 'msample01', name: 'Sam Sample', role: 'member', sex: 'm' }, { key: 'msample02', name: 'Mia Sample', role: 'member', sex: 'f' }] : [{ key: 'me', name: 'Sample Applicant', role: 'me' }], results: {} } };
+    } else if (b.fn === 'portalAccessList') {
+      out = u === 'sina' ? { ok: true, canGrantAdmin: true, staff: ACCESS_STAFF } : { ok: false, err: 'not_authorized' };
+    } else if (b.fn === 'portalSetAccess') {
+      const row = ACCESS_STAFF.find(x => x.id === b.args[2]); if (row) Object.assign(row, b.args[3]); out = row ? { ok: true } : { ok: false, err: 'not_found' };
     } else if (b.fn === 'portalListAccounts') {
       out = u === 'sina' ? { ok: true, accounts: ACCOUNTS } : { ok: false, err: 'not_authorized' };
     } else if (b.fn === 'portalCreateApplicant') {
@@ -591,7 +600,8 @@ async function open(viewport, query, seed) {
   ok('a note goes through hrCandidateNote and shows in the log', note && note.args[3] === 'Spoke today, very keen' && /Spoke today, very keen/.test(await page.$eval('#panel .log', e => e.textContent)));
   ok('no PIN or hash anywhere on the page', !/2468|1234|pinHash/.test(await page.$eval('#main', e => e.textContent)));
   ok('portal staff are offered no delete', !(await page.$('#deleteCand')));
-  ok('portal staff are offered no Forms button', !(await page.$('#toForms')));
+  await page.click('#navMenu'); await page.waitForSelector('#staffMenu');
+  ok('portal staff open the ☰ menu and get Staff access only — no Forms, no Admin access group', !(await page.$('#toForms')) && !!(await page.$('#toPreview')) && /Staff access/.test(await page.$eval('#staffMenu', e => e.textContent)) && !/Admin access/.test(await page.$eval('#staffMenu', e => e.textContent)));
   ok('but do get the GP app home link', !!(await page.$('#toGpApp')));
   ok('nor an Accounts button', !(await page.$('#toAccounts')));
   await page.click('[data-open="cd_anna"]');
@@ -634,7 +644,9 @@ async function open(viewport, query, seed) {
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
   await page.waitForSelector('.trow');
-  ok('a portal admin has a Forms button in the bar', !!(await page.$('#toForms')));
+  await page.click('#navMenu'); await page.waitForSelector('#staffMenu');
+  ok('a portal admin finds Forms under Admin access in the ☰ menu, apart from Staff access', !!(await page.$('#toForms')) && /Staff access/.test(await page.$eval('#staffMenu', e => e.textContent)) && /Admin access/.test(await page.$eval('#staffMenu', e => e.textContent)) && (await page.$$eval('#staffMenu .menuGroup', g => g.map(x => [...x.querySelectorAll('button')].map(b => b.id).join(',')).join('|'))) === 'toPreview,toLink|toForms,toAccounts,toTeam,toResources,toAccess');
+  if(!(await page.$('#toForms'))){ await page.click('#navMenu'); await page.waitForSelector('#toForms'); }
   await page.click('#toForms');
   await page.waitForSelector('#formSave');
   ok('the editor opens on DTS with a tab per form and the shipped-default note', await page.$eval('[data-formkey="dts"]', b => b.classList.contains('on')) && (await page.$$eval('[data-formkey]', b => b.length)) === 8 && /shipped default/.test(await page.$eval('#main', e => e.textContent)));
@@ -824,7 +836,8 @@ async function open(viewport, query, seed) {
 /* ---------- the portal admin fixes the Our team cards ---------- */
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
-  await page.waitForSelector('#toTeam');
+  await page.waitForSelector('#navMenu');
+  if(!(await page.$('#toTeam'))){ await page.click('#navMenu'); await page.waitForSelector('#navMenu'); }
   await page.click('#toTeam'); await page.waitForSelector('[data-meetedit]', { timeout: 5000 });
   ok('a portal admin has an Our team tab: the same cards applicants see, each with Edit', (await page.$$('.meetCard')).length === 2 && (await page.$$('[data-meetedit]')).length === 2 && /never changes the GP app/.test(await page.$eval('#main', e => e.textContent)));
   await page.click('[data-meetedit="st_yan"]'); await page.waitForSelector('#meet_name');
@@ -848,14 +861,49 @@ async function open(viewport, query, seed) {
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
   await page.waitForSelector('.trow');
-  ok('portal staff who are not admins have no Our team tab', !(await page.$('#toTeam')) && !!(await page.$('#toPreview')));
+  await page.click('#navMenu'); await page.waitForSelector('#staffMenu');
+  ok('portal staff who are not admins have no Our team in the menu', !(await page.$('#toTeam')) && !!(await page.$('#toPreview')) && !(await page.$('#toAccess')));
+  await ctx.close();
+}
+
+/* ---------- Who has access (portal admins) ---------- */
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('#navMenu'); await page.click('#navMenu'); await page.waitForSelector('#toAccess');
+  await page.click('#toAccess'); await page.waitForSelector('[data-accstaff]', { timeout: 5000 });
+  ok('Who has access lists every staff member with a Staff access and an Admin access switch, and says who has it anyway', (await page.$$('[data-accessrow]')).length === 5 && await page.$eval('[data-accstaff="st_dara"]', b => b.checked) && await page.$eval('[data-accadmin="st_sina"]', b => b.checked) && !(await page.$eval('[data-accadmin="st_plain"]', b => b.checked)) && /GP app admin/.test(await page.$eval('[data-accessrow="st_uriah"]', e => e.textContent)) && /Leads Outreach Teams/.test(await page.$eval('[data-accessrow="st_rithy"]', e => e.textContent)));
+  await page.click('[data-accstaff="st_plain"]'); await page.waitForTimeout(300);
+  const sa = sent.filter(b => b.fn === 'portalSetAccess').pop();
+  ok('ticking Staff access sends it for that person', sa && sa.args[2] === 'st_plain' && JSON.stringify(sa.args[3]) === '{"portalStaff":true}' && await page.$eval('[data-accstaff="st_plain"]', b => b.checked));
+  await page.click('[data-accadmin="st_plain"]'); await page.waitForTimeout(300);
+  const ad = sent.filter(b => b.fn === 'portalSetAccess').pop();
+  ok('… and Admin access the same (a GP app admin here)', ad && ad.args[2] === 'st_plain' && JSON.stringify(ad.args[3]) === '{"portalAdmin":true}');
+  await page.fill('#accessQ', 'rithy'); await page.waitForTimeout(200);
+  ok('search narrows the list', (await page.$$('[data-accessrow]')).length === 1);
+  await ctx.close();
+}
+/* ---------- the Teams tab in the order they come ---------- */
+{
+  CANDS = JSON.parse(JSON.stringify(CANDS0));
+  const base = CANDS.find(c => c.id === 'cd_team');
+  const mk = (id, name, from, to, updated) => { const c = JSON.parse(JSON.stringify(base)); c.id = id; c.updated = updated; c.portal.form.answers = { ...c.portal.form.answers, teamName: name, itinerary: from ? [{ place: 'YWAM Siem Reap', from, to, base: true }] : [] }; return c; };
+  CANDS.push(mk('cd_tsoon', 'Soon Team', '2026-11-01', '2026-11-10', '2026-09-01T10:00:00Z'), mk('cd_tnow', 'Here Now Team', '2026-10-01', '2026-10-20', '2026-09-02T10:00:00Z'), mk('cd_tgone', 'Gone Team', '2026-08-01', '2026-08-10', '2026-09-30T10:00:00Z'), mk('cd_tnodate', 'No Dates Team', '', '', '2026-09-29T10:00:00Z'));
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  await page.click('[data-whatfilter="team"]'); await page.waitForTimeout(200);
+  const order = await page.$$eval('.trow .who', ws => ws.map(w => w.textContent).join('|'));
+  ok('Teams come in the order they arrive: here now, then soonest first, then no dates yet, then already gone — not by last change', order === 'Here Now Team|Soon Team|Grace Church Team|No Dates Team|Gone Team', order);
+  ok('each dated team says when it comes', /from 1 Nov 2026/.test(await page.$eval('.trow[data-open="cd_tsoon"]', e => e.textContent)));
+  await page.click('[data-whatfilter=""]'); await page.waitForTimeout(200);
+  ok('the All tab keeps the latest change first', (await page.$eval('.trow .who', w => w.textContent)) === 'Gone Team');
   await ctx.close();
 }
 
 /* ---------- the portal admin edits Resources ---------- */
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
-  await page.waitForSelector('#toResources');
+  await page.waitForSelector('#navMenu');
+  if(!(await page.$('#toResources'))){ await page.click('#navMenu'); await page.waitForSelector('#navMenu'); }
   await page.click('#toResources'); await page.waitForSelector('[data-resf]', { timeout: 5000 });
   ok('a portal admin has a Resources tab with the list to edit', (await page.$$('.resEdit')).length === 5 && (await page.$$eval('[data-resf="0|kind"] option', os => os.map(o => o.value).join())) === 'guide,link,phone,note,app' && /shipped defaults/.test(await page.$eval('#main', e => e.textContent)));
   await page.fill('[data-resf="2|value"]', 'maps.app.goo.gl/list1');
@@ -1025,16 +1073,18 @@ async function open(viewport, query, seed) {
     noScroll: document.documentElement.scrollWidth <= innerWidth + 1
   }));
   ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
-  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, Our team, Resources, View as applicant, Link for applicants', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toTeam', 'toResources', 'toPreview', 'toLink']), JSON.stringify(bar.nav));
+  ok('the bar is just Applications and a ☰ menu — the rest sits in the menu', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'navMenu']) && !(await page.$('#staffMenu')), JSON.stringify(bar.nav));
   ok('and the bar starts with a way back to the GP app home', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent)));
   ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll && await page.$eval('#toGpApp', a => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }));
+  if(!(await page.$('#toPreview'))){ await page.click('#navMenu'); await page.waitForSelector('#toPreview'); }
   await page.click('#toPreview');
   await page.waitForSelector('#pvFrame');
-  ok('the bar marks where you are and takes you back', await page.$eval('#toPreview', b => b.classList.contains('on')) && !!(await page.$('#navCrm')));
+  ok('the ☰ button marks where you are (and closes the menu), with Applications to go back', await page.$eval('#navMenu', b => b.classList.contains('on') && /View as applicant/.test(b.textContent)) && !(await page.$('#staffMenu')) && !!(await page.$('#navCrm')));
   await page.click('#navCrm');
   await page.waitForSelector('.trow');
   ok('Applications in the bar returns to the list', await page.$eval('#navCrm', b => b.classList.contains('on')));
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  if(!(await page.$('#toLink'))){ await page.click('#navMenu'); await page.waitForSelector('#toLink'); }
   await page.click('#toLink');
   await page.waitForSelector('#applyLinkCard');
   ok('Link for applicants opens the portal link, ready to copy', /\/portal\.html$/.test(await page.$eval('#applyLinkBox', i => i.value)) && !!(await page.$('#copyApplyLink')), await page.$eval('#applyLinkBox', i => i.value));
@@ -1054,7 +1104,8 @@ async function open(viewport, query, seed) {
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
   await page.waitForSelector('.trow');
-  ok('portal staff have a View as applicant button in the bar', !!(await page.$('#toPreview')));
+  ok('portal staff have View as applicant in the ☰ menu', !!(await page.$('#navMenu')));
+  if(!(await page.$('#toPreview'))){ await page.click('#navMenu'); await page.waitForSelector('#toPreview'); }
   await page.click('#toPreview');
   await page.waitForSelector('#pvFrame');
   const first = sent.filter(b => b.fn === 'portalViewAs').pop();
@@ -1120,7 +1171,8 @@ async function open(viewport, query, seed) {
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
   await page.waitForSelector('.trow');
-  ok('a portal admin has an Accounts button in the bar', !!(await page.$('#toAccounts')));
+  ok('a portal admin has Accounts in the ☰ menu', !!(await page.$('#navMenu')));
+  if(!(await page.$('#toAccounts'))){ await page.click('#navMenu'); await page.waitForSelector('#toAccounts'); }
   await page.click('#toAccounts');
   await page.waitForSelector('[data-acc]');
   ok('Accounts lists every applicant account with who, what and where the application is', (await page.$$eval('[data-acc]', r => r.length)) === 2 && /@anna\.b/.test(await page.$eval('[data-acc="st_anna"]', e => e.textContent)) && /DTS/.test(await page.$eval('[data-acc="st_anna"]', e => e.textContent)) && /Accepted/.test(await page.$eval('[data-acc="st_team"]', e => e.textContent)));
@@ -1148,6 +1200,7 @@ async function open(viewport, query, seed) {
   await page.click('#accOpenApp');
   await page.waitForSelector('#panel');
   ok('Open the application jumps to that record on the Applications side', /Anna/.test(await page.$eval('#panel h2', e => e.textContent)));
+  if(!(await page.$('#toAccounts'))){ await page.click('#navMenu'); await page.waitForSelector('#toAccounts'); }
   await page.click('#toAccounts');
   await page.waitForSelector('[data-acc]');
   await page.click('#accAdd');

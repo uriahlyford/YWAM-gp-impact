@@ -508,6 +508,13 @@ r = await call('adminUpdateStaff', ['uriah', '1234', 'st_plain', { portalStaff: 
 ok('Admin’s edit form sets the flag too', r.body.ok === true && r.body.staff.portalStaff === true && r.body.staff.kind === 'staff');
 r = await call('adminUpdateStaff', ['uriah', '1234', anna.id, { portalStaff: true }]);
 ok('but not on an applicant', r.body.ok === false && r.body.err === 'is_applicant');
+r = await call('portalAccessList', ['sina', '1234']);
+ok('Who has access: a portal admin lists every active staff member (no applicants) with the two flags and nothing private; not a GP app admin, so cannot grant admin',
+  r.body.ok === true && r.body.canGrantAdmin === false && r.body.staff.length === mem.staff.filter(x => x.active !== false && !x.archived && x.kind !== 'applicant').length && r.body.staff.some(x => x.id === 'st_pstaff' && x.portalStaff === true && x.portalAdmin === false) && Object.keys(r.body.staff[0]).sort().join() === 'campus,dept,id,isAdmin,leadsTeams,ministry,name,portalAdmin,portalStaff', JSON.stringify(r.body.staff && r.body.staff[0]));
+r = await call('portalAccessList', ['uriah', '1234']);
+ok('… a GP app admin can', r.body.ok === true && r.body.canGrantAdmin === true && r.body.staff.some(x => x.isAdmin === true));
+r = await call('portalAccessList', ['dara', '1234']);
+ok('… portal staff cannot see it', r.body.ok === false && r.body.err === 'not_authorized');
 r = await call('portalSetAccess', ['uriah', '1234', 'nobody', { portalStaff: true }]);
 ok('an unknown id is not found', r.body.ok === false && r.body.err === 'not_found');
 
