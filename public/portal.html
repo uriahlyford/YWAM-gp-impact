@@ -1986,7 +1986,7 @@ function panelMembersHtml_(c){
   var men=l.filter(function(m){ return m.sex==='m'; }).length, women=l.filter(function(m){ return m.sex==='f'; }).length;
   var tp = P.tphotosFor===c.id ? P.tphotosStaff : null;
   var h='<h3>👥 '+esc(t('Team members'))+' <small>· '+l.length+(men||women ? ' · '+esc(gpT('{m} men, {w} women',{m:men,w:women})) : '')+'</small></h3>';
-  if(!l.length) h+='<p class="sub" style="margin:0 0 8px" id="panelMembers">'+esc(t('The team hasn’t listed its members yet.'))+'</p>';
+  if(!l.length) h+='<p class="sub" style="margin:0 0 8px" id="panelMembersNote">'+esc(t('The team hasn’t listed its members yet.'))+'</p>';
   h+='<div id="panelMembers">'+rosterHtml_(tp, true, c.id)+(tp ? uploadsForRosterHtml_(c, tp) : '')+'</div>';
   if(tp && (tp.people||[]).length) h+='<button class="btn ghost small" id="teamSheetBtn" style="margin-top:8px">🖼 '+esc(t('Team photo sheet'))+'</button><p class="hint">'+esc(t('One picture with every face and name — for the staff group chat.'))+'</p>';
   return h;
@@ -2000,9 +2000,12 @@ function guessPerson_(fileName, ppl){
   ppl.forEach(function(p){ var n=String(p.name||'').toLowerCase().split(/[^a-z\u00C0-\u024F]+/).filter(function(x){ return x && toks.indexOf(x)>-1; }).length; if(n>bestN){ best=p; bestN=n; tie=false; } else if(n && n===bestN) tie=true; });
   return best && !tie ? best.key : '';
 }
+function rosterDone_(tp){ var ppl=(tp && tp.people)||[]; return ppl.length>0 && ppl.every(function(p){ return tp.photos && tp.photos[p.key]; }); }
 function uploadsForRosterHtml_(c, tp){
-  var ups=photoUploads_(c), ppl=tp.people||[], photos=tp.photos||{};
-  if(!ups.length || !ppl.length) return '';
+  var ppl=tp.people||[], photos=tp.photos||{};
+  var used={}; Object.keys(photos).forEach(function(k){ if(photos[k] && photos[k].fromDoc) used[photos[k].fromDoc]=1; });
+  var ups=photoUploads_(c).filter(function(d){ return !used[d.id]; });
+  if(!ups.length || !ppl.length || rosterDone_(tp)) return '';
   var h='<div class="upPhotos" id="upPhotos"><p class="hint" style="margin:8px 0 4px">📎 '+esc(t('Photos the team uploaded as files — put each one on a person:'))+'</p>';
   ups.forEach(function(d){
     var guess=guessPerson_(d.name, ppl);
@@ -2021,7 +2024,7 @@ function bindUploadsForRoster_(c, onDone){
     run('portalGetDoc', [P.auth.user, P.auth.pin, id], function(d){
       if(!(d && d.ok && d.dataUrl)){ fail(t('Could not open the file')); return; }
       fetch(d.dataUrl).then(function(r){ return r.blob(); }).then(function(blob){ return shrinkPhoto_(blob, 480); }).then(function(b64){
-        run('portalSaveTeamPhoto', [P.auth.user, P.auth.pin, key, b64, c.id], function(r){
+        run('portalSaveTeamPhoto', [P.auth.user, P.auth.pin, key, b64, c.id, id], function(r){
           if(r && r.ok){ onDone(r); showMsg(t('Photo saved')); render(); } else fail(r && r.err==='too_large' ? t('That photo is too big — try again.') : t('Could not save the photo — try again.'));
         }, function(){ fail(t('Connection problem — try again.')); });
       }).catch(function(){ fail(t('That file is not a photo.')); });
@@ -2462,6 +2465,8 @@ function hospitalityHtml_(c, ans, trip){
 }
 function panelDocsHtml_(c){
   var kinds=c.docKinds||[]; if(!kinds.length) return '';
+  /* the team's names and photos live on the roster; once everyone has one, this row only confuses */
+  if(c.type==='team' && P.tphotosFor===c.id && rosterDone_(P.tphotosStaff)) kinds=kinds.filter(function(k){ return k.id!=='photo'; });
   var docs=(c.portal && Array.isArray(c.portal.docs)) ? c.portal.docs : [];
   return '<h3>📎 '+esc(t('Documents'))+'</h3>'+docsBodyHtml_(kinds, docs, 'staff', c.id);
 }

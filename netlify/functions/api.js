@@ -4576,7 +4576,7 @@ function photosDone_(c) { const p = c && c.portal && c.portal.photos; return !!(
 function hasPhotoDoc_(c) { return hasDoc_(c, 'photo') || photosDone_(c); }
 function teamPhotosOut_(c, store) {
   const ppl = teamPhotoPeople_(c), out = {};
-  ppl.forEach(function (p) { const ph = store.photos && store.photos[p.key]; if (ph) out[p.key] = { data: ph.data, at: ph.at }; });
+  ppl.forEach(function (p) { const ph = store.photos && store.photos[p.key]; if (ph) out[p.key] = { data: ph.data, at: ph.at, fromDoc: ph.fromDoc || '' }; });
   return { people: ppl, photos: out, tally: (c.portal && c.portal.photos) || { count: Object.keys(out).length, total: ppl.length } };
 }
 async function portalTeamPhotos(username, pin, candidateId) {
@@ -4584,7 +4584,9 @@ async function portalTeamPhotos(username, pin, candidateId) {
   if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
   return Object.assign({ ok: true }, teamPhotosOut_(a.cand, await getTeamPhotos_(a.cand)));
 }
-async function portalSaveTeamPhoto(username, pin, key, base64, candidateId) {
+/* fromDoc: the uploaded file this photo was made from (staff putting an old
+   upload onto a person), so the record can stop offering that file. */
+async function portalSaveTeamPhoto(username, pin, key, base64, candidateId, fromDoc) {
   const a = await docCand_(username, pin, candidateId); if (a.out) return a.out;
   const cand = a.cand;
   if (cand.type !== 'team') return { ok: false, err: 'not_team' };
@@ -4594,7 +4596,7 @@ async function portalSaveTeamPhoto(username, pin, key, base64, candidateId) {
   if (base64.length > TEAM_PHOTO_MAX_B64) return { ok: false, err: 'too_large' };
   const store = await getTeamPhotos_(cand);
   store.photos = store.photos || {};
-  store.photos[key] = { data: base64, at: new Date().toISOString(), by: a.s.id };
+  store.photos[key] = { data: base64, at: new Date().toISOString(), by: a.s.id, fromDoc: str_(fromDoc, 60) || '' };
   await writeJSON('tphotos:' + cand.id, store);
   await teamPhotoTally_(cand);
   teamAutoStage_(cand, a.s.id);
@@ -6728,7 +6730,7 @@ const HANDLERS = {
   portalResources: function (a) { return portalResources(a[0], a[1]); },
   portalSaveResources: function (a) { return portalSaveResources(a[0], a[1], a[2]); },
   portalTeamPhotos: function (a) { return portalTeamPhotos(a[0], a[1], a[2]); },
-  portalSaveTeamPhoto: function (a) { return portalSaveTeamPhoto(a[0], a[1], a[2], a[3], a[4]); },
+  portalSaveTeamPhoto: function (a) { return portalSaveTeamPhoto(a[0], a[1], a[2], a[3], a[4], a[5]); },
   portalDeleteTeamPhoto: function (a) { return portalDeleteTeamPhoto(a[0], a[1], a[2], a[3]); },
   portalSaveTeamMembers: function (a) { return portalSaveTeamMembers(a[0], a[1], a[2]); }
 };

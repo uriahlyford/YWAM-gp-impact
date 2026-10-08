@@ -211,6 +211,8 @@ console.log('=== a team’s photos: one per person, instead of a team photo with
   ok('with everyone photographed, the team photo document counts as in', r.body.application.steps.find(st => st.id === 'photo').done === true && r.body.tally.count === 4);
   r = await call('portalSaveTeamMembers', ['photo.team', '2468', [{ id: mid, name: 'Mia Renamed', sex: 'f' }, { id: mid2, name: 'Max Member', sex: 'm' }, { name: 'New Person', sex: '' }]]);
   ok('adding a member reopens it: one more face to take', r.body.application.photos.count === 4 && r.body.application.photos.total === 5 && r.body.application.steps.find(st => st.id === 'photo').done === false);
+  r = await call('portalSaveTeamPhoto', ['photo.team', '2468', 'co|0', base64Jpeg, undefined, 'pd_old1']);
+  ok('a photo made from an uploaded file remembers which, so the record stops offering that file', r.body && r.body.ok && r.body.photos['co|0'].fromDoc === 'pd_old1' && mem['tphotos:cd_photo'].photos['co|0'].fromDoc === 'pd_old1');
   r = await call('portalDeleteTeamPhoto', ['photo.team', '2468', 'co|0']);
   ok('a photo can be removed', r.body && r.body.ok && !r.body.photos['co|0'] && r.body.tally.count === 3);
   r = await call('portalTeamPhotos', ['dara', '1234', 'cd_photo']);
