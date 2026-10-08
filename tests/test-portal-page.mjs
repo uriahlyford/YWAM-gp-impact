@@ -73,7 +73,8 @@ const TEAM_SCHED = { week: '2026-10-04',
 let GOOGLE_ON = '';
 let TEAM_PHOTOS = {};   // the mocked team photo store, by person key
 let STRENGTHS = {};     // the mocked personality results, by person key
-const MEET_STAFF = [{ id: 'st_dara', name: 'Dara Pen', role: 'Host', ministry: 'Hospitality', dept: 'Campus Leadership', hasPhoto: true }, { id: 'st_yan', name: 'Yan Yap', role: 'YAP', ministry: 'Cafe', dept: 'Community Service', hasPhoto: false }];
+const MEET_STAFF0 = [{ id: 'st_dara', name: 'Dara Pen', role: 'Host', ministry: 'Hospitality', dept: 'Campus Leadership', hasPhoto: true, edited: false }, { id: 'st_yan', name: 'Yan Yap', role: 'YAP', ministry: 'Cafe', dept: 'Community Service', hasPhoto: false, edited: false }];
+const MEET_STAFF = MEET_STAFF0.map(x => ({ ...x }));
 const STRENGTH_PEOPLE = () => [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
 let RESOURCES = [{ id: 'r_leaders', kind: 'guide', title: 'Outreach Leader’s Guide', note: 'Getting here and more.', value: 'outreach' }, { id: 'r_police', kind: 'phone', title: 'Police', note: 'Emergency — Cambodia', value: '117' },
   { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes we like.', value: '' }, { id: 'r_teams', kind: 'link', title: 'Guide for Short-Term Teams', note: '', value: 'https://example.org/teams.pdf' }];   // the mocked portalAuthConfig: Google's client id, or off
@@ -113,7 +114,8 @@ async function open(viewport, query, seed) {
       const p = b.args[3] || {}, card = MEET_STAFF.find(x => x.id === b.args[2]);
       if (u !== 'sina') out = { ok: false, err: 'not_authorized' };
       else if (!card) out = { ok: false, err: 'not_found' };
-      else { if (p.name !== undefined) card.name = p.name; if (p.role !== undefined) card.role = p.role; if (p.photo !== undefined) card.hasPhoto = !!p.photo; out = { ok: true, staff: { ...card }, photo: card.hasPhoto ? 'data:image/jpeg;base64,' + (p.photo || 'AAAA') : '' }; }
+      else if (p.reset) { Object.assign(card, MEET_STAFF0.find(x => x.id === card.id)); out = { ok: true, staff: { ...card }, photo: card.hasPhoto ? 'data:image/jpeg;base64,AAAA' : '' }; }
+      else { if (p.name !== undefined) card.name = p.name; if (p.role !== undefined) card.role = p.role; if (p.photo !== undefined) card.hasPhoto = !!p.photo; card.edited = true; out = { ok: true, staff: { ...card }, photo: card.hasPhoto ? 'data:image/jpeg;base64,' + (p.photo || 'AAAA') : '' }; }
     } else if (b.fn === 'portalStaffPhoto') {
       out = { ok: true, id: b.args[2], photo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==' };
     } else if (b.fn === 'portalStrengths') {
@@ -821,9 +823,9 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
   await page.waitForSelector('#toTeam');
   await page.click('#toTeam'); await page.waitForSelector('[data-meetedit]', { timeout: 5000 });
-  ok('a portal admin has an Our team tab: the same cards applicants see, each with Edit', (await page.$$('.meetCard')).length === 2 && (await page.$$('[data-meetedit]')).length === 2 && /GP app profile/.test(await page.$eval('#main', e => e.textContent)));
+  ok('a portal admin has an Our team tab: the same cards applicants see, each with Edit', (await page.$$('.meetCard')).length === 2 && (await page.$$('[data-meetedit]')).length === 2 && /never changes the GP app/.test(await page.$eval('#main', e => e.textContent)));
   await page.click('[data-meetedit="st_yan"]'); await page.waitForSelector('#meet_name');
-  ok('Edit opens the card: name and role to type, a photo to add, the ministry pointed to the GP app', await page.$eval('#meet_name', i => i.value) === 'Yan Yap' && await page.$eval('#meet_role', i => i.value) === 'YAP' && /Add a photo/.test(await page.$eval('#meetPhotoBtn', e => e.textContent)) && !(await page.$('#meetPhotoDel')) && /Ministry: Cafe/.test(await page.$eval('.meetCard.editing', e => e.textContent)));
+  ok('Edit opens the card: name and role to type, a photo to add, the ministry pointed to the GP app', await page.$eval('#meet_name', i => i.value) === 'Yan Yap' && await page.$eval('#meet_role', i => i.value) === 'YAP' && /Add a photo/.test(await page.$eval('#meetPhotoBtn', e => e.textContent)) && !(await page.$('#meetPhotoDel')) && /Ministry: Cafe/.test(await page.$eval('.meetCard.editing', e => e.textContent)) && !(await page.$('#meetReset')));
   await page.fill('#meet_name', 'Yan Yap Sok'); await page.fill('#meet_role', 'YAP · Barista');
   await page.click('#meetSave'); await page.waitForTimeout(400);
   const sc = sent.filter(b => b.fn === 'portalSaveStaffCard').pop();
@@ -833,6 +835,11 @@ async function open(viewport, query, seed) {
   await page.waitForFunction(() => !!document.querySelector('[data-meetcard="st_yan"] img'), null, { timeout: 5000 });
   const sp = sent.filter(b => b.fn === 'portalSaveStaffCard').pop();
   ok('a photo goes up on its own, shrunk to a square jpeg, and shows on the card with Remove', sp && sp.args[3].photo && /^[A-Za-z0-9+/=]+$/.test(sp.args[3].photo) && sp.args[3].name === undefined && !!(await page.$('#meetPhotoDel')) && /Change the photo/.test(await page.$eval('#meetPhotoBtn', e => e.textContent)));
+  ok('an edited card says so, with a way back to the GP app’s details', /Changed here in the portal/.test(await page.$eval('.meetCard.editing', e => e.textContent)) && !!(await page.$('#meetReset')));
+  page.once('dialog', d => d.accept());
+  await page.click('#meetReset'); await page.waitForTimeout(400);
+  const rs0 = sent.filter(b => b.fn === 'portalSaveStaffCard').pop();
+  ok('Back to the GP app’s details sends reset, and the card reads Yan Yap again', rs0 && rs0.args[3].reset === true && /Yan Yap/.test(await page.$eval('[data-meetcard="st_yan"] .meetName', e => e.textContent)) && !/Sok/.test(await page.$eval('[data-meetcard="st_yan"] .meetName', e => e.textContent)));
   await ctx.close();
 }
 {

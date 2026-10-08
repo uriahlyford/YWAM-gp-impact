@@ -5533,13 +5533,22 @@ async function portalMeetTeam(username, pin) {
   const s = await verifyStaff_(username, pin, true);
   if (!s) return { ok: false, err: 'auth' };
   const campus = s.campus || PORTAL_DEFAULT_CAMPUS;
+  const cards = await getTeamCards_();
   const list = (await getStaff_()).filter(function (r) {
     const st = cleanStaffType_(r.staffType);
     return r && r.active !== false && !r.archived && !isApplicant_(r) && r.campus === campus && (st === 'campus' || st === 'yap');
-  }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); }).map(meetCard_);
+  }).map(function (r) { return meetCard_(r, cards[r.id]); }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
   return { ok: true, campus: campus, staff: list, canEdit: isPortalAdmin_(s) };
 }
-function meetCard_(r) { return { id: r.id, name: r.name, role: r.role || '', ministry: r.ministry || '', dept: deptOf_(r) || '', hasPhoto: !!r.photo }; }
+/* The card: the GP app's staff record fills it in, and whatever a portal admin
+   changed on top (the 'portalTeamCards' blob, by staff id) wins — the GP app
+   itself never sees those changes. */
+function meetCard_(r, ov) {
+  ov = ov || {};
+  return { id: r.id, name: ov.name || r.name, role: ov.role !== undefined ? ov.role : (r.role || ''), ministry: r.ministry || '', dept: deptOf_(r) || '', hasPhoto: !!meetPhoto_(r, ov), edited: !!(ov.name || ov.role !== undefined || ov.photo !== undefined) };
+}
+function meetPhoto_(r, ov) { return ov && ov.photo !== undefined ? ov.photo : (r.photo || ''); }
+async function getTeamCards_() { const b = await readJSON('portalTeamCards', { cards: {} }); return (b && b.cards) || {}; }
 function meetStaffOk_(r, s) {
   const st = r && cleanStaffType_(r.staffType);
   return !!(r && r.active !== false && !r.archived && !isApplicant_(r) && r.campus === (s.campus || PORTAL_DEFAULT_CAMPUS) && (st === 'campus' || st === 'yap'));
@@ -5549,12 +5558,14 @@ async function portalStaffPhoto(username, pin, staffId) {
   if (!s) return { ok: false, err: 'auth' };
   const r = (await getStaff_()).find(function (x) { return x.id === str_(staffId, 60); });
   if (!meetStaffOk_(r, s)) return { ok: false, err: 'not_found' };
-  return { ok: true, id: r.id, photo: r.photo || '' };
+  return { ok: true, id: r.id, photo: meetPhoto_(r, (await getTeamCards_())[r.id]) };
 }
 /* A portal admin fixes a card from the portal's Our team page — the name, the
    role or the photo (a square jpeg the page shrank, or '' to take it off).
-   The card is the person's GP app profile, so it changes there too. Only
-   the cards applicants see (campus staff and YAP of the admin's campus). */
+   The change is kept in the portal only ('portalTeamCards'), on top of the
+   GP app's record, which stays as it is; { reset: true } drops the change and
+   the card reads from the GP app again. Only the cards applicants see
+   (campus staff and YAP of the admin's campus). */
 const STAFF_CARD_PHOTO_MAX_B64 = 160 * 1024;
 async function portalSaveStaffCard(username, pin, staffId, patch) {
   const s = await verifyStaff_(username, pin);
@@ -5573,16 +5584,24 @@ async function portalSaveStaffCard(username, pin, staffId, patch) {
   const name = patch.name !== undefined ? dutyText_(patch.name, 120) : undefined;
   if (name !== undefined && !name) return { ok: false, err: 'name_required' };
   const role = patch.role !== undefined ? dutyText_(patch.role, 80) : undefined;
-  if (name === undefined && role === undefined && photoUri === undefined) return { ok: false, err: 'nothing' };
-  return mutateStaff_(function (rows) {
-    const r = rows.find(function (x) { return x.id === id; });
-    if (!meetStaffOk_(r, s)) return { abort: true, ok: false, err: 'not_found' };
-    if (name !== undefined) r.name = name;
-    if (role !== undefined) r.role = role;
-    if (photoUri !== undefined) r.photo = photoUri;
-    r.updated = new Date().toISOString();
-    return { ok: true, staff: meetCard_(r), photo: r.photo || '' };
-  });
+  const reset = patch.reset === true;
+  if (!reset && name === undefined && role === undefined && photoUri === undefined) return { ok: false, err: 'nothing' };
+  const r = (await getStaff_()).find(function (x) { return x.id === id; });
+  if (!meetStaffOk_(r, s)) return { ok: false, err: 'not_found' };
+  const blob = await readJSON('portalTeamCards', { cards: {} });
+  blob.cards = blob.cards || {};
+  if (reset) delete blob.cards[id];
+  else {
+    const ov = Object.assign({}, blob.cards[id] || {});
+    if (name !== undefined) ov.name = name;
+    if (role !== undefined) ov.role = role;
+    if (photoUri !== undefined) ov.photo = photoUri;
+    ov.at = new Date().toISOString(); ov.by = s.id;
+    blob.cards[id] = ov;
+  }
+  await writeJSON('portalTeamCards', blob);
+  const ov2 = blob.cards[id];
+  return { ok: true, staff: meetCard_(r, ov2), photo: meetPhoto_(r, ov2) };
 }
 
 /* Team strengths: the personality questionnaire from the staff app, taken
