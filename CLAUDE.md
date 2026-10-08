@@ -821,8 +821,10 @@ forms, documents and references follow.
   again. **Our team, staff side** (portal admins; nav `toTeam`, `P.view==='team'`,
   `teamAdminHtml_` / `bindTeamAdmin_`): the same cards with Edit — name, role and photo go
   through `portalSaveStaffCard(user, pin, staffId, {name?, role?, photo?})`, portal-admin only and
-  only for the cards applicants see (`meetStaffOk_`: campus/yap of the admin's campus). It writes
-  the person's real staff record (the GP app profile), photo as a jpeg data URI from
+  only for the cards applicants see (`meetStaffOk_`: campus/yap of the admin's campus). **It never
+  writes the GP app's staff record**: the GP app seeds the card and the portal's changes sit on top
+  in blob `portalTeamCards` {cards: {staffId: {name?, role?, photo?}}} (`meetCard_(r, ov)`,
+  `meetPhoto_`; `edited` flag; `{reset:true}` drops them). Photo as a jpeg data URI from
   `shrinkPhoto_(file, 384)`, '' to remove. **View as applicant shows every tab**: `portalViewAs`
   carries `strengths` (and a sample team has two sample members), `previewHtml_` swaps
   `P.aview/strengths/tphotos` in with the boot and draws `applicantNavHtml_('data-pvaview')`

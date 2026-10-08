@@ -240,7 +240,7 @@ console.log('=== the portal as a tool: meet our team, team strengths, resources 
   let r = await call('portalMeetTeam', ['tool.team', '2468']);
   ok('Meet our team: the campus staff and YAP of the applicant’s campus, as one list — no ministry staff, nobody inactive, nobody from Poipet, no applicants',
     r.body && r.body.ok && r.body.campus === 'siemreap' && r.body.staff.map(x => x.name).join('|') === 'Chan Campus|Yan Yap' && r.body.staff[0].hasPhoto === true && r.body.staff[1].hasPhoto === false, JSON.stringify(r.body && r.body.staff));
-  ok('… only a name, role, ministry and department leave — no username, email or phone', r.body && Object.keys(r.body.staff[0]).sort().join() === 'dept,hasPhoto,id,ministry,name,role');
+  ok('… only a name, role, ministry and department leave — no username, email or phone', r.body && Object.keys(r.body.staff[0]).sort().join() === 'dept,edited,hasPhoto,id,ministry,name,role');
   r = await call('portalStaffPhoto', ['tool.team', '2468', 'st_cs1']);
   ok('a staff photo comes one at a time', r.body && r.body.ok && r.body.photo === 'data:image/jpeg;base64,/9j/AAAA');
   r = await call('portalStaffPhoto', ['tool.team', '2468', 'st_min1']);
@@ -293,9 +293,18 @@ console.log('=== the portal as a tool: meet our team, team strengths, resources 
   ok('a portal admin gets the same list, flagged editable; an applicant’s is not', r.body && r.body.ok && r.body.canEdit === true && r.body.staff.length === 2);
   r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { name: '  Chan Dara  ', role: 'Head host', photo: jpg }]);
   ok('… and fixes a campus staff card: name, role and photo, answered as the card plus the photo', r.body && r.body.ok && r.body.staff.name === 'Chan Dara' && r.body.staff.role === 'Head host' && r.body.staff.hasPhoto === true && r.body.photo === 'data:image/jpeg;base64,' + jpg, JSON.stringify(r.body));
-  ok('… which is the person’s GP app profile', mem.staff.find(x => x.id === 'st_cs1').name === 'Chan Dara' && mem.staff.find(x => x.id === 'st_cs1').role === 'Head host' && mem.staff.find(x => x.id === 'st_cs1').photo === 'data:image/jpeg;base64,' + jpg);
+  ok('… kept in the portal only: the GP app’s staff record is untouched', mem.staff.find(x => x.id === 'st_cs1').name === 'Chan Campus' && mem.staff.find(x => x.id === 'st_cs1').role === 'Host' && mem.staff.find(x => x.id === 'st_cs1').photo === 'data:image/jpeg;base64,/9j/AAAA' && mem.portalTeamCards && mem.portalTeamCards.cards.st_cs1.name === 'Chan Dara');
+  r = await call('portalMeetTeam', ['tool.team', '2468']);
+  ok('… and applicants see the portal’s version, flagged as edited', r.body && r.body.staff[0].name === 'Chan Dara' && r.body.staff[0].role === 'Head host' && r.body.staff[0].edited === true && r.body.staff[1].edited === false);
+  r = await call('portalStaffPhoto', ['tool.team', '2468', 'st_cs1']);
+  ok('… photo included', r.body && r.body.photo === 'data:image/jpeg;base64,' + jpg);
   r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { photo: '' }]);
-  ok('an empty photo takes it off, nothing else changes', r.body && r.body.ok && r.body.photo === '' && r.body.staff.hasPhoto === false && r.body.staff.name === 'Chan Dara');
+  ok('an empty photo takes it off (in the portal), nothing else changes', r.body && r.body.ok && r.body.photo === '' && r.body.staff.hasPhoto === false && r.body.staff.name === 'Chan Dara' && mem.staff.find(x => x.id === 'st_cs1').photo === 'data:image/jpeg;base64,/9j/AAAA');
+  r = await call('portalStaffPhoto', ['tool.team', '2468', 'st_cs1']);
+  ok('… so applicants get no photo, not the GP app’s', r.body && r.body.ok && r.body.photo === '');
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { reset: true }]);
+  ok('reset drops the portal’s changes and the card reads from the GP app again', r.body && r.body.ok && r.body.staff.name === 'Chan Campus' && r.body.staff.role === 'Host' && r.body.staff.hasPhoto === true && r.body.staff.edited === false && !mem.portalTeamCards.cards.st_cs1);
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { name: 'Chan Dara', role: 'Head host' }]);
   r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { name: '   ' }]);
   ok('a blank name is refused', r.body && r.body.ok === false && r.body.err === 'name_required');
   r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { photo: 'not base64!!' }]);
@@ -309,7 +318,7 @@ console.log('=== the portal as a tool: meet our team, team strengths, resources 
   r = await call('portalSaveStaffCard', ['dara', '1234', 'st_cs1', { role: 'x' }]);
   ok('portal staff who are not admins cannot', r.body && r.body.ok === false && r.body.err === 'not_authorized');
   r = await call('portalSaveStaffCard', ['tool.team', '2468', 'st_cs1', { role: 'x' }]);
-  ok('… nor an applicant', r.body && r.body.ok === false && r.body.err === 'not_authorized' && mem.staff.find(x => x.id === 'st_cs1').role === 'Head host');
+  ok('… nor an applicant', r.body && r.body.ok === false && r.body.err === 'not_authorized' && mem.portalTeamCards.cards.st_cs1.role === 'Head host');
 
   /* the preview carries the strengths so staff can see every tab */
   r = await call('portalViewAs', ['sina', '1234', { candidateId: 'cd_tool' }]);
@@ -318,7 +327,7 @@ console.log('=== the portal as a tool: meet our team, team strengths, resources 
   ok('a sample team has two sample members, so the roster and strengths tabs have people on them', r.body && r.body.ok && r.body.application.members.length === 2 && r.body.strengths.people.map(p => p.name).join() === 'Sample Team,Sam Sample,Mia Sample' && Object.keys(r.body.strengths.results).length === 0, JSON.stringify(r.body && r.body.strengths));
   r = await call('portalViewAs', ['sina', '1234', { type: 'team', stage: 'new' }]);
   ok('… none before it has applied', r.body && r.body.ok && r.body.application.members.length === 0);
-  delete mem.portalResources; delete mem['tpers:cd_tool']; delete mem['tpers:cd_solo'];
+  delete mem.portalResources; delete mem.portalTeamCards; delete mem['tpers:cd_tool']; delete mem['tpers:cd_solo'];
   mem.staff = mem.staff.filter(x => ['st_cs1', 'st_yap1', 'st_min1', 'st_pp1', 'st_gone', 'st_tool', 'st_solo'].indexOf(x.id) === -1);
   mem.candidates = mem.candidates.filter(c => c.id !== 'cd_tool' && c.id !== 'cd_solo');
 }

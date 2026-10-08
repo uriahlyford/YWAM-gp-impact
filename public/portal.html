@@ -899,11 +899,12 @@ function meetPhotoHtml_(s){
   return '<div class="meetPhoto">'+(ph ? '<img src="'+esc(ph)+'" alt="'+esc(s.name)+'" loading="lazy">' : '<span class="meetInitials" data-staffphoto="'+esc(s.id)+'">'+esc(initials_(s.name)||'?')+'</span>')+'</div>';
 }
 /* ---- 👥 Our team, staff side (portal admins): the same cards, each with Edit ----
-   The name, role and photo are the person's GP app profile, so a fix here
-   shows there too — and on the cooking and chores schedules. */
+   The GP app's staff list fills the cards in; a fix here is kept in the portal
+   only (never written back to the GP app), and Back to the GP app's details
+   drops it. */
 function teamAdminHtml_(){
   var d=P.meet;
-  var h='<div class="wide"><div class="panelHead"><div><h1 style="font-size:28px">👥 '+esc(t('Our team'))+'</h1><p class="sub">'+esc(t('What applicants see under Our team: the campus staff and YAP of your campus. Fix a name or role or change a photo — it is their GP app profile, so it changes there too.'))+'</p></div></div>';
+  var h='<div class="wide"><div class="panelHead"><div><h1 style="font-size:28px">👥 '+esc(t('Our team'))+'</h1><p class="sub">'+esc(t('What applicants see under Our team: the campus staff and YAP of your campus, filled in from the GP app. Fix a name or role or change a photo here — it stays in the portal and never changes the GP app.'))+'</p></div></div>';
   if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
   if(!(d.staff||[]).length) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Nobody yet — in the GP app, set who is campus staff or YAP and they appear here.'))+'</p></div></div>';
   var e=P.teamEdit||{};
@@ -916,7 +917,8 @@ function teamAdminHtml_(){
       '<input type="file" accept="image/*" id="meetPhotoInput" hidden>'+
       '<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="meet_name" maxlength="120" value="'+esc(e.name||'')+'">'+
       '<label class="f">'+esc(t('Role'))+'</label><input type="text" id="meet_role" maxlength="80" value="'+esc(e.role||'')+'" placeholder="'+esc(t('e.g. Host, Cook, YAP'))+'">'+
-      (s.ministry ? '<p class="hint" style="margin:6px 0 0">'+esc(gpT('Ministry: {name} — change it in the GP app.',{name:s.ministry}))+'</p>' : '')+
+      (s.ministry ? '<p class="hint" style="margin:6px 0 0">'+esc(gpT('Ministry: {name} — from the GP app.',{name:s.ministry}))+'</p>' : '')+
+      (s.edited ? '<p class="hint" style="margin:6px 0 0">✏️ '+esc(t('Changed here in the portal.'))+' <button type="button" class="linkbtn inline" id="meetReset">'+esc(t('Back to the GP app’s details'))+'</button></p>' : '')+
       '<div class="meetBtns" style="margin-top:10px"><button type="button" class="btn small" id="meetSave"'+(P.busy?' disabled':'')+'>'+esc(P.busy ? t('Saving…') : t('Save'))+'</button><button type="button" class="linkbtn inline" id="meetCancel">'+esc(t('Cancel'))+'</button></div></div>';
   }).join('')+'</div>';
   return h+'</div>';
@@ -940,6 +942,7 @@ function bindTeamAdmin_(){
   on_('meetPhotoBtn', function(){ keep(); if(inp) inp.click(); });
   if(inp) inp.onchange=function(){ var f=inp.files && inp.files[0]; inp.value=''; if(!f) return; keep(); shrinkPhoto_(f, 384).then(function(b64){ save({ photo:b64 }); }, function(){ showMsg(t('That file is not a photo.')); }); };
   on_('meetPhotoDel', function(){ keep(); if(!confirm(t('Remove this photo?'))) return; save({ photo:'' }); });
+  on_('meetReset', function(){ if(!confirm(t('Drop the portal’s changes to this card and read it from the GP app again?'))) return; save({ reset:true }, function(){ P.teamEdit=null; }); });
 }
 /* the photos come one by one, after the names are on screen */
 function loadStaffPhotos_(){
