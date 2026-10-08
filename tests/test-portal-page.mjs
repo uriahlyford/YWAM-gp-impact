@@ -73,6 +73,7 @@ const TEAM_SCHED = { week: '2026-10-04',
 let GOOGLE_ON = '';
 let TEAM_PHOTOS = {};   // the mocked team photo store, by person key
 let STRENGTHS = {};     // the mocked personality results, by person key
+const MEET_STAFF = [{ id: 'st_dara', name: 'Dara Pen', role: 'Host', ministry: 'Hospitality', dept: 'Campus Leadership', hasPhoto: true }, { id: 'st_yan', name: 'Yan Yap', role: 'YAP', ministry: 'Cafe', dept: 'Community Service', hasPhoto: false }];
 const STRENGTH_PEOPLE = () => [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
 let RESOURCES = [{ id: 'r_leaders', kind: 'guide', title: 'Outreach Leader’s Guide', note: 'Getting here and more.', value: 'outreach' }, { id: 'r_police', kind: 'phone', title: 'Police', note: 'Emergency — Cambodia', value: '117' },
   { id: 'r_maps', kind: 'link', title: 'Our favourite places in Siem Reap', note: 'Cafes we like.', value: '' }, { id: 'r_teams', kind: 'link', title: 'Guide for Short-Term Teams', note: '', value: 'https://example.org/teams.pdf' }];   // the mocked portalAuthConfig: Google's client id, or off
@@ -107,7 +108,12 @@ async function open(viewport, query, seed) {
     const b = JSON.parse(r.request().postData() || '{}'); sent.push(b); let out = { ok: false };
     const [u, pin] = b.args || [];
     if (b.fn === 'portalMeetTeam') {
-      out = { ok: true, campus: 'siemreap', staff: [{ id: 'st_dara', name: 'Dara Pen', role: 'Host', ministry: 'Hospitality', dept: 'Campus Leadership', hasPhoto: true }, { id: 'st_yan', name: 'Yan Yap', role: 'YAP', ministry: 'Cafe', dept: 'Community Service', hasPhoto: false }] };
+      out = { ok: true, campus: 'siemreap', canEdit: u === 'sina', staff: MEET_STAFF };
+    } else if (b.fn === 'portalSaveStaffCard') {
+      const p = b.args[3] || {}, card = MEET_STAFF.find(x => x.id === b.args[2]);
+      if (u !== 'sina') out = { ok: false, err: 'not_authorized' };
+      else if (!card) out = { ok: false, err: 'not_found' };
+      else { if (p.name !== undefined) card.name = p.name; if (p.role !== undefined) card.role = p.role; if (p.photo !== undefined) card.hasPhoto = !!p.photo; out = { ok: true, staff: { ...card }, photo: card.hasPhoto ? 'data:image/jpeg;base64,' + (p.photo || 'AAAA') : '' }; }
     } else if (b.fn === 'portalStaffPhoto') {
       out = { ok: true, id: b.args[2], photo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==' };
     } else if (b.fn === 'portalStrengths') {
@@ -176,8 +182,8 @@ async function open(viewport, query, seed) {
       TEAM_APP = { ...TEAM_APP, docs: (TEAM_APP.docs || []).filter(d => d.id !== b.args[2]) }; out = { ok: true, docs: TEAM_APP.docs, application: TEAM_APP };
     } else if (b.fn === 'portalViewAs') {
       const o = b.args[2] || {};
-      if (o.candidateId) { const c = CANDS.find(x => x.id === o.candidateId); out = c ? { ok: true, preview: 'record', role: 'applicant', me: { ...ME_APP, name: c.name, type: c.type, school: c.school }, application: { ...ANNA, id: c.id, name: c.name, type: c.type, school: c.school, stage: c.stage, status: c.status, submittedAt: c.stage === 'new' ? null : '2026-09-20T10:00:00Z', answers: (c.portal && c.portal.form && c.portal.form.answers) || {}, refNeeded: c.type !== 'team', formKey: c.type === 'student' ? c.school : c.type }, form: FORMS[c.type === 'student' ? c.school : c.type] } : { ok: false, err: 'not_found' }; }
-      else out = { ok: true, preview: 'sample', role: 'applicant', me: { ...ME_APP, name: o.type === 'team' ? 'Sample Team' : 'Sample Applicant', type: o.type, school: o.school, country: o.audience === 'khmer' ? 'Cambodia' : 'Australia' }, application: { ...ANNA, id: 'preview', type: o.type, school: o.school, stage: o.stage, status: o.stage === 'new' ? 'draft' : o.stage === 'applied' ? 'pending' : o.stage, submittedAt: o.stage === 'new' ? null : '2026-09-20T10:00:00Z', audience: o.audience === 'khmer' ? 'khmer' : 'international', needsVisa: o.audience !== 'khmer', refNeeded: !(o.type === 'team' || (o.type === 'student' && o.audience === 'khmer')), formKey: o.type === 'student' ? o.school : o.type, docKinds: o.type === 'team' ? TEAM_DOCS : [], docs: [], steps: STEPS(o.stage === 'new' ? 'form' : 'contact') }, form: FORMS[o.type === 'student' ? o.school : o.type] };
+      if (o.candidateId) { const c = CANDS.find(x => x.id === o.candidateId); out = c ? { ok: true, preview: 'record', role: 'applicant', me: { ...ME_APP, name: c.name, type: c.type, school: c.school }, application: { ...ANNA, id: c.id, name: c.name, type: c.type, school: c.school, stage: c.stage, status: c.status, submittedAt: c.stage === 'new' ? null : '2026-09-20T10:00:00Z', answers: (c.portal && c.portal.form && c.portal.form.answers) || {}, refNeeded: c.type !== 'team', formKey: c.type === 'student' ? c.school : c.type }, form: FORMS[c.type === 'student' ? c.school : c.type], strengths: c.type === 'team' ? { people: STRENGTH_PEOPLE(), results: STRENGTHS } : { people: [{ key: 'me', name: c.name, role: 'me' }], results: {} } } : { ok: false, err: 'not_found' }; }
+      else out = { ok: true, preview: 'sample', role: 'applicant', me: { ...ME_APP, name: o.type === 'team' ? 'Sample Team' : 'Sample Applicant', type: o.type, school: o.school, country: o.audience === 'khmer' ? 'Cambodia' : 'Australia' }, application: { ...ANNA, id: 'preview', type: o.type, school: o.school, stage: o.stage, status: o.stage === 'new' ? 'draft' : o.stage === 'applied' ? 'pending' : o.stage, submittedAt: o.stage === 'new' ? null : '2026-09-20T10:00:00Z', audience: o.audience === 'khmer' ? 'khmer' : 'international', needsVisa: o.audience !== 'khmer', refNeeded: !(o.type === 'team' || (o.type === 'student' && o.audience === 'khmer')), formKey: o.type === 'student' ? o.school : o.type, docKinds: o.type === 'team' ? TEAM_DOCS : [], docs: [], members: o.type === 'team' && o.stage !== 'new' ? [{ id: 'msample01', name: 'Sam Sample', sex: 'm' }, { id: 'msample02', name: 'Mia Sample', sex: 'f' }] : [], steps: STEPS(o.stage === 'new' ? 'form' : 'contact') }, form: FORMS[o.type === 'student' ? o.school : o.type], strengths: { people: o.type === 'team' ? [{ key: 'leader', name: 'Sample Team', role: 'leader' }, { key: 'msample01', name: 'Sam Sample', role: 'member', sex: 'm' }, { key: 'msample02', name: 'Mia Sample', role: 'member', sex: 'f' }] : [{ key: 'me', name: 'Sample Applicant', role: 'me' }], results: {} } };
     } else if (b.fn === 'portalListAccounts') {
       out = u === 'sina' ? { ok: true, accounts: ACCOUNTS } : { ok: false, err: 'not_authorized' };
     } else if (b.fn === 'portalCreateApplicant') {
@@ -469,8 +475,9 @@ async function open(viewport, query, seed) {
   ok('the steps still ahead that are theirs are marked You', /You/.test(await page.$eval('#timeline [data-step="evisa"]', e => e.textContent)));
   ok('the letter of invitation is listed as coming from us, with no upload for them', /Coming from us/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !(await page.$('[data-docup="invitation"]')) && !!(await page.$('[data-docup="evisa"]')));
   ok('the team is told passports are needed as soon as possible', /as soon as possible/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
-  ok('the team photo document points to the roster: names for the cooking and chores schedules, photos of each, with a way there', /cooking and morning chores schedules/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && !!(await page.$('[data-dockind="photo"] [data-gomembers]')));
-  ok('the documents card lists what a team sends: passport copies, a team photo and flights needed; with those in, the e-visas — the letter comes from us', /Passport copies/.test(txt) && /team photo/i.test(txt) && /Flight itineraries/.test(txt) && (await page.$$eval('[data-docup]', i => i.map(x => x.getAttribute('data-docup')).join(','))) === 'passports,photo,flights,evisa' && /Needed/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
+  ok('the team photo document has no upload: it ticks itself off from the roster, ticks itself off from the roster, with a way there', !(await page.$('[data-docup="photo"]')) && /Tick(s|ed) itself off|Ticked off from Your team members/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && /✓ In|1 of 3 photos/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && !!(await page.$('[data-dockind="photo"] [data-gomembers]')), await page.$eval('[data-dockind="photo"]', e => e.textContent));
+  ok('… and the roster card says it once: names for the schedules, photos as the team photo, no second hint', /cooking and morning chores schedules/.test(await page.$eval('#teamMembers', e => e.textContent)) && (await page.$eval('#teamMembers', e => e.textContent)).split('team photo').length === 2);
+  ok('the documents card lists what a team sends: passport copies, a team photo and flights needed; with those in, the e-visas — the letter comes from us', /Passport copies/.test(txt) && /team photo/i.test(txt) && /Flight itineraries/.test(txt) && (await page.$$eval('[data-docup]', i => i.map(x => x.getAttribute('data-docup')).join(','))) === 'passports,flights,evisa' && /Needed/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
   ok('and says flights are needed to start the visa process, and can come once booked', /start your visa process/.test(txt) && /Upload them once you have them/.test(txt));
   await page.setInputFiles('[data-docup="passports"]', [{ name: 'passports.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 fake') }, { name: 'more.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 two') }]);
   await page.waitForFunction(() => document.querySelectorAll('[data-dockind="passports"] .docList li').length === 2, null, { timeout: 5000 });
@@ -772,7 +779,7 @@ async function open(viewport, query, seed) {
   ok('Team metrics has its own tab; before arrival it says the numbers open on arrival', /Team metrics/.test(await page.$eval('#main h2', e => e.textContent)) && /open on arrival/.test(await page.$eval('#main', e => e.textContent)) && !(await page.$('#teamNumbers')));
   /* 👥 */
   await page.click('[data-aview="team"]'); await page.waitForSelector('.meetGrid', { timeout: 5000 });
-  ok('Meet our team: "YWAM Siem Reap Campus Staff", one list, each with name and role', /YWAM Siem Reap Campus Staff/.test(await page.$eval('#main h2', e => e.textContent)) && (await page.$$eval('.meetCard .meetName', ns => ns.map(n => n.textContent))).join() === 'Dara Pen,Yan Yap' && /Host · Hospitality/.test(await page.$eval('.meetCard', e => e.textContent)));
+  ok('Meet our team: "YWAM Siem Reap Campus Staff" (YWAM once), one list, each with name and role', /^YWAM Siem Reap Campus Staff$/.test((await page.$eval('#main h2', e => e.textContent)).trim()) && (await page.$$eval('.meetCard .meetName', ns => ns.map(n => n.textContent))).join() === 'Dara Pen,Yan Yap' && /Host · Hospitality/.test(await page.$eval('.meetCard', e => e.textContent)));
   await page.waitForFunction(() => !!document.querySelector('.meetCard img'), null, { timeout: 5000 });
   ok('… the photos arrive one by one from the GP app; someone without one shows their initials', !!(await page.$('.meetCard img')) && /YY/.test(await page.$eval('.meetCard:nth-child(2) .meetPhoto', e => e.textContent)));
   /* 🧭 */
@@ -804,6 +811,32 @@ async function open(viewport, query, seed) {
   await page.click('[data-aview="status"]'); await page.waitForSelector('#statusPill');
   ok('Application brings the dashboard back', !!(await page.$('#timeline')));
   ok('no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await ctx.close();
+}
+
+/* ---------- the portal admin fixes the Our team cards ---------- */
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('#toTeam');
+  await page.click('#toTeam'); await page.waitForSelector('[data-meetedit]', { timeout: 5000 });
+  ok('a portal admin has an Our team tab: the same cards applicants see, each with Edit', (await page.$$('.meetCard')).length === 2 && (await page.$$('[data-meetedit]')).length === 2 && /GP app profile/.test(await page.$eval('#main', e => e.textContent)));
+  await page.click('[data-meetedit="st_yan"]'); await page.waitForSelector('#meet_name');
+  ok('Edit opens the card: name and role to type, a photo to add, the ministry pointed to the GP app', await page.$eval('#meet_name', i => i.value) === 'Yan Yap' && await page.$eval('#meet_role', i => i.value) === 'YAP' && /Add a photo/.test(await page.$eval('#meetPhotoBtn', e => e.textContent)) && !(await page.$('#meetPhotoDel')) && /Ministry: Cafe/.test(await page.$eval('.meetCard.editing', e => e.textContent)));
+  await page.fill('#meet_name', 'Yan Yap Sok'); await page.fill('#meet_role', 'YAP · Barista');
+  await page.click('#meetSave'); await page.waitForTimeout(400);
+  const sc = sent.filter(b => b.fn === 'portalSaveStaffCard').pop();
+  ok('Save sends the name and role for that card, and the card shows them', sc && sc.args[2] === 'st_yan' && sc.args[3].name === 'Yan Yap Sok' && sc.args[3].role === 'YAP · Barista' && sc.args[3].photo === undefined && /Yan Yap Sok/.test(await page.$eval('[data-meetcard="st_yan"] .meetName', e => e.textContent)) && !(await page.$('#meet_name')));
+  await page.click('[data-meetedit="st_yan"]'); await page.waitForSelector('#meetPhotoInput', { state: 'attached' });
+  await page.setInputFiles('#meetPhotoInput', { name: 'yan.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64') });
+  await page.waitForFunction(() => !!document.querySelector('[data-meetcard="st_yan"] img'), null, { timeout: 5000 });
+  const sp = sent.filter(b => b.fn === 'portalSaveStaffCard').pop();
+  ok('a photo goes up on its own, shrunk to a square jpeg, and shows on the card with Remove', sp && sp.args[3].photo && /^[A-Za-z0-9+/=]+$/.test(sp.args[3].photo) && sp.args[3].name === undefined && !!(await page.$('#meetPhotoDel')) && /Change the photo/.test(await page.$eval('#meetPhotoBtn', e => e.textContent)));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  ok('portal staff who are not admins have no Our team tab', !(await page.$('#toTeam')) && !!(await page.$('#toPreview')));
   await ctx.close();
 }
 
@@ -971,7 +1004,7 @@ async function open(viewport, query, seed) {
     noScroll: document.documentElement.scrollWidth <= innerWidth + 1
   }));
   ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
-  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, Resources, View as applicant, Link for applicants', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toResources', 'toPreview', 'toLink']), JSON.stringify(bar.nav));
+  ok('the staff tools sit in their own bar: Applications, Forms, Accounts, Our team, Resources, View as applicant, Link for applicants', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'toForms', 'toAccounts', 'toTeam', 'toResources', 'toPreview', 'toLink']), JSON.stringify(bar.nav));
   ok('and the bar starts with a way back to the GP app home', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent)));
   ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll && await page.$eval('#toGpApp', a => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }));
   await page.click('#toPreview');
@@ -1016,6 +1049,18 @@ async function open(viewport, query, seed) {
   await page.click('[data-pvkey="team"]');
   await page.waitForTimeout(300);
   ok('Team hides the Khmer / International switch and shows the team dashboard', !(await page.$('[data-pvaud]')) && /Sample Team/.test(await page.$eval('#pvFrame', e => e.textContent)) && /team photo/i.test(await page.$eval('#pvFrame', e => e.textContent)));
+  /* their tabs, outside the read-only frame, so every tab can be checked without a team account */
+  ok('the applicant’s tabs sit above the frame — five for a team, Application open — and work from the staff side', (await page.$$eval('#applicantNav [data-pvaview]', bs => bs.map(b => b.getAttribute('data-pvaview') + (b.classList.contains('on') ? '*' : '')).join())) === 'status*,team,strengths,metrics,resources' && !(await page.$('#pvFrame #applicantNav')));
+  await page.click('[data-pvaview="team"]'); await page.waitForSelector('#pvFrame .meetGrid', { timeout: 5000 });
+  ok('Our team shows the campus staff cards in the frame', /YWAM Siem Reap Campus Staff/.test(await page.$eval('#pvFrame h2', e => e.textContent)) && /Dara Pen/.test(await page.$eval('#pvFrame .meetGrid', e => e.textContent)));
+  await page.click('[data-pvaview="strengths"]'); await page.waitForTimeout(200);
+  ok('Strengths shows the sample team’s people, none taken yet', /Team strengths/.test(await page.$eval('#pvFrame h2', e => e.textContent)) && (await page.$$('#pvFrame [data-ptake]')).length === 3 && /Sam Sample/.test(await page.$eval('#pvFrame', e => e.textContent)));
+  await page.click('[data-pvaview="metrics"]'); await page.waitForTimeout(200);
+  ok('Metrics shows what a team at this stage sees', /Team metrics/.test(await page.$eval('#pvFrame h2', e => e.textContent)));
+  await page.click('[data-pvaview="resources"]'); await page.waitForSelector('#pvFrame .resRow', { timeout: 5000 });
+  ok('Resources shows the list applicants get', /Outreach Leader’s Guide/.test(await page.$eval('#pvFrame', e => e.textContent)));
+  await page.click('[data-pvaview="status"]'); await page.waitForTimeout(200);
+  ok('… and back to their application', /Sample Team/.test(await page.$eval('#pvFrame', e => e.textContent)) && !!(await page.$('#pvFrame #timeline')));
   ok('for a team there is a Their guide tab', !!(await page.$('[data-pvscreen="guide"]')));
   await page.click('[data-pvscreen="guide"]'); await page.waitForTimeout(250);
   const pg = await page.$eval('#pvGuide', e => e.textContent);
@@ -1038,6 +1083,7 @@ async function open(viewport, query, seed) {
   await page.waitForSelector('#pvFrame');
   const rec = sent.filter(b => b.fn === 'portalViewAs').pop();
   ok('picking one asks for that record and shows their dashboard', rec.args[2].candidateId === 'cd_tom' && /Tom Volunteer/.test(await page.$eval('#pvFrame', e => e.textContent)) && /Seeing what Tom Volunteer sees/.test(await page.$eval('.pvBar', e => e.textContent)));
+  ok('a volunteer has four tabs — no Metrics', (await page.$$eval('#applicantNav [data-pvaview]', bs => bs.map(b => b.getAttribute('data-pvaview')).join())) === 'status,team,strengths,resources');
   await page.click('#toCrm');
   await page.waitForSelector('.trow');
   await page.click('[data-open="cd_anna"]');

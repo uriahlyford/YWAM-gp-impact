@@ -286,6 +286,38 @@ console.log('=== the portal as a tool: meet our team, team strengths, resources 
     r.body && r.body.ok && r.body.isDefault === false && r.body.items.length === 3 && r.body.items[0].id === 'r_maps' && r.body.items[0].value === 'https://maps.app.goo.gl/abc' && r.body.items[1].value === '+855 12 345 678' && r.body.items[2].kind === 'link', JSON.stringify(r.body && r.body.items));
   r = await call('portalResources', ['tool.team', '2468']);
   ok('… and every applicant sees the saved list', r.body && r.body.items.length === 3 && r.body.items[1].title === 'Tourist police');
+
+  /* a portal admin fixes the cards from the portal */
+  const jpg = 'x'.repeat(200);
+  r = await call('portalMeetTeam', ['sina', '1234']);
+  ok('a portal admin gets the same list, flagged editable; an applicant’s is not', r.body && r.body.ok && r.body.canEdit === true && r.body.staff.length === 2);
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { name: '  Chan Dara  ', role: 'Head host', photo: jpg }]);
+  ok('… and fixes a campus staff card: name, role and photo, answered as the card plus the photo', r.body && r.body.ok && r.body.staff.name === 'Chan Dara' && r.body.staff.role === 'Head host' && r.body.staff.hasPhoto === true && r.body.photo === 'data:image/jpeg;base64,' + jpg, JSON.stringify(r.body));
+  ok('… which is the person’s GP app profile', mem.staff.find(x => x.id === 'st_cs1').name === 'Chan Dara' && mem.staff.find(x => x.id === 'st_cs1').role === 'Head host' && mem.staff.find(x => x.id === 'st_cs1').photo === 'data:image/jpeg;base64,' + jpg);
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { photo: '' }]);
+  ok('an empty photo takes it off, nothing else changes', r.body && r.body.ok && r.body.photo === '' && r.body.staff.hasPhoto === false && r.body.staff.name === 'Chan Dara');
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { name: '   ' }]);
+  ok('a blank name is refused', r.body && r.body.ok === false && r.body.err === 'name_required');
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { photo: 'not base64!!' }]);
+  ok('… so is a photo that is not base64', r.body && r.body.ok === false && r.body.err === 'bad_file');
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_cs1', { photo: 'A'.repeat(170 * 1024) }]);
+  ok('… or too big', r.body && r.body.ok === false && r.body.err === 'too_large');
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_min1', { role: 'x' }]);
+  ok('only the cards applicants see: not ministry staff', r.body && r.body.ok === false && r.body.err === 'not_found' && mem.staff.find(x => x.id === 'st_min1').role === 'Barista');
+  r = await call('portalSaveStaffCard', ['sina', '1234', 'st_pp1', { role: 'x' }]);
+  ok('… not another campus', r.body && r.body.ok === false && r.body.err === 'not_found');
+  r = await call('portalSaveStaffCard', ['dara', '1234', 'st_cs1', { role: 'x' }]);
+  ok('portal staff who are not admins cannot', r.body && r.body.ok === false && r.body.err === 'not_authorized');
+  r = await call('portalSaveStaffCard', ['tool.team', '2468', 'st_cs1', { role: 'x' }]);
+  ok('… nor an applicant', r.body && r.body.ok === false && r.body.err === 'not_authorized' && mem.staff.find(x => x.id === 'st_cs1').role === 'Head host');
+
+  /* the preview carries the strengths so staff can see every tab */
+  r = await call('portalViewAs', ['sina', '1234', { candidateId: 'cd_tool' }]);
+  ok('View as applicant on a record carries the team’s strengths: the same people, their results', r.body && r.body.ok && r.body.strengths && r.body.strengths.people.map(p => p.key).join() === 'leader,mabc1234' && r.body.strengths.results.leader && r.body.strengths.results.leader.type === 'ENFJ', JSON.stringify(r.body && r.body.strengths));
+  r = await call('portalViewAs', ['sina', '1234', { type: 'team', stage: 'docs' }]);
+  ok('a sample team has two sample members, so the roster and strengths tabs have people on them', r.body && r.body.ok && r.body.application.members.length === 2 && r.body.strengths.people.map(p => p.name).join() === 'Sample Team,Sam Sample,Mia Sample' && Object.keys(r.body.strengths.results).length === 0, JSON.stringify(r.body && r.body.strengths));
+  r = await call('portalViewAs', ['sina', '1234', { type: 'team', stage: 'new' }]);
+  ok('… none before it has applied', r.body && r.body.ok && r.body.application.members.length === 0);
   delete mem.portalResources; delete mem['tpers:cd_tool']; delete mem['tpers:cd_solo'];
   mem.staff = mem.staff.filter(x => ['st_cs1', 'st_yap1', 'st_min1', 'st_pp1', 'st_gone', 'st_tool', 'st_solo'].indexOf(x.id) === -1);
   mem.candidates = mem.candidates.filter(c => c.id !== 'cd_tool' && c.id !== 'cd_solo');

@@ -5527,7 +5527,8 @@ async function portalSetPassword(username, pin, newPassword) {
 /* Meet our team: the campus staff of the applicant's campus — campus staff
    and YAP as one group, "YWAM <Campus> Campus Staff" — name, role and
    ministry, with photos fetched one by one (portalStaffPhoto) so the list
-   itself stays light. Nothing else about a staff member leaves here. */
+   itself stays light. Nothing else about a staff member leaves here. The
+   heading is "<campus> Campus Staff" — the campus name already says YWAM. */
 async function portalMeetTeam(username, pin) {
   const s = await verifyStaff_(username, pin, true);
   if (!s) return { ok: false, err: 'auth' };
@@ -5535,17 +5536,53 @@ async function portalMeetTeam(username, pin) {
   const list = (await getStaff_()).filter(function (r) {
     const st = cleanStaffType_(r.staffType);
     return r && r.active !== false && !r.archived && !isApplicant_(r) && r.campus === campus && (st === 'campus' || st === 'yap');
-  }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); })
-    .map(function (r) { return { id: r.id, name: r.name, role: r.role || '', ministry: r.ministry || '', dept: deptOf_(r) || '', hasPhoto: !!r.photo }; });
-  return { ok: true, campus: campus, staff: list };
+  }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); }).map(meetCard_);
+  return { ok: true, campus: campus, staff: list, canEdit: isPortalAdmin_(s) };
+}
+function meetCard_(r) { return { id: r.id, name: r.name, role: r.role || '', ministry: r.ministry || '', dept: deptOf_(r) || '', hasPhoto: !!r.photo }; }
+function meetStaffOk_(r, s) {
+  const st = r && cleanStaffType_(r.staffType);
+  return !!(r && r.active !== false && !r.archived && !isApplicant_(r) && r.campus === (s.campus || PORTAL_DEFAULT_CAMPUS) && (st === 'campus' || st === 'yap'));
 }
 async function portalStaffPhoto(username, pin, staffId) {
   const s = await verifyStaff_(username, pin, true);
   if (!s) return { ok: false, err: 'auth' };
   const r = (await getStaff_()).find(function (x) { return x.id === str_(staffId, 60); });
-  const st = r && cleanStaffType_(r.staffType);
-  if (!r || r.active === false || r.archived || isApplicant_(r) || r.campus !== (s.campus || PORTAL_DEFAULT_CAMPUS) || !(st === 'campus' || st === 'yap')) return { ok: false, err: 'not_found' };
+  if (!meetStaffOk_(r, s)) return { ok: false, err: 'not_found' };
   return { ok: true, id: r.id, photo: r.photo || '' };
+}
+/* A portal admin fixes a card from the portal's Our team page — the name, the
+   role or the photo (a square jpeg the page shrank, or '' to take it off).
+   The card is the person's GP app profile, so it changes there too. Only
+   the cards applicants see (campus staff and YAP of the admin's campus). */
+const STAFF_CARD_PHOTO_MAX_B64 = 160 * 1024;
+async function portalSaveStaffCard(username, pin, staffId, patch) {
+  const s = await verifyStaff_(username, pin);
+  if (!s || !isPortalAdmin_(s)) return { ok: false, err: 'not_authorized' };
+  patch = patch && typeof patch === 'object' ? patch : {};
+  const id = str_(staffId, 60);
+  let photoUri;
+  if (patch.photo !== undefined) {
+    if (patch.photo === '' || patch.photo === null) photoUri = '';
+    else {
+      if (typeof patch.photo !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(patch.photo) || patch.photo.length < 100) return { ok: false, err: 'bad_file' };
+      if (patch.photo.length > STAFF_CARD_PHOTO_MAX_B64) return { ok: false, err: 'too_large' };
+      photoUri = 'data:image/jpeg;base64,' + patch.photo;
+    }
+  }
+  const name = patch.name !== undefined ? dutyText_(patch.name, 120) : undefined;
+  if (name !== undefined && !name) return { ok: false, err: 'name_required' };
+  const role = patch.role !== undefined ? dutyText_(patch.role, 80) : undefined;
+  if (name === undefined && role === undefined && photoUri === undefined) return { ok: false, err: 'nothing' };
+  return mutateStaff_(function (rows) {
+    const r = rows.find(function (x) { return x.id === id; });
+    if (!meetStaffOk_(r, s)) return { abort: true, ok: false, err: 'not_found' };
+    if (name !== undefined) r.name = name;
+    if (role !== undefined) r.role = role;
+    if (photoUri !== undefined) r.photo = photoUri;
+    r.updated = new Date().toISOString();
+    return { ok: true, staff: meetCard_(r), photo: r.photo || '' };
+  });
 }
 
 /* Team strengths: the personality questionnaire from the staff app, taken
@@ -6198,7 +6235,7 @@ async function portalViewAs(username, pin, opts) {
     const rows = await getStaff_();
     const acct = cand.staffId ? rows.find(function (r) { return r.id === cand.staffId && isApplicant_(r); }) : null;
     const me = acct ? portalMeOut_(acct) : { id: '', name: cand.name, username: '', email: cand.email || '', phone: cand.phone || '', messenger: cand.messenger || '', country: cand.country || '', campus: cand.campus || '', type: cand.type, school: cand.school || '' };
-    return { ok: true, preview: 'record', role: 'applicant', me: me, application: portalAppOut_(cand), form: forms[formKeyOf_(cand)] };
+    return { ok: true, preview: 'record', role: 'applicant', me: me, application: portalAppOut_(cand), form: forms[formKeyOf_(cand)], strengths: strengthsOut_(cand, await getStrengths_(cand)) };
   }
   const g = await hrGate_(username, pin); if (g.out) return g.out;
   const type = PORTAL_TYPES.indexOf(opts.type) > -1 ? opts.type : 'student';
@@ -6215,10 +6252,11 @@ async function portalViewAs(username, pin, opts) {
       visa: type === 'team' ? { flightsConfirmed: idx >= tIdx('call2'), invitationSent: idx >= tIdx('call2') }
         : { flightsConfirmed: idx >= portalStageIdx_('practical'), invitationSent: idx >= portalStageIdx_('practical') },
       team: { call1: idx >= tIdx('docs') ? now : null, call2: idx >= tIdx('practical') ? now : null },
+      members: type === 'team' && idx >= tIdx('applied') ? [{ id: 'msample01', name: 'Sam Sample', sex: 'm' }, { id: 'msample02', name: 'Mia Sample', sex: 'f' }] : [],
       referenceDone: idx >= portalStageIdx_('interview'), references: idx >= portalStageIdx_('interview') ? [{ id: 'ref_sample', usedAt: now, leaderName: 'Sample Leader', createdAt: now }] : [] },
     log: [], archived: null, created: now, updated: now };
   const me = { id: 'preview', name: cand.name, username: 'sample', email: cand.email, phone: cand.phone, messenger: 'whatsapp', country: cand.country, campus: campus, type: type, school: school };
-  return { ok: true, preview: 'sample', role: 'applicant', me: me, application: portalAppOut_(cand), form: forms[formKeyOf_(cand)] };
+  return { ok: true, preview: 'sample', role: 'applicant', me: me, application: portalAppOut_(cand), form: forms[formKeyOf_(cand)], strengths: strengthsOut_(cand, { people: {} }) };
 }
 /* ==================== the leader reference ====================
    International applicants (and every staff / volunteer applicant) send one
@@ -6632,6 +6670,7 @@ const HANDLERS = {
   getMySchedules: function (a) { return getMySchedules(a[0], a[1], a[2]); },
   portalMeetTeam: function (a) { return portalMeetTeam(a[0], a[1]); },
   portalStaffPhoto: function (a) { return portalStaffPhoto(a[0], a[1], a[2]); },
+  portalSaveStaffCard: function (a) { return portalSaveStaffCard(a[0], a[1], a[2], a[3]); },
   portalStrengths: function (a) { return portalStrengths(a[0], a[1], a[2]); },
   portalSaveStrength: function (a) { return portalSaveStrength(a[0], a[1], a[2], a[3], a[4]); },
   portalDeleteStrength: function (a) { return portalDeleteStrength(a[0], a[1], a[2], a[3]); },

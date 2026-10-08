@@ -817,6 +817,17 @@ forms, documents and references follow.
   `portalSaveResources`, blob `portalResources`, kinds guide|link|phone|note,
   `PORTAL_RESOURCES_DEFAULT`: the Outreach Leader's Guide, the teams booklet, 117/118/119, the
   places list). tests/test-portal.mjs and test-portal-page.mjs cover all four.
+  The heading is `'{campus} Campus Staff'` — `campusName_` already says YWAM, so never prefix it
+  again. **Our team, staff side** (portal admins; nav `toTeam`, `P.view==='team'`,
+  `teamAdminHtml_` / `bindTeamAdmin_`): the same cards with Edit — name, role and photo go
+  through `portalSaveStaffCard(user, pin, staffId, {name?, role?, photo?})`, portal-admin only and
+  only for the cards applicants see (`meetStaffOk_`: campus/yap of the admin's campus). It writes
+  the person's real staff record (the GP app profile), photo as a jpeg data URI from
+  `shrinkPhoto_(file, 384)`, '' to remove. **View as applicant shows every tab**: `portalViewAs`
+  carries `strengths` (and a sample team has two sample members), `previewHtml_` swaps
+  `P.aview/strengths/tphotos` in with the boot and draws `applicantNavHtml_('data-pvaview')`
+  outside the inert frame (`P.pv.aview`); Our team and Resources load with the staff member's own
+  creds (`meetOn` / `resOn` in `bindTabs_`).
 - **A team's photos (Oct 2026)**: instead of one team photo with names, the leader takes a photo
   of each person in the portal — `teamPhotoPeople_(c)` is the leader (from the form), the
   co-leaders (`co|<n>`) and every member (members now carry an `id`, kept through a rename —
@@ -825,7 +836,9 @@ forms, documents and references follow.
   `portalTeamPhotos` / `portalSaveTeamPhoto` / `portalDeleteTeamPhoto` (the team, or staff via
   `docCand_`). `teamPhotoTally_` keeps `portal.photos {count,total}` on the record so
   `photosDone_` → `hasPhotoDoc_` can mark the team-photo document in without opening the blob
-  (`teamDocsIn_`, the `photo` step). Page: `rosterHtml_` on the applicant's members card and the
+  (`teamDocsIn_`, the `photo` step). On the applicant's Documents card the `photo` kind has **no
+  upload** — it ticks itself off from the roster (`docsBodyHtml_`, mode me: In / "{have} of {n}
+  photos" / Needed, with Go to your team members), and the members card says the why once. Page: `rosterHtml_` on the applicant's members card and the
   staff record (`panelMembersHtml_`), `bindRoster_`, and `teamSheet_` — a canvas with every face
   and name for the staff group chat (`#teamSheetBtn`, shared via `dutyShare`).
 - **Country fields** have a search box (`countryFieldHtml_`, `bindCountrySearch_`): typing
