@@ -177,7 +177,9 @@ async function open(viewport, query, seed) {
       else if (b.args[0] === 'team.new') { NEW_TEAM_APP = { ...NEW_TEAM_APP, docs: (NEW_TEAM_APP.docs || []).concat([doc]) }; out = { ok: true, doc, docs: NEW_TEAM_APP.docs, application: NEW_TEAM_APP }; }
       else { TEAM_APP = { ...TEAM_APP, docs: (TEAM_APP.docs || []).concat([doc]) }; out = { ok: true, doc, docs: TEAM_APP.docs, application: TEAM_APP }; }
     } else if (b.fn === 'portalGetDoc') {
-      out = { ok: true, id: b.args[2], name: 'passports.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQK' };
+      const img = CANDS.flatMap(c => (c.portal && c.portal.docs) || []).find(d => d.id === b.args[2] && /^image\//.test(d.mime));
+      out = img ? { ok: true, id: img.id, name: img.name, mime: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==' }
+        : { ok: true, id: b.args[2], name: 'passports.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQK' };
     } else if (b.fn === 'portalDeleteDoc') {
       TEAM_APP = { ...TEAM_APP, docs: (TEAM_APP.docs || []).filter(d => d.id !== b.args[2]) }; out = { ok: true, docs: TEAM_APP.docs, application: TEAM_APP };
     } else if (b.fn === 'portalViewAs') {
@@ -475,7 +477,7 @@ async function open(viewport, query, seed) {
   ok('the steps still ahead that are theirs are marked You', /You/.test(await page.$eval('#timeline [data-step="evisa"]', e => e.textContent)));
   ok('the letter of invitation is listed as coming from us, with no upload for them', /Coming from us/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !(await page.$('[data-docup="invitation"]')) && !!(await page.$('[data-docup="evisa"]')));
   ok('the team is told passports are needed as soon as possible', /as soon as possible/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
-  ok('the team photo document has no upload: it ticks itself off from the roster, ticks itself off from the roster, with a way there', !(await page.$('[data-docup="photo"]')) && /Tick(s|ed) itself off|Ticked off from Your team members/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && /✓ In|1 of 3 photos/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && !!(await page.$('[data-dockind="photo"] [data-gomembers]')), await page.$eval('[data-dockind="photo"]', e => e.textContent));
+  ok('the team’s names and photos are not a document to the team any more — no row, no upload; they live under Your team members', !(await page.$('[data-docup="photo"]')) && !(await page.$('[data-dockind="photo"]')) && !!(await page.$('#teamMembers .rosterRow')));
   ok('… and the roster card says it once: names for the schedules, photos as the team photo, no second hint', /cooking and morning chores schedules/.test(await page.$eval('#teamMembers', e => e.textContent)) && (await page.$eval('#teamMembers', e => e.textContent)).split('team photo').length === 2);
   ok('the documents card lists what a team sends: passport copies, a team photo and flights needed; with those in, the e-visas — the letter comes from us', /Passport copies/.test(txt) && /team photo/i.test(txt) && /Flight itineraries/.test(txt) && (await page.$$eval('[data-docup]', i => i.map(x => x.getAttribute('data-docup')).join(','))) === 'passports,flights,evisa' && /Needed/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
   ok('and says flights are needed to start the visa process, and can come once booked', /start your visa process/.test(txt) && /Upload them once you have them/.test(txt));
@@ -978,6 +980,15 @@ async function open(viewport, query, seed) {
   ok('staff can add a file a team emailed them, onto that record', su && su.args[2] === 'photo' && su.args[6] === 'cd_team');
   await page.waitForSelector('#panelMembers .rosterRow', { timeout: 5000 });
   ok('the record shows the team’s faces — leader and members, each with a Photo button staff can use too — and a Team photo sheet button', (await page.$$('#panelMembers .rosterRow')).length >= 2 && !!(await page.$('#panelMembers [data-tphoto][data-tphotocand="cd_team"]')) && !!(await page.$('#teamSheetBtn')));
+  ok('a PDF under the photo kind is not offered for the roster', !(await page.$('#upPhotos')));
+  await page.setInputFiles('[data-docup="photo"]', [{ name: 'Member Two.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64') }]);
+  await page.waitForSelector('#upPhotos [data-upuse]', { timeout: 5000 });
+  const twoKey = await page.$eval('#panelMembers .rosterRow:nth-child(3)', e => e.getAttribute('data-rosterkey'));
+  ok('a photo uploaded as a file is offered for the roster, with a guess at who it is from the file name', /Photos the team uploaded as files/.test(await page.$eval('#upPhotos', e => e.textContent)) && /Member Two\.png/.test(await page.$eval('#upPhotos', e => e.textContent)) && (await page.$eval('#upPhotos [data-upfor]', s => s.value)) === twoKey && (await page.$$eval('#upPhotos [data-upfor] option', os => os.length)) === 4, twoKey);
+  await page.click('#upPhotos [data-upuse]');
+  await page.waitForFunction(k => !!document.querySelector('#panelMembers [data-rosterkey="' + k + '"] img.avatar'), twoKey, { timeout: 5000 });
+  const gd = sent.filter(b => b.fn === 'portalGetDoc').pop(), sp = sent.filter(b => b.fn === 'portalSaveTeamPhoto').pop();
+  ok('Use fetches the file, shrinks it and saves it as that person’s photo on this record — the face shows on the roster', (gd && sp && sp.args[2] === twoKey && sp.args[4] === 'cd_team' && /^[A-Za-z0-9+/=]+$/.test(sp.args[3])), JSON.stringify(sp && sp.args.slice(2, 3).concat(sp.args.slice(4))));
   await page.click('#teamSheetBtn'); await page.waitForTimeout(600);
   ok('the sheet is drawn and offered as a picture without a page error', !!(await page.$('#teamSheetBtn')) && errors.length === 0, errors.join(' | '));
   await ctx.close();

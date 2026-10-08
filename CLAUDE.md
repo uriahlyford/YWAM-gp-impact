@@ -836,9 +836,13 @@ forms, documents and references follow.
   `portalTeamPhotos` / `portalSaveTeamPhoto` / `portalDeleteTeamPhoto` (the team, or staff via
   `docCand_`). `teamPhotoTally_` keeps `portal.photos {count,total}` on the record so
   `photosDone_` → `hasPhotoDoc_` can mark the team-photo document in without opening the blob
-  (`teamDocsIn_`, the `photo` step). On the applicant's Documents card the `photo` kind has **no
-  upload** — it ticks itself off from the roster (`docsBodyHtml_`, mode me: In / "{have} of {n}
-  photos" / Needed, with Go to your team members), and the members card says the why once. Page: `rosterHtml_` on the applicant's members card and the
+  (`teamDocsIn_`, the `photo` step). The team never sees the `photo` kind as a document
+  any more (`meHtml_` filters it out — the names and photos live under Your team members and the
+  timeline step ticks itself). Staff still see it on the record, for photos a team sent as files:
+  `uploadsForRosterHtml_` lists the image uploads of that kind under the roster with a guess at who
+  each is from the file name (`guessPerson_`), and Use fetches the file (`portalGetDoc`), shrinks it
+  (`shrinkPhoto_`) and saves it as that person's photo (`portalSaveTeamPhoto` with the candidateId)
+  — how YWAM Montana's uploads, made before the roster existed, go onto their people. Page: `rosterHtml_` on the applicant's members card and the
   staff record (`panelMembersHtml_`), `bindRoster_`, and `teamSheet_` — a canvas with every face
   and name for the staff group chat (`#teamSheetBtn`, shared via `dutyShare`).
 - **Country fields** have a search box (`countryFieldHtml_`, `bindCountrySearch_`): typing
