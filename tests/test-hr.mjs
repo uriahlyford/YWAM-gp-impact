@@ -240,32 +240,38 @@ console.log('=== staff sign the legal documents and their contract in the app ==
   r = await call('mySaveStart', ['andrew', '0000', { ywamSince: 2016 }]);
   ok('… only with the right PIN', r.body.ok === false);
 
-  /* the Volunteer Staff Contract — signed with a base leader there */
+  /* the Volunteer Staff Contract — filled out in person on HR's phone: they sign, HR signs to approve */
   r = await call('hrSendContract', ['dara', '1234', 'st_andrew', { from: '2026-11', years: 2 }]);
-  ok('only HR sends a contract to sign', r.body.ok === false);
-  r = await call('hrSendContract', ['sina', '1234', 'st_andrew', { from: '2026-11', years: 2 }]);
-  const ct = r.body.ok && r.body.staff.contracts.find(c => c.digital);
-  ok('HR sends one: its month and length, waiting for them', r.body.ok && ct && ct.signed === '2026-11' && ct.years === 2 && ct.digital.status === 'awaiting_staff');
+  ok('only HR starts a staff contract', r.body.ok === false);
   r = await call('hrSendContract', ['sina', '1234', 'st_andrew', { from: '2026-12', years: 1 }]);
-  ok('… one at a time', r.body.ok === false && r.body.err === 'already_sent');
+  const ctId = r.body.contractId;
+  ok('HR starts one — even with a contract on file (to redo a paper one) — waiting to be signed', r.body.ok && !!ctId && r.body.staff.contracts.find(c => c.id === ctId).digital.status === 'awaiting_staff');
+  r = await call('hrSendContract', ['sina', '1234', 'st_andrew', { from: '2026-11', years: 2 }]);
+  const ct = r.body.ok && r.body.staff.contracts.find(c => c.id === ctId);
+  ok('starting again changes the one waiting, it does not add another', r.body.ok && r.body.contractId === ctId && ct.signed === '2026-11' && ct.years === 2 && r.body.staff.contracts.filter(c => c.digital && c.digital.status === 'awaiting_staff').length === 1);
   r = await call('myContract', ['andrew', '1234']);
   let cti = req(r.body).find(x => x.kind === 'contract');
-  ok('it shows on their list as a new one to sign', cti.toSign === true, JSON.stringify(cti));
-  ok('… and until it is signed it does not count: their current one still ends when it did', cti.ends === '2029-10-01');
+  ok('until it is signed it does not count, and the staff member is not asked to sign it', cti.ends === '2029-10-01' && cti.toSign === undefined && cti.state === 'current', JSON.stringify(cti));
   r = await call('staffSignOpen', ['andrew', '1234']);
+  ok('the staff member cannot open it on their own', r.body.ok && !r.body.docs.some(d => /^contract:/.test(d.id)));
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', 'contract:' + ctId, { name: 'Andrew Lee', sig: SIG }]);
+  ok('… nor sign it on their own', r.body.ok === false);
+  r = await call('hrContractOpen', ['dara', '1234', 'st_andrew']);
+  ok('only HR opens the signing page', r.body.ok === false && r.body.err === 'not_authorized');
+  r = await call('hrContractOpen', ['sina', '1234', 'st_andrew']);
   const cdoc = r.body.docs[0];
-  ok('it comes first, with its period, and needs a leader', cdoc.id === 'contract:' + ct.id && cdoc.title === 'Volunteer Staff Contract' && /2 years · From 11\/2026 to 11\/2028/.test(cdoc.period) && cdoc.sign.leader === true, cdoc && cdoc.period);
+  ok('HR opens it for that person: the contract with its period, their name, and HR as the one approving', r.body.ok && r.body.hrSign === true && r.body.people[0].name === 'Andrew Lee' && r.body.approver === 'Sina Sok' && cdoc.id === 'contract:' + ctId && /2 years · From 11\/2026 to 11\/2028/.test(cdoc.period) && cdoc.sign.leader === true);
   const cbody = { name: 'Andrew Lee', checks: { agree: true }, fields: { focus1: 'Cafe', future: 'lead a ministry' }, sig: SIG };
-  r = await call('staffSignSubmit', ['andrew', '1234', 'me', cdoc.id, cbody]);
-  ok('it will not sign without a base leader there', r.body.ok === false && r.body.err === 'leader_required');
-  r = await call('staffSignSubmit', ['andrew', '1234', 'me', cdoc.id, { ...cbody, leaderName: 'Sina Sok', leaderSig: 'not a jpeg' }]);
-  ok('… and their real signature', r.body.ok === false && r.body.err === 'leader_required');
-  r = await call('staffSignSubmit', ['andrew', '1234', 'me', cdoc.id, { ...cbody, leaderName: 'Sina Sok', leaderSig: SIG }]);
-  ok('they sign it together, on the same screen', r.body.ok);
+  r = await call('hrContractSign', ['sina', '1234', 'st_andrew', 'me', cdoc.id, cbody]);
+  ok('it will not be signed without HR approving', r.body.ok === false && r.body.err === 'leader_required');
+  r = await call('hrContractSign', ['dara', '1234', 'st_andrew', 'me', cdoc.id, { ...cbody, leaderName: 'Dara Pen', leaderSig: SIG }]);
+  ok('… and only HR can approve', r.body.ok === false && r.body.err === 'not_authorized');
+  r = await call('hrContractSign', ['sina', '1234', 'st_andrew', 'me', cdoc.id, { ...cbody, leaderName: 'Sina Sok', leaderSig: SIG }]);
+  ok('they sign, HR signs to approve: done', r.body.ok);
   r = await call('hrList', ['sina', '1234']);
   me = r.body.staff.find(x => x.id === 'st_andrew');
   const dg = me.contracts.find(c => c.id === ct.id).digital;
-  ok('… and it is signed straight away, with both names', dg.status === 'signed' && dg.staffName === 'Andrew Lee' && dg.leaderName === 'Sina Sok');
+  ok('… and it is their contract straight away, with both names and who approved it', dg.status === 'signed' && dg.staffName === 'Andrew Lee' && dg.leaderName === 'Sina Sok' && dg.approvedBy === 'st_hr');
   r = await call('hrContractPdf', ['sina', '1234', 'st_andrew', ct.id]);
   const pdf = r.body.ok ? Buffer.from(r.body.dataUrl.split(',')[1], 'base64').toString('latin1') : '';
   ok('the signed contract is a PDF with the letterhead, both signatures and the commitment', r.body.ok && (pdf.match(/\/Subtype \/Image/g) || []).length === 3 && pdf.includes('Cafe') && pdf.includes('Sina Sok') && pdf.includes('Signature of UofN Leader'));
@@ -275,7 +281,7 @@ console.log('=== staff sign the legal documents and their contract in the app ==
   ok('… nobody else can, even by its id', r.body.ok === false);
   r = await call('myContract', ['andrew', '1234']);
   cti = req(r.body).find(x => x.kind === 'contract');
-  ok('nothing about the contract is left to sign', cti.done === true && cti.state === 'current' && !cti.toSign, JSON.stringify(cti));
+  ok('it now counts: their contract ends when the new one does', cti.done === true && cti.state === 'current' && cti.ends === '2028-11-01', JSON.stringify(cti));
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

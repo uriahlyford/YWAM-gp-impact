@@ -868,12 +868,24 @@ forms, documents and references follow.
   they signed as an applicant in the portal (their application by staffId or the same email, signed as 'me';
   never a team's) are copied in by `syncPortalLegal_` as `{from:'portal', candId}`; `hrLegalPdf` reads those
   from the portal's blob. The Child Protection Agreement is on everyone's Required list (`requiredFor_`
-  item `legal:child`). The Volunteer Staff Contract (`STAFF_CONTRACT`, `sign.leader`): HR sends one
-  (`hrSendContract`, `digital.status` awaiting_staff); the staff member signs it in one go WITH a base leader
-  on the same screen (`leaderName` + `leaderSig` required, else `leader_required`) → signed, blob
-  `scontract:<id>`.staff. No later countersign. Only a signed contract counts (`contractInForce_` /
-  `hrInForce_`); `contractState_` adds `soon` (≤ HR_DUE_DAYS) and `toSign`, which drive the My contract
-  notice on My Home (`contractNoticeHtml_`). PDFs: `hrLegalPdf`, `hrContractPdf` (HR, or the person for their
+  item `legal:child`). The "Finish your profile" card (papers HR asks everyone to sign) is at the top of My
+  contract (`reqMyContractCardHtml_`), not on My Home; a paper's page goes back to My contract.
+- **Staff contract, filled out in person (Oct 2026, Uriah)**: only HR/admin opens the Volunteer Staff Contract
+  (`STAFF_CONTRACT`, `sign.leader`). On someone's HR profile, **Fill out staff contract** — any time, also to
+  redo a paper contract (it starts from that contract's month and years) — picks the period and calls
+  `hrSendContract` (one waits at a time, `digital.status` awaiting_staff; starting again changes its period;
+  returns `contractId`), then opens `portal.html?staff=1&hr=<staffId>&doc=contract:<id>` on HR's own phone
+  (`hrContractOpen` / `hrContractSign`, HR only, `hrContractGate_`). The person reads, fills in and signs;
+  HR signs under "Approved by" (name prefilled from `approver`; `leaderName` + `leaderSig` required, else
+  `leader_required`) → signed at once, `approvedBy`, blob `scontract:<id>`.staff; the page goes back to
+  `teams.html?view=hr&hr=<staffId>`. Staff never sign the contract themselves (`staffSignOpen` /
+  `staffSignSubmit` are only the legal documents) and My contract lists only contracts in force. Only a
+  signed contract counts (`contractInForce_` / `hrInForce_`); `contractState_` adds `soon` (≤ HR_DUE_DAYS),
+  which drives the My contract notice on My Home (`contractNoticeHtml_`). The HR list (`hrHtml`) defaults to
+  **By contract end** (`hrByEnd_`: run out the longest ago first, then renew soon, then by end, no contract at
+  the bottom) with **By ministry** as the old grouping, and filter chips (`HR_FILTERS_`, `hrFilterHas_`):
+  All, Expired, Renew soon, Current, No contract, Paper only (current contract not yet digital); each row
+  says 📄 Paper or ✍️ Digital. PDFs: `hrLegalPdf`, `hrContractPdf` (HR, or the person for their
   own — a contract only from their own record).
 - **Legal documents, signed on a phone (Oct 2026)**: YWAM Siem Reap's five forms (Photo Release, Accident
   Waiver, Liability Release Waiver, Acceptance of Place, Child Protection Agreement) live in `netlify/functions/legal-docs-default.js`

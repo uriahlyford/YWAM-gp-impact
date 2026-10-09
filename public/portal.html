@@ -578,7 +578,10 @@ var P = { aview:'status', meet:null, teamEdit:null, menuOpen:false, access:null,
   if(qs.ref){ P.view='ref'; P.refToken=String(qs.ref); }
   if(qs.staff){
     var gp=null; try { gp=JSON.parse(lsGet('gp-staff')||'null'); } catch(e){}
-    { P.view='sign'; P.sign={ only:qs.doc ? String(qs.doc) : '', staff:gp, token:null, openFn:'staffSignOpen', openArgs:gp ? [gp.user, gp.pin] : null, submitFn:'staffSignSubmit', data:gp ? null : { ok:false, err:'nostaff' }, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
+    /* ?staff=1&hr=<staffId>: HR fills out the staff contract with that person on HR's own phone */
+    var hrId=qs.hr ? String(qs.hr) : '';
+    { P.view='sign'; P.sign={ only:qs.doc ? String(qs.doc) : '', staff:gp, hr:hrId, token:null, openFn:hrId ? 'hrContractOpen' : 'staffSignOpen', openArgs:gp ? [gp.user, gp.pin].concat(hrId ? [hrId] : []) : null, submitFn:hrId ? 'hrContractSign' : 'staffSignSubmit',
+      back:hrId ? 'teams.html?view=hr&hr='+encodeURIComponent(hrId) : 'teams.html?view=mycontract', data:gp ? null : { ok:false, err:'nostaff' }, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
   }
   if(qs.sign){ P.view='sign'; P.sign={ token:String(qs.sign), data:null, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
   if(qs.open) P.openCand=String(qs.open);   // portal.html?open=<candidateId> — the GP app's Teams Database links here
@@ -752,10 +755,10 @@ function sigPadHtml_(id, label, small){
 }
 function signHtml_(){
   var S=P.sign, d=S.data;
-  var h='<div class="center signPage"><div class="gateTitle"><h2>✍️ '+esc(t('Legal documents'))+'</h2>';
+  var h='<div class="center signPage"><div class="gateTitle"><h2>✍️ '+esc(S.hr ? t('Staff contract') : t('Legal documents'))+'</h2>';
   if(d===null) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
   if(!d.ok) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(d.err==='nostaff' || (S.staff && d.err==='invalid') ? t('Open this from the GP app, signed in.') : d.err==='closed' ? t('This team’s documents are closed.') : t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.'))+'</p>'+(S.openFn ? '<a class="btn small" href="teams.html" style="margin-top:10px">'+esc(t('Open the GP app'))+'</a>' : '')+'</div>'+langRowHtml_()+'</div>';
-  h+='<p class="sub">'+esc(d.isTeam===false ? gpT('For {team}. Read each one and sign it here on your phone.',{team:d.team}) : gpT('For {team}. Everyone signs their own — pick your name to start.',{team:d.team}))+'</p>'+(S.inApp ? '<button type="button" class="linkbtn inline" id="signHome">← '+esc(t('Back to my application'))+'</button>' : '')+(S.staff ? '<a class="linkbtn inline" href="teams.html?view=mycontract">← '+esc(t('Back to My contract'))+'</a>' : '')+'</div>';
+  h+='<p class="sub">'+esc(d.isTeam===false ? gpT('For {team}. Read each one and sign it here on your phone.',{team:d.team}) : gpT('For {team}. Everyone signs their own — pick your name to start.',{team:d.team}))+'</p>'+(S.inApp ? '<button type="button" class="linkbtn inline" id="signHome">← '+esc(t('Back to my application'))+'</button>' : '')+(S.staff ? '<a class="linkbtn inline" href="'+esc(S.back)+'">← '+esc(S.hr ? t('Back to HR') : t('Back to My contract'))+'</a>' : '')+'</div>';
   var docs=(d.docs||[]).filter(function(x){ return !S.only || x.id===S.only; });
   if(!S.who && (d.people||[]).length===1) S.who=d.people[0].key;
   /* who are you */
@@ -777,7 +780,7 @@ function signHtml_(){
   d.shown=docs;
   if(!left.length || S.done){
     h+='<div class="card signDone"><div class="signBig">🎉</div><h3 style="margin:4px 0">'+esc(gpT('All signed — thank you, {name}!',{name:(me.name||'').split(' ')[0]}))+'</h3><p class="sub">'+esc(t('YWAM Siem Reap has your signed forms. Nothing more to do.'))+'</p>'+
-      (S.staff ? '<a class="btn" href="teams.html?view=mycontract">'+esc(t('Back to My contract'))+'</a>' : '')+
+      (S.staff ? '<a class="btn" href="'+esc(S.back)+'">'+esc(S.hr ? t('Back to HR') : t('Back to My contract'))+'</a>' : '')+
       ((d.people||[]).length>1 ? '<button type="button" class="btn" id="signNext">'+esc(t('Someone else on the team? Pick your name'))+'</button>' : '')+(S.inApp ? '<button type="button" class="btn ghost" id="signHome" style="margin-left:6px">'+esc(t('Back to my application'))+'</button>' : '')+'</div>';
     return h+'</div>';
   }
@@ -802,8 +805,8 @@ function signHtml_(){
     sigPadHtml_('sig', t('Signature'))+
     '<p class="hint" style="margin:6px 0 0">'+esc(gpT('Date: {date}',{date:fmtDate_(new Date().toISOString())}))+'</p>';
   if(sign.guardian && S.under18) h+='<div class="signGuard"><div class="eyebrow">'+esc(t('Parent or guardian'))+'</div><label class="f">'+esc(t('Their full name'))+'</label><input type="text" id="sign_gname" maxlength="120" value="'+esc(F.guardianName||'')+'">'+sigPadHtml_('guardianSig', t('Parent or guardian signature'))+'</div>';
-  if(sign.leader) h+='<div class="signGuard signLeader"><div class="eyebrow">'+esc(t('Base leader — signing with you now'))+'</div><p class="hint" style="margin:0 0 6px">'+esc(t('A base leader signs this together with you, on this phone.'))+'</p>'+
-    '<label class="f">'+esc(t('Leader’s full name'))+'</label><input type="text" id="sign_lname" maxlength="120" value="'+esc(F.leaderName||'')+'"'+(S.miss && S.miss.leaderName?' class="miss"':'')+'>'+sigPadHtml_('leaderSig', t('Signature of UofN Leader'))+'</div>';
+  if(sign.leader) h+='<div class="signGuard signLeader"><div class="eyebrow">'+esc(t('Approved by'))+'</div><p class="hint" style="margin:0 0 6px">'+esc(gpT('When {name} has signed, hand the phone back: you sign to approve, and it becomes their contract.',{name:(me.name||'').split(' ')[0]}))+'</p>'+
+    '<label class="f">'+esc(t('Your full name'))+'</label><input type="text" id="sign_lname" maxlength="120" value="'+esc(F.leaderName!=null ? F.leaderName : (d.approver||''))+'"'+(S.miss && S.miss.leaderName?' class="miss"':'')+'>'+sigPadHtml_('leaderSig', t('Signature of UofN Leader'))+'</div>';
   if(sign.witness) h+='<details class="signWit"'+(F.witnessOpen?' open':'')+'><summary>'+esc(t('Add a witness (optional)'))+'</summary><label class="f">'+esc(t('Witness full name'))+'</label><input type="text" id="sign_wname" maxlength="120" value="'+esc(F.witnessName||'')+'">'+sigPadHtml_('witnessSig', t('Witness signature'))+'</details>';
   h+='</div>';
   h+='<button type="button" class="btn" id="signSubmit"'+(S.busy?' disabled':'')+' style="margin-top:14px;width:100%">'+esc(S.busy ? t('Saving…') : (left.length>1 ? t('Sign and go to the next document') : t('Sign and finish')))+'</button>'+
@@ -878,6 +881,7 @@ function bindSign_(){
     if(!String(F.name||'').trim()){ miss.name=1; n++; }
     if(sign.age && !(Number(F.age)>0)){ miss.age=1; n++; }
     if(!S.pads.sig){ miss.sig=1; n++; }
+    if(sign.leader && F.leaderName==null && d.approver) F.leaderName=d.approver;
     if(sign.leader && (!String(F.leaderName||'').trim() || !S.pads.leaderSig)){ if(!String(F.leaderName||'').trim()) miss.leaderName=1; if(!S.pads.leaderSig) miss.leaderSig=1; n++; }
     var u18 = S.under18 || (sign.age && Number(F.age)>0 && Number(F.age)<18);
     if(sign.guardian && u18 && (!String(F.guardianName||'').trim() || !S.pads.guardianSig)){ if(!S.under18){ S.under18=true; } miss.guardianSig=1; n++; }
@@ -898,7 +902,7 @@ function bindSign_(){
         showMsg(t('Signed')); render(); window.scrollTo(0,0); return;
       }
       var e=r && r.err;
-      showMsg(e==='leader_required' ? t('The base leader needs to add their name and sign.') : e==='witness_incomplete' ? t('A witness needs their name and signature — or leave the witness out.') : e==='guardian_required' ? t('A parent or guardian needs to add their name and sign.') : e==='invalid' ? t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.') : t('Could not save — try again.'));
+      showMsg(e==='leader_required' ? t('You need to add your name and sign to approve it.') : e==='witness_incomplete' ? t('A witness needs their name and signature — or leave the witness out.') : e==='guardian_required' ? t('A parent or guardian needs to add their name and sign.') : e==='invalid' ? t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.') : t('Could not save — try again.'));
       render();
     }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
   });

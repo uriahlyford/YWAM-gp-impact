@@ -54,7 +54,7 @@ async function open(who) {
       trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [], base: { leader: false, entries: {}, okrs: [], survey: [], metricOverrides: [] }, hrDue: who.isAdmin ? 2 : null, required: who.required || null };
     else if (b.fn === 'getData') out = { entries: {}, okrs: [], survey: [] };
     else if (b.fn === 'hrList') out = { ok: true, staff, legalDocs: [{ id: 'photo', title: 'Photo Release Form' }, { id: 'child', title: 'Child Protection Agreement — YWAM Siem Reap' }] };
-    else if (b.fn === 'hrSendContract') { const p = find(b.args[2]); p.contracts = p.contracts.concat([{ id: 'cdig', signed: b.args[3].from, years: b.args[3].years, files: [], digital: { status: 'awaiting_staff', sentAt: '2026-10-09T01:00:00Z' } }]); out = { ok: true, staff: p }; }
+    else if (b.fn === 'hrSendContract') { const p = find(b.args[2]); p.contracts = p.contracts.filter(c => c.id !== 'cdig').concat([{ id: 'cdig', signed: b.args[3].from, years: b.args[3].years, files: [], digital: { status: 'awaiting_staff', sentAt: '2026-10-09T01:00:00Z' } }]); out = { ok: true, staff: p, contractId: 'cdig' }; }
     else if (b.fn === 'myContract') out = who.myc || { ok: false };
     else if (b.fn === 'mySaveStart') out = { ok: true, staff: { ...who.myc.me, ywamSince: b.args[2].ywamSince } };
     else if (b.fn === 'hrLegalPdf' || b.fn === 'hrContractPdf') out = { ok: true, name: 'signed.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQ=' };
@@ -101,8 +101,20 @@ console.log('=== the menu ===');
   const chips = await chipsOf(page);
   ok('every row carries a short status chip', chips.includes('Andrew Lee=Renew soon') && chips.includes('Sreilea Chan=Expired') && chips.includes('Dara Pen=No contract') && chips.includes('Tinh Vong=No contract'), chips.join(' | '));
   ok('archived people are hidden until asked for', !chips.some(c => /Sokna/.test(c)));
+  const names = () => page.evaluate(() => [].map.call(document.querySelectorAll('#hrList [data-hrrow]'), r => r.querySelector('.rowName').textContent.trim()));
+  ok('the list goes by contract end: run out first, then renew soon, then the rest, no contract at the bottom', JSON.stringify(await names()) === JSON.stringify(['Sreilea Chan', 'Andrew Lee', 'Dara Pen', 'Tinh Vong', 'Uriah Lyford']), (await names()).join(','));
+  const fchips = await page.$$eval('[data-hrstatusf]', bs => bs.map(b => b.textContent.trim()));
+  ok('filters with counts: all, expired, renew soon, current, no contract, paper only', JSON.stringify(fchips) === JSON.stringify(['All · 5', 'Expired · 1', 'Renew soon · 1', 'Current · 0', 'No contract · 3', 'Paper only · 2']), fchips.join(' | '));
+  ok('each row says whether the contract on file is paper or digital', /📄 Paper/.test(await page.$eval('[data-hrperson="st_1"]', e => e.textContent)) && !/Paper|Digital/.test(await page.$eval('[data-hrperson="st_dara"]', e => e.textContent)));
+  await page.click('[data-hrstatusf="expired"]'); await page.waitForTimeout(200);
+  ok('Expired shows only who has run out', JSON.stringify(await names()) === JSON.stringify(['Sreilea Chan']));
+  await page.click('[data-hrstatusf="none"]'); await page.waitForTimeout(200);
+  ok('No contract shows who has none', JSON.stringify(await names()) === JSON.stringify(['Dara Pen', 'Tinh Vong', 'Uriah Lyford']));
+  await page.click('[data-hrstatusf="paper"]'); await page.waitForTimeout(200);
+  ok('Paper only: who still has to move to the digital contract', JSON.stringify(await names()) === JSON.stringify(['Sreilea Chan', 'Andrew Lee']));
+  await page.click('[data-hrstatusf="all"]'); await page.click('[data-hrgroupby="ministry"]'); await page.waitForTimeout(200);
   const groups = await page.evaluate(() => [].map.call(document.querySelectorAll('#hrList [data-hrgroup]'), g => g.getAttribute('data-hrgroup') + ':' + g.querySelector('.mentorLabel').textContent.trim() + ':' + [].map.call(g.querySelectorAll('.rowName'), r => r.textContent.trim()).join('/')));
-  ok('the list is in the same two groups as Admin → Accounts, then whoever is not sorted yet', JSON.stringify(groups) === JSON.stringify(['ministry:Siem Reap ministries · 3:Andrew Lee/Dara Pen/Sreilea Chan', 'campus:YAP and Campus staff · 1:Uriah Lyford', 'unset:Kind of staff not set yet · 1:Tinh Vong']), JSON.stringify(groups));
+  ok('By ministry: the same two groups as Admin → Accounts, then whoever is not sorted yet', JSON.stringify(groups) === JSON.stringify(['ministry:Siem Reap ministries · 3:Andrew Lee/Dara Pen/Sreilea Chan', 'campus:YAP and Campus staff · 1:Uriah Lyford', 'unset:Kind of staff not set yet · 1:Tinh Vong']), JSON.stringify(groups));
   await page.click('#hrShowArchived');
   await page.waitForTimeout(300);
   ok('Show archived brings them in, marked', (await chipsOf(page)).includes('Sokna Non=Archived'));
@@ -239,12 +251,10 @@ staff.push({ ...base, id: 'st_6', name: 'Mora Moved', username: 'mora', dept: 'C
 console.log('\n=== signing: the legal documents and the staff contract ===');
 {
   const req = (c) => ({ items: [{ id: 'legal:child', kind: 'legal', title: 'Child Protection Agreement', done: false, at: '' }, { id: 'contract', kind: 'contract', title: 'Staff contract', ...c }], done: c.done ? 1 : 0, total: 2, finished: false });
-  let o = await open({ ...DARA, required: req({ done: false, state: 'tosign', ends: '', soon: false, toSign: false }) });
-  ok('a new contract from HR shows on their home, to sign with a base leader', /My contract/.test(await o.page.$eval('#goMyContract', e => e.textContent)) && /sign it with a base leader/.test(await o.page.$eval('#goMyContract', e => e.textContent)));
-  ok('no page errors (to sign)', o.errors.length === 0, o.errors.join(' | '));
-  await o.ctx.close();
+  let o;
   o = await open({ ...DARA, required: req({ done: true, state: 'current', ends: '2026-12-01', soon: true, toSign: false }) });
   ok('a contract ending soon: when, and to talk to HR about renewing', /ends Dec 1, 2026 — talk to HR about renewing/.test(await o.page.$eval('#goMyContract', e => e.textContent)));
+  ok('no page errors (notice)', o.errors.length === 0, o.errors.join(' | '));
   await o.ctx.close();
   o = await open({ ...DARA, required: req({ done: true, state: 'current', ends: '2028-12-01', soon: false, toSign: false }) });
   ok('a contract that runs a while yet: no notice', !(await o.page.$('#goMyContract')));
@@ -261,7 +271,7 @@ console.log('\n=== signing: the legal documents and the staff contract ===');
   ok('it asks for their own profile', sent.some(x => x.fn === 'myContract' && x.args[0] === 'dara'));
   const txt = await page.evaluate(() => document.body.textContent);
   ok('their profile like HR’s: name, time in YWAM, and each campus', /Dara Pen/.test(txt) && /In YWAM since/.test(txt) && /Siem Reap/.test(txt) && /Add time in [^\n]*Poipet/.test(txt));
-  ok('their current contract counts; the one from HR waits — with a link to sign it with a base leader', (await page.$eval('[data-mycsign="cdig"]', a => a.getAttribute('href'))) === 'portal.html?staff=1&doc=' + encodeURIComponent('contract:cdig') && /On file with HR/.test(await page.$eval('[data-myc="cold"]', e => e.textContent)));
+  ok('their contract is there; one HR has started but not signed with them is not, and there is nothing for them to sign', /On file with HR/.test(await page.$eval('[data-myc="cold"]', e => e.textContent)) && !(await page.$('[data-myc="cdig"]')) && !(await page.$('[data-mycsign]')) && !(await page.$('a[href*="contract%3A"]')));
   ok('legal documents: one signed in the portal, with its PDF; the Child Protection Agreement to read and sign', /1\/2/.test(await page.$eval('#mycLegal', e => e.previousElementSibling.textContent)) && /in the portal/.test(await page.$eval('[data-myclegal="liability"]', e => e.textContent)) && (await page.$eval('[data-myclegal="child"] a', a => a.getAttribute('href'))) === 'portal.html?staff=1&doc=child' && /revised Child Protection Agreement/.test(await page.$eval('#mycLegal', e => e.textContent)));
   await page.click('[data-myclegalpdf="liability"]'); await page.waitForTimeout(300);
   ok('their PDF is asked for as their own', sent.some(x => x.fn === 'hrLegalPdf' && x.args[2] === '' && x.args[3] === 'liability'));
@@ -281,12 +291,23 @@ console.log('\n=== signing: the legal documents and the staff contract ===');
   await page.click('[data-hrlegalpdf="photo"]'); await page.waitForTimeout(300);
   ok('PDF asks for that document of theirs', sent.some(x => x.fn === 'hrLegalPdf' && x.args[2] === 'st_dara' && x.args[3] === 'photo'));
   await page.click('#hrSendContract'); await page.waitForSelector('#hrSendForm');
-  ok('Send a contract to sign opens with this month and two years', /^\d{4}-\d{2}$/.test(await page.$eval('#hr_send_from', i => i.value)) && await page.$eval('#hr_send_years', s => s.value) === '2');
+  ok('Fill out staff contract opens with this month and two years when they have none', /Fill out staff contract/.test(await page.$eval('#hrSendForm', e => e.textContent)) && /^\d{4}-\d{2}$/.test(await page.$eval('#hr_send_from', i => i.value)) && await page.$eval('#hr_send_years', s => s.value) === '2');
   await page.fill('#hr_send_from', '2026-11'); await page.selectOption('#hr_send_years', '3');
-  await page.click('#hrSendSave'); await page.waitForTimeout(400);
+  await Promise.all([page.waitForURL(/portal\.html/, { timeout: 5000 }).catch(() => {}), page.click('#hrSendSave')]);
   const sc = sent.filter(x => x.fn === 'hrSendContract').pop();
-  ok('it sends the period for that person', sc && sc.args[2] === 'st_dara' && sc.args[3].from === '2026-11' && sc.args[3].years === 3);
-  ok('… and the contract shows as sent: they sign it in My contract with a base leader — not yet counted', /Sent to Dara Pen — they sign it in My contract, with a base leader there/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && /No contract on file/.test(await page.$eval('.hrBanner', e => e.textContent)) && !(await page.$('[data-hrcountersign]')));
+  ok('it starts one with that period, then opens the signing page on this phone for that person', sc && sc.args[2] === 'st_dara' && sc.args[3].from === '2026-11' && sc.args[3].years === 3 && /portal\.html\?staff=1&hr=st_dara&doc=contract%3Acdig/.test(page.url()), page.url());
+  await ctx.close();
+}
+{
+  const { ctx, page, errors } = await open(ADMIN);
+  await page.click('#menuBtn'); await page.waitForTimeout(300); await page.click('[data-menu-item="hr"]'); await page.waitForTimeout(800);
+  await page.click('[data-hrperson="st_dara"]'); await page.waitForSelector('[data-hrcontract="cdig"]');
+  ok('until it is signed, HR sees it waiting, with a way back into the signing page — and it does not count yet', /Not signed yet — fill it out with Dara Pen/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && (await page.$eval('[data-hrfillout="cdig"]', a => a.getAttribute('href'))) === 'portal.html?staff=1&hr=st_dara&doc=' + encodeURIComponent('contract:cdig') && /No contract on file/.test(await page.$eval('.hrBanner', e => e.textContent)));
+  await page.click('[data-hrback]').catch(() => {}); await page.waitForTimeout(300);
+  await page.click('[data-hrperson="st_1"]'); await page.waitForSelector('#hrSendContract');
+  await page.click('#hrSendContract'); await page.waitForSelector('#hrSendForm');
+  const andrewCur = staff.find(x => x.id === 'st_1').contracts.slice().sort((a, b) => a.signed < b.signed ? -1 : 1).pop();
+  ok('for someone on a paper contract, it starts from their current contract’s month and years — to redo it digitally', await page.$eval('#hr_send_from', i => i.value) === andrewCur.signed && await page.$eval('#hr_send_years', s => s.value) === String(andrewCur.years) && /Redoing their paper contract/.test(await page.$eval('#hrSendForm', e => e.textContent)), [await page.$eval('#hr_send_from', i => i.value), andrewCur.signed].join());
   ok('no page errors (HR signing)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
@@ -295,7 +316,7 @@ console.log('\n=== signing: the legal documents and the staff contract ===');
   const o = await open(ADMIN);
   await o.page.click('#menuBtn'); await o.page.waitForTimeout(300); await o.page.click('[data-menu-item="hr"]'); await o.page.waitForTimeout(800);
   await o.page.click('[data-hrperson="st_dara"]'); await o.page.waitForSelector('[data-hrcontractpdf]');
-  ok('signed by both: a PDF of the contract, and it counts as their contract', /Signed by Dara Pen and Uriah Lyford/.test(await o.page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && !/No contract on file/.test(await o.page.$eval('.hrBanner', e => e.textContent)));
+  ok('signed by both: a PDF of the contract, and it counts as their contract', /Signed by Dara Pen · approved by Uriah Lyford/.test(await o.page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && !/No contract on file/.test(await o.page.$eval('.hrBanner', e => e.textContent)));
   await o.ctx.close();
   d.contracts = []; delete d.legal;
 }

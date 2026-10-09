@@ -4903,7 +4903,7 @@ const DIGITAL_STATUS = ['awaiting_staff', 'awaiting_leader', 'signed'];
 function cleanDigital_(d) {
   if (!d || typeof d !== 'object' || DIGITAL_STATUS.indexOf(d.status) === -1) return undefined;
   const o = { status: d.status };
-  ['sentAt', 'sentBy', 'staffSignedAt', 'staffName', 'leaderSignedAt', 'leaderName', 'leaderId'].forEach(function (k) { if (d[k]) o[k] = str_(d[k], 120); });
+  ['sentAt', 'sentBy', 'staffSignedAt', 'staffName', 'leaderSignedAt', 'leaderName', 'leaderId', 'approvedBy'].forEach(function (k) { if (d[k]) o[k] = str_(d[k], 120); });
   return o;
 }
 /* a contract counts — for "current" and the due count — once it is signed (paper ones always are) */
@@ -5165,14 +5165,14 @@ async function getReqDocs_() {
    not run out (one running out soon is still done — HR's renewals list is
    where that shows). */
 function contractState_(s) {
-  const all = contractsOf_(s), list = all.filter(contractInForce_);
-  const waiting = all.some(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; });
-  if (!list.length) return { done: false, state: waiting ? 'tosign' : 'none', ends: '' };
+  /* a contract HR has started but not yet signed with them doesn't count */
+  const list = contractsOf_(s).filter(contractInForce_);
+  if (!list.length) return { done: false, state: 'none', ends: '' };
   const end = hrContractEnd_(list[list.length - 1]);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const ends = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-01';
-  if (end <= today) return { done: false, state: waiting ? 'tosign' : 'expired', ends: ends };
-  return { done: true, state: 'current', ends: ends, soon: Math.round((end - today) / 86400000) <= HR_DUE_DAYS, toSign: waiting };
+  if (end <= today) return { done: false, state: 'expired', ends: ends };
+  return { done: true, state: 'current', ends: ends, soon: Math.round((end - today) / 86400000) <= HR_DUE_DAYS };
 }
 /* One person's list: each paper (signed for its current version?) and the
    contract. A paper with nothing to read yet (no file, no link) is not asked. */
@@ -5185,7 +5185,7 @@ function requiredFor_(s, docs) {
   const cp = s && s.legal && s.legal.child;
   items.push({ id: 'legal:child', kind: 'legal', title: 'Child Protection Agreement', done: !!cp, at: cp ? str_(cp.at, 40) : '' });
   const c = contractState_(s);
-  items.push({ id: 'contract', kind: 'contract', title: 'Staff contract', done: c.done, state: c.state, ends: c.ends, soon: !!c.soon, toSign: !!c.toSign });
+  items.push({ id: 'contract', kind: 'contract', title: 'Staff contract', done: c.done, state: c.state, ends: c.ends, soon: !!c.soon });
   const done = items.filter(function (x) { return x.done; }).length;
   return { items: items, done: done, total: items.length, finished: done === items.length };
 }
@@ -6922,8 +6922,6 @@ async function staffSignOpen(username, pin) {
   s = await syncPortalLegal_(s);
   const legal = s.legal || {}, done = {};
   const docs = (await legalDocs_()).map(function (d) { if (legal[d.id]) done[d.id] = true; return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign || {} }; });
-  const pending = contractsOf_(s).filter(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; });
-  pending.forEach(function (c) { const d = contractDoc_(c); docs.unshift({ id: d.id, title: d.title, blocks: d.blocks, sign: d.sign, period: contractPeriod_(c) }); });
   return { ok: true, isTeam: false, staff: true, team: s.name, contacts: legalContacts_(await readJSON('legalDocs', {})),
     prefill: { role: [s.role, s.ministry].filter(Boolean).join(' — ') || 'Staff', dates: '' },
     people: [{ key: 'me', name: s.name, done: done }], docs: docs };
@@ -6932,20 +6930,6 @@ async function staffSignSubmit(username, pin, key, docId, p) {
   const s = await verifyStaff_(username, pin);
   if (!s || isApplicant_(s)) return { ok: false, err: 'invalid' };
   docId = str_(docId, 80);
-  if (/^contract:/.test(docId)) {
-    const c = contractsOf_(s).find(function (x) { return 'contract:' + x.id === docId && x.digital && x.digital.status === 'awaiting_staff'; });
-    if (!c) return { ok: false, err: 'bad_doc' };
-    const doc = contractDoc_(c);
-    const v = await signRecord_(doc, p, 'me'); if (v.err) return Object.assign({ ok: false }, v);
-    v.rec.period = contractPeriod_(c);
-    await writeJSON('scontract:' + c.id, { staff: v.rec });
-    return mutateStaff_(function (rows) {
-      const r = rows.find(function (x) { return x.id === s.id; }); if (!r) return { abort: true, ok: false, err: 'not_found' };
-      r.contracts = contractsOf_(r).map(function (x) { if (x.id !== c.id) return x; x.digital = Object.assign({}, x.digital, { status: 'signed', staffSignedAt: v.rec.at, staffName: v.rec.name, leaderSignedAt: v.rec.at, leaderName: v.rec.leaderName }); return x; });
-      r.updated = new Date().toISOString();
-      return { ok: true, done: staffDone_(r) };
-    });
-  }
   const doc = (await legalDocs_()).find(function (d) { return d.id === docId; });
   if (!doc) return { ok: false, err: 'bad_doc' };
   const v = await signRecord_(doc, p, 'me'); if (v.err) return Object.assign({ ok: false }, v);
@@ -6960,17 +6944,55 @@ async function staffSignSubmit(username, pin, key, docId, p) {
   });
 }
 function staffDone_(r) { const o = {}; Object.keys(r.legal || {}).forEach(function (k) { o[k] = true; }); return o; }
-/* HR sends a contract to sign: its first month and how many years */
+/* The Volunteer Staff Contract, filled out in person: HR (an admin) opens
+   it on the person's HR profile with its first month and length — any time,
+   also to redo a contract first signed on paper — hands their phone over,
+   the person reads, fills in and signs, and HR signs to approve. Only then
+   is it one of their contracts. One waits at a time; starting again changes
+   its period. */
 async function hrSendContract(username, pin, staffId, period) {
   period = period && typeof period === 'object' ? period : {};
   const from = isoMonth_(period.from), years = finiteNum_(period.years, 0.25, 30);
   if (!from || years == null) return { ok: false, err: 'bad_contract' };
-  return hrMutate_(username, pin, staffId, function (rec, me) {
-    const list = contractsOf_(rec);
+  let cid = '';
+  const out = await hrMutate_(username, pin, staffId, function (rec, me) {
+    const list = contractsOf_(rec), wait = list.filter(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; })[0];
+    if (wait) { wait.signed = from; wait.years = Math.round(years * 4) / 4; wait.digital = Object.assign({}, wait.digital, { sentAt: new Date().toISOString(), sentBy: me.id }); rec.contracts = list; cid = wait.id; return; }
     if (list.length >= HR_MAX_CONTRACTS) return { abort: true, ok: false, err: 'too_many' };
-    if (list.some(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; })) return { abort: true, ok: false, err: 'already_sent' };
-    rec.contracts = list.concat([{ id: hrId_('ct'), signed: from, years: Math.round(years * 4) / 4, notes: '', campus: HR_CAMPUSES.indexOf(rec.campus) > -1 ? rec.campus : '', files: [],
+    cid = hrId_('ct');
+    rec.contracts = list.concat([{ id: cid, signed: from, years: Math.round(years * 4) / 4, notes: '', campus: HR_CAMPUSES.indexOf(rec.campus) > -1 ? rec.campus : '', files: [],
       added: new Date().toISOString(), addedBy: me.id, digital: { status: 'awaiting_staff', sentAt: new Date().toISOString(), sentBy: me.id } }]);
+  });
+  return out && out.ok ? Object.assign(out, { contractId: cid }) : out;
+}
+async function hrContractGate_(username, pin, staffId) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { out: { ok: false, err: 'invalid' } };
+  if (!canHR_(me)) return { out: { ok: false, err: 'not_authorized' } };
+  const r = (await getStaff_()).find(function (x) { return x.id === str_(staffId, 60); });
+  if (!r) return { out: { ok: false, err: 'not_found' } };
+  return { me: me, r: r, wait: contractsOf_(r).filter(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; }) };
+}
+/* the signing page, on HR's phone: the person signs, then HR approves */
+async function hrContractOpen(username, pin, staffId) {
+  const g = await hrContractGate_(username, pin, staffId); if (g.out) return g.out;
+  const docs = g.wait.map(function (c) { const d = contractDoc_(c); return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign, period: contractPeriod_(c) }; });
+  return { ok: true, isTeam: false, staff: true, hrSign: true, team: g.r.name, approver: g.me.name, contacts: [],
+    prefill: { role: [g.r.role, g.r.ministry].filter(Boolean).join(' — ') || 'Staff', dates: '' },
+    people: [{ key: 'me', name: g.r.name, done: {} }], docs: docs };
+}
+async function hrContractSign(username, pin, staffId, key, docId, p) {
+  const g = await hrContractGate_(username, pin, staffId); if (g.out) return g.out;
+  const c = g.wait.find(function (x) { return 'contract:' + x.id === str_(docId, 80); });
+  if (!c) return { ok: false, err: 'bad_doc' };
+  const v = await signRecord_(contractDoc_(c), p, 'me'); if (v.err) return Object.assign({ ok: false }, v);
+  v.rec.period = contractPeriod_(c);
+  await writeJSON('scontract:' + c.id, { staff: v.rec });
+  return mutateStaff_(function (rows) {
+    const r = rows.find(function (x) { return x.id === g.r.id; }); if (!r) return { abort: true, ok: false, err: 'not_found' };
+    r.contracts = contractsOf_(r).map(function (x) { if (x.id !== c.id) return x; x.digital = Object.assign({}, x.digital, { status: 'signed', staffSignedAt: v.rec.at, staffName: v.rec.name, leaderSignedAt: v.rec.at, leaderName: v.rec.leaderName, approvedBy: g.me.id }); return x; });
+    r.updated = new Date().toISOString();
+    return { ok: true, done: { [docId]: true }, staff: hrStaffOut_(r) };
   });
 }
 /* My contract (the ☰ menu, every staff member): their profile as HR sees it —
@@ -7358,6 +7380,8 @@ const HANDLERS = {
   staffSignOpen: function (a) { return staffSignOpen(a[0], a[1]); },
   staffSignSubmit: function (a) { return staffSignSubmit(a[0], a[1], a[2], a[3], a[4]); },
   hrSendContract: function (a) { return hrSendContract(a[0], a[1], a[2], a[3]); },
+  hrContractOpen: function (a) { return hrContractOpen(a[0], a[1], a[2]); },
+  hrContractSign: function (a) { return hrContractSign(a[0], a[1], a[2], a[3], a[4], a[5]); },
   myContract: function (a) { return myContract(a[0], a[1]); },
   mySaveStart: function (a) { return mySaveStart(a[0], a[1], a[2]); },
   hrLegalPdf: function (a) { return hrLegalPdf(a[0], a[1], a[2], a[3]); },

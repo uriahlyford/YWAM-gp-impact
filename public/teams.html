@@ -2671,7 +2671,10 @@ function afterLogin(){
   saveStaffCard();
   S.view='week';
   /* back from signing on the portal: straight to My contract */
-  try { if(new URLSearchParams(location.search||'').get('view')==='mycontract'){ S.view='mycontract'; S.myc=null; } } catch(e){}
+  try { var qv=new URLSearchParams(location.search||'');
+    if(qv.get('view')==='mycontract'){ S.view='mycontract'; S.myc=null; }
+    /* back from filling out a contract with someone: their HR profile, fresh */
+    if(qv.get('view')==='hr' && qv.get('hr')){ S.view='hr'; S.hrTab='staff'; S.hrSub='person'; S.hrPersonId=qv.get('hr'); S.hrStaff=null; } } catch(e){}
   /* ONE request for everything this page needs. It used to be nine on top of the
      login — each verifying the same PIN, each re-rendering when it landed, so the
      page rebuilt itself nine times while it loaded. Sections that fail come back
@@ -5436,7 +5439,6 @@ function libOpen_(){ S.view='library'; S.libBook=null; S.libStep=null; S.libShel
 S.reqDocs=[]; S.required=null; S.reqDocId=null; S.reqOpened={}; S.reqAgree=false; S.reqName=''; S.reqSig=null; S.reqBusy=false;
 function reqItemLine_(x, other){
   if(x.kind==='legal') return x.done ? gpT('Signed {date}',{date:teamDate_(String(x.at).slice(0,10))}) : other ? t('Not signed yet') : t('Read and sign — in My contract');
-  if(x.kind==='contract' && x.state==='tosign') return other ? t('Sent — waiting to be signed') : t('Ready to sign with a base leader — in My contract');
   if(x.kind==='contract'){
     if(other && !x.done) return x.state==='expired' ? t('Contract has run out') : t('No contract on file');
     return x.done ? gpT('On file — runs to {date}',{date:x.ends ? teamDate_(x.ends) : ''})
@@ -5449,7 +5451,7 @@ function reqTitle_(x){ return x.kind==='contract' ? t('Staff contract') : x.titl
 function reqRowsHtml_(R, opts){
   opts=opts||{};
   return R.items.map(function(x){
-    var mine = opts.own && (x.kind==='legal' || (x.kind==='contract' && (x.state==='tosign' || x.done)));
+    var mine = opts.own && (x.kind==='legal' || (x.kind==='contract' && x.done));
     var tap = mine || (x.kind==='doc' && (opts.own || (opts.staffId && x.done)));
     var attrs = !tap ? '' : mine ? ' data-reqmy="1"' : opts.own ? ' data-reqopen="'+esc(x.id)+'"' : ' data-reqsigof="'+esc(x.id)+'|'+esc(opts.staffId)+'"';
     return '<'+(tap?'button':'div')+' class="reqRow'+(x.done?' done':'')+'"'+attrs+'>'+
@@ -5458,14 +5460,18 @@ function reqRowsHtml_(R, opts){
       (tap?PCHEV:'')+'</'+(tap?'button':'div')+'>';
   }).join('');
 }
-/* My Home: only while something is left to do. */
-function reqHomeCardHtml_(){
+/* My contract: how much of the profile is done, and the papers HR asks
+   everyone to read and sign (the agreement and the contract are further down
+   the same page). */
+function reqMyContractCardHtml_(){
   var R=S.required;
-  if(!R || R.finished) return '';
+  if(!R) return '';
+  var papers={ items:(R.items||[]).filter(function(x){ return x.kind==='doc'; }) };
+  if(R.finished) return '<div class="reqOk" id="reqCard">✅ '+esc(t('Profile complete'))+'</div>';
   return '<div class="card reqCard" id="reqCard"><div class="reqHead"><span class="reqHeadIcon">✍️</span><span style="flex:1"><b>'+esc(t('Finish your profile'))+'</b>'+
     '<span class="reqHeadSub">'+esc(gpT('{n} of {m} done — every staff member signs these',{n:R.done, m:R.total}))+'</span></span></div>'+
     '<div class="reqBar"><span style="width:'+Math.round(R.done/Math.max(1,R.total)*100)+'%"></span></div>'+
-    reqRowsHtml_(R, { own:true })+'</div>';
+    (papers.items.length ? reqRowsHtml_(papers, { own:true }) : '')+'</div>';
 }
 /* My profile: always, done or not. */
 function reqProfileCardHtml_(){
@@ -5499,7 +5505,7 @@ function reqOpenDoc_(doc, btn){
 /* The page for one paper: read it, agree, name, signature, sign. */
 function reqSignHtml(){
   var doc=reqDocById_(S.reqDocId);
-  var back='<button class="linkbtn" id="reqBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+  var back='<button class="linkbtn" id="reqBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My contract'))+'</button>';
   if(!doc) return back+'<p class="sub">'+esc(t('This document is no longer on the list.'))+'</p>';
   var item=((S.required&&S.required.items)||[]).filter(function(x){ return x.id===doc.id; })[0]||{};
   var h=back+'<h2>✍️ '+esc(doc.title)+'</h2>';
@@ -5544,7 +5550,7 @@ function reqSigPad_(canvas, onChange){
 }
 function bindReqSign_(){
   var bk=document.getElementById('reqBack');
-  if(bk) bk.onclick=function(){ gpTap(); S.view='week'; S.reqDocId=null; render(); window.scrollTo(0,0); };
+  if(bk) bk.onclick=function(){ gpTap(); S.reqDocId=null; openMyContract_(); };
   var doc=reqDocById_(S.reqDocId); if(!doc) return;
   var rd=document.getElementById('reqRead');
   if(rd) rd.onclick=function(){ gpTap(); reqOpenDoc_(doc, rd); };
@@ -6079,8 +6085,7 @@ function fmtDateShort_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d
 function contractNoticeHtml_(){
   var R=S.required, c=R && (R.items||[]).filter(function(x){ return x.kind==='contract'; })[0];
   if(!c) return '';
-  var msg = c.toSign || c.state==='tosign' ? t('Your new staff contract is ready — sign it with a base leader')
-    : (c.done && c.soon) ? gpT('Your contract ends {date} — talk to HR about renewing',{date:teamDate_(c.ends)}) : '';
+  var msg = (c.done && c.soon) ? gpT('Your contract ends {date} — talk to HR about renewing',{date:teamDate_(c.ends)}) : '';
   if(!msg) return '';
   return '<button class="card contractNotice" id="goMyContract"><span class="signDueIcon">📄</span><span><b>'+esc(t('My contract'))+'</b><span class="rowSub">'+esc(msg)+'</span></span><span class="signDueGo">→</span></button>';
 }
@@ -6095,10 +6100,9 @@ function homeHtml(){
      strengths). Updates live in the bell (its red dot says when there is
      something new); Leave Request and Profile & settings are in the menu.
      The quick-jump chip strip is gone; the summary card's rows jump. */
-  /* Required papers first while any are left (Uriah: mandatory for every
-     profile) — it goes away once they are signed and the contract is on file. */
-  var h=reqHomeCardHtml_();
-  h+=miniDashboardHtml();
+  /* The papers to sign live in My contract (☰), not on My Home (Uriah);
+     a notice here only when the contract ends soon or a new one is ready. */
+  var h=miniDashboardHtml();
   h+=gpQueueBannerHtml_();
   h+=phaseBanner(phase, wk);
   h += goalsCardHtml(goalsViewWeek());
@@ -7705,6 +7709,8 @@ function bindHr(){
   });
   var sa=document.getElementById('hrShowArchived');
   if(sa) sa.onchange=function(){ S.hrShowArchived=sa.checked; render(); };
+  document.querySelectorAll('[data-hrstatusf]').forEach(function(b){ b.onclick=function(){ gpTap(); S.hrStatusF=b.getAttribute('data-hrstatusf'); render(); }; });
+  document.querySelectorAll('[data-hrgroupby]').forEach(function(b){ b.onclick=function(){ gpTap(); S.hrGroupBy=b.getAttribute('data-hrgroupby'); render(); }; });
   var hs=document.getElementById('hrSearch');
   var hrFilter_=function(){
     var q=(S.hrSearch||'').trim().toLowerCase(), any=false;
@@ -7726,7 +7732,8 @@ function bindHr(){
   var person=(S.hrStaff||[]).filter(function(x){ return x.id===pid; })[0];
   if(S.hrSub!=='person' || !person) return;
   var sc=document.getElementById('hrSendContract');
-  if(sc) sc.onclick=function(){ gpTap(); S.hrSendForm={ staffId:pid, from:todayStr().slice(0,7), years:2 }; S.hrContractForm=null; render(); var el=document.getElementById('hrSendForm'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' }); };
+  if(sc) sc.onclick=function(){ gpTap(); var cur=hrCurrent_(person), paper=cur && !(cur.digital && cur.digital.status==='signed');
+    S.hrSendForm={ staffId:pid, from: paper ? cur.signed : todayStr().slice(0,7), years: paper ? cur.years : 2, redo: !!paper }; S.hrContractForm=null; render(); var el=document.getElementById('hrSendForm'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' }); };
   var sf=document.getElementById('hr_send_from'); if(sf) sf.onchange=sf.oninput=function(){ S.hrSendForm.from=sf.value; };
   var sy=document.getElementById('hr_send_years'); if(sy) sy.onchange=function(){ S.hrSendForm.years=Number(sy.value); };
   var sx=document.getElementById('hrSendCancel'); if(sx) sx.onclick=function(){ S.hrSendForm=null; render(); };
@@ -7736,8 +7743,9 @@ function bindHr(){
     S.busy=true; render();
     run('hrSendContract',[S.auth.user,S.auth.pin,pid,{ from:f.from, years:f.years }],function(d){
       S.busy=false;
-      if(d && d.ok){ S.hrStaff=S.hrStaff.map(function(x){ return x.id===pid ? d.staff : x; }); S.hrSendForm=null; showMsg(t('Sent — it is waiting on their home in the GP app')); }
-      else showMsg(d && d.err==='already_sent' ? t('A contract is already waiting for them to sign.') : hrFail_(d));
+      if(d && d.ok){ S.hrStaff=S.hrStaff.map(function(x){ return x.id===pid ? d.staff : x; }); S.hrSendForm=null;
+        location.href='portal.html?staff=1&hr='+encodeURIComponent(pid)+'&doc='+encodeURIComponent('contract:'+d.contractId); return; }
+      showMsg(hrFail_(d));
       render();
     }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
   };
@@ -9505,13 +9513,28 @@ function hrSpan_(since){
 }
 function hrYearsLabel_(n){ return Number(n)===1 ? t('1 year') : gpT('{n} years',{n:n}); }
 function hrYwamYears_(since){ var y=Number(since); if(!(y>=1960)) return 0; return Math.max(0, new Date().getFullYear()-y); }
+/* the HR list's filters: by where their contract stands, and who is still on paper */
+var HR_FILTERS_=[['all','All'],['expired','Expired'],['due','Renew soon'],['active','Current'],['none','No contract'],['paper','Paper only']];
+function hrIsDigital_(c){ return !!(c && c.digital && c.digital.status==='signed'); }
+function hrFilterHas_(p, f){
+  if(f==='all') return true;
+  var st=hrStatus_(p);
+  if(f==='paper'){ var c=hrCurrent_(p); return !!c && !hrIsDigital_(c); }
+  return st.key===f;
+}
+/* soonest end first (run out the longest ago at the very top), no contract last */
+function hrByEnd_(a, b){
+  var A=hrStatus_(a), B=hrStatus_(b), ra=A.days==null ? 1e9 : A.days, rb=B.days==null ? 1e9 : B.days;
+  return ra!==rb ? ra-rb : (a.name<b.name ? -1 : 1);
+}
 function hrStatusChip_(st){ return '<span class="hrChip '+st.key+'">'+esc(st.short)+'</span>'; }
 function hrRowHtml_(p){
   var st=hrStatus_(p), serving=hrServing_(p);
   return '<div data-hrrow="'+esc((p.name+' '+p.username).toLowerCase())+'"><button class="adminRow" data-hrperson="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
     '<span class="adminRowText"><span class="rowName">'+esc(p.name)+'</span>'+
     '<span class="rowSub">'+esc(t(p.dept))+(p.ministry?' · '+esc(t(p.ministry)):'')+(serving?' · '+esc(serving):'')+(p.ywamSince?' · '+esc(gpT('{n} yrs in YWAM',{n:hrYwamYears_(p.ywamSince)})):'')+
-      ((st.key==='due'||st.key==='expired')?' · '+esc(st.label):'')+'</span></span>'+
+      ((st.key==='due'||st.key==='expired')?' · '+esc(st.label):'')+
+      (hrCurrent_(p) ? ' · '+(hrIsDigital_(hrCurrent_(p)) ? '✍️ '+esc(t('Digital')) : '📄 '+esc(t('Paper'))) : '')+'</span></span>'+
     hrStatusChip_(st)+'</button></div>';
 }
 function hrBackHtml_(to, label){
@@ -9564,12 +9587,22 @@ function hrHtml(){
   var shown = activeTab==='__other' ? other : pool.filter(function(x){ return x.campus===activeTab; });
   shown.sort(function(a,b){ return a.name<b.name?-1:1; });
   if(!shown.length) return h+'<p class="sub">'+esc(t('No accounts yet.'))+'</p>';
+  /* by contract: who has run out, who renews soon, then everyone else by when
+     theirs ends, no contract at the bottom — and who is still on paper */
+  var fs_=HR_FILTERS_.map(function(f){ return { id:f[0], label:t(f[1]), n:shown.filter(function(x){ return hrFilterHas_(x, f[0]); }).length }; });
+  var fon=fs_.some(function(f){ return f.id===S.hrStatusF; }) ? S.hrStatusF : 'all';
+  h+='<div class="deptChips hrStatusChips">'+fs_.map(function(f){ return '<button class="deptChip'+(fon===f.id?' on':'')+'" data-hrstatusf="'+f.id+'">'+esc(f.label)+' · '+f.n+'</button>'; }).join('')+'</div>';
+  var byMin = S.hrGroupBy==='ministry';
+  h+='<div class="leadFilters hrGroupBy"><button class="leadSeg'+(byMin?'':' on')+'" data-hrgroupby="end">'+esc(t('By contract end'))+'</button><button class="leadSeg'+(byMin?' on':'')+'" data-hrgroupby="ministry">'+esc(t('By ministry'))+'</button></div>';
+  var rows=shown.filter(function(x){ return hrFilterHas_(x, fon); });
   h+='<div id="hrList">';
-  staffGroups_(shown, activeTab==='__other' ? t('Other') : campusShort(activeTab)).forEach(function(g){
+  if(!rows.length) h+='<p class="sub">'+esc(t('No one here.'))+'</p>';
+  else if(byMin) staffGroups_(rows, activeTab==='__other' ? t('Other') : campusShort(activeTab)).forEach(function(g){
     if(!g.rows.length) return;
     h+='<div data-hrgroup="'+g.id+'"><div class="mentorLabel" style="margin:12px 0 6px">'+esc(g.label)+' · '+g.rows.length+'</div>'+
       '<div class="accCard adminList">'+g.rows.map(hrRowHtml_).join('')+'</div></div>';
   });
+  else h+='<div data-hrgroup="byend"><div class="accCard adminList" style="margin-top:10px">'+rows.slice().sort(hrByEnd_).map(hrRowHtml_).join('')+'</div></div>';
   h+='</div>';
   return h;
 }
@@ -9744,8 +9777,9 @@ function hrContractCardHtml_(p, c, isCurrent){
     '<button class="linkbtn inline" data-hredit="'+esc(c.id)+'">'+esc(t('Edit'))+'</button></div>';
   if(c.digital){
     var dg=c.digital;
-    if(dg.status!=='signed') h+='<div class="hrDigital waiting">✍️ '+esc(gpT('Sent to {name} — they sign it in My contract, with a base leader there',{name:p.name}))+(dg.sentAt?' · '+esc(fmtDateShort_(dg.sentAt)):'')+'</div>';
-    else h+='<div class="hrDigital done">✅ '+esc(gpT('Signed by {name} and {leader}',{name:dg.staffName||p.name, leader:dg.leaderName||''}))+'</div>'+
+    if(dg.status!=='signed') h+='<div class="hrDigital waiting">✍️ '+esc(gpT('Not signed yet — fill it out with {name}: they sign, then you sign to approve',{name:p.name}))+'</div>'+
+      '<a class="btn small" href="portal.html?staff=1&hr='+encodeURIComponent(p.id)+'&doc='+encodeURIComponent('contract:'+c.id)+'" data-hrfillout="'+esc(c.id)+'">✍️ '+esc(t('Fill out and sign now'))+'</a>';
+    else h+='<div class="hrDigital done">✅ '+esc(gpT('Signed by {name} · approved by {leader}',{name:dg.staffName||p.name, leader:dg.leaderName||''}))+'</div>'+
       '<button class="btn ghost small" data-hrcontractpdf="'+esc(c.id)+'">📄 '+esc(t('Signed contract (PDF)'))+'</button>';
     return h+'</div>';
   }
@@ -9762,20 +9796,22 @@ function hrContractCardHtml_(p, c, isCurrent){
     '<input type="file" accept="application/pdf,image/*" data-hrattach="'+esc(c.id)+'" style="display:none"></label>';
   return h+'</div>';
 }
-/* send the Volunteer Staff Contract to sign: its first month and length; they
-   fill in their commitment and sign it in My contract, with a base leader there */
+/* Fill out the Volunteer Staff Contract with them, in person, on this phone:
+   its first month and length (a paper one being redone keeps its own), then
+   the signing page — they sign, HR signs to approve. */
 function hrSendFormHtml_(p){
   var f=S.hrSendForm;
-  return '<div class="card" id="hrSendForm"><h3 style="margin-top:0">✍️ '+esc(t('Send a contract to sign'))+'</h3><p class="sub" style="margin:0 0 8px">'+
-    esc(gpT('{name} reads the Volunteer Staff Contract in My contract, fills in their commitment and signs it — with a base leader there, who signs it too.',{name:p.name}))+'</p>'+
+  return '<div class="card" id="hrSendForm"><h3 style="margin-top:0">✍️ '+esc(t('Fill out staff contract'))+'</h3><p class="sub" style="margin:0 0 8px">'+
+    esc(gpT('Do it together on this phone: {name} reads the Volunteer Staff Contract, fills in their commitment and signs. Then you sign to approve it, and it becomes their contract.',{name:p.name}))+'</p>'+
+    (f.redo ? '<p class="hint" style="margin:0 0 8px">'+esc(t('Redoing their paper contract? The month and years below are from it.'))+'</p>' : '')+
     '<div class="teamGrid2"><div><label class="f">'+esc(t('From (month)'))+'</label><input type="month" id="hr_send_from" value="'+esc(f.from||'')+'"></div>'+
-    '<div><label class="f">'+esc(t('Years'))+'</label><select id="hr_send_years">'+[1,2,3].map(function(y){ return '<option value="'+y+'"'+(Number(f.years)===y?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></div></div>'+
-    '<button class="btn" id="hrSendSave"'+(S.busy?' disabled':'')+'>'+esc(t('Send to sign'))+'</button><button class="btn ghost" id="hrSendCancel">'+esc(t('Cancel'))+'</button></div>';
+    '<div><label class="f">'+esc(t('Years'))+'</label><select id="hr_send_years">'+[1,2,3].concat([1,2,3].indexOf(Number(f.years))===-1 ? [Number(f.years)] : []).map(function(y){ return '<option value="'+y+'"'+(Number(f.years)===y?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></div></div>'+
+    '<button class="btn" id="hrSendSave"'+(S.busy?' disabled':'')+'>'+esc(gpT('Start — hand the phone to {name}',{name:(p.name||'').split(' ')[0]}))+'</button><button class="btn ghost" id="hrSendCancel">'+esc(t('Cancel'))+'</button></div>';
 }
 /* ==================== My contract (☰ menu, every staff member) ====================
    Their own HR profile, read-only apart from their start dates: time in YWAM
-   and on each campus, their contracts and when the current one ends, a new
-   one from HR to sign (with a base leader there), and the legal documents —
+   and on each campus, their contracts and when the current one ends (HR
+   fills a new one out with them, in HR), and the legal documents —
    the Child Protection Agreement and the forms applicants sign in the portal
    — each signed here (or already in the portal) with its PDF. */
 function openMyContract_(){ S.view='mycontract'; S.myc=null; S.hrStartEdit=null; render(); window.scrollTo(0,0); }
@@ -9786,20 +9822,20 @@ function myContractHtml(){
   if(!d.ok) return back+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Could not load — try again.'))+'</p></div>';
   var p=d.me, st=hrStatus_(p), cur=hrCurrent_(p);
   var h=back+'<h2 style="margin:4px 0 10px">📄 '+esc(t('My contract'))+'</h2>';
+  h+=reqMyContractCardHtml_();
   h+='<div class="card"><div class="adminPersonHead">'+avatarHtml(p,'lg')+'<div style="min-width:0"><div class="pname">'+esc(p.name)+'</div>'+
     '<div class="pmeta">'+esc(campusName(p.campus))+' · '+esc(t(p.dept))+(p.ministry?' · '+esc(t(p.ministry)):'')+(p.role?' · '+esc(p.role):'')+'</div>'+
     hrStartsHtml_(p, true)+'</div></div>';
   h+='<div class="hrBanner '+st.key+'">'+(st.key==='none'?'📝':st.key==='expired'?'🔴':st.key==='due'?'🟠':'🟢')+' <b>'+esc(st.key==='none' ? t('No contract on file yet — HR adds it') : st.key==='due' ? gpT('Ends in {n} days — talk to HR about renewing',{n:st.days}) : st.label)+'</b>'+
     (cur ? '<span class="rowSub"> · '+esc(gpT('Signed {month}',{month:hrMonthLabel_(cur.signed)}))+' · '+esc(hrYearsLabel_(cur.years))+'</span>' : '')+'</div></div>';
-  var list=(p.contracts||[]).slice().reverse();
+  var list=(p.contracts||[]).filter(function(c){ return !(c.digital && c.digital.status!=='signed'); }).slice().reverse();
   h+='<h3>📄 '+esc(t('Contracts'))+'</h3>';
-  if(!list.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No contract on file yet. HR adds it, or sends you one to sign here.'))+'</p></div>';
+  if(!list.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No contract on file yet. HR fills it out with you.'))+'</p></div>';
   list.forEach(function(c){
-    var dg=c.digital, pending=dg && dg.status!=='signed';
-    h+='<div class="card slim hrContract" data-myc="'+esc(c.id)+'"><div class="rowName"><b>'+esc(pending ? gpT('From {month}',{month:hrMonthLabel_(c.signed)}) : gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
+    var dg=c.digital;
+    h+='<div class="card slim hrContract" data-myc="'+esc(c.id)+'"><div class="rowName"><b>'+esc(gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
       '<div class="rowSub">'+esc(gpT('Ends {month}',{month:hrMonthLabel_(hrEndYm_(c))}))+(cur && c.id===cur.id ? ' · '+esc(st.label) : '')+'</div>'+
-      (pending ? '<div class="hrDigital waiting">✍️ '+esc(t('HR has sent this to sign. Sign it with a base leader there — they sign it with you.'))+'</div><a class="btn" href="portal.html?staff=1&doc='+encodeURIComponent('contract:'+c.id)+'" data-mycsign="'+esc(c.id)+'">✍️ '+esc(t('Sign it now, with a base leader'))+'</a>'
-        : dg ? '<button class="btn ghost small" data-myccontractpdf="'+esc(c.id)+'">📄 '+esc(t('Signed contract (PDF)'))+'</button>'
+      (dg ? '<button class="btn ghost small" data-myccontractpdf="'+esc(c.id)+'">📄 '+esc(t('Signed contract (PDF)'))+'</button>'
         : '<div class="rowSub" style="margin-top:4px">'+esc(t('On file with HR'))+'</div>')+'</div>';
   });
   var docs=d.legalDocs||[], l=p.legal||{}, n=docs.filter(function(x){ return l[x.id]; }).length;
@@ -9925,7 +9961,7 @@ function hrPersonHtml_(p){
   list.forEach(function(c){ h+=hrContractCardHtml_(p, c, cur && c.id===cur.id); });
   if(S.hrContractForm && S.hrContractForm.staffId===p.id) h+=hrContractFormHtml_(p);
   else if(S.hrSendForm && S.hrSendForm.staffId===p.id) h+=hrSendFormHtml_(p);
-  else if(!p.archived) h+='<div class="hrContractBtns"><button class="btn" id="hrSendContract" style="margin-top:0">✍️ '+esc(t('Send a contract to sign'))+'</button>'+
+  else if(!p.archived) h+='<div class="hrContractBtns"><button class="btn" id="hrSendContract" style="margin-top:0">✍️ '+esc(t('Fill out staff contract'))+'</button>'+
     '<button class="btn ghost" id="hrAddContract" style="margin-top:0">＋ '+esc(list.length ? t('Add a paper renewal') : t('Add a paper contract'))+'</button></div>';
   h+=hrLegalHtml_(p);
 
