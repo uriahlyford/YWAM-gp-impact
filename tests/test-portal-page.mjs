@@ -604,6 +604,7 @@ async function open(viewport, query, seed) {
   ok('portal staff open the ☰ menu and get Staff access only — no Forms, no Admin access group', !(await page.$('#toForms')) && !!(await page.$('#toPreview')) && /Staff access/.test(await page.$eval('#staffMenu', e => e.textContent)) && !/Admin access/.test(await page.$eval('#staffMenu', e => e.textContent)));
   ok('but do get the GP app home link', !!(await page.$('#toGpApp')));
   ok('nor an Accounts button', !(await page.$('#toAccounts')));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
   await page.click('[data-open="cd_anna"]');
   await page.waitForSelector('#panel');
   const pan = await page.$eval('#panel', e => e.textContent);
@@ -992,6 +993,8 @@ async function open(viewport, query, seed) {
 }
 {
   CANDS = JSON.parse(JSON.stringify(CANDS0));
+  /* two files that came in the old way, under the names-and-photos document: a PDF and one person's picture */
+  CANDS.find(c => c.id === 'cd_team').portal.docs.push({ id: 'pd_tpdf', kind: 'photo', name: 'team.pdf', mime: 'application/pdf', size: 900, added: '2026-09-19T10:00:00Z', by: 'st_team' }, { id: 'pd_img', kind: 'photo', name: 'Member Two.png', mime: 'image/png', size: 70, added: '2026-09-19T10:00:00Z', by: 'st_team' });
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
   await page.waitForSelector('.trow');
   await page.click('[data-whatfilter="team"]');
@@ -1008,7 +1011,7 @@ async function open(viewport, query, seed) {
   ok('with a Copy button', !!(await page.$('#copyHosp')));
   ok('the trip block says whether flights are booked', /Flights booked\s*Not yet/.test(await page.$eval('#tripFlights', e => e.textContent)));
   ok('the record is headed by the sending church, with the leader named under it', /Grace Church Team/.test(await page.$eval('#panel h2', e => e.textContent)) && /Leader: Pat Leader/.test(pan));
-  ok('the record lists the team’s documents, with what is still needed', /passports\.pdf/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)));
+  ok('the record lists the team’s documents, with what is still needed — the names-and-photos row has no Upload, since those are made on the roster', /passports\.pdf/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && !(await page.$('[data-docup="photo"]')));
   ok('the stage picker has the team stages', (await page.$$eval('#p_stage option', o => o.map(x => x.value).join(','))) === 'new,applied,call1,docs,call2,practical,arrived');
   ok('and the Teams tab counts by them', /1st call/.test(await page.$eval('.tiles', e => e.textContent)) && /Awaiting documents/.test(await page.$eval('.tiles', e => e.textContent)) && !/Interview/.test(await page.$eval('.tiles', e => e.textContent)));
   ok('staff upload the letter of invitation themselves', /You send this/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !!(await page.$('[data-docup="invitation"]')));
@@ -1032,15 +1035,11 @@ async function open(viewport, query, seed) {
   const ts = sent.filter(b => b.fn === 'portalTeamStep').pop();
   ok('ticking the 1st call goes through portalTeamStep', ts && ts.args[2] === 'cd_team' && ts.args[3] === 'call1' && ts.args[4] === true, JSON.stringify(ts && ts.args.slice(2)));
   ok('and the record moves on to the documents', /Next: Passport copies for the whole team · waiting on the team/.test(await page.$eval('#teamNext', e => e.textContent)));
-  await page.setInputFiles('[data-docup="photo"]', [{ name: 'team.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF team') }]);
-  await page.waitForFunction(() => /team\.pdf/.test((document.querySelector('[data-dockind="photo"]') || {}).textContent || ''), null, { timeout: 5000 });
-  const su = sent.filter(b => b.fn === 'portalUploadDoc').pop();
-  ok('staff can add a file a team emailed them, onto that record', su && su.args[2] === 'photo' && su.args[6] === 'cd_team');
+  ok('the names-and-photos document has no upload on the record either: it lists files that came the old way and points to the roster', !(await page.$('[data-docup="photo"]')) && /team\.pdf/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && /Member Two\.png/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && /put each one on a person under Team members/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && !!(await page.$('[data-docup="passports"]')));
   await page.waitForSelector('#panelMembers .rosterRow', { timeout: 5000 });
   ok('the record shows the team’s faces — leader and members, each with a Photo button staff can use too — and a Team photo sheet button', (await page.$$('#panelMembers .rosterRow')).length >= 2 && !!(await page.$('#panelMembers [data-tphoto][data-tphotocand="cd_team"]')) && !!(await page.$('#teamSheetBtn')));
-  ok('a PDF under the photo kind is not offered for the roster', !(await page.$('#upPhotos')));
-  await page.setInputFiles('[data-docup="photo"]', [{ name: 'Member Two.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64') }]);
   await page.waitForSelector('#upPhotos [data-upuse]', { timeout: 5000 });
+  ok('only the picture is offered for the roster, not the PDF', (await page.$$('#upPhotos [data-upuse]')).length === 1);
   const twoKey = await page.$eval('#panelMembers .rosterRow:nth-child(3)', e => e.getAttribute('data-rosterkey'));
   ok('a photo uploaded as a file is offered for the roster, with a guess at who it is from the file name', /Photos the team uploaded as files/.test(await page.$eval('#upPhotos', e => e.textContent)) && /Member Two\.png/.test(await page.$eval('#upPhotos', e => e.textContent)) && (await page.$eval('#upPhotos [data-upfor]', s => s.value)) === twoKey && (await page.$$eval('#upPhotos [data-upfor] option', os => os.length)) === 4, twoKey);
   await page.click('#upPhotos [data-upuse]');
@@ -1083,7 +1082,15 @@ async function open(viewport, query, seed) {
   }));
   ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
   ok('the bar is just Applications and a ☰ menu — the rest sits in the menu', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'navMenu']) && !(await page.$('#staffMenu')), JSON.stringify(bar.nav));
-  ok('and the bar starts with a way back to the GP app home', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent)));
+  ok('and the bar starts with a small ‹ back to the GP app home (named for screen readers)', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent) && a.getBoundingClientRect().width <= 44 && /‹/.test(a.textContent)));
+  await page.click('#navMenu'); await page.waitForSelector('#staffMenu'); await page.waitForTimeout(350);
+  ok('☰ opens the menu as a panel on the side, over the page, with a backdrop', await page.$eval('#staffMenu', m => { const r = m.getBoundingClientRect(), cs = getComputedStyle(m); return cs.position === 'fixed' && Math.abs(r.right - innerWidth) < 1 && r.top === 0 && r.width < innerWidth; }) && !!(await page.$('#menuScrim')) && await page.evaluate(() => document.body.classList.contains('menuOn')), JSON.stringify(await page.$eval('#staffMenu', m => { const r = m.getBoundingClientRect(); return { pos: getComputedStyle(m).position, r: [r.left, r.top, r.right, r.width], w: innerWidth }; })));
+  await page.click('#menuScrim', { position: { x: 10, y: 400 } }); await page.waitForTimeout(150);
+  ok('tapping outside closes it', !(await page.$('#staffMenu')) && !(await page.evaluate(() => document.body.classList.contains('menuOn'))));
+  await page.click('#navMenu'); await page.waitForSelector('#staffMenu'); await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+  ok('… and so does Esc', !(await page.$('#staffMenu')));
+  await page.click('#navMenu'); await page.waitForSelector('#menuClose'); await page.click('#menuClose'); await page.waitForTimeout(150);
+  ok('… and ✕', !(await page.$('#staffMenu')));
   ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll && await page.$eval('#toGpApp', a => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }));
   if(!(await page.$('#toPreview'))){ await page.click('#navMenu'); await page.waitForSelector('#toPreview'); }
   await page.click('#toPreview');

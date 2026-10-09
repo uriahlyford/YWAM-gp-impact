@@ -309,10 +309,18 @@ textarea { min-height:80px; resize:vertical; }
 .staffNavBtn:hover { color:var(--ink); }
 .staffNavBtn.on { background:var(--ink); color:var(--accentInk); }
 a.staffNavBtn { text-decoration:none; text-align:center; }
-.staffNavBtn.home { border:1px solid var(--border2); }
+.staffNavBtn.home { flex:0 0 auto; width:38px; padding:6px 0; font-size:24px; line-height:1; font-weight:400; color:var(--muted); border:0; display:flex; align-items:center; justify-content:center; }
+.staffNavBtn.home:hover { color:var(--ink); background:var(--surface2); }
+.srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .staffNavBtn.menuBtn { flex:0 1 auto; margin-left:auto; }
-.staffMenu { margin:-10px 0 16px; padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); display:grid; gap:10px; }
-@media (min-width:600px) { .staffMenu { grid-template-columns:1fr 1fr; } }
+.menuScrim { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:60; animation:menuFade .18s ease-out; }
+.staffMenu { position:fixed; top:0; right:0; bottom:0; width:min(300px, 86vw); z-index:61; overflow-y:auto; padding:14px 12px calc(16px + env(safe-area-inset-bottom)); background:var(--surface); border-left:1px solid var(--border); box-shadow:-8px 0 28px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:14px; animation:menuIn .2s ease-out; }
+.menuHead { display:flex; align-items:center; justify-content:space-between; padding:0 0 4px 10px; font-size:16px; }
+.menuHome { margin-top:auto; border-top:1px solid var(--border); border-radius:0; padding-top:14px; text-decoration:none; }
+body.menuOn { overflow:hidden; }
+@keyframes menuIn { from { transform:translateX(100%); } to { transform:none; } }
+@keyframes menuFade { from { opacity:0; } to { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .staffMenu, .menuScrim { animation:none; } }
 .menuGroup { display:flex; flex-direction:column; gap:2px; }
 .menuItem { text-align:left; border:0; background:transparent; color:var(--ink); font:inherit; font-size:14.5px; font-weight:600; padding:9px 10px; border-radius:var(--rSm); cursor:pointer; }
 .menuItem:hover { background:var(--surface2); } .menuItem.on { background:var(--ink); color:var(--accentInk); }
@@ -487,7 +495,7 @@ var TEAM_STEP_NOTE = {
   form:'Your answers save as a draft — come back any time.',
   call1:'A video call to get to know each other and go over the logistics. We message you to find a time.',
   passports:'A copy of the photo page of every team member’s passport. Upload them under Documents.',
-  photo:'Under Your team members, add everyone coming and take a photo of each. We use the names for the cooking and morning chores schedules while you are here.',
+  photo:'Nothing to upload — under Your team members, add everyone coming and take a photo of each. We use the names for the cooking and morning chores schedules while you are here.',
   flights:'Important — we need them to start your visa process, and we arrange your airport pick-up from them.',
   invitation:'We send these once your passports, your team’s names and photos, and flights are in. They appear under Documents for you to download.',
   evisa:'Apply at evisa.gov.kh with the letter of invitation. Once the e-visas are approved, upload them under Documents.',
@@ -510,6 +518,7 @@ function chatHref_(messenger, phone){
 function fmtDate_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
 /* ---- state ---- */
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && P.menuOpen){ P.menuOpen=false; render(); var b=document.getElementById('navMenu'); if(b) b.focus(); } });
 var P = { aview:'status', meet:null, teamEdit:null, menuOpen:false, access:null, accessQ:'', staffPhotos:{}, strengths:null, ptest:null, pview:null, ppickFor:null, resources:null, resDraft:null, authCfg:null, pinLogin:false, gtoken:'', changePw:false, pw:{}, installEvt:null, a2hsOff:!!lsGet('gp-portal-a2hs'), auth:null, boot:null, view:'landing', apply:null, campus:DEFAULT_CAMPUS, reg:{}, busy:false, err:'', sel:null, filter:'', campusFilter:null, what:null, q:'', formSec:0, answers:{}, formMissing:null, draftSaved:'', formKey:null, formDraft:null, formDirty:false, editAnswers:false, staffAnswers:{}, feAud:'all', audFilter:'', editContact:false, note:'', accounts:null, accSel:null, accNew:false, accForm:{}, accQ:'', editMine:false, cal:null, pv:{ mode:'sample', key:'dts', aud:'international', stage:'new', candId:null, q:'', screen:'me', aview:'status', sec:0, boot:null, busy:false }, refToken:'', refData:null, refAnswers:{}, refMissing:null, refDone:false, refLink:null, showRef:false };
 (function(){
   var qs={}; try { String(location.search||'').replace(/^\?/,'').split('&').forEach(function(kv){ if(!kv) return; var p=kv.split('='); qs[decodeURIComponent(p[0])]=decodeURIComponent(p[1]||''); }); } catch(e){}
@@ -595,6 +604,7 @@ function render(){
     : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_())
     + (P.guideOpen && P.boot && typeof outreachGuideHtml==='function' ? guideOverlayHtml_() : '');
   document.body.classList.toggle('guideOn', !!(P.guideOpen && P.boot));
+  document.body.classList.toggle('menuOn', !!P.menuOpen);
   bind_();
   } catch (e) {
     /* A dead screen where nothing responds is the worst outcome — show what
@@ -617,12 +627,16 @@ function staffNavHtml_(v){
   var adminItems=[['forms','toForms','📝 '+t('Forms')],['accounts','toAccounts','👤 '+t('Accounts')],['team','toTeam','👥 '+t('Our team')],['resources','toResources','📚 '+t('Resources')],['access','toAccess','🔑 '+t('Who has access')]];
   var here=staffItems.concat(admin ? adminItems : []).filter(function(x){ return x[0]===v; })[0];
   var item=function(x){ return '<button class="menuItem'+(v===x[0] || (x[0]==='link' && P.linkOpen)?' on':'')+'" id="'+x[1]+'">'+esc(x[2])+'</button>'; };
-  /* Staff come here from the GP app; this takes them back to its home. */
-  return '<nav class="staffNav" id="staffNav"><a class="staffNavBtn home" id="toGpApp" href="teams.html">🏠 '+esc(t('GP app home'))+'</a>'+
+  /* Staff come here from the GP app; a small ‹ on the left takes them back to its home. */
+  return '<nav class="staffNav" id="staffNav"><a class="staffNavBtn home" id="toGpApp" href="teams.html" title="'+esc(t('GP app home'))+'"><span aria-hidden="true">‹</span><span class="srOnly">'+esc(t('GP app home'))+'</span></a>'+
     '<button class="staffNavBtn'+(v==='crm'?' on':'')+'" id="navCrm">📋 '+esc(t('Applications'))+'</button>'+
     '<button class="staffNavBtn menuBtn'+(here || P.menuOpen ? ' on':'')+'" id="navMenu" aria-expanded="'+(P.menuOpen?'true':'false')+'" aria-controls="staffMenu">☰ '+esc(here ? here[2] : t('Menu'))+'</button></nav>'+
-    (P.menuOpen ? '<div class="staffMenu" id="staffMenu"><div class="menuGroup"><div class="eyebrow">'+esc(t('Staff access'))+'</div>'+staffItems.map(item).join('')+'</div>'+
-      (admin ? '<div class="menuGroup"><div class="eyebrow">'+esc(t('Admin access'))+'</div>'+adminItems.map(item).join('')+'</div>' : '')+'</div>' : '')+
+    /* the menu slides in from the side, over the page; tap outside, ✕ or Esc closes it */
+    (P.menuOpen ? '<div class="menuScrim" id="menuScrim"></div><aside class="staffMenu" id="staffMenu" role="dialog" aria-modal="true" aria-label="'+esc(t('Menu'))+'">'+
+      '<div class="menuHead"><b>'+esc(t('Menu'))+'</b><button type="button" class="hbtn" id="menuClose" aria-label="'+esc(t('Close'))+'">✕</button></div>'+
+      '<div class="menuGroup"><div class="eyebrow">'+esc(t('Staff access'))+'</div>'+staffItems.map(item).join('')+'</div>'+
+      (admin ? '<div class="menuGroup"><div class="eyebrow">'+esc(t('Admin access'))+'</div>'+adminItems.map(item).join('')+'</div>' : '')+
+      '<a class="menuItem menuHome" href="teams.html">🏠 '+esc(t('GP app home'))+'</a></aside>' : '')+
     (P.linkOpen ? applyLinkHtml_() : '');
 }
 /* The link staff send to someone who should apply: the portal itself, or —
@@ -2081,8 +2095,14 @@ function docsBodyHtml_(kinds, docs, mode, candId){
     var chip = mine.length ? '<span class="pill accepted" style="font-size:11px">✓ '+esc(mine.length===1 ? t('1 file') : gpT('{n} files',{n:mine.length}))+'</span>'
       : mode==='form' ? '' : fromUs ? '<span class="pill" style="font-size:11px">'+esc(mode==='staff' ? t('You send this') : t('Coming from us'))+'</span>'
       : k.required ? '<span class="pill pending" style="font-size:11px">'+esc(t('Needed'))+'</span>' : '<span class="pill" style="font-size:11px">'+esc(t('When you have them'))+'</span>';
+    /* the team's names and photos are made on the roster, never uploaded: on the record the
+       row exists only to list files that came in the old way, until they are on people */
+    if(k.id==='photo'){
+      if(!mine.length) return '';
+      return '<div class="docKind" data-dockind="photo"><div class="panelHead"><b>'+esc(t(DOC_LABEL.photo))+'</b>'+chip+'</div>'+
+        '<p class="hint" style="margin:4px 0 6px">'+esc(t('Photos the team sent as files: put each one on a person under Team members below.'))+'</p>'+docListHtml_(mine, readOnly)+'</div>';
+    }
     return '<div class="docKind" data-dockind="'+esc(k.id)+'"><div class="panelHead"><b>'+esc(t(DOC_LABEL[k.id]||k.id))+'</b>'+chip+'</div>'+
-      (k.id==='photo' && mode==='staff' && mine.length ? '<p class="hint" style="margin:4px 0 6px">'+esc(t('Photos the team sent as files: put each one on a person under Team members below.'))+'</p>' : '')+
       (DOC_HINT[k.id] && mode==='me' ? '<p class="hint" style="margin:4px 0 6px">'+esc(t(DOC_HINT[k.id]))+(k.id==='photo' ? ' <button type="button" class="linkbtn inline" data-gomembers="1">'+esc(t('Go to your team members'))+' →</button>' : '')+'</p>' : '')+
       docListHtml_(mine, readOnly)+
       (readOnly ? '' : '<label class="btn ghost small docUp">⬆ '+esc(mine.length ? t('Add more') : t('Upload'))+'<input type="file" multiple accept="application/pdf,image/*" data-docup="'+esc(k.id)+'"'+(candId?' data-doccand="'+esc(candId)+'"':'')+' hidden></label>')+'</div>';
@@ -2625,7 +2645,9 @@ function bind_(){
   document.querySelectorAll('[data-refgo]').forEach(function(b){ b.onclick=goRef; });
   on_('refCopy', function(){ copyText_(P.refLink); });
   on_('editAnswersMine', function(){ P.answers=JSON.parse(JSON.stringify((P.boot.application && P.boot.application.answers)||{})); P.editMine=true; P.view='form'; P.formSec=0; P.formMissing=null; render(); window.scrollTo(0,0); });
-  on_('navMenu', function(){ P.menuOpen=!P.menuOpen; render(); });
+  on_('navMenu', function(){ P.menuOpen=!P.menuOpen; render(); if(P.menuOpen){ var f=document.querySelector('#staffMenu .menuItem'); if(f) f.focus(); } });
+  on_('menuClose', function(){ P.menuOpen=false; render(); var b=document.getElementById('navMenu'); if(b) b.focus(); });
+  on_('menuScrim', function(){ P.menuOpen=false; render(); });
   on_('toForms', function(){ P.menuOpen=false; if(P.view==='forms') return; P.view='forms'; render(); });
   on_('toResources', function(){ P.menuOpen=false; if(P.view==='resources') return; P.view='resources'; P.resDraft=null; render(); });
   on_('toTeam', function(){ P.menuOpen=false; if(P.view==='team') return; P.view='team'; P.teamEdit=null; render(); });
