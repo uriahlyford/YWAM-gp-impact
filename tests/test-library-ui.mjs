@@ -1,8 +1,9 @@
 /* The Library on the page, on the real backend: in the menu; the books load
-   only when it opens; every book on the shelf with its drawn cover — one series
-   look, nothing fetched, neighbours never the same pattern; shelves filter; a book
-   page has every part; Mark as read sticks on this phone and shows on the shelf;
-   Next book; Khmer at 320px; a failed load offers Try again. */
+   only when it opens; the home is swipeable rows (Start here, each shelf, See all)
+   of tiles with drawn covers — one series look, nothing fetched, neighbours never
+   the same pattern; a book page has every part; the reader goes one key idea per
+   screen (Next, swipe, Close keeps your place, Continue reading, Done marks it
+   read); Khmer at 320px; a failed load offers Try again. */
 import vm from 'node:vm';
 import { REPO, PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
 import { chromium, devices } from 'playwright';
@@ -90,47 +91,75 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await page.click('#menuBtn'); await page.waitForTimeout(250);
   ok('Library is in the menu', !!(await page.$('[data-menu-item="library"]')));
   await page.click('[data-menu-item="library"]'); await page.waitForTimeout(900);
-  const cards = await page.$$('[data-libbook]');
-  ok('every book is on the shelf', cards.length === BOOKS.length, cards.length + ' of ' + BOOKS.length);
-  await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 400) { window.scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); } window.scrollTo(0, 0); });
-  await page.waitForTimeout(500);
-  const covers = await page.$$eval('.libGrid .libCover', cs => cs.map(c => ({ title: c.querySelector('.libCoverTitle').innerText, svg: c.querySelector('.libCoverArt svg').innerHTML, h: c.getBoundingClientRect().height, w: c.getBoundingClientRect().width })));
-  ok('every book has a drawn cover with its title on it', covers.length === BOOKS.length && covers.every((c, i) => c.title.toLowerCase() === BOOKS[i].title.toLowerCase() && c.svg.length > 50));
-  ok('… all the same shape', covers.every(c => Math.abs(c.h / c.w - 1.5) < 0.02));
-  ok('… and no two side by side on a shelf share a pattern', covers.every((c, i) => i === 0 || BOOKS[i].shelf !== BOOKS[i - 1].shelf || c.svg !== covers[i - 1].svg));
+  const rows = await page.$$eval('.libSecHead', hs => hs.map(h => h.innerText.replace(/\s+/g, ' ')));
+  ok('the home is rows: Start here, then one per shelf, each with See all', rows.length === 1 + C.L.shelves.length && /Start here/.test(rows[0]) && rows.slice(1).every((r, i) => r.includes(C.L.shelves[i].name) && /See all/.test(r)), rows.join(' | '));
+  const ids = new Set(await page.$$eval('.libTile', ts => ts.map(t => t.getAttribute('data-libbook'))));
+  ok('every book is on its shelf’s row', ids.size === BOOKS.length && BOOKS.every(b => ids.has(b.id)), ids.size + ' of ' + BOOKS.length);
+  const shelfRows = await page.$$eval('.libRow', rs => rs.slice(1).map(r => [...r.querySelectorAll('.libTile')].map(t => ({
+    id: t.getAttribute('data-libbook'), title: t.querySelector('.libCoverTitle').innerText, svg: t.querySelector('.libCoverArt svg').innerHTML,
+    ratio: (b => b.height / b.width)(t.querySelector('.libCover').getBoundingClientRect()), meta: t.querySelector('.libTileMeta').innerText }))));
+  const flat = shelfRows.flat();
+  ok('every book has a drawn cover with its title on it', flat.length === BOOKS.length && flat.every(c => c.title.toLowerCase() === BOOKS.find(b => b.id === c.id).title.toLowerCase() && c.svg.length > 50));
+  ok('… all the same shape', flat.every(c => Math.abs(c.ratio - 1.5) < 0.02));
+  ok('… and no two side by side on a shelf share a pattern', shelfRows.every(r => r.every((c, i) => i === 0 || c.svg !== r[i - 1].svg)));
+  ok('under each: minutes and how many key ideas', flat.every(c => /5 min · 💡 \d/.test(c.meta)), flat[0].meta);
   ok('no cover is fetched from anywhere — they show at once, offline too', imageFetches.length === 0 && !(await page.$('.libCover img')), imageFetches.slice(0, 3).join(' '));
   const clipped = await page.$$eval('.libCoverTitle', ts => ts.filter(t => { const lh = parseFloat(getComputedStyle(t).fontSize) * 1.02;   // a line clamped away, not Koulen's tall caps
       return t.scrollWidth > t.clientWidth + 1 || t.scrollHeight - t.clientHeight > lh * 0.5; }).map(t => t.innerText.replace(/\n/g, ' ') + ':' + (t.scrollHeight - t.clientHeight)));
   ok('every title fits whole on its cover', clipped.length === 0, clipped.join(' | '));
-  await page.screenshot({ path: OUT + '/library.png', fullPage: true });
-  await page.click('[data-libshelf="start"]'); await page.waitForTimeout(250);
-  const startIds = await page.$$eval('[data-libbook]', els => els.map(e => e.getAttribute('data-libbook')));
-  ok('“Start here” shows the ten picks, in order, with a line on why', startIds.join() === START.join() && !!(await page.$('.libStartNote')), startIds.length + ' books');
+  ok('the rows swipe sideways inside themselves; the page does not', await page.evaluate(() => { const r = document.querySelector('.libRow'); return r.scrollWidth > r.clientWidth && document.documentElement.scrollWidth <= window.innerWidth + 1; }));
+  await page.screenshot({ path: OUT + '/library.png' });
+  await page.click('.libSeeAll[data-libshelf="start"]'); await page.waitForTimeout(250);
+  const startIds = await page.$$eval('.libGrid .libTile', els => els.map(e => e.getAttribute('data-libbook')));
+  ok('See all on Start here: the ten picks, in order, with a line on why', startIds.join() === START.join() && !!(await page.$('.libStartNote')), startIds.length + ' books');
   await page.click('[data-libshelf="habits"]'); await page.waitForTimeout(250);
-  ok('a shelf shows only its books', (await page.$$('[data-libbook]')).length === BOOKS.filter(b => b.shelf === 'habits').length);
+  ok('a shelf shows only its books', (await page.$$('.libGrid .libTile')).length === BOOKS.filter(b => b.shelf === 'habits').length);
+  await page.screenshot({ path: OUT + '/shelf.png' });
   await page.click('[data-libbook="atomic-habits"]'); await page.waitForTimeout(400);
   const txt = await page.$eval('#main', e => e.innerText);
-  ok('a book page: title, author, minutes, the vibe line', /Atomic Habits/.test(txt) && /James Clear/.test(txt) && /5-minute read/.test(txt) && /Tiny changes, wild results/.test(txt));
-  ok('… the big idea, numbered insights, try this week, for us at GP and the one line',
-    /The big idea/i.test(txt) && (await page.$$('.libInsight')).length === 6 && /Try this week/i.test(txt) && /For us at GP/i.test(txt) && /In one line/i.test(txt));
-  await page.screenshot({ path: OUT + '/book.png', fullPage: true });
-  await page.click('#libMarkRead'); await page.waitForTimeout(250);
-  ok('Mark as read ticks it, on this phone only', /✓ Read/.test(await page.$eval('#libMarkRead', e => e.innerText)) && await page.evaluate(() => !!JSON.parse(localStorage.getItem('gp-lib-read'))['atomic-habits']));
-  const next = await page.$eval('[data-libbook]', e => e.getAttribute('data-libbook'));
-  await page.click('[data-libbook="' + next + '"]'); await page.waitForTimeout(300);
-  ok('Next book goes on to the next one', await page.evaluate(n => S.libBook === n, next) && next !== 'atomic-habits', next);
-  await page.click('#libBack'); await page.waitForTimeout(300);
+  ok('a book page: cover, title, author, minutes, key ideas, the vibe line', !!(await page.$('.libHead .libCover')) && /Atomic Habits/.test(txt) && /James Clear/.test(txt) && /5-minute read/.test(txt) && /6 key ideas/.test(txt) && /Tiny changes, wild results/.test(txt));
+  ok('… Start reading, what it’s about, what’s inside and for us at GP',
+    /Start reading/.test(await page.$eval('#libStart', e => e.innerText)) && /What’s it about\?/.test(txt) && (await page.$$('.libInsideItem')).length === 6 && /For us at GP/i.test(txt));
+  await page.screenshot({ path: OUT + '/book.png' });
+  await page.click('#libStart'); await page.waitForTimeout(300);
+  let r = await page.$eval('#libReader', e => e.innerText);
+  ok('the reader opens on the intro, with a bar of 8 steps', /Intro/i.test(r) && (await page.$$('.libSegs span')).length === 8 && (await page.$$('.libSegs span.on')).length === 1 && !(await page.$('#libPrev')));
+  await page.click('#libNext'); await page.waitForTimeout(200);
+  r = await page.$eval('#libReader', e => e.innerText);
+  ok('Next: key idea 1 of 6, one idea on the screen', /Key idea 1 of 6/i.test(r) && !!(await page.$('.libReaderEmoji')) && (await page.$$('.libSegs span.on')).length === 2);
+  await page.screenshot({ path: OUT + '/reader.png' });
+  await page.evaluate(() => {   // a swipe to the left
+    const el = document.getElementById('libReader');
+    const tt = (x) => [new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 })];
+    el.dispatchEvent(new TouchEvent('touchstart', { touches: tt(320), changedTouches: tt(320), bubbles: true }));
+    el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: tt(120), bubbles: true }));
+  });
+  await page.waitForTimeout(200);
+  ok('a swipe to the left goes on to key idea 2', /Key idea 2 of 6/i.test(await page.$eval('#libReader', e => e.innerText)));
+  await page.click('#libClose'); await page.waitForTimeout(250);
+  ok('closing keeps your place: Continue — key idea 2', /Continue — key idea 2/.test(await page.$eval('#libStart', e => e.innerText)));
+  await page.click('#libBack'); await page.waitForTimeout(250);
   await page.click('[data-libshelf="all"]'); await page.waitForTimeout(250);
-  ok('back on the shelf the read book has a tick, and the count says so', !!(await page.$('[data-libbook="atomic-habits"] .libReadTag')) && /\b1\s*\/\s*\d+\s*read/.test(await page.$eval('.libProgress', e => e.innerText)));
+  ok('… and the home has a Continue reading row with it, and a progress bar on its tile', /Continue reading/.test(await page.$eval('.libSecHead', e => e.innerText)) && !!(await page.$('.libRow [data-libbook="atomic-habits"] .libTileBar')));
+  await page.click('.libRow [data-libbook="atomic-habits"]'); await page.waitForTimeout(300);
+  await page.click('#libStart'); await page.waitForTimeout(250);
+  ok('Continue opens where you were', /Key idea 2 of 6/i.test(await page.$eval('#libReader', e => e.innerText)));
+  for (let i = 0; i < 5; i++) { await page.click('#libNext'); await page.waitForTimeout(120); }
+  r = await page.$eval('#libReader', e => e.innerText);
+  ok('the last screen is the final summary: in one line, try this week, for us at GP', /Final summary/i.test(r) && /In one line/i.test(r) && /Try this week/i.test(r) && /For us at GP/i.test(r) && !!(await page.$('#libFinish')));
+  ok('nothing in the reader scrolls sideways', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await page.screenshot({ path: OUT + '/summary.png' });
+  await page.click('#libFinish'); await page.waitForTimeout(250);
+  ok('Done marks it read, on this phone only, and clears the place', /Read again/.test(await page.$eval('#libStart', e => e.innerText)) &&
+    await page.evaluate(() => !!JSON.parse(localStorage.getItem('gp-lib-read'))['atomic-habits'] && !JSON.parse(localStorage.getItem('gp-lib-progress') || '{}')['atomic-habits']));
+  const next = await page.$eval('.btnRow [data-libbook]', e => e.getAttribute('data-libbook'));
+  await page.click('.btnRow [data-libbook="' + next + '"]'); await page.waitForTimeout(300);
+  ok('Next book goes on to the next one', await page.evaluate(n => S.libBook === n, next) && next !== 'atomic-habits', next);
+  await page.click('#libMarkRead'); await page.waitForTimeout(200);
+  ok('Mark as read works without reading through', await page.evaluate(n => !!JSON.parse(localStorage.getItem('gp-lib-read'))[n], next));
+  await page.click('#libBack'); await page.waitForTimeout(300);
+  ok('back home the read books have a tick, and the count says so', !!(await page.$('[data-libbook="atomic-habits"] .libReadTag')) && /\b2\s*\/\s*\d+\s*read/.test(await page.$eval('.libProgress', e => e.innerText)) && !/Continue reading/.test(await page.$eval('#main', e => e.innerText)));
   ok('nothing scrolls sideways', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-  await ctx.close();
-}
-{
-  const { ctx, page } = await open('sreilea');
-  await openLib(page);
-  await page.screenshot({ path: OUT + '/library-covers.png', fullPage: true });
-  await page.click('[data-libbook="extreme-ownership"]'); await page.waitForTimeout(400);
-  await page.screenshot({ path: OUT + '/book-cover.png', fullPage: false });
   await ctx.close();
 }
 {
@@ -143,8 +172,11 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await page.waitForSelector('nav.bottom button', { timeout: 15000 });
   await openLib(page);
   ok('in Khmer the Library’s own words are Khmer', /បណ្ណាល័យ/.test(await page.$eval('#main h2', e => e.innerText)));
+  ok('… and the home fits a 320px phone', await page.evaluate(() => document.documentElement.scrollWidth <= 321));
   await page.click('[data-libbook]'); await page.waitForTimeout(300);
   ok('… and a book page fits a 320px phone', await page.evaluate(() => document.documentElement.scrollWidth <= 321));
+  await page.click('#libStart'); await page.waitForTimeout(250); await page.click('#libNext'); await page.waitForTimeout(200);
+  ok('… and the reader too, in Khmer', await page.evaluate(() => document.documentElement.scrollWidth <= 321) && /គំនិតសំខាន់ទី 1/.test(await page.$eval('#libReader', e => e.innerText)));
   await ctx.close();
 }
 {
@@ -154,7 +186,7 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   ok('if the books cannot load, it says so and offers Try again', !!(await page.$('#libRetry')));
   await page.unroute('**/library.js');
   await page.click('#libRetry'); await page.waitForTimeout(900);
-  ok('… and Try again loads them', (await page.$$('[data-libbook]')).length === BOOKS.length);
+  ok('… and Try again loads them', new Set(await page.$$eval('.libTile', ts => ts.map(t => t.getAttribute('data-libbook')))).size === BOOKS.length);
   await ctx.close();
 }
 ok('no page errors', errors.length === 0, errors.join(' | '));

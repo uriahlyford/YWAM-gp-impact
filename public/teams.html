@@ -642,17 +642,25 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .goalLink.unlinked { color:var(--faint); font-size:12.5px; } .goalLink.unlinked select { font-size:12.5px !important; }
 .libProgress { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin:2px 0 12px; }
 .libProgressBar { flex:1; height:6px; border-radius:99px; background:var(--surface2); overflow:hidden; } .libProgressBar span { display:block; height:100%; background:var(--good); }
-.libShelves { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
-.libShelfBtn { border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:999px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.libShelves { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; margin-bottom:6px; } .libShelves::-webkit-scrollbar { display:none; }
+.libShelfBtn { flex:0 0 auto; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:999px; padding:6px 12px; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
 .libShelfBtn.on { color:var(--pOnMark); background:var(--ink); border-color:var(--ink); }
-.libStartNote { margin:-4px 0 14px; }
-.libGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:14px 10px; margin-bottom:16px; }
-@media (max-width:340px){ .libGrid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-.libCard { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:3px; background:none; border:0; padding:0; text-align:left; font:inherit; color:var(--ink); cursor:pointer; min-width:0; }
-.libCard .libCover { width:100%; }
-.libCardMeta { font-size:12px; color:var(--muted); line-height:1.3; overflow-wrap:anywhere; margin-top:7px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
-.libCardMins { font-size:11.5px; color:var(--faint); font-weight:700; }
-.libReadTag { position:absolute; top:6px; right:6px; z-index:2; width:24px; height:24px; border-radius:50%; background:var(--good); color:var(--pOnMark); font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+.libStartNote { margin:8px 0 14px; }
+.libSecHead { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:22px 0 10px; }
+.libSecHead h3, .libSec h3, .libTitle, .libReaderBody h2 { font-family:inherit; text-transform:none; font-weight:800; letter-spacing:-.01em; }
+.libSecHead h3 { flex:1; min-width:0; margin:0; font-size:18px; }
+.libSeeAll { flex:0 0 auto; width:auto !important; margin:0 !important; padding:0 !important; font-size:13px; font-weight:700; text-decoration:none; white-space:nowrap; }
+.libRow { display:grid; grid-auto-flow:column; grid-auto-columns:136px; gap:12px; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x mandatory; scrollbar-width:none; padding-bottom:4px; }
+.libRow::-webkit-scrollbar { display:none; } .libRow > * { scroll-snap-align:start; }
+.libGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:18px 12px; margin:10px 0 16px; }
+.libTile { display:flex; flex-direction:column; align-items:stretch; gap:2px; background:none; border:0; padding:0; text-align:left; font:inherit; color:var(--ink); cursor:pointer; min-width:0; }
+.libTileArt { position:relative; aspect-ratio:1; border-radius:14px; background:color-mix(in srgb, var(--libc) 15%, var(--surface)); display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+.libTileArt .libCover { width:56%; }
+.libTileTitle { font-size:14px; font-weight:800; line-height:1.3; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; }
+.libTileAuthor { font-size:12.5px; color:var(--muted); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.libTileMeta { font-size:12px; color:var(--faint); font-weight:700; margin-top:3px; }
+.libTileBar { height:3px; border-radius:2px; background:var(--surface2); overflow:hidden; margin-top:5px; } .libTileBar span { display:block; height:100%; background:var(--libc); }
+.libReadTag { position:absolute; top:8px; right:8px; z-index:2; width:24px; height:24px; border-radius:50%; background:var(--good); color:var(--pOnMark); font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.25); }
 .libCover { position:relative; aspect-ratio:2/3; border-radius:6px 9px 9px 6px; overflow:hidden; container-type:inline-size; display:flex; flex-direction:column;
   box-shadow:0 6px 16px rgba(23,21,15,.18), 0 1px 3px rgba(23,21,15,.2), inset 3px 0 0 rgba(23,21,15,.08); }
 .libCoverArt { position:relative; flex:0 0 57%; overflow:hidden; } .libCoverArt svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
@@ -663,22 +671,37 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .libCoverTitle.l1 { font-size:17cqw; } .libCoverTitle.l2 { font-size:13.5cqw; } .libCoverTitle.l3 { font-size:11.5cqw; -webkit-line-clamp:4; } .libCoverTitle.l4 { font-size:10cqw; -webkit-line-clamp:4; }
 .libCoverAuthor { display:none; margin-top:auto; font-size:6.5cqw; font-weight:700; opacity:.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .libCover.big .libCoverAuthor { display:block; }
-.libHero { display:flex; gap:16px; align-items:flex-end; margin:6px 0 14px; }
-.libHero .libCover { width:132px; flex:0 0 132px; }
-.libHeroText { min-width:0; }
-.libShelfTag { display:inline-block; font-size:11.5px; font-weight:800; color:var(--libink); background:color-mix(in srgb, var(--libc) 16%, transparent); border-radius:999px; padding:3px 9px; }
-.libTitle { margin:6px 0 2px; font-size:24px; line-height:1.15; overflow-wrap:anywhere; }
-.libAuthor { font-size:13.5px; color:var(--muted); }
-.libMins { font-size:12.5px; font-weight:800; color:var(--faint); margin-top:6px; }
-.libVibe { font-size:18px; font-weight:800; line-height:1.4; border-left:4px solid; padding:4px 0 4px 12px; margin:4px 0 14px; }
+.libHead { margin:6px 0 14px; padding:24px 16px 18px; border-radius:20px; background:color-mix(in srgb, var(--libc) 15%, var(--surface)); text-align:center; }
+.libHead .libCover { width:148px; margin:0 auto 16px; }
+.libShelfTag { display:inline-block; font-size:11.5px; font-weight:800; color:var(--libink); background:color-mix(in srgb, var(--libc) 18%, transparent); border-radius:999px; padding:3px 9px; }
+.libTitle { margin:8px 0 2px; font-size:25px; line-height:1.15; overflow-wrap:anywhere; }
+.libAuthor { font-size:14px; color:var(--muted); }
+.libVibe { font-size:16px; font-weight:700; line-height:1.45; margin:10px auto 0; max-width:30em; }
+.libStats { display:flex; flex-wrap:wrap; justify-content:center; gap:6px 14px; font-size:13px; font-weight:700; color:var(--muted); margin-top:12px; }
+.libCta { width:100%; font-size:16px; padding:14px; border-radius:14px; color:var(--pOnMark); }
+.libSec h3 { margin:22px 0 8px; font-size:18px; font-weight:800; }
+.libSec p { margin:0; font-size:15.5px; line-height:1.65; }
+.libInside { border-top:1px solid var(--border); }
+.libInsideItem { display:flex; align-items:center; gap:12px; width:100%; padding:12px 2px; border:0; border-bottom:1px solid var(--border); background:none; font:inherit; font-size:15px; font-weight:700; color:var(--ink); text-align:left; cursor:pointer; }
+.libInsideItem > span:nth-child(2) { flex:1; min-width:0; }
+.libInsideGo { color:var(--faint); font-size:20px; }
+.libInsightNum { flex:0 0 26px; height:26px; border-radius:50%; color:var(--pOnMark); font-weight:900; font-size:12.5px; display:flex; align-items:center; justify-content:center; }
+.libForUs { margin-top:20px; border-left:4px solid; } .libForUs p { margin:0; font-size:15px; line-height:1.6; }
 .libKicker { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
-.libBlock p, .libInsight p { margin:0; font-size:15px; line-height:1.6; }
-.libInsight { margin-bottom:10px; }
-.libInsightHead { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:15.5px; }
-.libInsightNum { flex:0 0 24px; height:24px; border-radius:50%; color:var(--pOnMark); font-weight:900; font-size:12.5px; display:flex; align-items:center; justify-content:center; }
-.libInsightEmoji { font-size:18px; }
-.libTry { margin:0; padding-left:20px; } .libTry li { font-size:15px; line-height:1.55; margin:4px 0; }
-.libOneLine { color:var(--pOnMark); border-radius:14px; padding:14px 16px; font-size:17px; font-weight:800; line-height:1.4; margin-top:14px; }
+.libReader { display:flex; flex-direction:column; min-height:calc(100vh - 230px); }
+.libReaderTop { position:sticky; top:0; z-index:4; background:var(--bg); display:flex; align-items:center; gap:12px; padding:8px 0 10px; }
+.libReaderClose { flex:0 0 36px; height:36px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); font:inherit; font-size:15px; font-weight:800; cursor:pointer; }
+.libSegs { flex:1; display:flex; gap:3px; } .libSegs span { flex:1; height:4px; border-radius:2px; background:var(--surface2); } .libSegs span.on { background:var(--libc); }
+.libReaderBook { font-size:12.5px; color:var(--faint); font-weight:700; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.libReaderKicker { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--libink); margin:14px 0 4px; }
+.libReaderBody { flex:1; padding-bottom:18px; }
+.libReaderBody h2 { font-size:24px; line-height:1.25; margin:4px 0 14px; letter-spacing:-.01em; }
+.libReaderBody p { font-size:17.5px; line-height:1.7; margin:0; }
+.libReaderEmoji { font-size:46px; line-height:1; margin:10px 0 6px; }
+.libReaderNav { position:sticky; bottom:calc(64px + env(safe-area-inset-bottom)); display:flex; gap:10px; background:var(--bg); padding:10px 0 6px; }
+.libReaderNav .btn { flex:1; padding:13px; font-size:15.5px; } .libReaderNav .btn:not(.ghost) { color:var(--pOnMark); }
+.libTry { margin:0; padding-left:20px; } .libTry li { font-size:16px; line-height:1.6; margin:5px 0; }
+.libOneLine { color:var(--pOnMark); border-radius:16px; padding:16px 18px; font-size:19px; font-weight:800; line-height:1.4; margin-top:6px; }
 .libOneLine span { display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.8; margin-bottom:4px; }
 .btnRow { display:flex; gap:8px; flex-wrap:wrap; } .btnRow .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .grpRow { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer; }
@@ -5062,13 +5085,15 @@ function teamStrengthsHtml_(campus){
    The books load only when the Library is opened (libLoad_), so they cost the
    app's start nothing; sw.js keeps a copy for offline reading.
 
-   Covers come from Open Library by ISBN, on the phone. Under every cover sits a
-   drawn one — the title on the shelf's colour — so a missing cover, a wrong ISBN
-   or no connection still looks like a book. "Read" ticks are this phone's only
-   (localStorage), nothing is sent anywhere. The summaries are English; the
-   screens around them are translated like everything else. */
-S.libBook=null; S.libShelf='all'; S.libLoading=false; S.libError=false;
-var LIB_READ_KEY='gp-lib-read';
+   Laid out the way a book-summary app is: the home is rows you swipe sideways
+   (Continue reading, Start here, one per shelf, each with See all), a book page
+   with its cover on a tinted panel and Start reading, and a reader that goes one
+   key idea per screen (intro, the ideas, a final summary) with a progress bar,
+   Back/Next and swiping. Where you are in a book and the "Read" ticks are this
+   phone's only (localStorage), nothing is sent anywhere. The summaries are
+   English; the screens around them are translated like everything else. */
+S.libBook=null; S.libShelf='all'; S.libStep=null; S.libLoading=false; S.libError=false;
+var LIB_READ_KEY='gp-lib-read', LIB_PROG_KEY='gp-lib-progress';
 function libLoad_(){
   if(typeof GP_LIBRARY!=='undefined' || S.libLoading) return;
   S.libLoading=true; S.libError=false;
@@ -5079,12 +5104,15 @@ function libLoad_(){
   sc.onerror=function(){ S.libLoading=false; S.libError=true; sc.remove(); if(S.view==='library') render(); };
   document.head.appendChild(sc);
 }
-function libRead_(){ try { return JSON.parse(localStorage.getItem(LIB_READ_KEY)||'{}')||{}; } catch(e){ return {}; } }
-function libSetRead_(id, on){
-  var r=libRead_(); if(on) r[id]=todayStr(); else delete r[id];
-  try { localStorage.setItem(LIB_READ_KEY, JSON.stringify(r)); } catch(e){}
-}
+function libStore_(key){ try { return JSON.parse(localStorage.getItem(key)||'{}')||{}; } catch(e){ return {}; } }
+function libSave_(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
+function libRead_(){ return libStore_(LIB_READ_KEY); }
+function libSetRead_(id, on){ var r=libRead_(); if(on) r[id]=todayStr(); else delete r[id]; libSave_(LIB_READ_KEY, r); }
+function libProg_(){ return libStore_(LIB_PROG_KEY); }
+function libSetProg_(id, step){ var p=libProg_(); if(step>0) p[id]=step; else delete p[id]; libSave_(LIB_PROG_KEY, p); }
 function libShelf_(id){ return (GP_LIBRARY.shelves.filter(function(x){ return x.id===id; })[0]) || GP_LIBRARY.shelves[0]; }
+function libById_(id){ return GP_LIBRARY.books.filter(function(x){ return x.id===id; })[0]; }
+function libPicks_(){ return (GP_LIBRARY.startHere||[]).map(libById_).filter(Boolean); }
 /* Covers are drawn here, not fetched: one series look for every book — the
    shelf's colour with a pattern on top, the title in Koulen on paper below —
    so they sit well together and show at once, offline too. The pattern is
@@ -5120,70 +5148,132 @@ function libCoverHtml_(b, big){
     '<div class="libCoverTitle '+(n<=12?'l1':n<=22?'l2':n<=34?'l3':'l4')+'">'+esc(b.title)+'</div>'+
     '<div class="libCoverAuthor">'+esc(b.author)+'</div></div></div>';
 }
+function libTileHtml_(b, read, prog){
+  var sh=libShelf_(b.shelf), steps=b.insights.length+2, at=prog[b.id];
+  return '<button class="libTile" data-libbook="'+esc(b.id)+'" aria-label="'+esc(b.title+' — '+b.author)+'" style="--libc:'+sh.color+'">'+
+    '<span class="libTileArt">'+libCoverHtml_(b)+(read[b.id]?'<span class="libReadTag">✓</span>':'')+'</span>'+
+    '<span class="libTileTitle">'+esc(b.title)+'</span><span class="libTileAuthor">'+esc(b.author)+'</span>'+
+    '<span class="libTileMeta">⏱ '+esc(gpT('{n} min',{n:b.mins||5}))+' · 💡 '+b.insights.length+'</span>'+
+    (at && !read[b.id] ? '<span class="libTileBar"><span style="width:'+Math.round(at/(steps-1)*100)+'%"></span></span>' : '')+'</button>';
+}
+function libRowHtml_(title, books, read, prog, seeAll){
+  return '<div class="libSecHead"><h3>'+title+'</h3>'+(seeAll ? '<button class="linkbtn libSeeAll" data-libshelf="'+esc(seeAll)+'">'+esc(t('See all'))+' ('+books.length+')</button>' : '')+'</div>'+
+    '<div class="libRow">'+books.map(function(b){ return libTileHtml_(b, read, prog); }).join('')+'</div>';
+}
 function libraryHtml(){
-  var back='<button class="linkbtn" id="libBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(S.libBook ? t('Library') : t('My Home'))+'</button>';
+  var back='<button class="linkbtn" id="libBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(S.libBook ? t('Library') : S.libShelf!=='all' ? t('Library') : t('My Home'))+'</button>';
   if(typeof GP_LIBRARY==='undefined'){
     return back+'<h2>📚 '+esc(t('Library'))+'</h2>'+(S.libError
       ? '<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(t('The library could not load. Check your connection and try again.'))+'</p><button class="btn ghost" id="libRetry">'+esc(t('Try again'))+'</button></div>'
       : '<p class="sub">'+esc(t('Loading…'))+'</p>');
   }
   if(S.libBook){
-    var b=GP_LIBRARY.books.filter(function(x){ return x.id===S.libBook; })[0];
-    if(b) return back+libBookHtml_(b);
-    S.libBook=null;
+    var b=libById_(S.libBook);
+    if(b) return S.libStep!=null ? libReaderHtml_(b) : back+libBookHtml_(b);
+    S.libBook=null; S.libStep=null;
   }
-  var read=libRead_(), books=GP_LIBRARY.books;
-  var picks=(GP_LIBRARY.startHere||[]).map(function(id){ return books.filter(function(x){ return x.id===id; })[0]; }).filter(Boolean);
+  var read=libRead_(), prog=libProg_(), books=GP_LIBRARY.books, picks=libPicks_();
   if(S.libShelf==='start' && !picks.length) S.libShelf='all';
-  var shown = S.libShelf==='all' ? books : S.libShelf==='start' ? picks : books.filter(function(x){ return x.shelf===S.libShelf; });
   var readN=books.filter(function(x){ return read[x.id]; }).length;
   var h=back+'<h2>📚 '+esc(t('Library'))+'</h2>'+
     '<p class="sub">'+esc(t('Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</p>'+
     '<div class="libProgress"><b>'+readN+'</b> / '+books.length+' '+esc(t('read'))+'<span class="libProgressBar"><span style="width:'+Math.round(readN/Math.max(1,books.length)*100)+'%"></span></span></div>'+
     '<div class="libShelves">'+[{id:'all', name:'All'}].concat(picks.length ? [{id:'start', name:'Start here', emoji:'⭐'}] : [], GP_LIBRARY.shelves).map(function(sh){
       return '<button class="libShelfBtn'+(S.libShelf===sh.id?' on':'')+'" data-libshelf="'+esc(sh.id)+'"'+(sh.color&&S.libShelf===sh.id?' style="background:'+sh.color+';border-color:'+sh.color+'"':'')+'>'+(sh.emoji?sh.emoji+' ':'')+esc(t(sh.name))+'</button>';
-    }).join('')+'</div>'+
-    (S.libShelf==='start' ? '<p class="sub libStartNote">'+esc(gpT('{n} books to read first for leading at GP: culture, teams, hard conversations, vision, systems and getting things done.',{n:picks.length}))+'</p>' : '');
-  h+='<div class="libGrid">'+shown.map(function(x){
-    return '<button class="libCard" data-libbook="'+esc(x.id)+'" aria-label="'+esc(x.title+' — '+x.author)+'">'+libCoverHtml_(x)+
-      (read[x.id]?'<span class="libReadTag">✓</span>':'')+
-      '<span class="libCardMeta">'+esc(x.author)+'</span>'+
-      '<span class="libCardMins">⏱ '+esc(gpT('{n} min',{n:x.mins||5}))+'</span></button>';
-  }).join('')+'</div>';
+    }).join('')+'</div>';
+  if(S.libShelf==='all'){
+    var going=books.filter(function(x){ return prog[x.id] && !read[x.id]; });
+    if(going.length) h+=libRowHtml_('📖 '+esc(t('Continue reading')), going, read, prog);
+    if(picks.length) h+=libRowHtml_('⭐ '+esc(t('Start here')), picks, read, prog, 'start');
+    GP_LIBRARY.shelves.forEach(function(sh){
+      h+=libRowHtml_((sh.emoji?sh.emoji+' ':'')+esc(t(sh.name)), books.filter(function(x){ return x.shelf===sh.id; }), read, prog, sh.id);
+    });
+  } else {
+    var shown = S.libShelf==='start' ? picks : books.filter(function(x){ return x.shelf===S.libShelf; });
+    if(S.libShelf==='start') h+='<p class="sub libStartNote">'+esc(gpT('{n} books to read first for leading at GP: culture, teams, hard conversations, vision, systems and getting things done.',{n:picks.length}))+'</p>';
+    h+='<div class="libGrid">'+shown.map(function(b){ return libTileHtml_(b, read, prog); }).join('')+'</div>';
+  }
   return h+'<p class="pFine">'+esc(t('Summaries written for GP in our own words — not by the authors or publishers. Love one? Read the whole book.'))+'</p>';
 }
 function libBookHtml_(b){
-  var sh=libShelf_(b.shelf), read=libRead_()[b.id];
+  var sh=libShelf_(b.shelf), read=libRead_()[b.id], at=libProg_()[b.id];
   var list=GP_LIBRARY.books, i=list.indexOf(b), next=list[(i+1)%list.length];
-  var h='<div class="libHero" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+libCoverHtml_(b, true)+
-    '<div class="libHeroText"><span class="libShelfTag">'+(sh.emoji||'')+' '+esc(t(sh.name))+'</span>'+
+  var h='<div class="libHead" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+libCoverHtml_(b, true)+
+    '<span class="libShelfTag">'+(sh.emoji||'')+' '+esc(t(sh.name))+'</span>'+
     '<h2 class="libTitle">'+esc(b.title)+'</h2><div class="libAuthor">'+esc(b.author)+(b.year?' · '+b.year:'')+'</div>'+
-    '<div class="libMins">⏱ '+esc(gpT('{n}-minute read',{n:b.mins||5}))+'</div></div></div>';
-  h+='<div class="libVibe" style="border-color:'+sh.color+'">'+esc(b.vibe)+'</div>';
-  h+='<div class="card libBlock"><div class="libKicker">💡 '+esc(t('The big idea'))+'</div><p>'+esc(b.bigIdea)+'</p></div>';
-  h+='<div class="libKicker" style="margin:18px 2px 8px">'+esc(gpT('{n} key insights',{n:b.insights.length}))+'</div>';
-  b.insights.forEach(function(x, k){
-    h+='<div class="card libInsight"><div class="libInsightHead"><span class="libInsightNum" style="background:'+sh.color+'">'+(k+1)+'</span>'+
-      '<span class="libInsightEmoji">'+esc(x.emoji||'')+'</span><b>'+esc(x.title)+'</b></div><p>'+esc(x.body)+'</p></div>';
-  });
-  h+='<div class="card libBlock"><div class="libKicker">✅ '+esc(t('Try this week'))+'</div><ul class="libTry">'+
-    b.tryThis.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul></div>';
-  h+='<div class="card libBlock libForUs"><div class="libKicker">🌏 '+esc(t('For us at GP'))+'</div><p>'+esc(b.forUs)+'</p></div>';
-  h+='<div class="libOneLine" style="background:'+sh.color+'"><span>'+esc(t('In one line'))+'</span>'+esc(b.oneLine)+'</div>';
+    '<div class="libVibe">'+esc(b.vibe)+'</div>'+
+    '<div class="libStats"><span>⏱ '+esc(gpT('{n}-minute read',{n:b.mins||5}))+'</span><span>💡 '+esc(gpT('{n} key ideas',{n:b.insights.length}))+'</span>'+(read?'<span>✓ '+esc(t('Read'))+'</span>':'')+'</div></div>';
+  h+='<button class="btn libCta" id="libStart" style="background:'+sh.color+';border-color:'+sh.color+'">'+
+    esc(at && !read ? gpT('Continue — key idea {n}',{n:Math.min(at, b.insights.length)}) : read ? t('Read again') : '▶ '+t('Start reading'))+'</button>';
+  h+='<div class="libSec"><h3>'+esc(t('What’s it about?'))+'</h3><p>'+esc(b.bigIdea)+'</p></div>';
+  h+='<div class="libSec"><h3>'+esc(t('What’s inside'))+'</h3><div class="libInside">'+b.insights.map(function(x, k){
+    return '<button class="libInsideItem" data-libstep="'+(k+1)+'"><span class="libInsightNum" style="background:'+sh.color+'">'+(k+1)+'</span><span>'+esc(x.emoji||'')+' '+esc(x.title)+'</span><span class="libInsideGo">›</span></button>';
+  }).join('')+'</div></div>';
+  h+='<div class="card libForUs" style="border-left-color:'+sh.color+'"><div class="libKicker">🌏 '+esc(t('For us at GP'))+'</div><p>'+esc(b.forUs)+'</p></div>';
   h+='<div class="btnRow" style="margin-top:14px">'+
-    '<button class="btn'+(read?' ghost':'')+'" id="libMarkRead" data-libid="'+esc(b.id)+'">'+esc(read ? '✓ '+t('Read') : t('Mark as read'))+'</button>'+
+    '<button class="btn ghost" id="libMarkRead" data-libid="'+esc(b.id)+'">'+esc(read ? '✓ '+t('Read') : t('Mark as read'))+'</button>'+
     (next && next!==b ? '<button class="btn ghost" data-libbook="'+esc(next.id)+'">'+esc(t('Next book'))+' →</button>' : '')+'</div>';
   return h+'<p class="pFine">'+esc(t('Summary written for GP in our own words — not by the author or publisher.'))+'</p>';
 }
+/* One screen per step: 0 the intro, 1…n the key ideas, n+1 the final summary. */
+function libReaderHtml_(b){
+  var sh=libShelf_(b.shelf), n=b.insights.length, last=n+1, k=Math.max(0, Math.min(last, S.libStep|0));
+  var segs=''; for(var j=0;j<=last;j++) segs+='<span'+(j<=k?' class="on"':'')+'></span>';
+  var h='<div class="libReader" id="libReader" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+
+    '<div class="libReaderTop"><button class="libReaderClose" id="libClose" aria-label="'+esc(t('Close'))+'">✕</button><div class="libSegs">'+segs+'</div></div>'+
+    '<div class="libReaderBook">'+esc(b.title)+' · '+esc(b.author)+'</div>'+
+    '<div class="libReaderKicker">'+esc(k===0 ? t('Intro') : k<=n ? gpT('Key idea {n} of {m}',{n:k, m:n}) : t('Final summary'))+'</div><div class="libReaderBody">';
+  if(k===0) h+='<h2>'+esc(b.vibe)+'</h2><p>'+esc(b.bigIdea)+'</p>';
+  else if(k<=n){ var x=b.insights[k-1]; h+='<div class="libReaderEmoji">'+esc(x.emoji||'')+'</div><h2>'+esc(x.title)+'</h2><p>'+esc(x.body)+'</p>'; }
+  else h+='<div class="libOneLine" style="background:'+sh.color+'"><span>'+esc(t('In one line'))+'</span>'+esc(b.oneLine)+'</div>'+
+    '<div class="libKicker" style="margin-top:20px">✅ '+esc(t('Try this week'))+'</div><ul class="libTry">'+b.tryThis.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>'+
+    '<div class="libKicker" style="margin-top:18px">🌏 '+esc(t('For us at GP'))+'</div><p>'+esc(b.forUs)+'</p>';
+  h+='</div><div class="libReaderNav">'+
+    (k>0 ? '<button class="btn ghost" id="libPrev">← '+esc(t('Back'))+'</button>' : '')+
+    (k<last ? '<button class="btn" id="libNext" style="background:'+sh.color+';border-color:'+sh.color+'">'+esc(t('Next'))+' →</button>'
+            : '<button class="btn" id="libFinish" style="background:'+sh.color+';border-color:'+sh.color+'">✓ '+esc(t('Done — mark as read'))+'</button>')+
+    '</div></div>';
+  return h;
+}
+function libGo_(step){
+  var b=libById_(S.libBook); if(!b) return;
+  S.libStep=Math.max(0, Math.min(b.insights.length+1, step));
+  if(!libRead_()[b.id]) libSetProg_(b.id, S.libStep);
+  render(); window.scrollTo(0,0);
+}
 function bindLibrary_(){
   var lb=document.getElementById('libBack');
-  if(lb) lb.onclick=function(){ gpTap(); if(S.libBook){ S.libBook=null; render(); } else { S.view='week'; render(); } };
+  if(lb) lb.onclick=function(){ gpTap(); if(S.libBook){ S.libBook=null; S.libStep=null; render(); } else if(S.libShelf!=='all'){ S.libShelf='all'; render(); } else { S.view='week'; render(); } window.scrollTo(0,0); };
   var lr=document.getElementById('libRetry');
   if(lr) lr.onclick=function(){ libLoad_(); render(); };
-  document.querySelectorAll('[data-libshelf]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libShelf=b.getAttribute('data-libshelf'); render(); }; });
-  document.querySelectorAll('[data-libbook]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libBook=b.getAttribute('data-libbook'); render(); window.scrollTo(0,0); }; });
+  var onChip=document.querySelector('.libShelfBtn.on');   // the chosen shelf's chip in view, without moving the page
+  if(onChip && onChip.parentNode) onChip.parentNode.scrollLeft=Math.max(0, onChip.offsetLeft-onChip.parentNode.offsetLeft-24);
+  document.querySelectorAll('[data-libshelf]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libShelf=b.getAttribute('data-libshelf'); render(); if(b.classList.contains('libSeeAll')) window.scrollTo(0,0); }; });
+  document.querySelectorAll('[data-libbook]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libBook=b.getAttribute('data-libbook'); S.libStep=null; render(); window.scrollTo(0,0); }; });
+  document.querySelectorAll('[data-libstep]').forEach(function(b){ b.onclick=function(){ gpTap(); libGo_(+b.getAttribute('data-libstep')); }; });
+  var st=document.getElementById('libStart');
+  if(st) st.onclick=function(){ gpTap(); var id=S.libBook, at=libProg_()[id]; libGo_(at && !libRead_()[id] ? at : 0); };
   var mr=document.getElementById('libMarkRead');
-  if(mr) mr.onclick=function(){ var id=mr.getAttribute('data-libid'); libSetRead_(id, !libRead_()[id]); gpTap(); render(); };
+  if(mr) mr.onclick=function(){ var id=mr.getAttribute('data-libid'), on=!libRead_()[id]; libSetRead_(id, on); if(on) libSetProg_(id, 0); gpTap(); render(); };
+  var cl=document.getElementById('libClose');
+  if(cl) cl.onclick=function(){ gpTap(); S.libStep=null; render(); window.scrollTo(0,0); };
+  var pv=document.getElementById('libPrev'), nx=document.getElementById('libNext'), fin=document.getElementById('libFinish');
+  if(pv) pv.onclick=function(){ gpTap(); libGo_(S.libStep-1); };
+  if(nx) nx.onclick=function(){ gpTap(); libGo_(S.libStep+1); };
+  if(fin) fin.onclick=function(){ gpTap(); libSetRead_(S.libBook, true); libSetProg_(S.libBook, 0); S.libStep=null; render(); window.scrollTo(0,0); };
+  var rd=document.getElementById('libReader');
+  if(rd){   // swipe left for the next screen, right for the one before
+    var x0=null, y0=null;
+    rd.addEventListener('touchstart', function(e){ x0=e.touches[0].clientX; y0=e.touches[0].clientY; }, { passive:true });
+    rd.addEventListener('touchend', function(e){
+      if(x0==null) return;
+      var dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
+      if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.5) return;
+      var b=libById_(S.libBook); if(!b) return;
+      if(dx<0 && S.libStep<b.insights.length+1) libGo_(S.libStep+1);
+      else if(dx>0 && S.libStep>0) libGo_(S.libStep-1);
+    }, { passive:true });
+  }
 }
 
 /* ==================== Team → Personalities ====================

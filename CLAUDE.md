@@ -1209,8 +1209,15 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
   and the title in Koulen on paper below. Instant and offline; no image requests at all.
   Colours live in `GP_LIBRARY.shelves` and `GP_LIBRARY.cover`. ISBNs stay in the data
   for reference only.
-- "Read" ticks are this phone's only (`gp-lib-read` in localStorage). To add a book, add
-  an object to `GP_LIBRARY.books`; tests/test-library.mjs checks the shape.
+- **Laid out like a book-summary app:** the home is rows you swipe sideways (Continue
+  reading, Start here, one per shelf, each with See all → a two-column grid), tiles with
+  the cover on a tinted square; a book page with Start reading, What's it about, What's
+  inside; a reader (`libReaderHtml_`, `S.libStep`) one key idea per screen — intro, the
+  ideas, a final summary — with a progress bar, Back/Next and swipe. Library headings use
+  the body font; Koulen is for the covers only.
+- "Read" ticks (`gp-lib-read`) and where you are in a book (`gp-lib-progress`) are this
+  phone's only (localStorage). To add a book, add an object to `GP_LIBRARY.books`;
+  tests/test-library.mjs checks the shape.
 
 ## Admin → Arrivals & departures
 - **Invite a new group:** pick campus, department and (optionally) ministry → one link,

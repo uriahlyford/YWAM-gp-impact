@@ -2812,3 +2812,15 @@ now). "Read" means "I have read this book".
 | Summary written for GP in our own words — not by the author or publisher. | សេចក្តីសង្ខេបសរសេរសម្រាប់ GP ដោយពាក្យរបស់យើងផ្ទាល់ — មិនមែនដោយអ្នកនិពន្ធ ឬអ្នកបោះពុម្ពទេ។ |
 | Start here | ចាប់ផ្តើមនៅទីនេះ |
 | {n} books to read first for leading at GP: culture, teams, hard conversations, vision, systems and getting things done. | សៀវភៅ {n} ក្បាលដែលគួរអានមុនគេ សម្រាប់ការដឹកនាំនៅ GP៖ វប្បធម៌ ក្រុមការងារ ការសន្ទនាពិបាកៗ ចក្ខុវិស័យ ប្រព័ន្ធ និងការធ្វើការងារឱ្យបានសម្រេច។ |
+| Continue reading | បន្តអាន |
+| See all | មើលទាំងអស់ |
+| What’s it about? | និយាយអំពីអ្វី? |
+| What’s inside | មានអ្វីខ្លះនៅខាងក្នុង |
+| Start reading | ចាប់ផ្តើមអាន |
+| Read again | អានម្តងទៀត |
+| Intro | សេចក្តីផ្តើម |
+| Final summary | សេចក្តីសង្ខេបចុងក្រោយ |
+| Done — mark as read | រួចរាល់ — សម្គាល់ថាបានអាន |
+| {n} key ideas | គំនិតសំខាន់ៗ {n} |
+| Key idea {n} of {m} | គំនិតសំខាន់ទី {n} នៃ {m} |
+| Continue — key idea {n} | បន្ត — គំនិតសំខាន់ទី {n} |
