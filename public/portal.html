@@ -317,10 +317,12 @@ textarea { min-height:80px; resize:vertical; }
 .signProg { display:flex; gap:6px; justify-content:center; margin:0 0 10px; }
 .signDot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; border:1px solid var(--border); color:var(--muted); background:var(--surface); }
 .signDot.on { border-color:var(--ink); color:var(--ink); } .signDot.done { background:var(--good); border-color:var(--good); color:#fff; }
-.signH { font-size:15px; margin:16px 0 6px; } .signList { margin:0 0 10px; padding-left:20px; font-size:14.5px; line-height:1.55; } .signList li { margin:0 0 6px; }
+.signH { font-size:17px; margin:18px 0 6px; font-family:Georgia, 'Times New Roman', serif; font-weight:600; } .signH.num { font-size:15px; margin:14px 0 4px; }
+.signLetterhead { display:block; width:100%; max-width:460px; height:auto; margin:4px auto 8px; }
+.signTitle { text-align:center; margin:4px 0 14px; font-size:20px; line-height:1.3; } .signList { margin:0 0 10px; padding-left:20px; font-size:14.5px; line-height:1.55; } .signList li { margin:0 0 6px; }
 .signChoice { border-radius:var(--rSm); margin:0 0 6px; } .signChoice .signCheck input { border-radius:50%; }
 .signContacts { margin:0 0 10px; }
-.signP { font-size:14.5px; line-height:1.6; margin:0 0 10px; } .signP.italic { font-style:italic; color:var(--muted); } .signP.bold { font-weight:700; }
+.signP { font-size:14.5px; line-height:1.6; margin:0 0 10px; } .signP.italic { font-style:italic; color:var(--muted); } .signP.quote { font-style:italic; border-left:3px solid var(--border); padding:4px 0 4px 12px; margin-left:2px; } .signP.bold { font-weight:700; }
 .signCheck { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:0 0 8px; border:1px solid var(--border); border-radius:var(--rSm); font-size:14.5px; line-height:1.5; cursor:pointer; }
 .signCheck input { width:20px; height:20px; flex:0 0 auto; margin-top:2px; accent-color:var(--ink); }
 .signGroup { border:1px solid var(--border); border-radius:var(--rSm); margin:0 0 10px; padding:2px 12px 4px; } .signGroup .signCheck { border:0; padding:8px 0 2px; margin:0; }
@@ -338,7 +340,7 @@ textarea { min-height:80px; resize:vertical; }
 .lgHead { font-weight:700; font-size:11.5px; color:var(--muted); background:var(--surface2); } .lgName { font-weight:600; }
 .lgCell { display:flex; flex-direction:column; gap:2px; } .lgCell.ok span { color:var(--good); font-weight:600; } .lgCell.no { color:var(--muted); }
 .legalDocRow { display:grid; grid-template-columns:40px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-top:1px solid var(--border); }
-.legalDocRow:first-child { border-top:0; } .legalPreview { padding:4px 0 10px 50px; font-size:14px; } .legalPreview ul { padding-left:20px; }
+.legalDocRow:first-child { border-top:0; } .legalPreview { padding:4px 0 10px 50px; font-size:14px; } .legalPreview ul { padding-left:20px; } .legalPreview { padding-left:0; } .legalPreview .legalPaper { border:1px solid var(--border); border-radius:var(--rSm); padding:14px; background:var(--card, #fff); }
 .ptabs { position:sticky; top:0; z-index:5; display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; margin:12px -4px 12px; padding:6px 4px; background:var(--surface); border-bottom:1px solid var(--border); }
 .ptabs::-webkit-scrollbar { display:none; }
 .ptab { flex:0 0 auto; border:1px solid var(--border); background:transparent; color:var(--muted); font:inherit; font-size:13px; font-weight:600; padding:7px 11px; border-radius:999px; cursor:pointer; white-space:nowrap; }
@@ -775,10 +777,10 @@ function signHtml_(){
   }
   var doc=left[0], k=docs.indexOf(doc), sign=doc.sign||{}, F=S.form, nm=F.name!=null ? F.name : me.name;
   h+='<div class="signProg">'+docs.map(function(x, i){ return '<span class="signDot'+(done[x.id]?' done':(x===doc?' on':''))+'" title="'+esc(x.title)+'">'+(done[x.id]?'✓':(i+1))+'</span>'; }).join('')+'</div>';
-  h+='<div class="card signDoc" data-signdoc="'+esc(doc.id)+'"><div class="eyebrow">'+esc(gpT('Document {n} of {total}',{n:k+1, total:docs.length}))+'</div><h3 style="margin:2px 0 10px">'+esc(doc.title)+'</h3>';
+  h+='<div class="card signDoc" data-signdoc="'+esc(doc.id)+'"><div class="eyebrow">'+esc(gpT('Document {n} of {total}',{n:k+1, total:docs.length}))+'</div>'+legalHeadHtml_(doc.title);
   (doc.blocks||[]).forEach(function(b){
-    if(b.t==='h') h+='<h4 class="signH">'+esc(b.text)+'</h4>';
-    else if(b.t==='list') h+='<ul class="signList">'+(b.items||[]).map(function(it){ var m=/^([^:]{2,24}):\s(.*)$/.exec(it); return '<li>'+(m ? '<b>'+esc(m[1])+':</b> '+esc(m[2]) : esc(it))+'</li>'; }).join('')+'</ul>';
+    if(b.t==='h') h+=legalHHtml_(b.text);
+    else if(b.t==='list') h+=legalListHtml_(b.items);
     else if(b.t==='choice') h+='<div class="signChoice'+(S.miss && S.miss[b.id]?' miss':'')+'" data-signchoicebox="'+esc(b.id)+'">'+(b.options||[]).map(function(o){ return '<label class="signCheck"><input type="radio" name="sc_'+esc(b.id)+'" data-signchoice="'+esc(b.id)+'" value="'+esc(o.id)+'"'+(F.choices && F.choices[b.id]===o.id?' checked':'')+'><span>'+esc(o.text)+'</span></label>'; }).join('')+'</div>';
     else if(b.t==='contacts') h+='<div class="signContacts">'+(d.contacts||[]).map(function(c){ return '<div class="kv"><b>'+esc(c.role)+'</b><span>'+esc([c.name, c.phone].filter(Boolean).join(' · ') || t('Your leader will tell you on arrival.'))+'</span></div>'; }).join('')+'</div>';
     else if(b.t==='p') h+='<p class="signP'+(b.style?' '+esc(b.style):'')+'">'+esc(String(b.text||'').split('{name}').join(nm||'________'))+'</p>';
@@ -944,14 +946,35 @@ function legalAdminHtml_(){
   h+='<div class="card">'+(d.docs||[]).map(function(x){
     return '<div class="legalDocRow" data-legaldoc="'+esc(x.id)+'"><label class="accessChk"><input type="checkbox" data-legalon="'+esc(x.id)+'"'+(x.on?' checked':'')+(d.canEdit?'':' disabled')+' aria-label="'+esc(t('Teams sign this'))+'"></label>'+
       '<div class="accessWho"><b>'+esc(x.title)+'</b><span class="hint">'+esc(x.on ? t('Teams sign this') : t('Switched off'))+'</span></div><button type="button" class="linkbtn inline" data-legalpreview="'+esc(x.id)+'">'+esc(P.legalPreview===x.id ? t('Hide') : t('Read it'))+'</button></div>'+
-      (P.legalPreview===x.id ? '<div class="legalPreview">'+(x.blocks||[]).map(function(b){ return b.t==='p' ? '<p class="signP'+(b.style?' '+esc(b.style):'')+'">'+esc(b.text)+'</p>' : b.t==='check' ? '<p>☐ '+esc(b.text)+'</p>' : b.t==='group' ? '<p>☐ <b>'+esc(b.title)+'</b></p><ul>'+b.items.map(function(i){ return '<li>'+esc(i)+'</li>'; }).join('')+'</ul>' : b.t==='field' ? '<p>'+esc(b.label)+': ________</p>' : b.t==='initial' ? '<p>✍️ '+esc(b.label)+'</p>' : ''; }).join('')+
-        '<p>✍️ '+esc(t('Signature'))+(x.sign && x.sign.age ? ' · '+esc(t('Age')) : '')+(x.sign && x.sign.guardian ? ' · '+esc(t('Parent or guardian (under 18)')) : '')+(x.sign && x.sign.witness ? ' · '+esc(t('Witness (optional)')) : '')+'</p></div>' : '');
+      (P.legalPreview===x.id ? '<div class="legalPreview"><div class="legalPaper">'+legalHeadHtml_(x.title)+legalReadHtml_(x.blocks, d.contacts)+
+        '<p>✍️ '+esc(t('Signature'))+(x.sign && x.sign.age ? ' · '+esc(t('Age')) : '')+(x.sign && x.sign.guardian ? ' · '+esc(t('Parent or guardian (under 18)')) : '')+(x.sign && x.sign.witness ? ' · '+esc(t('Witness (optional)')) : '')+'</p></div></div>' : '');
   }).join('')+'</div>';
   if(!d.canEdit) h+='<p class="hint">'+esc(t('Only a portal admin can switch documents on or off.'))+'</p>';
   h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Reporting contacts'))+'</h3><p class="sub" style="margin:0 0 8px">'+esc(t('Part F of the Child Protection Agreement: who to tell about a concern. Everyone signing sees these.'))+'</p>'+
     (d.contacts||[]).map(function(c, i){ return '<label class="f">'+esc(c.role)+'</label><div class="teamGrid2"><input type="text" data-legalct="'+i+'|name" placeholder="'+esc(t('Name'))+'" value="'+esc(c.name||'')+'"'+(d.canEdit?'':' disabled')+'><input type="text" data-legalct="'+i+'|phone" placeholder="'+esc(t('Phone or contact method'))+'" value="'+esc(c.phone||'')+'"'+(d.canEdit?'':' disabled')+'></div>'; }).join('')+
     (d.canEdit ? '<button class="btn small" id="legalCtSave" style="margin-top:10px">'+esc(t('Save'))+'</button>' : '')+'</div>';
   return h+'</div>';
+}
+/* A legal document laid out like the paper: the YWAM Siem Reap letterhead and
+   the title centred on top, Part headings, numbered sections (1., 2. …) a size
+   down, bullets with a bold lead-in ("Physical harm: …"), and the quote set off. */
+function legalHeadHtml_(title){ return '<img class="signLetterhead" src="letterhead.jpg" alt="YWAM Siem Reap — Serve · Educate · Develop" width="800" height="190"><h3 class="signTitle">'+esc(title)+'</h3>'; }
+function legalHHtml_(text){ return '<h4 class="signH'+(/^\d+\.\s/.test(text||'')?' num':'')+'">'+esc(text)+'</h4>'; }
+function legalListHtml_(items){ return '<ul class="signList">'+(items||[]).map(function(it){ var m=/^([^:]{2,24}):\s(.*)$/.exec(it); return '<li>'+(m ? '<b>'+esc(m[1])+':</b> '+esc(m[2]) : esc(it))+'</li>'; }).join('')+'</ul>'; }
+/* read-only, for the admin's preview: what a signer sees, without the inputs */
+function legalReadHtml_(blocks, contacts){
+  return (blocks||[]).map(function(b){
+    if(b.t==='h') return legalHHtml_(b.text);
+    if(b.t==='list') return legalListHtml_(b.items);
+    if(b.t==='p') return '<p class="signP'+(b.style?' '+esc(b.style):'')+'">'+esc(b.text)+'</p>';
+    if(b.t==='check') return '<p class="signP">☐ '+esc(b.text)+'</p>';
+    if(b.t==='group') return '<p class="signP">☐ <b>'+esc(b.title)+'</b></p>'+legalListHtml_(b.items);
+    if(b.t==='choice') return (b.options||[]).map(function(o){ return '<p class="signP">◯ '+esc(o.text)+'</p>'; }).join('');
+    if(b.t==='contacts') return '<div class="signContacts">'+(contacts||[]).map(function(c){ return '<div class="kv"><b>'+esc(c.role)+'</b><span>'+esc([c.name, c.phone].filter(Boolean).join(' · ') || '—')+'</span></div>'; }).join('')+'</div>';
+    if(b.t==='field') return '<p class="signP">'+esc(b.label)+': ________</p>';
+    if(b.t==='initial') return '<p class="signP">✍️ '+esc(b.label)+'</p>';
+    return '';
+  }).join('');
 }
 function bindLegalAdmin_(){
   if(P.view!=='legal') return;
