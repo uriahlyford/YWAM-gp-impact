@@ -5417,8 +5417,9 @@ function libOpen_(){ S.view='library'; S.libBook=null; S.libStep=null; S.libShel
    and draw your signature with a finger. The drawn signature is kept as a
    small picture; a new version of a paper asks everyone to sign again. */
 S.reqDocs=[]; S.required=null; S.reqDocId=null; S.reqOpened={}; S.reqAgree=false; S.reqName=''; S.reqSig=null; S.reqBusy=false;
-function reqItemLine_(x){
+function reqItemLine_(x, other){
   if(x.kind==='contract'){
+    if(other && !x.done) return x.state==='expired' ? t('Contract has run out') : t('No contract on file');
     return x.done ? gpT('On file — runs to {date}',{date:x.ends ? teamDate_(x.ends) : ''})
       : x.state==='expired' ? t('Your contract has run out — talk to HR') : t('No contract on file yet — talk to HR');
   }
@@ -5433,7 +5434,7 @@ function reqRowsHtml_(R, opts){
     var attrs = !tap ? '' : opts.own ? ' data-reqopen="'+esc(x.id)+'"' : ' data-reqsigof="'+esc(x.id)+'|'+esc(opts.staffId)+'"';
     return '<'+(tap?'button':'div')+' class="reqRow'+(x.done?' done':'')+'"'+attrs+'>'+
       '<span class="reqMark">'+(x.done?'✓':x.kind==='contract'?'📄':'✍️')+'</span>'+
-      '<span class="reqText"><b>'+esc(reqTitle_(x))+'</b><span>'+esc(reqItemLine_(x))+(tap && !opts.own ? ' · '+esc(t('View signature')) : '')+'</span></span>'+
+      '<span class="reqText"><b>'+esc(reqTitle_(x))+'</b><span>'+esc(reqItemLine_(x, !!opts.staffId))+(tap && !opts.own ? ' · '+esc(t('View signature')) : '')+'</span></span>'+
       (tap?PCHEV:'')+'</'+(tap?'button':'div')+'>';
   }).join('');
 }
@@ -5628,7 +5629,7 @@ function reqHrHtml_(){
   var missing=REQ_SUGGEST.filter(function(x){ return !docs.some(function(d){ return d.title.toLowerCase()===x.toLowerCase(); }); });
   h+='<div class="card"><label class="f">'+esc(t('Add a document'))+'</label>'+
     (missing.length?'<div class="chips" style="margin:0 0 8px">'+missing.map(function(x){ return '<button class="chip blue" data-reqsuggest="'+esc(x)+'">+ '+esc(t(x))+'</button>'; }).join('')+'</div>':'')+
-    '<div class="numIn"><input type="text" id="reqNewTitle" placeholder="'+esc(t('Title, e.g. Child Protection Policy'))+'">'+
+    '<div class="numIn"><input type="text" id="reqNewTitle" placeholder="'+esc(t('Document title'))+'">'+
     '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" id="reqNewAdd">'+esc(t('Add'))+'</button></div></div>';
 
   var fin=people.filter(function(p){ return p.required.finished; }).length;
@@ -5640,7 +5641,7 @@ function reqHrHtml_(){
       var n=people.filter(function(p){ return p.required.items.some(function(x){ return x.id===doc.id && x.done; }); }).length;
       return [doc.title, n+' / '+people.length, false];
     })).map(function(x){ return '<div class="mmTile'+(x[2]?' hot':'')+'"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
-  h+='<div class="seg" style="max-width:280px;margin:8px 0 10px"><button data-reqfilter="open" class="'+(S.reqFilter==='open'?'on':'')+'">'+esc(gpT('Unfinished ({n})',{n:people.length-fin}))+'</button>'+
+  h+='<div class="seg" style="margin:8px 0 10px"><button data-reqfilter="open" class="'+(S.reqFilter==='open'?'on':'')+'">'+esc(gpT('Unfinished ({n})',{n:people.length-fin}))+'</button>'+
     '<button data-reqfilter="all" class="'+(S.reqFilter==='all'?'on':'')+'">'+esc(gpT('Everyone ({n})',{n:people.length}))+'</button></div>';
   var shown=people.filter(function(p){ return S.reqFilter==='all' || !p.required.finished; }).sort(function(a,b){ return a.name<b.name?-1:1; });
   if(!shown.length) return h+'<p class="sub">🎉 '+esc(t('Everyone is finished.'))+'</p>';

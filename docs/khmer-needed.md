@@ -2879,7 +2879,9 @@ now). "Read" means "I have read this book".
 | Upload PDF | ផ្ទុក PDF ឡើង |
 | A new file asks everyone to sign again | ឯកសារថ្មីនឹងស្នើឲ្យគ្រប់គ្នាចុះហត្ថលេខាម្តងទៀត |
 | Add a document | បន្ថែមឯកសារ |
-| Title, e.g. Child Protection Policy | ចំណងជើង ឧ. គោលនយោបាយការពារកុមារ |
+| Document title | ចំណងជើងឯកសារ |
+| Contract has run out | កិច្ចសន្យាផុតកំណត់ហើយ |
+| No contract on file | មិនមានកិច្ចសន្យាក្នុងឯកសារ |
 | Profiles complete | ប្រវត្តិរូបពេញលេញ |
 | Unfinished ({n}) | មិនទាន់រួច ({n}) |
 | Everyone ({n}) | គ្រប់គ្នា ({n}) |
