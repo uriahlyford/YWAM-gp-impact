@@ -844,6 +844,12 @@ forms, documents and references follow.
   sweep leaves it. Page: the Teams tab's chip reads 🗄 Archive and groups by year (`<details
   class=archYear>`, newest open) and quarter (`.archQ`, `archDate_` = left or at, `QUARTER_MONTHS`); the
   record shows `#archBanner`.
+- **The staff record in tabs (Oct 2026)**: `panelHtml_` keeps contact on top, then a sticky tab row
+  (`#ptabs`, `[data-ptab]`, `P.ptab`, reset to overview per record via `P.ptabFor`): Overview (stage,
+  owner, next step, team steps) · Trip · People · Documents (visa + docs + reference) · Numbers · Answers ·
+  Notes, only the tabs a record has; the actions sit in `.panelFoot`. Only the open tab is drawn, so a test
+  calls `ptab(page, id)` before reaching into one. Answers fold per form section (`.ansFold`, first
+  open, answered/asked) with `#ansQ` Find in answers (`answersHtml_(…, {fold, q})`, `answerText_`).
 - **Staff side bar and menu (Oct 2026)**: the bar is a small ‹ to the GP app home (`#toGpApp`, name in
   `.srOnly`) · Applications · ☰ (`staffNavHtml_`, `P.menuOpen`, `#navMenu`); the menu is a drawer that
   slides in from the right over a backdrop (`#staffMenu` fixed, `#menuScrim`, `body.menuOn`; ✕, the
