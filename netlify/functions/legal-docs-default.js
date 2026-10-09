@@ -149,7 +149,7 @@ const CHILD = {
     { t: 'p', text: 'I will cooperate with the response process and treat everyone involved with respect. I understand that an allegation must be taken seriously and investigated fairly.' },
     { t: 'h', text: 'Part D — Responding to a disclosure' },
     { t: 'p', text: 'I will listen calmly, take them seriously, and say:' },
-    { t: 'p', style: 'italic', text: '"Thank you for telling me. This is not your fault. I need to tell someone who can help keep you safe."' },
+    { t: 'p', style: 'quote', text: '"Thank you for telling me. This is not your fault. I need to tell someone who can help keep you safe."' },
     { t: 'p', text: 'I will not promise secrecy, question the child repeatedly or investigate myself. I will write down their words, what I observed, the date and time, and any action taken, then pass this securely to the responsible leader. If there is immediate danger, I will seek urgent help to keep the child safe.' },
     { t: 'h', text: 'Part E — Commitments of YWAM Siem Reap' },
     { t: 'p', text: 'Following the full child protection policy, leadership will listen to the child, record concerns securely, notify the director immediately and appoint a small team to handle the response. The person accused will be removed from responsibilities during the investigation. Leadership will work with appropriate authorities as required and will not use pastoral care to avoid the law.' },

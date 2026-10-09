@@ -331,7 +331,7 @@ console.log('=== legal documents, signed on a phone ===');
   ok('staff see who signed what: three of five for the member, one for the leader', r.body.ok && Object.keys(mo.signed).sort().join() === 'acceptance,accident,photo' && Object.keys(lead.signed).join() === 'child' && r.body.link && r.body.link.createdAt);
   r = await call('portalSignedPdf', ['dara', '1234', 'cd_sign', 'msign0001', 'acceptance']);
   const pdf = r.body.ok ? Buffer.from(r.body.dataUrl.split(',')[1], 'base64') : Buffer.alloc(0);
-  ok('each signed one downloads as a PDF: the text, ticks, initials, signatures and who signed when', r.body.ok && pdf.slice(0, 5).toString() === '%PDF-' && /%%EOF\s*$/.test(pdf.slice(-10).toString('latin1')) && /Acceptance of Place - Mo Signer\.pdf/.test(r.body.name) && (pdf.toString('latin1').match(/\/Subtype \/Image/g) || []).length === 4 && pdf.toString('latin1').includes('Signed digitally by Mo Signer \\(Signing Church'), r.body && r.body.name);
+  ok('each signed one downloads as a PDF: the letterhead, text, ticks, initials, signatures and who signed when', r.body.ok && pdf.slice(0, 5).toString() === '%PDF-' && /%%EOF\s*$/.test(pdf.slice(-10).toString('latin1')) && /Acceptance of Place - Mo Signer\.pdf/.test(r.body.name) && (pdf.toString('latin1').match(/\/Subtype \/Image/g) || []).length === 5 && pdf.toString('latin1').includes('Signed digitally by Mo Signer \\(Signing Church'), r.body && r.body.name);
   r = await call('portalSignedPdf', ['dara', '1234', 'cd_sign', 'leader', 'photo']);
   ok('nothing to download for one not signed', r.body.ok === false && r.body.err === 'not_signed');
   r = await call('portalSignedPdf', ['tool.team', '2468', 'cd_sign', 'msign0001', 'photo']);

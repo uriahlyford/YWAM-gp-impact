@@ -976,6 +976,7 @@ async function open(viewport, query, seed) {
   ok('picking a name asks once whether they are under 18', /Hi Member One/.test(await page.$eval('#main', e => e.textContent)));
   await page.click('[data-signu18="yes"]'); await page.waitForSelector('[data-signdoc="photo"]');
   ok('then the first document: its text with their name in it, the box to tick, a signature box, and an optional witness', /Document 1 of 2/.test(await page.$eval('.signDoc', e => e.textContent)) && /photographed, Member One/.test(await page.$eval('.signDoc', e => e.textContent)) && !!(await page.$('[data-signcheck="agree"]')) && !!(await page.$('[data-sigpad="sig"]')) && !!(await page.$('.signWit')) && await page.$eval('#sign_name', i => i.value) === 'Member One');
+  ok('… under the YWAM Siem Reap letterhead, with the title centred as on the paper', !!(await page.$('.signDoc img.signLetterhead')) && await page.$eval('.signDoc .signTitle', e => e.textContent) === 'Photo Release Form' && await page.$eval('.signDoc .signTitle', e => getComputedStyle(e).textAlign) === 'center');
   await page.click('#signSubmit'); await page.waitForTimeout(150);
   ok('signing with nothing done marks what is missing in red and sends nothing', (await page.$$('.miss')).length >= 2 && !sent.some(b => b.fn === 'portalSignSubmit'));
   const draw = async (sel) => { await page.$eval(sel, c => c.scrollIntoView({ block: 'center' })); const r = await page.$eval(sel, c => { const b = c.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; }); await page.mouse.move(r.x + 20, r.y + r.h * 0.7); await page.mouse.down(); for (let i = 1; i <= 12; i++) await page.mouse.move(r.x + 20 + i * (r.w - 40) / 12, r.y + r.h * (i % 2 ? 0.3 : 0.7)); await page.mouse.up(); };
@@ -1048,6 +1049,7 @@ async function open(viewport, query, seed) {
   ok('Save sends the contacts and leaves the documents as they are', lc && lc.args[2] === null && lc.args[3][0].name === 'Dara Pen' && lc.args[3][0].phone === '+855 12 000 000');
   await page.click('[data-legalpreview="acceptance"]'); await page.waitForSelector('.legalPreview');
   ok('Read it shows the document', /orientation/.test(await page.$eval('.legalPreview', e => e.textContent)));
+  ok('… laid out like the paper: the letterhead, the title, headings, bullets with a bold lead-in, the choices and contacts', !!(await page.$('.legalPreview img.signLetterhead[src="letterhead.jpg"]')) && /Acceptance of Place/.test(await page.$eval('.legalPreview .signTitle', e => e.textContent)) && /Part F — Reporting contacts/.test(await page.$eval('.legalPreview .signH', e => e.textContent)) && await page.$eval('.legalPreview .signList li b', e => e.textContent) === 'Physical harm:' && /Nothing to disclose/.test(await page.$eval('.legalPreview', e => e.textContent)) && !!(await page.$('.legalPreview .signContacts')));
   await page.click('[data-legalon="photo"]'); await page.waitForTimeout(300);
   const sl = sent.filter(b => b.fn === 'portalSaveLegalDocs').pop();
   ok('switching one off saves it', sl && sl.args[2].photo === false && sl.args[2].acceptance === true && !(await page.$eval('[data-legalon="photo"]', b => b.checked)));

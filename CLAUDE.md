@@ -844,6 +844,12 @@ forms, documents and references follow.
   sweep leaves it. Page: the Teams tab's chip reads 🗄 Archive and groups by year (`<details
   class=archYear>`, newest open) and quarter (`.archQ`, `archDate_` = left or at, `QUARTER_MONTHS`); the
   record shows `#archBanner`.
+- **Legal documents look like the paper (Oct 2026)**: every document (signing screen, the admin's Read it
+  preview, the signed PDF) has the YWAM Siem Reap letterhead (`public/letterhead.jpg`, also inlined as
+  `LETTERHEAD_JPEG` in legal-pdf.js so the function needs no file read) and the title centred. Headings that
+  start "1. " are numbered sections, a size down from the Part headings; a list item "Lead: text" gets a bold
+  lead-in; a paragraph with `style:'quote'` is set off with a bar. Portal: `legalHeadHtml_`, `legalHHtml_`,
+  `legalListHtml_`, `legalReadHtml_` (read-only, every block type).
 - **Legal documents, signed on a phone (Oct 2026)**: YWAM Siem Reap's five forms (Photo Release, Accident
   Waiver, Liability Release Waiver, Acceptance of Place, Child Protection Agreement) live in `netlify/functions/legal-docs-default.js`
   as blocks (p / check / group / field / initial) with `sign {age, witness, guardian}` — English, verbatim
