@@ -310,6 +310,18 @@ textarea { min-height:80px; resize:vertical; }
 .tripBox .kv, .hospBox { font-size:14px; }
 .hospBox { margin-top:10px; }
 .hospBox textarea { width:100%; margin-top:6px; font-family:inherit; font-size:14px; line-height:1.5; }
+.ptabs { position:sticky; top:0; z-index:5; display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; margin:12px -4px 12px; padding:6px 4px; background:var(--surface); border-bottom:1px solid var(--border); }
+.ptabs::-webkit-scrollbar { display:none; }
+.ptab { flex:0 0 auto; border:1px solid var(--border); background:transparent; color:var(--muted); font:inherit; font-size:13px; font-weight:600; padding:7px 11px; border-radius:999px; cursor:pointer; white-space:nowrap; }
+.ptab:hover { color:var(--ink); } .ptab.on { background:var(--ink); color:var(--accentInk); border-color:var(--ink); }
+.ptab .n { display:inline-block; min-width:18px; padding:0 5px; margin-left:3px; border-radius:9px; font-size:11px; line-height:17px; text-align:center; background:var(--surface2); color:var(--ink); }
+.ptab.on .n { background:rgba(255,255,255,.22); color:inherit; }
+.ptabBody > h3:first-child, .ptabBody > .panelHead:first-child { margin-top:0; }
+.panelFoot { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border); }
+.ansFold { border:1px solid var(--border); border-radius:var(--rSm); margin:0 0 8px; }
+.ansFold > summary { cursor:pointer; padding:9px 12px; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px; }
+.ansFold > summary .n { margin-left:auto; color:var(--muted); font-weight:600; font-size:12px; }
+.ansFold > .ansSec { padding:0 12px 8px; }
 .staffNav { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 16px; padding:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); }
 .staffNavBtn { flex:1 1 auto; border:0; background:transparent; color:var(--muted); font:inherit; font-size:13.5px; font-weight:600; padding:9px 12px; border-radius:var(--rSm); cursor:pointer; white-space:nowrap; }
 .staffNavBtn:hover { color:var(--ink); }
@@ -1345,28 +1357,44 @@ function panelHtml_(c, byId){
   if(c.type==='team' && c.archived && c.archived.left) h+='<div class="banner" id="archBanner" style="margin:10px 0 0">🗄 <b>'+esc(gpT('Archived — the team left on {date}.',{date:fmtDate_(c.archived.left)}))+'</b><br>'+esc(t('Everything is kept: passports, flights, e-visas and other documents, the names and photos, strengths and numbers.'))+'</div>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(gpT('Open {app} chat',{app:MESSENGER_LABEL[c.messenger]||t('chat')}))+'</a>':'')+
     (c.email?'<a class="chatBtn" href="mailto:'+esc(c.email)+'">✉️ '+esc(t('Email'))+'</a>':'')+'</div>';
+  /* The record in tabs, so nothing is a long scroll: contact on top, Overview first,
+     then only the tabs this record has (a team has its trip, people and numbers). */
+  if(P.ptabFor!==c.id){ P.ptabFor=c.id; P.ptab='overview'; P.ansQ=''; }
+  var ov='';
   h+='<div class="kv"><b>'+esc(t('Phone'))+'</b><span>'+esc(c.phone||'—')+'</span></div><div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(c.email||'—')+'</span></div>'+
     '<div class="kv"><b>'+esc(t('Status shown to them'))+'</b><span>'+esc(t(STATUS_LABEL[c.status]||c.status))+'</span></div>';
-  h+='<label class="f">'+esc(t('Stage'))+'</label><select id="p_stage">'+stagesOf_(c.type).map(function(s){ return '<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+esc(t(STAGE_LABEL[s]||s))+'</option>'; }).join('')+'</select>';
-  h+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
-  h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
-  h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
-  h+=panelTeamFlowHtml_(c);
-  h+=panelTeamNumbersHtml_(c);
-  h+=panelMembersHtml_(c);
-  h+=panelTripHtml_(c);
-  h+=panelVisaHtml_(c);
-  h+=panelDocsHtml_(c);
-  h+=panelReferenceHtml_(c);
-  h+=panelAnswersHtml_(c);
+  ov+='<label class="f">'+esc(t('Stage'))+'</label><select id="p_stage">'+stagesOf_(c.type).map(function(s){ return '<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+esc(t(STAGE_LABEL[s]||s))+'</option>'; }).join('')+'</select>';
+  ov+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
+  ov+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
+  ov+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
+  ov+=panelTeamFlowHtml_(c);
+  var docsN=((c.portal && c.portal.docs)||[]).length, ppl=(c.portal && c.portal.members)||[];
+  var tabs=[
+    ['overview','📋',t('Overview'), ov, ''],
+    ['trip','✈️',t('Trip'), panelTripHtml_(c), ''],
+    ['people','👥',t('People'), panelMembersHtml_(c), c.type==='team' ? String(ppl.length) : ''],
+    ['docs','📎',t('Documents'), panelVisaHtml_(c)+panelDocsHtml_(c)+panelReferenceHtml_(c), docsN ? String(docsN) : ''],
+    ['numbers','📊',t('Numbers'), panelTeamNumbersHtml_(c), ''],
+    ['answers','📝',t('Answers'), panelAnswersHtml_(c), ''],
+    ['notes','💬',t('Notes'), '', String((c.log||[]).filter(function(l){ return l.kind!=='stage'; }).length||'')]
+  ].filter(function(x){ return x[0]==='notes' || x[3]; });
+  if(!tabs.some(function(x){ return x[0]===P.ptab; })) P.ptab='overview';
+  h+='<nav class="ptabs" id="ptabs" role="tablist">'+tabs.map(function(x){ return '<button type="button" class="ptab'+(P.ptab===x[0]?' on':'')+'" data-ptab="'+x[0]+'" role="tab" aria-selected="'+(P.ptab===x[0])+'"><span aria-hidden="true">'+x[1]+'</span> '+esc(x[2])+(x[4] && x[4]!=='0' ? ' <span class="n">'+esc(x[4])+'</span>' : '')+'</button>'; }).join('')+'</nav>';
+  var cur=tabs.filter(function(x){ return x[0]===P.ptab; })[0];
+  if(P.ptab!=='notes'){ h+='<div class="ptabBody" data-ptabbody="'+esc(P.ptab)+'">'+cur[3]+'</div>'; }
+  else {
+  h+='<div class="ptabBody" data-ptabbody="notes">';
   h+='<h3>'+esc(t('Notes'))+'</h3><textarea id="p_note" placeholder="'+esc(t('Add a note…'))+'">'+esc(P.note)+'</textarea><button class="btn small ghost" id="addNote" style="margin-top:8px">'+esc(t('Add note'))+'</button>';
   var log=(c.log||[]).slice().reverse();
   h+='<ul class="log">'+(log.length ? log.map(function(l){ var who=byId[l.by] ? byId[l.by].name : (l.by===c.staffId ? c.name : '—');
     return '<li><span class="when">'+esc(fmtDate_(l.at))+' · '+esc(who)+'</span>'+(l.kind==='stage' ? '→ '+esc(t(STAGE_LABEL[l.text]||l.text)) : esc(l.text))+'</li>'; }).join('') : '<li class="empty">'+esc(t('No notes yet.'))+'</li>')+'</ul>';
+  h+='</div>';
+  }
+  h+='<div class="panelFoot">';
   h+='<button class="linkbtn" id="archiveCand">'+esc(c.archived ? t('Reopen this application') : t('Close this application'))+'</button>';
   h+='<button class="linkbtn" id="viewAsCand">👁 '+esc(t('View as this applicant'))+'</button>';
   if(P.boot.role==='portal-admin') h+='<button class="linkbtn danger" id="deleteCand">'+esc(c.hasAccount ? t('Delete this account and application') : t('Delete this application'))+'</button>';
-  h+='</div>';
+  h+='</div></div>';
   return h;
 }
 /* ==================== the application form (applicant side) ====================
@@ -1747,18 +1775,33 @@ function bindAccounts_(){
   });
 }
 /* Read-only answers, for the applicant after submitting and for staff. */
-function answersHtml_(form, answers, aud){
+/* opts.fold: each form section is a fold (staff record); opts.q: only the
+   questions whose label or answer has that text, their sections open. */
+function answerText_(q, v){
+  if(Array.isArray(v)) return v.map(function(r){ return r && typeof r==='object' ? [r.name, r.email, r.phone, r.place, r.from, r.to].filter(Boolean).join(' ') : r; }).join(' ');
+  return v==null ? '' : String(v);
+}
+function answersHtml_(form, answers, aud, opts){
   if(!form) return '';
-  var h='';
-  (form.sections||[]).forEach(function(sec){
+  opts=opts||{};
+  var h='', q0=String(opts.q||'').trim().toLowerCase(), hits=0;
+  (form.sections||[]).forEach(function(sec, si){
     var qs=askedIn_(sec, aud); if(!qs.length) return;
-    h+='<div class="ansSec"><div class="eyebrow">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){
+    if(q0) qs=qs.filter(function(q){ return (lt_(q.label)+' '+answerText_(q, answers[q.id])).toLowerCase().indexOf(q0)>-1; });
+    if(!qs.length) return;
+    hits+=qs.length;
+    if(opts.fold){
+      var filled=qs.filter(function(q){ return answered_(q, answers[q.id]); }).length;
+      h+='<details class="ansFold" data-anssec="'+si+'"'+(q0 || si===0 ? ' open' : '')+'><summary>'+esc(lt_(sec.title))+'<span class="n">'+filled+'/'+qs.length+'</span></summary><div class="ansSec">';
+    } else h+='<div class="ansSec"><div class="eyebrow">'+esc(lt_(sec.title))+'</div>';
+    h+=qs.map(function(q){
       var v=answers[q.id];
       if(q.type==='people'){ var ppl=(Array.isArray(v)?v:[]).filter(function(r){ return r && r.name; }); return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(ppl.length ? ppl.map(function(r){ return esc(r.name)+(r.email?' · '+esc(r.email):'')+(r.phone?' · '+esc(r.phone):''); }).join('<br>') : '<i>—</i>')+'</span></div>'; }
       if(q.type==='stays'){ var rows=Array.isArray(v)?v:[]; return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(rows.length ? rows.map(function(r, i){ var n=daysIncl_(r.from, r.to); return '📍 '+esc(i===0 ? (r.place||basePlace_()) : (r.place||'—'))+': '+esc(rangeLabel_(r.from, r.to))+(n?' ('+esc(daysLabel_(n))+')':''); }).join('<br>') : '<i>—</i>')+'</span></div>'; }
       var txt=Array.isArray(v)?v.join(', '):(v||'');
-      return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(txt?esc(txt):'<i>—</i>')+'</span></div>'; }).join('')+'</div>';
+      return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(txt?esc(txt):'<i>—</i>')+'</span></div>'; }).join('')+'</div>'+(opts.fold ? '</details>' : '');
   });
+  if(q0 && !hits) h='<p class="sub" style="margin:6px 0">'+esc(t('Nothing in the answers matches.'))+'</p>';
   return h;
 }
 /* ==================== the e-visa guide (applicant side) ====================
@@ -2462,9 +2505,10 @@ function panelAnswersHtml_(c){
   if(P.editAnswers){
     (form.sections||[]).forEach(function(sec){ var qs=askedIn_(sec, c.audience); if(!qs.length) return; h+='<div class="eyebrow" style="margin-top:10px">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){ return questionHtml_(q, P.staffAnswers[q.id], 's_', false); }).join(''); });
     h+='<button class="btn small" id="saveAnswers"'+(P.busy?' disabled':'')+'>'+esc(t('Save answers'))+'</button> <button class="linkbtn inline" id="cancelAnswers">'+esc(t('Cancel'))+'</button>';
-  } else {
-    h+= Object.keys(answers).length ? answersHtml_(form, answers, c.audience) : '<p class="sub" style="margin:0">'+esc(t('Nothing answered yet.'))+'</p>';
-  }
+  } else if(Object.keys(answers).length){
+    h+='<input type="search" id="ansQ" placeholder="'+esc(t('Find in answers — a word, a name, a date'))+'" value="'+esc(P.ansQ||'')+'" style="margin:8px 0 6px">'+
+      '<div id="ansBody">'+answersHtml_(form, answers, c.audience, { fold:true, q:P.ansQ })+'</div>';
+  } else h+='<p class="sub" style="margin:0">'+esc(t('Nothing answered yet.'))+'</p>';
   return h;
 }
 /* For a team: how long they are in Cambodia, each place with its dates,
@@ -2562,6 +2606,9 @@ function panelVisaHtml_(c){
 }
 function bindPanelExtras_(){
   var c=selected_(); if(!c) return;
+  document.querySelectorAll('[data-ptab]').forEach(function(b){ b.onclick=function(){ P.ptab=b.getAttribute('data-ptab'); P.editAnswers=false; render(); var p=document.getElementById('ptabs'); if(p && p.getBoundingClientRect().top<0) p.scrollIntoView({ block:'start' }); }; });
+  var aq=document.getElementById('ansQ');
+  if(aq) aq.oninput=function(){ P.ansQ=aq.value; var form=(P.boot.forms||{})[c.formKey], answers=(c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}; var b=document.getElementById('ansBody'); if(b) b.innerHTML=answersHtml_(form, answers, c.audience, { fold:true, q:P.ansQ }); };
   if(c.type==='team' && P.tphotosFor!==c.id && !P.tphotosLoading){
     P.tphotosLoading=true;
     run('portalTeamPhotos', [P.auth.user, P.auth.pin, c.id], function(d){ P.tphotosLoading=false; P.tphotosFor=c.id; P.tphotosStaff = d && d.ok ? d : { people:[], photos:{} }; render(); }, function(){ P.tphotosLoading=false; P.tphotosFor=c.id; P.tphotosStaff={ people:[], photos:{} }; render(); });
