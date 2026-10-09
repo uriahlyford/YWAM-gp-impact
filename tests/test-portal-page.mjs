@@ -1462,6 +1462,27 @@ async function open(viewport, query, seed) {
 }
 
 ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+/* ---------- fits a phone: nothing cut off, nothing sliding sideways ---------- */
+{
+  const { ctx, page } = await open({ width: 360, height: 740 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  const head = await page.evaluate(() => { const t = document.querySelector('.brandTitle').getBoundingClientRect(), b = document.querySelector('.hbtns').getBoundingClientRect(); return t.right <= b.left && b.right <= innerWidth; });
+  ok('on a 360px phone the portal title never runs under the language and sign-out buttons', head);
+  await (await page.$$('.trow'))[2].click(); await page.waitForSelector('[data-ptab]');
+  for (const tab of ['overview', 'answers', 'notes']) {
+    await page.click('[data-ptab="' + tab + '"]'); await page.waitForTimeout(200);
+    const fit = await page.evaluate(() => ({ crm: document.querySelector('.crm').scrollWidth <= document.querySelector('.crm').clientWidth + 1, page: document.documentElement.scrollWidth <= innerWidth + 1, tabs: getComputedStyle(document.querySelector('.ptabs')).overflowX }));
+    ok('a staff record on a phone fits the screen (' + tab + ') — the record’s tabs scroll on their own', fit.crm && fit.page && fit.tabs === 'auto', JSON.stringify(fit));
+  }
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 320, height: 700 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
+  await page.waitForSelector('#applicantNav');
+  ok('an applicant at 320px: the title wraps beside the buttons, nothing slides sideways', await page.evaluate(() => { const t = document.querySelector('.brandTitle').getBoundingClientRect(), b = document.querySelector('.hbtns').getBoundingClientRect(); return t.right <= b.left && document.documentElement.scrollWidth <= innerWidth + 1; }));
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 console.log(`\n${pass} passed, ${fail} failed`);

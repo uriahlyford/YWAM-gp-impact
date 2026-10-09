@@ -850,6 +850,12 @@ forms, documents and references follow.
   sweep leaves it. Page: the Teams tab's chip reads 🗄 Archive and groups by year (`<details
   class=archYear>`, newest open) and quarter (`.archQ`, `archDate_` = left or at, `QUARTER_MONTHS`); the
   record shows `#archBanner`.
+- **Portal on phones and desktops (Oct 2026)**: the staff list/record grid is `minmax(0,1fr)` with
+  `.crm > * { min-width:0 }` — before, a long line in a record (its tabs, a chip row) stretched the column
+  to ~570px on a 360px phone and the page slid sideways, cutting things off. The header title wraps beside
+  the language / sign-out buttons under 420px (`.hbtns` never shrinks), roster names wrap instead of `…`,
+  and on screens ≥1200px the Applications page (`body.wideStaff`) widens to 1400px for the list beside a
+  record. Tests: "fits a phone" in test-portal-page.
 - **Legal documents look like the paper (Oct 2026)**: every document (signing screen, the admin's Read it
   preview, the signed PDF) has the YWAM Siem Reap letterhead (`public/letterhead.jpg`, also inlined as
   `LETTERHEAD_JPEG` in legal-pdf.js so the function needs no file read) and the title centred. Headings that
