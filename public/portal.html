@@ -185,7 +185,13 @@ textarea { min-height:80px; resize:vertical; }
 .confettiBit { position:absolute; width:9px; height:9px; border-radius:2px; will-change:transform, opacity; }
 .pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 12px; font-size:12.5px; font-weight:600; border:1px solid var(--border2); background:var(--surface2); color:var(--muted); white-space:nowrap; }
 .pill.pending, .pill.in_review, .pill.interview { color:var(--warn); border-color:var(--warn); background:transparent; }
-.pill.accepted, .pill.practical, .pill.arrived { color:var(--good); border-color:var(--good); background:transparent; }
+.pill.accepted, .pill.practical, .pill.arrived, .pill.completed { color:var(--good); border-color:var(--good); background:transparent; }
+.archYear { margin:0 0 10px; border:1px solid var(--border); border-radius:var(--r); background:var(--surface); overflow:hidden; }
+.archYear > summary { cursor:pointer; padding:11px 14px; font-weight:700; font-size:15px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+.archYear > summary::-webkit-details-marker { display:none; }
+.archYear > summary::before { content:'📁'; margin-right:8px; } .archYear[open] > summary::before { content:'📂'; }
+.archYear > summary .n { color:var(--muted); font-weight:600; font-size:13px; margin-left:auto; }
+.archQ { padding:6px 14px 2px; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); border-top:1px solid var(--border); background:var(--surface2); }
 .pill.closed { color:var(--bad); border-color:var(--bad); background:transparent; }
 .pill.big { font-size:15px; padding:9px 16px; }
 /* the choices */
@@ -471,7 +477,7 @@ function applyLabel_(type, school){
   if(type==='staff') return t('Staff'); if(type==='volunteer') return t('Volunteer'); if(type==='team') return t('Short-term team');
   return type||'—';
 }
-var STATUS_LABEL = { call1:'1st call', docs:'Awaiting documents', call2:'2nd call — cultural orientation', draft:'Not submitted yet', pending:'Application pending', in_review:'In review — we’ll be in touch', interview:'Interview stage', accepted:'Accepted!', practical:'Getting ready', arrived:'Arrived', closed:'Closed' };
+var STATUS_LABEL = { call1:'1st call', docs:'Awaiting documents', call2:'2nd call — cultural orientation', draft:'Not submitted yet', pending:'Application pending', in_review:'In review — we’ll be in touch', interview:'Interview stage', accepted:'Accepted!', practical:'Getting ready', arrived:'Arrived', completed:'Outreach complete', closed:'Closed' };
 var STATUS_NOTE = {
   draft:'Fill out your application when you are ready — it saves as you go.',
   pending:'We have your application. One of our team will message you on {app} soon.',
@@ -507,7 +513,8 @@ var TEAM_STATUS_NOTE = {
   call1:'We will set up a first video call to get to know each other and go over the logistics — watch for a message on {app}.',
   docs:'Next: passport copies, a team photo and your flight itineraries. Once they are in, the visa steps open.',
   call2:'Your documents and visas are in. Next is a call with your whole team for cultural orientation.',
-  practical:'Nearly there — get ready to travel. Add your team’s numbers below as you go.'
+  practical:'Nearly there — get ready to travel. Add your team’s numbers below as you go.',
+  completed:'Thank you for serving with us! Everything from your trip is kept safe with us. If you have not yet, add your final numbers under Metrics.'
 };
 var STAGE_LABEL = { call1:'1st call', docs:'Awaiting documents', call2:'2nd call — orientation', 'new':'New', contacted:'Contacted', applied:'Applied', interview:'Interview', accepted:'Accepted', practical:'Getting ready', arrived:'Arrived' };
 var MESSENGER_LABEL = { whatsapp:'WhatsApp', telegram:'Telegram' };
@@ -1205,7 +1212,7 @@ function meHtml_(){
   h+='<div class="card"><div class="panelHead"><h3 style="margin-top:0">📝 '+esc(t('Application form'))+'</h3>'+(submitted?'<button class="linkbtn inline" id="viewAnswers">'+esc(P.showAnswers?t('Hide'):t('View my answers'))+'</button>':'')+'</div>'+
     (submitted ? '<p class="sub" style="margin:0">✓ '+esc(t('Submitted'))+(app.submittedAt?' · '+esc(fmtDate_(app.submittedAt)):'')+(app.answersUpdatedAt?' · '+esc(gpT('updated {when}',{when:fmtDate_(app.answersUpdatedAt)})):'')+'</p>'+
         (app.type==='team' ? '<p class="hint">'+esc(t('Dates and head counts can be estimates — come back and update them here as your plans firm up.'))+'</p>' : '')+
-        (app.status!=='closed' ? '<button class="btn ghost small" id="editAnswersMine" style="margin-top:10px">'+esc(t('Edit my answers'))+'</button>' : '')+
+        (app.status!=='closed' && app.status!=='completed' ? '<button class="btn ghost small" id="editAnswersMine" style="margin-top:10px">'+esc(t('Edit my answers'))+'</button>' : '')+
         (P.showAnswers ? answersHtml_(d.form, P.answers, app.audience) : '')
       : '<p class="sub" style="margin:0 0 8px">'+esc(done ? gpT('{done} of {total} answered — pick up where you left off.',{done:done,total:total}) : t('A few sections about you, your faith and what you are applying for. Your answers save as you go.'))+'</p>'+
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
@@ -1254,6 +1261,8 @@ function teamOrder_(a,b){
   if(ga[0]===0 || ga[0]===3) return ga[1]>gb[1] ? -1 : ga[1]<gb[1] ? 1 : 0;
   return (b.updated||'') < (a.updated||'') ? -1 : 1;
 }
+var QUARTER_MONTHS={ 1:'Jan–Mar', 2:'Apr–Jun', 3:'Jul–Sep', 4:'Oct–Dec' };
+function archDate_(c){ return (c.archived && (c.archived.left || c.archived.at)) || ''; }
 function crmHtml_(){
   var d=P.boot, all=d.applicants.slice();
   var byId={}; d.staff.forEach(function(s){ byId[s.id]=s; });
@@ -1288,7 +1297,7 @@ function crmHtml_(){
     return '<div class="tile"><div class="tileNum">'+(counts[x[0]]||0)+'</div><div class="tileLbl">'+esc(x[1])+'</div></div>'; }).join('')+'</div>';
   h+='<div class="crm'+(P.sel?' open':'')+'"><div>';
   h+='<div class="tools"><input type="text" id="q" placeholder="'+esc(t('Search by name, email or phone'))+'" value="'+esc(P.q)+'"></div>';
-  h+='<div class="chips">'+[['',t('All')]].concat((P.what==='team' ? stagesOf_('team') : d.stages).map(function(s){ return [s, t(STAGE_LABEL[s]||s)]; })).concat([['archived',t('Archived')]]).map(function(x){
+  h+='<div class="chips">'+[['',t('All')]].concat((P.what==='team' ? stagesOf_('team') : d.stages).map(function(s){ return [s, t(STAGE_LABEL[s]||s)]; })).concat([['archived', P.what==='team' ? '🗄 '+t('Archive') : t('Archived')]]).map(function(x){
     return '<button class="chip'+(P.filter===x[0]?' on':'')+'" data-filter="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('')+'</div>';
   var q=P.q.trim().toLowerCase();
   var rows=list.filter(function(c){
@@ -1298,18 +1307,32 @@ function crmHtml_(){
   }).sort(P.what==='team' ? teamOrder_ : function(a,b){ return (b.updated||'') < (a.updated||'') ? -1 : 1; });
   h+='<div class="tbl"><div class="thead"><span>'+esc(t('Name'))+'</span><span>'+esc(t('Applying for'))+'</span><span>'+esc(t('Stage'))+'</span><span>'+esc(t('Owner'))+'</span><span></span></div>';
   if(!rows.length) h+='<div class="empty">'+esc(t('Nobody here yet.'))+'</div>';
-  rows.forEach(function(c){
+  var rowOf=function(c){ var h='';
     var owner=c.assignedTo && byId[c.assignedTo] ? byId[c.assignedTo].name : '—';
     var chat=chatHref_(c.messenger, c.phone);
     h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
       '<span><span class="who">'+esc(candName_(c))+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span>'+
+        (c.type==='team' && c.archived && c.archived.left ? '<span class="meta" style="display:block">🗄 '+esc(gpT('Left {date}',{date:fmtDate_(c.archived.left)}))+'</span>' : '')+
         (c.type==='team' && teamNext_(c) && !c.archived ? '<span class="meta nextStep" style="display:block">→ '+esc(t(TEAM_STEP_LABEL[teamNext_(c).id]||''))+'</span>' : '')+'</span>'+
       '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(c.type==='team' ? (function(){ var tr=tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); return (tr && tr.days ? ' · '+esc(gpT('{n} in Cambodia',{n:daysLabel_(tr.days)})) : '')+(tr && tr.start ? ' · '+esc(gpT('from {date}',{date:fmtDate_(tr.start)})) : ''); })() : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
       '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
       '<span class="meta desk">'+esc(owner)+'</span>'+
       '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
     '</button>';
-  });
+    return h; };
+  /* the Teams archive: a folder per year (newest open), a quarter heading inside, by the date the team left */
+  if(P.what==='team' && P.filter==='archived' && rows.length){
+    var years={}, order=[];
+    rows.slice().sort(function(a,b){ return archDate_(b)<archDate_(a) ? -1 : archDate_(b)>archDate_(a) ? 1 : 0; }).forEach(function(c){
+      var d=archDate_(c), y=d.slice(0,4)||'—', q=d ? Math.floor((Number(d.slice(5,7))-1)/3)+1 : 0;
+      if(!years[y]){ years[y]={}; order.push(y); } (years[y][q]=years[y][q]||[]).push(c);
+    });
+    order.forEach(function(y, i){
+      var n=Object.keys(years[y]).reduce(function(a,q){ return a+years[y][q].length; }, 0);
+      h+='<details class="archYear" data-archyear="'+esc(y)+'"'+(i===0?' open':'')+'><summary>'+esc(y)+'<span class="n">'+esc(n===1 ? t('1 team') : gpT('{n} teams',{n:n}))+'</span></summary>'+
+        Object.keys(years[y]).sort().reverse().map(function(q){ return '<div class="archQ" data-archq="'+esc(y+'-Q'+q)+'">'+esc(q==='0' ? t('No date') : 'Q'+q+' · '+t(QUARTER_MONTHS[q]))+' · '+years[y][q].length+'</div>'+years[y][q].map(rowOf).join(''); }).join('')+'</details>';
+    });
+  } else rows.forEach(function(c){ h+=rowOf(c); });
   h+='</div></div>';
   if(P.sel){ var c=list.filter(function(x){ return x.id===P.sel; })[0]; h+='<div>'+(c ? panelHtml_(c, byId) : '')+'</div>'; }
   h+='</div>';
@@ -1319,6 +1342,7 @@ function panelHtml_(c, byId){
   var chat=chatHref_(c.messenger, c.phone);
   var h='<div class="panel" id="panel"><div class="panelHead"><div><h2 style="margin:0">'+esc(candName_(c))+'</h2><p class="sub" style="margin:2px 0 0">'+(candName_(c)!==c.name ? esc(gpT('Leader: {name}',{name:c.name}))+' · ' : '')+esc(applyLabel_(c.type, c.school))+' · '+esc(campusName_(c.campus))+(c.country?' · '+esc(c.country):'')+'</p></div>'+
     '<button class="hbtn" id="closePanel">✕</button></div>';
+  if(c.type==='team' && c.archived && c.archived.left) h+='<div class="banner" id="archBanner" style="margin:10px 0 0">🗄 <b>'+esc(gpT('Archived — the team left on {date}.',{date:fmtDate_(c.archived.left)}))+'</b><br>'+esc(t('Everything is kept: passports, flights, e-visas and other documents, the names and photos, strengths and numbers.'))+'</div>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(gpT('Open {app} chat',{app:MESSENGER_LABEL[c.messenger]||t('chat')}))+'</a>':'')+
     (c.email?'<a class="chatBtn" href="mailto:'+esc(c.email)+'">✉️ '+esc(t('Email'))+'</a>':'')+'</div>';
   h+='<div class="kv"><b>'+esc(t('Phone'))+'</b><span>'+esc(c.phone||'—')+'</span></div><div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(c.email||'—')+'</span></div>'+

@@ -900,6 +900,29 @@ async function open(viewport, query, seed) {
   await ctx.close();
 }
 
+/* ---------- the Teams archive: by year and quarter ---------- */
+{
+  CANDS = JSON.parse(JSON.stringify(CANDS0));
+  const base = CANDS.find(c => c.id === 'cd_team');
+  const gone = (id, name, left, manual) => { const c = JSON.parse(JSON.stringify(base)); c.id = id; c.stage = 'arrived'; c.status = manual ? 'closed' : 'completed'; c.portal.form.answers = { ...c.portal.form.answers, teamName: name }; c.archived = manual ? { at: left, reason: 'Trip off', by: 'st_dara' } : { at: left, reason: 'auto', by: 'auto', left }; return c; };
+  CANDS.push(gone('cd_a1', 'Summer Team', '2026-08-20'), gone('cd_a2', 'Spring Team', '2026-04-03'), gone('cd_a3', 'August Team', '2026-07-02'), gone('cd_a4', 'Last Year Team', '2025-11-05'), gone('cd_a5', 'Called Off Team', '2026-05-01', true));
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  await page.click('[data-whatfilter="team"]'); await page.waitForTimeout(150);
+  ok('on the Teams tab the chip reads Archive', /Archive/.test(await page.$eval('[data-filter="archived"]', b => b.textContent)) && !/\bArchived\b/.test(await page.$eval('[data-filter="archived"]', b => b.textContent)));
+  ok('archived teams are not in the open list', !(await page.$('.trow[data-open="cd_a1"]')));
+  await page.click('[data-filter="archived"]'); await page.waitForTimeout(200);
+  const folders = await page.$$eval('.archYear', ds => ds.map(d => d.getAttribute('data-archyear') + (d.open ? '*' : '') + ':' + [...d.querySelectorAll('.archQ')].map(q => q.getAttribute('data-archq') + '=' + [...q.parentElement.querySelectorAll('.trow')].length).join(',')));
+  const qs = await page.$$eval('.archQ', qs => qs.map(q => q.getAttribute('data-archq')));
+  ok('the archive is a folder per year, newest first and open, with the quarters inside, newest first', JSON.stringify(folders.map(f => f.split(':')[0])) === '["2026*","2025"]' && JSON.stringify(qs) === '["2026-Q3","2026-Q2","2025-Q4"]', JSON.stringify(folders) + ' ' + JSON.stringify(qs));
+  const q3 = await page.$eval('[data-archq="2026-Q3"]', q => { const out = []; let n = q.nextElementSibling; while (n && n.classList.contains('trow')) { out.push(n.querySelector('.who').textContent); n = n.nextElementSibling; } return out.join('|'); });
+  ok('each quarter lists its teams, latest to leave first, and says when they left', q3 === 'Summer Team|August Team' && /Q3 · Jul–Sep · 2/.test(await page.$eval('[data-archq="2026-Q3"]', e => e.textContent)) && /Left 20 Aug 2026/.test(await page.$eval('.trow[data-open="cd_a1"]', e => e.textContent)), q3);
+  ok('a team closed by hand sits in the quarter it was closed, with no "Left"', /Called Off Team/.test(await page.$eval('[data-archyear="2026"]', e => e.textContent)) && !/Left/.test(await page.$eval('.trow[data-open="cd_a5"]', e => e.textContent)));
+  await page.click('.trow[data-open="cd_a1"]'); await page.waitForSelector('#panel');
+  ok('the archived record says when the team left and that everything is kept, documents included', /Archived — the team left on 20 Aug 2026/.test(await page.$eval('#archBanner', e => e.textContent)) && /passports, flights, e-visas/.test(await page.$eval('#archBanner', e => e.textContent)) && /passports\.pdf/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
+  await ctx.close();
+}
+
 /* ---------- the portal admin edits Resources ---------- */
 {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));

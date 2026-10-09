@@ -226,6 +226,49 @@ console.log('=== a team’s photos: one per person, instead of a team photo with
   mem.staff = mem.staff.filter(x => x.id !== 'st_photo'); mem.candidates = mem.candidates.filter(c => c.id !== 'cd_photo'); delete mem['tphotos:cd_photo'];
 }
 
+console.log('=== a team that has left is archived by itself ===');
+{
+  const it = (from, to) => ({ teamName: 'T', leaderName: 'L', itinerary: [{ place: 'YWAM Siem Reap', from, to, base: true }, { place: 'Phnom Penh', from: to, to: to.slice(0, 8) + String(Number(to.slice(8)) + 3).padStart(2, '0'), base: false }] });
+  const team = (id, stage, from, to, extra) => Object.assign({ id, campus: 'siemreap', name: id, type: 'team', stage, staffId: id === 'cd_left' ? 'st_left' : '', email: id + '@example.org', portal: { createdAt: '2025-12-01', submittedAt: '2025-12-02', form: { answers: it(from, to) }, docs: [{ id: 'pd_' + id, kind: 'passports', name: 'passports.pdf', mime: 'application/pdf', size: 10, added: '2025-12-03' }], members: [] }, log: [], archived: null }, extra || {});
+  mem.staff.push({ id: 'st_left', username: 'left.team', name: 'Lia Left', email: 'lia@example.org', kind: 'applicant', campus: 'siemreap', active: true, applicant: { type: 'team', school: '', candidateId: 'cd_left' }, pinSalt: 'st_left', pinHash: mkHash('2468', 'st_left') });
+  mem.candidates = (mem.candidates || []).concat([
+    team('cd_left', 'arrived', '2026-01-05', '2026-01-15'),
+    team('cd_here', 'arrived', '2026-01-05', '2099-01-15'),
+    team('cd_nevercame', 'practical', '2026-01-05', '2026-01-15'),
+    team('cd_reopened', 'arrived', '2026-01-05', '2026-01-15', { archiveOff: true })]);
+  mem['pdoc:pd_cd_left'] = { id: 'pd_cd_left', candidateId: 'cd_left', kind: 'passports', name: 'passports.pdf', mime: 'application/pdf', data: 'JVBERi0xLjQK' };
+  mem.teamTrips = (mem.teamTrips || []).filter(t => t.candidateId !== 'cd_left');
+  let r = await call('portalBoot', ['dara', '1234']);
+  const byId = id => r.body.applicants.find(a => a.id === id);
+  const left = byId('cd_left');
+  ok('a team that arrived is archived the day after its last date in Cambodia (Phnom Penh, not just Siem Reap)', left && left.archived && left.archived.left === '2026-01-18' && left.archived.by === 'auto' && left.status === 'completed', JSON.stringify(left && left.archived));
+  ok('… with a note in its log, and saved', /archived automatically/.test((left.log || []).map(l => l.text).join(' ')) && mem.candidates.find(c => c.id === 'cd_left').archived.left === '2026-01-18');
+  ok('a team still here, one that never arrived, and one staff reopened are left alone', !byId('cd_here').archived && !byId('cd_nevercame').archived && !byId('cd_reopened').archived);
+  ok('nothing is removed: its documents stay on the record and still open', (left.portal.docs || []).length === 1 && mem['pdoc:pd_cd_left']);
+  r = await call('portalGetDoc', ['dara', '1234', 'pd_cd_left']);
+  ok('… staff open the passports file on the archived team', r.body && r.body.ok && r.body.name === 'passports.pdf');
+  r = await call('portalBoot', ['left.team', '2468']);
+  ok('the team sees "Outreach complete", not closed', r.body.ok && r.body.application.status === 'completed');
+  r = await call('portalSaveTeamNumbers', ['left.team', '2468', { 'People Served': 40 }, { male: 10, female: 12 }]);
+  const trip = (mem.teamTrips || []).find(t => t.candidateId === 'cd_left');
+  ok('… can still add its final numbers', r.body && r.body.ok && trip && trip.metrics['People Served'] === 40, JSON.stringify(r.body && r.body.err));
+  ok('… and the Teams Database keeps it as a team that came, not cancelled', trip && trip.status === 'active');
+  r = await call('portalSaveDraft', ['left.team', '2468', { teamName: 'Changed' }]);
+  ok('other changes stay closed on a finished team', r.body && r.body.ok === false && r.body.err === 'closed');
+  r = await call('hrArchiveCandidate', ['dara', '1234', 'cd_left', null]);
+  ok('staff can reopen it', r.body && r.body.ok && !r.body.candidate.archived && r.body.candidate.archiveOff === true);
+  r = await call('portalBoot', ['dara', '1234']);
+  ok('… and it stays open after that', !r.body.applicants.find(a => a.id === 'cd_left').archived);
+  r = await call('hrSaveCandidate', ['dara', '1234', { ...mem.candidates.find(c => c.id === 'cd_left'), nextStep: 'Debrief' }]);
+  ok('… even after an edit on the record', r.body.ok && mem.candidates.find(c => c.id === 'cd_left').archiveOff === true);
+  r = await call('hrArchiveCandidate', ['dara', '1234', 'cd_here', { reason: 'Trip off' }]);
+  ok('closing a team by hand still marks it cancelled in the Teams Database', r.body.ok && !r.body.candidate.archived.left && ((mem.teamTrips || []).find(t => t.candidateId === 'cd_here') || {}).status === 'cancelled');
+  mem.staff = mem.staff.filter(x => x.id !== 'st_left');
+  mem.candidates = mem.candidates.filter(c => ['cd_left', 'cd_here', 'cd_nevercame', 'cd_reopened'].indexOf(c.id) === -1);
+  mem.teamTrips = (mem.teamTrips || []).filter(t => ['cd_left', 'cd_here'].indexOf(t.candidateId) === -1);
+  delete mem['pdoc:pd_cd_left'];
+}
+
 console.log('=== the portal as a tool: meet our team, team strengths, resources ===');
 {
   mem.staff.push(
