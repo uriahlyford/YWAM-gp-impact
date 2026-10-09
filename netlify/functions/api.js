@@ -24,6 +24,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import TEAM_SEED from './team-seed.js';
 import PORTAL_FORMS_DEFAULT from './portal-forms-default.js';
+import LEGAL_DOCS_DEFAULT from './legal-docs-default.js';
+import { buildSignedPdf, isJpeg as isJpeg_ } from './legal-pdf.js';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
 
@@ -6651,6 +6653,189 @@ async function portalReferenceSubmit(token, answers) {
   await writeJSON('candidates', f.rows);
   return { ok: true, applicantName: f.cand.name };
 }
+/* ==================== legal documents, signed on a phone (Oct 2026) ====================
+   A team's people sign YWAM Siem Reap's forms (legal-docs-default.js) with no
+   account: staff make the team's signing link on the record (portalSignLink —
+   a random token, kept only as a sha256 hash, a new one turning the old one
+   off), anyone on the team opens portal.html?sign=<token>, picks their name
+   (the team's names and photos list — leader, co-leaders, members) and signs
+   each document in turn. Each signature keeps the exact text signed (a
+   snapshot, 'legalSnap:<hash>'), the ticks, details, initials and the
+   handwritten signature JPEGs, in one blob per person
+   ('tsign:<candidateId>:<key>'); the record keeps only who signed what and
+   when (portal.signed) for the grid on the record's Legal tab, where each
+   signed one downloads as a PDF built from those (legal-pdf.js). A portal
+   admin can turn a document off ('legalDocs' {off:[ids]}). */
+const SIG_MAX_B64 = 120 * 1024;
+/* who signs on a record: a team's people, or the applicant alone ('me') */
+function signPeople_(c) { return c.type === 'team' ? teamPhotoPeople_(c) : [{ key: 'me', name: c.name, role: 'me' }]; }
+/* the Child Protection Agreement's reporting contacts, set by a portal admin */
+const CONTACT_ROLES = ['Ministry leader or director', 'Alternative senior leader'];
+function legalContacts_(set) {
+  const got = Array.isArray(set && set.contacts) ? set.contacts : [];
+  return CONTACT_ROLES.map(function (role, i) { const c = got[i] || {}; return { role: role, name: dutyText_(c.name, 120), phone: dutyText_(c.phone, 60) }; });
+}
+/* what the role and dates lines start with on a record */
+function signPrefill_(c) {
+  const fmt = function (d) { return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : ''; };
+  if (c.type === 'team') {
+    const trip = tripFromApp_(c, null) || {};
+    return { role: 'Short-term team — ' + teamTitle_(c), dates: trip.from && trip.to ? fmt(trip.from) + ' – ' + fmt(trip.to) : '' };
+  }
+  return { role: c.type === 'student' ? String(c.school || '').toUpperCase() + ' student' : c.type === 'staff' ? 'Staff' : c.type === 'volunteer' ? 'Volunteer' : '', dates: '' };
+}
+async function legalDocs_(all) {
+  const set = await readJSON('legalDocs', { off: [] });
+  const off = Array.isArray(set && set.off) ? set.off : [];
+  return LEGAL_DOCS_DEFAULT.map(function (d) { return Object.assign({}, d, { on: off.indexOf(d.id) === -1, hash: crypto.createHash('sha256').update(JSON.stringify(d)).digest('hex') }); })
+    .filter(function (d) { return all || d.on; });
+}
+function signHash_(token) { return hashPin_(String(token), 'sign'); }
+function signBlobKey_(candId, key) { return 'tsign:' + candId + ':' + String(key).replace(/[^a-zA-Z0-9]/g, '_'); }
+function teamTitle_(c) { return dutyText_(teamAnswers_(c).teamName, 120) || c.name; }
+function pnpStamp_(iso) {
+  const d = new Date(new Date(iso).getTime() + 7 * 3600 * 1000), p = function (n) { return String(n).padStart(2, '0'); };
+  return { date: p(d.getUTCDate()) + '/' + p(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(), at: d.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()] + ' ' + d.getUTCFullYear() + ', ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ' (Phnom Penh time)' };
+}
+async function signStatus_(c) {
+  const docs = await legalDocs_();
+  const signed = (c.portal && c.portal.signed) || {};
+  return {
+    link: c.portal && c.portal.signLink ? { createdAt: c.portal.signLink.createdAt } : null,
+    docs: docs.map(function (d) { return { id: d.id, title: d.title }; }),
+    people: signPeople_(c).map(function (p) { return { key: p.key, name: p.name, role: p.role, signed: signed[p.key] || {} }; })
+  };
+}
+async function portalSignLink(username, pin, candidateId) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  return makeSignLink_(a, a.s.id);
+}
+/* an applicant signs from their own dashboard, signed in — no link, so a team
+   link staff already sent keeps working */
+async function signFor_(arg) {
+  if (arg && typeof arg === 'object') { const a = await applicantCand_(arg.user, arg.pin); return a.out ? null : { rows: a.rows, cand: a.cand }; }
+  return findSign_(arg);
+}
+async function makeSignLink_(a, by) {
+  const c = a.cand;
+  if (c.archived) return { ok: false, err: 'closed' };
+  const token = pinSalt_() + pinSalt_() + pinSalt_();
+  c.portal = c.portal || {};
+  c.portal.signLink = { hash: signHash_(token), createdAt: new Date().toISOString(), by: by };
+  c.updated = new Date().toISOString(); c.updatedBy = by;
+  await writeJSON('candidates', a.rows);
+  return Object.assign({ ok: true, token: token }, await signStatus_(c));
+}
+async function portalSignStatus(username, pin, candidateId) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  return Object.assign({ ok: true }, await signStatus_(a.cand));
+}
+async function findSign_(token) {
+  token = String(token || '');
+  if (!/^[a-f0-9]{24,128}$/.test(token)) return null;
+  const h = signHash_(token);
+  const rows = await getCandidates_();
+  const c = rows.find(function (x) { return x && x.portal && x.portal.signLink && x.portal.signLink.hash === h; });
+  return c ? { rows: rows, cand: c } : null;
+}
+/* the signer's side: the team, its people, the documents — nothing else about the team */
+async function portalSignOpen(token) {
+  const f = await signFor_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  if (f.cand.archived) return { ok: false, err: 'closed' };
+  const signed = (f.cand.portal && f.cand.portal.signed) || {};
+  const docs = await legalDocs_();
+  return {
+    ok: true, team: f.cand.type === 'team' ? teamTitle_(f.cand) : f.cand.name, isTeam: f.cand.type === 'team',
+    contacts: legalContacts_(await readJSON('legalDocs', {})), prefill: signPrefill_(f.cand),
+    people: signPeople_(f.cand).map(function (p) { const m = signed[p.key] || {}; const done = {}; docs.forEach(function (d) { if (m[d.id]) done[d.id] = true; }); return { key: p.key, name: p.name, done: done }; }),
+    docs: docs.map(function (d) { return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign || {} }; })
+  };
+}
+async function portalSignSubmit(token, key, docId, p) {
+  const f = await signFor_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  const c = f.cand;
+  if (c.archived) return { ok: false, err: 'closed' };
+  key = str_(key, 40);
+  const person = signPeople_(c).find(function (x) { return x.key === key; });
+  if (!person) return { ok: false, err: 'bad_person' };
+  const doc = (await legalDocs_()).find(function (d) { return d.id === str_(docId, 40); });
+  if (!doc) return { ok: false, err: 'bad_doc' };
+  p = p && typeof p === 'object' ? p : {};
+  const sign = doc.sign || {};
+  const name = dutyText_(p.name, 120);
+  if (!name) return { ok: false, err: 'name_required' };
+  const checks = {}, fields = {}, initials = {}, choices = {};
+  for (const b of doc.blocks) {
+    if (b.t === 'check' || b.t === 'group') { if (!(p.checks && p.checks[b.id] === true)) return { ok: false, err: 'unticked', id: b.id }; checks[b.id] = true; }
+    if (b.t === 'choice') { const v = p.choices && p.choices[b.id]; if (!(b.options || []).some(function (o) { return o.id === v; })) return { ok: false, err: 'choice_required', id: b.id }; choices[b.id] = v; }
+    if (b.t === 'field') { const v = dutyText_(p.fields && p.fields[b.id], 120); if (!v && !b.optional) return { ok: false, err: 'field_required', id: b.id }; if (v) fields[b.id] = v; }
+    if (b.t === 'initial') { const v = p.initials && p.initials[b.id]; if (!isJpeg_(v) || v.length > SIG_MAX_B64) return { ok: false, err: 'initials_required', id: b.id }; initials[b.id] = v; }
+  }
+  if (!isJpeg_(p.sig) || p.sig.length > SIG_MAX_B64) return { ok: false, err: 'signature_required' };
+  let age = null;
+  if (sign.age) { age = finiteNum_(p.age, 1, 120); if (age == null) return { ok: false, err: 'age_required' }; age = Math.round(age); }
+  const under18 = !!p.under18 || (age != null && age < 18);
+  let guardianName = '', guardianSig = '';
+  if (sign.guardian && under18) {
+    guardianName = dutyText_(p.guardianName, 120);
+    guardianSig = p.guardianSig;
+    if (!guardianName || !isJpeg_(guardianSig) || guardianSig.length > SIG_MAX_B64) return { ok: false, err: 'guardian_required' };
+  }
+  let witnessName = '', witnessSig = '';
+  if (sign.witness && (p.witnessName || p.witnessSig)) {
+    witnessName = dutyText_(p.witnessName, 120); witnessSig = p.witnessSig || '';
+    if (!witnessName || !isJpeg_(witnessSig) || witnessSig.length > SIG_MAX_B64) return { ok: false, err: 'witness_incomplete' };
+  }
+  const now = new Date().toISOString(), stamp = pnpStamp_(now);
+  const snapKey = 'legalSnap:' + doc.hash;
+  if (!(await readJSON(snapKey, null))) { const snap = Object.assign({}, doc); delete snap.on; delete snap.hash; await writeJSON(snapKey, snap); }
+  const blobKey = signBlobKey_(c.id, key);
+  const mine = await readJSON(blobKey, { docs: {} });
+  mine.docs = mine.docs || {};
+  mine.docs[doc.id] = { at: now, dateText: stamp.date, atText: stamp.at, name: name, age: age, under18: under18, guardianName: guardianName, guardianSig: guardianSig, witnessName: witnessName, witnessSig: witnessSig,
+    sig: p.sig, checks: checks, choices: choices, fields: fields, initials: initials, docHash: doc.hash, personKey: key,
+    contacts: doc.blocks.some(function (b) { return b.t === 'contacts'; }) ? legalContacts_(await readJSON('legalDocs', {})) : undefined };
+  await writeJSON(blobKey, mine);
+  c.portal = c.portal || {};
+  c.portal.signed = c.portal.signed || {};
+  c.portal.signed[key] = Object.assign({}, c.portal.signed[key] || {});
+  c.portal.signed[key][doc.id] = { at: now, name: name };
+  if (choices.disclose === 'private') {
+    c.log = (Array.isArray(c.log) ? c.log : []).concat([{ at: now, by: 'sign', kind: 'note', text: name + ' signed the Child Protection Agreement and has information to disclose privately to the director before starting.' }]).slice(-CAND_LOG_MAX);
+    c.portal.signed[key][doc.id].disclose = true;
+  }
+  c.updated = now; c.updatedBy = 'sign';
+  await writeJSON('candidates', f.rows);
+  const done = {}; Object.keys(c.portal.signed[key]).forEach(function (d) { done[d] = true; });
+  return { ok: true, done: done };
+}
+async function portalSignedPdf(username, pin, candidateId, key, docId) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  const c = a.cand;
+  const rec = ((await readJSON(signBlobKey_(c.id, str_(key, 40)), { docs: {} })).docs || {})[str_(docId, 40)];
+  if (!rec) return { ok: false, err: 'not_signed' };
+  const doc = (await readJSON('legalSnap:' + rec.docHash, null)) || LEGAL_DOCS_DEFAULT.find(function (d) { return d.id === docId; });
+  if (!doc) return { ok: false, err: 'no_doc' };
+  const pdf = buildSignedPdf({ doc: doc, record: rec, teamName: teamTitle_(c) });
+  const file = (doc.title + ' - ' + rec.name).replace(/[^A-Za-z0-9 ._-]/g, '').replace(/\s+/g, ' ').trim() + '.pdf';
+  return { ok: true, name: file, mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,' + pdf.toString('base64') };
+}
+/* the documents, for the admin page: each with whether teams are asked to sign it */
+async function portalLegalDocs(username, pin) {
+  const g = await hrGate_(username, pin); if (g.out) return g.out;
+  return { ok: true, canEdit: isPortalAdmin_(g.s), contacts: legalContacts_(await readJSON('legalDocs', {})), docs: (await legalDocs_(true)).map(function (d) { return { id: d.id, title: d.title, on: d.on, blocks: d.blocks, sign: d.sign || {} }; }) };
+}
+async function portalSaveLegalDocs(username, pin, on, contacts) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  const prev = await readJSON('legalDocs', {});
+  const off = on && typeof on === 'object' ? LEGAL_DOCS_DEFAULT.map(function (d) { return d.id; }).filter(function (id) { return on[id] === false; }) : (Array.isArray(prev.off) ? prev.off : []);
+  await writeJSON('legalDocs', { off: off, contacts: Array.isArray(contacts) ? legalContacts_({ contacts: contacts }) : legalContacts_(prev), updated: new Date().toISOString(), by: me.id });
+  return portalLegalDocs(username, pin);
+}
 /* Staff-side writes on one record beyond the CRM's own: the visa flags the
    applicant watches for (flights confirmed, letter of invitation sent) and
    corrections to submitted answers. Same gate and scope as the CRM writes. */
@@ -6951,6 +7136,13 @@ const HANDLERS = {
   portalDeleteDoc: function (a) { return portalDeleteDoc(a[0], a[1], a[2]); },
   portalReferenceForm: function (a) { return portalReferenceForm(a[0]); },
   portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
+  portalSignLink: function (a) { return portalSignLink(a[0], a[1], a[2]); },
+  portalSignStatus: function (a) { return portalSignStatus(a[0], a[1], a[2]); },
+  portalSignOpen: function (a) { return portalSignOpen(a[0]); },
+  portalSignSubmit: function (a) { return portalSignSubmit(a[0], a[1], a[2], a[3]); },
+  portalSignedPdf: function (a) { return portalSignedPdf(a[0], a[1], a[2], a[3], a[4]); },
+  portalLegalDocs: function (a) { return portalLegalDocs(a[0], a[1]); },
+  portalSaveLegalDocs: function (a) { return portalSaveLegalDocs(a[0], a[1], a[2], a[3]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
   portalTeamStep: function (a) { return portalTeamStep(a[0], a[1], a[2], a[3], a[4]); },
   portalSaveTeamNumbers: function (a) { return portalSaveTeamNumbers(a[0], a[1], a[2], a[3]); },
