@@ -692,11 +692,21 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .libReaderTop { position:sticky; top:0; z-index:4; background:var(--bg); display:flex; align-items:center; gap:12px; padding:8px 0 10px; }
 .libReaderClose { flex:0 0 36px; height:36px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); font:inherit; font-size:15px; font-weight:800; cursor:pointer; }
 .libSegs { flex:1; display:flex; gap:3px; } .libSegs span { flex:1; height:4px; border-radius:2px; background:var(--surface2); } .libSegs span.on { background:var(--libc); }
-.libReaderBook { font-size:12.5px; color:var(--faint); font-weight:700; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.libReaderBook { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; color:var(--faint); font-weight:700; margin-top:4px; }
+.libReaderBook > span { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.libReaderBook .libLangSwitch { margin:0; }
+.libLangSwitch { display:inline-flex; flex:0 0 auto; background:var(--surface2); border-radius:999px; padding:3px; margin:0 0 10px; }
+.libLangSwitch button { border:0; background:none; border-radius:999px; padding:5px 12px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; }
+.libLangSwitch button.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(23,21,15,.12); }
+.libKmNote { margin:-4px 0 10px; }
+.libKm p, .libKm li, p.libKm { line-height:1.95; }
+.libReaderBody.libKm h2 { line-height:1.5; }
+.libHead.libKm .libVibe { line-height:1.7; }
 .libReaderKicker { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--libink); margin:14px 0 4px; }
 .libReaderBody { flex:1; padding-bottom:18px; }
 .libReaderBody h2 { font-size:24px; line-height:1.25; margin:4px 0 14px; letter-spacing:-.01em; }
-.libReaderBody p { font-size:17.5px; line-height:1.7; margin:0; }
+.libReaderBody p, .libSec p, .libForUs p { margin:0; } .libReaderBody p + p, .libSec p + p, .libForUs p + p { margin-top:12px; }
+.libReaderBody p { font-size:17.5px; line-height:1.7; }
 .libReaderEmoji { font-size:46px; line-height:1; margin:10px 0 6px; }
 .libReaderNav { position:sticky; bottom:calc(64px + env(safe-area-inset-bottom)); display:flex; gap:10px; background:var(--bg); padding:10px 0 6px; }
 .libReaderNav .btn { flex:1; padding:13px; font-size:15.5px; } .libReaderNav .btn:not(.ghost) { color:var(--pOnMark); }
@@ -5092,8 +5102,35 @@ function teamStrengthsHtml_(campus){
    Back/Next and swiping. Where you are in a book and the "Read" ticks are this
    phone's only (localStorage), nothing is sent anywhere. The summaries are
    English; the screens around them are translated like everything else. */
-S.libBook=null; S.libShelf='all'; S.libStep=null; S.libLoading=false; S.libError=false;
+S.libBook=null; S.libShelf='all'; S.libStep=null; S.libLoading=false; S.libError=false; S.libKmLoading=false; S.libKmError=false;
 var LIB_READ_KEY='gp-lib-read', LIB_PROG_KEY='gp-lib-progress';
+/* Which language the summaries are read in: the app's own unless switched on a book
+   page (remembered on this phone). Khmer lives in library-km.js, loaded only when
+   it is wanted; until it is there — or if it cannot load — the English shows. */
+function libLang_(){ var v=lsGet('gp-lib-lang'); return v==='en'||v==='km' ? v : (LANG==='km' ? 'km' : 'en'); }
+function libLoadKm_(){
+  if(typeof GP_LIBRARY_KM!=='undefined' || S.libKmLoading) return;
+  S.libKmLoading=true; S.libKmError=false;
+  var sc=document.createElement('script');
+  sc.src='library-km.js';
+  sc.setAttribute('data-optional','');
+  sc.onload=function(){ S.libKmLoading=false; if(S.view==='library') render(); };
+  sc.onerror=function(){ S.libKmLoading=false; S.libKmError=true; sc.remove(); if(S.view==='library') render(); };
+  document.head.appendChild(sc);
+}
+function libText_(b){
+  var k=(libLang_()==='km' && typeof GP_LIBRARY_KM!=='undefined') ? GP_LIBRARY_KM[b.id] : null;
+  if(!k) return { km:false, vibe:b.vibe, bigIdea:b.bigIdea, insights:b.insights, tryThis:b.tryThis, forUs:b.forUs, oneLine:b.oneLine };
+  return { km:true, vibe:k.vibe, bigIdea:k.bigIdea, tryThis:k.tryThis, forUs:k.forUs, oneLine:k.oneLine,
+    insights:b.insights.map(function(x, i){ var y=k.insights[i]||{}; return { emoji:x.emoji, title:y.title||x.title, body:y.body||x.body }; }) };
+}
+function libLangSwitch_(){
+  if(libLang_()==='km' && typeof GP_LIBRARY_KM==='undefined' && !S.libKmError) libLoadKm_();
+  var on=libLang_();
+  return '<div class="libLangSwitch" role="group" aria-label="'+esc(t('Language'))+'">'+
+    '<button data-liblang="en" class="'+(on==='en'?'on':'')+'">English</button><button data-liblang="km" class="'+(on==='km'?'on':'')+'">ខ្មែរ</button></div>'+
+    (on==='km' && S.libKmError ? '<p class="hint libKmNote">'+esc(t('The library could not load. Check your connection and try again.'))+'</p>' : '');
+}
 function libLoad_(){
   if(typeof GP_LIBRARY!=='undefined' || S.libLoading) return;
   S.libLoading=true; S.libError=false;
@@ -5148,6 +5185,7 @@ function libCoverHtml_(b, big){
     '<div class="libCoverTitle '+(n<=12?'l1':n<=22?'l2':n<=34?'l3':'l4')+'">'+esc(b.title)+'</div>'+
     '<div class="libCoverAuthor">'+esc(b.author)+'</div></div></div>';
 }
+function libParas_(txt){ return String(txt||'').split(/\n\s*\n/).map(function(x){ return x.trim() ? '<p>'+esc(x.trim())+'</p>' : ''; }).join(''); }
 function libTileHtml_(b, read, prog){
   var sh=libShelf_(b.shelf), steps=b.insights.length+2, at=prog[b.id];
   return '<button class="libTile" data-libbook="'+esc(b.id)+'" aria-label="'+esc(b.title+' — '+b.author)+'" style="--libc:'+sh.color+'">'+
@@ -5196,20 +5234,20 @@ function libraryHtml(){
   return h+'<p class="pFine">'+esc(t('Summaries written for GP in our own words — not by the authors or publishers. Love one? Read the whole book.'))+'</p>';
 }
 function libBookHtml_(b){
-  var sh=libShelf_(b.shelf), read=libRead_()[b.id], at=libProg_()[b.id];
+  var sh=libShelf_(b.shelf), read=libRead_()[b.id], at=libProg_()[b.id], T=libText_(b);
   var list=GP_LIBRARY.books, i=list.indexOf(b), next=list[(i+1)%list.length];
-  var h='<div class="libHead" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+libCoverHtml_(b, true)+
+  var h=libLangSwitch_()+'<div class="libHead'+(T.km?' libKm':'')+'" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+libCoverHtml_(b, true)+
     '<span class="libShelfTag">'+(sh.emoji||'')+' '+esc(t(sh.name))+'</span>'+
     '<h2 class="libTitle">'+esc(b.title)+'</h2><div class="libAuthor">'+esc(b.author)+(b.year?' · '+b.year:'')+'</div>'+
-    '<div class="libVibe">'+esc(b.vibe)+'</div>'+
+    '<div class="libVibe">'+esc(T.vibe)+'</div>'+
     '<div class="libStats"><span>⏱ '+esc(gpT('{n}-minute read',{n:b.mins||5}))+'</span><span>💡 '+esc(gpT('{n} key ideas',{n:b.insights.length}))+'</span>'+(read?'<span>✓ '+esc(t('Read'))+'</span>':'')+'</div></div>';
   h+='<button class="btn libCta" id="libStart" style="background:'+sh.color+';border-color:'+sh.color+'">'+
     esc(at && !read ? gpT('Continue — key idea {n}',{n:Math.min(at, b.insights.length)}) : read ? t('Read again') : '▶ '+t('Start reading'))+'</button>';
-  h+='<div class="libSec"><h3>'+esc(t('What’s it about?'))+'</h3><p>'+esc(b.bigIdea)+'</p></div>';
-  h+='<div class="libSec"><h3>'+esc(t('What’s inside'))+'</h3><div class="libInside">'+b.insights.map(function(x, k){
+  h+='<div class="libSec'+(T.km?' libKm':'')+'"><h3>'+esc(t('What’s it about?'))+'</h3>'+libParas_(T.bigIdea)+'</div>';
+  h+='<div class="libSec'+(T.km?' libKm':'')+'"><h3>'+esc(t('What’s inside'))+'</h3><div class="libInside">'+T.insights.map(function(x, k){
     return '<button class="libInsideItem" data-libstep="'+(k+1)+'"><span class="libInsightNum" style="background:'+sh.color+'">'+(k+1)+'</span><span>'+esc(x.emoji||'')+' '+esc(x.title)+'</span><span class="libInsideGo">›</span></button>';
   }).join('')+'</div></div>';
-  h+='<div class="card libForUs" style="border-left-color:'+sh.color+'"><div class="libKicker">🌏 '+esc(t('For us at GP'))+'</div><p>'+esc(b.forUs)+'</p></div>';
+  h+='<div class="card libForUs'+(T.km?' libKm':'')+'" style="border-left-color:'+sh.color+'"><div class="libKicker">🌏 '+esc(t('For us at GP'))+'</div>'+libParas_(T.forUs)+'</div>';
   h+='<div class="btnRow" style="margin-top:14px">'+
     '<button class="btn ghost" id="libMarkRead" data-libid="'+esc(b.id)+'">'+esc(read ? '✓ '+t('Read') : t('Mark as read'))+'</button>'+
     (next && next!==b ? '<button class="btn ghost" data-libbook="'+esc(next.id)+'">'+esc(t('Next book'))+' →</button>' : '')+'</div>';
@@ -5217,17 +5255,17 @@ function libBookHtml_(b){
 }
 /* One screen per step: 0 the intro, 1…n the key ideas, n+1 the final summary. */
 function libReaderHtml_(b){
-  var sh=libShelf_(b.shelf), n=b.insights.length, last=n+1, k=Math.max(0, Math.min(last, S.libStep|0));
+  var sh=libShelf_(b.shelf), T=libText_(b), n=b.insights.length, last=n+1, k=Math.max(0, Math.min(last, S.libStep|0));
   var segs=''; for(var j=0;j<=last;j++) segs+='<span'+(j<=k?' class="on"':'')+'></span>';
   var h='<div class="libReader" id="libReader" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+
     '<div class="libReaderTop"><button class="libReaderClose" id="libClose" aria-label="'+esc(t('Close'))+'">✕</button><div class="libSegs">'+segs+'</div></div>'+
-    '<div class="libReaderBook">'+esc(b.title)+' · '+esc(b.author)+'</div>'+
-    '<div class="libReaderKicker">'+esc(k===0 ? t('Intro') : k<=n ? gpT('Key idea {n} of {m}',{n:k, m:n}) : t('Final summary'))+'</div><div class="libReaderBody">';
-  if(k===0) h+='<h2>'+esc(b.vibe)+'</h2><p>'+esc(b.bigIdea)+'</p>';
-  else if(k<=n){ var x=b.insights[k-1]; h+='<div class="libReaderEmoji">'+esc(x.emoji||'')+'</div><h2>'+esc(x.title)+'</h2><p>'+esc(x.body)+'</p>'; }
-  else h+='<div class="libOneLine" style="background:'+sh.color+'"><span>'+esc(t('In one line'))+'</span>'+esc(b.oneLine)+'</div>'+
-    '<div class="libKicker" style="margin-top:20px">✅ '+esc(t('Try this week'))+'</div><ul class="libTry">'+b.tryThis.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>'+
-    '<div class="libKicker" style="margin-top:18px">🌏 '+esc(t('For us at GP'))+'</div><p>'+esc(b.forUs)+'</p>';
+    '<div class="libReaderBook"><span>'+esc(b.title)+' · '+esc(b.author)+'</span>'+libLangSwitch_()+'</div>'+
+    '<div class="libReaderKicker">'+esc(k===0 ? t('Intro') : k<=n ? gpT('Key idea {n} of {m}',{n:k, m:n}) : t('Final summary'))+'</div><div class="libReaderBody'+(T.km?' libKm':'')+'">';
+  if(k===0) h+='<h2>'+esc(T.vibe)+'</h2>'+libParas_(T.bigIdea);
+  else if(k<=n){ var x=T.insights[k-1]; h+='<div class="libReaderEmoji">'+esc(x.emoji||'')+'</div><h2>'+esc(x.title)+'</h2>'+libParas_(x.body); }
+  else h+='<div class="libOneLine" style="background:'+sh.color+'"><span>'+esc(t('In one line'))+'</span>'+esc(T.oneLine)+'</div>'+
+    '<div class="libKicker" style="margin-top:20px">✅ '+esc(t('Try this week'))+'</div><ul class="libTry">'+T.tryThis.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>'+
+    '<div class="libKicker" style="margin-top:18px">🌏 '+esc(t('For us at GP'))+'</div>'+libParas_(T.forUs);
   h+='</div><div class="libReaderNav">'+
     (k>0 ? '<button class="btn ghost" id="libPrev">← '+esc(t('Back'))+'</button>' : '')+
     (k<last ? '<button class="btn" id="libNext" style="background:'+sh.color+';border-color:'+sh.color+'">'+esc(t('Next'))+' →</button>'
@@ -5251,6 +5289,7 @@ function bindLibrary_(){
   document.querySelectorAll('[data-libshelf]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libShelf=b.getAttribute('data-libshelf'); render(); if(b.classList.contains('libSeeAll')) window.scrollTo(0,0); }; });
   document.querySelectorAll('[data-libbook]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libBook=b.getAttribute('data-libbook'); S.libStep=null; render(); window.scrollTo(0,0); }; });
   document.querySelectorAll('[data-libstep]').forEach(function(b){ b.onclick=function(){ gpTap(); libGo_(+b.getAttribute('data-libstep')); }; });
+  document.querySelectorAll('[data-liblang]').forEach(function(b){ b.onclick=function(){ gpTap(); lsSet('gp-lib-lang', b.getAttribute('data-liblang')); S.libKmError=false; render(); }; });
   var st=document.getElementById('libStart');
   if(st) st.onclick=function(){ gpTap(); var id=S.libBook, at=libProg_()[id]; libGo_(at && !libRead_()[id] ? at : 0); };
   var mr=document.getElementById('libMarkRead');

@@ -12,12 +12,12 @@
    answered from here; nor are Google Fonts (the page has fallbacks).
 
    Bump SHELL when the list changes; old caches are dropped on activate. */
-var SHELL = 'gp-shell-v3';   // v2: the portal is in the shell too; v3: the Library
+var SHELL = 'gp-shell-v4';   // v2: the portal is in the shell too; v3: the Library; v4: its Khmer
 var NET_WAIT_MS = 4000;
 var PRECACHE = [
   'teams.html', 'manifest.json', 'km.js', 'taxonomy.js', 'rollup.js', 'logo.js', 'duty.js',
   'jobfocus.js', 'personality.js', 'gpstrengths.js', 'kpiguide.js', 'sr-checkin-history.js',
-  'icon-180.png', 'icon-512.png', 'ywam-logo.png', 'library.js',
+  'icon-180.png', 'icon-512.png', 'ywam-logo.png', 'library.js', 'library-km.js',
   /* the YWAM GP Portal installs as its own app (portal-manifest.json) off the same worker */
   'portal.html', 'portal-manifest.json', 'outreach-guide.js'
 ];

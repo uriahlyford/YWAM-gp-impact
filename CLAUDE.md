@@ -1200,7 +1200,13 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
 - **Our own words.** Each summary (vibe, big idea, 5–7 insights, try this week, "for us
   at GP", one line) is written for GP — no quotations, nothing from the books or any
   summary service. Brain and money claims are framed as the author's view where debated.
-  English on purpose; the screens around them are translated.
+  About 1,150–1,300 words each — an honest five minutes; each key idea has a story or
+  example from the book (ours are labelled "Simple everyday example").
+- **Khmer** (`public/library-km.js`, `GP_LIBRARY_KM`, keyed by book id, same parts in the
+  same order) is loaded only when someone reads in Khmer (`libLoadKm_`). The language
+  follows the app's unless switched on a book page (English | ខ្មែរ, `gp-lib-lang` on this
+  phone). Written by Claude in plain spoken Khmer; "ministry" is កិច្ចការបម្រើ as in km.js.
+  When a summary changes in library.js, change its Khmer too — the test checks the shape.
 - **Loaded only when opened** (`libLoad_`, `data-optional` so a failed load says so on
   the page instead of the whole-app error screen); sw.js precaches it for offline reading.
 - **Covers are drawn, not fetched** (`libCoverHtml_`/`libMotif_`): one series look —

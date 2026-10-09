@@ -83,6 +83,7 @@ async function open(user, opts) {
 const C = {}; vm.createContext(C); vm.runInContext(fs.readFileSync(PUBLIC + '/library.js', 'utf8') + ';this.L=GP_LIBRARY;', C);
 const BOOKS = C.L.books;
 const START = C.L.startHere || [];
+const AH = BOOKS.find(b => b.id === 'atomic-habits'), AHN = AH.insights.length;
 const openLib = async page => { await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="library"]'); await page.waitForTimeout(900); };
 {
   const { ctx, page } = await open('sreilea');
@@ -117,16 +118,16 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await page.screenshot({ path: OUT + '/shelf.png' });
   await page.click('[data-libbook="atomic-habits"]'); await page.waitForTimeout(400);
   const txt = await page.$eval('#main', e => e.innerText);
-  ok('a book page: cover, title, author, minutes, key ideas, the vibe line', !!(await page.$('.libHead .libCover')) && /Atomic Habits/.test(txt) && /James Clear/.test(txt) && /5-minute read/.test(txt) && /6 key ideas/.test(txt) && /Tiny changes, wild results/.test(txt));
+  ok('a book page: cover, title, author, minutes, key ideas, the vibe line', !!(await page.$('.libHead .libCover')) && /Atomic Habits/.test(txt) && /James Clear/.test(txt) && /5-minute read/.test(txt) && new RegExp(AHN + ' key ideas').test(txt) && txt.includes(AH.vibe.slice(0, 24)));
   ok('… Start reading, what it’s about, what’s inside and for us at GP',
-    /Start reading/.test(await page.$eval('#libStart', e => e.innerText)) && /What’s it about\?/.test(txt) && (await page.$$('.libInsideItem')).length === 6 && /For us at GP/i.test(txt));
+    /Start reading/.test(await page.$eval('#libStart', e => e.innerText)) && /What’s it about\?/.test(txt) && (await page.$$('.libInsideItem')).length === AHN && /For us at GP/i.test(txt));
   await page.screenshot({ path: OUT + '/book.png' });
   await page.click('#libStart'); await page.waitForTimeout(300);
   let r = await page.$eval('#libReader', e => e.innerText);
-  ok('the reader opens on the intro, with a bar of 8 steps', /Intro/i.test(r) && (await page.$$('.libSegs span')).length === 8 && (await page.$$('.libSegs span.on')).length === 1 && !(await page.$('#libPrev')));
+  ok('the reader opens on the intro, with a bar of every step', /Intro/i.test(r) && (await page.$$('.libSegs span')).length === AHN + 2 && (await page.$$('.libSegs span.on')).length === 1 && !(await page.$('#libPrev')));
   await page.click('#libNext'); await page.waitForTimeout(200);
   r = await page.$eval('#libReader', e => e.innerText);
-  ok('Next: key idea 1 of 6, one idea on the screen', /Key idea 1 of 6/i.test(r) && !!(await page.$('.libReaderEmoji')) && (await page.$$('.libSegs span.on')).length === 2);
+  ok('Next: key idea 1 of all, one idea on the screen', new RegExp('Key idea 1 of ' + AHN, 'i').test(r) && !!(await page.$('.libReaderEmoji')) && (await page.$$('.libSegs span.on')).length === 2);
   await page.screenshot({ path: OUT + '/reader.png' });
   await page.evaluate(() => {   // a swipe to the left
     const el = document.getElementById('libReader');
@@ -135,7 +136,7 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
     el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: tt(120), bubbles: true }));
   });
   await page.waitForTimeout(200);
-  ok('a swipe to the left goes on to key idea 2', /Key idea 2 of 6/i.test(await page.$eval('#libReader', e => e.innerText)));
+  ok('a swipe to the left goes on to key idea 2', new RegExp('Key idea 2 of ' + AHN, 'i').test(await page.$eval('#libReader', e => e.innerText)));
   await page.click('#libClose'); await page.waitForTimeout(250);
   ok('closing keeps your place: Continue — key idea 2', /Continue — key idea 2/.test(await page.$eval('#libStart', e => e.innerText)));
   await page.click('#libBack'); await page.waitForTimeout(250);
@@ -143,8 +144,8 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   ok('… and the home has a Continue reading row with it, and a progress bar on its tile', /Continue reading/.test(await page.$eval('.libSecHead', e => e.innerText)) && !!(await page.$('.libRow [data-libbook="atomic-habits"] .libTileBar')));
   await page.click('.libRow [data-libbook="atomic-habits"]'); await page.waitForTimeout(300);
   await page.click('#libStart'); await page.waitForTimeout(250);
-  ok('Continue opens where you were', /Key idea 2 of 6/i.test(await page.$eval('#libReader', e => e.innerText)));
-  for (let i = 0; i < 5; i++) { await page.click('#libNext'); await page.waitForTimeout(120); }
+  ok('Continue opens where you were', new RegExp('Key idea 2 of ' + AHN, 'i').test(await page.$eval('#libReader', e => e.innerText)));
+  for (let i = 0; i < AHN - 1; i++) { await page.click('#libNext'); await page.waitForTimeout(120); }
   r = await page.$eval('#libReader', e => e.innerText);
   ok('the last screen is the final summary: in one line, try this week, for us at GP', /Final summary/i.test(r) && /In one line/i.test(r) && /Try this week/i.test(r) && /For us at GP/i.test(r) && !!(await page.$('#libFinish')));
   ok('nothing in the reader scrolls sideways', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
@@ -160,6 +161,7 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await page.click('#libBack'); await page.waitForTimeout(300);
   ok('back home the read books have a tick, and the count says so', !!(await page.$('[data-libbook="atomic-habits"] .libReadTag')) && /\b2\s*\/\s*\d+\s*read/.test(await page.$eval('.libProgress', e => e.innerText)) && !/Continue reading/.test(await page.$eval('#main', e => e.innerText)));
   ok('nothing scrolls sideways', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  ok('reading in English never loads the Khmer', await page.evaluate(() => typeof GP_LIBRARY_KM === 'undefined'));
   await ctx.close();
 }
 {
@@ -173,10 +175,18 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await openLib(page);
   ok('in Khmer the Library’s own words are Khmer', /បណ្ណាល័យ/.test(await page.$eval('#main h2', e => e.innerText)));
   ok('… and the home fits a 320px phone', await page.evaluate(() => document.documentElement.scrollWidth <= 321));
-  await page.click('[data-libbook]'); await page.waitForTimeout(300);
+  await page.click('[data-libbook]'); await page.waitForTimeout(600);
   ok('… and a book page fits a 320px phone', await page.evaluate(() => document.documentElement.scrollWidth <= 321));
+  const kmAbout = await page.$eval('.libSec p', e => e.innerText);
+  ok('in Khmer the summary itself is Khmer, and ខ្មែរ is on', /[\u1780-\u17FF]{5}/.test(kmAbout) && !!(await page.$('[data-liblang="km"].on')), kmAbout.slice(0, 40));
+  await page.click('[data-liblang="en"]'); await page.waitForTimeout(250);
+  const enAbout = await page.$eval('.libSec p', e => e.innerText);
+  ok('… English switches it to the English, and that is remembered', !/[\u1780-\u17FF]/.test(enAbout) && await page.evaluate(() => localStorage.getItem('gp-lib-lang') === 'en'), enAbout.slice(0, 40));
+  await page.click('[data-liblang="km"]'); await page.waitForTimeout(250);
   await page.click('#libStart'); await page.waitForTimeout(250); await page.click('#libNext'); await page.waitForTimeout(200);
-  ok('… and the reader too, in Khmer', await page.evaluate(() => document.documentElement.scrollWidth <= 321) && /គំនិតសំខាន់ទី 1/.test(await page.$eval('#libReader', e => e.innerText)));
+  ok('… and the reader too, in Khmer — the key idea itself Khmer', await page.evaluate(() => document.documentElement.scrollWidth <= 321) && /គំនិតសំខាន់ទី 1/.test(await page.$eval('#libReader', e => e.innerText)) &&
+    /[\u1780-\u17FF]{5}/.test(await page.$eval('.libReaderBody p', e => e.innerText)));
+  await page.screenshot({ path: OUT + '/reader-km.png' });
   await ctx.close();
 }
 {
