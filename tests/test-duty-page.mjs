@@ -40,7 +40,7 @@ const KITCHEN = () => ({ layout: 'grid', title: 'Cooking schedule', km: 'កា�
   rows: [{ id: 'bf', label: 'Breakfast 7:30', km: 'អាហារ-ព្រឹក', time: 'Cooking 6:00', off: ['sun'], span: false },
          { id: 'pr', label: 'Pray – Announcements', km: '', time: '', off: ['sun'], span: true },
          { id: 'di', label: 'Dinner 6:30', km: '', time: 'Cooking 5:00', off: [], span: false }],
-  cells: { 'bf|mon': ['Kim', 'Kara'], 'pr|all': ['Hana'], 'di|tue': ['Kim'] } });
+  cells: { 'bf|mon': ['Kim', 'Kara'], 'pr|all': ['Hana'], 'di|tue': ['Kim'], 'di|wed': ['Uriah Lyford'] } });
 const CHORES = () => ({ layout: 'list', title: 'Morning chores (8–8:30 AM)', km: '', notes: '',
   sections: [{ id: 'base', title: 'Base', km: '', rows: [{ id: 'c1', place: 'Stairs 1–4', km: '', duty: 'Sweep and mop stairs 1–4.', people: [] }, { id: 'c2', place: 'Rooftop', km: '', duty: 'Sweep and mop the rooftop.', people: ['Kim'] }] },
              { id: 'house', title: 'Family house', km: '', rows: [{ id: 'h1', place: 'Plants', km: '', duty: 'Water the plants.', people: [] }] }] });
@@ -116,6 +116,8 @@ console.log('=== everyone: My Home, the menu, reading, the picture ===');
   ok('a table, Sunday to Friday', grid.heads.join() === 'Time,Sunday,Monday,Tuesday,Wednesday,Thursday,Friday', grid.heads.join());
   ok('my name stands out', grid.me.join() === 'Kim,Kim');
   ok('Pray – Announcements spans the week; Sunday’s off boxes are shaded', grid.span === 5 && grid.off === 2, JSON.stringify(grid));
+  const full = await page.evaluate(() => { const n = [].filter.call(document.querySelectorAll('.dutyName'), x => x.textContent === 'Uriah Lyford')[0]; return n ? { h: n.getBoundingClientRect().height, lh: parseFloat(getComputedStyle(n).lineHeight) } : null; });
+  ok('a full name stays on one line — “Uriah Lyford”, not Uriah over Lyford', full && full.h < full.lh * 1.5, JSON.stringify(full));
   ok('the table scrolls inside its card, not the page', !(await overflow(page)));
   ok('someone outside Culinary has no Edit', !(await page.$('#schedEditBtn')));
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }).catch(() => null), page.click('#schedShare')]);
