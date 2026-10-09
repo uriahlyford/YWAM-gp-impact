@@ -640,6 +640,18 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .goalsWeekSwitch button { border:0; background:none; border-radius:999px; padding:5px 14px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; }
 .goalsWeekSwitch button.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(23,21,15,.12); }
 .goalLink.unlinked { color:var(--faint); font-size:12.5px; } .goalLink.unlinked select { font-size:12.5px !important; }
+.guestEntry { margin-top:14px; } .guestCampus { margin:0 0 12px; max-width:none; }
+.guestHero { text-align:center; padding:20px 16px; } .guestHeroIcon { font-size:40px; } .guestHero h2 { margin:6px 0; } .guestHero p { margin:0 0 12px; font-size:15px; line-height:1.55; color:var(--muted); }
+.guestBtns { margin:0; } .guestBtns .btn { margin:0; }
+.guestBig { display:flex; align-items:center; gap:12px; width:100%; text-align:left; font:inherit; color:var(--ink); cursor:pointer; }
+.guestBig b { display:block; font-size:16.5px; } .guestBig span span, .guestBig > span:nth-child(2) > span { display:block; font-size:13.5px; color:var(--muted); margin-top:2px; line-height:1.45; }
+.guestBigIcon { font-size:30px; flex:0 0 auto; }
+.guestTool { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; margin-bottom:8px; }
+.guestTool b { display:block; font-size:15px; } .guestTool > span:nth-child(2) > span { display:block; font-size:13px; color:var(--muted); margin-top:2px; line-height:1.45; }
+.guestToolIcon { font-size:24px; flex:0 0 auto; } .guestLock { font-size:14px; opacity:.6; }
+.guestFoot { text-align:center; } .guestFoot p { margin:0 0 12px; color:var(--muted); font-size:14px; line-height:1.5; }
+.gate { max-width:400px; margin:4vh auto 0; text-align:center; } .gate .gateIcon { font-size:38px; line-height:1; }
+.gate h3 { margin:12px 0 8px; font-size:19px; } .gate p { font-size:14px; line-height:1.55; color:var(--muted); margin:0 0 20px; }
 .libTally { display:block; width:100%; margin-top:12px; text-align:left; border:0; border-radius:12px; padding:10px 12px; background:var(--surface2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
 .reqCard { padding:14px; } .reqCard.reqAlert { border:1.5px solid var(--bad); }
 .reqHead { display:flex; align-items:center; gap:10px; margin-bottom:8px; } .reqHeadIcon { font-size:24px; }
@@ -2609,6 +2621,9 @@ function boot(){
   S.regPrefill = gpInviteFromUrl_();
   var saved = null;
   try { saved = JSON.parse(lsGet('gp-staff')||'null'); } catch(e){}
+  var wantGuest = false;
+  try { wantGuest = String(location.search||'').indexOf('guest=1')>-1; } catch(e){}
+  if(!(saved && saved.user && saved.pin) && (wantGuest || lsGet(GUEST_KEY))){ gpEnterGuest_(); return; }
   if(saved && saved.user && saved.pin){
     /* A remembered session goes straight to getMyBoot: it verifies the PIN and
        returns the staff record, so the separate staffLogin round-trip that used
@@ -2789,10 +2804,11 @@ function render(){
     bind();
     return;
   }
-  var notifN = visibleNotifItems_().length;
-  hb.innerHTML = '<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+
+  var notifN = S.guest ? 0 : visibleNotifItems_().length;
+  if(S.guest && GUEST_VIEWS.indexOf(S.view)===-1) S.view='week';
+  hb.innerHTML = '<button class="hbtn" id="langBtn">'+(LANG==='km'?'EN':'ខ្មែរ')+'</button>'+ (S.guest ? '' :
     '<button class="hbtn icon" id="bellBtn" style="position:relative" aria-label="'+esc(gpT('Notifications ({n})',{n:notifN}))+'">'+BELL_SVG+
-    (notifN?'<span class="notifDot"></span>':'')+'</button>'+
+    (notifN?'<span class="notifDot"></span>':'')+'</button>')+
     '<button class="hbtn icon" id="menuBtn" aria-label="'+esc(t('Menu'))+'">'+HAMBURGER_SVG+'</button>';
   /* Base leads: signing in should show how the base is doing, not a to-do list.
      Your own week is one tap away, Profile is folded into Me, and Mentor is
@@ -2812,12 +2828,15 @@ function render(){
     health: NAV_SVG_OPEN+'<path d="M12 20.5s-7.5-4.6-9.8-9.6C.6 7.3 2.4 4 5.7 4c2 0 3.5 1.1 4.3 2.5C10.8 5.1 12.3 4 14.3 4c3.3 0 5.1 3.3 3.5 6.9C15.5 15.9 12 20.5 12 20.5Z"/></svg>'
   };
   var tabs=[['week','My Home'],['base','Base'],['team','Team'+(reqN?' ('+reqN+')':'')],['health','Health']];
+  if(S.guest) tabs=[['week','Look around'],['base','Base'],['team','Team'],['health','Health']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+NAV_ICONS[tab[0]]+'</span>'+t(tab[1])+'</button>';
   }).join('');
   var m=document.getElementById('main');
-  if(S.view==='base') m.innerHTML=baseHtml();
+  if(S.guest && S.view==='week') m.innerHTML=gpGuestHomeHtml_();
+  else if(S.guest && (S.view==='team' || S.view==='health')) m.innerHTML=gpGuestLockHtml_(S.view);
+  else if(S.view==='base') m.innerHTML=(S.guest ? gpGuestCampusHtml_() : '')+baseHtml();
   else if(S.view==='week') m.innerHTML=homeHtml();
   else if(S.view==='health') m.innerHTML=healthHtml();
   else if(S.view==='team') m.innerHTML=teamHtml();
@@ -3021,7 +3040,9 @@ function renderMenu(){
   var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
   var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
   IC.library='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>';
-  var sections=[
+  var sections= S.guest ? [
+    { title:'', items:[it('library', t('Library')), it('guestreg', t('Create my profile')), it('guestlogin', t('Log in'))] }
+  ] : [
     { title:'', items:[it('leave', t('Leave Request')), it('library', t('Library')), it('profile', t('Profile & settings'))] },
     { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
     { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
@@ -3048,6 +3069,7 @@ function renderMenu(){
       if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='library'){ S.view='library'; S.libBook=null; libLoad_(); render(); }
+      else if(id==='guestreg' || id==='guestlogin'){ gpLeaveGuest_(id==='guestreg'); }
       else if(id==='profile'){ S.view='profile'; render(); }
       else if(id==='admin'){ S.view='admin'; render(); }
       else if(id==='hr'){ S.view='hr'; S.hrSub='home'; render(); }
@@ -5695,6 +5717,100 @@ function bindReqHr_(){
   document.querySelectorAll('[data-reqfilter]').forEach(function(b){ b.onclick=function(){ S.reqFilter=b.getAttribute('data-reqfilter'); render(); }; });
   document.querySelectorAll('[data-reqperson]').forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-reqperson'); S.reqOpenPerson = S.reqOpenPerson===id ? null : id; render(); }; });
   bindReqRows_();
+}
+
+/* ==================== looking around without an account ====================
+   "Look around" on the log-in screen (Uriah, Oct 2026: people who want to see
+   the app and its tools without making a username). A guest gets the app's
+   shell with what is safe to show anyone:
+     • the whole Library — read ticks stay on this phone, and go up to the
+       account if they make a profile later (libAdoptServer_);
+     • Base — the public base figures (getData with no code: the same numbers
+       the front door's guest dashboard has always shown, money metrics never);
+     • My Home as a tour of every tool, each saying what it does.
+   Team and Health stay locked with a reason: one is people's names, photos and
+   goals, the other private check-ins. Nothing a guest does calls the server
+   with credentials — S.auth stays empty, so every save path is never reached.
+   Kept on this phone (gp-app-guest) until they log in or make a profile. */
+var GUEST_KEY='gp-app-guest';
+var GUEST_VIEWS=['week','base','team','health','library'];
+function gpGuestMe_(){
+  return { id:'guest', name:t('Guest'), username:'', campus: lsGet('gp-guest-campus') || 'siemreap', dept:'', ministry:'', role:'',
+    photo:'', staffType:'campus', country:'—', ministries:[], leads:[], guest:true };
+}
+function gpEnterGuest_(){
+  lsSet(GUEST_KEY, '1');
+  S.guest=true; S.me=gpGuestMe_(); S.profile={}; S.auth={ user:'', pin:'' }; S.regMode=false;
+  S.view='week'; S.roster=[]; S.required=null; S.reqDocs=[];
+  gpGuestLoadBase_();
+  render(); window.scrollTo(0,0);
+}
+function gpGuestLoadBase_(){
+  /* The staff count and its kinds come from the roster. A guest gets the public
+     one with every name and photo dropped on arrival — counts only, nobody named. */
+  var roster=new Promise(function(done){
+    run('teamRoster', [], function(r){
+      if(Array.isArray(r)) S.roster=r.map(function(p, i){ return { id:'g'+i, name:'', campus:p.campus, dept:p.dept, ministry:p.ministry||'', staffType:p.staffType||'', country:p.country||'', photo:'', leads:[], ministries:[] }; });
+      done();
+    }, function(){ done(); });
+  });
+  var base=new Promise(function(done){
+    run('getData', [''], function(d){ if(d && d.entries){ S.base=Object.assign({}, d, { roster: undefined }); } done(); }, function(){ done(); });
+  });
+  return Promise.all([roster, base]).then(function(){ if(S.guest) render(); });
+}
+function gpGuestCampusHtml_(){
+  return '<div class="campusSeg guestCampus">'+CAMPUSES.map(function(c){
+    return '<button class="campusBtn'+(S.me.campus===c.id?' on':'')+'" data-guestcampus="'+esc(c.id)+'">'+esc(t(c.short))+'</button>'; }).join('')+'</div>';
+}
+function gpLeaveGuest_(toRegister){
+  lsDel(GUEST_KEY);
+  S.guest=false; S.me=null; S.base=null; S.regMode=!!toRegister; S.menuOpen=false; S.view='week';
+  renderMenu(); render(); window.scrollTo(0,0);
+}
+function gpGuestButtonsHtml_(){
+  return '<div class="btnRow guestBtns"><button class="btn" data-guestgo="reg">'+esc(t('Create my profile'))+'</button>'+
+    '<button class="btn ghost" data-guestgo="login">'+esc(t('Log in'))+'</button></div>';
+}
+var GUEST_TOOLS=[
+  ['🗒️','Weekly goals','Write a few goals each week and tick them off — your team can cheer you on.'],
+  ['🔁','Habit tracker','Small daily habits — prayer, the Bible, exercise, rest — and your streaks.'],
+  ['💚','Weekly health check-in','A few honest questions each week. Private: only you and your mentor see your answers.'],
+  ['📊','My Ministry','Log your ministry’s numbers each week and watch them add up for the whole base.'],
+  ['🧭','Personality type','A forty-question test, your type, and how to work well with every type on your team.'],
+  ['💪','Strengths','Find your top five strengths and see the mix on your team.'],
+  ['🤝','Mentorship','Choose a mentor to walk with you, and meet one-on-one.'],
+  ['✈️','Leave requests','Ask for days away, and see who is covering.'],
+  ['👥','Team directory','Everyone on the base: their ministries, goals, types and strengths.']
+];
+function gpGuestHomeHtml_(){
+  var nb=libBooksRead_(), books=(typeof GP_LIBRARY!=='undefined') ? GP_LIBRARY.books.length : 0;
+  var h='<div class="card guestHero"><div class="guestHeroIcon">👀</div><h2>'+esc(t('You’re looking around'))+'</h2>'+
+    '<p>'+esc(t('This is the GP app, as a guest. Read the Library, see how the base is doing, and see what every tool does. Nothing here is saved to an account.'))+'</p>'+
+    gpGuestButtonsHtml_()+'</div>';
+  h+='<button class="card guestBig" id="guestLibrary"><span class="guestBigIcon">📚</span><span style="flex:1"><b>'+esc(t('Library'))+'</b>'+
+    '<span>'+esc(nb ? gpT('{n} books read',{n:nb}) : t('Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</span></span>'+PCHEV+'</button>';
+  h+='<button class="card guestBig" id="guestBase"><span class="guestBigIcon">📈</span><span style="flex:1"><b>'+esc(t('Base'))+'</b>'+
+    '<span>'+esc(t('How the base is doing this week — ministry numbers for Siem Reap and Poipet.'))+'</span></span>'+PCHEV+'</button>';
+  h+='<h3>✨ '+esc(t('What staff use the app for'))+'</h3><div class="guestTools">'+GUEST_TOOLS.map(function(x){
+    return '<div class="card guestTool"><span class="guestToolIcon">'+x[0]+'</span><span style="flex:1"><b>'+esc(t(x[1]))+'</b><span>'+esc(t(x[2]))+'</span></span><span class="guestLock" aria-label="'+esc(t('Needs a profile'))+'">🔒</span></div>';
+  }).join('')+'</div>';
+  h+='<div class="card guestFoot"><p>'+esc(t('Staff at YWAM GonPreah use all of this with their own profile. It takes a minute to make one.'))+'</p>'+gpGuestButtonsHtml_()+'</div>';
+  return h;
+}
+function gpGuestLockHtml_(which){
+  var team = which==='team';
+  return '<div class="gate guestGate"><div class="gateIcon">'+(team?'👥':'💚')+'</div>'+
+    '<h3>'+esc(t('This part is for staff with a profile'))+'</h3>'+
+    '<p>'+esc(team ? t('The team directory shows people’s names, photos and goals, so it is only for people on the base.')
+      : t('The weekly check-in is private — only you and your mentor ever see your answers. It needs your own profile.'))+'</p>'+
+    gpGuestButtonsHtml_()+'</div>';
+}
+function bindGuest_(){
+  document.querySelectorAll('[data-guestgo]').forEach(function(b){ b.onclick=function(){ gpTap(); gpLeaveGuest_(b.getAttribute('data-guestgo')==='reg'); }; });
+  var gl=document.getElementById('guestLibrary'); if(gl) gl.onclick=function(){ gpTap(); libOpen_(); };
+  var gb=document.getElementById('guestBase'); if(gb) gb.onclick=function(){ gpTap(); S.view='base'; render(); window.scrollTo(0,0); };
+  document.querySelectorAll('[data-guestcampus]').forEach(function(b){ b.onclick=function(){ gpTap(); S.me.campus=b.getAttribute('data-guestcampus'); lsSet('gp-guest-campus', S.me.campus); render(); }; });
 }
 
 /* ==================== Team → Personalities ====================
@@ -11659,7 +11775,9 @@ function loginHtml(){
     '<label class="f">Username</label><input type="text" id="li_user" autocapitalize="none" placeholder="e.g. sokha">'+
     '<label class="f">PIN</label><input type="password" id="li_pin" inputmode="numeric" maxlength="4" placeholder="••••">'+
     '<button class="btn" id="loginBtn">Log in</button>'+
-    '<button class="linkbtn" id="toReg">New here? Create my profile</button></div>';
+    '<button class="linkbtn" id="toReg">New here? Create my profile</button></div>'+
+    '<button class="btn ghost guestEntry" id="lookAround">👀 '+esc(t('Look around without an account'))+'</button>'+
+    '<p class="hint" style="text-align:center">'+esc(t('Read the Library and see the app first — no username needed.'))+'</p>';
 }
 /*  Two facts the base counts people by: what kind of staff you are, and where you
     are from. Asked when a profile is created and changed from Profile & settings
@@ -14080,6 +14198,7 @@ function bindAway(){
   bindHr();
   if(S.view==='library') bindLibrary_();
   if(S.view==='required') bindReqSign_();
+  if(S.guest) bindGuest_();
   bindReqRows_();
   ['libHomeTile','personBooks','profBooks'].forEach(function(id){ var b=document.getElementById(id); if(b) b.onclick=function(){ gpTap(); libOpen_(); }; });
   if(S.view==='admin' && S.adminSub==='groups') bindAdminGroups_();
@@ -15102,6 +15221,7 @@ function bind(){
       }
     });
   };
+  var look=document.getElementById('lookAround'); if(look) look.onclick=function(){ gpTap(); gpEnterGuest_(); };
   var toReg=document.getElementById('toReg'); if(toReg) toReg.onclick=function(){ S.regMode=true; if(!S.roster.length){ run('teamRoster',[],function(r){S.roster=Array.isArray(r)?r:[];render();}); } else render(); };
   var toLogin=document.getElementById('toLogin'); if(toLogin) toLogin.onclick=function(){ S.regMode=false; render(); };
 
@@ -15370,6 +15490,7 @@ function runP(fn, args){
 
 function refreshAll(){
   if(!S.me) return Promise.resolve();
+  if(S.guest) return gpGuestLoadBase_();
   var u=S.auth.user, k=S.auth.pin;
   return Promise.all([
     runP('teamRoster',[S.auth.user,S.auth.pin]).then(function(r){ if(Array.isArray(r)) S.roster=r; }),

@@ -2897,3 +2897,33 @@ now). "Read" means "I have read this book".
 | Staff Manual | សៀវភៅណែនាំបុគ្គលិក |
 | Signed {date} | បានចុះហត្ថលេខា {date} |
 | You signed this on {date}. | អ្នកបានចុះហត្ថលេខាលើឯកសារនេះនៅ {date}។ |
+
+## 67. Looking around without an account (guest)
+
+| English | Khmer (pending) |
+|---|---|
+| You’re looking around | អ្នកកំពុងមើលជុំវិញ |
+| This is the GP app, as a guest. Read the Library, see how the base is doing, and see what every tool does. Nothing here is saved to an account. | នេះជាកម្មវិធី GP ក្នុងនាមជាភ្ញៀវ។ អានបណ្ណាល័យ មើលថាមូលដ្ឋានកំពុងដំណើរការយ៉ាងណា និងមើលថាឧបករណ៍នីមួយៗធ្វើអ្វីខ្លះ។ គ្មានអ្វីនៅទីនេះត្រូវបានរក្សាទុកក្នុងគណនីទេ។ |
+| How the base is doing this week — ministry numbers for Siem Reap and Poipet. | មូលដ្ឋានកំពុងដំណើរការយ៉ាងណាសប្តាហ៍នេះ — តួលេខកិច្ចការបម្រើសម្រាប់សៀមរាប និងប៉ោយប៉ែត។ |
+| What staff use the app for | អ្វីដែលបុគ្គលិកប្រើកម្មវិធីនេះសម្រាប់ |
+| Needs a profile | ត្រូវការប្រវត្តិរូប |
+| Staff at YWAM GonPreah use all of this with their own profile. It takes a minute to make one. | បុគ្គលិកនៅ YWAM GonPreah ប្រើទាំងអស់នេះជាមួយប្រវត្តិរូបផ្ទាល់ខ្លួន។ ចំណាយពេលតែមួយនាទីប៉ុណ្ណោះដើម្បីបង្កើតមួយ។ |
+| This part is for staff with a profile | ផ្នែកនេះសម្រាប់បុគ្គលិកដែលមានប្រវត្តិរូប |
+| The team directory shows people’s names, photos and goals, so it is only for people on the base. | បញ្ជីក្រុមបង្ហាញឈ្មោះ រូបថត និងគោលដៅរបស់មនុស្ស ដូច្នេះវាសម្រាប់តែមនុស្សនៅលើមូលដ្ឋានប៉ុណ្ណោះ។ |
+| The weekly check-in is private — only you and your mentor ever see your answers. It needs your own profile. | ការពិនិត្យប្រចាំសប្តាហ៍គឺឯកជន — មានតែអ្នក និងអ្នកណែនាំរបស់អ្នកទេដែលឃើញចម្លើយរបស់អ្នក។ វាត្រូវការប្រវត្តិរូបផ្ទាល់ខ្លួនរបស់អ្នក។ |
+| Look around without an account | មើលជុំវិញដោយមិនចាំបាច់មានគណនី |
+| Read the Library and see the app first — no username needed. | អានបណ្ណាល័យ និងមើលកម្មវិធីជាមុនសិន — មិនចាំបាច់មានឈ្មោះអ្នកប្រើទេ។ |
+| Look around | មើលជុំវិញ |
+| Write a few goals each week and tick them off — your team can cheer you on. | សរសេរគោលដៅពីរបីរៀងរាល់សប្តាហ៍ ហើយធីកវាពេលធ្វើរួច — ក្រុមរបស់អ្នកអាចលើកទឹកចិត្តអ្នក។ |
+| Habit tracker | កម្មវិធីតាមដានទម្លាប់ |
+| Small daily habits — prayer, the Bible, exercise, rest — and your streaks. | ទម្លាប់តូចៗប្រចាំថ្ងៃ — ការអធិស្ឋាន ព្រះគម្ពីរ ការហាត់ប្រាណ ការសម្រាក — និងចំនួនថ្ងៃជាប់ៗគ្នារបស់អ្នក។ |
+| Weekly health check-in | ការពិនិត្យសុខភាពប្រចាំសប្តាហ៍ |
+| A few honest questions each week. Private: only you and your mentor see your answers. | សំណួរស្មោះត្រង់ពីរបីរៀងរាល់សប្តាហ៍។ ឯកជន៖ មានតែអ្នក និងអ្នកណែនាំរបស់អ្នកទេដែលឃើញចម្លើយ។ |
+| Log your ministry’s numbers each week and watch them add up for the whole base. | កត់ត្រាតួលេខកិច្ចការបម្រើរបស់អ្នករៀងរាល់សប្តាហ៍ ហើយមើលវាបូកបញ្ចូលគ្នាសម្រាប់មូលដ្ឋានទាំងមូល។ |
+| A forty-question test, your type, and how to work well with every type on your team. | តេស្តសែសិបសំណួរ ប្រភេទរបស់អ្នក និងរបៀបធ្វើការល្អជាមួយប្រភេទនីមួយៗក្នុងក្រុមរបស់អ្នក។ |
+| Find your top five strengths and see the mix on your team. | ស្វែងរកចំណុចខ្លាំងកំពូលទាំងប្រាំរបស់អ្នក ហើយមើលការលាយបញ្ចូលគ្នាក្នុងក្រុមរបស់អ្នក។ |
+| Choose a mentor to walk with you, and meet one-on-one. | ជ្រើសរើសអ្នកណែនាំម្នាក់ឲ្យដើរជាមួយអ្នក ហើយជួបគ្នាមួយទល់មួយ។ |
+| Leave requests | សំណើសុំច្បាប់ |
+| Ask for days away, and see who is covering. | សុំថ្ងៃឈប់ ហើយមើលថាអ្នកណាជួសជំនួស។ |
+| Team directory | បញ្ជីក្រុម |
+| Everyone on the base: their ministries, goals, types and strengths. | មនុស្សគ្រប់គ្នានៅលើមូលដ្ឋាន៖ កិច្ចការបម្រើ គោលដៅ ប្រភេទ និងចំណុចខ្លាំងរបស់ពួកគេ។ |

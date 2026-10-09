@@ -62,6 +62,7 @@ const SERVER = [
 
 const BROWSER = [
   'test-library-ui.mjs',  // Menu → Library: loads when opened, covers or drawn ones, shelves, book page, read ticks, Khmer, retry
+  'test-guest-ui.mjs',    // Look around without an account: the tour, the whole Library, Base (counts, no names), Team/Health locked, no credentials ever sent
   'test-required-ui.mjs', // books-read tally, "Finish your profile", read + sign with a drawn signature, admin view, HR → Required
   'test-pull-drill.mjs',    // the pull gesture on both pages, and which figures open
   'test-touch-scroll.mjs',  // a swipe over a slider or the chip strip scrolls the page, and answers nothing

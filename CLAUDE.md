@@ -1242,6 +1242,19 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
   phone's only (localStorage). To add a book, add an object to `GP_LIBRARY.books`;
   tests/test-library.mjs checks the shape.
 
+## Looking around without an account (teams.html guest mode, Oct 2026)
+"Look around without an account" on the log-in screen, or `teams.html?guest=1`, sets
+`gp-app-guest` (localStorage — they stay a guest on reopen until Log in / Create my
+profile). `S.guest` with a stand-in `S.me` (`gpGuestMe_`, id 'guest') and EMPTY `S.auth`:
+- **Open:** My Home becomes a tour (`gpGuestHomeHtml_`: every tool, what it does, 🔒),
+  the whole **Library** (ticks on the phone; `libAdoptServer_` sends them up once they
+  log in), and **Base** from the public `getData('')` with the staff counted from the
+  public `teamRoster` — names and photos dropped on arrival — plus a campus switch.
+- **Locked with a reason:** Team (names, photos, goals) and Health (private check-ins);
+  the menu is Library / Create my profile / Log in. Any other view falls back to the tour.
+- No call a guest makes carries a username or PIN, and the boot never runs (test-guest-ui).
+  index.html's own "View as guest" (the old dashboard) is separate and unchanged.
+
 ## Required papers and the books-read tally (Oct 2026)
 - **Books read** are on the staff record (`libRead: {bookId: date}`, `libSaveReads`), with the
   phone's copy and a queue of unsent changes (`gp-lib-pending`) so it works offline. Only the
