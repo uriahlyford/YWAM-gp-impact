@@ -1196,7 +1196,7 @@ Menu → Library. All 44 books from Craig Groeschel's four leadership lists ("44
 Every Leader Should Read", the current list Uriah sent — Lead Like Jesus, not Dalio's
 Principles), on four shelves (Lead & grow, People & culture, Habits & goals, Create &
 communicate). `GP_LIBRARY.startHere` is the "⭐ Start here" chip: ten to read first for
-leading at GP (culture, multiplying leaders, hard conversations, vision, execution).
+leading at GP (culture, teams, hard conversations, vision, systems, execution).
 - **Our own words.** Each summary (vibe, big idea, 5–7 insights, try this week, "for us
   at GP", one line) is written for GP — no quotations, nothing from the books or any
   summary service. Brain and money claims are framed as the author's view where debated.

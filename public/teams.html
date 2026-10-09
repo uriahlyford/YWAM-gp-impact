@@ -5113,7 +5113,7 @@ function libraryHtml(){
     '<div class="libShelves">'+[{id:'all', name:'All'}].concat(picks.length ? [{id:'start', name:'Start here', emoji:'⭐'}] : [], GP_LIBRARY.shelves).map(function(sh){
       return '<button class="libShelfBtn'+(S.libShelf===sh.id?' on':'')+'" data-libshelf="'+esc(sh.id)+'"'+(sh.color&&S.libShelf===sh.id?' style="background:'+sh.color+';border-color:'+sh.color+'"':'')+'>'+(sh.emoji?sh.emoji+' ':'')+esc(t(sh.name))+'</button>';
     }).join('')+'</div>'+
-    (S.libShelf==='start' ? '<p class="sub libStartNote">'+esc(gpT('{n} books to read first for leading at GP: culture, multiplying leaders, hard conversations, vision and getting things done.',{n:picks.length}))+'</p>' : '');
+    (S.libShelf==='start' ? '<p class="sub libStartNote">'+esc(gpT('{n} books to read first for leading at GP: culture, teams, hard conversations, vision, systems and getting things done.',{n:picks.length}))+'</p>' : '');
   h+='<div class="libGrid">'+shown.map(function(x){
     return '<button class="libCard" data-libbook="'+esc(x.id)+'">'+libCoverHtml_(x)+
       (read[x.id]?'<span class="libReadTag">✓</span>':'')+

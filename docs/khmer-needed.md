@@ -2811,4 +2811,4 @@ now). "Read" means "I have read this book".
 | Next book | សៀវភៅបន្ទាប់ |
 | Summary written for GP in our own words — not by the author or publisher. | សេចក្តីសង្ខេបសរសេរសម្រាប់ GP ដោយពាក្យរបស់យើងផ្ទាល់ — មិនមែនដោយអ្នកនិពន្ធ ឬអ្នកបោះពុម្ពទេ។ |
 | Start here | ចាប់ផ្តើមនៅទីនេះ |
-| {n} books to read first for leading at GP: culture, multiplying leaders, hard conversations, vision and getting things done. | សៀវភៅ {n} ក្បាលដែលគួរអានមុនគេ សម្រាប់ការដឹកនាំនៅ GP៖ វប្បធម៌ ការពង្រីកអ្នកដឹកនាំ ការសន្ទនាពិបាកៗ ចក្ខុវិស័យ និងការធ្វើការងារឱ្យបានសម្រេច។ |
+| {n} books to read first for leading at GP: culture, teams, hard conversations, vision, systems and getting things done. | សៀវភៅ {n} ក្បាលដែលគួរអានមុនគេ សម្រាប់ការដឹកនាំនៅ GP៖ វប្បធម៌ ក្រុមការងារ ការសន្ទនាពិបាកៗ ចក្ខុវិស័យ ប្រព័ន្ធ និងការធ្វើការងារឱ្យបានសម្រេច។ |

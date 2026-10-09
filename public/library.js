@@ -41,13 +41,13 @@ var GP_LIBRARY = {
  ],
  "startHere": [
   "the-21-irrefutable-laws-of-leadership",
-  "lead-like-jesus",
-  "multipliers",
+  "the-7-habits-of-highly-effective-people",
   "the-advantage",
   "the-five-dysfunctions-of-a-team",
   "crucial-conversations",
   "start-with-why",
   "the-4-disciplines-of-execution",
+  "the-e-myth-revisited",
   "extreme-ownership",
   "boundaries"
  ],
