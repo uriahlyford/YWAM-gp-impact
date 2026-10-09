@@ -461,6 +461,12 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   with `pending` from `pendingTeamIds_` and `bookingId` when a booking has its `tripId`.
   "Fits / Short by N" is worked out in the page (`hospFit_`: the tightest night of the
   stay against beds in use). Students aren't requests yet (no dates on the portal).
+- **A cancelled or deleted team with beds booked** (closed in the portal → its Teams Database row is
+  cancelled; deleted in the portal → `portalDeleteApplicant` cancels the row; or cancelled / deleted in the
+  Teams Database) is still listed by `hospRequests_` while its booking runs, as `cancelled: 'cancelled' |
+  'deleted'` with `bookingId` and `count`. The booking is never removed on its own: Requests shows these
+  first ("Cancelled — beds still booked") with **Free the beds** (`hospDelete` booking), the overview tile and
+  tab badge count them, and the booking card is marked. Individual applicants never make requests.
 - **Rights**: `canHosp_` — admins, and the Hospitality ministry: members (main or other
   ministry), its leaders, the Skills Training overseer. Not applicants, not inactive
   accounts. `getMyBoot`'s staff carries `hospitality`. Handlers: `getHospitality`,

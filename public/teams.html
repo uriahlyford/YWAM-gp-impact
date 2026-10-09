@@ -1023,6 +1023,7 @@ button.reqRow { cursor:pointer; }
 .hospBarPct small { font-weight:600; color:var(--accent); }
 .hospFit.ok { background:var(--goodSoft); border-color:var(--good); color:var(--good); }
 .hospFit.no { background:var(--badSoft); border-color:var(--bad); color:var(--bad); }
+.hospGone { border:1.5px solid var(--bad); }
 .hospCat { border-left:4px solid var(--accent); }
 .hospCat.guest { border-left-color:var(--good); }
 .hospCat.speaker { border-left-color:var(--amber); }
@@ -9829,7 +9830,9 @@ function hospDaily_(list, start, end, skip){
 }
 function hospReqNeed_(q){ var n=Number(q.size)||0; var mf=(Number(q.males)||0)+(Number(q.females)||0); return Math.max(n, mf); }
 // the team requests nobody has booked yet, as bookings-to-be (for "if they all come")
-function hospOpenReqs_(H){ return (H.requests||[]).filter(function(q){ return !q.bookingId; }).map(function(q){ return { id:'req_'+q.tripId, from:q.from, to:q.to, count:hospReqNeed_(q) }; }); }
+/* teams cancelled or deleted with beds still booked for them */
+function hospGoneReqs_(H){ return (H.requests||[]).filter(function(q){ return q.cancelled; }); }
+function hospOpenReqs_(H){ return (H.requests||[]).filter(function(q){ return !q.bookingId && !q.cancelled; }).map(function(q){ return { id:'req_'+q.tripId, from:q.from, to:q.to, count:hospReqNeed_(q) }; }); }
 /* Does a stay of `need` people over [from, to) fit? Against the tightest night. */
 function hospFit_(H, from, to, need, skip){
   var cap=hospCap_(H), d=hospDaily_(H.bookings, from, to, skip), peak=0;
@@ -9888,14 +9891,14 @@ function hospDashHtml_(H){
     if(k.from>=today && k.from<wkEnd) arriving+=Number(k.count)||0;
     if(!k.permanent && k.to>=today && k.to<wkEnd) leaving+=Number(k.count)||0;
   });
-  var waiting=hospOpenReqs_(H).length;
+  var waiting=hospOpenReqs_(H).length, goneN=hospGoneReqs_(H).length;
   h+='<button class="btn" id="hospNewBtn" style="margin-top:0">＋ '+esc(t('New booking'))+'</button>';
   var tile=function(id, name, num, sub){ return '<div class="mmTile" data-hosptile="'+id+'"><div class="mmTileName">'+esc(name)+'</div><div class="mmTileNum">'+esc(String(num))+'</div>'+(sub?'<div class="mmTileSub">'+esc(sub)+'</div>':'')+'</div>'; };
   h+='<div class="mmGrid">'+
     tile('tonight', t('Here tonight'), tonight, cap ? gpT('{pct}% full',{pct:Math.round(tonight/cap*100)}) : '')+
     tile('free', t('Beds free tonight'), Math.max(0,cap-tonight), gpT('of {n} beds',{n:cap}))+
     tile('arriving', t('Arriving in 7 days'), arriving, gpT('{n} leaving',{n:leaving}))+
-    tile('requests', t('Team requests'), waiting, waiting ? t('waiting for beds') : t('all booked'))+'</div>';
+    tile('requests', t('Team requests'), waiting, goneN ? gpT('{n} cancelled — free the beds',{n:goneN}) : waiting ? t('waiting for beds') : t('all booked'))+'</div>';
   // who is here tonight, by kind of guest
   var by={};
   H.bookings.forEach(function(k){ if(k.from<=today && today<hospEnd_(k)) by[k.category]=(by[k.category]||0)+(Number(k.count)||0); });
@@ -9936,6 +9939,10 @@ function hospDashHtml_(H){
   return h;
 }
 function hospReqCardHtml_(H, q){
+  if(q.cancelled) return '<div class="card slim hospReq hospGone" data-hospreq="'+esc(q.tripId)+'"><div class="rowName"><b>'+esc(q.name)+'</b> <span class="teamStat hospFit no" data-cancelled>✕ '+esc(q.cancelled==='deleted' ? t('Deleted') : t('Cancelled'))+'</span></div>'+
+    '<div class="rowSub">📅 '+esc(hospRange_(q))+(q.count?' · 🛏 '+esc(gpT('{n} beds still booked',{n:q.count})):'')+'</div>'+
+    '<div class="rowSub">'+esc(q.cancelled==='deleted' ? t('This team was deleted. Their beds are still booked — free them if they are not coming.') : t('This team was cancelled. Their beds are still booked — free them if they are not coming.'))+'</div>'+
+    '<div class="hospActions"><button class="btn small" data-hospfree="'+esc(q.bookingId)+'">'+esc(t('Free the beds'))+'</button><button class="btn ghost small" data-hospedit="'+esc(q.bookingId)+'">'+esc(t('Open booking'))+'</button></div></div>';
   var need=hospReqNeed_(q), f=hospFit_(H, q.from, q.to, need);
   var h='<div class="card slim hospReq" data-hospreq="'+esc(q.tripId)+'">';
   h+='<div class="rowName"><b>'+esc(q.name)+'</b>'+(q.pending?' <span class="teamStat pending" data-pending>⏳ '+esc(t('Pending'))+'</span>':'')+'</div>';
@@ -9953,7 +9960,8 @@ function hospReqsHtml_(H){
   var reqs=H.requests||[];
   var h='<p class="sub" style="margin:0 0 10px">'+esc(t('Every team in the Teams Database that hasn’t left yet. Pending teams applied on the portal and haven’t confirmed flights.'))+'</p>';
   if(!reqs.length) return h+'<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No upcoming teams.'))+'</p></div>';
-  var open=reqs.filter(function(q){ return !q.bookingId; }), done=reqs.filter(function(q){ return q.bookingId; });
+  var gone=hospGoneReqs_(H), open=reqs.filter(function(q){ return !q.bookingId && !q.cancelled; }), done=reqs.filter(function(q){ return q.bookingId && !q.cancelled; });
+  if(gone.length) h+='<h3>'+esc(t('Cancelled — beds still booked'))+' <small>· '+gone.length+'</small></h3><div class="hospGrid">'+gone.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>'+(open.length?'<h3>'+esc(t('Waiting for beds'))+' <small>· '+open.length+'</small></h3>':'');
   h+='<div class="hospGrid">'+open.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>';
   if(done.length) h+='<h3>'+esc(t('Booked'))+' <small>· '+done.length+'</small></h3><div class="hospGrid">'+done.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>';
   return h;
@@ -9962,7 +9970,8 @@ function hospBookingCardHtml_(H, k, idx){
   var c=hospCat_(k.category);
   var names=k.bedIds.map(function(id){ var x=idx[id]; return x ? x.room.name+' '+x.bed.label+(k.bedNames && k.bedNames[id] ? ' · '+k.bedNames[id] : '') : ''; }).filter(Boolean);
   var h='<button class="card slim hospBooking hospCat '+c[0]+'" data-hospedit="'+esc(k.id)+'">';
-  h+='<div class="rowName"><b>'+esc(k.name)+'</b> <span class="teamStat">'+c[2]+' '+esc(t(c[1]))+'</span></div>';
+  var gq=k.tripId && hospGoneReqs_(H).filter(function(q){ return q.bookingId===k.id; })[0];
+  h+='<div class="rowName"><b>'+esc(k.name)+'</b> <span class="teamStat">'+c[2]+' '+esc(t(c[1]))+'</span>'+(gq?' <span class="teamStat hospFit no" data-cancelled>✕ '+esc(gq.cancelled==='deleted' ? t('Deleted') : t('Cancelled'))+'</span>':'')+'</div>';
   h+='<div class="rowSub">📅 '+esc(hospRange_(k))+'</div>';
   h+='<div class="rowSub">👥 '+esc(hospPeople_(k))+((k.people||[]).length ? ' · '+esc(gpT('{n} named',{n:k.people.length})) : '')+'</div>';
   h+='<div class="rowSub">🛏 '+(names.length ? esc(names.join(', ')) : '')+
@@ -10553,7 +10562,7 @@ function hospHtml(){
   if(S.hospForm) return h+hospFormHtml_(H)+'</div>';
   if(S.hospRoom) return h+hospRoomFormHtml_(H)+'</div>';
   var tab=['dash','req','cal','book','staff','rooms'].indexOf(S.hospTab)>-1 ? S.hospTab : 'dash';
-  var nReq=hospOpenReqs_(H).length;
+  var nReq=hospOpenReqs_(H).length+hospGoneReqs_(H).length;
   h+='<div class="hospTabs">'+[['dash','📊','Overview'],['req','👥','Requests'],['cal','📅','Calendar'],['book','🛏','Bookings'],['staff','🛌','Staff'],['rooms','🏠','Rooms']].map(function(x){
     return '<button class="hospTab'+(tab===x[0]?' on':'')+'" data-hosptab="'+x[0]+'"><span>'+x[1]+'</span>'+esc(t(x[2]))+(x[0]==='req'&&nReq?' <b class="hospBadge">'+nReq+'</b>':'')+'</button>'; }).join('')+'</div>';
   if(tab==='req') h+=hospReqsHtml_(H);
@@ -10660,6 +10669,11 @@ function bindHosp(){
   document.querySelectorAll('[data-hospedit]').forEach(function(b){ b.onclick=function(){
     var k=S.hosp.bookings.filter(function(x){ return x.id===b.getAttribute('data-hospedit'); })[0];
     if(!k) return; gpTap(); S.hospForm=JSON.parse(JSON.stringify(k)); S.hospBedPick=null; render(); top('hospFormCard'); }; });
+  document.querySelectorAll('[data-hospfree]').forEach(function(b){ b.onclick=function(){
+    var id=b.getAttribute('data-hospfree'), k=(S.hosp.bookings||[]).filter(function(x){ return x.id===id; })[0];
+    if(!confirm(gpT('Free the beds booked for “{name}”? The booking is deleted.',{name:k ? k.name : ''}))) return;
+    send('hospDelete', ['booking', id], function(){ showMsg(t('Beds freed')); }, b);
+  }; });
   document.querySelectorAll('[data-hospbookreq]').forEach(function(b){ b.onclick=function(){
     var q=(S.hosp.requests||[]).filter(function(x){ return x.tripId===b.getAttribute('data-hospbookreq'); })[0];
     if(!q) return; gpTap();
