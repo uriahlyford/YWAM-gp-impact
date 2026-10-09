@@ -41,11 +41,11 @@ const SOK = { ...base, id: 'st_sok', name: 'Sok Chan', username: 'sok', dept: 'C
 const DARA = { ...base, id: 'st_dara', name: 'Dara Pen', username: 'dara', dept: 'Community Service', ministry: 'Cafe', role: 'Barista' };
 const OVERSEER = { ...base, id: 'st_sina', name: 'Sina Sok', username: 'sina', dept: 'Campus Leadership', ministry: 'Community Service', role: 'Overseer' };
 const trip = (o) => ({ id: o.id, campus: 'siemreap', name: o.name, org: o.org || '', country: o.country || '', from: o.from, to: o.to, size: o.size ?? null,
-  males: null, females: null, couples: null, families: null, staff: o.staff || '', focus: '', status: o.status || 'active', notes: '', metrics: o.metrics || {}, reached: o.reached || { male: null, female: null } });
+  males: o.males ?? null, females: o.females ?? null, couples: null, families: null, staff: o.staff || '', focus: '', status: o.status || 'active', notes: '', metrics: o.metrics || {}, reached: o.reached || { male: null, female: null } });
 // two teams left in Feb of this year, one in May, one is still here, one was cancelled
 const TRIPS = [
-  trip({ id: 't1', name: 'Alpha DTS', org: 'YWAM Kona', country: 'United States', from: Y + '-01-20', to: Y + '-02-10', size: 8, staff: 'Sok', metrics: { 'People Served': 100, 'Salvations': 2 }, reached: { male: 40, female: 60 } }),
-  trip({ id: 't2', name: 'Bravo Church', org: 'Four Square', country: 'usa', from: Y + '-02-01', to: Y + '-02-20', size: 12, metrics: { 'People Served': 50, 'Healings': 1 } }),
+  trip({ id: 't1', name: 'Alpha DTS', org: 'YWAM Kona', country: 'United States', from: Y + '-01-20', to: Y + '-02-10', size: 8, males: 3, females: 5, staff: 'Sok', metrics: { 'People Served': 100, 'Salvations': 2 }, reached: { male: 40, female: 60 } }),
+  trip({ id: 't2', name: 'Bravo Church', org: 'Four Square', country: 'usa', from: Y + '-02-01', to: Y + '-02-20', size: 12, males: 7, females: 5, metrics: { 'People Served': 50, 'Healings': 1 } }),
   trip({ id: 't3', name: 'Charlie DTS', from: Y + '-04-20', to: Y + '-05-10', size: 6, metrics: { 'People Served': 30 } }),
   trip({ id: 't4', name: 'Delta DTS', from: Y + '-02-05', to: Y + '-02-25', size: 5, status: 'cancelled' }),
   // applied on the portal and not arrived yet: pending — one still coming, one whose dates have passed
@@ -134,6 +134,7 @@ console.log('=== Outreach Teams staff open on the teams page ===');
   s = await state(page);
   ok('Year: the three teams that finished this year are counted', await tileOf(page, 'Teams Hosted') === '3', await tileOf(page, 'Teams Hosted'));
   ok('Volunteers Mobilized is everyone who came — no separate Team Members', await tileOf(page, 'Volunteers Mobilized') === '26' && await tileOf(page, 'Team Members') === null, await tileOf(page, 'Volunteers Mobilized'));
+  ok('under it, how many were men and how many women, from each team’s head counts', (await page.$eval('#vmTile .mmTileSplit', e => e.textContent)) === '10 men · 10 women');
   const tileNames = await page.$$eval('.mmTile .mmTileName', t => t.slice(0, 3).map(x => x.textContent.trim()));
   ok('the first three: Teams Hosted, Volunteers Mobilized, Countries', tileNames.join() === 'Teams Hosted,Volunteers Mobilized,Countries', tileNames.join());
   ok('“usa” and “United States” are one country', await tileOf(page, 'Countries') === '1');
