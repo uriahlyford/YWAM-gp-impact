@@ -640,6 +640,31 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .goalsWeekSwitch button { border:0; background:none; border-radius:999px; padding:5px 14px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; }
 .goalsWeekSwitch button.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(23,21,15,.12); }
 .goalLink.unlinked { color:var(--faint); font-size:12.5px; } .goalLink.unlinked select { font-size:12.5px !important; }
+.libTally { display:block; width:100%; margin-top:12px; text-align:left; border:0; border-radius:12px; padding:10px 12px; background:var(--surface2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+.reqCard { padding:14px; } .reqCard.reqAlert { border:1.5px solid var(--bad); }
+.reqHead { display:flex; align-items:center; gap:10px; margin-bottom:8px; } .reqHeadIcon { font-size:24px; }
+.reqHead b { display:block; font-size:16px; } .reqHeadSub { display:block; font-size:13px; color:var(--muted); margin-top:2px; }
+.reqBar { height:6px; border-radius:99px; background:var(--surface2); overflow:hidden; margin:2px 0 8px; } .reqBar span { display:block; height:100%; background:var(--good); }
+.reqRow { display:flex; align-items:center; gap:10px; width:100%; padding:10px 2px; border:0; border-top:1px solid var(--border); background:none; font:inherit; color:var(--ink); text-align:left; }
+button.reqRow { cursor:pointer; }
+.reqMark { flex:0 0 30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--surface2); font-size:15px; font-weight:900; }
+.reqRow.done .reqMark { background:var(--good); color:var(--pOnMark); }
+.reqText { flex:1; min-width:0; } .reqText b { display:block; font-size:14.5px; } .reqText span { display:block; font-size:12.5px; color:var(--muted); margin-top:1px; }
+.reqOk { margin:10px 0 0; font-size:13.5px; font-weight:700; color:var(--muted); }
+.reqStep { padding:14px; } .reqStep.off { opacity:.55; } .reqStepHead { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:15.5px; }
+.reqStepNum { flex:0 0 26px; height:26px; border-radius:50%; background:var(--ink); color:var(--pOnMark); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; }
+.reqStep.done .reqStepNum { background:var(--good); }
+.reqAgree { display:flex; gap:10px; align-items:flex-start; font-size:14.5px; line-height:1.5; margin:0 0 6px; } .reqAgree input { margin-top:4px; width:20px; height:20px; flex:0 0 auto; }
+.sigWrap { position:relative; border:1.5px dashed var(--border2); border-radius:12px; background:var(--pOnMark); height:170px; overflow:hidden; }
+.sigWrap.off { pointer-events:none; }
+.sigPad { position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:crosshair; }
+.sigLine { position:absolute; left:16px; right:16px; bottom:38px; height:1px; background:var(--border2); pointer-events:none; }
+.sigHint { position:absolute; left:0; right:0; bottom:12px; text-align:center; font-size:12.5px; color:var(--faint); pointer-events:none; }
+.sigShow { margin-top:10px; } .sigShow img { display:block; width:100%; max-width:420px; border-radius:10px; border:1px solid var(--border); background:var(--pOnMark); }
+.reqSigBox { padding:0 2px 10px 42px; }
+.reqDocCard { padding:14px; } .reqDocTop { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px; } .reqDocTop b { font-size:15.5px; }
+.reqDocBtns { display:flex; flex-wrap:wrap; gap:4px 14px; margin:8px 0 2px; } .reqUpload { cursor:pointer; }
+.reqPersonRows { padding:0 12px 6px 56px; }
 .libProgress { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin:2px 0 12px; }
 .libProgressBar { flex:1; height:6px; border-radius:99px; background:var(--surface2); overflow:hidden; } .libProgressBar span { display:block; height:100%; background:var(--good); }
 .libShelves { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; margin-bottom:6px; } .libShelves::-webkit-scrollbar { display:none; }
@@ -2667,6 +2692,9 @@ function applyBoot(d, fromCache){
   S.numbers = d.numbers || null;
   S.pulse = {}; S.staffDebt = null;
   S.hrFollowUps = (d.hrFollowUps===undefined) ? null : d.hrFollowUps;
+  S.reqDocs = d.reqDocs || [];
+  S.required = d.required || null;      // what this profile still needs (the papers and the contract)
+  libAdoptServer_(d.libRead, fromCache);
   if(d.teamTrips && d.teamTrips.ok) S.teamTrips[d.teamTrips.campus] = { trips: d.teamTrips.trips || [], canEdit: !!d.teamTrips.canEdit };
   S.smartGoals = d.smartGoals || [];
   S.tasks = d.tasks || [];
@@ -2696,6 +2724,7 @@ function applyBoot(d, fromCache){
 
 function logout(){
   lsDel('gp-staff'); lsDel(GP_BOOT_CACHE); S.offlineSince=null;
+  lsDel('gp-lib-read'); lsDel('gp-lib-pending'); lsDel('gp-lib-synced'); lsDel('gp-lib-progress');
   lsDel('gp-staff-card');
   S.me=null; S.auth={user:'',pin:''}; S.logs=[]; S.mentees=[];
   S.goals=[]; S.checkins=[]; S.ministry=null; S.goalsWeek=null; S.goalEditIdx=null; S.kpiWeek=null; S.leaveDraft=null; S.weekDraft={}; S.kpiDraft={}; S.kpiWeekDraft={};
@@ -2809,6 +2838,7 @@ function render(){
   else if(S.view==='gtest') m.innerHTML=gtestHtml();
   else if(S.view==='gstr') m.innerHTML=gstrHtml();
   else if(S.view==='library') m.innerHTML=libraryHtml();
+  else if(S.view==='required') m.innerHTML=reqSignHtml();
   else m.innerHTML=profileHtml();
   if(S.offlineSince) m.insertAdjacentHTML('afterbegin', gpOfflineBannerHtml_());
   if(S.bootStale) m.insertAdjacentHTML('afterbegin', gpStaleBarHtml_());
@@ -4747,7 +4777,9 @@ function aboutMeHtml_(){
       ? homeTile_('gsSeeMine', '💪', t('Strengths'), '<span class="sChips homeTileChips">'+g.top.map(function(id,i){ return gsChipHtml(id,i+1); }).join('')+'</span>')
       : homeTile_('gsStart', '💪', t('Strengths'), esc(t('Find your top 5 strengths')));
   }
-  return tiles ? '<h3 id="sec-ptype">🧭 '+esc(t('About me'))+'</h3><div class="homeTiles" id="sec-strengths">'+tiles+'</div>' : '';
+  var nb=libBooksRead_();
+  tiles += homeTile_('libHomeTile', '📚', t('Library'), esc(nb ? gpT('{n} books read',{n:nb}) : t('Five-minute reads')));
+  return '<h3 id="sec-ptype">🧭 '+esc(t('About me'))+'</h3><div class="homeTiles" id="sec-strengths">'+tiles+'</div>';
 }
 var PCHEV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>';
 
@@ -5154,7 +5186,11 @@ function libLoad_(){
 function libStore_(key){ try { return JSON.parse(localStorage.getItem(key)||'{}')||{}; } catch(e){ return {}; } }
 function libSave_(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
 function libRead_(){ return libStore_(LIB_READ_KEY); }
-function libSetRead_(id, on){ var r=libRead_(); if(on) r[id]=todayStr(); else delete r[id]; libSave_(LIB_READ_KEY, r); }
+function libSetRead_(id, on){
+  var r=libRead_(); if(on) r[id]=todayStr(); else delete r[id]; libSave_(LIB_READ_KEY, r);
+  var p=libPending_(); p[id]=on ? todayStr() : null; libSave_(LIB_PENDING_KEY, p);   // and to your account (libPush_)
+  libPush_();
+}
 function libProg_(){ return libStore_(LIB_PROG_KEY); }
 function libSetProg_(id, step){ var p=libProg_(); if(step>0) p[id]=step; else delete p[id]; libSave_(LIB_PROG_KEY, p); }
 function libShelf_(id){ return (GP_LIBRARY.shelves.filter(function(x){ return x.id===id; })[0]) || GP_LIBRARY.shelves[0]; }
@@ -5325,6 +5361,339 @@ function bindLibrary_(){
       else if(dx>0 && S.libStep>0) libGo_(S.libStep-1);
     }, { passive:true });
   }
+}
+
+/* ==================== the Library on your account ====================
+   "Read" ticks used to live on the phone only; now they are kept on the staff
+   record too (libSaveReads), so the count follows you to any phone and shows
+   on your profile. The phone keeps a copy (LIB_READ_KEY) so the Library opens
+   instantly and offline, and a list of changes not yet saved
+   (LIB_PENDING_KEY) that goes up whenever there is a connection. The first
+   time a phone sees the saved list, what it had marked before is sent up. */
+var LIB_PENDING_KEY='gp-lib-pending', LIB_SYNCED_KEY='gp-lib-synced';
+function libPending_(){ return libStore_(LIB_PENDING_KEY); }
+function libAdoptServer_(server, fromCache){
+  if(!server || typeof server!=='object') return;
+  var pending=libPending_();
+  if(!fromCache && !lsGet(LIB_SYNCED_KEY)){
+    var local=libRead_();
+    Object.keys(local).forEach(function(id){ if(!server[id] && !(id in pending)) pending[id]=local[id]||todayStr(); });
+    lsSet(LIB_SYNCED_KEY, '1');
+    libSave_(LIB_PENDING_KEY, pending);
+  }
+  var merged=Object.assign({}, server);
+  Object.keys(pending).forEach(function(id){ if(pending[id]) merged[id]=pending[id]; else delete merged[id]; });
+  libSave_(LIB_READ_KEY, merged);
+  if(!fromCache) libPush_();
+}
+function libPush_(){
+  var pending=libPending_(), keys=Object.keys(pending);
+  if(!keys.length || S.libPushing || !S.auth || !S.auth.user) return;
+  S.libPushing=true;
+  run('libSaveReads',[S.auth.user,S.auth.pin,pending],function(d){
+    S.libPushing=false;
+    if(!d || !d.ok) return;
+    var now=libPending_();
+    keys.forEach(function(k){ if(now[k]===pending[k]) delete now[k]; });
+    libSave_(LIB_PENDING_KEY, now);
+    libAdoptServer_(d.libRead, true);
+    if(Object.keys(now).length) libPush_();
+    if(S.view==='week' || S.view==='profile') render();
+  }, function(){ S.libPushing=false; });   // offline: kept, and sent with the next change or page open
+}
+function libBooksRead_(){ return Object.keys(libRead_()).length; }
+/* The tally, wherever it shows — tap it and the Library opens. */
+function libOpen_(){ S.view='library'; S.libBook=null; S.libStep=null; S.libShelf='all'; libLoad_(); render(); window.scrollTo(0,0); }
+
+/* ==================== required: papers every staff member signs ====================
+   What every profile must have done (Uriah, Oct 2026): the Child Protection
+   Policy and the Staff Manual read and signed here, and a staff contract on
+   file with HR. The list of papers is HR's (HR → Required); the server says
+   what each person still needs (S.required, from the boot). Until it is all
+   done, My Home has a card for it, and admins and HR see "Profile unfinished"
+   on that person's profile.
+
+   Signing: open the paper, tick that you have read it, type your full name,
+   and draw your signature with a finger. The drawn signature is kept as a
+   small picture; a new version of a paper asks everyone to sign again. */
+S.reqDocs=[]; S.required=null; S.reqDocId=null; S.reqOpened={}; S.reqAgree=false; S.reqName=''; S.reqSig=null; S.reqBusy=false;
+function reqItemLine_(x){
+  if(x.kind==='contract'){
+    return x.done ? gpT('On file — runs to {date}',{date:x.ends ? teamDate_(x.ends) : ''})
+      : x.state==='expired' ? t('Your contract has run out — talk to HR') : t('No contract on file yet — talk to HR');
+  }
+  return x.done ? gpT('Signed {date}',{date:teamDate_(String(x.at).slice(0,10))}) : x.older ? t('New version — read and sign again') : t('Read and sign');
+}
+function reqTitle_(x){ return x.kind==='contract' ? t('Staff contract') : x.title; }
+/* The rows of one person's list. `open` makes the papers tappable (your own). */
+function reqRowsHtml_(R, opts){
+  opts=opts||{};
+  return R.items.map(function(x){
+    var tap = x.kind==='doc' && (opts.own || (opts.staffId && x.done));
+    var attrs = !tap ? '' : opts.own ? ' data-reqopen="'+esc(x.id)+'"' : ' data-reqsigof="'+esc(x.id)+'|'+esc(opts.staffId)+'"';
+    return '<'+(tap?'button':'div')+' class="reqRow'+(x.done?' done':'')+'"'+attrs+'>'+
+      '<span class="reqMark">'+(x.done?'✓':x.kind==='contract'?'📄':'✍️')+'</span>'+
+      '<span class="reqText"><b>'+esc(reqTitle_(x))+'</b><span>'+esc(reqItemLine_(x))+(tap && !opts.own ? ' · '+esc(t('View signature')) : '')+'</span></span>'+
+      (tap?PCHEV:'')+'</'+(tap?'button':'div')+'>';
+  }).join('');
+}
+/* My Home: only while something is left to do. */
+function reqHomeCardHtml_(){
+  var R=S.required;
+  if(!R || R.finished) return '';
+  return '<div class="card reqCard" id="reqCard"><div class="reqHead"><span class="reqHeadIcon">✍️</span><span style="flex:1"><b>'+esc(t('Finish your profile'))+'</b>'+
+    '<span class="reqHeadSub">'+esc(gpT('{n} of {m} done — every staff member signs these',{n:R.done, m:R.total}))+'</span></span></div>'+
+    '<div class="reqBar"><span style="width:'+Math.round(R.done/Math.max(1,R.total)*100)+'%"></span></div>'+
+    reqRowsHtml_(R, { own:true })+'</div>';
+}
+/* My profile: always, done or not. */
+function reqProfileCardHtml_(){
+  var R=S.required;
+  if(!R) return '';
+  return '<div class="card reqCard"><div class="reqHead"><span class="reqHeadIcon">'+(R.finished?'✅':'✍️')+'</span><span style="flex:1"><b>'+
+    esc(R.finished ? t('Profile complete') : t('Profile unfinished'))+'</b><span class="reqHeadSub">'+esc(gpT('{n} of {m} done',{n:R.done, m:R.total}))+'</span></span></div>'+
+    reqRowsHtml_(R, { own:true })+'</div>';
+}
+/* A teammate's profile, for admins and HR (and yourself): the server only sends it to them. */
+function reqPersonCardHtml_(d){
+  var R=d && d.required;
+  if(!R) return '';
+  var mine=d.isMe;
+  if(R.finished) return '<div class="reqOk">✅ '+esc(t('Profile complete'))+'</div>';
+  return '<div class="card reqCard reqAlert"><div class="reqHead"><span class="reqHeadIcon">⚠️</span><span style="flex:1"><b>'+esc(t('Profile unfinished'))+'</b>'+
+    '<span class="reqHeadSub">'+esc(gpT('{n} of {m} done',{n:R.done, m:R.total}))+'</span></span></div>'+
+    reqRowsHtml_(R, mine ? { own:true } : { staffId:d.staff.id })+'</div>';
+}
+function reqDocById_(id){ return (S.reqDocs||[]).filter(function(x){ return x.id===id; })[0]; }
+function reqOpenDoc_(doc, btn){
+  if(!doc) return;
+  S.reqOpened[doc.id]=true;
+  if(doc.kind==='link'){ window.open(doc.url, '_blank', 'noopener'); render(); return; }
+  if(btn){ btn.disabled=true; btn.textContent=t('Opening…'); }
+  run('reqDocFile',[S.auth.user,S.auth.pin,doc.id],function(d){
+    if(d && d.ok) hrOpenDataUrl_(d.dataUrl, d.name); else showMsg(t('Could not open the file'));
+    render();
+  });
+}
+/* The page for one paper: read it, agree, name, signature, sign. */
+function reqSignHtml(){
+  var doc=reqDocById_(S.reqDocId);
+  var back='<button class="linkbtn" id="reqBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+  if(!doc) return back+'<p class="sub">'+esc(t('This document is no longer on the list.'))+'</p>';
+  var item=((S.required&&S.required.items)||[]).filter(function(x){ return x.id===doc.id; })[0]||{};
+  var h=back+'<h2>✍️ '+esc(doc.title)+'</h2>';
+  if(item.done){
+    return h+'<div class="card"><p style="margin:0 0 10px;font-size:15.5px">✅ '+esc(gpT('You signed this on {date}.',{date:teamDate_(String(item.at).slice(0,10))}))+'</p>'+
+      '<button class="btn ghost" id="reqRead">📄 '+esc(t('Read it again'))+'</button>'+
+      '<button class="btn ghost" id="reqMine">'+esc(t('View my signature'))+'</button><div id="reqMineBox"></div></div>';
+  }
+  var opened=!!S.reqOpened[doc.id];
+  h+='<p class="sub">'+esc(item.older ? t('There is a new version. Please read it again and sign.') : t('Every staff member reads this and signs it. It takes a few minutes.'))+'</p>';
+  h+='<div class="card reqStep'+(opened?' done':'')+'"><div class="reqStepHead"><span class="reqStepNum">1</span><b>'+esc(t('Read it'))+'</b></div>'+
+    '<button class="btn'+(opened?' ghost':'')+'" id="reqRead">📄 '+esc(opened ? t('Open it again') : t('Open the document'))+'</button>'+
+    (doc.kind==='file' && doc.fileName ? '<div class="hint">'+esc(doc.fileName)+'</div>' : '')+'</div>';
+  h+='<div class="card reqStep'+(opened?'':' off')+'"><div class="reqStepHead"><span class="reqStepNum">2</span><b>'+esc(t('Agree and sign'))+'</b></div>'+
+    '<label class="reqAgree"><input type="checkbox" id="reqAgree"'+(S.reqAgree?' checked':'')+(opened?'':' disabled')+'> <span>'+
+      esc(gpT('I have read and understood the {title}, and I agree to follow it.',{title:doc.title}))+'</span></label>'+
+    '<label class="f">'+esc(t('Your full name'))+'</label><input type="text" id="reqName" autocomplete="name" value="'+esc(S.reqName||'')+'" placeholder="'+esc(S.me?S.me.name:'')+'"'+(opened?'':' disabled')+'>'+
+    '<label class="f">'+esc(t('Your signature'))+'</label>'+
+    '<div class="sigWrap'+(opened?'':' off')+'"><canvas id="reqSigPad" class="sigPad"></canvas><span class="sigLine"></span>'+
+      '<span class="sigHint" id="reqSigHint"'+(S.reqSig?' style="display:none"':'')+'>'+esc(t('Sign here with your finger'))+'</span></div>'+
+    '<button class="linkbtn inline" id="reqSigClear">'+esc(t('Clear'))+'</button>'+
+    '<button class="btn" id="reqSignBtn"'+(S.reqBusy?' disabled':'')+'>'+esc(S.reqBusy ? t('Saving…') : t('Sign'))+'</button>'+
+    '<div class="hint" id="reqSignHint"></div></div>';
+  return h+'<p class="pFine">'+esc(t('Your signature is kept with the date and your name. Only you, admins and HR can see it.'))+'</p>';
+}
+/* A finger (or mouse) signature pad. The picture is drawn at most 2× so the
+   saved PNG stays a few KB; ink is a fixed dark blue so it reads on paper in
+   either theme. */
+function reqSigPad_(canvas, onChange){
+  var ratio=Math.min(2, window.devicePixelRatio||1), ctx=canvas.getContext('2d'), drawing=false, last=null, ink=0;
+  var size=function(){ var r=canvas.getBoundingClientRect(); canvas.width=Math.round(r.width*ratio); canvas.height=Math.round(r.height*ratio);
+    ctx.setTransform(ratio,0,0,ratio,0,0); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=2.4; ctx.strokeStyle='#1B2A6B'; };
+  size();
+  var at=function(e){ var r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; };
+  canvas.addEventListener('pointerdown', function(e){ drawing=true; last=at(e); canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+    ctx.beginPath(); ctx.arc(last.x,last.y,1.1,0,Math.PI*2); ctx.fillStyle=ctx.strokeStyle; ctx.fill(); ink++; e.preventDefault(); });
+  canvas.addEventListener('pointermove', function(e){ if(!drawing) return; var p=at(e);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; ink++; e.preventDefault(); });
+  var end=function(){ if(!drawing) return; drawing=false; if(onChange) onChange(ink>8 ? canvas.toDataURL('image/png') : null); };
+  canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end); canvas.addEventListener('pointerleave', end);
+  return { clear:function(){ ctx.clearRect(0,0,canvas.width,canvas.height); ink=0; if(onChange) onChange(null); } };
+}
+function bindReqSign_(){
+  var bk=document.getElementById('reqBack');
+  if(bk) bk.onclick=function(){ gpTap(); S.view='week'; S.reqDocId=null; render(); window.scrollTo(0,0); };
+  var doc=reqDocById_(S.reqDocId); if(!doc) return;
+  var rd=document.getElementById('reqRead');
+  if(rd) rd.onclick=function(){ gpTap(); reqOpenDoc_(doc, rd); };
+  var ag=document.getElementById('reqAgree');
+  if(ag) ag.onchange=function(){ S.reqAgree=ag.checked; };
+  var nm=document.getElementById('reqName');
+  if(nm) nm.oninput=function(){ S.reqName=nm.value; };
+  var pad=document.getElementById('reqSigPad'), hint=document.getElementById('reqSigHint');
+  var sp = (pad && S.reqOpened[doc.id]) ? reqSigPad_(pad, function(img){ S.reqSig=img; if(hint) hint.style.display=img?'none':''; var w=document.getElementById('reqSignHint'); if(w && img) w.textContent=''; }) : null;
+  if(pad && S.reqSig){   // drawn before a re-render: put it back
+    var im=new Image(); im.onload=function(){ var c=pad.getContext('2d'); c.save(); c.setTransform(1,0,0,1,0,0); c.drawImage(im,0,0,pad.width,pad.height); c.restore(); }; im.src=S.reqSig;
+  }
+  var cl=document.getElementById('reqSigClear');
+  if(cl) cl.onclick=function(){ if(sp) sp.clear(); S.reqSig=null; if(hint) hint.style.display=''; };
+  var sb=document.getElementById('reqSignBtn'), why=document.getElementById('reqSignHint');
+  if(sb) sb.onclick=function(){
+    var say=function(m){ if(why) why.textContent=m; };
+    if(!S.reqOpened[doc.id]) return say(t('Open the document first.'));
+    if(!S.reqAgree) return say(t('Tick the box to say you have read it.'));
+    if(String(S.reqName||'').trim().length<2) return say(t('Type your full name.'));
+    if(!S.reqSig) return say(t('Draw your signature in the box.'));
+    S.reqBusy=true; render();
+    run('reqSign',[S.auth.user,S.auth.pin,doc.id,doc.version,String(S.reqName).trim(),S.reqSig],function(d){
+      S.reqBusy=false;
+      if(d && d.ok){ S.required=d.required; S.reqDocs=d.docs||S.reqDocs; S.reqAgree=false; S.reqName=''; S.reqSig=null; gpTap(); showMsg(t('Signed — thank you')); }
+      else if(d && d.err==='new_version'){ S.reqDocs=d.docs||S.reqDocs; S.reqOpened[doc.id]=false; showMsg(t('This document was just updated — please open it again.')); }
+      else showMsg(t('Could not sign — try again.'));
+      render();
+    }, function(){ S.reqBusy=false; showMsg(t('No connection — your signature was not sent. Try again when you are online.')); render(); });
+  };
+  var mine=document.getElementById('reqMine');
+  if(mine) mine.onclick=function(){ reqShowSig_(doc.id, S.me.id, document.getElementById('reqMineBox')); };
+}
+/* A saved signature, shown in place (yours, or anyone's for admins / HR). */
+function reqShowSig_(docId, staffId, box){
+  if(!box) return;
+  box.innerHTML='<p class="hint">'+esc(t('Loading…'))+'</p>';
+  run('reqSignature',[S.auth.user,S.auth.pin,docId,staffId],function(d){
+    if(!d || !d.ok){ box.innerHTML='<p class="hint">'+esc(t('Could not load the signature.'))+'</p>'; return; }
+    box.innerHTML='<div class="sigShow"><img alt="" src="'+esc(d.sig)+'"><div class="hint">'+esc(d.name)+' · '+esc(teamDate_(String(d.at).slice(0,10)))+
+      (d.title?' · '+esc(d.title):'')+' · v'+esc(String(d.v))+'</div></div>';
+  });
+}
+/* Rows of a list that open the paper (yours) or a signature (admins / HR). */
+function bindReqRows_(){
+  document.querySelectorAll('[data-reqopen]').forEach(function(b){
+    b.onclick=function(){ gpTap(); S.reqDocId=b.getAttribute('data-reqopen'); S.reqAgree=false; S.reqName=''; S.reqSig=null; S.view='required'; render(); window.scrollTo(0,0); };
+  });
+  document.querySelectorAll('[data-reqsigof]').forEach(function(b){
+    b.onclick=function(){
+      var v=b.getAttribute('data-reqsigof'), i=v.indexOf('|'), box=b.nextElementSibling;
+      if(!box || !box.classList.contains('reqSigBox')){ box=document.createElement('div'); box.className='reqSigBox'; b.parentNode.insertBefore(box, b.nextSibling); }
+      else if(box.innerHTML){ box.innerHTML=''; return; }
+      reqShowSig_(v.slice(0,i), v.slice(i+1), box);
+    };
+  });
+}
+
+/* ---------- HR → Required: the papers, and everyone's progress ----------
+   For admins and HR. Add a paper (a title, then a PDF or a link), replace its
+   file (and choose whether everyone signs again), rename or remove it; and see
+   who has finished, who is missing what, and open anyone's signature. */
+S.reqAll=null; S.reqAllErr=''; S.reqFilter='open'; S.reqEdit=null; S.reqResign={}; S.reqOpenPerson=null;
+function reqAllLoad_(){
+  if(S.reqAllLoading) return;
+  S.reqAllErr=''; S.reqAllLoading=true;
+  run('reqStatusAll',[S.auth.user,S.auth.pin],function(d){
+    S.reqAllLoading=false;
+    if(d && d.ok){ S.reqAll=d; S.reqDocs=d.docs||S.reqDocs; } else S.reqAllErr=(d&&d.err)||'error';
+    if(S.view==='hr') render();
+  }, function(e){ S.reqAllLoading=false; S.reqAllErr=String((e&&e.message)||'offline'); if(S.view==='hr') render(); });
+}
+var REQ_SUGGEST=['Child Protection Policy','Staff Manual'];
+function reqHrHtml_(){
+  var h='<p class="sub">'+esc(t('Papers every staff member reads and signs in the app. With a current staff contract, they are what makes a profile complete.'))+'</p>';
+  if(S.reqAllErr) return h+'<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load the list.'))+'</p><button class="btn ghost" id="reqAllRetry">'+esc(t('Try again'))+'</button></div>';
+  if(!S.reqAll){ reqAllLoad_(); return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>'; }
+  var docs=S.reqAll.docs||[], people=S.reqAll.people||[];
+  h+='<h3>📄 '+esc(t('Documents'))+'</h3>';
+  docs.forEach(function(doc){
+    var signed=people.filter(function(p){ return p.required.items.some(function(x){ return x.id===doc.id && x.done; }); }).length;
+    var editing=S.reqEdit && S.reqEdit.id===doc.id;
+    h+='<div class="card reqDocCard"><div class="reqDocTop"><b>'+esc(doc.title)+'</b><span class="hrChip '+(doc.kind==='none'?'due':'active')+'">'+
+      esc(doc.kind==='none' ? t('No file yet') : gpT('{n} of {m} signed',{n:signed, m:people.length}))+'</span></div>'+
+      '<div class="hint">'+esc(doc.kind==='file' ? doc.fileName+' · '+Math.max(1,Math.round(doc.size/1024))+' KB' : doc.kind==='link' ? doc.url : t('Add the PDF or a link so people can read it.'))+
+      ' · v'+doc.version+(doc.updated?' · '+esc(teamDate_(doc.updated.slice(0,10))):'')+'</div>';
+    if(editing){
+      h+='<label class="f">'+esc(t('Title'))+'</label><input type="text" id="reqEditTitle" value="'+esc(S.reqEdit.title)+'">'+
+        '<label class="f">'+esc(t('Or a link instead of a file'))+'</label><input type="url" id="reqEditUrl" value="'+esc(S.reqEdit.url)+'" placeholder="https://…">'+
+        '<div class="btnRow"><button class="btn" id="reqEditSave">'+esc(t('Save'))+'</button><button class="btn ghost" id="reqEditCancel">'+esc(t('Cancel'))+'</button></div>';
+    } else {
+      h+='<div class="reqDocBtns">'+(doc.kind!=='none'?'<button class="linkbtn inline" data-reqhropen="'+esc(doc.id)+'">'+esc(t('Open'))+'</button>':'')+
+        '<label class="linkbtn inline reqUpload">'+esc(doc.kind==='file' ? t('Replace file') : t('Upload PDF'))+
+          '<input type="file" accept="application/pdf,image/*" data-requpload="'+esc(doc.id)+'" style="display:none"></label>'+
+        '<button class="linkbtn inline" data-reqedit="'+esc(doc.id)+'">'+esc(t('Edit'))+'</button>'+
+        '<button class="linkbtn inline" data-reqdel="'+esc(doc.id)+'">'+esc(t('Remove'))+'</button></div>'+
+        (doc.kind!=='none' ? '<label class="hrToggle"><input type="checkbox" data-reqresign="'+esc(doc.id)+'"'+(S.reqResign[doc.id]!==false?' checked':'')+'> '+
+          esc(t('A new file asks everyone to sign again'))+'</label>' : '');
+    }
+    h+='</div>';
+  });
+  var missing=REQ_SUGGEST.filter(function(x){ return !docs.some(function(d){ return d.title.toLowerCase()===x.toLowerCase(); }); });
+  h+='<div class="card"><label class="f">'+esc(t('Add a document'))+'</label>'+
+    (missing.length?'<div class="chips" style="margin:0 0 8px">'+missing.map(function(x){ return '<button class="chip blue" data-reqsuggest="'+esc(x)+'">+ '+esc(t(x))+'</button>'; }).join('')+'</div>':'')+
+    '<div class="numIn"><input type="text" id="reqNewTitle" placeholder="'+esc(t('Title, e.g. Child Protection Policy'))+'">'+
+    '<button class="btn ghost" style="margin:0;width:auto;padding:9px 14px" id="reqNewAdd">'+esc(t('Add'))+'</button></div></div>';
+
+  var fin=people.filter(function(p){ return p.required.finished; }).length;
+  var contracts=people.filter(function(p){ return p.required.items.some(function(x){ return x.kind==='contract' && x.done; }); }).length;
+  h+='<h3>👥 '+esc(t('Everyone'))+'</h3><div class="mmGrid">'+[
+      [t('Profiles complete'), fin+' / '+people.length, fin<people.length],
+      [t('Contracts on file'), contracts+' / '+people.length, false]
+    ].concat(docs.filter(function(d){ return d.kind!=='none'; }).map(function(doc){
+      var n=people.filter(function(p){ return p.required.items.some(function(x){ return x.id===doc.id && x.done; }); }).length;
+      return [doc.title, n+' / '+people.length, false];
+    })).map(function(x){ return '<div class="mmTile'+(x[2]?' hot':'')+'"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>';
+  h+='<div class="seg" style="max-width:280px;margin:8px 0 10px"><button data-reqfilter="open" class="'+(S.reqFilter==='open'?'on':'')+'">'+esc(gpT('Unfinished ({n})',{n:people.length-fin}))+'</button>'+
+    '<button data-reqfilter="all" class="'+(S.reqFilter==='all'?'on':'')+'">'+esc(gpT('Everyone ({n})',{n:people.length}))+'</button></div>';
+  var shown=people.filter(function(p){ return S.reqFilter==='all' || !p.required.finished; }).sort(function(a,b){ return a.name<b.name?-1:1; });
+  if(!shown.length) return h+'<p class="sub">🎉 '+esc(t('Everyone is finished.'))+'</p>';
+  h+='<div class="accCard adminList">'+shown.map(function(p){
+    var R=p.required, open=S.reqOpenPerson===p.id;
+    return '<div><button class="adminRow" data-reqperson="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
+      '<span class="adminRowText"><span class="rowName">'+esc(p.name)+'</span><span class="rowSub">'+esc(campusShort(p.campus)+' · '+t(p.dept))+'</span></span>'+
+      '<span class="hrChip '+(R.finished?'active':'due')+'">'+esc(R.finished ? t('Complete') : gpT('{n} of {m}',{n:R.done, m:R.total}))+'</span></button>'+
+      (open ? '<div class="reqPersonRows">'+reqRowsHtml_(R, { staffId:p.id })+'</div>' : '')+'</div>';
+  }).join('')+'</div>';
+  return h;
+}
+function reqReadFile_(file, cb){
+  var mime=file.type || (/\.pdf$/i.test(file.name)?'application/pdf':'');
+  var fr=new FileReader();
+  fr.onload=function(){ var s=String(fr.result||''), i=s.indexOf(','); cb(mime, i>-1 ? s.slice(i+1) : ''); };
+  fr.onerror=function(){ showMsg(t('Could not read that file')); };
+  fr.readAsDataURL(file);
+}
+function bindReqHr_(){
+  var rt=document.getElementById('reqAllRetry'); if(rt) rt.onclick=function(){ S.reqAll=null; render(); };
+  var done=function(d){ if(d && d.ok){ S.reqDocs=d.docs||S.reqDocs; S.reqAll=null; S.reqEdit=null; showMsg(t('Saved')); }
+    else showMsg(d && d.err==='too_large' ? t('That file is too big — up to about 4 MB. Try a smaller PDF, or a link.') : d && d.err==='bad_type' ? t('A PDF or a picture, please.') : d && d.err==='bad_link' ? t('That link does not look right — it starts with https://') : t('Could not save — try again.'));
+    render(); };
+  var add=function(title){ title=String(title||'').trim(); if(!title) return; run('reqDocSave',[S.auth.user,S.auth.pin,{title:title}],done); };
+  var na=document.getElementById('reqNewAdd'), nt=document.getElementById('reqNewTitle');
+  if(na) na.onclick=function(){ add(nt && nt.value); };
+  document.querySelectorAll('[data-reqsuggest]').forEach(function(b){ b.onclick=function(){ add(b.getAttribute('data-reqsuggest')); }; });
+  document.querySelectorAll('[data-reqhropen]').forEach(function(b){ b.onclick=function(){ reqOpenDoc_(reqDocById_(b.getAttribute('data-reqhropen')), b); }; });
+  document.querySelectorAll('[data-reqresign]').forEach(function(c){ c.onchange=function(){ S.reqResign[c.getAttribute('data-reqresign')]=c.checked; }; });
+  document.querySelectorAll('[data-requpload]').forEach(function(inp){
+    inp.onchange=function(){
+      var f=inp.files && inp.files[0], id=inp.getAttribute('data-requpload'); if(!f) return;
+      if(f.size>4.1*1024*1024){ showMsg(t('That file is too big — up to about 4 MB. Try a smaller PDF, or a link.')); return; }
+      showMsg(t('Uploading…'));
+      reqReadFile_(f, function(mime, b64){ run('reqDocUpload',[S.auth.user,S.auth.pin,id,f.name,mime,b64,S.reqResign[id]!==false],done); });
+    };
+  });
+  document.querySelectorAll('[data-reqedit]').forEach(function(b){ b.onclick=function(){ var d=reqDocById_(b.getAttribute('data-reqedit')); if(!d) return; S.reqEdit={id:d.id,title:d.title,url:d.url||''}; render(); }; });
+  var es=document.getElementById('reqEditSave'), ec=document.getElementById('reqEditCancel');
+  if(ec) ec.onclick=function(){ S.reqEdit=null; render(); };
+  if(es) es.onclick=function(){
+    var ti=document.getElementById('reqEditTitle'), ur=document.getElementById('reqEditUrl');
+    run('reqDocSave',[S.auth.user,S.auth.pin,{id:S.reqEdit.id, title:ti.value, url:String(ur.value||'').trim(), resign:S.reqResign[S.reqEdit.id]!==false}],done);
+  };
+  document.querySelectorAll('[data-reqdel]').forEach(function(b){ b.onclick=function(){
+    var d=reqDocById_(b.getAttribute('data-reqdel')); if(!d) return;
+    if(!confirm(gpT('Remove “{title}”? It will no longer be asked of anyone.',{title:d.title}))) return;
+    run('reqDocDelete',[S.auth.user,S.auth.pin,d.id],done);
+  }; });
+  document.querySelectorAll('[data-reqfilter]').forEach(function(b){ b.onclick=function(){ S.reqFilter=b.getAttribute('data-reqfilter'); render(); }; });
+  document.querySelectorAll('[data-reqperson]').forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-reqperson'); S.reqOpenPerson = S.reqOpenPerson===id ? null : id; render(); }; });
+  bindReqRows_();
 }
 
 /* ==================== Team → Personalities ====================
@@ -5692,7 +6061,10 @@ function homeHtml(){
      strengths). Updates live in the bell (its red dot says when there is
      something new); Leave Request and Profile & settings are in the menu.
      The quick-jump chip strip is gone; the summary card's rows jump. */
-  var h=miniDashboardHtml();
+  /* Required papers first while any are left (Uriah: mandatory for every
+     profile) — it goes away once they are signed and the contract is on file. */
+  var h=reqHomeCardHtml_();
+  h+=miniDashboardHtml();
   h+=gpQueueBannerHtml_();
   h+=phaseBanner(phase, wk);
   h += goalsCardHtml(goalsViewWeek());
@@ -7266,6 +7638,7 @@ function hrPut_(d){
 function hrFail_(d){ return d && d.err==='not_authorized' ? t('Only HR or an admin can do that.') : d && d.err==='too_large' ? t('That file is too big — keep it under 4 MB.') : d && d.err==='bad_type' ? t('Only a PDF or a photo can be attached.') : d && d.err==='bad_contract' ? t('Pick the month signed and how many years.') : t('Could not save'); }
 function bindHr(){
   if(S.view!=='hr') return;
+  if(S.hrTab==='docs') bindReqHr_();
   if(!S.hrStaff && !S.hrLoading && !S.hrError){
     S.hrLoading=true;
     run('hrList',[S.auth.user,S.auth.pin],function(d){
@@ -9093,6 +9466,7 @@ function hrHtml(){
     S.hrSub='home';
   }
   if(S.hrTab==='cands') return candsHtml_();
+  if(S.hrTab==='docs') return hrBackHtml_('week', t('My Home'))+'<h2>🗂️ '+esc(t('Human Resources'))+'</h2>'+hrTabsHtml_()+reqHrHtml_();
   var h=hrBackHtml_('week', t('My Home'));
   h+='<h2>🗂️ '+esc(t('Human Resources'))+'</h2>'+hrTabsHtml_();
   h+='<p class="sub">'+esc(t('Staff contracts — who signed when, for how long, and whose is coming up for renewal.'))+'</p>';
@@ -9142,10 +9516,11 @@ function hrHtml(){
   return h;
 }
 function hrTabsHtml_(){
-  var tab=S.hrTab==='cands'?'cands':'staff';
+  var tab=S.hrTab==='cands'||S.hrTab==='docs' ? S.hrTab : 'staff';
   return '<div class="campusSeg" style="max-width:none">'+
     '<button class="campusBtn'+(tab==='staff'?' on':'')+'" data-hrtab="staff">📄 '+esc(t('Staff contracts'))+'</button>'+
-    '<button class="campusBtn'+(tab==='cands'?' on':'')+'" data-hrtab="cands">🌱 '+esc(t('Candidates'))+((S.hrFollowUps)?' · '+S.hrFollowUps:'')+'</button></div>';
+    '<button class="campusBtn'+(tab==='cands'?' on':'')+'" data-hrtab="cands">🌱 '+esc(t('Candidates'))+((S.hrFollowUps)?' · '+S.hrFollowUps:'')+'</button>'+
+    '<button class="campusBtn'+(tab==='docs'?' on':'')+'" data-hrtab="docs">✍️ '+esc(t('Required'))+'</button></div>';
 }
 
 /* ---------- Candidates — potential staff, volunteers, students ----------
@@ -12858,7 +13233,9 @@ function personHtml(){
        (a.lastLogged?'<span class="chip blue">'+esc(t('last logged'))+' '+esc(a.lastLogged)+'</span>':'')+
        '</div>';
   }
+  h+='<button class="libTally" id="personBooks">📚 '+esc(gpT('{n} books read',{n:d.booksRead||0}))+' · '+esc(t('Library'))+' →</button>';
   h+='</div>';
+  h+=reqPersonCardHtml_(d);
   h+=personTypeCardHtml(d);
   h+=personGSCardHtml(d);
 
@@ -13155,7 +13532,9 @@ function profileHtml(){
   var h='<h2>My profile</h2>';
   h+='<div class="card"><div class="pcard">'+avatarHtml(S.me,'lg')+
      '<div><button class="btn ghost" id="photoBtn" style="width:auto;margin:0;padding:9px 14px">'+(S.me.photo?'Change photo':'Add photo')+'</button>'+
-     '<input type="file" accept="image/*" id="photoInput" style="display:none"></div></div></div>';
+     '<input type="file" accept="image/*" id="photoInput" style="display:none"></div></div>'+
+     '<button class="libTally" id="profBooks">📚 '+esc(gpT('{n} books read',{n:libBooksRead_()}))+' · '+esc(t('Library'))+' →</button></div>';
+  h+=reqProfileCardHtml_();
   h+='<div class="card">'+
     '<label class="f">Full name</label><input type="text" id="p_name" value="'+esc(S.me.name)+'">'+
     '<label class="f">Email</label><input type="email" id="p_email" value="'+esc(p.email||'')+'" placeholder="you@example.com">'+
@@ -13699,6 +14078,9 @@ function bindAway(){
   });
   bindHr();
   if(S.view==='library') bindLibrary_();
+  if(S.view==='required') bindReqSign_();
+  bindReqRows_();
+  ['libHomeTile','personBooks','profBooks'].forEach(function(id){ var b=document.getElementById(id); if(b) b.onclick=function(){ gpTap(); libOpen_(); }; });
   if(S.view==='admin' && S.adminSub==='groups') bindAdminGroups_();
   bindHosp();
   if(S.view==='ministry') bindLead_();

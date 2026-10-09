@@ -2827,3 +2827,71 @@ now). "Read" means "I have read this book".
 | Made at GP | បង្កើតនៅ GP |
 | Original GP guide | មគ្គុទ្ទេសក៍ដើមរបស់ GP |
 | An original guide written for GP — not a published book. Every person is different: use it to start conversations, not to put people in boxes. | មគ្គុទ្ទេសក៍ដើមដែលសរសេរសម្រាប់ GP — មិនមែនជាសៀវភៅបោះពុម្ពទេ។ មនុស្សម្នាក់ៗខុសៗគ្នា៖ ប្រើវាដើម្បីចាប់ផ្តើមការសន្ទនា មិនមែនដើម្បីដាក់មនុស្សក្នុងប្រអប់ទេ។ |
+
+## 66. Books read and required documents (signatures)
+
+| English | Khmer (pending) |
+|---|---|
+| {n} books read | បានអានសៀវភៅ {n} ក្បាល |
+| Five-minute reads | ការអានរយៈពេលប្រាំនាទី |
+| On file — runs to {date} | មានក្នុងឯកសារ — ដល់ {date} |
+| Your contract has run out — talk to HR | កិច្ចសន្យារបស់អ្នកផុតកំណត់ហើយ — សូមនិយាយជាមួយផ្នែកធនធានមនុស្ស |
+| No contract on file yet — talk to HR | មិនទាន់មានកិច្ចសន្យាក្នុងឯកសារនៅឡើយ — សូមនិយាយជាមួយផ្នែកធនធានមនុស្ស |
+| New version — read and sign again | កំណែថ្មី — សូមអាន និងចុះហត្ថលេខាម្តងទៀត |
+| Read and sign | អាន និងចុះហត្ថលេខា |
+| Staff contract | កិច្ចសន្យាបុគ្គលិក |
+| View signature | មើលហត្ថលេខា |
+| Finish your profile | បំពេញប្រវត្តិរូបរបស់អ្នកឲ្យចប់ |
+| {n} of {m} done — every staff member signs these | រួចរាល់ {n} ក្នុងចំណោម {m} — បុគ្គលិកគ្រប់រូបចុះហត្ថលេខាលើឯកសារទាំងនេះ |
+| Profile complete | ប្រវត្តិរូបពេញលេញ |
+| Profile unfinished | ប្រវត្តិរូបមិនទាន់ពេញលេញ |
+| {n} of {m} done | រួចរាល់ {n} ក្នុងចំណោម {m} |
+| This document is no longer on the list. | ឯកសារនេះលែងមាននៅក្នុងបញ្ជីហើយ។ |
+| Read it again | អានម្តងទៀត |
+| View my signature | មើលហត្ថលេខារបស់ខ្ញុំ |
+| There is a new version. Please read it again and sign. | មានកំណែថ្មី។ សូមអានវាម្តងទៀត ហើយចុះហត្ថលេខា។ |
+| Every staff member reads this and signs it. It takes a few minutes. | បុគ្គលិកគ្រប់រូបអានឯកសារនេះ ហើយចុះហត្ថលេខា។ វាចំណាយពេលតែប៉ុន្មាននាទីប៉ុណ្ណោះ។ |
+| Open it again | បើកវាម្តងទៀត |
+| Open the document | បើកឯកសារ |
+| Agree and sign | យល់ព្រម និងចុះហត្ថលេខា |
+| I have read and understood the {title}, and I agree to follow it. | ខ្ញុំបានអាន និងយល់ពី {title} ហើយខ្ញុំយល់ព្រមអនុវត្តតាម។ |
+| Your full name | ឈ្មោះពេញរបស់អ្នក |
+| Your signature | ហត្ថលេខារបស់អ្នក |
+| Sign here with your finger | ចុះហត្ថលេខានៅទីនេះដោយម្រាមដៃរបស់អ្នក |
+| Sign | ចុះហត្ថលេខា |
+| Your signature is kept with the date and your name. Only you, admins and HR can see it. | ហត្ថលេខារបស់អ្នកត្រូវបានរក្សាទុកជាមួយកាលបរិច្ឆេទ និងឈ្មោះរបស់អ្នក។ មានតែអ្នក អ្នកគ្រប់គ្រង និងផ្នែកធនធានមនុស្សទេដែលអាចមើលឃើញ។ |
+| Open the document first. | សូមបើកឯកសារជាមុនសិន។ |
+| Tick the box to say you have read it. | សូមធីកប្រអប់ ដើម្បីបញ្ជាក់ថាអ្នកបានអានរួចហើយ។ |
+| Type your full name. | សូមវាយឈ្មោះពេញរបស់អ្នក។ |
+| Draw your signature in the box. | សូមគូរហត្ថលេខារបស់អ្នកក្នុងប្រអប់។ |
+| Signed — thank you | បានចុះហត្ថលេខា — សូមអរគុណ |
+| This document was just updated — please open it again. | ឯកសារនេះទើបតែត្រូវបានធ្វើបច្ចុប្បន្នភាព — សូមបើកវាម្តងទៀត។ |
+| Could not sign — try again. | មិនអាចចុះហត្ថលេខាបានទេ — សូមព្យាយាមម្តងទៀត។ |
+| No connection — your signature was not sent. Try again when you are online. | គ្មានអ៊ីនធឺណិត — ហត្ថលេខារបស់អ្នកមិនទាន់បានផ្ញើទេ។ សូមព្យាយាមម្តងទៀតពេលមានអ៊ីនធឺណិត។ |
+| Could not load the signature. | មិនអាចបើកហត្ថលេខាបានទេ។ |
+| Papers every staff member reads and signs in the app. With a current staff contract, they are what makes a profile complete. | ឯកសារដែលបុគ្គលិកគ្រប់រូបអាន និងចុះហត្ថលេខាក្នុងកម្មវិធី។ រួមជាមួយកិច្ចសន្យាបុគ្គលិកដែលនៅមានសុពលភាព ទាំងនេះធ្វើឲ្យប្រវត្តិរូបពេញលេញ។ |
+| Couldn’t load the list. | មិនអាចបើកបញ្ជីបានទេ។ |
+| No file yet | មិនទាន់មានឯកសារ |
+| {n} of {m} signed | បានចុះហត្ថលេខា {n} ក្នុងចំណោម {m} |
+| Add the PDF or a link so people can read it. | បន្ថែម PDF ឬតំណ ដើម្បីឲ្យមនុស្សអាចអានបាន។ |
+| Or a link instead of a file | ឬតំណជំនួសឲ្យឯកសារ |
+| Replace file | ប្តូរឯកសារ |
+| Upload PDF | ផ្ទុក PDF ឡើង |
+| A new file asks everyone to sign again | ឯកសារថ្មីនឹងស្នើឲ្យគ្រប់គ្នាចុះហត្ថលេខាម្តងទៀត |
+| Add a document | បន្ថែមឯកសារ |
+| Title, e.g. Child Protection Policy | ចំណងជើង ឧ. គោលនយោបាយការពារកុមារ |
+| Profiles complete | ប្រវត្តិរូបពេញលេញ |
+| Unfinished ({n}) | មិនទាន់រួច ({n}) |
+| Everyone ({n}) | គ្រប់គ្នា ({n}) |
+| Everyone is finished. | គ្រប់គ្នាបានបញ្ចប់រួចហើយ។ |
+| Complete | ពេញលេញ |
+| {n} of {m} | {n} ក្នុងចំណោម {m} |
+| Could not read that file | មិនអាចអានឯកសារនោះបានទេ |
+| That file is too big — up to about 4 MB. Try a smaller PDF, or a link. | ឯកសារនោះធំពេក — អតិបរមាប្រហែល 4 MB។ សូមសាកល្បង PDF តូចជាងនេះ ឬតំណ។ |
+| A PDF or a picture, please. | សូមប្រើ PDF ឬរូបភាព។ |
+| That link does not look right — it starts with https:// | តំណនោះហាក់ដូចជាមិនត្រឹមត្រូវ — វាចាប់ផ្តើមដោយ https:// |
+| Remove “{title}”? It will no longer be asked of anyone. | លុប “{title}” ចេញ? វានឹងលែងត្រូវបានស្នើពីនរណាម្នាក់ទៀតហើយ។ |
+| Child Protection Policy | គោលនយោបាយការពារកុមារ |
+| Staff Manual | សៀវភៅណែនាំបុគ្គលិក |
+| Signed {date} | បានចុះហត្ថលេខា {date} |
+| You signed this on {date}. | អ្នកបានចុះហត្ថលេខាលើឯកសារនេះនៅ {date}។ |

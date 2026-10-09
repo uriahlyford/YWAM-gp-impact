@@ -1230,6 +1230,21 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
   phone's only (localStorage). To add a book, add an object to `GP_LIBRARY.books`;
   tests/test-library.mjs checks the shape.
 
+## Required papers and the books-read tally (Oct 2026)
+- **Books read** are on the staff record (`libRead: {bookId: date}`, `libSaveReads`), with the
+  phone's copy and a queue of unsent changes (`gp-lib-pending`) so it works offline. Only the
+  COUNT leaves through staffProfile (`booksRead`); the count shows on Team → person, My
+  profile and the About me tile, and each opens the Library. Logout clears the phone's copy.
+- **Required papers** (HR → ✍️ Required, admins and HR): the list is `reqDocs` (title, a PDF
+  as `reqfile:<id>` or a link, a version). Staff read → tick → type their name → draw a
+  signature (`reqSign`); the record keeps `signed: {docId: {v, at, name}}` and the drawn PNG
+  is `reqsig:<docId>:<staffId>`. A replaced file with "ask everyone to sign again" bumps the
+  version. The **staff contract** half is HR's own record: done while the newest contract
+  hasn't run out. `requiredFor_` is the one place a status is worked out.
+- Who sees what: the person sees their own (My Home card until finished, My profile);
+  admins and HR see "Profile unfinished" on anyone's profile, the everyone list, and
+  signatures. Teammates see nothing of it — the contract half is HR's business.
+
 ## Admin → Arrivals & departures
 - **Invite a new group:** pick campus, department and (optionally) ministry → one link,
   `teams.html?reg=1&campus=…&dept=…&ministry=…` (`gpInviteLink_`). It opens the

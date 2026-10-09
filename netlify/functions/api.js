@@ -3237,6 +3237,10 @@ async function staffProfile(username, pin, staffId) {
       lastLogged: dates.length ? dates[dates.length - 1] : ''
     },
     awayWork: awayWork,
+    // how many Library books they have read — the count only, never the list
+    booksRead: Object.keys(cleanLibRead_(p.libRead)).length,
+    // what their profile still needs — for them, and for admins / HR only
+    required: (p.id === me.id || canHR_(me)) ? requiredFor_(p, await getReqDocs_()) : null,
     isMe: p.id === me.id
   };
 }
@@ -3268,7 +3272,7 @@ async function backupStatus_() {
    It deliberately does NOT fail as a unit: each section is caught on its own, so
    a problem reading trips cannot stop the page from having the base's figures. */
 const BOOT_KEYS = ['entries', 'survey', 'okrs', 'dailyLogs', 'goals', 'holidays', 'smartGoals', 'broadcasts',
-  'personalKpi', 'trips', 'kpiDaily', 'oneOnOnes', 'numbersPeople', 'metricOverrides', 'teamTrips', 'tasks'];
+  'personalKpi', 'trips', 'kpiDaily', 'oneOnOnes', 'numbersPeople', 'metricOverrides', 'teamTrips', 'tasks', 'reqDocs'];
 async function getMyBoot(username, pin) {
   prefetch_(['staff', 'loginThrottle'].concat(BOOT_KEYS));   // before the PIN check, so they travel together
   const s = await verifyStaff_(username, pin);
@@ -3300,6 +3304,7 @@ async function getMyBoot(username, pin) {
       part(function () { return canHR_(s) ? getCandidates_() : null; }),
       part(function () { return getMyTasks(username, pin); })
     ]);
+  const reqDocs = await part(getReqDocs_);
 
   return {
     ok: true,
@@ -3331,6 +3336,10 @@ async function getMyBoot(username, pin) {
     // whose numbers are due, and (for a department overseer) which ministries are in
     numbers: await part(function () { return numbersStatus_(s, staffRows || []); }),
     hrFollowUps: canHR_(s) ? candFollowUpsCount_(candRows || []) : null,
+    // the books they have marked read in the Library, and the papers every staff member signs
+    libRead: cleanLibRead_(s.libRead),
+    reqDocs: reqDocs ? reqDocsAnswer_(reqDocs) : [],
+    required: (reqDocs && !isApplicant_(s)) ? requiredFor_(s, reqDocs) : null,
     // admins only: when the nightly backup last ran (netlify/functions/backup.js)
     backup: s.isAdmin ? await part(backupStatus_) : null,
     // the roster is already top-level above; no need to ship it twice in one response
@@ -5035,6 +5044,219 @@ async function hrDeleteFile(username, pin, staffId, contractId, fileId) {
   if (out.ok) { try { await hrDropFile_(store(), fileId); } catch (e) { /* the record is already clean */ } }
   return out;
 }
+/* ==================== the Library: books each person has read ====================
+   Which Library books someone has marked read — on their own staff record as
+   `libRead: { bookId: 'YYYY-MM-DD' }`, so the count follows them to any phone
+   and teammates can see it. Only the count leaves through staffProfile; the
+   list itself goes to its owner only. Ids are library.js slugs. */
+const LIB_MAX = 300;
+function cleanLibRead_(m) {
+  const out = {};
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return out;
+  Object.keys(m).slice(0, LIB_MAX).forEach(function (k) { if (/^[a-z0-9-]{1,80}$/.test(k)) out[k] = isoDate_(m[k]) || ''; });
+  return out;
+}
+/* changes: { bookId: 'YYYY-MM-DD' } to mark read, { bookId: null } to unmark.
+   The phone also sends what it marked before this was saved anywhere, once. */
+async function libSaveReads(username, pin, changes) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, err: 'bad_changes' };
+  const keys = Object.keys(changes).filter(function (k) { return /^[a-z0-9-]{1,80}$/.test(k); }).slice(0, LIB_MAX);
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === me.id; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const cur = cleanLibRead_(rows[idx].libRead);
+    keys.forEach(function (k) {
+      if (changes[k] === null || changes[k] === false) delete cur[k];
+      else if (!cur[k]) cur[k] = isoDate_(changes[k]) || new Date().toISOString().slice(0, 10);
+    });
+    if (Object.keys(cur).length > LIB_MAX) return { abort: true, ok: false, err: 'too_many' };
+    rows[idx].libRead = cur;
+    return { ok: true, libRead: cur };
+  });
+}
+
+/* ==================== required: papers every staff member signs ====================
+   What every profile must have done (Uriah, Oct 2026): the Child Protection
+   Policy and the Staff Manual read and signed in the app, and a staff
+   contract on file — more papers can be added later from HR → Required.
+
+   'reqDocs' is the list (title, the file or a link, a version). A file is its
+   own blob (reqfile:<id>) like an HR attachment, so the list stays small. A
+   signature is two things: on the staff record, `signed: { docId: {v, at,
+   name} }` — small, read by everything that shows a status — and the drawn
+   signature itself as reqsig:<docId>:<staffId>, read only when someone opens
+   it. A new version (a replaced file, with "ask everyone to sign again") asks
+   everyone again: a signature counts for the version it was given to.
+
+   Who sees what: anyone may open the papers and sign their own; a person sees
+   their own status; admins and HR see everyone's and can open a signature.
+   Teammates never see anyone else's — the contract half is HR's business. */
+const REQ_MAX_DOCS = 20;
+const REQ_SIG_MAX = 150000;   // a drawn signature as a PNG data URL — a few KB in practice
+function reqDocOut_(d) {
+  return { id: d.id, title: d.title, kind: d.kind, url: d.url || '', fileName: d.fileName || '', mime: d.mime || '', size: d.size || 0,
+    version: d.version, updated: d.updated || '', order: d.order || 0 };
+}
+function cleanReqDoc_(d) {
+  if (!d || typeof d !== 'object') return null;
+  const id = str_(d.id, 60), title = str_(d.title, 120);
+  if (!id || !title) return null;
+  const url = /^https?:\/\//i.test(String(d.url || '')) ? str_(d.url, 500) || '' : '';
+  return { id: id, title: title, kind: d.fileId ? 'file' : (url ? 'link' : 'none'), url: url,
+    fileId: str_(d.fileId, 60) || '', fileName: str_(d.fileName, 160) || '', mime: str_(d.mime, 80) || '', size: finiteNum_(d.size, 0, 1e9) || 0,
+    version: finiteNum_(d.version, 1, 1e6) || 1, updated: str_(d.updated, 40) || '', by: str_(d.by, 60) || '', order: finiteNum_(d.order, 0, 1000) || 0 };
+}
+async function getReqDocs_() {
+  return (await readJSON('reqDocs', [])).map(cleanReqDoc_).filter(Boolean)
+    .sort(function (a, b) { return a.order - b.order || (a.title < b.title ? -1 : 1); });
+}
+/* The contract half, from HR's own record: done while the newest contract has
+   not run out (one running out soon is still done — HR's renewals list is
+   where that shows). */
+function contractState_(s) {
+  const list = contractsOf_(s);
+  if (!list.length) return { done: false, state: 'none', ends: '' };
+  const end = hrContractEnd_(list[list.length - 1]);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const ends = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-01';
+  return end > today ? { done: true, state: 'current', ends: ends } : { done: false, state: 'expired', ends: ends };
+}
+/* One person's list: each paper (signed for its current version?) and the
+   contract. A paper with nothing to read yet (no file, no link) is not asked. */
+function requiredFor_(s, docs) {
+  const signed = (s && s.signed && typeof s.signed === 'object' && !Array.isArray(s.signed)) ? s.signed : {};
+  const items = docs.filter(function (d) { return d.kind !== 'none'; }).map(function (d) {
+    const g = signed[d.id], ok = !!(g && Number(g.v) === d.version);
+    return { id: d.id, kind: 'doc', title: d.title, done: ok, at: ok ? str_(g.at, 40) || '' : '', older: !!(g && !ok) };
+  });
+  const c = contractState_(s);
+  items.push({ id: 'contract', kind: 'contract', title: 'Staff contract', done: c.done, state: c.state, ends: c.ends });
+  const done = items.filter(function (x) { return x.done; }).length;
+  return { items: items, done: done, total: items.length, finished: done === items.length };
+}
+function reqDocsAnswer_(docs) { return docs.map(reqDocOut_); }
+
+async function reqDocSave(username, pin, doc) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  if (!doc || typeof doc !== 'object') return { ok: false, err: 'bad_doc' };
+  const title = str_(doc.title, 120);
+  if (!title) return { ok: false, err: 'no_title' };
+  const url = doc.url === undefined ? undefined : (doc.url === '' || doc.url === null ? '' : (/^https?:\/\//i.test(String(doc.url)) && str_(doc.url, 500)) || null);
+  if (url === null) return { ok: false, err: 'bad_link' };
+  const docs = await getReqDocs_();
+  let hit = doc.id ? docs.filter(function (d) { return d.id === doc.id; })[0] : null;
+  if (doc.id && !hit) return { ok: false, err: 'not_found' };
+  const now = new Date().toISOString();
+  if (!hit) {
+    if (docs.length >= REQ_MAX_DOCS) return { ok: false, err: 'too_many' };
+    hit = cleanReqDoc_({ id: hrId_('rd'), title: title, url: url || '', version: 1, updated: now, by: s.id, order: docs.length ? Math.max.apply(null, docs.map(function (d) { return d.order; })) + 1 : 0 });
+    docs.push(hit);
+  } else {
+    hit.title = title;
+    if (url !== undefined && url !== hit.url) { hit.url = url; if (doc.resign) hit.version++; }
+    if (finiteNum_(doc.order, 0, 1000) !== null) hit.order = Number(doc.order);
+    hit.updated = now; hit.by = s.id;
+    Object.assign(hit, cleanReqDoc_(hit));
+  }
+  await writeJSON('reqDocs', docs);
+  return { ok: true, doc: reqDocOut_(hit), docs: reqDocsAnswer_(docs) };
+}
+async function reqDocUpload(username, pin, docId, name, mime, base64, resign) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  mime = str_(mime, 80);
+  if (HR_FILE_MIME.indexOf(mime) === -1) return { ok: false, err: 'bad_type' };
+  if (typeof base64 !== 'string' || !base64) return { ok: false, err: 'bad_file' };
+  if (base64.length > HR_FILE_MAX_B64) return { ok: false, err: 'too_large' };
+  const docs = await getReqDocs_();
+  const hit = docs.filter(function (d) { return d.id === docId; })[0];
+  if (!hit) return { ok: false, err: 'not_found' };
+  const fileId = hrId_('rf'), old = hit.fileId, now = new Date().toISOString();
+  await writeJSON('reqfile:' + fileId, { id: fileId, docId: hit.id, name: str_(name, 160) || 'document', mime: mime, data: base64, added: now, by: s.id });
+  const hadSomething = hit.kind !== 'none';
+  hit.fileId = fileId; hit.fileName = str_(name, 160) || 'document'; hit.mime = mime; hit.size = Math.floor(base64.length * 3 / 4);
+  hit.url = ''; hit.kind = 'file'; hit.updated = now; hit.by = s.id;
+  if (resign && hadSomething) hit.version++;
+  await writeJSON('reqDocs', docs);
+  if (old) { try { await hrDropReqFile_(old); } catch (e) { /* the list already points at the new one */ } }
+  return { ok: true, doc: reqDocOut_(hit), docs: reqDocsAnswer_(docs) };
+}
+async function hrDropReqFile_(fileId) {
+  const st = store();
+  if (typeof st.delete === 'function') await st.delete('reqfile:' + fileId);
+  else await st.setJSON('reqfile:' + fileId, null);
+}
+async function reqDocDelete(username, pin, docId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  const docs = await getReqDocs_();
+  const hit = docs.filter(function (d) { return d.id === docId; })[0];
+  if (!hit) return { ok: false, err: 'not_found' };
+  const rest = docs.filter(function (d) { return d.id !== docId; });
+  await writeJSON('reqDocs', rest);
+  if (hit.fileId) { try { await hrDropReqFile_(hit.fileId); } catch (e) { /* gone from the list either way */ } }
+  return { ok: true, docs: reqDocsAnswer_(rest) };
+}
+/* Anyone signed in may open a paper — everyone has to read it. */
+async function reqDocFile(username, pin, docId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const hit = (await getReqDocs_()).filter(function (d) { return d.id === docId; })[0];
+  if (!hit || !hit.fileId) return { ok: false, err: 'not_found' };
+  const f = await readJSON('reqfile:' + hit.fileId, null);
+  if (!f || !f.data) return { ok: false, err: 'not_found' };
+  return { ok: true, name: f.name, mime: f.mime, dataUrl: 'data:' + f.mime + ';base64,' + f.data };
+}
+async function reqSign(username, pin, docId, version, name, sig) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (isApplicant_(s)) return { ok: false, err: 'not_staff' };
+  const docs = await getReqDocs_();
+  const hit = docs.filter(function (d) { return d.id === docId; })[0];
+  if (!hit || hit.kind === 'none') return { ok: false, err: 'not_found' };
+  if (Number(version) !== hit.version) return { ok: false, err: 'new_version', docs: reqDocsAnswer_(docs) };
+  const typed = str_(name, 100);
+  if (!typed || typed.length < 2) return { ok: false, err: 'no_name' };
+  if (typeof sig !== 'string' || sig.indexOf('data:image/png;base64,') !== 0 || sig.length < 200 || sig.length > REQ_SIG_MAX) return { ok: false, err: 'bad_signature' };
+  const at = new Date().toISOString();
+  await writeJSON('reqsig:' + hit.id + ':' + s.id, { docId: hit.id, staffId: s.id, v: hit.version, title: hit.title, at: at, name: typed, sig: sig });
+  return mutateStaff_(function (rows) {
+    const idx = rows.findIndex(function (r) { return r.id === s.id; });
+    if (idx === -1) return { abort: true, ok: false, err: 'not_found' };
+    const signed = (rows[idx].signed && typeof rows[idx].signed === 'object' && !Array.isArray(rows[idx].signed)) ? rows[idx].signed : {};
+    signed[hit.id] = { v: hit.version, at: at, name: typed };
+    rows[idx].signed = signed;
+    return { ok: true, required: requiredFor_(rows[idx], docs), docs: reqDocsAnswer_(docs) };
+  });
+}
+/* The drawn signature — its owner, or an admin / HR. */
+async function reqSignature(username, pin, docId, staffId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const who = str_(staffId, 60) || s.id;
+  if (who !== s.id && !canHR_(s)) return { ok: false, err: 'not_authorized' };
+  const g = await readJSON('reqsig:' + str_(docId, 60) + ':' + who, null);
+  if (!g || !g.sig) return { ok: false, err: 'not_found' };
+  return { ok: true, name: g.name, at: g.at, v: g.v, title: g.title || '', sig: g.sig };
+}
+/* Everyone's list, for HR → Required. */
+async function reqStatusAll(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  const docs = await getReqDocs_();
+  const rows = (await getStaff_()).filter(function (r) { return r.active && !r.archived && !isApplicant_(r); });
+  return { ok: true, docs: reqDocsAnswer_(docs), people: rows.map(function (r) {
+    return { id: r.id, name: r.name, campus: r.campus, dept: r.dept, ministry: r.ministry || '', photo: r.photo || '', required: requiredFor_(r, docs) };
+  }) };
+}
+
 async function hrArchive(username, pin, staffId, info) {
   return hrMutate_(username, pin, staffId, function (rec, me) {
     if (rec.id === me.id) return { abort: true, ok: false, err: 'self_archive' };
@@ -6732,7 +6954,15 @@ const HANDLERS = {
   portalTeamPhotos: function (a) { return portalTeamPhotos(a[0], a[1], a[2]); },
   portalSaveTeamPhoto: function (a) { return portalSaveTeamPhoto(a[0], a[1], a[2], a[3], a[4], a[5]); },
   portalDeleteTeamPhoto: function (a) { return portalDeleteTeamPhoto(a[0], a[1], a[2], a[3]); },
-  portalSaveTeamMembers: function (a) { return portalSaveTeamMembers(a[0], a[1], a[2]); }
+  portalSaveTeamMembers: function (a) { return portalSaveTeamMembers(a[0], a[1], a[2]); },
+  libSaveReads: function (a) { return libSaveReads(a[0], a[1], a[2]); },
+  reqDocSave: function (a) { return reqDocSave(a[0], a[1], a[2]); },
+  reqDocUpload: function (a) { return reqDocUpload(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); },
+  reqDocDelete: function (a) { return reqDocDelete(a[0], a[1], a[2]); },
+  reqDocFile: function (a) { return reqDocFile(a[0], a[1], a[2]); },
+  reqSign: function (a) { return reqSign(a[0], a[1], a[2], a[3], a[4], a[5]); },
+  reqSignature: function (a) { return reqSignature(a[0], a[1], a[2], a[3]); },
+  reqStatusAll: function (a) { return reqStatusAll(a[0], a[1]); }
 };
 
 export default async (req) => {

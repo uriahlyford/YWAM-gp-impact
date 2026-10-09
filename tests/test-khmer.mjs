@@ -130,7 +130,7 @@ const KH = /[ក-៿]/;
     }
   }
   ok('every t() string in the code has a translation', missing.length === 0,
-    missing.length + ' missing: ' + missing.slice(0, 4).join(' | '));
+    missing.length + ' missing: ' + missing.slice(0, process.env.KM_ALL ? 999 : 4).join(' | '));
 }
 
 /* ---------- 2. it reaches the screen ---------- */
