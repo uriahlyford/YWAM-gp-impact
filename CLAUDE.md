@@ -834,8 +834,10 @@ forms, documents and references follow.
   `P.aview/strengths/tphotos` in with the boot and draws `applicantNavHtml_('data-pvaview')`
   outside the inert frame (`P.pv.aview`); Our team and Resources load with the staff member's own
   creds (`meetOn` / `resOn` in `bindTabs_`).
-- **Staff side bar and menu (Oct 2026)**: the bar is GP app home · Applications · ☰ (`staffNavHtml_`,
-  `P.menuOpen`, `#navMenu`); the menu (`#staffMenu`, drawn only when open) has two groups — Staff
+- **Staff side bar and menu (Oct 2026)**: the bar is a small ‹ to the GP app home (`#toGpApp`, name in
+  `.srOnly`) · Applications · ☰ (`staffNavHtml_`, `P.menuOpen`, `#navMenu`); the menu is a drawer that
+  slides in from the right over a backdrop (`#staffMenu` fixed, `#menuScrim`, `body.menuOn`; ✕, the
+  backdrop or Esc close it — a test that opens it must close it before clicking the page) with two groups — Staff
   access (View as applicant, Link for applicants) and Admin access (Forms, Accounts, Our team,
   Resources, Who has access). The ids (`toForms`…) are unchanged, so tests open the menu first when
   a button is missing. **Who has access** (`P.view==='access'`, `accessHtml_` / `bindAccess_`): every
