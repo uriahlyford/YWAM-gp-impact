@@ -1148,5 +1148,14 @@ ok('staff cannot use the applicant’s handler', r.body.ok === false);
 r = await call('portalBoot', ['tom.v', '2468']);
 ok('the second applicant still sees only their own', r.body.ok === true && r.body.application.type === 'volunteer' && !JSON.stringify(r.body).includes('anna'));
 
+console.log('\n=== deleting a team cancels it in the Teams Database ===');
+{
+  mem.candidates.push({ id: 'cd_del', type: 'team', name: 'Delete Me Team', campus: 'siemreap', stage: 'docs', portal: { docs: [] } });
+  mem.teamTrips = (mem.teamTrips || []).concat([{ id: 'ta_cd_del', candidateId: 'cd_del', campus: 'siemreap', name: 'Delete Me Team', from: '2027-03-01', to: '2027-03-10', status: 'active', metrics: {}, reached: {} }]);
+  r = await call('portalDeleteApplicant', ['sina', '1234', 'cd_del']);
+  const tr = mem.teamTrips.find(t => t.id === 'ta_cd_del');
+  ok('the team’s row is kept but cancelled, so it stops counting and SR Hospitality shows any booked beds as cancelled', r.body.ok === true && tr && tr.status === 'cancelled' && !mem.candidates.some(c => c.id === 'cd_del'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

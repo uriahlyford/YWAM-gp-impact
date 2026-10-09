@@ -3941,9 +3941,29 @@ async function hospRequests_(campus, bookings) {
   (await getCandidates_()).forEach(function (c) { if (c && c.id) byCand[c.id] = c; });
   const booked = {};
   bookings.forEach(function (k) { if (k.tripId) booked[k.tripId] = k.id; });
-  return (await getTeamTrips_()).filter(function (t) {
-    return t.campus === campus && t.status !== 'cancelled' && t.from && t.to && t.to >= today;
-  }).map(function (t) {
+  /* a team whose application was deleted in the portal is gone too */
+  const goneCand = function (t) { return !!(t.candidateId && !byCand[t.candidateId]); };
+  const trips = await getTeamTrips_();
+  const live = trips.filter(function (t) {
+    return t.campus === campus && t.status !== 'cancelled' && !goneCand(t) && t.from && t.to && t.to >= today;
+  });
+  /* A team cancelled (closed in the portal, or cancelled in the Teams
+     Database) or deleted while its beds are booked: the booking stays until
+     someone frees the beds, so it shows here as cancelled. */
+  const liveIds = {}, tripById = {};
+  live.forEach(function (t) { liveIds[t.id] = 1; });
+  trips.forEach(function (t) { tripById[t.id] = t; });
+  const raw = {}; (await getTeamTripsRaw_()).forEach(function (r) { if (r && r.id) raw[r.id] = r; });
+  const gone = bookings.filter(function (k) { return k.tripId && !liveIds[k.tripId] && !k.permanent && k.to && k.to >= today; }).map(function (k) {
+    const t = tripById[k.tripId], r = raw[k.tripId];
+    const why = !t || (r && r.deleted) || goneCand(t) ? 'deleted' : t.status === 'cancelled' ? 'cancelled' : '';
+    if (!why || (t && t.campus !== campus)) return null;
+    return { tripId: k.tripId, name: (t && t.name) || k.name, country: (t && t.country) || '', from: k.from, to: k.to,
+      size: null, males: k.males == null ? null : k.males, females: k.females == null ? null : k.females, couples: null,
+      pending: false, portalStage: '', candidateId: t && !goneCand(t) ? t.candidateId || '' : '', bookingId: k.id, people: [],
+      cancelled: why, count: Number(k.count) || 0 };
+  }).filter(Boolean);
+  return live.map(function (t) {
     return {
       tripId: t.id, name: t.name, country: t.country || '', from: t.from, to: t.to,
       size: t.size == null ? null : t.size, males: t.males == null ? null : t.males, females: t.females == null ? null : t.females,
@@ -3952,7 +3972,7 @@ async function hospRequests_(campus, bookings) {
       candidateId: t.candidateId || '', bookingId: booked[t.id] || '',
       people: teamPeople_(t.candidateId && byCand[t.candidateId])
     };
-  }).sort(function (a, b) { return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; });
+  }).concat(gone).sort(function (a, b) { return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; });
 }
 async function hospAuth_(username, pin) {
   const s = await verifyStaff_(username, pin);
@@ -6925,6 +6945,13 @@ async function portalDeleteApplicant(username, pin, candidateId) {
   for (const d of docs) { if (d && d.id) { try { await store().delete('pdoc:' + d.id); } catch (e) { /* already gone */ } try { await store().delete('hrfile:' + d.id); } catch (e) { /* already gone */ } } }
   rows.splice(idx, 1);
   await writeJSON('candidates', rows);
+  /* a team: its row in the Teams Database is cancelled, so it stops counting
+     and SR Hospitality shows any beds still booked for it as cancelled */
+  if (cand.type === 'team') {
+    const trips = await getTeamTripsRaw_();
+    const tr = trips.find(function (r) { return r && r.candidateId === cand.id && !r.deleted; });
+    if (tr && tr.status !== 'cancelled') { tr.status = 'cancelled'; tr.updated = new Date().toISOString(); tr.updatedBy = me.id; await writeJSON('teamTrips', trips); }
+  }
   let accountRemoved = false;
   if (cand.staffId) {
     const out = await mutateStaff_(function (all) {
