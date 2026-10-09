@@ -138,7 +138,7 @@ async function open(viewport, query, seed) {
       const ppl = [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
       out = { ok: true, people: ppl, photos: TEAM_PHOTOS, tally: { count: Object.keys(TEAM_PHOTOS).length, total: ppl.length } };
     } else if (b.fn === 'portalSaveTeamPhoto') {
-      TEAM_PHOTOS[b.args[2]] = { data: b.args[3], at: '2026-10-07T01:00:00Z' };
+      TEAM_PHOTOS[b.args[2]] = { data: b.args[3], at: '2026-10-07T01:00:00Z', fromDoc: b.args[5] || '' };
       const ppl = [{ key: 'leader', name: 'Lee Leader', role: 'leader' }].concat(((TEAM_APP && TEAM_APP.members) || []).map((m, i) => ({ key: m.id || ('m00000' + i), name: m.name, role: 'member', sex: m.sex })));
       out = { ok: true, people: ppl, photos: TEAM_PHOTOS, tally: { count: Object.keys(TEAM_PHOTOS).length, total: ppl.length }, application: { ...TEAM_APP, photos: { count: Object.keys(TEAM_PHOTOS).length, total: ppl.length } } };
     } else if (b.fn === 'portalAuthConfig') {
@@ -1047,6 +1047,15 @@ async function open(viewport, query, seed) {
   await page.waitForFunction(k => !!document.querySelector('#panelMembers [data-rosterkey="' + k + '"] img.avatar'), twoKey, { timeout: 5000 });
   const gd = sent.filter(b => b.fn === 'portalGetDoc').pop(), sp = sent.filter(b => b.fn === 'portalSaveTeamPhoto').pop();
   ok('Use fetches the file, shrinks it and saves it as that person’s photo on this record — the face shows on the roster', (gd && sp && sp.args[2] === twoKey && sp.args[4] === 'cd_team' && /^[A-Za-z0-9+/=]+$/.test(sp.args[3])), JSON.stringify(sp && sp.args.slice(2, 3).concat(sp.args.slice(4))));
+  ok('… it sends which upload it came from, and that upload is no longer offered', (typeof sp.args[5] === 'string' && sp.args[5].length > 0 && !(await page.$('#upPhotos'))));
+  ok('… the names-and-photos document row is still there while someone has no photo', !!(await page.$('[data-dockind="photo"]')));
+  for (const k of await page.$$eval('#panelMembers .rosterRow', rs => rs.filter(r => !r.querySelector('img.avatar')).map(r => r.getAttribute('data-rosterkey')))) {
+    await page.click('#panelMembers [data-tphoto="' + k + '"]');
+    await page.setInputFiles('#tphotoInput', { name: k + '.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64') });
+    await page.waitForFunction(kk => !!document.querySelector('#panelMembers [data-rosterkey="' + kk + '"] img.avatar'), k, { timeout: 5000 });
+  }
+  await page.waitForFunction(() => /Everyone has a photo/.test((document.querySelector('#panelMembers') || {}).textContent || ''), null, { timeout: 5000 });
+  ok('once everyone has a photo, the names-and-photos document row and the uploads are hidden — the roster is the one place', !(await page.$('[data-dockind="photo"]')) && !(await page.$('#upPhotos')) && !!(await page.$('[data-dockind="passports"]')));
   await page.click('#teamSheetBtn'); await page.waitForTimeout(600);
   ok('the sheet is drawn and offered as a picture without a page error', !!(await page.$('#teamSheetBtn')) && errors.length === 0, errors.join(' | '));
   await ctx.close();

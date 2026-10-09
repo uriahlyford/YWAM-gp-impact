@@ -858,7 +858,10 @@ forms, documents and references follow.
   `uploadsForRosterHtml_` lists the image uploads of that kind under the roster with a guess at who
   each is from the file name (`guessPerson_`), and Use fetches the file (`portalGetDoc`), shrinks it
   (`shrinkPhoto_`) and saves it as that person's photo (`portalSaveTeamPhoto` with the candidateId)
-  — how YWAM Montana's uploads, made before the roster existed, go onto their people. Page: `rosterHtml_` on the applicant's members card and the
+  — how YWAM Montana's uploads, made before the roster existed, go onto their people. A photo
+  made that way remembers its upload (`fromDoc`), so the file is not offered again; and once
+  everyone has a photo (`rosterDone_`) the uploads block and the staff record's `photo` document
+  row are hidden — the roster is the one place. Page: `rosterHtml_` on the applicant's members card and the
   staff record (`panelMembersHtml_`), `bindRoster_`, and `teamSheet_` — a canvas with every face
   and name for the staff group chat (`#teamSheetBtn`, shared via `dutyShare`).
 - **Country fields** have a search box (`countryFieldHtml_`, `bindCountrySearch_`): typing
