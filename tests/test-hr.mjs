@@ -186,5 +186,66 @@ ok('and they can sign in again', r.body.ok === true);
 r = await call('hrUnarchive', ['sina', '1234', 'st_dara']);
 ok('unarchiving someone who was never archived is refused', r.body.ok === false && r.body.err === 'not_archived');
 
+console.log('=== staff sign the legal documents and their contract in the app ===');
+{
+  const SIG = '/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAAUADwDASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAYFBAf/xAAsEAABAwIEBAUFAQAAAAAAAAABAAQFAgMGERMhFDFRcSMyQWGhEiJigZGx/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/APTkWTOz1qG0bZZu3bhxnpWW1o1GrLLPM8hzCycsYTXmqbwLWr0HjXyP8HwQgo38iyjbOs/dWW9vrcrAz7dVPHGfFE1QcLISVmnz36aNOjL8TV5j7bLpYYNiGt7iXdFyRd+t97Xqn+Hb4VCAKQAAABsAEGDG4vhn93h6nFTN0Ni3d06VYPTfYnsVvLjkomOlbOlIs7Lin0+unMjseY/SwDhWQi/uwzNXm9A5NHXjWewz3p+Sgq0UoMTykWRRiSDvW6BtxbLxbR9yOdI7qrBzAPVAREQEREBERAREQf/Z';
+  r = await call('adminUpdateStaff', ['uriah', '1234', 'st_andrew', { staffType: 'campus' }]);
+  r = await call('getMyBoot', ['andrew', '1234']);
+  ok('a campus staff member’s boot says what is still to sign: the five documents, no contract yet', r.body.ok && r.body.staff.signDue && r.body.staff.signDue.docs === 5 && r.body.staff.signDue.contract === false, JSON.stringify(r.body.staff && r.body.staff.signDue));
+  r = await call('getMyBoot', ['dara', '1234']);
+  ok('… ministry staff are not asked', r.body.ok && r.body.staff.signDue.docs === 0);
+  r = await call('staffSignOpen', ['andrew', '1234']);
+  ok('staff open their documents with their own sign-in: the five, for them alone', r.body.ok && r.body.staff === true && r.body.docs.map(d => d.id).join() === 'photo,accident,liability,acceptance,child' && r.body.people.length === 1 && r.body.people[0].name === 'Andrew Lee');
+  r = await call('staffSignOpen', ['andrew', '0000']);
+  ok('… only with the right PIN', r.body.ok === false);
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', 'photo', { name: 'Andrew Lee', checks: { beyond: true }, sig: SIG }]);
+  ok('the same rules as applicants: every box ticked', r.body.ok === false && r.body.err === 'unticked');
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', 'photo', { name: 'Andrew Lee', checks: { beyond: true, noPay: true, read: true }, sig: SIG }]);
+  ok('the Photo Release signs, once', r.body.ok && r.body.done.photo === true);
+  r = await call('getMyBoot', ['andrew', '1234']);
+  ok('… and four are left', r.body.staff.signDue.docs === 4);
+  r = await call('hrList', ['sina', '1234']);
+  let me = r.body.staff.find(x => x.id === 'st_andrew');
+  ok('HR sees it on their profile, with the list of documents', me.legal.photo && me.legal.photo.name === 'Andrew Lee' && r.body.legalDocs.length === 5);
+  r = await call('hrLegalPdf', ['sina', '1234', 'st_andrew', 'photo']);
+  ok('… and opens it as a PDF', r.body.ok && /^data:application\/pdf;base64,JVBER/.test(r.body.dataUrl));
+  r = await call('hrLegalPdf', ['andrew', '1234', '', 'photo']);
+  ok('staff can open their own', r.body.ok);
+  r = await call('hrLegalPdf', ['dara', '1234', 'st_andrew', 'photo']);
+  ok('… not someone else’s', r.body.ok === false && r.body.err === 'not_authorized');
+
+  /* the Volunteer Staff Contract */
+  r = await call('hrSendContract', ['dara', '1234', 'st_andrew', { from: '2026-11', years: 2 }]);
+  ok('only HR sends a contract to sign', r.body.ok === false);
+  r = await call('hrSendContract', ['sina', '1234', 'st_andrew', { from: '2026-11', years: 2 }]);
+  const ct = r.body.ok && r.body.staff.contracts.find(c => c.digital);
+  ok('HR sends one: its month and length, waiting for them', r.body.ok && ct && ct.signed === '2026-11' && ct.years === 2 && ct.digital.status === 'awaiting_staff');
+  r = await call('hrSendContract', ['sina', '1234', 'st_andrew', { from: '2026-12', years: 1 }]);
+  ok('… one at a time', r.body.ok === false && r.body.err === 'already_sent');
+  r = await call('getMyBoot', ['andrew', '1234']);
+  ok('it shows on their home as to sign', r.body.staff.signDue.contract === true);
+  r = await call('staffSignOpen', ['andrew', '1234']);
+  const cdoc = r.body.docs[0];
+  ok('it comes first, with its period', cdoc.id === 'contract:' + ct.id && cdoc.title === 'Volunteer Staff Contract' && /2 years · From 11\/2026 to 11\/2028/.test(cdoc.period), cdoc && cdoc.period);
+  r = await call('hrCountersign', ['sina', '1234', 'st_andrew', ct.id, { name: 'Sina Sok', sig: SIG }]);
+  ok('a leader cannot countersign before they sign', r.body.ok === false && r.body.err === 'not_yet');
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', cdoc.id, { name: 'Andrew Lee', checks: { agree: true }, fields: { focus1: 'Cafe', future: 'lead a ministry' }, sig: SIG }]);
+  ok('they sign it: their commitment, ticked, signed', r.body.ok);
+  r = await call('hrList', ['sina', '1234']);
+  me = r.body.staff.find(x => x.id === 'st_andrew');
+  ok('… now it waits for a UofN leader', me.contracts.find(c => c.id === ct.id).digital.status === 'awaiting_leader' && me.contracts.find(c => c.id === ct.id).digital.staffName === 'Andrew Lee');
+  r = await call('hrCountersignOpen', ['sina', '1234', 'st_andrew', ct.id]);
+  ok('the leader reads what they signed: their lines and signature', r.body.ok && r.body.status === 'awaiting_leader' && r.body.signed.fields.focus1 === 'Cafe' && r.body.signed.sig === SIG && r.body.me === 'Sina Sok');
+  r = await call('hrCountersign', ['dara', '1234', 'st_andrew', ct.id, { name: 'Dara Pen', sig: SIG }]);
+  ok('only HR or an admin countersigns', r.body.ok === false && r.body.err === 'not_authorized');
+  r = await call('hrCountersign', ['sina', '1234', 'st_andrew', ct.id, { name: 'Sina Sok', sig: SIG }]);
+  ok('HR countersigns, and the contract is signed', r.body.ok && r.body.staff.contracts.find(c => c.id === ct.id).digital.status === 'signed' && r.body.staff.contracts.find(c => c.id === ct.id).digital.leaderName === 'Sina Sok');
+  r = await call('hrContractPdf', ['sina', '1234', 'st_andrew', ct.id]);
+  const pdf = r.body.ok ? Buffer.from(r.body.dataUrl.split(',')[1], 'base64').toString('latin1') : '';
+  ok('the signed contract is a PDF with both signatures and the commitment', r.body.ok && (pdf.match(/\/Subtype \/Image/g) || []).length === 2 && pdf.includes('Cafe') && pdf.includes('Signature of UofN Leader'));
+  r = await call('getMyBoot', ['andrew', '1234']);
+  ok('nothing about the contract is left to sign', r.body.staff.signDue.contract === false);
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

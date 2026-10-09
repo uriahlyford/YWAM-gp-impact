@@ -858,6 +858,16 @@ forms, documents and references follow.
   `legalListHtml_`, `legalReadHtml_` (read-only, every block type).
   The Child Protection Agreement has a box to tick after each Part and each numbered commitment (`readA`…`readF`,
   `c1`…`c8`), so people tick as they read; every box is needed to sign (`unticked`).
+- **Staff sign in the GP app (Oct 2026)**: campus and YAP staff (`staffSignsLegal_`) sign the five legal documents
+  once, and anyone can be sent the Volunteer Staff Contract (`STAFF_CONTRACT` in legal-docs-default.js) — on
+  `portal.html?staff=1`, which reads the GP app's saved sign-in (`gp-staff`) and uses `staffSignOpen` /
+  `staffSignSubmit` (same screens and rules: `signRecord_` is shared). Records: `staff.legal[docId]`, blob
+  `ssign:<staffId>`. Boot carries `staff.signDue {docs, contract}` → the ✍️ Documents to sign card on My Home
+  (`signDueCardHtml_`). HR: `hrSendContract` adds a contract with `digital.status` awaiting_staff →
+  awaiting_leader (staff signed, blob `scontract:<id>`.staff) → signed (`hrCountersign` on
+  `portal.html?staff=1&countersign=<staffId>:<contractId>`, HR/admin only). Only a signed contract counts
+  (`contractInForce_` / `hrInForce_`), so expiry and the due count work as for paper ones. PDFs:
+  `hrLegalPdf`, `hrContractPdf` (HR, or the person themselves). HR page: `hrLegalHtml_`, `hrSendFormHtml_`.
 - **Legal documents, signed on a phone (Oct 2026)**: YWAM Siem Reap's five forms (Photo Release, Accident
   Waiver, Liability Release Waiver, Acceptance of Place, Child Protection Agreement) live in `netlify/functions/legal-docs-default.js`
   as blocks (p / check / group / field / initial) with `sign {age, witness, guardian}` — English, verbatim

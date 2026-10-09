@@ -1172,6 +1172,14 @@ button.reqRow { cursor:pointer; }
 .hrBanner.active { border-color:var(--good); }
 .hrBanner.due { border-color:var(--amber); }
 .hrBanner.expired { border-color:var(--bad); }
+.hrDigital { margin:8px 0 6px; padding:8px 10px; border-radius:10px; font-size:13.5px; background:var(--surface2); border:1px solid var(--border); }
+.hrDigital.waiting { border-color:var(--amber); } .hrDigital.done { border-color:var(--good); }
+.hrContractBtns { display:flex; gap:8px; flex-wrap:wrap; } .hrContractBtns .btn { flex:1 1 200px; }
+.hrLegalRow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:7px 0; border-top:1px solid var(--border); font-size:14px; }
+.hrLegalRow:first-of-type { border-top:0; } .hrLegalName { flex:1 1 200px; min-width:0; }
+.hrFlag { display:inline-block; margin-left:4px; padding:1px 7px; border-radius:9px; font-size:11.5px; color:var(--bad); border:1px solid var(--bad); }
+.signDueCard { display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--ink); border:1.5px solid var(--accent, var(--ink)); }
+.signDueCard .rowSub { display:block; } .signDueIcon { font-size:24px; } .signDueGo { margin-left:auto; font-size:18px; color:var(--muted); }
 .hrToggle { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin:0 0 8px; }
 .hrFiles { margin-top:8px; }
 .hrFile { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13px; }
@@ -4520,6 +4528,7 @@ function miniDashboardHtml(){
       '</div>'+
     '</div>'+
   '</div>';
+  h+=signDueCardHtml_();
 
   if(open){
     h+='<div class="card">'+
@@ -6053,6 +6062,15 @@ function bindGStrengths(){
   };
 }
 
+/* Documents to sign: the five legal documents (campus and YAP staff, once)
+   and a staff contract HR has sent. Signing happens on portal.html?staff=1,
+   which uses this app's sign-in. */
+function fmtDateShort_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB',{ day:'numeric', month:'short', year:'numeric' }); }
+function signDueCardHtml_(){
+  var d=S.me && S.me.signDue; if(!d || (!d.docs && !d.contract)) return '';
+  var what=[]; if(d.contract) what.push(t('your staff contract')); if(d.docs) what.push(d.docs===1 ? t('1 legal document') : gpT('{n} legal documents',{n:d.docs}));
+  return '<a class="card signDueCard" id="goSignDocs" href="portal.html?staff=1"><span class="signDueIcon">✍️</span><span><b>'+esc(t('Documents to sign'))+'</b><span class="rowSub">'+esc(what.join(' · '))+'</span></span><span class="signDueGo">→</span></a>';
+}
 function homeHtml(){
   var wk=thisWeek();
   var phase=weekPhase();
@@ -7646,7 +7664,7 @@ function bindHr(){
     S.hrLoading=true;
     run('hrList',[S.auth.user,S.auth.pin],function(d){
       S.hrLoading=false;
-      if(d && d.ok) S.hrStaff=d.staff;
+      if(d && d.ok){ S.hrStaff=d.staff; S.hrLegalDocs=d.legalDocs||[]; }
       else S.hrError = d && d.err==='not_authorized' ? t('Only HR or an admin can open this.') : (d && d.err) || t('The server answered without the staff list.');
       render();
     }, function(e){ S.hrLoading=false; S.hrError=(e && e.message) || t('Connection problem — try again.'); render(); });
@@ -7694,6 +7712,25 @@ function bindHr(){
   var pid=S.hrPersonId;
   var person=(S.hrStaff||[]).filter(function(x){ return x.id===pid; })[0];
   if(S.hrSub!=='person' || !person) return;
+  var sc=document.getElementById('hrSendContract');
+  if(sc) sc.onclick=function(){ gpTap(); S.hrSendForm={ staffId:pid, from:todayStr().slice(0,7), years:2 }; S.hrContractForm=null; render(); var el=document.getElementById('hrSendForm'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' }); };
+  var sf=document.getElementById('hr_send_from'); if(sf) sf.onchange=sf.oninput=function(){ S.hrSendForm.from=sf.value; };
+  var sy=document.getElementById('hr_send_years'); if(sy) sy.onchange=function(){ S.hrSendForm.years=Number(sy.value); };
+  var sx=document.getElementById('hrSendCancel'); if(sx) sx.onclick=function(){ S.hrSendForm=null; render(); };
+  var ss2=document.getElementById('hrSendSave');
+  if(ss2) ss2.onclick=function(){
+    if(S.busy) return; var f=S.hrSendForm; if(!f.from){ showMsg(t('Choose the month it starts.')); return; }
+    S.busy=true; render();
+    run('hrSendContract',[S.auth.user,S.auth.pin,pid,{ from:f.from, years:f.years }],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.hrStaff=S.hrStaff.map(function(x){ return x.id===pid ? d.staff : x; }); S.hrSendForm=null; showMsg(t('Sent — it is waiting on their home in the GP app')); }
+      else showMsg(d && d.err==='already_sent' ? t('A contract is already waiting for them to sign.') : hrFail_(d));
+      render();
+    }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  };
+  var openPdf_=function(b, fn, args){ b.disabled=true; run(fn, [S.auth.user,S.auth.pin].concat(args), function(d){ b.disabled=false; if(d && d.ok) hrOpenDataUrl_(d.dataUrl, d.name); else showMsg(hrFail_(d)); }, function(){ b.disabled=false; showMsg(t('Connection problem — try again.')); }); };
+  document.querySelectorAll('[data-hrlegalpdf]').forEach(function(b){ b.onclick=function(){ openPdf_(b, 'hrLegalPdf', [pid, b.getAttribute('data-hrlegalpdf')]); }; });
+  document.querySelectorAll('[data-hrcontractpdf]').forEach(function(b){ b.onclick=function(){ openPdf_(b, 'hrContractPdf', [pid, b.getAttribute('data-hrcontractpdf')]); }; });
   var ac=document.getElementById('hrAddContract');
   if(ac) ac.onclick=function(){ gpTap(); S.hrContractForm={ staffId:pid, id:'', signed:'', years:'', notes:'', campus:person.campus }; render(); var el=document.getElementById('hrContractForm'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
   document.querySelectorAll('[data-hredit]').forEach(function(b){
@@ -9402,7 +9439,8 @@ function hrMonthLabel_(ym){ if(!ym) return ''; return t(MONTH_SHORT[Number(ym.sl
 function hrContractEnd_(c){ var y=Number(c.signed.slice(0,4)), m=Number(c.signed.slice(5,7))-1; return new Date(y, m+Math.round(Number(c.years)*12), 1); }
 function hrEndYm_(c){ var d=hrContractEnd_(c); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
 function hrDaysLeft_(c){ var now=new Date(); now.setHours(0,0,0,0); return Math.round((hrContractEnd_(c)-now)/86400000); }
-function hrCurrent_(p){ var l=p.contracts||[]; return l.length ? l[l.length-1] : null; }
+function hrInForce_(c){ return !c.digital || c.digital.status==='signed'; }
+function hrCurrent_(p){ var l=(p.contracts||[]).filter(hrInForce_); return l.length ? l[l.length-1] : null; }
 function hrStatus_(p){
   // label is the full sentence (banner, list line); short fits a chip
   if(p.archived) return { key:'archived', label:t('Archived'), short:t('Archived') };
@@ -9687,10 +9725,19 @@ function candPersonHtml_(c){
 function hrFileSize_(n){ n=Number(n)||0; return n>1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
 function hrContractCardHtml_(p, c, isCurrent){
   var h='<div class="card slim hrContract" data-hrcontract="'+esc(c.id)+'">';
-  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
+  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(c.digital && c.digital.status!=='signed' ? gpT('From {month}',{month:hrMonthLabel_(c.signed)}) : gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
     '<div class="rowSub">'+esc(gpT('Ends {month}',{month:hrMonthLabel_(hrEndYm_(c))}))+(isCurrent && !p.archived ? ' · '+esc(hrStatus_(p).label) : '')+'</div>'+
     (c.notes?'<div class="rowSub" style="margin-top:2px">'+esc(c.notes)+'</div>':'')+'</div>'+
     '<button class="linkbtn inline" data-hredit="'+esc(c.id)+'">'+esc(t('Edit'))+'</button></div>';
+  if(c.digital){
+    var dg=c.digital;
+    if(dg.status==='awaiting_staff') h+='<div class="hrDigital waiting">✍️ '+esc(gpT('Sent to {name} to sign in the GP app',{name:p.name}))+(dg.sentAt?' · '+esc(fmtDateShort_(dg.sentAt)):'')+'</div>';
+    else if(dg.status==='awaiting_leader') h+='<div class="hrDigital waiting">✍️ '+esc(gpT('{name} signed on {date} — now a UofN leader signs',{name:dg.staffName||p.name, date:fmtDateShort_(dg.staffSignedAt)}))+'</div>'+
+      '<a class="btn small" href="portal.html?staff=1&countersign='+encodeURIComponent(p.id+':'+c.id)+'" data-hrcountersign="'+esc(c.id)+'">✍️ '+esc(t('Sign as UofN leader'))+'</a>';
+    else h+='<div class="hrDigital done">✅ '+esc(gpT('Signed by {name} and {leader}',{name:dg.staffName||p.name, leader:dg.leaderName||''}))+'</div>'+
+      '<button class="btn ghost small" data-hrcontractpdf="'+esc(c.id)+'">📄 '+esc(t('Signed contract (PDF)'))+'</button>';
+    return h+'</div>';
+  }
   var files=c.files||[];
   if(files.length){
     h+='<div class="hrFiles">'+files.map(function(f){
@@ -9702,6 +9749,27 @@ function hrContractCardHtml_(p, c, isCurrent){
   }
   h+='<label class="btn ghost hrAttach">'+esc(t('Attach the signed contract'))+' (PDF / photo)'+
     '<input type="file" accept="application/pdf,image/*" data-hrattach="'+esc(c.id)+'" style="display:none"></label>';
+  return h+'</div>';
+}
+/* send the Volunteer Staff Contract to sign: its first month and length; they
+   fill in their commitment and sign in the app, then a UofN leader countersigns */
+function hrSendFormHtml_(p){
+  var f=S.hrSendForm;
+  return '<div class="card" id="hrSendForm"><h3 style="margin-top:0">✍️ '+esc(t('Send a contract to sign'))+'</h3><p class="sub" style="margin:0 0 8px">'+
+    esc(gpT('{name} reads the Volunteer Staff Contract in the GP app, fills in their commitment and signs. Then you (or a UofN leader) sign it here.',{name:p.name}))+'</p>'+
+    '<div class="teamGrid2"><div><label class="f">'+esc(t('From (month)'))+'</label><input type="month" id="hr_send_from" value="'+esc(f.from||'')+'"></div>'+
+    '<div><label class="f">'+esc(t('Years'))+'</label><select id="hr_send_years">'+[1,2,3].map(function(y){ return '<option value="'+y+'"'+(Number(f.years)===y?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></div></div>'+
+    '<button class="btn" id="hrSendSave"'+(S.busy?' disabled':'')+'>'+esc(t('Send to sign'))+'</button><button class="btn ghost" id="hrSendCancel">'+esc(t('Cancel'))+'</button></div>';
+}
+/* the five legal documents each staff member signs once */
+function hrLegalHtml_(p){
+  var docs=S.hrLegalDocs||[]; if(!docs.length) return '';
+  var l=p.legal||{}, n=docs.filter(function(d){ return l[d.id]; }).length;
+  var h='<h3>✍️ '+esc(t('Legal documents'))+' <small>· '+n+'/'+docs.length+'</small></h3><div class="card slim" id="hrLegal">';
+  if(n<docs.length) h+='<p class="sub" style="margin:0 0 6px">'+esc(t('They sign these once in the GP app — "Documents to sign" on their home.'))+'</p>';
+  h+=docs.map(function(d){ var s=l[d.id];
+    return '<div class="hrLegalRow" data-hrlegal="'+esc(d.id)+'"><span class="hrLegalName">'+(s?'✅':'⬜')+' '+esc(d.title)+(s && s.disclose ? ' <span class="hrFlag">'+esc(t('has something to disclose privately'))+'</span>' : '')+'</span>'+
+      (s ? '<span class="rowSub">'+esc(fmtDateShort_(s.at))+'</span><button class="linkbtn inline" data-hrlegalpdf="'+esc(d.id)+'">📄 PDF</button>' : '<span class="rowSub">'+esc(t('Not yet'))+'</span>')+'</div>'; }).join('');
   return h+'</div>';
 }
 function hrContractFormHtml_(p){
@@ -9768,7 +9836,10 @@ function hrPersonHtml_(p){
   if(!list.length && !S.hrContractForm) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No contract on file yet. Add the one from the paper folder.'))+'</p></div>';
   list.forEach(function(c){ h+=hrContractCardHtml_(p, c, cur && c.id===cur.id); });
   if(S.hrContractForm && S.hrContractForm.staffId===p.id) h+=hrContractFormHtml_(p);
-  else h+='<button class="btn" id="hrAddContract" style="margin-top:0">＋ '+esc(list.length ? t('Add a renewal') : t('Add a contract'))+'</button>';
+  else if(S.hrSendForm && S.hrSendForm.staffId===p.id) h+=hrSendFormHtml_(p);
+  else if(!p.archived) h+='<div class="hrContractBtns"><button class="btn" id="hrSendContract" style="margin-top:0">✍️ '+esc(t('Send a contract to sign'))+'</button>'+
+    '<button class="btn ghost" id="hrAddContract" style="margin-top:0">＋ '+esc(list.length ? t('Add a paper renewal') : t('Add a paper contract'))+'</button></div>';
+  h+=hrLegalHtml_(p);
 
   if(!p.archived){
     var d=S.hrArchiveDraft && S.hrArchiveDraft.staffId===p.id ? S.hrArchiveDraft : { at:todayStr(), reason:'' };

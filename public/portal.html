@@ -321,7 +321,7 @@ textarea { min-height:80px; resize:vertical; }
 .signLetterhead { display:block; width:100%; max-width:460px; height:auto; margin:4px auto 8px; }
 .signTitle { text-align:center; margin:4px 0 14px; font-size:20px; line-height:1.3; } .signList { margin:0 0 10px; padding-left:20px; font-size:14.5px; line-height:1.55; } .signList li { margin:0 0 6px; }
 .signChoice { border-radius:var(--rSm); margin:0 0 6px; } .signChoice .signCheck input { border-radius:50%; }
-.signContacts { margin:0 0 10px; }
+.signContacts { margin:0 0 10px; } .signPeriod { margin:0 0 10px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--rSm); }
 .signP { font-size:14.5px; line-height:1.6; margin:0 0 10px; } .signP.italic { font-style:italic; color:var(--muted); } .signP.quote { font-style:italic; border-left:3px solid var(--border); padding:4px 0 4px 12px; margin-left:2px; } .signP.bold { font-weight:700; }
 .signCheck { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:0 0 8px; border:1px solid var(--border); border-radius:var(--rSm); font-size:14.5px; line-height:1.5; cursor:pointer; }
 .signCheck input { width:20px; height:20px; flex:0 0 auto; margin-top:2px; accent-color:var(--ink); }
@@ -576,14 +576,19 @@ var P = { aview:'status', meet:null, teamEdit:null, menuOpen:false, access:null,
   if(qs.campus && CAMPUS_SCHOOLS[qs.campus] && isOpenCampus_(qs.campus)) P.campus=qs.campus;
   if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
   if(qs.ref){ P.view='ref'; P.refToken=String(qs.ref); }
+  if(qs.staff){
+    var gp=null; try { gp=JSON.parse(lsGet('gp-staff')||'null'); } catch(e){}
+    if(qs.countersign){ P.view='countersign'; P.cs={ gp:gp, ids:String(qs.countersign).split(':'), data:null, pads:{}, name:'' }; }
+    else { P.view='sign'; P.sign={ staff:gp, token:null, openFn:'staffSignOpen', openArgs:gp ? [gp.user, gp.pin] : null, submitFn:'staffSignSubmit', data:gp ? null : { ok:false, err:'nostaff' }, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
+  }
   if(qs.sign){ P.view='sign'; P.sign={ token:String(qs.sign), data:null, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
   if(qs.open) P.openCand=String(qs.open);   // portal.html?open=<candidateId> — the GP app's Teams Database links here
   var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
-  if(saved && saved.user && saved.pin && !P.sign){ P.auth=saved; P.view='booting'; boot_(); }
+  if(saved && saved.user && saved.pin && !P.sign && !P.cs){ P.auth=saved; P.view='booting'; boot_(); }
 })();
 /* Is Google sign-in on? (GP_GOOGLE_CLIENT_ID on the server.) Asked once; the
    sign-in redraws when the answer lands. */
-run('portalAuthConfig', [], function(d){ if(d && d.ok){ P.authCfg=d; if(d.google) gsiLoad_(); if(!P.auth && P.view!=='booting' && P.view!=='ref' && P.view!=='sign') render(); } }, function(){});
+run('portalAuthConfig', [], function(d){ if(d && d.ok){ P.authCfg=d; if(d.google) gsiLoad_(); if(!P.auth && P.view!=='booting' && P.view!=='ref' && P.view!=='sign' && P.view!=='countersign') render(); } }, function(){});
 /* The portal installs like the staff app: same service worker (network first,
    the last copy when offline), its own manifest. */
 (function(){
@@ -652,7 +657,7 @@ function render(){
   var applicantTabs = P.auth && P.boot && P.boot.role==='applicant' && v==='me';
   try { m.innerHTML = (staffView ? staffNavHtml_(v) : applicantTabs ? applicantNavHtml_() : '') + (v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
     : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meTabHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='resources' ? resourcesAdminHtml_() : v==='team' ? teamAdminHtml_() : v==='access' ? accessHtml_() : v==='accounts' ? accountsHtml_() : v==='preview' ? previewHtml_()
-    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : v==='sign' ? signHtml_() : v==='legal' ? legalAdminHtml_() : loginHtml_())
+    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : v==='sign' ? signHtml_() : v==='countersign' ? countersignHtml_() : v==='legal' ? legalAdminHtml_() : loginHtml_())
     + (P.guideOpen && P.boot && typeof outreachGuideHtml==='function' ? guideOverlayHtml_() : '');
   document.body.classList.toggle('guideOn', !!(P.guideOpen && P.boot));
   document.body.classList.toggle('menuOn', !!P.menuOpen);
@@ -750,8 +755,8 @@ function signHtml_(){
   var S=P.sign, d=S.data;
   var h='<div class="center signPage"><div class="gateTitle"><h2>✍️ '+esc(t('Legal documents'))+'</h2>';
   if(d===null) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
-  if(!d.ok) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(d.err==='closed' ? t('This team’s documents are closed.') : t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.'))+'</p></div>'+langRowHtml_()+'</div>';
-  h+='<p class="sub">'+esc(d.isTeam===false ? gpT('For {team}. Read each one and sign it here on your phone.',{team:d.team}) : gpT('For {team}. Everyone signs their own — pick your name to start.',{team:d.team}))+'</p>'+(S.inApp ? '<button type="button" class="linkbtn inline" id="signHome">← '+esc(t('Back to my application'))+'</button>' : '')+'</div>';
+  if(!d.ok) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(d.err==='nostaff' || (S.staff && d.err==='invalid') ? t('Open this from the GP app, signed in.') : d.err==='closed' ? t('This team’s documents are closed.') : t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.'))+'</p>'+(S.openFn ? '<a class="btn small" href="teams.html" style="margin-top:10px">'+esc(t('Open the GP app'))+'</a>' : '')+'</div>'+langRowHtml_()+'</div>';
+  h+='<p class="sub">'+esc(d.isTeam===false ? gpT('For {team}. Read each one and sign it here on your phone.',{team:d.team}) : gpT('For {team}. Everyone signs their own — pick your name to start.',{team:d.team}))+'</p>'+(S.inApp ? '<button type="button" class="linkbtn inline" id="signHome">← '+esc(t('Back to my application'))+'</button>' : '')+(S.staff ? '<a class="linkbtn inline" href="teams.html">← '+esc(t('Back to the GP app'))+'</a>' : '')+'</div>';
   var docs=d.docs||[];
   if(!S.who && (d.people||[]).length===1) S.who=d.people[0].key;
   /* who are you */
@@ -772,6 +777,7 @@ function signHtml_(){
   var done=signDocDone_(d, S.who), left=docs.filter(function(x){ return !done[x.id]; });
   if(!left.length || S.done){
     h+='<div class="card signDone"><div class="signBig">🎉</div><h3 style="margin:4px 0">'+esc(gpT('All signed — thank you, {name}!',{name:(me.name||'').split(' ')[0]}))+'</h3><p class="sub">'+esc(t('YWAM Siem Reap has your signed forms. Nothing more to do.'))+'</p>'+
+      (S.staff ? '<a class="btn" href="teams.html">'+esc(t('Back to the GP app'))+'</a>' : '')+
       ((d.people||[]).length>1 ? '<button type="button" class="btn" id="signNext">'+esc(t('Someone else on the team? Pick your name'))+'</button>' : '')+(S.inApp ? '<button type="button" class="btn ghost" id="signHome" style="margin-left:6px">'+esc(t('Back to my application'))+'</button>' : '')+'</div>';
     return h+'</div>';
   }
@@ -779,7 +785,8 @@ function signHtml_(){
   h+='<div class="signProg">'+docs.map(function(x, i){ return '<span class="signDot'+(done[x.id]?' done':(x===doc?' on':''))+'" title="'+esc(x.title)+'">'+(done[x.id]?'✓':(i+1))+'</span>'; }).join('')+'</div>';
   h+='<div class="card signDoc" data-signdoc="'+esc(doc.id)+'"><div class="eyebrow">'+esc(gpT('Document {n} of {total}',{n:k+1, total:docs.length}))+'</div>'+legalHeadHtml_(doc.title);
   (doc.blocks||[]).forEach(function(b){
-    if(b.t==='h') h+=legalHHtml_(b.text);
+    if(b.t==='period') h+='<div class="signPeriod"><div class="kv"><b>'+esc(t('Volunteer name'))+'</b><span>'+esc(nm||'')+'</span></div><div class="kv"><b>'+esc(t('Period of contract'))+'</b><span>'+esc(doc.period||'')+'</span></div></div>';
+    else if(b.t==='h') h+=legalHHtml_(b.text);
     else if(b.t==='list') h+=legalListHtml_(b.items);
     else if(b.t==='choice') h+='<div class="signChoice'+(S.miss && S.miss[b.id]?' miss':'')+'" data-signchoicebox="'+esc(b.id)+'">'+(b.options||[]).map(function(o){ return '<label class="signCheck"><input type="radio" name="sc_'+esc(b.id)+'" data-signchoice="'+esc(b.id)+'" value="'+esc(o.id)+'"'+(F.choices && F.choices[b.id]===o.id?' checked':'')+'><span>'+esc(o.text)+'</span></label>'; }).join('')+'</div>';
     else if(b.t==='contacts') h+='<div class="signContacts">'+(d.contacts||[]).map(function(c){ return '<div class="kv"><b>'+esc(c.role)+'</b><span>'+esc([c.name, c.phone].filter(Boolean).join(' · ') || t('Your leader will tell you on arrival.'))+'</span></div>'; }).join('')+'</div>';
@@ -844,7 +851,7 @@ function bindSign_(){
   var S=P.sign;
   if(S.data===null && !S.loading){
     S.loading=true;
-    run('portalSignOpen', [S.token], function(d){ S.loading=false; S.data=d||{ ok:false }; render(); }, function(){ S.loading=false; S.data={ ok:false, err:'network' }; render(); showMsg(t('Connection problem — try again.')); });
+    run(S.openFn||'portalSignOpen', S.openArgs||[S.token], function(d){ S.loading=false; S.data=d||{ ok:false }; render(); }, function(){ S.loading=false; S.data={ ok:false, err:'network' }; render(); showMsg(t('Connection problem — try again.')); });
     return;
   }
   document.querySelectorAll('[data-signwho]').forEach(function(b){ b.onclick=function(){ S.who=b.getAttribute('data-signwho'); S.under18=null; S.form={}; S.pads={}; S.done=false; S.miss=null; render(); window.scrollTo(0,0); }; });
@@ -877,7 +884,7 @@ function bindSign_(){
     if(sign.guardian && u18){ pay.guardianName=String(F.guardianName).trim(); pay.guardianSig=S.pads.guardianSig; }
     if(sign.witness && (String(F.witnessName||'').trim() || S.pads.witnessSig)){ pay.witnessName=String(F.witnessName||'').trim(); pay.witnessSig=S.pads.witnessSig||''; }
     S.busy=true; render();
-    run('portalSignSubmit', [S.token, S.who, doc.id, pay], function(r){
+    run(S.submitFn||'portalSignSubmit', (S.openArgs||[S.token]).concat([S.who, doc.id, pay]), function(r){
       S.busy=false;
       if(r && r.ok){
         (d.people||[]).forEach(function(p){ if(p.key===S.who) p.done=r.done; });
@@ -889,6 +896,51 @@ function bindSign_(){
       showMsg(e==='witness_incomplete' ? t('A witness needs their name and signature — or leave the witness out.') : e==='guardian_required' ? t('A parent or guardian needs to add their name and sign.') : e==='invalid' ? t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.') : t('Could not save — try again.'));
       render();
     }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
+}
+/* ==================== a UofN leader countersigns a staff contract ====================
+   portal.html?staff=1&countersign=<staffId>:<contractId>, from the HR page: the
+   contract as the staff member signed it (their period, their commitment
+   lines, their signature), then the leader's name and signature. */
+function docReadHtml_(blocks, o){
+  o=o||{};
+  return (blocks||[]).map(function(b){
+    if(b.t==='period') return '<div class="signPeriod"><div class="kv"><b>'+esc(t('Volunteer name'))+'</b><span>'+esc(o.name||'')+'</span></div><div class="kv"><b>'+esc(t('Period of contract'))+'</b><span>'+esc(o.period||'')+'</span></div></div>';
+    if(b.t==='h') return '<h4 class="signH">'+esc(b.text)+'</h4>';
+    if(b.t==='p') return '<p class="signP'+(b.style?' '+esc(b.style):'')+'">'+esc(String(b.text||'').split('{name}').join(o.name||'________'))+'</p>';
+    if(b.t==='list') return '<ul class="signList">'+(b.items||[]).map(function(i){ return '<li>'+esc(i)+'</li>'; }).join('')+'</ul>';
+    if(b.t==='check') return '<p class="signP">☑ '+esc(String(b.text||'').split('{name}').join(o.name||'________'))+'</p>';
+    if(b.t==='field') return '<div class="kv"><b>'+esc(b.label)+'</b><span>'+esc((o.fields||{})[b.id]||'—')+'</span></div>';
+    return '';
+  }).join('');
+}
+function countersignHtml_(){
+  var C=P.cs, d=C.data;
+  var h='<div class="center signPage"><div class="gateTitle"><h2>✍️ '+esc(t('Volunteer Staff Contract'))+'</h2></div>';
+  if(!C.gp) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Open this from the GP app, signed in.'))+'</p></div></div>';
+  if(d===null) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  if(!d.ok) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(d.err==='not_authorized' ? t('Only HR or an admin can countersign a contract.') : t('Could not load'))+'</p><a class="btn small" href="teams.html" style="margin-top:10px">'+esc(t('Back to the GP app'))+'</a></div></div>';
+  if(d.status==='signed' || C.done) return h+'<div class="card signDone"><div class="signBig">✅</div><h3 style="margin:4px 0">'+esc(gpT('{name}’s contract is signed.',{name:d.staffName}))+'</h3><p class="sub">'+esc(t('It is on their HR page with its PDF.'))+'</p><a class="btn" href="teams.html">'+esc(t('Back to the GP app'))+'</a></div></div>';
+  if(d.status!=='awaiting_leader' || !d.signed) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(gpT('{name} has not signed it yet.',{name:d.staffName}))+'</p><a class="btn small" href="teams.html" style="margin-top:10px">'+esc(t('Back to the GP app'))+'</a></div></div>';
+  h+='<div class="card signDoc"><div class="eyebrow">'+esc(gpT('Signed by {name} on {date}',{name:d.signed.name, date:fmtDate_(d.signed.at)}))+'</div>'+docReadHtml_(d.doc.blocks, { name:d.signed.name, period:d.period, fields:d.signed.fields })+
+    '<div class="sigLabel" style="margin-top:12px">'+esc(t('Signature of staff'))+'</div><img class="sigShown" alt="" src="data:image/jpeg;base64,'+esc(d.signed.sig||'')+'">'+
+    '<div class="signHere"><div class="eyebrow">'+esc(t('Signature of UofN Leader'))+'</div><label class="f">'+esc(t('Full name'))+'</label><input type="text" id="cs_name" maxlength="120" value="'+esc(C.name!=null && C.name!=='' ? C.name : (d.me||''))+'">'+
+    sigPadHtml_('leader', t('Signature'))+'<p class="hint" style="margin:6px 0 0">'+esc(gpT('Date: {date}',{date:fmtDate_(new Date().toISOString())}))+'</p></div>'+
+    '<button type="button" class="btn" id="csSubmit"'+(C.busy?' disabled':'')+' style="margin-top:14px;width:100%">'+esc(C.busy ? t('Saving…') : t('Countersign the contract'))+'</button></div>';
+  return h+'</div>';
+}
+function bindCountersign_(){
+  if(P.view!=='countersign') return;
+  var C=P.cs; if(!C.gp) return;
+  if(C.data===null && !C.loading){ C.loading=true; run('hrCountersignOpen', [C.gp.user, C.gp.pin, C.ids[0], C.ids[1]], function(d){ C.loading=false; C.data=d||{ ok:false }; render(); }, function(){ C.loading=false; C.data={ ok:false }; render(); }); return; }
+  /* the pad keeps its drawing in P.sign.pads, so borrow that shape */
+  P.sign=P.sign||{ pads:C.pads, form:{}, miss:null }; P.sign.pads=C.pads;
+  bindSigPads_();
+  on_('csSubmit', function(){
+    var n=document.getElementById('cs_name'); C.name=n ? n.value : C.name;
+    if(!String(C.name||'').trim() || !C.pads.leader){ showMsg(t('Add your name and sign in the box.')); return; }
+    C.busy=true; render();
+    run('hrCountersign', [C.gp.user, C.gp.pin, C.ids[0], C.ids[1], { name:String(C.name).trim(), sig:C.pads.leader }], function(r){ C.busy=false; if(r && r.ok){ C.done=true; showMsg(t('Signed')); } else showMsg(r && r.err==='already_signed' ? t('This contract is already signed.') : t('Could not save — try again.')); render(); }, function(){ C.busy=false; showMsg(t('Connection problem — try again.')); render(); });
   });
 }
 /* the record's Legal tab: the team's link, and who signed what with each PDF */
@@ -3043,7 +3095,7 @@ function bind_(){
   document.querySelectorAll('[data-linkkind]').forEach(function(b){ b.onclick=function(){ P.linkKind=b.getAttribute('data-linkkind'); render(); copyText_(applyLinkUrl_(P.linkKind)); }; });
   on_('toPreview', function(){ P.menuOpen=false; if(P.view==='preview') return; P.view='preview'; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; render(); });
   on_('toAccounts', function(){ P.menuOpen=false; if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
-  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindSign_(); bindLegalAdmin_(); bindPreview_(); bindStays_(); bindPeople_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();
+  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindSign_(); bindLegalAdmin_(); bindCountersign_(); bindPreview_(); bindStays_(); bindPeople_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){

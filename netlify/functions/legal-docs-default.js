@@ -183,3 +183,42 @@ const CHILD = {
 };
 
 export default [PHOTO, ACCIDENT, LIABILITY, ACCEPTANCE, CHILD];
+
+/* The Volunteer Staff Contract (YWAM SR), signed by a staff member in the GP
+   app and then countersigned by a UofN leader on the HR page. Not one of the
+   documents everyone signs: HR sends it to a person with its period, and it
+   becomes one of their HR contracts. {t:'period'} shows the period HR set. */
+export const STAFF_CONTRACT = {
+  id: 'contract', title: 'Volunteer Staff Contract',
+  blocks: [
+    { t: 'period' },
+    { t: 'h', text: 'Rules of Contract' },
+    { t: 'list', items: [
+      'Staff (A) agrees to work with University of the Nations, Cambodia as a non-salaried volunteer staff member.',
+      'Staff (A) is required to be honest and open with all aspects of his/her work duties.',
+      'Staff (A) must work within the leadership structure of this organization. Staff (A) must be accountable to his/her leader and follow the decisions that his/her leaders make.',
+      'Staff (A) is expected to attend all regular staff meetings. If Staff (A) is unable to attend, he/she must inform a leader beforehand.',
+      'Staff (A) is expected to pay a monthly office fee according to his nationality and marital status.',
+      'Staff (A) will receive a break for all major public holidays in Cambodia, as determined by the University of the Nations, Cambodia.',
+      'Staff (A) is expected to take a vacation every 3-4 months for up to 2 weeks and a furlough of longer-term rest and renewal every 1-2 years. This furlough should be 6 weeks or more outside Cambodia. This is a time to reconnect with friends, family, and supporters. (These furloughs need to be planned in advance and approved by the local UofN leadership).',
+      'Staff (A) is expected to have health insurance with coverage for medical evacuations.',
+      'Staff (A) is expected to learn the Khmer language and culture while working in Cambodia.',
+      'Staff (A) is expected to be respectful of Cambodian culture at all times.',
+      'Staff (A) is expected to follow the security, child protection, and other policies that are described in the University of the Nations, Cambodia staff manual.'] },
+    { t: 'h', text: 'Conditions of Contract' },
+    { t: 'list', items: [
+      'If Staff (A) or University of the Nations, Cambodia decides to terminate this contract, they must submit a written letter at least 6 months before the intended termination date. In this letter, the reason for termination must be explained explicitly.',
+      'All staff must complete an initial evaluation with members of leadership after serving their first 3 months with YWAM Siem Reap to confirm this location is where they will remain serving.',
+      'If Staff (A) is found to have committed serious acts of misconduct (violent behavior, stealing, major moral failing, etc), University of the Nations, Cambodia has the right to terminate this contract immediately.'] },
+    { t: 'h', text: 'Personal Unto-Statement / Commitment' },
+    { t: 'p', text: 'During my time in Siem Reap, I commit to focusing on the following areas to better develop myself and the ministries I am a part of:' },
+    { t: 'field', id: 'focus1', label: 'Area 1' },
+    { t: 'field', id: 'focus2', label: 'Area 2', optional: true },
+    { t: 'field', id: 'focus3', label: 'Area 3', optional: true },
+    { t: 'field', id: 'future', label: 'I will focus on these areas because in the future…' },
+    { t: 'h', text: 'Agreement with this Contract and our Organizational Values' },
+    { t: 'check', id: 'agree', text: 'I, {name}, have read through this contract and agree to adhere to the rules and conditions of this contract. I have also read through the values of this organization and agree to operate within those principles.' },
+    { t: 'p', style: 'italic', text: 'Youth with a Mission, Siem Reap · Traing Village, Slar Kram Commune, Siem Reap City, Krong Siem Reap, Kingdom of Cambodia' }
+  ],
+  sign: { leader: true }
+};
