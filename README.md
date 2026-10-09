@@ -69,6 +69,7 @@ public/            the whole frontend, served directly by Netlify
   kpiguide.js      what each KPI means — the line behind the ⓘ beside every box staff log
   personality.js   the personality-type questionnaire, sixteen types, avatars and tips — GP's own words and art
   sw.js            the offline copy of the page: network first, the kept copy only when there is no connection
+  library.js       the Library: five-minute reads of 27 leadership books, our own words (loaded when opened)
   gpstrengths.js   GP Strengths: the free strengths test — 34 strengths in four groups, 102 pairs, GP's own words
   logo.js          the brand marks as base64 — never regenerate these
 netlify/functions/

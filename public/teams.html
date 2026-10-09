@@ -640,6 +640,42 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .goalsWeekSwitch button { border:0; background:none; border-radius:999px; padding:5px 14px; font:inherit; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; }
 .goalsWeekSwitch button.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(23,21,15,.12); }
 .goalLink.unlinked { color:var(--faint); font-size:12.5px; } .goalLink.unlinked select { font-size:12.5px !important; }
+.libProgress { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin:2px 0 12px; }
+.libProgressBar { flex:1; height:6px; border-radius:99px; background:var(--surface2); overflow:hidden; } .libProgressBar span { display:block; height:100%; background:var(--good); }
+.libShelves { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.libShelfBtn { border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:999px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.libShelfBtn.on { color:var(--pOnMark); background:var(--ink); border-color:var(--ink); }
+.libGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:14px 10px; margin-bottom:16px; }
+@media (max-width:340px){ .libGrid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+.libCard { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:3px; background:none; border:0; padding:0; text-align:left; font:inherit; color:var(--ink); cursor:pointer; min-width:0; }
+.libCard .libCover { width:100%; }
+.libCardTitle { font-size:13px; font-weight:800; line-height:1.25; margin-top:6px; overflow-wrap:anywhere; }
+.libCardMeta { font-size:12px; color:var(--muted); line-height:1.3; overflow-wrap:anywhere; }
+.libCardMins { font-size:11.5px; color:var(--faint); font-weight:700; }
+.libReadTag { position:absolute; top:6px; right:6px; z-index:2; width:24px; height:24px; border-radius:50%; background:var(--good); color:var(--pOnMark); font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+.libCover { position:relative; aspect-ratio:2/3; border-radius:10px; overflow:hidden; box-shadow:0 6px 16px rgba(23,21,15,.18), 0 1px 3px rgba(23,21,15,.2); }
+.libCoverDrawn { position:absolute; inset:0; padding:10px 8px; display:flex; flex-direction:column; justify-content:space-between; color:var(--pOnMark); }
+.libCoverTitle { font-size:13px; font-weight:900; line-height:1.15; letter-spacing:-.01em; overflow-wrap:break-word; hyphens:auto; }
+.libCoverAuthor { font-size:10px; font-weight:700; opacity:.85; line-height:1.2; }
+.libCover.big .libCoverTitle { font-size:16px; } .libCover.big .libCoverAuthor { font-size:11px; }
+.libCoverImg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.libHero { display:flex; gap:16px; align-items:flex-end; margin:6px 0 14px; }
+.libHero .libCover { width:120px; flex:0 0 120px; }
+.libHeroText { min-width:0; }
+.libShelfTag { display:inline-block; font-size:11.5px; font-weight:800; color:var(--libink); background:color-mix(in srgb, var(--libc) 16%, transparent); border-radius:999px; padding:3px 9px; }
+.libTitle { margin:6px 0 2px; font-size:24px; line-height:1.15; overflow-wrap:anywhere; }
+.libAuthor { font-size:13.5px; color:var(--muted); }
+.libMins { font-size:12.5px; font-weight:800; color:var(--faint); margin-top:6px; }
+.libVibe { font-size:18px; font-weight:800; line-height:1.4; border-left:4px solid; padding:4px 0 4px 12px; margin:4px 0 14px; }
+.libKicker { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.libBlock p, .libInsight p { margin:0; font-size:15px; line-height:1.6; }
+.libInsight { margin-bottom:10px; }
+.libInsightHead { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:15.5px; }
+.libInsightNum { flex:0 0 24px; height:24px; border-radius:50%; color:var(--pOnMark); font-weight:900; font-size:12.5px; display:flex; align-items:center; justify-content:center; }
+.libInsightEmoji { font-size:18px; }
+.libTry { margin:0; padding-left:20px; } .libTry li { font-size:15px; line-height:1.55; margin:4px 0; }
+.libOneLine { color:var(--pOnMark); border-radius:14px; padding:14px 16px; font-size:17px; font-weight:800; line-height:1.4; margin-top:14px; }
+.libOneLine span { display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.8; margin-bottom:4px; }
 .btnRow { display:flex; gap:8px; flex-wrap:wrap; } .btnRow .btn { flex:1 1 30%; margin:0; min-width:96px; }
 .grpRow { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer; }
 .grpRow input { width:auto; flex:0 0 auto; margin:0; }
@@ -2733,6 +2769,7 @@ function render(){
   else if(S.view==='ptype') m.innerHTML=ptypeHtml();
   else if(S.view==='gtest') m.innerHTML=gtestHtml();
   else if(S.view==='gstr') m.innerHTML=gstrHtml();
+  else if(S.view==='library') m.innerHTML=libraryHtml();
   else m.innerHTML=profileHtml();
   if(S.offlineSince) m.insertAdjacentHTML('afterbegin', gpOfflineBannerHtml_());
   if(S.bootStale) m.insertAdjacentHTML('afterbegin', gpStaleBarHtml_());
@@ -2914,8 +2951,9 @@ function renderMenu(){
   var IC={"ministry":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01\"/></svg>","profile":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20.5c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg>","leave":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"16\" rx=\"2.5\"/><line x1=\"3.5\" y1=\"10\" x2=\"20.5\" y2=\"10\"/><path d=\"M8 8V3.5M16 8V3.5\"/><path d=\"M8.5 14.5l2 2 4-4\"/></svg>","sched":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18M9 9v12M15 9v12\"/></svg>","hosp":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 18V7\"/><path d=\"M3 14h18v4\"/><path d=\"M21 14v-2a3 3 0 0 0-3-3h-7v5\"/><circle cx=\"7\" cy=\"11\" r=\"2\"/></svg>","portal":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 4h11l5 5v11H4z\"/><path d=\"M15 4v5h5\"/><path d=\"M8 13h8M8 17h5\"/></svg>","hr":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18\"/><path d=\"M8 2.5V6M16 2.5V6\"/><path d=\"M8 14h4M8 17.5h8\"/></svg>","admin":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z\"/><path d=\"M9 12l2 2 4-4\"/></svg>"};
   var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
   var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
+  IC.library='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>';
   var sections=[
-    { title:'', items:[it('leave', t('Leave Request')), it('profile', t('Profile & settings'))] },
+    { title:'', items:[it('leave', t('Leave Request')), it('library', t('Library')), it('profile', t('Profile & settings'))] },
     { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
     { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
     { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : []) }
@@ -2940,6 +2978,7 @@ function renderMenu(){
       S.menuOpen=false;
       if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
+      else if(id==='library'){ S.view='library'; S.libBook=null; libLoad_(); render(); }
       else if(id==='profile'){ S.view='profile'; render(); }
       else if(id==='admin'){ S.view='admin'; render(); }
       else if(id==='hr'){ S.view='hr'; S.hrSub='home'; render(); }
@@ -5011,6 +5050,107 @@ function teamStrengthsHtml_(campus){
     h+='</div>';
   });
   return h+gsFineHtml();
+}
+
+/* ==================== Library ====================
+   Five-minute reads of the books on Craig Groeschel's leadership lists, written
+   for GP in our own words (public/library.js — GP_LIBRARY). Menu → Library.
+   The books load only when the Library is opened (libLoad_), so they cost the
+   app's start nothing; sw.js keeps a copy for offline reading.
+
+   Covers come from Open Library by ISBN, on the phone. Under every cover sits a
+   drawn one — the title on the shelf's colour — so a missing cover, a wrong ISBN
+   or no connection still looks like a book. "Read" ticks are this phone's only
+   (localStorage), nothing is sent anywhere. The summaries are English; the
+   screens around them are translated like everything else. */
+S.libBook=null; S.libShelf='all'; S.libLoading=false; S.libError=false;
+var LIB_READ_KEY='gp-lib-read';
+function libLoad_(){
+  if(typeof GP_LIBRARY!=='undefined' || S.libLoading) return;
+  S.libLoading=true; S.libError=false;
+  var sc=document.createElement('script');
+  sc.src='library.js';
+  sc.setAttribute('data-optional','');   // a failed load says so on the Library page — never the whole-app error screen
+  sc.onload=function(){ S.libLoading=false; if(S.view==='library') render(); };
+  sc.onerror=function(){ S.libLoading=false; S.libError=true; sc.remove(); if(S.view==='library') render(); };
+  document.head.appendChild(sc);
+}
+function libRead_(){ try { return JSON.parse(localStorage.getItem(LIB_READ_KEY)||'{}')||{}; } catch(e){ return {}; } }
+function libSetRead_(id, on){
+  var r=libRead_(); if(on) r[id]=todayStr(); else delete r[id];
+  try { localStorage.setItem(LIB_READ_KEY, JSON.stringify(r)); } catch(e){}
+}
+function libShelf_(id){ return (GP_LIBRARY.shelves.filter(function(x){ return x.id===id; })[0]) || GP_LIBRARY.shelves[0]; }
+function libCoverHtml_(b, big){
+  var sh=libShelf_(b.shelf);
+  var h='<div class="libCover'+(big?' big':'')+'" style="background:linear-gradient(160deg,'+sh.color+','+sh.ink+')">'+
+    '<div class="libCoverDrawn"><div class="libCoverTitle">'+esc(b.title)+'</div><div class="libCoverAuthor">'+esc(b.author)+'</div></div>';
+  if(b.isbn) h+='<img class="libCoverImg" alt="" loading="lazy" referrerpolicy="no-referrer" src="https://covers.openlibrary.org/b/isbn/'+esc(b.isbn)+'-M.jpg?default=false"'+
+    ' onload="if(this.naturalWidth<20)this.remove()" onerror="this.remove()">';
+  return h+'</div>';
+}
+function libraryHtml(){
+  var back='<button class="linkbtn" id="libBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(S.libBook ? t('Library') : t('My Home'))+'</button>';
+  if(typeof GP_LIBRARY==='undefined'){
+    return back+'<h2>📚 '+esc(t('Library'))+'</h2>'+(S.libError
+      ? '<div class="card"><p class="sub" style="margin:0 0 10px">'+esc(t('The library could not load. Check your connection and try again.'))+'</p><button class="btn ghost" id="libRetry">'+esc(t('Try again'))+'</button></div>'
+      : '<p class="sub">'+esc(t('Loading…'))+'</p>');
+  }
+  if(S.libBook){
+    var b=GP_LIBRARY.books.filter(function(x){ return x.id===S.libBook; })[0];
+    if(b) return back+libBookHtml_(b);
+    S.libBook=null;
+  }
+  var read=libRead_(), books=GP_LIBRARY.books;
+  var shown = S.libShelf==='all' ? books : books.filter(function(x){ return x.shelf===S.libShelf; });
+  var readN=books.filter(function(x){ return read[x.id]; }).length;
+  var h=back+'<h2>📚 '+esc(t('Library'))+'</h2>'+
+    '<p class="sub">'+esc(t('Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</p>'+
+    '<div class="libProgress"><b>'+readN+'</b> / '+books.length+' '+esc(t('read'))+'<span class="libProgressBar"><span style="width:'+Math.round(readN/Math.max(1,books.length)*100)+'%"></span></span></div>'+
+    '<div class="libShelves">'+[{id:'all', name:'All'}].concat(GP_LIBRARY.shelves).map(function(sh){
+      return '<button class="libShelfBtn'+(S.libShelf===sh.id?' on':'')+'" data-libshelf="'+esc(sh.id)+'"'+(sh.color&&S.libShelf===sh.id?' style="background:'+sh.color+';border-color:'+sh.color+'"':'')+'>'+(sh.emoji?sh.emoji+' ':'')+esc(t(sh.name))+'</button>';
+    }).join('')+'</div>';
+  h+='<div class="libGrid">'+shown.map(function(x){
+    return '<button class="libCard" data-libbook="'+esc(x.id)+'">'+libCoverHtml_(x)+
+      (read[x.id]?'<span class="libReadTag">✓</span>':'')+
+      '<span class="libCardTitle">'+esc(x.title)+'</span><span class="libCardMeta">'+esc(x.author)+'</span>'+
+      '<span class="libCardMins">⏱ '+esc(gpT('{n} min',{n:x.mins||5}))+'</span></button>';
+  }).join('')+'</div>';
+  return h+'<p class="pFine">'+esc(t('Summaries written for GP in our own words — not by the authors or publishers. Love one? Read the whole book.'))+' '+
+    esc(t('Covers from Open Library.'))+'</p>';
+}
+function libBookHtml_(b){
+  var sh=libShelf_(b.shelf), read=libRead_()[b.id];
+  var list=GP_LIBRARY.books, i=list.indexOf(b), next=list[(i+1)%list.length];
+  var h='<div class="libHero" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+libCoverHtml_(b, true)+
+    '<div class="libHeroText"><span class="libShelfTag">'+(sh.emoji||'')+' '+esc(t(sh.name))+'</span>'+
+    '<h2 class="libTitle">'+esc(b.title)+'</h2><div class="libAuthor">'+esc(b.author)+(b.year?' · '+b.year:'')+'</div>'+
+    '<div class="libMins">⏱ '+esc(gpT('{n}-minute read',{n:b.mins||5}))+'</div></div></div>';
+  h+='<div class="libVibe" style="border-color:'+sh.color+'">'+esc(b.vibe)+'</div>';
+  h+='<div class="card libBlock"><div class="libKicker">💡 '+esc(t('The big idea'))+'</div><p>'+esc(b.bigIdea)+'</p></div>';
+  h+='<div class="libKicker" style="margin:18px 2px 8px">'+esc(gpT('{n} key insights',{n:b.insights.length}))+'</div>';
+  b.insights.forEach(function(x, k){
+    h+='<div class="card libInsight"><div class="libInsightHead"><span class="libInsightNum" style="background:'+sh.color+'">'+(k+1)+'</span>'+
+      '<span class="libInsightEmoji">'+esc(x.emoji||'')+'</span><b>'+esc(x.title)+'</b></div><p>'+esc(x.body)+'</p></div>';
+  });
+  h+='<div class="card libBlock"><div class="libKicker">✅ '+esc(t('Try this week'))+'</div><ul class="libTry">'+
+    b.tryThis.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul></div>';
+  h+='<div class="card libBlock libForUs"><div class="libKicker">🌏 '+esc(t('For us at GP'))+'</div><p>'+esc(b.forUs)+'</p></div>';
+  h+='<div class="libOneLine" style="background:'+sh.color+'"><span>'+esc(t('In one line'))+'</span>'+esc(b.oneLine)+'</div>';
+  h+='<div class="btnRow" style="margin-top:14px">'+
+    '<button class="btn'+(read?' ghost':'')+'" id="libMarkRead" data-libid="'+esc(b.id)+'">'+esc(read ? '✓ '+t('Read') : t('Mark as read'))+'</button>'+
+    (next && next!==b ? '<button class="btn ghost" data-libbook="'+esc(next.id)+'">'+esc(t('Next book'))+' →</button>' : '')+'</div>';
+  return h+'<p class="pFine">'+esc(t('Summary written for GP in our own words — not by the author or publisher.'))+'</p>';
+}
+function bindLibrary_(){
+  var lb=document.getElementById('libBack');
+  if(lb) lb.onclick=function(){ gpTap(); if(S.libBook){ S.libBook=null; render(); } else { S.view='week'; render(); } };
+  var lr=document.getElementById('libRetry');
+  if(lr) lr.onclick=function(){ libLoad_(); render(); };
+  document.querySelectorAll('[data-libshelf]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libShelf=b.getAttribute('data-libshelf'); render(); }; });
+  document.querySelectorAll('[data-libbook]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libBook=b.getAttribute('data-libbook'); render(); window.scrollTo(0,0); }; });
+  var mr=document.getElementById('libMarkRead');
+  if(mr) mr.onclick=function(){ var id=mr.getAttribute('data-libid'); libSetRead_(id, !libRead_()[id]); gpTap(); render(); };
 }
 
 /* ==================== Team → Personalities ====================
@@ -13384,6 +13524,7 @@ function bindAway(){
     b.onclick=function(){ gpTap(); S.view='hr'; S.hrSub='home'; render(); };
   });
   bindHr();
+  if(S.view==='library') bindLibrary_();
   if(S.view==='admin' && S.adminSub==='groups') bindAdminGroups_();
   bindHosp();
   if(S.view==='ministry') bindLead_();

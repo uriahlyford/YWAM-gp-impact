@@ -2781,3 +2781,32 @@ and the Last week / This week switch on Weekly Goals.
 | Link to a KPI | ភ្ជាប់ទៅ KPI |
 | How did last week go? Move each slider to where it ended. | សប្តាហ៍មុនទៅយ៉ាងម៉េចដែរ? សូមរំកិលគ្រាប់រំកិលនីមួយៗទៅកន្លែងដែលវាបានបញ្ចប់។ |
 | You didn’t set goals that week. | អ្នកមិនបានកំណត់គោលដៅសម្រាប់សប្តាហ៍នោះទេ។ |
+
+## 65. The Library
+
+The screens around the book summaries (the summaries themselves are English for
+now). "Read" means "I have read this book".
+
+| English | Khmer (pending) |
+|---|---|
+| Library | បណ្ណាល័យ |
+| The library could not load. Check your connection and try again. | មិនអាចផ្ទុកបណ្ណាល័យបានទេ។ សូមពិនិត្យការតភ្ជាប់ ហើយសាកល្បងម្តងទៀត។ |
+| Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us. | ការអានរយៈពេលប្រាំនាទីពីសៀវភៅល្អបំផុតស្តីពីការដឹកនាំ វប្បធម៌ ទម្លាប់ និងការច្នៃប្រឌិត — គំនិតធំៗ រៀបចំសម្រាប់យើង។ |
+| read | បានអាន |
+| Lead & grow | ដឹកនាំ និងរីកចម្រើន |
+| People & culture | មនុស្ស និងវប្បធម៌ |
+| Habits & goals | ទម្លាប់ និងគោលដៅ |
+| Create & communicate | ច្នៃប្រឌិត និងទំនាក់ទំនង |
+| {n} min | {n} នាទី |
+| Summaries written for GP in our own words — not by the authors or publishers. Love one? Read the whole book. | សេចក្តីសង្ខេបសរសេរសម្រាប់ GP ដោយពាក្យរបស់យើងផ្ទាល់ — មិនមែនដោយអ្នកនិពន្ធ ឬអ្នកបោះពុម្ពទេ។ ចូលចិត្តសៀវភៅណាមួយ? សូមអានសៀវភៅទាំងមូល។ |
+| Covers from Open Library. | ក្របសៀវភៅពី Open Library។ |
+| {n}-minute read | ការអាន {n} នាទី |
+| The big idea | គំនិតធំ |
+| {n} key insights | ចំណុចសំខាន់ៗ {n} |
+| Try this week | សាកល្បងសប្តាហ៍នេះ |
+| For us at GP | សម្រាប់យើងនៅ GP |
+| In one line | ក្នុងមួយបន្ទាត់ |
+| Read | បានអាន |
+| Mark as read | សម្គាល់ថាបានអាន |
+| Next book | សៀវភៅបន្ទាប់ |
+| Summary written for GP in our own words — not by the author or publisher. | សេចក្តីសង្ខេបសរសេរសម្រាប់ GP ដោយពាក្យរបស់យើងផ្ទាល់ — មិនមែនដោយអ្នកនិពន្ធ ឬអ្នកបោះពុម្ពទេ។ |

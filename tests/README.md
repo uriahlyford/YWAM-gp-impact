@@ -34,6 +34,8 @@ than failing. Chromium is found automatically at the usual locations; set
 
 | File | What breaks if it fails |
 |---|---|
+| `test-library.mjs` | The Library's books (public/library.js): four shelves, unique ids, every field a page draws, 5–7 insights and 3 things to try, a five-minute length, valid ISBN-13 check digits, no long quotations |
+| `test-library-ui.mjs` | Menu → Library: the books load only when opened; every book on the shelf with its cover (a stand-in for Open Library) or a drawn one; shelves filter; a book page with every part; Mark as read sticks and shows on the shelf; Next book; covers blocked leaves nothing broken; Khmer at 320px; a failed load offers Try again |
 | `test-firstrun.mjs` | A brand-new base, a junk blob or a malformed request takes the whole app down with a 500 |
 | `test-boot.mjs` | A page open costs more than one function invocation — Netlify bills these |
 | `test-week-auth.mjs` | Health answers stop being anonymous in base averages, or reach someone other than your one mentor |

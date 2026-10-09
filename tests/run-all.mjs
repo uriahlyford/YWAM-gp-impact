@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const SERVER = [
+  'test-library.mjs',   // the Library's books: every field, shelves, unique ids, valid ISBNs, no quotations
   'test-firstrun.mjs',   // empty / junk / ragged store, malformed requests
   'test-boot.mjs',       // getMyBoot: one call per page open
   'test-week-auth.mjs',  // weekly health: anonymity + mentor visibility
@@ -59,6 +60,7 @@ const SERVER = [
 ];
 
 const BROWSER = [
+  'test-library-ui.mjs',  // Menu → Library: loads when opened, covers or drawn ones, shelves, book page, read ticks, Khmer, retry
   'test-pull-drill.mjs',    // the pull gesture on both pages, and which figures open
   'test-touch-scroll.mjs',  // a swipe over a slider or the chip strip scrolls the page, and answers nothing
   'test-number-entry.mjs',  // typing into a number box replaces what is in it, and no box starts at a 0 nobody typed

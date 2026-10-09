@@ -1191,6 +1191,24 @@ results saved then are still in `staff.strengths` but nothing reads them.)
   localStorage (`gp_gstr_draft`) until saved.
 - **Khmer:** all ~515 strings in `PENDING_KM` (docs/khmer-needed.md §53).
 
+## Library (public/library.js) — five-minute reads
+Menu → Library. 27 books from Craig Groeschel's four leadership lists ("44 leadership
+books"), on four shelves (Lead & grow, People & culture, Habits & goals, Create &
+communicate). Only 27 of the 44 could be confirmed: the lists' pages are blocked from the
+build sandbox and search showed only parts of each — add the rest as Uriah sends them.
+- **Our own words.** Each summary (vibe, big idea, 5–7 insights, try this week, "for us
+  at GP", one line) is written for GP — no quotations, nothing from the books or any
+  summary service. Brain and money claims are framed as the author's view where debated.
+  English on purpose; the screens around them are translated.
+- **Loaded only when opened** (`libLoad_`, `data-optional` so a failed load says so on
+  the page instead of the whole-app error screen); sw.js precaches it for offline reading.
+- **Covers** load on the phone from Open Library by ISBN (`?default=false`, so a miss is
+  a 404 and the img removes itself); a drawn cover in the shelf's colour sits underneath,
+  so a wrong ISBN or no connection still looks like a book. ISBNs were written from
+  memory — the check digit is tested, the book they point to is not.
+- "Read" ticks are this phone's only (`gp-lib-read` in localStorage). To add a book, add
+  an object to `GP_LIBRARY.books`; tests/test-library.mjs checks the shape.
+
 ## Admin → Arrivals & departures
 - **Invite a new group:** pick campus, department and (optionally) ministry → one link,
   `teams.html?reg=1&campus=…&dept=…&ministry=…` (`gpInviteLink_`). It opens the
