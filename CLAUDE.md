@@ -1192,10 +1192,11 @@ results saved then are still in `staff.strengths` but nothing reads them.)
 - **Khmer:** all ~515 strings in `PENDING_KM` (docs/khmer-needed.md §53).
 
 ## Library (public/library.js) — five-minute reads
-Menu → Library. 27 books from Craig Groeschel's four leadership lists ("44 leadership
-books"), on four shelves (Lead & grow, People & culture, Habits & goals, Create &
-communicate). Only 27 of the 44 could be confirmed: the lists' pages are blocked from the
-build sandbox and search showed only parts of each — add the rest as Uriah sends them.
+Menu → Library. All 44 books from Craig Groeschel's four leadership lists ("44 Books
+Every Leader Should Read", the current list Uriah sent — Lead Like Jesus, not Dalio's
+Principles), on four shelves (Lead & grow, People & culture, Habits & goals, Create &
+communicate). `GP_LIBRARY.startHere` is the "⭐ Start here" chip: ten to read first for
+leading at GP (culture, multiplying leaders, hard conversations, vision, execution).
 - **Our own words.** Each summary (vibe, big idea, 5–7 insights, try this week, "for us
   at GP", one line) is written for GP — no quotations, nothing from the books or any
   summary service. Brain and money claims are framed as the author's view where debated.

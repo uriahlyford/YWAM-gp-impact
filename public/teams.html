@@ -645,6 +645,7 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .libShelves { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
 .libShelfBtn { border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:999px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
 .libShelfBtn.on { color:var(--pOnMark); background:var(--ink); border-color:var(--ink); }
+.libStartNote { margin:-4px 0 14px; }
 .libGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:14px 10px; margin-bottom:16px; }
 @media (max-width:340px){ .libGrid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 .libCard { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:3px; background:none; border:0; padding:0; text-align:left; font:inherit; color:var(--ink); cursor:pointer; min-width:0; }
@@ -5102,14 +5103,17 @@ function libraryHtml(){
     S.libBook=null;
   }
   var read=libRead_(), books=GP_LIBRARY.books;
-  var shown = S.libShelf==='all' ? books : books.filter(function(x){ return x.shelf===S.libShelf; });
+  var picks=(GP_LIBRARY.startHere||[]).map(function(id){ return books.filter(function(x){ return x.id===id; })[0]; }).filter(Boolean);
+  if(S.libShelf==='start' && !picks.length) S.libShelf='all';
+  var shown = S.libShelf==='all' ? books : S.libShelf==='start' ? picks : books.filter(function(x){ return x.shelf===S.libShelf; });
   var readN=books.filter(function(x){ return read[x.id]; }).length;
   var h=back+'<h2>📚 '+esc(t('Library'))+'</h2>'+
     '<p class="sub">'+esc(t('Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</p>'+
     '<div class="libProgress"><b>'+readN+'</b> / '+books.length+' '+esc(t('read'))+'<span class="libProgressBar"><span style="width:'+Math.round(readN/Math.max(1,books.length)*100)+'%"></span></span></div>'+
-    '<div class="libShelves">'+[{id:'all', name:'All'}].concat(GP_LIBRARY.shelves).map(function(sh){
+    '<div class="libShelves">'+[{id:'all', name:'All'}].concat(picks.length ? [{id:'start', name:'Start here', emoji:'⭐'}] : [], GP_LIBRARY.shelves).map(function(sh){
       return '<button class="libShelfBtn'+(S.libShelf===sh.id?' on':'')+'" data-libshelf="'+esc(sh.id)+'"'+(sh.color&&S.libShelf===sh.id?' style="background:'+sh.color+';border-color:'+sh.color+'"':'')+'>'+(sh.emoji?sh.emoji+' ':'')+esc(t(sh.name))+'</button>';
-    }).join('')+'</div>';
+    }).join('')+'</div>'+
+    (S.libShelf==='start' ? '<p class="sub libStartNote">'+esc(gpT('{n} books to read first for leading at GP: culture, multiplying leaders, hard conversations, vision and getting things done.',{n:picks.length}))+'</p>' : '');
   h+='<div class="libGrid">'+shown.map(function(x){
     return '<button class="libCard" data-libbook="'+esc(x.id)+'">'+libCoverHtml_(x)+
       (read[x.id]?'<span class="libReadTag">✓</span>':'')+

@@ -39,6 +39,18 @@ var GP_LIBRARY = {
    "ink": "#7A4A04"
   }
  ],
+ "startHere": [
+  "the-21-irrefutable-laws-of-leadership",
+  "lead-like-jesus",
+  "multipliers",
+  "the-advantage",
+  "the-five-dysfunctions-of-a-team",
+  "crucial-conversations",
+  "start-with-why",
+  "the-4-disciplines-of-execution",
+  "extreme-ownership",
+  "boundaries"
+ ],
  "books": [
   {
    "id": "developing-the-leader-within-you",
@@ -359,6 +371,210 @@ var GP_LIBRARY = {
    ],
    "forUs": "Base life is a strong whirlwind: guests arriving, meals, worship, school schedules, visa runs. If your ministry has a big goal — more Khmer leaders trained, a stronger cafe, better follow-up after outreach — pick one, track a few simple actions, and check in weekly. A whiteboard scoreboard in the office can bring Khmer and international staff together around one clear win.",
    "oneLine": "Pick one big goal, track the actions that drive it, keep score and check in every week."
+  },
+  {
+   "id": "thou-shall-prosper",
+   "title": "Thou Shall Prosper",
+   "author": "Rabbi Daniel Lapin",
+   "year": 2002,
+   "shelf": "lead",
+   "mins": 5,
+   "vibe": "Money is not dirty. Done right, it's a sign that you served people well.",
+   "bigIdea": "Rabbi Daniel Lapin draws on old Jewish wisdom to argue that business is moral, honourable work. In his view, money is mostly about relationships: you earn it by meeting the real needs of other people. He shares ten 'commandments' for making money, and most of them are really about character, trust and serving others. Wealth is a tool, and how you earn it and give it says a lot about who you are.",
+   "insights": [
+    {
+     "emoji": "🤝",
+     "title": "Business is moral work",
+     "body": "Lapin pushes back on the idea that business is greedy or second-class. When you sell good coffee at a fair price, you make someone's day better and they freely choose to pay you. That is a good thing. Believing this changes how you work: with pride, honesty and care."
+    },
+    {
+     "emoji": "🧾",
+     "title": "Money as a thank-you note",
+     "body": "He describes money as a kind of certificate that says you helped someone. Each coin is a record of a need you met. So if you want more of it, the question is not 'How do I get money?' but 'How can I serve more people, better?'"
+    },
+    {
+     "emoji": "🕸️",
+     "title": "Grow your circle of people",
+     "body": "Making money is a team sport, because it always happens between people. Lapin encourages you to build many real friendships and connections, not only useful contacts. The more people you know and care about, the more ways you can help them and be helped."
+    },
+    {
+     "emoji": "🪞",
+     "title": "Know yourself, then change",
+     "body": "He urges you to look honestly at your own habits, strengths and weak spots. Be consistent, so people know what to expect from you. And learn which things in life should change with the times, and which things must never change, like your values and promises."
+    },
+    {
+     "emoji": "🎁",
+     "title": "Give a tenth away",
+     "body": "Lapin teaches giving about ten percent of what you earn to charity. Giving reminds you that what you have is not only yours. It also breaks the grip that money can have on your heart, and it keeps you generous when things are good and when they are hard."
+    },
+    {
+     "emoji": "🚫",
+     "title": "Don't chase perfection, don't retire",
+     "body": "Waiting for the perfect plan keeps you stuck, so act and improve as you go. He also argues against the idea of stopping work to do nothing. Work is a way to serve others, so keep serving and stay useful as long as you can."
+    }
+   ],
+   "tryThis": [
+    "Think of one customer, guest or supporter and ask: what real need am I meeting for them?",
+    "Reach out to one person outside your usual circle this week, just to get to know them.",
+    "Look at your budget and decide on one clear, planned gift you will give this month."
+   ],
+   "forUs": "On a mission base we can feel awkward about money. Some of us run a cafe or small business, and many of us live on support from churches and friends. This book helps us see both as relational and honourable: serving guests with excellence is ministry, and partners who give are real relationships to care for, not just bank deposits. Khmer and international staff alike can learn to handle money with honesty, generosity and joy, trusting God as the true provider.",
+   "oneLine": "Serve people well, keep your word, give generously, and money becomes a tool for good."
+  },
+  {
+   "id": "the-e-myth-revisited",
+   "title": "The E-Myth Revisited",
+   "author": "Michael E. Gerber",
+   "year": 1995,
+   "isbn": "9780887307287",
+   "shelf": "lead",
+   "mins": 5,
+   "vibe": "Stop just working IN your business. Start working ON it.",
+   "bigIdea": "Gerber says most small businesses fail because of a myth: that people who are good at a skill will be good at running a business that uses that skill. A great baker opens a bakery and is soon drowning in work. The fix is to build simple, clear systems so the business runs well without depending on one tired person. Think of your work as a model that anyone could follow.",
+   "insights": [
+    {
+     "emoji": "🥧",
+     "title": "The great myth",
+     "body": "Many businesses start when a skilled worker gets tired of working for someone else. Gerber calls this an 'entrepreneurial seizure'. He tells the story of Sarah, who loved baking pies until her pie shop took over her life. Being good at the work is not the same as building a business."
+    },
+    {
+     "emoji": "🎭",
+     "title": "Three people inside you",
+     "body": "Everyone has an Entrepreneur who dreams about the future, a Manager who loves order and plans, and a Technician who just wants to do the work. Most owners are mostly Technician. A healthy business needs all three voices working together."
+    },
+    {
+     "emoji": "🌱",
+     "title": "The stages of growth",
+     "body": "A business grows from infancy, when the owner does everything, to adolescence, when they get help but it feels chaotic. Many get stuck here or shrink back. Maturity comes when it is built from the start with a clear vision of what it should become."
+    },
+    {
+     "emoji": "🍔",
+     "title": "Build it like a franchise",
+     "body": "Gerber's big idea is the 'franchise prototype'. Imagine your business will be copied 5,000 times. Every task should be written down and simple enough that a normal person can do it well. Then results are steady, no matter who is on shift."
+    },
+    {
+     "emoji": "📋",
+     "title": "Systems over heroes",
+     "body": "When things depend on one superstar, everything breaks when that person is sick or leaves. Good systems free people to focus and to grow. Gerber suggests testing ideas, measuring results and then making the best way the normal way."
+    },
+    {
+     "emoji": "🗺️",
+     "title": "Plan the whole thing",
+     "body": "He walks through a simple program: know your life aim, set the business goal, draw an org chart of roles (not names), then plan how you will manage, train people, market and run your systems. Start with roles, even if one person fills many of them."
+    }
+   ],
+   "tryThis": [
+    "Write a simple step-by-step checklist for one task you do every week.",
+    "Draw an org chart of roles in your ministry, then write who fills each one today.",
+    "Block one hour this week to work ON your ministry, not IN it."
+   ],
+   "forUs": "Our cafe, guesthouse, school office and kitchen all run better with simple systems. Staff come and go every few months, so if knowledge lives only in one person's head, it leaves with them. Written checklists in English and Khmer help new staff and volunteers serve well from day one, and they free leaders to think, pray and plan. Good systems are a gift to the next team.",
+   "oneLine": "Build simple systems so your work can thrive without you holding it all."
+  },
+  {
+   "id": "the-tipping-point",
+   "title": "The Tipping Point",
+   "author": "Malcolm Gladwell",
+   "year": 2000,
+   "isbn": "9780316346627",
+   "shelf": "lead",
+   "mins": 5,
+   "vibe": "Small things can start big waves. Here's how ideas go viral.",
+   "bigIdea": "Gladwell says ideas, trends and behaviours spread like a flu. For a long time, nothing seems to happen. Then they reach a 'tipping point' and spread very fast. He finds three rules behind this: the right few people, a message that sticks, and the right setting. Small, smart changes in any of these can make a huge difference.",
+   "insights": [
+    {
+     "emoji": "🦠",
+     "title": "Change spreads like a virus",
+     "body": "Trends behave like epidemics. They are contagious, little causes can have big effects, and change happens suddenly, not slowly. Gladwell uses examples like an old brand of shoes that suddenly became cool again in the 1990s."
+    },
+    {
+     "emoji": "👥",
+     "title": "The Law of the Few",
+     "body": "A small group of people does most of the spreading. Connectors know huge numbers of people. Mavens love to collect information and share it. Salesmen are great at persuading. Gladwell compares Paul Revere, a Connector who raised many fighters on his famous night ride, with another rider who carried the same news but woke far fewer people."
+    },
+    {
+     "emoji": "🍯",
+     "title": "The Stickiness Factor",
+     "body": "A message has to stay in people's minds and move them to act. Gladwell shows how kids' TV shows like Sesame Street and Blue's Clues tested and tweaked tiny details so children would remember and learn. Often a small change in how you present something makes it stick."
+    },
+    {
+     "emoji": "🏙️",
+     "title": "The Power of Context",
+     "body": "People are very sensitive to their surroundings. Gladwell discusses the 'broken windows' idea used in New York City: fixing small signs of disorder, like graffiti and fare-dodging, was linked with less crime. Change the setting and you can change behaviour."
+    },
+    {
+     "emoji": "1️⃣5️⃣0️⃣",
+     "title": "The Rule of 150",
+     "body": "Groups work best when they stay small enough for people to really know each other, around 150 people. He describes a company that split its factories when they grew past that size. In small groups, people care about each other and pass on ideas naturally."
+    },
+    {
+     "emoji": "🎯",
+     "title": "Focus your effort",
+     "body": "You do not need huge resources to start change. Find the key people, shape a message that sticks, and set up the right environment. Then test and adjust. The lesson is hopeful: with the right small push, the world can move."
+    }
+   ],
+   "tryThis": [
+    "Name the Connectors, Mavens and Salesmen in your team or community.",
+    "Take one announcement or poster and make it shorter, clearer and easier to remember.",
+    "Fix one small 'broken window' in your shared space this week."
+   ],
+   "forUs": "When we want a new value or habit to spread on base, like prayer, hospitality or cleaning up together, we can think like Gladwell. Who are the trusted people, Khmer and international, that others listen to? How can we make the message simple and sticky in both languages? Is our shared space saying the right thing? Small, faithful steps by the right people can bring real change in a team or a village.",
+   "oneLine": "The right people, a sticky message and the right setting can tip small ideas into big change."
+  },
+  {
+   "id": "the-21-irrefutable-laws-of-leadership",
+   "title": "The 21 Irrefutable Laws of Leadership",
+   "author": "John C. Maxwell",
+   "year": 1998,
+   "isbn": "9780785288374",
+   "shelf": "lead",
+   "mins": 5,
+   "vibe": "Leadership has laws, like gravity. Learn them and people will follow.",
+   "bigIdea": "Maxwell believes leadership works by laws that are true in every culture and setting. He gives 21 of them, each with stories from business, sport, history and the Bible. You cannot be perfect at all 21, but you can grow in each one and build a team that covers your gaps. Here are some of the most important laws, grouped together.",
+   "insights": [
+    {
+     "emoji": "📏",
+     "title": "The Law of the Lid",
+     "body": "Your leadership ability is like a lid on how effective you and your team can be. A team rarely rises above its leader. So if you want to see more fruit, the best place to start is growing yourself as a leader."
+    },
+    {
+     "emoji": "🧲",
+     "title": "Influence and Process",
+     "body": "Maxwell says the true measure of leadership is influence, nothing more and nothing less. And influence is not built in a day. It grows slowly through daily learning and faithful work, step by step, over many years."
+    },
+    {
+     "emoji": "🪨",
+     "title": "Solid Ground and Respect",
+     "body": "Trust is the foundation of all leadership. Every time you break trust, you lose some of your influence. People naturally follow leaders who are stronger than themselves, so earn respect through character, courage and care."
+    },
+    {
+     "emoji": "❤️",
+     "title": "Connection and Magnetism",
+     "body": "Leaders touch a heart before they ask for a hand. People need to feel you care before they follow. Also, who you are is who you attract: if you want a team that is faithful and kind, grow those things in yourself first."
+    },
+    {
+     "emoji": "⭕",
+     "title": "Inner Circle and Empowerment",
+     "body": "A leader's potential depends on the people closest to them, so choose your inner circle wisely. Secure leaders give power away instead of holding it tight. They trust others, train them and let them lead."
+    },
+    {
+     "emoji": "🤲",
+     "title": "Buy-In and Sacrifice",
+     "body": "People buy into the leader first, then the vision. If they don't trust you, even a great plan will struggle. And leaders must give up to go up: the higher you go, the more you are asked to lay down your own comfort and rights."
+    },
+    {
+     "emoji": "🌳",
+     "title": "Explosive Growth and Legacy",
+     "body": "Leaders who develop followers grow slowly, but leaders who develop other leaders multiply. Your lasting value is measured by who comes after you. Plan for your work to continue long after you are gone."
+    }
+   ],
+   "tryThis": [
+    "Pick one law where you feel weak and ask a trusted friend to rate you honestly.",
+    "Have one real heart-level conversation with a team member before talking about tasks.",
+    "Give away one responsibility you usually keep, and coach the person who takes it."
+   ],
+   "forUs": "On a YWAM base, many of us lead small teams for a short time, like a DTS outreach team or a ministry shift. These laws remind us that leadership is about influence, trust and serving, which fits the way Jesus led. When we connect with hearts, give power away and raise up Khmer and international leaders to replace us, the work keeps growing even after we move on.",
+   "oneLine": "Leadership is influence built on trust, and its best fruit is new leaders."
   },
   {
    "id": "how-to-win-friends-and-influence-people",
@@ -784,6 +1000,316 @@ var GP_LIBRARY = {
    ],
    "forUs": "YWAM has a strong why: to know God and to make Him known. When we explain the why first — to DTS students, new staff or local partners — tasks like cleaning, cooking and paperwork become part of the mission. Make sure every ministry, in Siem Reap and Poipet, can say its why in simple words, in both Khmer and English.",
    "oneLine": "Start with your purpose; it is what inspires people to follow."
+  },
+  {
+   "id": "boundaries",
+   "title": "Boundaries",
+   "author": "Henry Cloud & John Townsend",
+   "year": 1992,
+   "isbn": "9780310351801",
+   "shelf": "people",
+   "mins": 5,
+   "vibe": "Saying 'no' can be one of the most loving words you ever say.",
+   "bigIdea": "A boundary is like a property line. It shows where you end and someone else begins. God made us responsible for our own hearts, choices and feelings — not for everyone else's. When we know our boundaries, we can love people freely instead of out of fear or guilt. Healthy boundaries are not selfish; they are part of being a good steward of the life God gave you.",
+   "insights": [
+    {
+     "emoji": "🏡",
+     "title": "Know your property line",
+     "body": "Inside your 'yard' are your feelings, attitudes, choices, time and values. You are the one who must look after them. Other people own their yard. Problems start when we try to manage their yard and forget our own."
+    },
+    {
+     "emoji": "🎒",
+     "title": "Boulders and backpacks",
+     "body": "The Bible says to carry each other's burdens, and also that each person must carry their own load. A boulder is a crisis too heavy for one person — help with that. A backpack is daily responsibility — each of us carries our own. Love helps with boulders, but does not carry someone's backpack for them."
+    },
+    {
+     "emoji": "🚪",
+     "title": "Fences with gates, not walls",
+     "body": "Boundaries are not about shutting people out. A good fence has a gate. You let good things in and keep harmful things out. You can open the gate when it is safe and close it when it is not."
+    },
+    {
+     "emoji": "🧩",
+     "title": "Four boundary problems",
+     "body": "'Compliant' people say yes to things they should refuse. 'Avoidant' people say no to good things, like asking for help. 'Controllers' don't respect other people's no. 'Nonresponsive' people ignore real needs around them. Most of us lean toward one or two of these."
+    },
+    {
+     "emoji": "🌾",
+     "title": "Let people reap what they sow",
+     "body": "When we always rescue someone from the results of their choices, they never learn. Natural consequences are a teacher. Stepping back is sometimes the most caring thing you can do."
+    },
+    {
+     "emoji": "😤",
+     "title": "Expect pushback",
+     "body": "When you start setting boundaries, some people will be upset, especially those who benefited from you having none. That does not mean you are wrong. Stay kind, stay calm, and stay clear."
+    },
+    {
+     "emoji": "✝️",
+     "title": "God has boundaries too",
+     "body": "God is clear about who he is and what he will and won't do. He lets people choose, and he lets them face the results. He respects our 'no' even when it hurts him. Our boundaries reflect his character."
+    }
+   ],
+   "tryThis": [
+    "Notice one place this week where you said yes but meant no. Write down why.",
+    "Practise a gentle, honest sentence: 'I can't do that this time, but I can help with ___.'",
+    "Ask a friend for help with one real 'boulder' instead of carrying it alone."
+   ],
+   "forUs": "On a mission base, the needs never stop, and it is easy to feel guilty for resting or saying no. Some of us grew up in cultures where saying no to an elder or leader feels impossible, and others say no too quickly. Talk as a team about what healthy boundaries look like — days off, sleep, family time — so nobody has to fight for them alone. Leaders can protect their staff's limits instead of testing them. Serving out of overflow lasts longer than serving out of exhaustion.",
+   "oneLine": "Own your life, help with the boulders, and let love — not guilt — drive your yes."
+  },
+  {
+   "id": "the-power-of-moments",
+   "title": "The Power of Moments",
+   "author": "Chip Heath & Dan Heath",
+   "year": 2017,
+   "isbn": "9781501147760",
+   "shelf": "people",
+   "mins": 5,
+   "vibe": "Life is mostly ordinary days — so design the moments that people will never forget.",
+   "bigIdea": "We remember life in moments, not in averages. A few peak moments shape how we feel about a whole experience. These 'defining moments' don't have to be random — we can create them on purpose. The Heath brothers show that most great moments contain one or more of four elements: Elevation, Insight, Pride and Connection.",
+   "insights": [
+    {
+     "emoji": "🏔️",
+     "title": "Peaks and endings matter most",
+     "body": "When people remember an experience, they mostly remember the best (or worst) moment and the ending. The middle fades. So you don't need to make everything perfect. Make a few peaks great, and finish strong."
+    },
+    {
+     "emoji": "🚀",
+     "title": "Elevation: break the script",
+     "body": "Elevation moments rise above the everyday. Add surprise, raise the stakes, and make the senses come alive. A small surprise breaks the normal routine and makes people pay attention. Think celebrations, ceremonies and unexpected kindness."
+    },
+    {
+     "emoji": "💡",
+     "title": "Insight: trip over the truth",
+     "body": "Some moments suddenly change how we see ourselves or the world. You can create them by helping people meet a problem face to face, not just hear about it. Stretching people with a real challenge also helps them discover what they are capable of."
+    },
+    {
+     "emoji": "🏅",
+     "title": "Pride: celebrate the wins",
+     "body": "We feel proud when we are recognised and when we reach milestones. Specific, personal thanks means far more than general praise. Break long journeys into smaller milestones so people get to celebrate along the way."
+    },
+    {
+     "emoji": "🤝",
+     "title": "Connection: share the moment",
+     "body": "Moments become powerful when we share them with others. Doing something meaningful together, or struggling together, bonds a group. People also feel connected when they feel truly understood and cared for."
+    },
+    {
+     "emoji": "🚪",
+     "title": "Don't waste transitions",
+     "body": "First days, last days and big changes are natural moments. Many organisations let them pass with paperwork and silence. Instead, mark them. A warm welcome on someone's first day can shape how they feel for years."
+    }
+   ],
+   "tryThis": [
+    "Plan one small surprise for a teammate this week that breaks the normal routine.",
+    "Write a short, specific thank-you note to someone, naming exactly what they did and why it mattered.",
+    "Look at your calendar for the next month and find one transition you can turn into a moment."
+   ],
+   "forUs": "YWAM life is full of natural moments: a DTS student's first day, the send-off before outreach, the return, graduation, a new staff member arriving or a long-term worker leaving. These are gifts — let's not rush past them. Mix cultures in how we celebrate: Khmer hospitality, food and blessing alongside other traditions. Honour people in ways that fit them; for some, public praise feels great, for others a quiet word means more. And remember that many spiritual moments are also defining moments — make space for God to meet people.",
+   "oneLine": "Don't just wait for great moments — create them, especially at the peaks and transitions."
+  },
+  {
+   "id": "the-advantage",
+   "title": "The Advantage",
+   "author": "Patrick Lencioni",
+   "year": 2012,
+   "isbn": "9780470941522",
+   "shelf": "people",
+   "mins": 5,
+   "vibe": "Being smart is not enough. Healthy teams beat clever teams.",
+   "bigIdea": "Most organisations focus on being 'smart' — strategy, plans and skills. Lencioni says the bigger advantage is being healthy: little politics, little confusion, high trust and good morale. Health is simple and free, but it takes courage and discipline. He gives four steps to get there.",
+   "insights": [
+    {
+     "emoji": "🩺",
+     "title": "Health beats smarts",
+     "body": "A healthy organisation uses all the intelligence it already has. An unhealthy one wastes it through politics and confusion. Leaders often skip health because it feels soft. But it is the foundation that makes everything else work."
+    },
+    {
+     "emoji": "🤝",
+     "title": "Step 1: Build a cohesive leadership team",
+     "body": "The top team must trust each other, argue honestly about ideas, commit to decisions, hold each other accountable and focus on shared results. If the leaders are divided, everyone below them feels it. Leaders must see the leadership team as their first team."
+    },
+    {
+     "emoji": "❓",
+     "title": "Step 2: Create clarity",
+     "body": "Leaders must agree on six simple questions: Why do we exist? How do we behave? What do we do? How will we succeed? What is most important right now? Who must do what? Clear answers remove a lot of confusion lower down."
+    },
+    {
+     "emoji": "🎯",
+     "title": "Have one top priority",
+     "body": "Lencioni calls the answer to 'what is most important right now' a 'thematic goal' or rallying cry. It is one shared goal for a season, usually a few months. When everything is a priority, nothing is."
+    },
+    {
+     "emoji": "📣",
+     "title": "Step 3: Overcommunicate clarity",
+     "body": "Leaders often say something once and think everyone understood. People need to hear a message many times, from different leaders, before they believe it. Repeating yourself is not boring — it is leadership."
+    },
+    {
+     "emoji": "⚙️",
+     "title": "Step 4: Reinforce clarity",
+     "body": "Build your values and priorities into everyday systems: hiring, welcoming new people, reviews, rewards and even letting people go. This keeps clarity alive without leaders policing it all the time."
+    },
+    {
+     "emoji": "🗓️",
+     "title": "Meetings matter",
+     "body": "Bad meetings drain teams. Lencioni suggests different meetings for different purposes, like a short daily check-in, a weekly tactical meeting and longer times for big strategic topics."
+    }
+   ],
+   "tryThis": [
+    "Try answering the six questions for your ministry team in one sentence each.",
+    "Agree with your team on one top priority for the next three months.",
+    "Pick one key message and repeat it clearly at least three times this week."
+   ],
+   "forUs": "A YWAM base can have many ministries, each doing good work but not always pulling in the same direction. Clarity helps everyone, especially staff working in a second language — simple, repeated messages beat long, clever ones. Leaders from different cultures may avoid conflict in different ways, so building trust is step one. Ask your leaders the six questions together, and pray over the answers. When the leadership team is united, the whole base feels safer.",
+   "oneLine": "Get your leaders united, get clear, say it again and again, and build it into how you work."
+  },
+  {
+   "id": "multipliers",
+   "title": "Multipliers",
+   "author": "Liz Wiseman (with Greg McKeown)",
+   "year": 2010,
+   "isbn": "9780061964398",
+   "shelf": "people",
+   "mins": 5,
+   "vibe": "The best leaders don't make you feel small. They make you smarter.",
+   "bigIdea": "Some leaders drain the energy and ideas from people around them. Wiseman calls them 'Diminishers'. Other leaders, 'Multipliers', bring out more intelligence and effort than people knew they had. Her research found Multipliers get roughly twice as much from their people. The difference is mostly about what a leader believes: that people are smart and can figure things out.",
+   "insights": [
+    {
+     "emoji": "🧲",
+     "title": "Talent Magnet, not Empire Builder",
+     "body": "Empire Builders collect people and keep them for their own success. Talent Magnets find what people are naturally good at, use them fully, and help them grow — even if it means they move on. Good people want to work for them."
+    },
+    {
+     "emoji": "🕊️",
+     "title": "Liberator, not Tyrant",
+     "body": "Tyrants create fear, so people play it safe and hide mistakes. Liberators create a calm, safe space where people can think and speak up. But they also expect people's best work."
+    },
+    {
+     "emoji": "🧗",
+     "title": "Challenger, not Know-It-All",
+     "body": "Know-It-Alls give all the answers and show off what they know. Challengers ask big questions and set stretching goals. They point to an opportunity and let people work out how to get there."
+    },
+    {
+     "emoji": "🗣️",
+     "title": "Debate Maker, not Decision Maker",
+     "body": "Diminishers decide alone or with a small inner circle. Multipliers bring people together to debate the issue properly before a decision. People understand the decision and own it more."
+    },
+    {
+     "emoji": "🌱",
+     "title": "Investor, not Micromanager",
+     "body": "Micromanagers jump in and take back control. Investors give real ownership and resources, teach when needed, and then hand the problem back. They hold people accountable for results."
+    },
+    {
+     "emoji": "🙈",
+     "title": "Watch for accidental diminishing",
+     "body": "Many diminishers have good hearts. Being always 'on', rescuing people fast or having too many ideas can quietly shut others down. Sometimes the most helpful thing is to talk less and ask more."
+    }
+   ],
+   "tryThis": [
+    "In your next meeting, ask questions instead of giving your opinion first.",
+    "Give one task fully to a teammate — and resist the urge to take it back.",
+    "Ask someone, 'What do you think we should do?' and wait for the full answer."
+   ],
+   "forUs": "On a mission base, older or more experienced staff can easily become the 'answer people' without meaning to. In Khmer culture, younger staff may stay quiet out of respect, so leaders need to invite ideas on purpose — maybe in small groups or one-to-one rather than in front of everyone. Hand real responsibility to local staff and students and trust them to grow. Jesus did this with his disciples: he sent them out before they felt ready.",
+   "oneLine": "Lead in a way that makes others smarter, braver and more capable — not more dependent on you."
+  },
+  {
+   "id": "crucial-conversations",
+   "title": "Crucial Conversations",
+   "author": "Kerry Patterson, Joseph Grenny, Ron McMillan & Al Switzler",
+   "year": 2002,
+   "isbn": "9780071401944",
+   "shelf": "people",
+   "mins": 5,
+   "vibe": "When it matters most, most of us do our worst talking. You can learn to do better.",
+   "bigIdea": "A crucial conversation has high stakes, different opinions and strong emotions. Under that pressure, we usually go silent or get aggressive. The authors teach how to keep honest dialogue going, so everyone's ideas and feelings can be shared safely. Better conversations lead to better decisions and stronger relationships.",
+   "insights": [
+    {
+     "emoji": "🏊",
+     "title": "Fill the 'pool of shared meaning'",
+     "body": "Every person brings their own facts, feelings and opinions. Good dialogue puts all of it into a shared pool. The more that is in the pool, the better the decision. Silence or force keeps important information out."
+    },
+    {
+     "emoji": "❤️",
+     "title": "Start with heart",
+     "body": "Before you speak, ask: What do I really want for myself, for the other person, and for our relationship? This stops you from just trying to win. Also reject the 'fool's choice' — the idea that you must pick between being honest and being kind."
+    },
+    {
+     "emoji": "👀",
+     "title": "Watch for safety",
+     "body": "When people feel unsafe, they move to 'silence' (hiding, avoiding) or 'violence' (attacking, controlling). Notice the signs in them and in yourself. When safety drops, step out of the topic and rebuild it."
+    },
+    {
+     "emoji": "🛡️",
+     "title": "Make it safe",
+     "body": "People need to feel you care about their goals (mutual purpose) and that you respect them (mutual respect). If you hurt someone, apologise. Use 'contrasting': explain what you don't mean, then what you do mean."
+    },
+    {
+     "emoji": "📖",
+     "title": "Master your stories",
+     "body": "We see something, tell ourselves a story about it, feel an emotion, then act. Often our story casts us as the victim and them as the villain. Ask what a reasonable person would be thinking, and separate facts from your story."
+    },
+    {
+     "emoji": "🧭",
+     "title": "Speak honestly, listen deeply",
+     "body": "Share facts first, then your view, tentatively, and invite others to disagree. When listening, ask questions, reflect their feelings and repeat back what you heard. Then agree who will do what by when, and follow up."
+    }
+   ],
+   "tryThis": [
+    "Before a hard talk, write down what you really want for you, them and the relationship.",
+    "Next time you feel upset, separate the facts from the story you're telling yourself.",
+    "Practise one contrasting sentence: 'I don't want ___. I do want ___.'"
+   ],
+   "forUs": "Across cultures, crucial conversations look different. Many Khmer staff prefer indirect, private conversations that protect face, while some international staff are very direct. Neither is wrong, but both can make the other feel unsafe. Choose the right setting, start with respect, and maybe use a trusted go-between when that fits. Silence can look like agreement when it isn't, so gently check understanding. Speaking the truth in love is exactly what this book is trying to teach.",
+   "oneLine": "Make it safe, check your story, and keep talking honestly when it matters most."
+  },
+  {
+   "id": "the-ideal-team-player",
+   "title": "The Ideal Team Player",
+   "author": "Patrick Lencioni",
+   "year": 2016,
+   "isbn": "9781119209591",
+   "shelf": "people",
+   "mins": 5,
+   "vibe": "Great teammates are humble, hungry and people smart — all three at once.",
+   "bigIdea": "Lencioni tells a story about a new leader at a construction company who needs to fix a struggling team. Along the way, the leaders discover what makes someone a great team player. The answer is three simple virtues: humble, hungry and smart (meaning people smart). When someone has all three, teamwork becomes much easier.",
+   "insights": [
+    {
+     "emoji": "🙇",
+     "title": "Humble",
+     "body": "Humble team players care more about the team than their own image. They share credit and praise others easily. Lencioni warns about two problems: arrogance, and also false humility, where people put themselves down so much they don't contribute."
+    },
+    {
+     "emoji": "🔥",
+     "title": "Hungry",
+     "body": "Hungry people are self-motivated. They work hard, take initiative and look for more to do. They don't need to be pushed. But healthy hunger is for the team's mission, not just for personal success."
+    },
+    {
+     "emoji": "🧠",
+     "title": "People smart",
+     "body": "This is not about IQ. It is common sense about people. People-smart team players read a room well, listen, and understand how their words affect others. They know how to handle conversations wisely."
+    },
+    {
+     "emoji": "⚠️",
+     "title": "Missing one virtue is a problem",
+     "body": "Humble and hungry without people smarts can be an 'accidental mess-maker'. Humble and smart without hunger can be a 'lovable slacker'. Hungry and smart without humility can be a 'skillful politician' — the most dangerous, because they look great."
+    },
+    {
+     "emoji": "🔎",
+     "title": "Hire for the three virtues",
+     "body": "In interviews, ask about teamwork, not just skills. Ask what others would say about them. Spend informal time together and watch how they treat everyone, not just the boss."
+    },
+    {
+     "emoji": "🌱",
+     "title": "Everyone can grow",
+     "body": "These virtues are not fixed personality traits. They can be learned with honest feedback and coaching. Leaders should help people see their weaker virtue and grow in it, and model all three themselves."
+    }
+   ],
+   "tryThis": [
+    "Rate yourself from 1 to 3 on humble, hungry and smart. Which is your weakest?",
+    "Ask a trusted teammate which of the three virtues they see most and least in you.",
+    "Do one practical thing this week to grow your weakest virtue."
+   ],
+   "forUs": "Humility is already a core value in YWAM and in Khmer culture, which is a great start. But humility without hunger can turn into waiting to be told, and hunger without people smarts can feel pushy across cultures. People smarts also means learning what respect looks like for someone from a different background. Use these three words when choosing staff, building outreach teams and coaching DTS students. Jesus showed all three: he served humbly, worked with purpose and understood people deeply.",
+   "oneLine": "Look for — and become — someone who is humble, hungry and people smart."
   },
   {
    "id": "atomic-habits",
@@ -1216,6 +1742,265 @@ var GP_LIBRARY = {
    "oneLine": "Admit what you don't know, ask simpler questions, follow the incentives, and don't fear quitting."
   },
   {
+   "id": "lead-like-jesus",
+   "title": "Lead Like Jesus",
+   "author": "Ken Blanchard & Phil Hodges",
+   "year": 2005,
+   "shelf": "habits",
+   "mins": 5,
+   "vibe": "The best leadership model ever? He washed feet.",
+   "bigIdea": "Ken Blanchard and Phil Hodges say Jesus is the greatest model of leadership we have. For them, leadership is any time you try to influence what other people think or do, so everyone leads somewhere. Leading like Jesus means serving, not being served. The book looks at four parts of a leader: the heart, the head, the hands and the habits. If the heart is wrong, the rest will not stay right for long.",
+   "insights": [
+    {
+     "emoji": "❤️",
+     "title": "The heart: why do you lead?",
+     "body": "The first question is about motivation. Am I leading to serve others, or to serve myself? The authors say the big enemy is our ego. They turn EGO into a phrase: 'Edging God Out'. The answer is a different EGO: 'Exalting God Only'."
+    },
+    {
+     "emoji": "😨",
+     "title": "Pride and fear",
+     "body": "Ego usually shows up in two ways. Pride makes us think too highly of ourselves, so we want credit and control. Fear makes us protect ourselves, so we avoid hard talks and hold on to power. Both put me at the center instead of God and the people I serve."
+    },
+    {
+     "emoji": "🧭",
+     "title": "The head: a clear vision",
+     "body": "Jesus knew his purpose and taught a clear picture of the future and clear values. A servant leader also gives direction: where are we going and why? First you set the vision, then you serve people as they work toward it."
+    },
+    {
+     "emoji": "🙌",
+     "title": "The hands: a coach, not a boss",
+     "body": "Jesus took ordinary disciples and grew them step by step, from beginners to people who could lead and teach others. Good leaders do the same. Give a beginner clear direction and lots of support. As people grow, give them more freedom. The goal is to send them out, not to keep them dependent on you."
+    },
+    {
+     "emoji": "🙏",
+     "title": "The habits: stay filled up",
+     "body": "You cannot serve well for long if you are empty. The book points to habits Jesus lived: time alone with God, prayer, learning and living out Scripture, resting in God's unconditional love, and close friends who keep you honest. These habits keep your heart in the right place."
+    },
+    {
+     "emoji": "🧼",
+     "title": "Serving is the point",
+     "body": "Jesus washed his disciples' feet and said the greatest is the one who serves. In this model, success is not how big your title is. It is whether the people you lead grow and the mission moves forward."
+    }
+   ],
+   "tryThis": [
+    "Before a meeting or task you lead this week, ask: am I doing this to serve or to look good?",
+    "Notice one moment of pride or fear in yourself and name it honestly to God.",
+    "Pick one person you lead and ask: what do you need from me to grow right now?"
+   ],
+   "forUs": "On a YWAM base almost everyone leads something: a DTS small group, a kitchen team, an outreach team, a ministry. Try to notice ego in small places, like wanting your idea chosen or avoiding a hard talk with a teammate. Coach new staff step by step, and give Khmer leaders real responsibility, not just tasks. And guard your time with God, because a busy base can make even good leaders run on empty.",
+   "oneLine": "Lead from a heart that serves, with a clear vision, patient coaching and daily time with God."
+  },
+  {
+   "id": "the-4-hour-workweek",
+   "title": "The 4-Hour Workweek",
+   "author": "Tim Ferriss",
+   "year": 2007,
+   "isbn": "9780307465351",
+   "shelf": "habits",
+   "mins": 5,
+   "vibe": "Do less of what doesn't matter, so you have more life for what does.",
+   "bigIdea": "Tim Ferriss argues that many people waste their best years working long hours for a future they may never enjoy. He offers a four-step plan called DEAL: Definition, Elimination, Automation and Liberation. His goal is a business that runs with little effort, so you can travel and live freely now, not only at retirement. Not all of this fits missionary life, but his tools for cutting busywork and protecting rest are very useful.",
+   "insights": [
+    {
+     "emoji": "🎯",
+     "title": "D — Define what you really want",
+     "body": "Ferriss suggests 'fear-setting': write down the worst that could happen if you make a change, how you could fix it, and what it costs you to do nothing. Fear often shrinks when you look at it clearly."
+    },
+    {
+     "emoji": "✂️",
+     "title": "E — Eliminate with the 80/20 rule",
+     "body": "Often about 80% of results come from about 20% of your activities. Find that 20% and do more of it. Find the tasks that bring little value and stop doing them."
+    },
+    {
+     "emoji": "⏳",
+     "title": "Work expands to fill the time",
+     "body": "This is 'Parkinson's Law'. If you give a task a whole day, it takes a whole day. Give it a short, clear deadline and you often finish faster and focus better."
+    },
+    {
+     "emoji": "📥",
+     "title": "Batch and guard your attention",
+     "body": "Checking messages all day breaks your focus again and again. Ferriss checks email at set times only and groups similar tasks together. He also suggests a 'low-information diet': stop taking in news and noise that you will not act on."
+    },
+    {
+     "emoji": "🤝",
+     "title": "Automate and delegate",
+     "body": "Ferriss hands repeat tasks to assistants and systems. A smaller version works for anyone: write simple steps for a task once, then let someone else do it. Train people instead of becoming the bottleneck."
+    },
+    {
+     "emoji": "🌴",
+     "title": "L — Mini-retirements",
+     "body": "Instead of saving all rest for old age, Ferriss suggests longer breaks spread across life. He calls them 'mini-retirements'. The heart of this is good: rest and renewal are not a reward at the end, they are part of a healthy life now."
+    },
+    {
+     "emoji": "⚖️",
+     "title": "Where we see it differently",
+     "body": "The book is built around building automated income and escaping work you dislike. Missionaries on raised support are not trying to earn more with less effort. Our work is relational and comes from a calling, and people are never tasks to outsource. Take the tools, not the whole goal."
+    }
+   ],
+   "tryThis": [
+    "List your weekly tasks and circle the 20% that bring most of the good fruit.",
+    "Check messages at two or three set times a day for one week.",
+    "Write simple step-by-step notes for one task you always do, so someone else could do it."
+   ],
+   "forUs": "Base life is full of meetings, messages and small jobs that can crowd out the things only you can do: discipling, praying, preparing teaching, being present with people. Use the 80/20 question with your team: which activities really bear fruit? Batch admin, write down simple processes so new Khmer and international staff can step in, and plan real rest between schools and outreaches. Sabbath was God's idea long before mini-retirements. Our aim is not a four-hour week. It is to be faithful and fruitful without burning out.",
+   "oneLine": "Cut the busywork, focus on what bears fruit, and build real rest into life now."
+  },
+  {
+   "id": "the-7-habits-of-highly-effective-people",
+   "title": "The 7 Habits of Highly Effective People",
+   "author": "Stephen R. Covey",
+   "year": 1989,
+   "isbn": "9780743269513",
+   "shelf": "habits",
+   "mins": 5,
+   "vibe": "Character first, tips second. Change starts on the inside.",
+   "bigIdea": "Stephen Covey says real effectiveness comes from character and lasting principles, not quick tricks to look good. He calls this working from the 'inside out'. His seven habits move us from dependence (you take care of me) to independence (I take care of myself) and then to interdependence (we can do more together). The first three habits are about leading yourself. The next three are about working well with others. The last one keeps you renewed.",
+   "insights": [
+    {
+     "emoji": "🔑",
+     "title": "Habit 1: Be proactive",
+     "body": "Between what happens to you and how you respond, you have a choice. Proactive people focus on their 'circle of influence', the things they can actually change. Reactive people focus on their 'circle of concern', the things they worry about but cannot change, and they feel more and more powerless."
+    },
+    {
+     "emoji": "🗺️",
+     "title": "Habit 2: Begin with the end in mind",
+     "body": "Picture the end of your life. What would you want people to say about you? Let that shape today. Covey suggests writing a personal mission statement based on your values and roles, so you live on purpose and not by accident."
+    },
+    {
+     "emoji": "📅",
+     "title": "Habit 3: Put first things first",
+     "body": "Covey sorts tasks by urgent and important. Many of us live in urgent things: crises, interruptions, noise. The secret is the important but not urgent area: planning, relationships, prevention, growth. Plan your week around your roles and your big rocks first."
+    },
+    {
+     "emoji": "🤝",
+     "title": "Habit 4: Think win-win",
+     "body": "Life is not a competition where someone has to lose. Look for solutions that are good for both sides. This needs good character and trust. Covey's 'emotional bank account' helps here: kindness, keeping promises and saying sorry make deposits that build trust."
+    },
+    {
+     "emoji": "👂",
+     "title": "Habit 5: Seek first to understand",
+     "body": "Most of us listen while planning our answer. Covey asks for empathic listening: listen until you really understand the other person's feelings and point of view. Then share your own view clearly. People are more open to you when they feel understood."
+    },
+    {
+     "emoji": "🧩",
+     "title": "Habit 6: Synergize",
+     "body": "When people with different views respect each other, they can find a third way that is better than either first idea."
+    },
+    {
+     "emoji": "🪚",
+     "title": "Habit 7: Sharpen the saw",
+     "body": "A tired woodcutter with a dull saw works hard but gets little done. Take time to renew four areas: body, mind, heart and relationships, and spirit. This keeps the other habits alive."
+    }
+   ],
+   "tryThis": [
+    "Write down one worry and one thing in it that is inside your circle of influence. Act on that part.",
+    "On Sunday, plan two important but not urgent things into your week.",
+    "In one conversation, repeat back what the other person said before you give your opinion."
+   ],
+   "forUs": "A YWAM base is the definition of interdependence: Khmer and international staff from many cultures sharing a mission, a kitchen and a schedule. Habit 5 is gold here, because so many misunderstandings come from language and culture, not bad hearts. Make deposits in each other's emotional bank account, look for win-win when teams disagree, and value different cultural views as a way to find better solutions. Covey wrote for everyone, but much of this sounds like Jesus: serve, listen, keep your promises, and take time to be renewed by God.",
+   "oneLine": "Lead yourself from the inside out, then work with others in trust, and keep renewing yourself."
+  },
+  {
+   "id": "the-compound-effect",
+   "title": "The Compound Effect",
+   "author": "Darren Hardy",
+   "year": 2010,
+   "isbn": "9781593157241",
+   "shelf": "habits",
+   "mins": 5,
+   "vibe": "No magic shortcut. Just small choices, done again and again, for a long time.",
+   "bigIdea": "Darren Hardy says success is not about one big moment or a secret trick. It comes from small, smart choices repeated consistently over time. Each choice looks too small to matter, which is why it is easy to skip. But over months and years, small choices add up, like interest on money. This works in both directions: small bad habits also add up, slowly and quietly.",
+   "insights": [
+    {
+     "emoji": "🪙",
+     "title": "The magic penny",
+     "body": "Hardy asks: would you take a lot of money today, or one penny that doubles every day for a month? The penny looks weak for weeks, then grows into far more by the end. Small, steady actions work the same way. The results come late, so most people quit too early."
+    },
+    {
+     "emoji": "👬",
+     "title": "Three friends, three paths",
+     "body": "Hardy imagines three friends with similar lives. One changes nothing. One makes small good changes, like reading a little each day and eating a bit less. One makes small bad changes. After months nobody sees a difference. After a few years their lives look completely different."
+    },
+    {
+     "emoji": "🙋",
+     "title": "Take 100% responsibility",
+     "body": "You cannot control everything that happens, but you can choose your response. Stop blaming luck or other people. Hardy also says to track your choices. Writing down what you actually do, like spending or eating, shows you the truth and makes change much easier."
+    },
+    {
+     "emoji": "🔄",
+     "title": "Build habits with a strong why",
+     "body": "Willpower alone runs out. A strong reason, your 'why', keeps you going. Find the triggers for your bad habits and remove them, swap them for better habits, and start small. It helps to change habits with a friend."
+    },
+    {
+     "emoji": "🎢",
+     "title": "Momentum",
+     "body": "Starting something new is hard, like pushing a heavy merry-go-round from stillness. Once it is moving, it takes much less effort to keep it going. Keep a regular rhythm, because stopping and starting again costs a lot of energy."
+    },
+    {
+     "emoji": "🧲",
+     "title": "Watch your influences",
+     "body": "Three things shape you quietly: what you put into your mind, the people you spend time with, and your environment. Choose them on purpose. Then, to speed up growth, do a little more than expected at key moments."
+    }
+   ],
+   "tryThis": [
+    "Pick one small good choice and do it every day for seven days.",
+    "Track one area, like phone time or spending, for a week without changing anything. Then look.",
+    "Write down your 'why' for one goal and put it somewhere you will see it daily."
+   ],
+   "forUs": "Mission work rarely has quick wins. Language learning, discipleship, trust between Khmer and international staff, and fruit in a village all come from small faithful steps over years. This book is a good reminder that the daily things count: a few new Khmer words, a short time in the Word, a kind word to a teammate, showing up for intercession. Be patient in the slow middle, when nothing seems to change. God often works through small and steady faithfulness.",
+   "oneLine": "Small, smart choices plus consistency plus time equals big change."
+  },
+  {
+   "id": "the-power-of-habit",
+   "title": "The Power of Habit",
+   "author": "Charles Duhigg",
+   "year": 2012,
+   "isbn": "9780812981605",
+   "shelf": "habits",
+   "mins": 5,
+   "vibe": "Your brain runs on autopilot. Learn how the autopilot works and you can reprogram it.",
+   "bigIdea": "Charles Duhigg, a journalist, explains the science of habits in people, companies and whole communities. A large part of what we do each day is habit, not careful choice. Every habit follows a simple loop, and once you understand the loop you can change it. Habits are not destiny: they can be rebuilt.",
+   "insights": [
+    {
+     "emoji": "🔁",
+     "title": "The habit loop",
+     "body": "Every habit has three parts. A cue triggers it, like a time, place or feeling. A routine is the behavior itself. A reward is what your brain gets at the end. Repeat the loop enough and it runs on its own, with little thinking."
+    },
+    {
+     "emoji": "🤤",
+     "title": "Craving is the engine",
+     "body": "Habits get strong when your brain starts to expect the reward as soon as it sees the cue. That expectation is a craving. Duhigg shows how advertisers use this, for example with products that give a fresh, tingling feeling so people crave it and come back."
+    },
+    {
+     "emoji": "🔧",
+     "title": "The golden rule of change",
+     "body": "You usually cannot just delete a bad habit. Instead keep the same cue and the same reward, but swap in a new routine. Bored at 3 pm and reaching for a snack? Maybe what you really want is a chat with a friend. Belief also matters: change often sticks when people believe they can change, and groups help that belief grow."
+    },
+    {
+     "emoji": "🗝️",
+     "title": "Keystone habits",
+     "body": "Some habits start a chain reaction. Duhigg tells how Paul O'Neill turned around the company Alcoa by focusing on worker safety, which changed many other habits too. For individuals, things like regular exercise or eating together as a family can lift other parts of life."
+    },
+    {
+     "emoji": "💪",
+     "title": "Willpower can be trained",
+     "body": "Willpower works like a muscle. It gets tired, but it can grow stronger. Duhigg describes how Starbucks trained staff with simple plans for hard moments, so they knew ahead of time how to respond to an angry customer. Plan your response before the hard moment comes."
+    },
+    {
+     "emoji": "🏘️",
+     "title": "Habits in groups and movements",
+     "body": "Organizations have habits too, and a crisis can be a chance to change them. Movements grow through friendships, wider community ties, and new shared habits. Duhigg uses the Montgomery bus boycott and Saddleback Church as examples."
+    }
+   ],
+   "tryThis": [
+    "Pick one habit you want to change and write down its cue, routine and reward.",
+    "Test what reward you really want by trying a different routine when the cue comes.",
+    "Plan ahead for one hard moment: decide now what you will do when it comes."
+   ],
+   "forUs": "A base runs on shared habits: morning worship, intercession, meals, staff meetings, how we greet new students. Some help us and some just happen out of tradition. Ask your team which keystone habit could lift everything else, like a weekly team prayer time or eating lunch together across cultures. When you help a DTS student or teammate with a struggle, remember the golden rule: find the real need behind the habit, and walk with them in community. Lasting change often comes with faith and with friends.",
+   "oneLine": "Find the cue and the reward, change the routine, and lasting change becomes possible."
+  },
+  {
    "id": "deep-work",
    "title": "Deep Work",
    "author": "Cal Newport",
@@ -1479,6 +2264,106 @@ var GP_LIBRARY = {
    ],
    "forUs": "Mission life can bring stress, homesickness, culture shock and old wounds to the surface. This book can help us notice our thinking and bring it to God, alone or with a mentor or team leader. It is not a replacement for medical or mental health care, so if someone is really struggling, please help them find proper support too.",
    "oneLine": "Leaf's message is that your thoughts matter and, with God's help, you can choose to renew them one day at a time."
+  },
+  {
+   "id": "building-a-storybrand",
+   "title": "Building a StoryBrand",
+   "author": "Donald Miller",
+   "year": 2017,
+   "isbn": "9780718033323",
+   "shelf": "create",
+   "mins": 5,
+   "vibe": "Your audience is the hero. You're the guide. Tell the story clearly.",
+   "bigIdea": "Miller says most messages fail because they are confusing, not because the product is bad. People's brains filter out anything that is hard to understand. The fix is to use the shape of a good story, where the customer is the hero and you are the helpful guide. His seven-part framework, called SB7, helps you say what you offer so clearly that anyone gets it in seconds.",
+   "insights": [
+    {
+     "emoji": "🧠",
+     "title": "Clarity beats clever",
+     "body": "The brain is always trying to save energy, so it ignores messages that take work to understand. If people cannot quickly tell what you offer, how it helps them and how to get it, they move on. Clear is better than clever, every time."
+    },
+    {
+     "emoji": "🦸",
+     "title": "They are the hero",
+     "body": "The first part of the framework is a character who wants something. That character is your customer, not you. Find one simple thing they want, and make your message all about helping them get it."
+    },
+    {
+     "emoji": "🐉",
+     "title": "Name the problem",
+     "body": "Every story needs a problem, often shown as a villain. Miller says problems have three levels: the outside problem, how it makes people feel inside, and why it is just wrong. People mostly buy solutions to the inside problem, the feeling."
+    },
+    {
+     "emoji": "🧙",
+     "title": "Be the guide, not the hero",
+     "body": "Heroes need a guide, like Yoda in Star Wars. A good guide shows empathy, saying 'I understand how you feel', and authority, showing they can really help. Brands that make themselves the hero lose people's attention."
+    },
+    {
+     "emoji": "🗺️",
+     "title": "Give a plan and a call",
+     "body": "Guides give heroes a simple plan, often just three steps, so the path feels safe. Then they clearly call them to act, like 'Book now' or 'Join us'. Miller also suggests a softer option, like a free guide, for people not ready yet."
+    },
+    {
+     "emoji": "🏆",
+     "title": "Show what's at stake",
+     "body": "Stories need stakes. Show briefly what failure looks like if nothing changes, and paint a clear picture of success if it does. In the end, people want to change and become a better version of themselves."
+    }
+   ],
+   "tryThis": [
+    "Write a one-liner for your ministry: the problem, your solution, and the result.",
+    "Look at one poster or post and ask: is the audience the hero, or are we?",
+    "Turn your sign-up process into three simple steps and share them clearly."
+   ],
+   "forUs": "We share many messages: DTS promotion, cafe menus, outreach reports, newsletters to supporters. It's easy to make ourselves the hero of every story. StoryBrand reminds us that students, guests and partners are the heroes, and we are guides pointing them toward growth and toward God. Clear, simple words also help Khmer and international readers who use English as a second language.",
+   "oneLine": "Make your audience the hero, be the guide, and say it so clearly anyone gets it."
+  },
+  {
+   "id": "the-war-of-art",
+   "title": "The War of Art",
+   "author": "Steven Pressfield",
+   "year": 2002,
+   "isbn": "9781936891023",
+   "shelf": "create",
+   "mins": 5,
+   "vibe": "There's a force fighting your best work. Its name is Resistance.",
+   "bigIdea": "Pressfield says every person who tries to create or do something good faces an invisible enemy he calls Resistance. It shows up as fear, delay, distraction and excuses. The way to beat it is not to wait for inspiration, but to 'turn pro': show up and do the work every day. When you do, he believes, a deeper help comes to meet you.",
+   "insights": [
+    {
+     "emoji": "👻",
+     "title": "Meet Resistance",
+     "body": "Resistance is the inner force that stops you from writing, praying, exercising, starting a project or following a calling. It is not a person outside you. It lives inside, and it never fully goes away, so you must face it again each day."
+    },
+    {
+     "emoji": "🧭",
+     "title": "It points to what matters",
+     "body": "Here's the twist: the more important a task is for your growth, the more Resistance you will feel. So that heavy feeling can be a compass. If you strongly avoid something, it may be exactly what you are meant to do."
+    },
+    {
+     "emoji": "⏳",
+     "title": "Its favourite tricks",
+     "body": "Resistance loves procrastination, the 'I'll start tomorrow' trick. It also uses smart-sounding excuses, drama, endless busyness and fear of what others think. Pressfield says fear is often a good sign that you are close to something meaningful."
+    },
+    {
+     "emoji": "💼",
+     "title": "Amateur vs professional",
+     "body": "Amateurs work when they feel like it. Professionals show up every day, no matter how they feel. They are patient, keep learning, take the work seriously but not themselves, and do not let criticism or praise control them."
+    },
+    {
+     "emoji": "✍️",
+     "title": "Just sit down and start",
+     "body": "Pressfield describes his own routine: he sits down and works for a set time, then stops and lets it go. The hardest part is beginning. Once you start, the work begins to pull you forward."
+    },
+    {
+     "emoji": "✨",
+     "title": "Help from beyond",
+     "body": "In the last part, Pressfield talks openly about a higher realm, using words like Muse and angels. He believes that when we commit to our work, unseen help comes alongside us. Do the work for its own sake, not for praise, and offer it up."
+    }
+   ],
+   "tryThis": [
+    "Name one task you keep avoiding, and write down how Resistance shows up for you.",
+    "Set a fixed 25-minute time each day this week and do that task, no matter how you feel.",
+    "When you finish, stop and let it go, without judging how good it was."
+   ],
+   "forUs": "On a busy base, Resistance often hides behind good things: one more meeting, one more chat, one more errand. It can keep us from prayer, language study, preparing a teaching or starting that new ministry idea God put on our heart. Pressfield writes from his own spiritual view, but as followers of Jesus we can take the core lesson: faithfulness every day, and trusting God to meet us in the work.",
+   "oneLine": "Resistance is real, but showing up every day like a pro is how you beat it."
   }
  ]
 };

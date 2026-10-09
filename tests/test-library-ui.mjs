@@ -85,6 +85,7 @@ async function open(user, opts) {
 
 const C = {}; vm.createContext(C); vm.runInContext(fs.readFileSync(PUBLIC + '/library.js', 'utf8') + ';this.L=GP_LIBRARY;', C);
 const BOOKS = C.L.books;
+const START = C.L.startHere || [];
 const openLib = async page => { await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="library"]'); await page.waitForTimeout(900); };
 {
   const { ctx, page } = await open('sreilea', { covers: 'ok' });
@@ -101,6 +102,9 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   ok('books with an ISBN show their cover', imgs === BOOKS.filter(b => b.isbn).length, imgs + ' covers');
   ok('… and the ones without still have a drawn cover', (await page.$$('.libCoverDrawn')).length === BOOKS.length);
   await page.screenshot({ path: OUT + '/library.png', fullPage: true });
+  await page.click('[data-libshelf="start"]'); await page.waitForTimeout(250);
+  const startIds = await page.$$eval('[data-libbook]', els => els.map(e => e.getAttribute('data-libbook')));
+  ok('“Start here” shows the ten picks, in order, with a line on why', startIds.join() === START.join() && !!(await page.$('.libStartNote')), startIds.length + ' books');
   await page.click('[data-libshelf="habits"]'); await page.waitForTimeout(250);
   ok('a shelf shows only its books', (await page.$$('[data-libbook]')).length === BOOKS.filter(b => b.shelf === 'habits').length);
   await page.click('[data-libbook="atomic-habits"]'); await page.waitForTimeout(400);

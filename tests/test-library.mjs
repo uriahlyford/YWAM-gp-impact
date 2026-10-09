@@ -15,7 +15,7 @@ function ok(name, cond, extra) {
 const ctx = {}; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(PUBLIC + '/library.js', 'utf8') + ';this.L=GP_LIBRARY;', ctx);
 const L = ctx.L, shelves = L.shelves.map((s) => s.id), books = L.books;
-ok('there are shelves and books', shelves.length === 4 && books.length >= 20, shelves.join() + ' · ' + books.length + ' books');
+ok('there are four shelves and all 44 books', shelves.length === 4 && books.length === 44, shelves.join() + ' · ' + books.length + ' books');
 ok('every shelf has a name, an emoji and two colours', L.shelves.every((s) => s.name && s.emoji && /^#[0-9A-F]{6}$/i.test(s.color) && /^#[0-9A-F]{6}$/i.test(s.ink)));
 ok('ids are unique slugs', new Set(books.map((b) => b.id)).size === books.length && books.every((b) => /^[a-z0-9-]+$/.test(b.id)));
 const str = (v) => typeof v === 'string' && v.trim().length > 0;
@@ -34,5 +34,7 @@ ok('an ISBN, when given, is a valid ISBN-13', badIsbn.length === 0, badIsbn.map(
 const texts = (b) => [b.vibe, b.bigIdea, b.forUs, b.oneLine].concat(b.insights.map((x) => x.title), b.insights.map((x) => x.body), b.tryThis);
 const quoted = books.filter((b) => texts(b).some((x) => /[“"][^”"]{40,}[”"]/.test(x)));
 ok('no long quotations — our own words', quoted.length === 0, quoted.map((b) => b.id).join(', '));
+const ids = new Set(books.map((b) => b.id)), start = L.startHere || [];
+ok('“Start here” is ten real books, none twice', start.length === 10 && new Set(start).size === 10 && start.every((id) => ids.has(id)), start.filter((id) => !ids.has(id)).join(', '));
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
