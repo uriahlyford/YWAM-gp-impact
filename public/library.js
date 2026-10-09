@@ -1,8 +1,9 @@
 /*  The Library — five-minute reads of the books on Craig Groeschel's four
     leadership book lists (craiggroeschel.com, "44 leadership books" series),
     written for GP in our own words. Not the authors' or publishers' text and not
-    any summary service's; no quotations. Covers load on the phone from Open
-    Library by ISBN (teams.html draws a cover underneath in case one is missing).
+    any summary service's; no quotations.
+    The covers are drawn by teams.html (libCoverHtml_) in one series look from the
+    shelf colours and the brand paper, ink and marigold below — nothing is fetched.
 
     Plain script, loaded only when the Library is opened (libLoad_ in teams.html).
     To add a book: add an object with the same fields to GP_LIBRARY.books —
@@ -35,10 +36,15 @@ var GP_LIBRARY = {
    "id": "create",
    "name": "Create & communicate",
    "emoji": "💡",
-   "color": "#C9800F",
-   "ink": "#7A4A04"
+   "color": "#6B4FA0",
+   "ink": "#3F2A66"
   }
  ],
+ "cover": {
+  "paper": "#FAF6F0",
+  "ink": "#17150F",
+  "accent": "#FFB323"
+ },
  "startHere": [
   "the-21-irrefutable-laws-of-leadership",
   "the-7-habits-of-highly-effective-people",

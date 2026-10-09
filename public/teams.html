@@ -650,18 +650,21 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 @media (max-width:340px){ .libGrid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 .libCard { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:3px; background:none; border:0; padding:0; text-align:left; font:inherit; color:var(--ink); cursor:pointer; min-width:0; }
 .libCard .libCover { width:100%; }
-.libCardTitle { font-size:13px; font-weight:800; line-height:1.25; margin-top:6px; overflow-wrap:anywhere; }
-.libCardMeta { font-size:12px; color:var(--muted); line-height:1.3; overflow-wrap:anywhere; }
+.libCardMeta { font-size:12px; color:var(--muted); line-height:1.3; overflow-wrap:anywhere; margin-top:7px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
 .libCardMins { font-size:11.5px; color:var(--faint); font-weight:700; }
 .libReadTag { position:absolute; top:6px; right:6px; z-index:2; width:24px; height:24px; border-radius:50%; background:var(--good); color:var(--pOnMark); font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.25); }
-.libCover { position:relative; aspect-ratio:2/3; border-radius:10px; overflow:hidden; box-shadow:0 6px 16px rgba(23,21,15,.18), 0 1px 3px rgba(23,21,15,.2); }
-.libCoverDrawn { position:absolute; inset:0; padding:10px 8px; display:flex; flex-direction:column; justify-content:space-between; color:var(--pOnMark); }
-.libCoverTitle { font-size:13px; font-weight:900; line-height:1.15; letter-spacing:-.01em; overflow-wrap:break-word; hyphens:auto; }
-.libCoverAuthor { font-size:10px; font-weight:700; opacity:.85; line-height:1.2; }
-.libCover.big .libCoverTitle { font-size:16px; } .libCover.big .libCoverAuthor { font-size:11px; }
-.libCoverImg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.libCover { position:relative; aspect-ratio:2/3; border-radius:6px 9px 9px 6px; overflow:hidden; container-type:inline-size; display:flex; flex-direction:column;
+  box-shadow:0 6px 16px rgba(23,21,15,.18), 0 1px 3px rgba(23,21,15,.2), inset 3px 0 0 rgba(23,21,15,.08); }
+.libCoverArt { position:relative; flex:0 0 57%; overflow:hidden; } .libCoverArt svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+.libCoverText { flex:1; min-height:0; padding:7% 8% 6%; display:flex; flex-direction:column; overflow:hidden; }
+.libCoverRule { width:22%; height:3px; border-radius:2px; margin-bottom:5%; flex:0 0 auto; }
+.libCoverTitle { font-family:'Koulen','Archivo Narrow','Arial Narrow',Impact,sans-serif; font-weight:400; text-transform:uppercase; line-height:1.02; letter-spacing:.01em; overflow-wrap:break-word;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; font-size:13px; }
+.libCoverTitle.l1 { font-size:17cqw; } .libCoverTitle.l2 { font-size:13.5cqw; } .libCoverTitle.l3 { font-size:11.5cqw; -webkit-line-clamp:4; } .libCoverTitle.l4 { font-size:10cqw; -webkit-line-clamp:4; }
+.libCoverAuthor { display:none; margin-top:auto; font-size:6.5cqw; font-weight:700; opacity:.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.libCover.big .libCoverAuthor { display:block; }
 .libHero { display:flex; gap:16px; align-items:flex-end; margin:6px 0 14px; }
-.libHero .libCover { width:120px; flex:0 0 120px; }
+.libHero .libCover { width:132px; flex:0 0 132px; }
 .libHeroText { min-width:0; }
 .libShelfTag { display:inline-block; font-size:11.5px; font-weight:800; color:var(--libink); background:color-mix(in srgb, var(--libc) 16%, transparent); border-radius:999px; padding:3px 9px; }
 .libTitle { margin:6px 0 2px; font-size:24px; line-height:1.15; overflow-wrap:anywhere; }
@@ -5082,13 +5085,40 @@ function libSetRead_(id, on){
   try { localStorage.setItem(LIB_READ_KEY, JSON.stringify(r)); } catch(e){}
 }
 function libShelf_(id){ return (GP_LIBRARY.shelves.filter(function(x){ return x.id===id; })[0]) || GP_LIBRARY.shelves[0]; }
+/* Covers are drawn here, not fetched: one series look for every book — the
+   shelf's colour with a pattern on top, the title in Koulen on paper below —
+   so they sit well together and show at once, offline too. The pattern is
+   picked by the book's place on its shelf (neighbours never repeat) and nudged
+   by a hash of its id, so every cover stays the same from day to day. */
+function libHash_(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function libStar_(x, y, r){ return 'M'+x+','+(y-r)+'Q'+x+','+y+' '+(x+r)+','+y+'Q'+x+','+y+' '+x+','+(y+r)+'Q'+x+','+y+' '+(x-r)+','+y+'Q'+x+','+y+' '+x+','+(y-r)+'Z'; }
+function libMotif_(b){
+  var C=GP_LIBRARY.cover||{}, P=C.paper||'white', A=C.accent||'gold';
+  var shelfIdx=GP_LIBRARY.shelves.map(function(x){ return x.id; }).indexOf(b.shelf);
+  var onShelf=GP_LIBRARY.books.filter(function(x){ return x.shelf===b.shelf; }).indexOf(b);
+  var seed=libHash_(b.id), rnd=function(){ seed=(Math.imul(seed,1103515245)+12345)>>>0; return (seed>>>8)/16777216; };
+  var m=(onShelf+shelfIdx*3)%10, o='', k, x, y;
+  var c=function(cx,cy,r,a){ return '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r.toFixed(1)+'" '+a+'/>'; };
+  var ring='fill="none" stroke="'+P+'" stroke-opacity=".3" stroke-width="4"';
+  if(m===0){ x=22+rnd()*56; y=22+rnd()*46; for(k=1;k<=6;k++) o+=c(x,y,k*11,ring); o+=c(x,y,6,'fill="'+A+'"'); }
+  else if(m===1){ x=30+rnd()*40; o+=c(x,92,30,'fill="'+A+'"'); for(k=0;k<9;k++){ var an=Math.PI*(1+k/8); o+='<line x1="'+(x+Math.cos(an)*38).toFixed(1)+'" y1="'+(92+Math.sin(an)*38).toFixed(1)+'" x2="'+(x+Math.cos(an)*70).toFixed(1)+'" y2="'+(92+Math.sin(an)*70).toFixed(1)+'" stroke="'+P+'" stroke-opacity=".4" stroke-width="3" stroke-linecap="round"/>'; } }
+  else if(m===2){ var pick=Math.floor(rnd()*30); for(k=0;k<30;k++){ x=12+(k%6)*15.2; y=12+Math.floor(k/6)*16.5; o+= k===pick ? c(x,y,6.5,'fill="'+A+'"') : c(x,y,2.4,'fill="'+P+'" fill-opacity=".38"'); } }
+  else if(m===3){ var hot=2+Math.floor(rnd()*8); o+='<g transform="rotate(-35 50 45)">'; for(k=-4;k<14;k++) o+='<rect x="'+(k*12-40)+'" y="-80" width="5" height="250" fill="'+(k===hot?A:P)+'"'+(k===hot?'':' fill-opacity=".2"')+'/>'; o+='</g>'; }
+  else if(m===4){ x=rnd()<.5?0:100; var hotA=1+Math.floor(rnd()*5); for(k=1;k<=8;k++) o+=c(x,90,k*13,'fill="none" stroke="'+(k===hotA?A:P)+'"'+(k===hotA?'':' stroke-opacity=".32"')+' stroke-width="5"'); }
+  else if(m===5){ x=40+rnd()*20; o+='<path d="'+libStar_(x,46,30)+'" fill="'+A+'"/><path d="'+libStar_(x>50?20:80,18,9)+'" fill="'+P+'" fill-opacity=".7"/><path d="'+libStar_(x>50?84:16,72,6)+'" fill="'+P+'" fill-opacity=".45"/>'; }
+  else if(m===6){ y=40+rnd()*10; o+=c(36,y,25,'fill="'+P+'" fill-opacity=".2"')+c(64,y,25,'fill="'+P+'" fill-opacity=".2"')+c(50,y+22,25,'fill="'+P+'" fill-opacity=".14"')+c(50,y+8,6,'fill="'+A+'"'); }
+  else if(m===7){ x=18+rnd()*20; o+=c(x,24,9,'fill="'+A+'"')+'<polygon points="-5,92 34,36 74,92" fill="'+P+'" fill-opacity=".22"/><polygon points="34,92 72,24 108,74 108,92" fill="'+P+'" fill-opacity=".34"/>'; }
+  else if(m===8){ o+='<path d="M-2,92V74H18V60H38V46H58V32H78V18H102V92Z" fill="'+P+'" fill-opacity=".24"/>'+c(90,9,6,'fill="'+A+'"'); }
+  else { var hotW=Math.floor(rnd()*5); for(k=0;k<5;k++){ y=16+k*15; o+='<path d="M-5,'+y+' C20,'+(y-12)+' 30,'+(y+12)+' 50,'+y+' S80,'+(y-12)+' 105,'+y+'" fill="none" stroke="'+(k===hotW?A:P)+'"'+(k===hotW?'':' stroke-opacity=".34"')+' stroke-width="3.5" stroke-linecap="round"/>'; } }
+  return '<svg viewBox="0 0 100 90" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'+o+'</svg>';
+}
 function libCoverHtml_(b, big){
-  var sh=libShelf_(b.shelf);
-  var h='<div class="libCover'+(big?' big':'')+'" style="background:linear-gradient(160deg,'+sh.color+','+sh.ink+')">'+
-    '<div class="libCoverDrawn"><div class="libCoverTitle">'+esc(b.title)+'</div><div class="libCoverAuthor">'+esc(b.author)+'</div></div>';
-  if(b.isbn) h+='<img class="libCoverImg" alt="" loading="lazy" referrerpolicy="no-referrer" src="https://covers.openlibrary.org/b/isbn/'+esc(b.isbn)+'-M.jpg?default=false"'+
-    ' onload="if(this.naturalWidth<20)this.remove()" onerror="this.remove()">';
-  return h+'</div>';
+  var sh=libShelf_(b.shelf), C=GP_LIBRARY.cover||{}, n=b.title.length;
+  return '<div class="libCover'+(big?' big':'')+'" style="background:'+(C.paper||sh.color)+';color:'+(C.ink||sh.ink)+'">'+
+    '<div class="libCoverArt" style="background:linear-gradient(155deg,'+sh.color+','+sh.ink+')">'+libMotif_(b)+'</div>'+
+    '<div class="libCoverText"><div class="libCoverRule" style="background:'+sh.color+'"></div>'+
+    '<div class="libCoverTitle '+(n<=12?'l1':n<=22?'l2':n<=34?'l3':'l4')+'">'+esc(b.title)+'</div>'+
+    '<div class="libCoverAuthor">'+esc(b.author)+'</div></div></div>';
 }
 function libraryHtml(){
   var back='<button class="linkbtn" id="libBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(S.libBook ? t('Library') : t('My Home'))+'</button>';
@@ -5115,13 +5145,12 @@ function libraryHtml(){
     }).join('')+'</div>'+
     (S.libShelf==='start' ? '<p class="sub libStartNote">'+esc(gpT('{n} books to read first for leading at GP: culture, teams, hard conversations, vision, systems and getting things done.',{n:picks.length}))+'</p>' : '');
   h+='<div class="libGrid">'+shown.map(function(x){
-    return '<button class="libCard" data-libbook="'+esc(x.id)+'">'+libCoverHtml_(x)+
+    return '<button class="libCard" data-libbook="'+esc(x.id)+'" aria-label="'+esc(x.title+' — '+x.author)+'">'+libCoverHtml_(x)+
       (read[x.id]?'<span class="libReadTag">✓</span>':'')+
-      '<span class="libCardTitle">'+esc(x.title)+'</span><span class="libCardMeta">'+esc(x.author)+'</span>'+
+      '<span class="libCardMeta">'+esc(x.author)+'</span>'+
       '<span class="libCardMins">⏱ '+esc(gpT('{n} min',{n:x.mins||5}))+'</span></button>';
   }).join('')+'</div>';
-  return h+'<p class="pFine">'+esc(t('Summaries written for GP in our own words — not by the authors or publishers. Love one? Read the whole book.'))+' '+
-    esc(t('Covers from Open Library.'))+'</p>';
+  return h+'<p class="pFine">'+esc(t('Summaries written for GP in our own words — not by the authors or publishers. Love one? Read the whole book.'))+'</p>';
 }
 function libBookHtml_(b){
   var sh=libShelf_(b.shelf), read=libRead_()[b.id];

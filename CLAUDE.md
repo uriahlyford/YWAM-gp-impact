@@ -1203,10 +1203,12 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
   English on purpose; the screens around them are translated.
 - **Loaded only when opened** (`libLoad_`, `data-optional` so a failed load says so on
   the page instead of the whole-app error screen); sw.js precaches it for offline reading.
-- **Covers** load on the phone from Open Library by ISBN (`?default=false`, so a miss is
-  a 404 and the img removes itself); a drawn cover in the shelf's colour sits underneath,
-  so a wrong ISBN or no connection still looks like a book. ISBNs were written from
-  memory — the check digit is tested, the book they point to is not.
+- **Covers are drawn, not fetched** (`libCoverHtml_`/`libMotif_`): one series look —
+  the shelf's colour with one of ten patterns (picked by place on the shelf so
+  neighbours differ, nudged by a hash of the id), the brand marigold as the one accent,
+  and the title in Koulen on paper below. Instant and offline; no image requests at all.
+  Colours live in `GP_LIBRARY.shelves` and `GP_LIBRARY.cover`. ISBNs stay in the data
+  for reference only.
 - "Read" ticks are this phone's only (`gp-lib-read` in localStorage). To add a book, add
   an object to `GP_LIBRARY.books`; tests/test-library.mjs checks the shape.
 

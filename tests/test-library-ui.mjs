@@ -1,9 +1,8 @@
 /* The Library on the page, on the real backend: in the menu; the books load
-   only when it opens; every book on the shelf with its cover (a stand-in image
-   for Open Library) or a drawn one; shelves filter; a book page has every part;
-   Mark as read sticks on this phone and shows on the shelf; Next book; with the
-   cover service blocked nothing looks broken; Khmer at 320px; a failed load
-   offers Try again. */
+   only when it opens; every book on the shelf with its drawn cover — one series
+   look, nothing fetched, neighbours never the same pattern; shelves filter; a book
+   page has every part; Mark as read sticks on this phone and shows on the shelf;
+   Next book; Khmer at 320px; a failed load offers Try again. */
 import vm from 'node:vm';
 import { REPO, PUBLIC, tmpDir, CHROMIUM } from './env.mjs';
 import { chromium, devices } from 'playwright';
@@ -13,8 +12,6 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 const TMP = tmpDir('library-ui');
-/* a 40×60 PNG standing in for an Open Library cover (the sandbox cannot reach it) */
-const COVER_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACgAAAA8CAIAAACb22+3AAAAOElEQVR4nO3NQQkAAAgEsAtmCGMbyxgiDPZfpvpExGKxWCwWi8VisVgsFovFYrFYLBaLxWLxp3gBm4B0NUMK7qAAAAAASUVORK5CYII=', 'base64');
 const OUT = tmpDir('library-ui-out');
 fs.mkdirSync(TMP + '/node_modules/@netlify/blobs', { recursive: true });
 fs.writeFileSync(TMP + '/node_modules/@netlify/blobs/index.js', `
@@ -58,7 +55,7 @@ function ok(name, cond, extra) {
   else { fail++; console.log('FAIL ' + name + (extra ? '  → ' + extra : '')); }
 }
 const browser = await chromium.launch({ executablePath: CHROMIUM });
-const errors = [];
+const errors = [], imageFetches = [];
 async function open(user, opts) {
   opts = opts || {};
   const ctx = await browser.newContext({ ...devices['iPhone 13'], timezoneId: 'Asia/Phnom_Penh' });
@@ -67,8 +64,7 @@ async function open(user, opts) {
   page.on('pageerror', e => errors.push('PAGEERROR ' + e.message));
   page.on('console', m => { if (m.type() === 'error' && !/net::|ERR_/.test(m.text())) errors.push('CONSOLE ' + m.text()); });
   await page.route('**fonts.g**', r => r.abort());
-  if (opts.covers === 'ok') await page.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 200, contentType: 'image/png', body: COVER_PNG }));
-  else await page.route('https://covers.openlibrary.org/**', r => r.abort());
+  page.on('request', r => { if (r.resourceType() === 'image' && !r.url().startsWith(BASE) && !r.url().startsWith('data:')) imageFetches.push(r.url()); });
   await page.addInitScript(a => {
     localStorage.setItem('gp-staff', JSON.stringify({ user: a.u, pin: '1234' }));
     if (a.km) localStorage.setItem('gp-lang', 'km');
@@ -88,7 +84,7 @@ const BOOKS = C.L.books;
 const START = C.L.startHere || [];
 const openLib = async page => { await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="library"]'); await page.waitForTimeout(900); };
 {
-  const { ctx, page } = await open('sreilea', { covers: 'ok' });
+  const { ctx, page } = await open('sreilea');
   const loadedAtStart = await page.evaluate(() => typeof GP_LIBRARY !== 'undefined');
   ok('the books are not loaded until the Library is opened', !loadedAtStart);
   await page.click('#menuBtn'); await page.waitForTimeout(250);
@@ -98,9 +94,14 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   ok('every book is on the shelf', cards.length === BOOKS.length, cards.length + ' of ' + BOOKS.length);
   await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 400) { window.scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); } window.scrollTo(0, 0); });
   await page.waitForTimeout(500);
-  const imgs = await page.$$eval('.libCover .libCoverImg', is => is.filter(i => i.complete && i.naturalWidth > 0).length);
-  ok('books with an ISBN show their cover', imgs === BOOKS.filter(b => b.isbn).length, imgs + ' covers');
-  ok('… and the ones without still have a drawn cover', (await page.$$('.libCoverDrawn')).length === BOOKS.length);
+  const covers = await page.$$eval('.libGrid .libCover', cs => cs.map(c => ({ title: c.querySelector('.libCoverTitle').innerText, svg: c.querySelector('.libCoverArt svg').innerHTML, h: c.getBoundingClientRect().height, w: c.getBoundingClientRect().width })));
+  ok('every book has a drawn cover with its title on it', covers.length === BOOKS.length && covers.every((c, i) => c.title.toLowerCase() === BOOKS[i].title.toLowerCase() && c.svg.length > 50));
+  ok('… all the same shape', covers.every(c => Math.abs(c.h / c.w - 1.5) < 0.02));
+  ok('… and no two side by side on a shelf share a pattern', covers.every((c, i) => i === 0 || BOOKS[i].shelf !== BOOKS[i - 1].shelf || c.svg !== covers[i - 1].svg));
+  ok('no cover is fetched from anywhere — they show at once, offline too', imageFetches.length === 0 && !(await page.$('.libCover img')), imageFetches.slice(0, 3).join(' '));
+  const clipped = await page.$$eval('.libCoverTitle', ts => ts.filter(t => { const lh = parseFloat(getComputedStyle(t).fontSize) * 1.02;   // a line clamped away, not Koulen's tall caps
+      return t.scrollWidth > t.clientWidth + 1 || t.scrollHeight - t.clientHeight > lh * 0.5; }).map(t => t.innerText.replace(/\n/g, ' ') + ':' + (t.scrollHeight - t.clientHeight)));
+  ok('every title fits whole on its cover', clipped.length === 0, clipped.join(' | '));
   await page.screenshot({ path: OUT + '/library.png', fullPage: true });
   await page.click('[data-libshelf="start"]'); await page.waitForTimeout(250);
   const startIds = await page.$$eval('[data-libbook]', els => els.map(e => e.getAttribute('data-libbook')));
@@ -125,15 +126,11 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await ctx.close();
 }
 {
-  const { ctx, page } = await open('sreilea', { covers: 'blocked' });
+  const { ctx, page } = await open('sreilea');
   await openLib(page);
-  await page.waitForTimeout(600);
-  /* covers below the fold load lazily, so only the ones on screen have been tried */
-  const onScreenImgs = await page.$$eval('.libCoverImg', is => is.filter(i => { const r = i.getBoundingClientRect(); return r.top < window.innerHeight && r.bottom > 0; }).length);
-  ok('with no cover service, the drawn covers show and no broken image is left on screen', onScreenImgs === 0 && (await page.$$('.libCoverDrawn')).length === BOOKS.length, onScreenImgs + ' left');
-  await page.screenshot({ path: OUT + '/library-drawn.png', fullPage: false });
+  await page.screenshot({ path: OUT + '/library-covers.png', fullPage: true });
   await page.click('[data-libbook="extreme-ownership"]'); await page.waitForTimeout(400);
-  await page.screenshot({ path: OUT + '/book-drawn.png', fullPage: true });
+  await page.screenshot({ path: OUT + '/book-cover.png', fullPage: false });
   await ctx.close();
 }
 {
@@ -141,7 +138,6 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push('PAGEERROR ' + e.message));
   await page.route('**fonts.g**', r => r.abort());
-  await page.route('https://covers.openlibrary.org/**', r => r.abort());
   await page.addInitScript(() => { localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })); localStorage.setItem('gp-lang', 'km'); });
   await page.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await page.waitForSelector('nav.bottom button', { timeout: 15000 });
