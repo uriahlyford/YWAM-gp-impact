@@ -76,14 +76,14 @@ ok('nothing about reads or signatures in the roster', !JSON.stringify(boot.roste
 
 console.log('\n=== the papers ===');
 boot = await call('getMyBoot', ['dara', '1234']);
-ok('before any paper: only the contract is asked, and there is none', boot.required && boot.required.total === 1 && boot.required.items[0].kind === 'contract' && !boot.required.finished);
+ok('before any paper: only the Child Protection Agreement and the contract are asked, none done', boot.required && boot.required.total === 2 && boot.required.items.map((x) => x.kind).join() === 'legal,contract' && boot.required.done === 0 && !boot.required.finished);
 r = await call('reqDocSave', ['dara', '1234', { title: 'Child Protection Policy' }]);
 ok('staff cannot add a paper', !r.ok && r.err === 'not_authorized');
 r = await call('reqDocSave', ['hana', '1234', { title: 'Child Protection Policy' }]);
 const cpp = r.doc;
 ok('HR can', r.ok && cpp.title === 'Child Protection Policy' && cpp.version === 1 && cpp.kind === 'none');
 boot = await call('getMyBoot', ['dara', '1234']);
-ok('a paper with nothing to read yet is not asked', boot.required.total === 1);
+ok('a paper with nothing to read yet is not asked', boot.required.total === 2);
 r = await call('reqDocUpload', ['hana', '1234', cpp.id, 'cpp.pdf', 'application/zip', PDF, false]);
 ok('only a PDF or a picture is taken', !r.ok && r.err === 'bad_type');
 r = await call('reqDocUpload', ['hana', '1234', cpp.id, 'cpp.pdf', 'application/pdf', PDF, true]);
@@ -94,7 +94,7 @@ ok('an admin can add one as a link', r.ok && man.kind === 'link');
 r = await call('reqDocSave', ['uriah', '1234', { title: 'Bad', url: 'javascript:alert(1)' }]);
 ok('… a link must be http(s)', !r.ok && r.err === 'bad_link');
 boot = await call('getMyBoot', ['dara', '1234']);
-ok('now everyone is asked for both papers and the contract', boot.required.total === 3 && boot.required.done === 0 && boot.reqDocs.length === 2);
+ok('now everyone is asked for both papers, the agreement and the contract', boot.required.total === 4 && boot.required.done === 0 && boot.reqDocs.length === 2);
 r = await call('reqDocFile', ['dara', '1234', cpp.id]);
 ok('any staff member can open the paper', r.ok && r.dataUrl.indexOf('data:application/pdf;base64,') === 0);
 
@@ -126,7 +126,7 @@ console.log('\n=== who sees whose status ===');
 prof = await call('staffProfile', ['emma', '1234', 'st_dara']);
 ok('a teammate sees no status', prof.ok && prof.required === null);
 prof = await call('staffProfile', ['hana', '1234', 'st_dara']);
-ok('HR sees it on the profile', prof.ok && prof.required && prof.required.done === 1 && prof.required.total === 3 && !prof.required.finished);
+ok('HR sees it on the profile', prof.ok && prof.required && prof.required.done === 1 && prof.required.total === 4 && !prof.required.finished);
 prof = await call('staffProfile', ['dara', '1234', 'st_dara']);
 ok('and you see your own', prof.ok && prof.required && prof.required.done === 1);
 r = await call('reqStatusAll', ['dara', '1234']);
@@ -147,7 +147,11 @@ c = boot.required.items.find((x) => x.kind === 'contract');
 ok('a current one does, with its end', c.done && c.state === 'current' && /^\d{4}-\d{2}-01$/.test(c.ends));
 await call('reqSign', ['dara', '1234', man.id, 1, 'Dara Sok', SIG]);
 boot = await call('getMyBoot', ['dara', '1234']);
-ok('both papers and the contract: the profile is complete', boot.required.finished && boot.required.done === 3);
+ok('papers and contract, but not the Child Protection Agreement: not complete yet', !boot.required.finished && boot.required.done === 3);
+{ const st = blobs.getStore({ name: 'gp-data' }), rows = await st.get('staff', { type: 'json' });
+  rows.find((x) => x.id === 'st_dara').legal = { child: { at: '2026-10-01T00:00:00.000Z', name: 'Dara Sok' } }; await st.setJSON('staff', rows); }
+boot = await call('getMyBoot', ['dara', '1234']);
+ok('both papers, the agreement and the contract: the profile is complete', boot.required.finished && boot.required.done === 4);
 
 console.log('\n=== a new version ===');
 r = await call('reqDocUpload', ['hana', '1234', cpp.id, 'cpp-v2.pdf', 'application/pdf', PDF, false]);
@@ -168,7 +172,7 @@ r = await call('reqDocDelete', ['dara', '1234', man.id]);
 ok('staff cannot remove one', !r.ok && r.err === 'not_authorized');
 r = await call('reqDocDelete', ['uriah', '1234', man.id]);
 boot = await call('getMyBoot', ['emma', '1234']);
-ok('an admin can, and nobody is asked for it any more', r.ok && r.docs.length === 1 && boot.required.total === 2);
+ok('an admin can, and nobody is asked for it any more', r.ok && r.docs.length === 1 && boot.required.total === 3);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

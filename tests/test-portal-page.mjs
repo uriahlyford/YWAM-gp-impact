@@ -97,7 +97,8 @@ const SIGN_DOCS = [
     { t: 'choice', id: 'disclose', options: [{ id: 'none', text: 'Nothing to disclose' }, { id: 'private', text: 'I have information to disclose privately' }] },
     { t: 'field', id: 'role', label: 'Role or team', prefill: 'role' }, { t: 'field', id: 'interpreter', label: 'Interpreter name if used', optional: true }], sign: { age: true, guardian: true } }];
 const SIGN_EXTRA = { contacts: [{ role: 'Ministry leader or director', name: 'Dara Pen', phone: '+855 12 000 000' }, { role: 'Alternative senior leader', name: '', phone: '' }], prefill: { role: 'Short-term team — Grace Church Team', dates: '' } };
-let SIGN_DONE = {};      // key -> { docId: true }, as the server keeps it
+let SIGN_DONE = {};
+let STAFF_DONE = {};      // key -> { docId: true }, as the server keeps it
 let SIGN_STATUS_DOCS = [{ id: 'photo', title: 'Photo Release Form' }, { id: 'acceptance', title: 'Acceptance of Place' }];
 let LEGAL_ON = { photo: true, acceptance: true };
 let ACCESS_STAFF = [{ id: 'st_sina', name: 'Sina Sok', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', portalStaff: false, portalAdmin: true, isAdmin: false, leadsTeams: false },
@@ -214,6 +215,11 @@ async function open(viewport, query, seed) {
     } else if (b.fn === 'portalSignOpen') {
       out = b.args[0] && b.args[0].user === 'team.au' ? { ok: true, isTeam: true, team: 'Grace Church Team', ...SIGN_EXTRA, people: [{ key: 'leader', name: 'Lee Leader', done: SIGN_DONE.leader || {} }, { key: 'm1', name: 'Member One', done: SIGN_DONE.m1 || {} }], docs: SIGN_DOCS }
         : b.args[0] === 'tok123' ? { ok: true, isTeam: true, team: 'Grace Church Team', ...SIGN_EXTRA, people: [{ key: 'leader', name: 'Lee Leader', done: SIGN_DONE.leader || {} }, { key: 'm1', name: 'Member One', done: SIGN_DONE.m1 || {} }], docs: SIGN_DOCS } : { ok: false, err: 'invalid' };
+    } else if (b.fn === 'staffSignOpen') {
+      out = u === 'andrew' ? { ok: true, staff: true, isTeam: false, team: 'Andrew Lee', ...SIGN_EXTRA, people: [{ key: 'me', name: 'Andrew Lee', done: STAFF_DONE }],
+        docs: [{ id: 'contract:c9', title: 'Volunteer Staff Contract', period: '2 years · From 11/2026 to 11/2028', blocks: [{ t: 'period' }, { t: 'field', id: 'focus1', label: 'Area 1' }, { t: 'check', id: 'agree', text: 'I, {name}, agree.' }], sign: { leader: true } }].concat(SIGN_DOCS.slice(0, 1)) } : { ok: false, err: 'invalid' };
+    } else if (b.fn === 'staffSignSubmit') {
+      STAFF_DONE[b.args[3]] = true; out = { ok: true, done: STAFF_DONE };
     } else if (b.fn === 'portalSignSubmit') {
       const [, key, docId] = b.args; SIGN_DONE[key] = { ...(SIGN_DONE[key] || {}), [docId]: true }; out = { ok: true, done: SIGN_DONE[key] };
     } else if (b.fn === 'portalSignStatus' || b.fn === 'portalSignLink') {
@@ -1053,6 +1059,41 @@ async function open(viewport, query, seed) {
   await page.click('[data-legalon="photo"]'); await page.waitForTimeout(300);
   const sl = sent.filter(b => b.fn === 'portalSaveLegalDocs').pop();
   ok('switching one off saves it', sl && sl.args[2].photo === false && sl.args[2].acceptance === true && !(await page.$eval('[data-legalon="photo"]', b => b.checked)));
+  await ctx.close();
+}
+
+/* ---------- staff sign with their GP app sign-in; the contract with a base leader there ---------- */
+{
+  const draw = async (page, pad) => { const r = await page.$eval('[data-sigpad="' + pad + '"]', c => { c.scrollIntoView({ block: 'center' }); const b = c.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
+    await page.mouse.move(r.x + 20, r.y + 60); await page.mouse.down(); for (let i = 1; i <= 10; i++) await page.mouse.move(r.x + 20 + i * 25, r.y + (i % 2 ? 30 : 90)); await page.mouse.up(); };
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'andrew', pin: '1234' })));
+  await page.waitForSelector('[data-signdoc]', { timeout: 8000 });
+  const so = sent.filter(b => b.fn === 'staffSignOpen').pop();
+  ok('portal.html?staff=1 opens with the GP app sign-in — no name to pick, the contract first with its period, back to My contract', so && so.args[0] === 'andrew' && so.args[1] === '1234' && !(await page.$('[data-signwho]')) && /Volunteer Staff Contract/.test(await page.$eval('.signDoc', e => e.textContent)) && /2 years · From 11\/2026/.test(await page.$eval('.signPeriod', e => e.textContent)) && /Andrew Lee/.test(await page.$eval('.signPeriod', e => e.textContent)) && !!(await page.$('a[href="teams.html?view=mycontract"]')));
+  ok('the contract has the base leader’s name and signature on the same screen', !!(await page.$('#sign_lname')) && !!(await page.$('[data-sigpad="leaderSig"]')) && /Base leader — signing with you now/.test(await page.$eval('.signLeader', e => e.textContent)));
+  await page.fill('[data-signfield="focus1"]', 'Cafe'); await page.check('[data-signcheck="agree"]');
+  await draw(page, 'sig');
+  await page.click('#signSubmit'); await page.waitForTimeout(300);
+  ok('it will not send without the leader’s name and signature', !sent.some(b => b.fn === 'staffSignSubmit') && await page.$eval('#sign_lname', i => i.classList.contains('miss')));
+  await page.fill('#sign_lname', 'Sina Sok'); await draw(page, 'leaderSig');
+  await page.click('#signSubmit'); await page.waitForTimeout(400);
+  const ss = sent.filter(b => b.fn === 'staffSignSubmit').pop();
+  ok('signing sends both — theirs and the leader’s — through the staff handler with their sign-in', ss && ss.args[0] === 'andrew' && ss.args[1] === '1234' && ss.args[2] === 'me' && ss.args[3] === 'contract:c9' && ss.args[4].fields.focus1 === 'Cafe' && /^\/9j\//.test(ss.args[4].sig) && ss.args[4].leaderName === 'Sina Sok' && /^\/9j\//.test(ss.args[4].leaderSig));
+  ok('… and the next document opens, with no leader on it', /Photo Release Form/.test(await page.$eval('.signDoc', e => e.textContent)) && !(await page.$('#sign_lname')));
+  await ctx.close();
+}
+{
+  Object.keys(STAFF_DONE).forEach(k => delete STAFF_DONE[k]);
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1&doc=photo', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'andrew', pin: '1234' })));
+  await page.waitForSelector('[data-signdoc]', { timeout: 8000 });
+  ok('from My contract, one document opens on its own', /Photo Release Form/.test(await page.$eval('.signDoc', e => e.textContent)) && !/Volunteer Staff Contract/.test(await page.evaluate(() => document.querySelector('#main').textContent)));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1');
+  await page.waitForFunction(() => /Open this from the GP app/.test(document.querySelector('#main').textContent), null, { timeout: 8000 });
+  ok('without a GP app sign-in it says to open it from the GP app', !!(await page.$('a[href="teams.html"]')));
+  ok('no page errors (staff signing)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 

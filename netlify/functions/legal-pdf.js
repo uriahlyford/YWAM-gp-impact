@@ -107,7 +107,8 @@ export function buildSignedPdf(o) {
   wrap_(doc.title, 16, W - 2 * M, true).forEach(function (ln) { y -= 22; text(ln, 16, 'F2', (W - width_(ln, 16, true)) / 2); });
   y -= 16;
   (doc.blocks || []).forEach(function (b) {
-    if (b.t === 'h') { const num = /^\d+\.\s/.test(b.text || ''); need(30); y -= num ? 4 : 8; para(b.text, { font: 'F2', size: num ? 11 : 12.5, after: 2 }); }
+    if (b.t === 'period') { kv('Volunteer Name', name); kv('Period of Contract', r.period || ''); y -= 6; }
+    else if (b.t === 'h') { const num = /^\d+\.\s/.test(b.text || ''); need(30); y -= num ? 4 : 8; para(b.text, { font: 'F2', size: num ? 11 : 12.5, after: 2 }); }
     else if (b.t === 'list') {
       (b.items || []).forEach(function (it) {
         /* a bold lead-in, as on the paper: "Physical harm: I will not …" */
@@ -166,6 +167,7 @@ export function buildSignedPdf(o) {
   kv('Date (d/m/y)', r.dateText || '');
   image(r.sig, 220, 70, 'Signature');
   if (doc.sign && doc.sign.guardian && r.under18) { y -= 6; kv('Parent / guardian', r.guardianName || ''); image(r.guardianSig, 220, 70, 'Parent / guardian signature'); }
+  if (doc.sign && doc.sign.leader) { y -= 6; kv('UofN leader', r.leaderName || 'not yet signed'); if (r.leaderSig) { kv('Date (d/m/y)', r.leaderDateText || ''); image(r.leaderSig, 220, 70, 'Signature of UofN Leader'); } }
   if (doc.sign && doc.sign.witness && (r.witnessName || r.witnessSig)) { y -= 6; kv('Witness', r.witnessName || ''); image(r.witnessSig, 220, 70, 'Witness signature'); }
 
   /* the footer on every page */

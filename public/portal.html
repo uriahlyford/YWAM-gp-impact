@@ -321,7 +321,7 @@ textarea { min-height:80px; resize:vertical; }
 .signLetterhead { display:block; width:100%; max-width:460px; height:auto; margin:4px auto 8px; }
 .signTitle { text-align:center; margin:4px 0 14px; font-size:20px; line-height:1.3; } .signList { margin:0 0 10px; padding-left:20px; font-size:14.5px; line-height:1.55; } .signList li { margin:0 0 6px; }
 .signChoice { border-radius:var(--rSm); margin:0 0 6px; } .signChoice .signCheck input { border-radius:50%; }
-.signContacts { margin:0 0 10px; }
+.signContacts { margin:0 0 10px; } .signPeriod { margin:0 0 10px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--rSm); }
 .signP { font-size:14.5px; line-height:1.6; margin:0 0 10px; } .signP.italic { font-style:italic; color:var(--muted); } .signP.quote { font-style:italic; border-left:3px solid var(--border); padding:4px 0 4px 12px; margin-left:2px; } .signP.bold { font-weight:700; }
 .signCheck { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:0 0 8px; border:1px solid var(--border); border-radius:var(--rSm); font-size:14.5px; line-height:1.5; cursor:pointer; }
 .signCheck input { width:20px; height:20px; flex:0 0 auto; margin-top:2px; accent-color:var(--ink); }
@@ -576,6 +576,10 @@ var P = { aview:'status', meet:null, teamEdit:null, menuOpen:false, access:null,
   if(qs.campus && CAMPUS_SCHOOLS[qs.campus] && isOpenCampus_(qs.campus)) P.campus=qs.campus;
   if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
   if(qs.ref){ P.view='ref'; P.refToken=String(qs.ref); }
+  if(qs.staff){
+    var gp=null; try { gp=JSON.parse(lsGet('gp-staff')||'null'); } catch(e){}
+    { P.view='sign'; P.sign={ only:qs.doc ? String(qs.doc) : '', staff:gp, token:null, openFn:'staffSignOpen', openArgs:gp ? [gp.user, gp.pin] : null, submitFn:'staffSignSubmit', data:gp ? null : { ok:false, err:'nostaff' }, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
+  }
   if(qs.sign){ P.view='sign'; P.sign={ token:String(qs.sign), data:null, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
   if(qs.open) P.openCand=String(qs.open);   // portal.html?open=<candidateId> — the GP app's Teams Database links here
   var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
@@ -750,9 +754,9 @@ function signHtml_(){
   var S=P.sign, d=S.data;
   var h='<div class="center signPage"><div class="gateTitle"><h2>✍️ '+esc(t('Legal documents'))+'</h2>';
   if(d===null) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
-  if(!d.ok) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(d.err==='closed' ? t('This team’s documents are closed.') : t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.'))+'</p></div>'+langRowHtml_()+'</div>';
-  h+='<p class="sub">'+esc(d.isTeam===false ? gpT('For {team}. Read each one and sign it here on your phone.',{team:d.team}) : gpT('For {team}. Everyone signs their own — pick your name to start.',{team:d.team}))+'</p>'+(S.inApp ? '<button type="button" class="linkbtn inline" id="signHome">← '+esc(t('Back to my application'))+'</button>' : '')+'</div>';
-  var docs=d.docs||[];
+  if(!d.ok) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(d.err==='nostaff' || (S.staff && d.err==='invalid') ? t('Open this from the GP app, signed in.') : d.err==='closed' ? t('This team’s documents are closed.') : t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.'))+'</p>'+(S.openFn ? '<a class="btn small" href="teams.html" style="margin-top:10px">'+esc(t('Open the GP app'))+'</a>' : '')+'</div>'+langRowHtml_()+'</div>';
+  h+='<p class="sub">'+esc(d.isTeam===false ? gpT('For {team}. Read each one and sign it here on your phone.',{team:d.team}) : gpT('For {team}. Everyone signs their own — pick your name to start.',{team:d.team}))+'</p>'+(S.inApp ? '<button type="button" class="linkbtn inline" id="signHome">← '+esc(t('Back to my application'))+'</button>' : '')+(S.staff ? '<a class="linkbtn inline" href="teams.html?view=mycontract">← '+esc(t('Back to My contract'))+'</a>' : '')+'</div>';
+  var docs=(d.docs||[]).filter(function(x){ return !S.only || x.id===S.only; });
   if(!S.who && (d.people||[]).length===1) S.who=d.people[0].key;
   /* who are you */
   if(!S.who){
@@ -770,8 +774,10 @@ function signHtml_(){
     return h+'</div>';
   }
   var done=signDocDone_(d, S.who), left=docs.filter(function(x){ return !done[x.id]; });
+  d.shown=docs;
   if(!left.length || S.done){
     h+='<div class="card signDone"><div class="signBig">🎉</div><h3 style="margin:4px 0">'+esc(gpT('All signed — thank you, {name}!',{name:(me.name||'').split(' ')[0]}))+'</h3><p class="sub">'+esc(t('YWAM Siem Reap has your signed forms. Nothing more to do.'))+'</p>'+
+      (S.staff ? '<a class="btn" href="teams.html?view=mycontract">'+esc(t('Back to My contract'))+'</a>' : '')+
       ((d.people||[]).length>1 ? '<button type="button" class="btn" id="signNext">'+esc(t('Someone else on the team? Pick your name'))+'</button>' : '')+(S.inApp ? '<button type="button" class="btn ghost" id="signHome" style="margin-left:6px">'+esc(t('Back to my application'))+'</button>' : '')+'</div>';
     return h+'</div>';
   }
@@ -779,7 +785,8 @@ function signHtml_(){
   h+='<div class="signProg">'+docs.map(function(x, i){ return '<span class="signDot'+(done[x.id]?' done':(x===doc?' on':''))+'" title="'+esc(x.title)+'">'+(done[x.id]?'✓':(i+1))+'</span>'; }).join('')+'</div>';
   h+='<div class="card signDoc" data-signdoc="'+esc(doc.id)+'"><div class="eyebrow">'+esc(gpT('Document {n} of {total}',{n:k+1, total:docs.length}))+'</div>'+legalHeadHtml_(doc.title);
   (doc.blocks||[]).forEach(function(b){
-    if(b.t==='h') h+=legalHHtml_(b.text);
+    if(b.t==='period') h+='<div class="signPeriod"><div class="kv"><b>'+esc(t('Volunteer name'))+'</b><span>'+esc(nm||'')+'</span></div><div class="kv"><b>'+esc(t('Period of contract'))+'</b><span>'+esc(doc.period||'')+'</span></div></div>';
+    else if(b.t==='h') h+=legalHHtml_(b.text);
     else if(b.t==='list') h+=legalListHtml_(b.items);
     else if(b.t==='choice') h+='<div class="signChoice'+(S.miss && S.miss[b.id]?' miss':'')+'" data-signchoicebox="'+esc(b.id)+'">'+(b.options||[]).map(function(o){ return '<label class="signCheck"><input type="radio" name="sc_'+esc(b.id)+'" data-signchoice="'+esc(b.id)+'" value="'+esc(o.id)+'"'+(F.choices && F.choices[b.id]===o.id?' checked':'')+'><span>'+esc(o.text)+'</span></label>'; }).join('')+'</div>';
     else if(b.t==='contacts') h+='<div class="signContacts">'+(d.contacts||[]).map(function(c){ return '<div class="kv"><b>'+esc(c.role)+'</b><span>'+esc([c.name, c.phone].filter(Boolean).join(' · ') || t('Your leader will tell you on arrival.'))+'</span></div>'; }).join('')+'</div>';
@@ -795,6 +802,8 @@ function signHtml_(){
     sigPadHtml_('sig', t('Signature'))+
     '<p class="hint" style="margin:6px 0 0">'+esc(gpT('Date: {date}',{date:fmtDate_(new Date().toISOString())}))+'</p>';
   if(sign.guardian && S.under18) h+='<div class="signGuard"><div class="eyebrow">'+esc(t('Parent or guardian'))+'</div><label class="f">'+esc(t('Their full name'))+'</label><input type="text" id="sign_gname" maxlength="120" value="'+esc(F.guardianName||'')+'">'+sigPadHtml_('guardianSig', t('Parent or guardian signature'))+'</div>';
+  if(sign.leader) h+='<div class="signGuard signLeader"><div class="eyebrow">'+esc(t('Base leader — signing with you now'))+'</div><p class="hint" style="margin:0 0 6px">'+esc(t('A base leader signs this together with you, on this phone.'))+'</p>'+
+    '<label class="f">'+esc(t('Leader’s full name'))+'</label><input type="text" id="sign_lname" maxlength="120" value="'+esc(F.leaderName||'')+'"'+(S.miss && S.miss.leaderName?' class="miss"':'')+'>'+sigPadHtml_('leaderSig', t('Signature of UofN Leader'))+'</div>';
   if(sign.witness) h+='<details class="signWit"'+(F.witnessOpen?' open':'')+'><summary>'+esc(t('Add a witness (optional)'))+'</summary><label class="f">'+esc(t('Witness full name'))+'</label><input type="text" id="sign_wname" maxlength="120" value="'+esc(F.witnessName||'')+'">'+sigPadHtml_('witnessSig', t('Witness signature'))+'</details>';
   h+='</div>';
   h+='<button type="button" class="btn" id="signSubmit"'+(S.busy?' disabled':'')+' style="margin-top:14px;width:100%">'+esc(S.busy ? t('Saving…') : (left.length>1 ? t('Sign and go to the next document') : t('Sign and finish')))+'</button>'+
@@ -834,6 +843,7 @@ function keepSignForm_(){
   if(g('sign_age')!==undefined) F.age=g('sign_age');
   if(g('sign_gname')!==undefined) F.guardianName=g('sign_gname');
   if(g('sign_wname')!==undefined) F.witnessName=g('sign_wname');
+  if(g('sign_lname')!==undefined) F.leaderName=g('sign_lname');
   var w=document.querySelector('.signWit'); if(w) F.witnessOpen=w.open;
   F.checks=F.checks||{}; document.querySelectorAll('[data-signcheck]').forEach(function(c){ F.checks[c.getAttribute('data-signcheck')]=c.checked; });
   F.fields=F.fields||{}; document.querySelectorAll('[data-signfield]').forEach(function(i){ F.fields[i.getAttribute('data-signfield')]=i.value; });
@@ -844,7 +854,7 @@ function bindSign_(){
   var S=P.sign;
   if(S.data===null && !S.loading){
     S.loading=true;
-    run('portalSignOpen', [S.token], function(d){ S.loading=false; S.data=d||{ ok:false }; render(); }, function(){ S.loading=false; S.data={ ok:false, err:'network' }; render(); showMsg(t('Connection problem — try again.')); });
+    run(S.openFn||'portalSignOpen', S.openArgs||[S.token], function(d){ S.loading=false; S.data=d||{ ok:false }; render(); }, function(){ S.loading=false; S.data={ ok:false, err:'network' }; render(); showMsg(t('Connection problem — try again.')); });
     return;
   }
   document.querySelectorAll('[data-signwho]').forEach(function(b){ b.onclick=function(){ S.who=b.getAttribute('data-signwho'); S.under18=null; S.form={}; S.pads={}; S.done=false; S.miss=null; render(); window.scrollTo(0,0); }; });
@@ -857,7 +867,7 @@ function bindSign_(){
   bindSigPads_();
   on_('signSubmit', function(){
     keepSignForm_();
-    var d=S.data, done=signDocDone_(d, S.who), doc=(d.docs||[]).filter(function(x){ return !done[x.id]; })[0]; if(!doc) return;
+    var d=S.data, done=signDocDone_(d, S.who), doc=(d.shown||d.docs||[]).filter(function(x){ return !done[x.id]; })[0]; if(!doc) return;
     var F=S.form, sign=doc.sign||{}, miss={}, n=0;
     (doc.blocks||[]).forEach(function(b){
       if((b.t==='check'||b.t==='group') && !(F.checks && F.checks[b.id])){ miss[b.id]=1; n++; }
@@ -868,16 +878,18 @@ function bindSign_(){
     if(!String(F.name||'').trim()){ miss.name=1; n++; }
     if(sign.age && !(Number(F.age)>0)){ miss.age=1; n++; }
     if(!S.pads.sig){ miss.sig=1; n++; }
+    if(sign.leader && (!String(F.leaderName||'').trim() || !S.pads.leaderSig)){ if(!String(F.leaderName||'').trim()) miss.leaderName=1; if(!S.pads.leaderSig) miss.leaderSig=1; n++; }
     var u18 = S.under18 || (sign.age && Number(F.age)>0 && Number(F.age)<18);
     if(sign.guardian && u18 && (!String(F.guardianName||'').trim() || !S.pads.guardianSig)){ if(!S.under18){ S.under18=true; } miss.guardianSig=1; n++; }
     if(n){ S.miss=miss; render(); showMsg(n===1 ? t('One thing still to do — it is marked in red.') : gpT('{n} things still to do — they are marked in red.',{n:n})); var first=document.querySelector('.miss'); if(first) first.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
     var pay={ name:String(F.name).trim(), checks:F.checks||{}, choices:F.choices||{}, fields:F.fields||{}, sig:S.pads.sig, under18:!!u18, initials:{} };
     (doc.blocks||[]).forEach(function(b){ if(b.t==='initial') pay.initials[b.id]=S.pads['init:'+b.id]; });
     if(sign.age) pay.age=Number(F.age);
+    if(sign.leader){ pay.leaderName=String(F.leaderName).trim(); pay.leaderSig=S.pads.leaderSig; }
     if(sign.guardian && u18){ pay.guardianName=String(F.guardianName).trim(); pay.guardianSig=S.pads.guardianSig; }
     if(sign.witness && (String(F.witnessName||'').trim() || S.pads.witnessSig)){ pay.witnessName=String(F.witnessName||'').trim(); pay.witnessSig=S.pads.witnessSig||''; }
     S.busy=true; render();
-    run('portalSignSubmit', [S.token, S.who, doc.id, pay], function(r){
+    run(S.submitFn||'portalSignSubmit', (S.openArgs||[S.token]).concat([S.who, doc.id, pay]), function(r){
       S.busy=false;
       if(r && r.ok){
         (d.people||[]).forEach(function(p){ if(p.key===S.who) p.done=r.done; });
@@ -886,7 +898,7 @@ function bindSign_(){
         showMsg(t('Signed')); render(); window.scrollTo(0,0); return;
       }
       var e=r && r.err;
-      showMsg(e==='witness_incomplete' ? t('A witness needs their name and signature — or leave the witness out.') : e==='guardian_required' ? t('A parent or guardian needs to add their name and sign.') : e==='invalid' ? t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.') : t('Could not save — try again.'));
+      showMsg(e==='leader_required' ? t('The base leader needs to add their name and sign.') : e==='witness_incomplete' ? t('A witness needs their name and signature — or leave the witness out.') : e==='guardian_required' ? t('A parent or guardian needs to add their name and sign.') : e==='invalid' ? t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.') : t('Could not save — try again.'));
       render();
     }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
   });
