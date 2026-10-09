@@ -38,6 +38,13 @@ var GP_LIBRARY = {
    "emoji": "💡",
    "color": "#6B4FA0",
    "ink": "#3F2A66"
+  },
+  {
+   "id": "gp",
+   "name": "Made at GP",
+   "emoji": "🌉",
+   "color": "#A4572A",
+   "ink": "#6B3315"
   }
  ],
  "cover": {
@@ -2375,6 +2382,116 @@ var GP_LIBRARY = {
    ],
    "forUs": "On a busy base, Resistance often hides behind good things: one more meeting, one more chat, one more errand. It can keep us from prayer, language study, preparing a teaching or starting that new ministry idea God put on our heart. In DTS, it might look like putting off a hard but needed talk with a student. On outreach, it might look like staying busy so we do not have to share our faith. Pressfield writes from his own spiritual view, which is different from ours. But as followers of Jesus we can take the core lesson: be faithful every day, even in small things, and trust God to meet us in the work. We do not work to earn love or praise. We work as worship, and we leave the results to God.",
    "oneLine": "Resistance is real, but showing up every day like a pro is how you beat it."
+  },
+  {
+   "id": "working-well-with-westerners",
+   "title": "Working Well with Westerners",
+   "author": "GP Library",
+   "year": 2026,
+   "shelf": "gp",
+   "mins": 5,
+   "original": true,
+   "vibe": "They are not rude, and you are not too quiet. You learned different ways to show respect.",
+   "bigIdea": "At GP, Khmer and Western staff serve side by side every day. We love each other, but sometimes we confuse each other. A Westerner says no in a meeting, and you feel shocked. You say yes to be polite, and later they feel let down. Nobody meant harm.\n\nThis guide explains why many Westerners act as they do and what they usually mean. It shows how to speak up, say no, ask for help and disagree, while keeping your Khmer strengths of respect, patience and warmth.\n\nThese are tendencies, not rules. An American is not a Brit or a Dutch person. Personality, family, age and faith shape people too. Use these ideas to start conversations, not to put people in boxes.",
+   "insights": [
+    {
+     "emoji": "🗣️",
+     "title": "Straight words, kind heart",
+     "body": "Many Westerners grew up learning that clear words are honest and kind. Researchers like Erin Meyer call this low-context communication: the meaning is in the words. In Khmer culture, much of the meaning is in the tone, the timing and what is not said. Both ways carry respect, just differently.\n\nAt a cafe meeting, Emma says, 'I don't think this menu will work.' Dara feels embarrassed for the person who made it. But Emma is talking about the menu, not the person. Five minutes later she is laughing with everyone.\n\nSo when a Westerner speaks directly, try not to hear anger. Usually it means, 'I trust you enough to be honest.' If the words still sting, you can ask later, 'What did you mean by that?' Most will be glad you asked."
+    },
+    {
+     "emoji": "🤝",
+     "title": "When yes is not a promise",
+     "body": "In Khmer, baat or chas is often a polite way to say, 'I heard you.' It does not always mean, 'I agree,' or 'I will do it.' But many Westerners hear yes as a promise. When the task is not done, they feel confused, and you feel blamed.\n\nJosh asks Sokha to finish the outreach budget by Friday. Sokha says yes, though he already has three jobs. Friday comes, and the budget is not ready. Josh is not upset that Sokha is busy, only that he did not know earlier.\n\nFor many Westerners, a clear no is kinder than a yes that cannot happen. Try honest, polite words: 'I can do it by Monday.' Or, 'This week is full. What is first?' A smile and an honest answer can go together."
+    },
+    {
+     "emoji": "🪞",
+     "title": "Feedback is about the work",
+     "body": "Saving face (មុខមាត់) protects people's dignity, and that is a beautiful value. Many Westerners care about dignity too, but they honour someone by helping them grow. So they give feedback often, and they aim it at the work, not the person.\n\nAfter a DTS lecture week, Hannah tells Srey Leak that her notes for the speaker came late. Srey Leak smiles, but she is embarrassed and wonders if Hannah still likes her. Hannah does not know that a Khmer smile can hide hurt. The next day she thanks Srey Leak and asks her to lead again. For Hannah, feedback and friendship were never in conflict.\n\nWhen you hear feedback, separate the task from your worth. You can say, 'Thank you. Can you show me how?' You can also kindly ask for feedback in private."
+    },
+    {
+     "emoji": "🙋",
+     "title": "Your idea is a gift",
+     "body": "In Khmer culture, you show respect by honouring age and position. You call an older person bong, you wait for the leader, and you hold back so you do not trouble anyone. This is kraeng chet (ក្រែងចិត្ត), and it comes from care. Many Westerners show respect another way. They use first names, even with older leaders, and ask everyone for ideas, believing the best plan comes from many voices.\n\nIn a staff meeting, the leader asks, 'Any concerns?' Everyone is quiet. Later Dara tells a friend the plan will not work in the village. The leader hears about it only after outreach starts.\n\nWhen a Westerner asks for your opinion, they truly want it. To them, silence often sounds like agreement. If speaking up in the group is hard, share your idea after the meeting, or write it down."
+    },
+    {
+     "emoji": "🆘",
+     "title": "Ask for help early",
+     "body": "Many Khmer staff do not want to be a burden, so they try to solve everything alone. Some families learned, especially after the Khmer Rouge years, that it is safer to be careful and quiet. That caution makes sense.\n\nMany Westerners were raised to see asking for help as wise and normal. Saying 'I don't know' is not shameful to them. Leaving you alone with a task can even show respect: they trust you.\n\nAt the guesthouse, Sophea does not understand the new booking system. She guesses for two weeks rather than bother Lucy. Lucy finds the mistakes and feels sad, not angry. She says, 'I wish you had asked me sooner.'\n\nSo ask early. Say, 'Can you show me how this works?' Asking early protects both the work and the friendship."
+    },
+    {
+     "emoji": "⏰",
+     "title": "Time, plans and family",
+     "body": "Many Westerners see time as something to plan and protect. A meeting at nine means nine. A plan in an email feels like a promise. This comes from fairness: they do not want to waste other people's time. Khmer life often moves around relationships, so plans stay more flexible. Both ways care about people.\n\nFamily duty is a strong Khmer value. Weddings, funerals, Khmer New Year, Pchum Ben and caring for parents matter deeply. Most Westerners respect this, but they need to know in time. When Vanna left for a family funeral without telling anyone, Mark had to close the cafe for a day. He was not upset about the funeral, only that nobody told him.\n\nSo tell people early. Write down dates and plans. If you will be late, send a quick message."
+    },
+    {
+     "emoji": "☕",
+     "title": "From work to friendship",
+     "body": "In Cambodia, friendship often comes first, and work grows from that trust. Many Westerners build trust the other way: first they see that you are reliable at work, then friendship grows. Both roads can lead to deep friendship.\n\nMany Westerners value privacy and personal space. Questions about age, marriage or salary are friendly in Khmer culture, but some Westerners feel uneasy with them. They may joke with sarcasm, saying the opposite of what they mean. They may show frustration openly, and it often passes quickly.\n\nWhen Josh did not eat the food Sokha shared, Sokha felt hurt. Later he learned Josh did not want to take too much. Now they eat together every Friday.\n\nBe patient. Share food, and gently teach them about the head and feet. Your hospitality is a gift."
+    }
+   ],
+   "tryThis": [
+    "This week, say one polite, honest no: 'I can't today, but I can on Monday.'",
+    "Ask a Western teammate what they hope you do with their feedback. Share how feedback feels for you.",
+    "Invite a Western teammate to eat with you. Ask about their family, and share about yours."
+   ],
+   "forUs": "GP is a picture of Revelation 7:9: people from every nation and language, worshipping God together. That happens when we honour one another and learn each other's language of love.\n\nYour Khmer ways are not something to fix. Your patience, respect, loyalty and warm hospitality bless this base every day, and Westerners need them. You do not need to become Western. You only need to understand them, and help them understand you.\n\nRemember: these are tendencies, not rules. Every person is different, so ask, listen and stay curious. When something confuses you, believe the best and ask a friend. In meetings, on outreach and in the cafe, we learn this together, as one family in Christ.",
+   "oneLine": "Understand their ways, keep your own, and build a bridge of love."
+  },
+  {
+   "id": "working-well-with-cambodians",
+   "title": "Working Well with Cambodians",
+   "author": "GP Library",
+   "year": 2026,
+   "shelf": "gp",
+   "mins": 5,
+   "original": true,
+   "vibe": "You are a guest who is still learning. Here is how respect, trust and care often work in Khmer culture.",
+   "bigIdea": "Many Western staff come to GP ready to work hard and help. But good intentions can still hurt people in a new culture. A direct question can embarrass someone. A quick yes may not mean yes.\n\nThis guide explains some common Khmer patterns and the values underneath them: respect, harmony, care and loyalty. They are tendencies, not rules. Every person is different. Family, generation, region, education and faith shape people as much as culture does. Use these ideas to start conversations, not to put people in boxes.\n\nCome as a learner. Your Khmer teammates are not your project. They are your colleagues, leaders and friends, and they have a lot to teach you.",
+   "insights": [
+    {
+     "emoji": "🙂",
+     "title": "Face belongs to everyone",
+     "body": "In Cambodia, face (មុខមាត់) is a person's dignity and good name in front of others. When someone loses face, their family and team can feel the shame too. So people protect each other's face. This is a way of showing love and respect.\n\nAt a staff meeting, Josh points out mistakes in the cafe accounts and asks Dara, the cafe leader, to explain. Josh only wants to fix the problem. But Dara goes quiet, and for weeks he keeps away from Josh.\n\nHonest feedback is still needed. It just needs the right setting. Give hard feedback in private, and start with real thanks. Talk about the work and the next step, not the person's character. Praise in public, correct in private. Feedback that builds people up is heard. Feedback that shames makes people hide."
+    },
+    {
+     "emoji": "🙏",
+     "title": "Respect has a shape",
+     "body": "Khmer culture honours age and position. People call an older person bong (older sibling) and a younger person oun (younger sibling). Leaders, teachers and parents receive special respect. The sampeah, palms together, shows honour. The head is seen as high and respected, and the feet as low. These forms say that everyone has a place in the family, and the family stays strong when people honour each other.\n\nIn DTS, Emma calls an older Khmer pastor by his first name only and sits with her feet pointing at him. He smiles kindly, but the students feel uncomfortable for her.\n\nAsk how people like to be called, and use bong or a title. Learn the sampeah and return it. Do not touch an adult's head or point with your feet. Small acts of respect build deep trust."
+    },
+    {
+     "emoji": "👍",
+     "title": "Yes can mean I heard you",
+     "body": "Many Western cultures see directness as honesty. Khmer communication is often more indirect. Meaning is carried in hints, tone and silence, because peace and face matter. Baat or chas, the polite yes, often means I hear you and I respect you. It does not always mean I agree, or I can do this. A smile may show embarrassment, not happiness. No is often said softly: maybe, it is a bit difficult, or I will try.\n\nOn outreach, Emma asks Sokha if the team can be ready to leave at 5 a.m. Sokha says yes. At 5, half the team is still asleep. Sokha knew it would not work, but saying no to a leader felt rude.\n\nSo listen for the soft no. Instead of asking 'Can you do it?', ask 'What might make this hard?', and wait for the answer."
+    },
+    {
+     "emoji": "🤲",
+     "title": "Kraeng chet and the open door",
+     "body": "Kraeng chet (ក្រែងចិត្ត) means holding back so you do not burden, bother or upset someone. It comes from humility and care. Because of it, a Khmer teammate may not ask you for help, may not disagree with you, and may not tell you that your plan is hard for them.\n\nIn the lecture phase, Srey Leak has a better idea for the outreach schedule. But Josh is the leader and older, so she stays quiet. Later Josh wonders why nobody spoke up.\n\nYou cannot remove it by saying just be honest with me. But you can make speaking up feel safe. Ask open questions, not yes-or-no ones. Give time to think, and let people answer later or in writing. Talk one-on-one or in small groups. Ask 'What would you change?' When someone shares, thank them warmly."
+    },
+    {
+     "emoji": "🍚",
+     "title": "Relationship comes first",
+     "body": "Many Westerners build trust through tasks: good work earns trust, and friendship may come later. Many Khmer build trust the other way: first friendship, then work. Time spent eating and chatting is not wasted. It is the foundation. For some families, the Khmer Rouge years left a deep caution, so trust may take longer. Never rush it.\n\nThis shapes time too. A meeting may start late because someone stopped to help a relative. For many Khmer, people matter more than the clock.\n\nJosh wants to start a new program in his first month at GP. The Khmer staff are polite but slow to join. A year later, after many meals and motorbike rides, they build it together.\n\nSo invest in friendship before projects. Be patient. Clear times still matter, so kindly explain why."
+    },
+    {
+     "emoji": "👨‍👩‍👧",
+     "title": "Family, food and the gift of care",
+     "body": "For most Khmer staff, family duty is deep and good. Staff may need to go home for a wedding, a funeral, Khmer New Year or Pchum Ben. Many send part of a small income to support their parents. This is love and loyalty, not a lack of commitment to ministry.\n\nKhmer culture is also very generous. People share food, invite you home and ask personal questions: How old are you? Are you married? How much do you earn? These are a friendly way to know you, not rudeness.\n\nWhen Dara's grandmother dies, Emma travels to the funeral and sits with the family. Dara never forgets it.\n\nSo plan for family seasons. Go to weddings and funerals when you can. Receive hospitality gladly. Let people care for you, not only the other way around."
+    },
+    {
+     "emoji": "🌱",
+     "title": "Empower leaders, not just helpers",
+     "body": "Where hierarchy is honoured, people often wait for the leader to decide. A Western leader may see a lack of initiative. Usually it is respect. So growing leaders takes intention.\n\nJosh asks Sokha to lead the cafe team. But Josh still makes every decision and corrects her in front of the team. The team keeps coming to Josh, and Sokha feels like an assistant.\n\nReal empowerment shares authority, not just work. Explain the why behind plans. Ask Khmer leaders for their view before you give yours, because once the foreigner speaks, others may simply agree. Let them make decisions, even ones you would make differently. Support them in public, and talk through problems in private. Many Khmer leaders understand the language, culture and people far better than you. Often the best help is to step back."
+    }
+   ],
+   "tryThis": [
+    "Ask a Khmer teammate how they like to be addressed, and ask them to teach you the sampeah.",
+    "Before your next meeting, prepare one open question, and let people answer later or in private.",
+    "Say yes to the next invitation to a meal or family event. Go to listen and learn."
+   ],
+   "forUs": "At GP, Khmer and Western staff serve side by side in every ministry. Many Khmer staff already move between two cultures every day, and often adjust to us more than we adjust to them. We can honour that by learning too: some Khmer language, eating together, asking good questions and letting Khmer leaders lead.\n\nRemember that these patterns are tendencies, not rules. Your teammate is a person first, not a culture. When you are unsure, ask with humility.\n\nRevelation 7:9 shows people from every nation and language worshipping God together. That is our family. We are guests in Cambodia, and also brothers and sisters. Let us honour one another and learn each other's language of love.",
+   "oneLine": "Come as a learner, protect people's face, and let trust and Khmer leaders grow."
   }
  ]
 };

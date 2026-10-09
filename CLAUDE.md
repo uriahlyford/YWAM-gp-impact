@@ -1202,6 +1202,11 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
   summary service. Brain and money claims are framed as the author's view where debated.
   About 1,150–1,300 words each — an honest five minutes; each key idea has a story or
   example from the book (ours are labelled "Simple everyday example").
+- **Made at GP** (shelf `gp`, shown first after Start here): original guides written for
+  GP — `original: true`, author "GP Library", no ISBN — so far Working Well with
+  Westerners (for Khmer staff) and Working Well with Cambodians (for Western staff). Their
+  fine print says they are not published books and describe tendencies, not rules. Their
+  Khmer entry has a `title` too (`libTitle_`), drawn in Kantumruy Pro on the cover.
 - **Khmer** (`public/library-km.js`, `GP_LIBRARY_KM`, keyed by book id, same parts in the
   same order) is loaded only when someone reads in Khmer (`libLoadKm_`). The language
   follows the app's unless switched on a book page (English | ខ្មែរ, `gp-lib-lang` on this

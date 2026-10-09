@@ -668,7 +668,9 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .libCoverRule { width:22%; height:3px; border-radius:2px; margin-bottom:5%; flex:0 0 auto; }
 .libCoverTitle { font-family:'Koulen','Archivo Narrow','Arial Narrow',Impact,sans-serif; font-weight:400; text-transform:uppercase; line-height:1.02; letter-spacing:.01em; overflow-wrap:break-word;
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; font-size:13px; }
+.libCoverTitle.km { font-family:'Kantumruy Pro',system-ui,sans-serif; font-weight:700; text-transform:none; letter-spacing:0; line-height:1.35; }   /* Khmer names: the app's Khmer font, always there for Khmer readers */
 .libCoverTitle.l1 { font-size:17cqw; } .libCoverTitle.l2 { font-size:13.5cqw; } .libCoverTitle.l3 { font-size:11.5cqw; -webkit-line-clamp:4; } .libCoverTitle.l4 { font-size:10cqw; -webkit-line-clamp:4; }
+.libCoverTitle.km.l3, .libCoverTitle.km.l4 { font-size:9.5cqw; }
 .libCoverAuthor { display:none; margin-top:auto; font-size:6.5cqw; font-weight:700; opacity:.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .libCover.big .libCoverAuthor { display:block; }
 .libHead { margin:6px 0 14px; padding:24px 16px 18px; border-radius:20px; background:color-mix(in srgb, var(--libc) 15%, var(--surface)); text-align:center; }
@@ -5124,6 +5126,14 @@ function libText_(b){
   return { km:true, vibe:k.vibe, bigIdea:k.bigIdea, tryThis:k.tryThis, forUs:k.forUs, oneLine:k.oneLine,
     insights:b.insights.map(function(x, i){ var y=k.insights[i]||{}; return { emoji:x.emoji, title:y.title||x.title, body:y.body||x.body }; }) };
 }
+/* The name shown for a book: its Khmer name when reading in Khmer and one exists
+   (the GP guides have one; published books keep their own English titles). */
+function libTitle_(b){
+  var k=(libLang_()==='km' && typeof GP_LIBRARY_KM!=='undefined') ? GP_LIBRARY_KM[b.id] : null;
+  return (k && k.title) || b.title;
+}
+/* Shelves in the order the home shows them: the guides made at GP first. */
+function libShelvesShown_(){ return GP_LIBRARY.shelves.filter(function(x){ return x.id==='gp'; }).concat(GP_LIBRARY.shelves.filter(function(x){ return x.id!=='gp'; })); }
 function libLangSwitch_(){
   if(libLang_()==='km' && typeof GP_LIBRARY_KM==='undefined' && !S.libKmError) libLoadKm_();
   var on=libLang_();
@@ -5178,11 +5188,11 @@ function libMotif_(b){
   return '<svg viewBox="0 0 100 90" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'+o+'</svg>';
 }
 function libCoverHtml_(b, big){
-  var sh=libShelf_(b.shelf), C=GP_LIBRARY.cover||{}, n=b.title.length;
+  var sh=libShelf_(b.shelf), C=GP_LIBRARY.cover||{}, title=libTitle_(b), n=title.length;
   return '<div class="libCover'+(big?' big':'')+'" style="background:'+(C.paper||sh.color)+';color:'+(C.ink||sh.ink)+'">'+
     '<div class="libCoverArt" style="background:linear-gradient(155deg,'+sh.color+','+sh.ink+')">'+libMotif_(b)+'</div>'+
     '<div class="libCoverText"><div class="libCoverRule" style="background:'+sh.color+'"></div>'+
-    '<div class="libCoverTitle '+(n<=12?'l1':n<=22?'l2':n<=34?'l3':'l4')+'">'+esc(b.title)+'</div>'+
+    '<div class="libCoverTitle '+(n<=12?'l1':n<=22?'l2':n<=34?'l3':'l4')+(/[\u1780-\u17FF]/.test(title)?' km':'')+'">'+esc(title)+'</div>'+
     '<div class="libCoverAuthor">'+esc(b.author)+'</div></div></div>';
 }
 function libParas_(txt){ return String(txt||'').split(/\n\s*\n/).map(function(x){ return x.trim() ? '<p>'+esc(x.trim())+'</p>' : ''; }).join(''); }
@@ -5190,7 +5200,7 @@ function libTileHtml_(b, read, prog){
   var sh=libShelf_(b.shelf), steps=b.insights.length+2, at=prog[b.id];
   return '<button class="libTile" data-libbook="'+esc(b.id)+'" aria-label="'+esc(b.title+' — '+b.author)+'" style="--libc:'+sh.color+'">'+
     '<span class="libTileArt">'+libCoverHtml_(b)+(read[b.id]?'<span class="libReadTag">✓</span>':'')+'</span>'+
-    '<span class="libTileTitle">'+esc(b.title)+'</span><span class="libTileAuthor">'+esc(b.author)+'</span>'+
+    '<span class="libTileTitle">'+esc(libTitle_(b))+'</span><span class="libTileAuthor">'+esc(b.author)+'</span>'+
     '<span class="libTileMeta">⏱ '+esc(gpT('{n} min',{n:b.mins||5}))+' · 💡 '+b.insights.length+'</span>'+
     (at && !read[b.id] ? '<span class="libTileBar"><span style="width:'+Math.round(at/(steps-1)*100)+'%"></span></span>' : '')+'</button>';
 }
@@ -5210,20 +5220,21 @@ function libraryHtml(){
     if(b) return S.libStep!=null ? libReaderHtml_(b) : back+libBookHtml_(b);
     S.libBook=null; S.libStep=null;
   }
+  if(libLang_()==='km' && typeof GP_LIBRARY_KM==='undefined' && !S.libKmError) libLoadKm_();   // so Khmer names show on the shelves
   var read=libRead_(), prog=libProg_(), books=GP_LIBRARY.books, picks=libPicks_();
   if(S.libShelf==='start' && !picks.length) S.libShelf='all';
   var readN=books.filter(function(x){ return read[x.id]; }).length;
   var h=back+'<h2>📚 '+esc(t('Library'))+'</h2>'+
     '<p class="sub">'+esc(t('Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</p>'+
     '<div class="libProgress"><b>'+readN+'</b> / '+books.length+' '+esc(t('read'))+'<span class="libProgressBar"><span style="width:'+Math.round(readN/Math.max(1,books.length)*100)+'%"></span></span></div>'+
-    '<div class="libShelves">'+[{id:'all', name:'All'}].concat(picks.length ? [{id:'start', name:'Start here', emoji:'⭐'}] : [], GP_LIBRARY.shelves).map(function(sh){
+    '<div class="libShelves">'+[{id:'all', name:'All'}].concat(picks.length ? [{id:'start', name:'Start here', emoji:'⭐'}] : [], libShelvesShown_()).map(function(sh){
       return '<button class="libShelfBtn'+(S.libShelf===sh.id?' on':'')+'" data-libshelf="'+esc(sh.id)+'"'+(sh.color&&S.libShelf===sh.id?' style="background:'+sh.color+';border-color:'+sh.color+'"':'')+'>'+(sh.emoji?sh.emoji+' ':'')+esc(t(sh.name))+'</button>';
     }).join('')+'</div>';
   if(S.libShelf==='all'){
     var going=books.filter(function(x){ return prog[x.id] && !read[x.id]; });
     if(going.length) h+=libRowHtml_('📖 '+esc(t('Continue reading')), going, read, prog);
     if(picks.length) h+=libRowHtml_('⭐ '+esc(t('Start here')), picks, read, prog, 'start');
-    GP_LIBRARY.shelves.forEach(function(sh){
+    libShelvesShown_().forEach(function(sh){
       h+=libRowHtml_((sh.emoji?sh.emoji+' ':'')+esc(t(sh.name)), books.filter(function(x){ return x.shelf===sh.id; }), read, prog, sh.id);
     });
   } else {
@@ -5237,8 +5248,8 @@ function libBookHtml_(b){
   var sh=libShelf_(b.shelf), read=libRead_()[b.id], at=libProg_()[b.id], T=libText_(b);
   var list=GP_LIBRARY.books, i=list.indexOf(b), next=list[(i+1)%list.length];
   var h=libLangSwitch_()+'<div class="libHead'+(T.km?' libKm':'')+'" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+libCoverHtml_(b, true)+
-    '<span class="libShelfTag">'+(sh.emoji||'')+' '+esc(t(sh.name))+'</span>'+
-    '<h2 class="libTitle">'+esc(b.title)+'</h2><div class="libAuthor">'+esc(b.author)+(b.year?' · '+b.year:'')+'</div>'+
+    '<span class="libShelfTag">'+(sh.emoji||'')+' '+esc(t(sh.name))+'</span>'+(b.original?' <span class="libShelfTag">✨ '+esc(t('Original GP guide'))+'</span>':'')+
+    '<h2 class="libTitle">'+esc(libTitle_(b))+'</h2><div class="libAuthor">'+esc(b.author)+(b.year?' · '+b.year:'')+'</div>'+
     '<div class="libVibe">'+esc(T.vibe)+'</div>'+
     '<div class="libStats"><span>⏱ '+esc(gpT('{n}-minute read',{n:b.mins||5}))+'</span><span>💡 '+esc(gpT('{n} key ideas',{n:b.insights.length}))+'</span>'+(read?'<span>✓ '+esc(t('Read'))+'</span>':'')+'</div></div>';
   h+='<button class="btn libCta" id="libStart" style="background:'+sh.color+';border-color:'+sh.color+'">'+
@@ -5251,7 +5262,8 @@ function libBookHtml_(b){
   h+='<div class="btnRow" style="margin-top:14px">'+
     '<button class="btn ghost" id="libMarkRead" data-libid="'+esc(b.id)+'">'+esc(read ? '✓ '+t('Read') : t('Mark as read'))+'</button>'+
     (next && next!==b ? '<button class="btn ghost" data-libbook="'+esc(next.id)+'">'+esc(t('Next book'))+' →</button>' : '')+'</div>';
-  return h+'<p class="pFine">'+esc(t('Summary written for GP in our own words — not by the author or publisher.'))+'</p>';
+  return h+'<p class="pFine">'+esc(b.original ? t('An original guide written for GP — not a published book. Every person is different: use it to start conversations, not to put people in boxes.')
+    : t('Summary written for GP in our own words — not by the author or publisher.'))+'</p>';
 }
 /* One screen per step: 0 the intro, 1…n the key ideas, n+1 the final summary. */
 function libReaderHtml_(b){
@@ -5259,7 +5271,7 @@ function libReaderHtml_(b){
   var segs=''; for(var j=0;j<=last;j++) segs+='<span'+(j<=k?' class="on"':'')+'></span>';
   var h='<div class="libReader" id="libReader" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+
     '<div class="libReaderTop"><button class="libReaderClose" id="libClose" aria-label="'+esc(t('Close'))+'">✕</button><div class="libSegs">'+segs+'</div></div>'+
-    '<div class="libReaderBook"><span>'+esc(b.title)+' · '+esc(b.author)+'</span>'+libLangSwitch_()+'</div>'+
+    '<div class="libReaderBook"><span>'+esc(libTitle_(b))+' · '+esc(b.author)+'</span>'+libLangSwitch_()+'</div>'+
     '<div class="libReaderKicker">'+esc(k===0 ? t('Intro') : k<=n ? gpT('Key idea {n} of {m}',{n:k, m:n}) : t('Final summary'))+'</div><div class="libReaderBody'+(T.km?' libKm':'')+'">';
   if(k===0) h+='<h2>'+esc(T.vibe)+'</h2>'+libParas_(T.bigIdea);
   else if(k<=n){ var x=T.insights[k-1]; h+='<div class="libReaderEmoji">'+esc(x.emoji||'')+'</div><h2>'+esc(x.title)+'</h2>'+libParas_(x.body); }

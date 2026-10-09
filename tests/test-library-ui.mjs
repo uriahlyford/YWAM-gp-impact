@@ -93,7 +93,8 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   ok('Library is in the menu', !!(await page.$('[data-menu-item="library"]')));
   await page.click('[data-menu-item="library"]'); await page.waitForTimeout(900);
   const rows = await page.$$eval('.libSecHead', hs => hs.map(h => h.innerText.replace(/\s+/g, ' ')));
-  ok('the home is rows: Start here, then one per shelf, each with See all', rows.length === 1 + C.L.shelves.length && /Start here/.test(rows[0]) && rows.slice(1).every((r, i) => r.includes(C.L.shelves[i].name) && /See all/.test(r)), rows.join(' | '));
+  const SHOWN = C.L.shelves.filter(x => x.id === 'gp').concat(C.L.shelves.filter(x => x.id !== 'gp'));
+  ok('the home is rows: Start here, the GP guides, then one per shelf, each with See all', rows.length === 1 + SHOWN.length && /Start here/.test(rows[0]) && /Made at GP/.test(rows[1]) && rows.slice(1).every((r, i) => r.includes(SHOWN[i].name) && /See all/.test(r)), rows.join(' | '));
   const ids = new Set(await page.$$eval('.libTile', ts => ts.map(t => t.getAttribute('data-libbook'))));
   ok('every book is on its shelf’s row', ids.size === BOOKS.length && BOOKS.every(b => ids.has(b.id)), ids.size + ' of ' + BOOKS.length);
   const shelfRows = await page.$$eval('.libRow', rs => rs.slice(1).map(r => [...r.querySelectorAll('.libTile')].map(t => ({
@@ -157,6 +158,11 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await page.click('.btnRow [data-libbook="' + next + '"]'); await page.waitForTimeout(300);
   ok('Next book goes on to the next one', await page.evaluate(n => S.libBook === n, next) && next !== 'atomic-habits', next);
   await page.click('#libMarkRead'); await page.waitForTimeout(200);
+  await page.click('#libBack'); await page.waitForTimeout(250);
+  await page.click('.libRow [data-libbook="working-well-with-cambodians"]'); await page.waitForTimeout(300);
+  ok('a GP guide says it is an original, not a published book', /Original GP guide/.test(await page.$eval('#main', e => e.innerText)) && /not a published book/.test(await page.$eval('#main .pFine', e => e.innerText)));
+  await page.click('#libBack'); await page.waitForTimeout(250);
+  await page.click('.libRow [data-libbook="' + next + '"]'); await page.waitForTimeout(300);
   ok('Mark as read works without reading through', await page.evaluate(n => !!JSON.parse(localStorage.getItem('gp-lib-read'))[n], next));
   await page.click('#libBack'); await page.waitForTimeout(300);
   ok('back home the read books have a tick, and the count says so', !!(await page.$('[data-libbook="atomic-habits"] .libReadTag')) && /\b2\s*\/\s*\d+\s*read/.test(await page.$eval('.libProgress', e => e.innerText)) && !/Continue reading/.test(await page.$eval('#main', e => e.innerText)));

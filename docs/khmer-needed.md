@@ -2824,3 +2824,6 @@ now). "Read" means "I have read this book".
 | {n} key ideas | គំនិតសំខាន់ៗ {n} |
 | Key idea {n} of {m} | គំនិតសំខាន់ទី {n} នៃ {m} |
 | Continue — key idea {n} | បន្ត — គំនិតសំខាន់ទី {n} |
+| Made at GP | បង្កើតនៅ GP |
+| Original GP guide | មគ្គុទ្ទេសក៍ដើមរបស់ GP |
+| An original guide written for GP — not a published book. Every person is different: use it to start conversations, not to put people in boxes. | មគ្គុទ្ទេសក៍ដើមដែលសរសេរសម្រាប់ GP — មិនមែនជាសៀវភៅបោះពុម្ពទេ។ មនុស្សម្នាក់ៗខុសៗគ្នា៖ ប្រើវាដើម្បីចាប់ផ្តើមការសន្ទនា មិនមែនដើម្បីដាក់មនុស្សក្នុងប្រអប់ទេ។ |

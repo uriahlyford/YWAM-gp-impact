@@ -15,7 +15,7 @@ function ok(name, cond, extra) {
 const ctx = {}; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(PUBLIC + '/library.js', 'utf8') + ';this.L=GP_LIBRARY;', ctx);
 const L = ctx.L, shelves = L.shelves.map((s) => s.id), books = L.books;
-ok('there are four shelves and all 44 books', shelves.length === 4 && books.length === 44, shelves.join() + ' · ' + books.length + ' books');
+ok('four shelves of 44 books, and the Made at GP shelf of guides', shelves.length === 5 && books.filter((b) => !b.original).length === 44 && books.filter((b) => b.original && b.shelf === 'gp').length >= 2, shelves.join() + ' · ' + books.length + ' books');
 ok('every shelf has a name, an emoji and two colours', L.shelves.every((s) => s.name && s.emoji && /^#[0-9A-F]{6}$/i.test(s.color) && /^#[0-9A-F]{6}$/i.test(s.ink)));
 ok('ids are unique slugs', new Set(books.map((b) => b.id)).size === books.length && books.every((b) => /^[a-z0-9-]+$/.test(b.id)));
 const str = (v) => typeof v === 'string' && v.trim().length > 0;
@@ -46,6 +46,7 @@ const kmBad = books.filter((b) => { const k = KM[b.id]; return !k || !str(k.vibe
   !Array.isArray(k.tryThis) || k.tryThis.length !== 3 || !k.tryThis.every(str); });
 ok('every book is in Khmer too, with the same number of ideas and things to try', kmBad.length === 0 && Object.keys(KM).length === books.length, kmBad.map((b) => b.id).join(', '));
 const khmerShare = (x) => { const letters = x.replace(/[\s\d\p{P}\p{S}]/gu, ''); return letters ? (letters.match(/[\u1780-\u17FF]/g) || []).length / letters.length : 1; };
+ok('the GP guides have a Khmer name too', books.filter((b) => b.original).every((b) => KM[b.id] && str(KM[b.id].title) && khmerShare(KM[b.id].title) > 0.6));
 const kmTexts = (k) => [k.vibe, k.bigIdea, k.forUs, k.oneLine].concat(k.insights.map((x) => x.title + ' ' + x.body), k.tryThis);
 const notKhmer = books.filter((b) => KM[b.id] && kmTexts(KM[b.id]).some((x) => khmerShare(x) < 0.6));
 ok('… and it is Khmer, not English left in place', notKhmer.length === 0, notKhmer.map((b) => b.id).join(', '));
