@@ -184,8 +184,8 @@ const CHILD = {
 
 export default [PHOTO, ACCIDENT, LIABILITY, ACCEPTANCE, CHILD];
 
-/* The Volunteer Staff Contract (YWAM SR), signed by a staff member in the GP
-   app and then countersigned by a UofN leader on the HR page. Not one of the
+/* The Volunteer Staff Contract (YWAM SR), signed in the GP app by the staff
+   member and a base leader together, on the same screen (both required). Not one of the
    documents everyone signs: HR sends it to a person with its period, and it
    becomes one of their HR contracts. {t:'period'} shows the period HR set. */
 export const STAFF_CONTRACT = {

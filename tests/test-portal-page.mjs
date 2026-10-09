@@ -217,14 +217,9 @@ async function open(viewport, query, seed) {
         : b.args[0] === 'tok123' ? { ok: true, isTeam: true, team: 'Grace Church Team', ...SIGN_EXTRA, people: [{ key: 'leader', name: 'Lee Leader', done: SIGN_DONE.leader || {} }, { key: 'm1', name: 'Member One', done: SIGN_DONE.m1 || {} }], docs: SIGN_DOCS } : { ok: false, err: 'invalid' };
     } else if (b.fn === 'staffSignOpen') {
       out = u === 'andrew' ? { ok: true, staff: true, isTeam: false, team: 'Andrew Lee', ...SIGN_EXTRA, people: [{ key: 'me', name: 'Andrew Lee', done: STAFF_DONE }],
-        docs: [{ id: 'contract:c9', title: 'Volunteer Staff Contract', period: '2 years · From 11/2026 to 11/2028', blocks: [{ t: 'period' }, { t: 'field', id: 'focus1', label: 'Area 1' }, { t: 'check', id: 'agree', text: 'I, {name}, agree.' }], sign: {} }].concat(SIGN_DOCS.slice(0, 1)) } : { ok: false, err: 'invalid' };
+        docs: [{ id: 'contract:c9', title: 'Volunteer Staff Contract', period: '2 years · From 11/2026 to 11/2028', blocks: [{ t: 'period' }, { t: 'field', id: 'focus1', label: 'Area 1' }, { t: 'check', id: 'agree', text: 'I, {name}, agree.' }], sign: { leader: true } }].concat(SIGN_DOCS.slice(0, 1)) } : { ok: false, err: 'invalid' };
     } else if (b.fn === 'staffSignSubmit') {
       STAFF_DONE[b.args[3]] = true; out = { ok: true, done: STAFF_DONE };
-    } else if (b.fn === 'hrCountersignOpen') {
-      out = u === 'uriah' ? { ok: true, status: 'awaiting_leader', staffName: 'Andrew Lee', me: 'Uriah Lyford', period: '2 years · From 11/2026 to 11/2028', doc: { title: 'Volunteer Staff Contract', blocks: [{ t: 'period' }, { t: 'field', id: 'focus1', label: 'Area 1' }] },
-        signed: { name: 'Andrew Lee', at: '2026-10-09T02:00:00Z', fields: { focus1: 'Cafe' }, sig: '/9j/4AAQSkZJRg' } } : { ok: false, err: 'not_authorized' };
-    } else if (b.fn === 'hrCountersign') {
-      out = { ok: true };
     } else if (b.fn === 'portalSignSubmit') {
       const [, key, docId] = b.args; SIGN_DONE[key] = { ...(SIGN_DONE[key] || {}), [docId]: true }; out = { ok: true, done: SIGN_DONE[key] };
     } else if (b.fn === 'portalSignStatus' || b.fn === 'portalSignLink') {
@@ -1067,38 +1062,37 @@ async function open(viewport, query, seed) {
   await ctx.close();
 }
 
-/* ---------- staff sign with their GP app sign-in; a leader countersigns ---------- */
+/* ---------- staff sign with their GP app sign-in; the contract with a base leader there ---------- */
 {
+  const draw = async (page, pad) => { const r = await page.$eval('[data-sigpad="' + pad + '"]', c => { c.scrollIntoView({ block: 'center' }); const b = c.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
+    await page.mouse.move(r.x + 20, r.y + 60); await page.mouse.down(); for (let i = 1; i <= 10; i++) await page.mouse.move(r.x + 20 + i * 25, r.y + (i % 2 ? 30 : 90)); await page.mouse.up(); };
   const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'andrew', pin: '1234' })));
   await page.waitForSelector('[data-signdoc]', { timeout: 8000 });
   const so = sent.filter(b => b.fn === 'staffSignOpen').pop();
-  ok('portal.html?staff=1 opens with the GP app sign-in — no name to pick, the contract first with its period', so && so.args[0] === 'andrew' && so.args[1] === '1234' && !(await page.$('[data-signwho]')) && /Volunteer Staff Contract/.test(await page.$eval('.signDoc', e => e.textContent)) && /2 years · From 11\/2026/.test(await page.$eval('.signPeriod', e => e.textContent)) && /Andrew Lee/.test(await page.$eval('.signPeriod', e => e.textContent)) && !!(await page.$('a[href="teams.html"]')));
+  ok('portal.html?staff=1 opens with the GP app sign-in — no name to pick, the contract first with its period, back to My contract', so && so.args[0] === 'andrew' && so.args[1] === '1234' && !(await page.$('[data-signwho]')) && /Volunteer Staff Contract/.test(await page.$eval('.signDoc', e => e.textContent)) && /2 years · From 11\/2026/.test(await page.$eval('.signPeriod', e => e.textContent)) && /Andrew Lee/.test(await page.$eval('.signPeriod', e => e.textContent)) && !!(await page.$('a[href="teams.html?view=mycontract"]')));
+  ok('the contract has the base leader’s name and signature on the same screen', !!(await page.$('#sign_lname')) && !!(await page.$('[data-sigpad="leaderSig"]')) && /Base leader — signing with you now/.test(await page.$eval('.signLeader', e => e.textContent)));
   await page.fill('[data-signfield="focus1"]', 'Cafe'); await page.check('[data-signcheck="agree"]');
-  const r = await page.$eval('[data-sigpad="sig"]', c => { c.scrollIntoView({ block: 'center' }); const b = c.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
-  await page.mouse.move(r.x + 20, r.y + 60); await page.mouse.down(); for (let i = 1; i <= 10; i++) await page.mouse.move(r.x + 20 + i * 25, r.y + (i % 2 ? 30 : 90)); await page.mouse.up();
+  await draw(page, 'sig');
+  await page.click('#signSubmit'); await page.waitForTimeout(300);
+  ok('it will not send without the leader’s name and signature', !sent.some(b => b.fn === 'staffSignSubmit') && await page.$eval('#sign_lname', i => i.classList.contains('miss')));
+  await page.fill('#sign_lname', 'Sina Sok'); await draw(page, 'leaderSig');
   await page.click('#signSubmit'); await page.waitForTimeout(400);
   const ss = sent.filter(b => b.fn === 'staffSignSubmit').pop();
-  ok('signing sends it through the staff handler with their sign-in', ss && ss.args[0] === 'andrew' && ss.args[1] === '1234' && ss.args[2] === 'me' && ss.args[3] === 'contract:c9' && ss.args[4].fields.focus1 === 'Cafe' && /^\/9j\//.test(ss.args[4].sig));
-  ok('… and the next document opens', /Photo Release Form/.test(await page.$eval('.signDoc', e => e.textContent)));
+  ok('signing sends both — theirs and the leader’s — through the staff handler with their sign-in', ss && ss.args[0] === 'andrew' && ss.args[1] === '1234' && ss.args[2] === 'me' && ss.args[3] === 'contract:c9' && ss.args[4].fields.focus1 === 'Cafe' && /^\/9j\//.test(ss.args[4].sig) && ss.args[4].leaderName === 'Sina Sok' && /^\/9j\//.test(ss.args[4].leaderSig));
+  ok('… and the next document opens, with no leader on it', /Photo Release Form/.test(await page.$eval('.signDoc', e => e.textContent)) && !(await page.$('#sign_lname')));
+  await ctx.close();
+}
+{
+  Object.keys(STAFF_DONE).forEach(k => delete STAFF_DONE[k]);
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1&doc=photo', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'andrew', pin: '1234' })));
+  await page.waitForSelector('[data-signdoc]', { timeout: 8000 });
+  ok('from My contract, one document opens on its own', /Photo Release Form/.test(await page.$eval('.signDoc', e => e.textContent)) && !/Volunteer Staff Contract/.test(await page.evaluate(() => document.querySelector('#main').textContent)));
   await ctx.close();
 }
 {
   const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1');
   await page.waitForFunction(() => /Open this from the GP app/.test(document.querySelector('#main').textContent), null, { timeout: 8000 });
   ok('without a GP app sign-in it says to open it from the GP app', !!(await page.$('a[href="teams.html"]')));
-  await ctx.close();
-}
-{
-  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1&countersign=st_1:c9', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'uriah', pin: '1234' })));
-  await page.waitForSelector('#csSubmit', { timeout: 8000 });
-  ok('the countersign page shows the contract as they signed it — their lines and signature — and the leader’s name to sign', /Signed by Andrew Lee/.test(await page.$eval('.signDoc', e => e.textContent)) && /Cafe/.test(await page.$eval('.signDoc', e => e.textContent)) && !!(await page.$('img.sigShown')) && await page.$eval('#cs_name', i => i.value) === 'Uriah Lyford' && !!(await page.$('[data-sigpad="leader"]')));
-  await page.click('#csSubmit'); await page.waitForTimeout(150);
-  ok('it will not countersign without a signature', !sent.some(b => b.fn === 'hrCountersign'));
-  const r = await page.$eval('[data-sigpad="leader"]', c => { c.scrollIntoView({ block: 'center' }); const b = c.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
-  await page.mouse.move(r.x + 20, r.y + 60); await page.mouse.down(); for (let i = 1; i <= 10; i++) await page.mouse.move(r.x + 20 + i * 25, r.y + (i % 2 ? 30 : 90)); await page.mouse.up();
-  await page.click('#csSubmit'); await page.waitForSelector('.signDone', { timeout: 5000 });
-  const cs = sent.filter(b => b.fn === 'hrCountersign').pop();
-  ok('countersigning sends the leader’s name and signature for that contract, then says it is signed', cs && cs.args[2] === 'st_1' && cs.args[3] === 'c9' && cs.args[4].name === 'Uriah Lyford' && /^\/9j\//.test(cs.args[4].sig) && /contract is signed/.test(await page.$eval('.signDone', e => e.textContent)));
   ok('no page errors (staff signing)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

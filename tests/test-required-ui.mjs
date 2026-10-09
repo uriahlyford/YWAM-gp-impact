@@ -97,8 +97,8 @@ async function draw(page, sel) {
 
 {
   const { ctx, page } = await open('dara');
-  ok('My Home has the "Finish your profile" card: 0 of 3', /0[^\d]+3/.test(await page.$eval('#reqCard', e => e.innerText)) && (await page.$$('#reqCard .reqRow')).length === 3);
-  ok('… the two papers to read and sign, and the contract', /Child Protection Policy/.test(await page.$eval('#reqCard', e => e.innerText)) && /Staff Manual/.test(await page.$eval('#reqCard', e => e.innerText)) && /No contract on file yet/.test(await page.$eval('#reqCard', e => e.innerText)));
+  ok('My Home has the "Finish your profile" card: 0 of 4', /0[^\d]+4/.test(await page.$eval('#reqCard', e => e.innerText)) && (await page.$$('#reqCard .reqRow')).length === 4);
+  ok('… the two papers to read and sign, the Child Protection Agreement (signed in My contract), and the contract', /Read and sign — in My contract/.test(await page.$eval('#reqCard', e => e.innerText)) && !!(await page.$('#reqCard [data-reqmy]')) && /Child Protection Policy/.test(await page.$eval('#reqCard', e => e.innerText)) && /Staff Manual/.test(await page.$eval('#reqCard', e => e.innerText)) && /No contract on file yet/.test(await page.$eval('#reqCard', e => e.innerText)));
   ok('About me has the Library with the books read, from the account', /2 books read/.test(await page.$eval('#libHomeTile', e => e.innerText)));
   await page.screenshot({ path: OUT + '/home.png' });
   await page.click('#libHomeTile'); await page.waitForTimeout(900);
@@ -131,14 +131,14 @@ async function draw(page, sel) {
   await page.click('#reqMine'); await page.waitForTimeout(800);
   ok('… and you can see your own signature', !!(await page.$('#reqMineBox .sigShow img')));
   await page.click('#reqBack'); await page.waitForTimeout(300);
-  ok('home: 1 of 3 now, and the paper shows as signed', /1[^\d]+3/.test(await page.$eval('#reqCard', e => e.innerText)) && !!(await page.$('#reqCard .reqRow.done')));
+  ok('home: 1 of 4 now, and the paper shows as signed', /1[^\d]+4/.test(await page.$eval('#reqCard', e => e.innerText)) && !!(await page.$('#reqCard .reqRow.done')));
   await page.click('#reqCard [data-reqopen="rd_man"]'); await page.waitForTimeout(300);
   await page.click('#reqRead'); await page.waitForTimeout(300);
   ok('a paper that is a link opens the link', (await page.evaluate(() => window.__opened)).indexOf('https://drive.example.org/manual') > -1);
   await page.check('#reqAgree'); await page.fill('#reqName', 'Dara Sok'); await draw(page, '#reqSigPad');
   await page.click('#reqSignBtn'); await page.waitForTimeout(1200);
   await page.click('#reqBack'); await page.waitForTimeout(300);
-  ok('both papers signed — only the contract is left', /2[^\d]+3/.test(await page.$eval('#reqCard', e => e.innerText)) && !!dara().signed.rd_man);
+  ok('both papers signed — the Child Protection Agreement and the contract are left', /2[^\d]+4/.test(await page.$eval('#reqCard', e => e.innerText)) && !!dara().signed.rd_man);
   await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="profile"]'); await page.waitForTimeout(400);
   ok('My profile: the books read, and "Profile unfinished"', /2 books read/.test(await page.$eval('#profBooks', e => e.innerText)) && /Profile unfinished/.test(await page.$eval('#main', e => e.innerText)));
   ok('nothing scrolls sideways', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
@@ -176,7 +176,7 @@ async function draw(page, sel) {
   await page.waitForTimeout(1500);
   ok('… uploading the PDF puts it on everyone’s list', !!mem.reqDocs.find(d => d.id === id).fileId && /conduct\.pdf/.test(await page.$eval('#main', e => e.innerText)));
   await page.click('[data-reqperson="st1"]'); await page.waitForTimeout(300);
-  ok('opening a person shows their list', (await page.$$('.reqPersonRows .reqRow')).length === 4);
+  ok('opening a person shows their list', (await page.$$('.reqPersonRows .reqRow')).length === 5);
   await page.screenshot({ path: OUT + '/hr.png', fullPage: true });
   ok('nothing scrolls sideways', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await ctx.close();

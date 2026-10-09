@@ -51,10 +51,12 @@ async function open(who) {
     let out = { ok: true };
     const find = id => staff.find(x => x.id === id);
     if (b.fn === 'getMyBoot') out = { ok: true, staff: who, profile: {}, roster: staff.filter(s => s.active), logs: [], habits: null, mentees: [], mentorRequests: [], goals: [], checkins: [], ministry: null, personal: { ok: true, entries: {} },
-      trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [], base: { leader: false, entries: {}, okrs: [], survey: [], metricOverrides: [] }, hrDue: who.isAdmin ? 2 : null };
+      trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [], base: { leader: false, entries: {}, okrs: [], survey: [], metricOverrides: [] }, hrDue: who.isAdmin ? 2 : null, required: who.required || null };
     else if (b.fn === 'getData') out = { entries: {}, okrs: [], survey: [] };
     else if (b.fn === 'hrList') out = { ok: true, staff, legalDocs: [{ id: 'photo', title: 'Photo Release Form' }, { id: 'child', title: 'Child Protection Agreement — YWAM Siem Reap' }] };
     else if (b.fn === 'hrSendContract') { const p = find(b.args[2]); p.contracts = p.contracts.concat([{ id: 'cdig', signed: b.args[3].from, years: b.args[3].years, files: [], digital: { status: 'awaiting_staff', sentAt: '2026-10-09T01:00:00Z' } }]); out = { ok: true, staff: p }; }
+    else if (b.fn === 'myContract') out = who.myc || { ok: false };
+    else if (b.fn === 'mySaveStart') out = { ok: true, staff: { ...who.myc.me, ywamSince: b.args[2].ywamSince } };
     else if (b.fn === 'hrLegalPdf' || b.fn === 'hrContractPdf') out = { ok: true, name: 'signed.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQ=' };
     else if (b.fn === 'hrSaveStart') { const p = find(b.args[2]); const d = b.args[3]; if (d.ywamSince !== undefined) p.ywamSince = d.ywamSince === '' ? null : d.ywamSince; if (d.baseSince !== undefined) p.baseSince = d.baseSince; if (d.starts) { p.starts = { ...(p.starts || {}), ...d.starts }; Object.keys(p.starts).forEach(k => { if (!p.starts[k]) delete p.starts[k]; }); p.baseSince = p.starts[p.campus] || ''; } out = { ok: true, staff: p }; }
     else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; if (c.ywamSince !== undefined) p.ywamSince = c.ywamSince === '' ? null : c.ywamSince; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, campus: c.campus, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); out = { ok: true, staff: p }; }
@@ -236,15 +238,38 @@ staff.push({ ...base, id: 'st_6', name: 'Mora Moved', username: 'mora', dept: 'C
 
 console.log('\n=== signing: the legal documents and the staff contract ===');
 {
-  const me = { ...DARA, signDue: { docs: 5, contract: true } };
-  const { ctx, page, errors } = await open(me);
-  ok('a staff member with documents to sign sees it on their home, linking to the signing page', !!(await page.$('#goSignDocs')) && (await page.$eval('#goSignDocs', a => a.getAttribute('href'))) === 'portal.html?staff=1' && /your staff contract · 5 legal documents/.test(await page.$eval('#goSignDocs', e => e.textContent)));
-  ok('no page errors (to sign)', errors.length === 0, errors.join(' | '));
-  await ctx.close();
+  const req = (c) => ({ items: [{ id: 'legal:child', kind: 'legal', title: 'Child Protection Agreement', done: false, at: '' }, { id: 'contract', kind: 'contract', title: 'Staff contract', ...c }], done: c.done ? 1 : 0, total: 2, finished: false });
+  let o = await open({ ...DARA, required: req({ done: false, state: 'tosign', ends: '', soon: false, toSign: false }) });
+  ok('a new contract from HR shows on their home, to sign with a base leader', /My contract/.test(await o.page.$eval('#goMyContract', e => e.textContent)) && /sign it with a base leader/.test(await o.page.$eval('#goMyContract', e => e.textContent)));
+  ok('no page errors (to sign)', o.errors.length === 0, o.errors.join(' | '));
+  await o.ctx.close();
+  o = await open({ ...DARA, required: req({ done: true, state: 'current', ends: '2026-12-01', soon: true, toSign: false }) });
+  ok('a contract ending soon: when, and to talk to HR about renewing', /ends Dec 1, 2026 — talk to HR about renewing/.test(await o.page.$eval('#goMyContract', e => e.textContent)));
+  await o.ctx.close();
+  o = await open({ ...DARA, required: req({ done: true, state: 'current', ends: '2028-12-01', soon: false, toSign: false }) });
+  ok('a contract that runs a while yet: no notice', !(await o.page.$('#goMyContract')));
+  await o.ctx.close();
 }
 {
-  const { ctx, page } = await open(DARA);
-  ok('nothing to sign, no card', !(await page.$('#goSignDocs')));
+  const me = { ...DARA, ywamSince: null, contracts: [{ id: 'cold', signed: ym(Y - 1, M), years: 3, files: [] }, { id: 'cdig', signed: ym(Y, M + 1), years: 2, files: [], digital: { status: 'awaiting_staff', sentAt: '2026-10-09T01:00:00Z' } }],
+    legal: { liability: { at: '2026-03-01T00:00:00.000Z', name: 'Dara Pen', from: 'portal', candId: 'c_1' } } };
+  const who = { ...DARA, myc: { ok: true, me, legalDocs: [{ id: 'liability', title: 'Release of Liability' }, { id: 'child', title: 'Child Protection Agreement — YWAM Siem Reap' }] } };
+  const { ctx, page, errors, sent } = await open(who);
+  await page.click('#menuBtn'); await page.waitForTimeout(350);
+  ok('the ☰ menu has My contract for every staff member — and no HR for them', !!(await page.$('[data-menu-item="mycontract"]')) && !(await page.$('[data-menu-item="hr"]')));
+  await page.click('[data-menu-item="mycontract"]'); await page.waitForSelector('#mycLegal');
+  ok('it asks for their own profile', sent.some(x => x.fn === 'myContract' && x.args[0] === 'dara'));
+  const txt = await page.evaluate(() => document.body.textContent);
+  ok('their profile like HR’s: name, time in YWAM, and each campus', /Dara Pen/.test(txt) && /In YWAM since/.test(txt) && /Siem Reap/.test(txt) && /Add time in [^\n]*Poipet/.test(txt));
+  ok('their current contract counts; the one from HR waits — with a link to sign it with a base leader', (await page.$eval('[data-mycsign="cdig"]', a => a.getAttribute('href'))) === 'portal.html?staff=1&doc=' + encodeURIComponent('contract:cdig') && /On file with HR/.test(await page.$eval('[data-myc="cold"]', e => e.textContent)));
+  ok('legal documents: one signed in the portal, with its PDF; the Child Protection Agreement to read and sign', /1\/2/.test(await page.$eval('#mycLegal', e => e.previousElementSibling.textContent)) && /in the portal/.test(await page.$eval('[data-myclegal="liability"]', e => e.textContent)) && (await page.$eval('[data-myclegal="child"] a', a => a.getAttribute('href'))) === 'portal.html?staff=1&doc=child' && /revised Child Protection Agreement/.test(await page.$eval('#mycLegal', e => e.textContent)));
+  await page.click('[data-myclegalpdf="liability"]'); await page.waitForTimeout(300);
+  ok('their PDF is asked for as their own', sent.some(x => x.fn === 'hrLegalPdf' && x.args[2] === '' && x.args[3] === 'liability'));
+  await page.click('[data-hrstartedit="ywam"]'); await page.waitForSelector('#hr_start');
+  await page.fill('#hr_start', '2015'); await page.click('#hrStartSave'); await page.waitForTimeout(400);
+  const ms = sent.filter(x => x.fn === 'mySaveStart').pop();
+  ok('they add when they joined YWAM themselves', ms && ms.args[2].ywamSince === 2015 && /In YWAM since 2015/.test(await page.$eval('#hrYwamSince', e => e.textContent)));
+  ok('no page errors (My contract)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 {
@@ -261,18 +286,12 @@ console.log('\n=== signing: the legal documents and the staff contract ===');
   await page.click('#hrSendSave'); await page.waitForTimeout(400);
   const sc = sent.filter(x => x.fn === 'hrSendContract').pop();
   ok('it sends the period for that person', sc && sc.args[2] === 'st_dara' && sc.args[3].from === '2026-11' && sc.args[3].years === 3);
-  ok('… and the contract shows as sent, waiting for them — not yet counted as signed', /Sent to Dara Pen to sign/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && /From/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && /No contract on file/.test(await page.$eval('.hrBanner', e => e.textContent)));
+  ok('… and the contract shows as sent: they sign it in My contract with a base leader — not yet counted', /Sent to Dara Pen — they sign it in My contract, with a base leader there/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && /No contract on file/.test(await page.$eval('.hrBanner', e => e.textContent)) && !(await page.$('[data-hrcountersign]')));
   ok('no page errors (HR signing)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 {
-  const d = staff.find(x => x.id === 'st_dara'); d.contracts[0].digital = { status: 'awaiting_leader', staffName: 'Dara Pen', staffSignedAt: '2026-10-09T02:00:00Z' };
-  const { ctx, page } = await open(ADMIN);
-  await page.click('#menuBtn'); await page.waitForTimeout(300); await page.click('[data-menu-item="hr"]'); await page.waitForTimeout(800);
-  await page.click('[data-hrperson="st_dara"]'); await page.waitForSelector('[data-hrcontract="cdig"]');
-  ok('once they sign, HR gets Sign as UofN leader, opening the countersign page for that contract', /now a UofN leader signs/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && (await page.$eval('[data-hrcountersign]', a => a.getAttribute('href'))) === 'portal.html?staff=1&countersign=' + encodeURIComponent('st_dara:cdig'));
-  d.contracts[0].digital = { status: 'signed', staffName: 'Dara Pen', leaderName: 'Uriah Lyford' };
-  await ctx.close();
+  const d = staff.find(x => x.id === 'st_dara'); d.contracts[0].digital = { status: 'signed', staffName: 'Dara Pen', leaderName: 'Uriah Lyford' };
   const o = await open(ADMIN);
   await o.page.click('#menuBtn'); await o.page.waitForTimeout(300); await o.page.click('[data-menu-item="hr"]'); await o.page.waitForTimeout(800);
   await o.page.click('[data-hrperson="st_dara"]'); await o.page.waitForSelector('[data-hrcontractpdf]');

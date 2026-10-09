@@ -62,13 +62,13 @@ async function menuOf(who) {
   return { out, errors };
 }
 const EXPECT = {
-  staff: 'leave library profile # Operations sched',
-  hosp: 'leave library profile # Operations sched hosp',
-  hospLeader: 'leave library profile # Operations sched hosp',
-  teamsLeader: 'leave library profile # Operations sched # Applications portal',
-  cafeLeader: 'leave library profile # Operations sched',
-  hr: 'leave library profile # Operations sched # Admin hr',
-  admin: 'leave library profile # Operations sched hosp # Applications portal # Admin hr admin',
+  staff: 'leave mycontract library profile # Operations sched',
+  hosp: 'leave mycontract library profile # Operations sched hosp',
+  hospLeader: 'leave mycontract library profile # Operations sched hosp',
+  teamsLeader: 'leave mycontract library profile # Operations sched # Applications portal',
+  cafeLeader: 'leave mycontract library profile # Operations sched',
+  hr: 'leave mycontract library profile # Operations sched # Admin hr',
+  admin: 'leave mycontract library profile # Operations sched hosp # Applications portal # Admin hr admin',
 };
 for (const k of Object.keys(EXPECT)) {
   const { out, errors } = await menuOf(WHO[k]);

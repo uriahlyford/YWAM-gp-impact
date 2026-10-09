@@ -858,16 +858,23 @@ forms, documents and references follow.
   `legalListHtml_`, `legalReadHtml_` (read-only, every block type).
   The Child Protection Agreement has a box to tick after each Part and each numbered commitment (`readA`…`readF`,
   `c1`…`c8`), so people tick as they read; every box is needed to sign (`unticked`).
-- **Staff sign in the GP app (Oct 2026)**: campus and YAP staff (`staffSignsLegal_`) sign the five legal documents
-  once, and anyone can be sent the Volunteer Staff Contract (`STAFF_CONTRACT` in legal-docs-default.js) — on
-  `portal.html?staff=1`, which reads the GP app's saved sign-in (`gp-staff`) and uses `staffSignOpen` /
-  `staffSignSubmit` (same screens and rules: `signRecord_` is shared). Records: `staff.legal[docId]`, blob
-  `ssign:<staffId>`. Boot carries `staff.signDue {docs, contract}` → the ✍️ Documents to sign card on My Home
-  (`signDueCardHtml_`). HR: `hrSendContract` adds a contract with `digital.status` awaiting_staff →
-  awaiting_leader (staff signed, blob `scontract:<id>`.staff) → signed (`hrCountersign` on
-  `portal.html?staff=1&countersign=<staffId>:<contractId>`, HR/admin only). Only a signed contract counts
-  (`contractInForce_` / `hrInForce_`), so expiry and the due count work as for paper ones. PDFs:
-  `hrLegalPdf`, `hrContractPdf` (HR, or the person themselves). HR page: `hrLegalHtml_`, `hrSendFormHtml_`.
+- **My contract & staff signing (Oct 2026)**: ☰ → My contract (`S.view='mycontract'`, `myContractHtml` /
+  `bindMyContract_`, server `myContract`) — every staff member's own HR profile, read-only except their start
+  dates (`mySaveStart`, same rules as HR's via `applyStart_`): time in YWAM and on each campus, their contracts
+  and when the current one ends, and the legal documents. HR itself stays HR/admin-only. They sign on
+  `portal.html?staff=1[&doc=<id>]`, which reads the GP app's saved sign-in (`gp-staff`) and uses
+  `staffSignOpen` / `staffSignSubmit` (same screens and rules as applicants: `signRecord_` is shared), then
+  links back to `teams.html?view=mycontract`. Records: `staff.legal[docId]`, blob `ssign:<staffId>`. Forms
+  they signed as an applicant in the portal (their application by staffId or the same email, signed as 'me';
+  never a team's) are copied in by `syncPortalLegal_` as `{from:'portal', candId}`; `hrLegalPdf` reads those
+  from the portal's blob. The Child Protection Agreement is on everyone's Required list (`requiredFor_`
+  item `legal:child`). The Volunteer Staff Contract (`STAFF_CONTRACT`, `sign.leader`): HR sends one
+  (`hrSendContract`, `digital.status` awaiting_staff); the staff member signs it in one go WITH a base leader
+  on the same screen (`leaderName` + `leaderSig` required, else `leader_required`) → signed, blob
+  `scontract:<id>`.staff. No later countersign. Only a signed contract counts (`contractInForce_` /
+  `hrInForce_`); `contractState_` adds `soon` (≤ HR_DUE_DAYS) and `toSign`, which drive the My contract
+  notice on My Home (`contractNoticeHtml_`). PDFs: `hrLegalPdf`, `hrContractPdf` (HR, or the person for their
+  own — a contract only from their own record).
 - **Legal documents, signed on a phone (Oct 2026)**: YWAM Siem Reap's five forms (Photo Release, Accident
   Waiver, Liability Release Waiver, Acceptance of Place, Child Protection Agreement) live in `netlify/functions/legal-docs-default.js`
   as blocks (p / check / group / field / initial) with `sign {age, witness, guardian}` — English, verbatim
