@@ -1166,6 +1166,7 @@ button.reqRow { cursor:pointer; }
 .hrChip.due { color:var(--amber); border-color:var(--amber); }
 .hrChip.expired { color:var(--bad); border-color:var(--bad); }
 .hrChip.archived { opacity:.7; }
+.mmTileSplit { font-size:12.5px; font-weight:600; color:var(--ink); margin-top:2px; }
 .hrBanner { margin-top:12px; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); font-size:14px; }
 .hrBanner.active { border-color:var(--good); }
 .hrBanner.due { border-color:var(--amber); }
@@ -9012,7 +9013,10 @@ function teamsDashboardHtml_(campus, trips){
      countries they came from, then every other metric */
   var tiles=[{ name:t('Teams Hosted'), text:fmt(shown.length,''), has:shown.length>0 }];
   var vm=sum(function(tr){ return tripMetric_(tr, TEAM_AUTO_METRIC); }), ctry=teamCountries_(shown);
-  tiles.push({ name:t(TEAM_AUTO_METRIC), text:fmt(vm,''), has:vm!==null });
+  /* under the total, how many were men and how many women (each team's own head counts) */
+  var vmM=sum(function(tr){ return tr.males; }), vmF=sum(function(tr){ return tr.females; });
+  tiles.push({ name:t(TEAM_AUTO_METRIC), text:fmt(vm,''), has:vm!==null, id:'vmTile',
+    split: (vmM!==null || vmF!==null) ? gpT('{m} men · {w} women',{m:fmt(vmM,''), w:fmt(vmF,'')}) : '' });
   tiles.push({ name:t('Countries'), text:fmt(ctry.list.length,''), has:ctry.list.length>0 });
   metrics.forEach(function(m){ if(m===TEAM_AUTO_METRIC) return; var v=sum(function(tr){ return tripMetric_(tr, m); }); tiles.push({ name:t(m), text:fmt(v,m), has:v!==null }); });
   var rm=sum(function(tr){ return tr.reached&&tr.reached.male; }), rf=sum(function(tr){ return tr.reached&&tr.reached.female; });
@@ -9022,8 +9026,9 @@ function teamsDashboardHtml_(campus, trips){
   var list=S.mmDashAll?tiles:tiles.slice(0,6);
   var h='<h3>📈 '+esc(gpT('{period} at a glance',{period:teamPeriodLabel_()}))+'</h3><div class="mmGrid">';
   list.forEach(function(tl){
-    h+='<div class="mmTile'+(tl.has?'':' empty')+'"><div class="mmTileName">'+esc(tl.name)+'</div>'+
+    h+='<div class="mmTile'+(tl.has?'':' empty')+'"'+(tl.id?' id="'+tl.id+'"':'')+'><div class="mmTileName">'+esc(tl.name)+'</div>'+
       '<div class="mmTileNum">'+(tl.has?tl.text:'—')+'</div>'+
+      (tl.split ? '<div class="mmTileSplit">'+esc(tl.split)+'</div>' : '')+
       '<div class="mmTileSub">'+esc(gpT('{n} teams',{n:shown.length}))+'</div></div>';
   });
   h+='</div>';

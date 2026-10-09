@@ -1539,6 +1539,12 @@ function meHtml_(){
 /* The Teams tab in the order they come: teams here now first, then the ones
    still to come (soonest first), then teams with no dates yet (latest change
    first), then teams already gone (most recent first). */
+/* a team's row says when it is in Cambodia, not when it last changed */
+function teamDatesLine_(c){
+  var tr=teamTrip_(c);
+  if(!tr || !tr.start) return t('Dates in Cambodia not set yet');
+  return gpT('In Cambodia {from} – {to}',{from:fmtDate_(tr.start), to:fmtDate_(tr.end||tr.start)});
+}
 function teamTrip_(c){ return tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); }
 function teamOrder_(a,b){
   var today=new Date().toISOString().slice(0,10);
@@ -1599,10 +1605,10 @@ function crmHtml_(){
     var owner=c.assignedTo && byId[c.assignedTo] ? byId[c.assignedTo].name : '—';
     var chat=chatHref_(c.messenger, c.phone);
     h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
-      '<span><span class="who">'+esc(candName_(c))+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span>'+
+      '<span><span class="who">'+esc(candName_(c))+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(c.type==='team' ? teamDatesLine_(c) : fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span>'+
         (c.type==='team' && c.archived && c.archived.left ? '<span class="meta" style="display:block">🗄 '+esc(gpT('Left {date}',{date:fmtDate_(c.archived.left)}))+'</span>' : '')+
         (c.type==='team' && teamNext_(c) && !c.archived ? '<span class="meta nextStep" style="display:block">→ '+esc(t(TEAM_STEP_LABEL[teamNext_(c).id]||''))+'</span>' : '')+'</span>'+
-      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(c.type==='team' ? (function(){ var tr=tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); return (tr && tr.days ? ' · '+esc(gpT('{n} in Cambodia',{n:daysLabel_(tr.days)})) : '')+(tr && tr.start ? ' · '+esc(gpT('from {date}',{date:fmtDate_(tr.start)})) : ''); })() : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
+      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(c.type==='team' ? (function(){ var tr=tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); return (tr && tr.days ? ' · '+esc(gpT('{n} in Cambodia',{n:daysLabel_(tr.days)})) : ''); })() : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
       '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
       '<span class="meta desk">'+esc(owner)+'</span>'+
       '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
