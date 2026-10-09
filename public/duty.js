@@ -39,13 +39,14 @@ function dutyAddDays(iso, n){ var d=new Date(iso+'T12:00:00'); d.setDate(d.getDa
     '.dutyGrid td.off{background:var(--surface2)}'+
     '.dutyKm{display:block;font-size:11px;font-weight:600;color:var(--muted)}'+
     '.dutyTime{display:block;font-size:11px;font-weight:600;color:var(--muted)}'+
-    '.dutyName{display:block;line-height:1.35}'+
+    /* a full name stays on one line ("Uriah Lyford", not Uriah / Lyford); the table scrolls sideways if it needs to */
+    '.dutyName{display:block;line-height:1.35;white-space:nowrap}'+
     '.dutyName.me{background:var(--accent);color:var(--accentInk);border-radius:6px;padding:0 4px;font-weight:800}'+
     '.dutyEmpty{color:var(--faint)}'+
     '.dutyCell{cursor:pointer}'+
     '.dutySec{font-weight:800;font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}'+
     '.dutyList{border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden}'+
-    '.dutyItem{display:grid;grid-template-columns:1fr minmax(96px,34%);gap:10px;padding:10px 12px;border-top:1px solid var(--border);color:var(--ink);text-align:left;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;font:inherit}'+
+    '.dutyItem{display:grid;grid-template-columns:1fr minmax(96px,auto);gap:10px;padding:10px 12px;border-top:1px solid var(--border);color:var(--ink);text-align:left;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;font:inherit}'+
     '.dutyItem:first-child{border-top:0}'+
     '.dutyPlace{font-weight:700;font-size:14px}'+
     '.dutyWhat{font-size:12.5px;color:var(--muted);margin-top:2px;white-space:pre-line}'+
@@ -215,7 +216,10 @@ function dutyImage(s, o){
     if(s.notes){ y+=16; ctx.textAlign='left'; ctx.font='400 17px '+FONT; ctx.fillStyle=MUTED; dutyWrap_(ctx, s.notes, W-2*PAD).forEach(function(l){ if(!measureOnly) ctx.fillText(l, PAD, y); y+=24; }); }
     return y+PAD;
   };
-  W = s.layout==='grid' ? Math.max(1400, 240+s.days.length*190+2*PAD) : 1100;
+  /* each day's column is wide enough for the longest full name on one line */
+  ctx.font='500 18px '+FONT; var longest=0;
+  Object.keys(s.cells||{}).forEach(function(k){ (s.cells[k]||[]).forEach(function(n){ longest=Math.max(longest, ctx.measureText(String(n)).width); }); });
+  W = s.layout==='grid' ? Math.max(1400, 240+s.days.length*Math.max(190, Math.ceil(longest)+32)+2*PAD) : 1100;
   // the page's Khmer font may not be loaded yet — a canvas draws with whatever is there
   var ready = (document.fonts && document.fonts.load) ? Promise.all([document.fonts.load('700 34px "Kantumruy Pro"', 'ក'), document.fonts.load('500 18px "Kantumruy Pro"', 'ក')]).catch(function(){}) : Promise.resolve();
   return ready.then(function(){
