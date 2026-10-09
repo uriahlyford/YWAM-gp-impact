@@ -24,7 +24,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import TEAM_SEED from './team-seed.js';
 import PORTAL_FORMS_DEFAULT from './portal-forms-default.js';
-import LEGAL_DOCS_DEFAULT from './legal-docs-default.js';
+import LEGAL_DOCS_DEFAULT, { STAFF_CONTRACT } from './legal-docs-default.js';
 import { buildSignedPdf, isJpeg as isJpeg_ } from './legal-pdf.js';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
@@ -3305,7 +3305,7 @@ async function getMyBoot(username, pin) {
 
   return {
     ok: true,
-    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s), hospitality: canHosp_(s) }),
+    staff: Object.assign(publicStaff_(s), { isAdmin: !!s.isAdmin, hr: !!s.hr, portalStaff: !!s.portalStaff, portalAdmin: !!s.portalAdmin, portal: canPortal_(s), hospitality: canHosp_(s), signDue: await staffSignDue_(s) }),
     profile: {
       phone: s.phone, joined: s.joined, debt: s.debt, mentorStatus: s.mentorStatus || '',
       dashboardColor: s.dashboardColor || '', dashboardBg: s.dashboardBg || '', email: s.email || '',
@@ -4865,8 +4865,20 @@ function cleanContract_(c, keepFiles) {
   return { id: str_(c.id, 60) || hrId_('ct'), signed: signed, years: Math.round(years * 4) / 4, notes: str_(c.notes, 500),
     campus: HR_CAMPUSES.indexOf(c.campus) > -1 ? c.campus : '',
     files: (Array.isArray(keepFiles) ? keepFiles : []).map(cleanFileMeta_).filter(Boolean).slice(0, HR_MAX_FILES),
-    added: str_(c.added, 40), addedBy: str_(c.addedBy, 60) };
+    added: str_(c.added, 40), addedBy: str_(c.addedBy, 60), digital: cleanDigital_(c.digital) };
 }
+/* A contract signed in the app: sent by HR (awaiting_staff), signed by the
+   staff member (awaiting_leader), countersigned by a UofN leader (signed).
+   The signatures live in blob 'scontract:<contractId>'. */
+const DIGITAL_STATUS = ['awaiting_staff', 'awaiting_leader', 'signed'];
+function cleanDigital_(d) {
+  if (!d || typeof d !== 'object' || DIGITAL_STATUS.indexOf(d.status) === -1) return undefined;
+  const o = { status: d.status };
+  ['sentAt', 'sentBy', 'staffSignedAt', 'staffName', 'leaderSignedAt', 'leaderName', 'leaderId'].forEach(function (k) { if (d[k]) o[k] = str_(d[k], 120); });
+  return o;
+}
+/* a contract counts — for "current" and the due count — once it is signed (paper ones always are) */
+function contractInForce_(c) { return !c.digital || c.digital.status === 'signed'; }
 function contractsOf_(s) {
   return (Array.isArray(s && s.contracts) ? s.contracts : []).map(function (c) { return cleanContract_(c, c && c.files); })
     .filter(Boolean).sort(function (a, b) { return a.signed < b.signed ? -1 : a.signed > b.signed ? 1 : 0; });
@@ -4884,7 +4896,7 @@ function hrDueCount_(rows) {
   let n = 0;
   (rows || []).forEach(function (r) {
     if (!r || r.active === false || r.archived) return;
-    const list = contractsOf_(r); if (!list.length) return;
+    const list = contractsOf_(r).filter(contractInForce_); if (!list.length) return;
     const days = Math.round((hrContractEnd_(list[list.length - 1]) - today) / 86400000);
     if (days <= HR_DUE_DAYS) n++;
   });
@@ -4893,6 +4905,7 @@ function hrDueCount_(rows) {
 function hrStaffOut_(s) {
   const out = adminStaffOut_(s);
   out.joined = s.joined || ''; out.photo = s.photo || ''; out.contracts = contractsOf_(s);
+  out.legal = s.legal && typeof s.legal === 'object' ? s.legal : {};
   out.ywamSince = ywamSinceOf_(s);
   out.starts = startsOf_(s);
   out.baseSince = out.starts[s.campus] || '';
@@ -4924,7 +4937,7 @@ async function hrList(username, pin) {
   if (!s) return { ok: false };
   if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
   const rows = await getStaff_();
-  return { ok: true, staff: rows.filter(function (r) { return !isApplicant_(r); }).map(hrStaffOut_) };
+  return { ok: true, staff: rows.filter(function (r) { return !isApplicant_(r); }).map(hrStaffOut_), legalDocs: (await legalDocs_()).map(function (d) { return { id: d.id, title: d.title }; }) };
 }
 async function hrMutate_(username, pin, staffId, fn) {
   const s = await verifyStaff_(username, pin);
@@ -6530,6 +6543,44 @@ async function portalSignOpen(token) {
     docs: docs.map(function (d) { return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign || {} }; })
   };
 }
+/* Everything a signature must have for this document — the ticks, the
+   choice, the lines, initials, the handwritten signature, age, a guardian
+   under 18, a witness if one was added — and the record kept for it, with a
+   snapshot of the exact text signed. Shared by applicants and staff. */
+async function signRecord_(doc, p, key) {
+  p = p && typeof p === 'object' ? p : {};
+  const sign = doc.sign || {};
+  const name = dutyText_(p.name, 120);
+  if (!name) return { err: 'name_required' };
+  const checks = {}, fields = {}, initials = {}, choices = {};
+  for (const b of doc.blocks) {
+    if (b.t === 'check' || b.t === 'group') { if (!(p.checks && p.checks[b.id] === true)) return { err: 'unticked', id: b.id }; checks[b.id] = true; }
+    if (b.t === 'choice') { const v = p.choices && p.choices[b.id]; if (!(b.options || []).some(function (o) { return o.id === v; })) return { err: 'choice_required', id: b.id }; choices[b.id] = v; }
+    if (b.t === 'field') { const v = dutyText_(p.fields && p.fields[b.id], 120); if (!v && !b.optional) return { err: 'field_required', id: b.id }; if (v) fields[b.id] = v; }
+    if (b.t === 'initial') { const v = p.initials && p.initials[b.id]; if (!isJpeg_(v) || v.length > SIG_MAX_B64) return { err: 'initials_required', id: b.id }; initials[b.id] = v; }
+  }
+  if (!isJpeg_(p.sig) || p.sig.length > SIG_MAX_B64) return { err: 'signature_required' };
+  let age = null;
+  if (sign.age) { age = finiteNum_(p.age, 1, 120); if (age == null) return { err: 'age_required' }; age = Math.round(age); }
+  const under18 = !!p.under18 || (age != null && age < 18);
+  let guardianName = '', guardianSig = '';
+  if (sign.guardian && under18) {
+    guardianName = dutyText_(p.guardianName, 120);
+    guardianSig = p.guardianSig;
+    if (!guardianName || !isJpeg_(guardianSig) || guardianSig.length > SIG_MAX_B64) return { err: 'guardian_required' };
+  }
+  let witnessName = '', witnessSig = '';
+  if (sign.witness && (p.witnessName || p.witnessSig)) {
+    witnessName = dutyText_(p.witnessName, 120); witnessSig = p.witnessSig || '';
+    if (!witnessName || !isJpeg_(witnessSig) || witnessSig.length > SIG_MAX_B64) return { err: 'witness_incomplete' };
+  }
+  const now = new Date().toISOString(), stamp = pnpStamp_(now);
+  const snapKey = 'legalSnap:' + doc.hash;
+  if (!(await readJSON(snapKey, null))) { const snap = Object.assign({}, doc); delete snap.on; delete snap.hash; await writeJSON(snapKey, snap); }
+  return { rec: { at: now, dateText: stamp.date, atText: stamp.at, name: name, age: age, under18: under18, guardianName: guardianName, guardianSig: guardianSig, witnessName: witnessName, witnessSig: witnessSig,
+    sig: p.sig, checks: checks, choices: choices, fields: fields, initials: initials, docHash: doc.hash, personKey: key,
+    contacts: doc.blocks.some(function (b) { return b.t === 'contacts'; }) ? legalContacts_(await readJSON('legalDocs', {})) : undefined } };
+}
 async function portalSignSubmit(token, key, docId, p) {
   const f = await signFor_(token);
   if (!f) return { ok: false, err: 'invalid' };
@@ -6540,41 +6591,13 @@ async function portalSignSubmit(token, key, docId, p) {
   if (!person) return { ok: false, err: 'bad_person' };
   const doc = (await legalDocs_()).find(function (d) { return d.id === str_(docId, 40); });
   if (!doc) return { ok: false, err: 'bad_doc' };
-  p = p && typeof p === 'object' ? p : {};
-  const sign = doc.sign || {};
-  const name = dutyText_(p.name, 120);
-  if (!name) return { ok: false, err: 'name_required' };
-  const checks = {}, fields = {}, initials = {}, choices = {};
-  for (const b of doc.blocks) {
-    if (b.t === 'check' || b.t === 'group') { if (!(p.checks && p.checks[b.id] === true)) return { ok: false, err: 'unticked', id: b.id }; checks[b.id] = true; }
-    if (b.t === 'choice') { const v = p.choices && p.choices[b.id]; if (!(b.options || []).some(function (o) { return o.id === v; })) return { ok: false, err: 'choice_required', id: b.id }; choices[b.id] = v; }
-    if (b.t === 'field') { const v = dutyText_(p.fields && p.fields[b.id], 120); if (!v && !b.optional) return { ok: false, err: 'field_required', id: b.id }; if (v) fields[b.id] = v; }
-    if (b.t === 'initial') { const v = p.initials && p.initials[b.id]; if (!isJpeg_(v) || v.length > SIG_MAX_B64) return { ok: false, err: 'initials_required', id: b.id }; initials[b.id] = v; }
-  }
-  if (!isJpeg_(p.sig) || p.sig.length > SIG_MAX_B64) return { ok: false, err: 'signature_required' };
-  let age = null;
-  if (sign.age) { age = finiteNum_(p.age, 1, 120); if (age == null) return { ok: false, err: 'age_required' }; age = Math.round(age); }
-  const under18 = !!p.under18 || (age != null && age < 18);
-  let guardianName = '', guardianSig = '';
-  if (sign.guardian && under18) {
-    guardianName = dutyText_(p.guardianName, 120);
-    guardianSig = p.guardianSig;
-    if (!guardianName || !isJpeg_(guardianSig) || guardianSig.length > SIG_MAX_B64) return { ok: false, err: 'guardian_required' };
-  }
-  let witnessName = '', witnessSig = '';
-  if (sign.witness && (p.witnessName || p.witnessSig)) {
-    witnessName = dutyText_(p.witnessName, 120); witnessSig = p.witnessSig || '';
-    if (!witnessName || !isJpeg_(witnessSig) || witnessSig.length > SIG_MAX_B64) return { ok: false, err: 'witness_incomplete' };
-  }
-  const now = new Date().toISOString(), stamp = pnpStamp_(now);
-  const snapKey = 'legalSnap:' + doc.hash;
-  if (!(await readJSON(snapKey, null))) { const snap = Object.assign({}, doc); delete snap.on; delete snap.hash; await writeJSON(snapKey, snap); }
+  const v = await signRecord_(doc, p, key);
+  if (v.err) return Object.assign({ ok: false }, v);
+  const now = v.rec.at, name = v.rec.name, choices = v.rec.choices;
   const blobKey = signBlobKey_(c.id, key);
   const mine = await readJSON(blobKey, { docs: {} });
   mine.docs = mine.docs || {};
-  mine.docs[doc.id] = { at: now, dateText: stamp.date, atText: stamp.at, name: name, age: age, under18: under18, guardianName: guardianName, guardianSig: guardianSig, witnessName: witnessName, witnessSig: witnessSig,
-    sig: p.sig, checks: checks, choices: choices, fields: fields, initials: initials, docHash: doc.hash, personKey: key,
-    contacts: doc.blocks.some(function (b) { return b.t === 'contacts'; }) ? legalContacts_(await readJSON('legalDocs', {})) : undefined };
+  mine.docs[doc.id] = v.rec;
   await writeJSON(blobKey, mine);
   c.portal = c.portal || {};
   c.portal.signed = c.portal.signed || {};
@@ -6588,6 +6611,145 @@ async function portalSignSubmit(token, key, docId, p) {
   await writeJSON('candidates', f.rows);
   const done = {}; Object.keys(c.portal.signed[key]).forEach(function (d) { done[d] = true; });
   return { ok: true, done: done };
+}
+/* ==================== staff sign in the GP app (Oct 2026) ====================
+   Campus and YAP staff sign the same five documents once, and a Volunteer
+   Staff Contract whenever HR sends one. They sign on portal.html?staff=1 with
+   their GP app sign-in (the same screens as applicants). Their records:
+   staff.legal = { docId: {at, name} } and blob 'ssign:<staffId>'; a contract's
+   signatures in blob 'scontract:<contractId>' { staff, leader }. */
+function staffSignsLegal_(s) { const st = cleanStaffType_(s && s.staffType); return st === 'campus' || st === 'yap'; }
+function contractPeriod_(c) {
+  const end = hrContractEnd_(c), p = function (n) { return String(n).padStart(2, '0'); };
+  const yrs = Number(c.years);
+  return (yrs === 1 ? '1 year' : yrs + ' years') + ' · From ' + c.signed.slice(5, 7) + '/' + c.signed.slice(0, 4) + ' to ' + p(end.getMonth() + 1) + '/' + end.getFullYear();
+}
+function contractDoc_(c) { return Object.assign({}, STAFF_CONTRACT, { id: 'contract:' + c.id, hash: crypto.createHash('sha256').update(JSON.stringify(STAFF_CONTRACT)).digest('hex') }); }
+async function staffSignDue_(s) {
+  const legal = s.legal || {};
+  const docs = staffSignsLegal_(s) ? (await legalDocs_()).filter(function (d) { return !legal[d.id]; }).length : 0;
+  const contract = contractsOf_(s).some(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; });
+  return { docs: docs, contract: contract };
+}
+async function staffSignOpen(username, pin) {
+  const s = await verifyStaff_(username, pin);
+  if (!s || isApplicant_(s)) return { ok: false, err: 'invalid' };
+  const legal = s.legal || {}, done = {};
+  const docs = (await legalDocs_()).map(function (d) { if (legal[d.id]) done[d.id] = true; return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign || {} }; });
+  const pending = contractsOf_(s).filter(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; });
+  pending.forEach(function (c) { const d = contractDoc_(c); docs.unshift({ id: d.id, title: d.title, blocks: d.blocks, sign: {}, period: contractPeriod_(c) }); });
+  return { ok: true, isTeam: false, staff: true, team: s.name, contacts: legalContacts_(await readJSON('legalDocs', {})),
+    prefill: { role: [s.role, s.ministry].filter(Boolean).join(' — ') || 'Staff', dates: '' },
+    people: [{ key: 'me', name: s.name, done: done }], docs: docs };
+}
+async function staffSignSubmit(username, pin, key, docId, p) {
+  const s = await verifyStaff_(username, pin);
+  if (!s || isApplicant_(s)) return { ok: false, err: 'invalid' };
+  docId = str_(docId, 80);
+  if (/^contract:/.test(docId)) {
+    const c = contractsOf_(s).find(function (x) { return 'contract:' + x.id === docId && x.digital && x.digital.status === 'awaiting_staff'; });
+    if (!c) return { ok: false, err: 'bad_doc' };
+    const doc = contractDoc_(c);
+    const v = await signRecord_(doc, p, 'me'); if (v.err) return Object.assign({ ok: false }, v);
+    v.rec.period = contractPeriod_(c);
+    await writeJSON('scontract:' + c.id, { staff: v.rec });
+    return mutateStaff_(function (rows) {
+      const r = rows.find(function (x) { return x.id === s.id; }); if (!r) return { abort: true, ok: false, err: 'not_found' };
+      r.contracts = contractsOf_(r).map(function (x) { if (x.id !== c.id) return x; x.digital = Object.assign({}, x.digital, { status: 'awaiting_leader', staffSignedAt: v.rec.at, staffName: v.rec.name }); return x; });
+      r.updated = new Date().toISOString();
+      return { ok: true, done: staffDone_(r) };
+    });
+  }
+  const doc = (await legalDocs_()).find(function (d) { return d.id === docId; });
+  if (!doc) return { ok: false, err: 'bad_doc' };
+  const v = await signRecord_(doc, p, 'me'); if (v.err) return Object.assign({ ok: false }, v);
+  const blob = await readJSON('ssign:' + s.id, { docs: {} }); blob.docs = blob.docs || {}; blob.docs[doc.id] = v.rec;
+  await writeJSON('ssign:' + s.id, blob);
+  return mutateStaff_(function (rows) {
+    const r = rows.find(function (x) { return x.id === s.id; }); if (!r) return { abort: true, ok: false, err: 'not_found' };
+    r.legal = Object.assign({}, r.legal || {}); r.legal[doc.id] = { at: v.rec.at, name: v.rec.name };
+    if (v.rec.choices && v.rec.choices.disclose === 'private') r.legal[doc.id].disclose = true;
+    r.updated = new Date().toISOString();
+    return { ok: true, done: staffDone_(r) };
+  });
+}
+function staffDone_(r) { const o = {}; Object.keys(r.legal || {}).forEach(function (k) { o[k] = true; }); return o; }
+/* HR sends a contract to sign: its first month and how many years */
+async function hrSendContract(username, pin, staffId, period) {
+  period = period && typeof period === 'object' ? period : {};
+  const from = isoMonth_(period.from), years = finiteNum_(period.years, 0.25, 30);
+  if (!from || years == null) return { ok: false, err: 'bad_contract' };
+  return hrMutate_(username, pin, staffId, function (rec, me) {
+    const list = contractsOf_(rec);
+    if (list.length >= HR_MAX_CONTRACTS) return { abort: true, ok: false, err: 'too_many' };
+    if (list.some(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; })) return { abort: true, ok: false, err: 'already_sent' };
+    rec.contracts = list.concat([{ id: hrId_('ct'), signed: from, years: Math.round(years * 4) / 4, notes: '', campus: HR_CAMPUSES.indexOf(rec.campus) > -1 ? rec.campus : '', files: [],
+      added: new Date().toISOString(), addedBy: me.id, digital: { status: 'awaiting_staff', sentAt: new Date().toISOString(), sentBy: me.id } }]);
+  });
+}
+/* the leader's side: read what the staff member signed, then countersign */
+async function hrCountersignOpen(username, pin, staffId, contractId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  const r = (await getStaff_()).find(function (x) { return x.id === str_(staffId, 60); });
+  const c = r && contractsOf_(r).find(function (x) { return x.id === str_(contractId, 60); });
+  if (!c || !c.digital) return { ok: false, err: 'not_found' };
+  const blob = await readJSON('scontract:' + c.id, {});
+  const st = blob.staff || {};
+  return { ok: true, status: c.digital.status, staffName: r.name, me: s.name, doc: { title: STAFF_CONTRACT.title, blocks: STAFF_CONTRACT.blocks }, period: contractPeriod_(c),
+    signed: st.at ? { name: st.name, at: st.at, fields: st.fields || {}, sig: st.sig } : null };
+}
+async function hrCountersign(username, pin, staffId, contractId, p) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
+  p = p && typeof p === 'object' ? p : {};
+  const name = dutyText_(p.name, 120);
+  if (!name) return { ok: false, err: 'name_required' };
+  if (!isJpeg_(p.sig) || p.sig.length > SIG_MAX_B64) return { ok: false, err: 'signature_required' };
+  const r0 = (await getStaff_()).find(function (x) { return x.id === str_(staffId, 60); });
+  const c0 = r0 && contractsOf_(r0).find(function (x) { return x.id === str_(contractId, 60); });
+  if (!c0 || !c0.digital) return { ok: false, err: 'not_found' };
+  if (c0.digital.status !== 'awaiting_leader') return { ok: false, err: c0.digital.status === 'signed' ? 'already_signed' : 'not_yet' };
+  const now = new Date().toISOString(), stamp = pnpStamp_(now);
+  const blob = await readJSON('scontract:' + c0.id, {});
+  blob.leader = { at: now, dateText: stamp.date, atText: stamp.at, name: name, sig: p.sig, by: s.id };
+  await writeJSON('scontract:' + c0.id, blob);
+  return hrMutate_(username, pin, staffId, function (rec) {
+    rec.contracts = contractsOf_(rec).map(function (x) { if (x.id !== c0.id) return x; x.digital = Object.assign({}, x.digital, { status: 'signed', leaderSignedAt: now, leaderName: name, leaderId: s.id }); return x; });
+  });
+}
+/* the PDFs: HR for anyone, a staff member for their own */
+async function staffPdfGate_(username, pin, staffId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { out: { ok: false } };
+  const id = str_(staffId, 60) || s.id;
+  if (id !== s.id && !canHR_(s)) return { out: { ok: false, err: 'not_authorized' } };
+  const r = (await getStaff_()).find(function (x) { return x.id === id; });
+  if (!r) return { out: { ok: false, err: 'not_found' } };
+  return { s: s, r: r };
+}
+function pdfOut_(doc, rec, who) {
+  const pdf = buildSignedPdf({ doc: doc, record: rec, teamName: who });
+  const file = (doc.title + ' - ' + rec.name).replace(/[^A-Za-z0-9 ._-]/g, '').replace(/\s+/g, ' ').trim() + '.pdf';
+  return { ok: true, name: file, mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,' + pdf.toString('base64') };
+}
+async function hrLegalPdf(username, pin, staffId, docId) {
+  const g = await staffPdfGate_(username, pin, staffId); if (g.out) return g.out;
+  const rec = ((await readJSON('ssign:' + g.r.id, { docs: {} })).docs || {})[str_(docId, 40)];
+  if (!rec) return { ok: false, err: 'not_signed' };
+  const doc = (await readJSON('legalSnap:' + rec.docHash, null)) || LEGAL_DOCS_DEFAULT.find(function (d) { return d.id === docId; });
+  if (!doc) return { ok: false, err: 'no_doc' };
+  return pdfOut_(doc, rec, 'YWAM Siem Reap staff');
+}
+async function hrContractPdf(username, pin, staffId, contractId) {
+  const g = await staffPdfGate_(username, pin, staffId); if (g.out) return g.out;
+  const blob = await readJSON('scontract:' + str_(contractId, 60), {});
+  if (!blob.staff) return { ok: false, err: 'not_signed' };
+  const doc = (await readJSON('legalSnap:' + blob.staff.docHash, null)) || STAFF_CONTRACT;
+  const rec = Object.assign({}, blob.staff, blob.leader ? { leaderName: blob.leader.name, leaderSig: blob.leader.sig, leaderDateText: blob.leader.dateText } : {});
+  return pdfOut_(doc, rec, 'YWAM Siem Reap staff');
 }
 async function portalSignedPdf(username, pin, candidateId, key, docId) {
   const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
@@ -6919,6 +7081,13 @@ const HANDLERS = {
   portalSignOpen: function (a) { return portalSignOpen(a[0]); },
   portalSignSubmit: function (a) { return portalSignSubmit(a[0], a[1], a[2], a[3]); },
   portalSignedPdf: function (a) { return portalSignedPdf(a[0], a[1], a[2], a[3], a[4]); },
+  staffSignOpen: function (a) { return staffSignOpen(a[0], a[1]); },
+  staffSignSubmit: function (a) { return staffSignSubmit(a[0], a[1], a[2], a[3], a[4]); },
+  hrSendContract: function (a) { return hrSendContract(a[0], a[1], a[2], a[3]); },
+  hrCountersignOpen: function (a) { return hrCountersignOpen(a[0], a[1], a[2], a[3]); },
+  hrCountersign: function (a) { return hrCountersign(a[0], a[1], a[2], a[3], a[4]); },
+  hrLegalPdf: function (a) { return hrLegalPdf(a[0], a[1], a[2], a[3]); },
+  hrContractPdf: function (a) { return hrContractPdf(a[0], a[1], a[2], a[3]); },
   portalLegalDocs: function (a) { return portalLegalDocs(a[0], a[1]); },
   portalSaveLegalDocs: function (a) { return portalSaveLegalDocs(a[0], a[1], a[2], a[3]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },

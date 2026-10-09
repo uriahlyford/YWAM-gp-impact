@@ -53,7 +53,9 @@ async function open(who) {
     if (b.fn === 'getMyBoot') out = { ok: true, staff: who, profile: {}, roster: staff.filter(s => s.active), logs: [], habits: null, mentees: [], mentorRequests: [], goals: [], checkins: [], ministry: null, personal: { ok: true, entries: {} },
       trips: { ok: true, trips: [], totals: {}, reasons: { work: [], personal: [] }, hasMentor: false }, tripRequests: [], base: { leader: false, entries: {}, okrs: [], survey: [], metricOverrides: [] }, hrDue: who.isAdmin ? 2 : null };
     else if (b.fn === 'getData') out = { entries: {}, okrs: [], survey: [] };
-    else if (b.fn === 'hrList') out = { ok: true, staff };
+    else if (b.fn === 'hrList') out = { ok: true, staff, legalDocs: [{ id: 'photo', title: 'Photo Release Form' }, { id: 'child', title: 'Child Protection Agreement — YWAM Siem Reap' }] };
+    else if (b.fn === 'hrSendContract') { const p = find(b.args[2]); p.contracts = p.contracts.concat([{ id: 'cdig', signed: b.args[3].from, years: b.args[3].years, files: [], digital: { status: 'awaiting_staff', sentAt: '2026-10-09T01:00:00Z' } }]); out = { ok: true, staff: p }; }
+    else if (b.fn === 'hrLegalPdf' || b.fn === 'hrContractPdf') out = { ok: true, name: 'signed.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQ=' };
     else if (b.fn === 'hrSaveStart') { const p = find(b.args[2]); const d = b.args[3]; if (d.ywamSince !== undefined) p.ywamSince = d.ywamSince === '' ? null : d.ywamSince; if (d.baseSince !== undefined) p.baseSince = d.baseSince; if (d.starts) { p.starts = { ...(p.starts || {}), ...d.starts }; Object.keys(p.starts).forEach(k => { if (!p.starts[k]) delete p.starts[k]; }); p.baseSince = p.starts[p.campus] || ''; } out = { ok: true, staff: p }; }
     else if (b.fn === 'hrSaveContract') { const p = find(b.args[2]); const c = b.args[3]; if (c.ywamSince !== undefined) p.ywamSince = c.ywamSince === '' ? null : c.ywamSince; const rec = { id: c.id || 'c_new', signed: c.signed, years: c.years, notes: c.notes, campus: c.campus, files: [] }; p.contracts = p.contracts.filter(x => x.id !== rec.id).concat([rec]).sort((a, b2) => a.signed < b2.signed ? -1 : 1); out = { ok: true, staff: p }; }
     else if (b.fn === 'hrUploadFile') { const p = find(b.args[2]); const c = p.contracts.find(x => x.id === b.args[3]); const meta = { id: 'f_new', name: b.args[4], mime: b.args[5], size: Math.floor(b.args[6].length * 3 / 4) }; c.files = c.files.concat([meta]); out = { ok: true, staff: p, file: meta }; }
@@ -230,6 +232,53 @@ staff.push({ ...base, id: 'st_6', name: 'Mora Moved', username: 'mora', dept: 'C
 
   ok('no page errors (moved)', errors.length === 0, errors.join(' | '));
   await ctx.close();
+}
+
+console.log('\n=== signing: the legal documents and the staff contract ===');
+{
+  const me = { ...DARA, signDue: { docs: 5, contract: true } };
+  const { ctx, page, errors } = await open(me);
+  ok('a staff member with documents to sign sees it on their home, linking to the signing page', !!(await page.$('#goSignDocs')) && (await page.$eval('#goSignDocs', a => a.getAttribute('href'))) === 'portal.html?staff=1' && /your staff contract · 5 legal documents/.test(await page.$eval('#goSignDocs', e => e.textContent)));
+  ok('no page errors (to sign)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open(DARA);
+  ok('nothing to sign, no card', !(await page.$('#goSignDocs')));
+  await ctx.close();
+}
+{
+  const d = staff.find(x => x.id === 'st_dara'); d.contracts = []; d.legal = { photo: { at: '2026-10-08T03:00:00Z', name: 'Dara Pen' }, child: { at: '2026-10-08T03:05:00Z', name: 'Dara Pen', disclose: true } };
+  const { ctx, page, errors, sent } = await open(ADMIN);
+  await page.click('#menuBtn'); await page.waitForTimeout(300); await page.click('[data-menu-item="hr"]'); await page.waitForTimeout(800);
+  await page.click('[data-hrperson="st_dara"]'); await page.waitForSelector('#hrLegal');
+  ok('their HR page shows the legal documents they signed, each with a PDF, and flags a private disclosure', /2\/2/.test(await page.$eval('#hrLegal', e => e.previousElementSibling.textContent)) && (await page.$$('[data-hrlegalpdf]')).length === 2 && /has something to disclose privately/.test(await page.$eval('[data-hrlegal="child"]', e => e.textContent)));
+  await page.click('[data-hrlegalpdf="photo"]'); await page.waitForTimeout(300);
+  ok('PDF asks for that document of theirs', sent.some(x => x.fn === 'hrLegalPdf' && x.args[2] === 'st_dara' && x.args[3] === 'photo'));
+  await page.click('#hrSendContract'); await page.waitForSelector('#hrSendForm');
+  ok('Send a contract to sign opens with this month and two years', /^\d{4}-\d{2}$/.test(await page.$eval('#hr_send_from', i => i.value)) && await page.$eval('#hr_send_years', s => s.value) === '2');
+  await page.fill('#hr_send_from', '2026-11'); await page.selectOption('#hr_send_years', '3');
+  await page.click('#hrSendSave'); await page.waitForTimeout(400);
+  const sc = sent.filter(x => x.fn === 'hrSendContract').pop();
+  ok('it sends the period for that person', sc && sc.args[2] === 'st_dara' && sc.args[3].from === '2026-11' && sc.args[3].years === 3);
+  ok('… and the contract shows as sent, waiting for them — not yet counted as signed', /Sent to Dara Pen to sign/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && /From/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && /No contract on file/.test(await page.$eval('.hrBanner', e => e.textContent)));
+  ok('no page errors (HR signing)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+{
+  const d = staff.find(x => x.id === 'st_dara'); d.contracts[0].digital = { status: 'awaiting_leader', staffName: 'Dara Pen', staffSignedAt: '2026-10-09T02:00:00Z' };
+  const { ctx, page } = await open(ADMIN);
+  await page.click('#menuBtn'); await page.waitForTimeout(300); await page.click('[data-menu-item="hr"]'); await page.waitForTimeout(800);
+  await page.click('[data-hrperson="st_dara"]'); await page.waitForSelector('[data-hrcontract="cdig"]');
+  ok('once they sign, HR gets Sign as UofN leader, opening the countersign page for that contract', /now a UofN leader signs/.test(await page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && (await page.$eval('[data-hrcountersign]', a => a.getAttribute('href'))) === 'portal.html?staff=1&countersign=' + encodeURIComponent('st_dara:cdig'));
+  d.contracts[0].digital = { status: 'signed', staffName: 'Dara Pen', leaderName: 'Uriah Lyford' };
+  await ctx.close();
+  const o = await open(ADMIN);
+  await o.page.click('#menuBtn'); await o.page.waitForTimeout(300); await o.page.click('[data-menu-item="hr"]'); await o.page.waitForTimeout(800);
+  await o.page.click('[data-hrperson="st_dara"]'); await o.page.waitForSelector('[data-hrcontractpdf]');
+  ok('signed by both: a PDF of the contract, and it counts as their contract', /Signed by Dara Pen and Uriah Lyford/.test(await o.page.$eval('[data-hrcontract="cdig"]', e => e.textContent)) && !/No contract on file/.test(await o.page.$eval('.hrBanner', e => e.textContent)));
+  await o.ctx.close();
+  d.contracts = []; delete d.legal;
 }
 
 await browser.close();

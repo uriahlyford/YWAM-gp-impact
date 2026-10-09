@@ -103,7 +103,8 @@ export function buildSignedPdf(o) {
   y -= 4; text('YWAM SIEM REAP', 9, 'F2', M); text('Serve - Educate - Develop', 9, 'F1', W - M - width_('Serve - Educate - Develop', 9));
   y -= 30; text(doc.title, 16, 'F2', M); y -= 18;
   (doc.blocks || []).forEach(function (b) {
-    if (b.t === 'h') { need(30); y -= 8; para(b.text, { font: 'F2', size: 12, after: 2 }); }
+    if (b.t === 'period') { kv('Volunteer Name', name); kv('Period of Contract', r.period || ''); y -= 6; }
+    else if (b.t === 'h') { need(30); y -= 8; para(b.text, { font: 'F2', size: 12, after: 2 }); }
     else if (b.t === 'list') {
       (b.items || []).forEach(function (it) {
         const lines = wrap_(it, 10.5, W - 2 * M - 22);
@@ -152,6 +153,7 @@ export function buildSignedPdf(o) {
   kv('Date (d/m/y)', r.dateText || '');
   image(r.sig, 220, 70, 'Signature');
   if (doc.sign && doc.sign.guardian && r.under18) { y -= 6; kv('Parent / guardian', r.guardianName || ''); image(r.guardianSig, 220, 70, 'Parent / guardian signature'); }
+  if (doc.sign && doc.sign.leader) { y -= 6; kv('UofN leader', r.leaderName || 'not yet signed'); if (r.leaderSig) { kv('Date (d/m/y)', r.leaderDateText || ''); image(r.leaderSig, 220, 70, 'Signature of UofN Leader'); } }
   if (doc.sign && doc.sign.witness && (r.witnessName || r.witnessSig)) { y -= 6; kv('Witness', r.witnessName || ''); image(r.witnessSig, 220, 70, 'Witness signature'); }
 
   /* the footer on every page */
