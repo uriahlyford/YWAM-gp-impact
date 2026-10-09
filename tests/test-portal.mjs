@@ -27,6 +27,8 @@ fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
 fs.copyFileSync(REPO + '/netlify/functions/team-seed.js', TMP + '/team-seed.js');
 fs.copyFileSync(REPO + '/netlify/functions/portal-forms-default.js', TMP + '/portal-forms-default.js'); // and the portal's shipped forms // api.js imports it
+fs.copyFileSync(REPO + '/netlify/functions/legal-docs-default.js', TMP + '/legal-docs-default.js');  // the legal forms teams sign
+fs.copyFileSync(REPO + '/netlify/functions/legal-pdf.js', TMP + '/legal-pdf.js');  // and the signed-PDF builder
 process.env.GP_LEADER_CODE = 'leadercode';
 process.env.GP_ADMIN_CODE = 'admincode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
@@ -267,6 +269,103 @@ console.log('=== a team that has left is archived by itself ===');
   mem.candidates = mem.candidates.filter(c => ['cd_left', 'cd_here', 'cd_nevercame', 'cd_reopened'].indexOf(c.id) === -1);
   mem.teamTrips = (mem.teamTrips || []).filter(t => ['cd_left', 'cd_here'].indexOf(t.candidateId) === -1);
   delete mem['pdoc:pd_cd_left'];
+}
+
+console.log('=== legal documents, signed on a phone ===');
+{
+  const SIG = '/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAAUADwDASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAYFBAf/xAAsEAABAwIEBAUFAQAAAAAAAAABAAQFAgMGERMhFDFRcSMyQWGhEiJigZGx/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/APTkWTOz1qG0bZZu3bhxnpWW1o1GrLLPM8hzCycsYTXmqbwLWr0HjXyP8HwQgo38iyjbOs/dWW9vrcrAz7dVPHGfFE1QcLISVmnz36aNOjL8TV5j7bLpYYNiGt7iXdFyRd+t97Xqn+Hb4VCAKQAAABsAEGDG4vhn93h6nFTN0Ni3d06VYPTfYnsVvLjkomOlbOlIs7Lin0+unMjseY/SwDhWQi/uwzNXm9A5NHXjWewz3p+Sgq0UoMTykWRRiSDvW6BtxbLxbR9yOdI7qrBzAPVAREQEREBERAREQf/Z';
+  mem.candidates = (mem.candidates || []).concat([
+    { id: 'cd_sign', campus: 'siemreap', name: 'Sia Leader', type: 'team', stage: 'practical', staffId: '', email: 'sia@example.org', portal: { createdAt: '2026-09-01', submittedAt: '2026-09-02', form: { answers: { teamName: 'Signing Church', leaderName: 'Sia Leader', coLeaders: [] } }, docs: [], members: [{ id: 'msign0001', name: 'Mo Signer', sex: 'm' }] }, log: [], archived: null }]);
+  mem.staff.push({ id: 'st_lone', username: 'lone.app', name: 'Lou Lone', email: 'lou@example.org', kind: 'applicant', campus: 'siemreap', active: true, applicant: { type: 'volunteer', school: '', candidateId: 'cd_lone' }, pinSalt: 'st_lone', pinHash: mkHash('2468', 'st_lone') });
+  mem.candidates.push({ id: 'cd_lone', campus: 'siemreap', name: 'Lou Lone', type: 'volunteer', stage: 'arrived', staffId: 'st_lone', email: 'lou@example.org', portal: { createdAt: '2026-09-01', submittedAt: '2026-09-02', form: { answers: {} }, docs: [] }, log: [], archived: null });
+  let r = await call('portalSignOpen', ['0123456789abcdef0123456789abcdef']);
+  ok('a made-up signing link opens nothing', r.body && r.body.ok === false && r.body.err === 'invalid');
+  r = await call('portalSignLink', ['nobody', '0000', 'cd_sign']);
+  ok('only staff make a signing link', r.body && r.body.ok === false);
+  r = await call('portalSignLink', ['dara', '1234', 'cd_sign']);
+  const token = r.body && r.body.token;
+  ok('staff make the team’s signing link: a long token, the people and the five documents', r.body.ok && /^[a-f0-9]{24,}$/.test(token) && r.body.people.map(p => p.key).join() === 'leader,msign0001' && r.body.docs.map(d => d.id).join() === 'photo,accident,liability,acceptance,child' && !JSON.stringify(mem.candidates.find(c => c.id === 'cd_sign')).includes(token));
+  r = await call('portalSignOpen', [token]);
+  ok('the link opens with the team name, the people to pick from, and each document’s text — nothing else about the team', r.body.ok && r.body.team === 'Signing Church' && r.body.people.length === 2 && r.body.docs.length === 5 && r.body.docs[0].blocks.length > 0 && r.body.isTeam === true && r.body.prefill.role === 'Short-term team — Signing Church' && r.body.contacts.length === 2 && !JSON.stringify(r.body).includes('sia@example.org'), JSON.stringify(r.body && Object.keys(r.body)));
+  const photo = { name: 'Mo Signer', checks: { beyond: true, noPay: true, read: true }, sig: SIG };
+  r = await call('portalSignSubmit', [token, 'msign0001', 'photo', { ...photo, checks: { beyond: true } }]);
+  ok('every box must be ticked', r.body.ok === false && r.body.err === 'unticked');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'photo', { ...photo, sig: '' }]);
+  ok('… and a handwritten signature given', r.body.ok === false && r.body.err === 'signature_required');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'photo', { ...photo, sig: 'bm90IGEganBlZw==' }]);
+  ok('… that is really a picture', r.body.ok === false && r.body.err === 'signature_required');
+  r = await call('portalSignSubmit', [token, 'nobody', 'photo', photo]);
+  ok('only someone on this team can sign', r.body.ok === false && r.body.err === 'bad_person');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'photo', { ...photo, witnessName: 'Dara Pen' }]);
+  ok('a witness, if one is added, signs too', r.body.ok === false && r.body.err === 'witness_incomplete');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'photo', photo]);
+  ok('the Photo Release signs', r.body.ok && r.body.done.photo === true);
+  const blob = mem['tsign:cd_sign:msign0001'];
+  ok('the signature, ticks and the exact text signed are kept apart from the record', blob && blob.docs.photo.sig === SIG && blob.docs.photo.checks.read === true && mem['legalSnap:' + blob.docs.photo.docHash] && mem['legalSnap:' + blob.docs.photo.docHash].title === 'Photo Release Form' && !JSON.stringify(mem.candidates.find(c => c.id === 'cd_sign')).includes(SIG));
+  const acc = { name: 'Mo Signer', checks: { read: true }, sig: SIG };
+  r = await call('portalSignSubmit', [token, 'msign0001', 'accident', acc]);
+  ok('the Accident Waiver asks their age', r.body.ok === false && r.body.err === 'age_required');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'accident', { ...acc, age: 16 }]);
+  ok('… and under 18, a parent or guardian signs as well', r.body.ok === false && r.body.err === 'guardian_required');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'accident', { ...acc, age: 16, guardianName: 'Pat Signer', guardianSig: SIG }]);
+  ok('… then it signs', r.body.ok && r.body.done.accident === true);
+  const accept = { name: 'Mo Signer', under18: true, guardianName: 'Pat Signer', guardianSig: SIG, sig: SIG, fields: { location: 'Siem Reap' }, checks: { general: true, visa: true, money: true, health: true, values: true, mediation: true, declaration: true }, initials: { page1: SIG } };
+  r = await call('portalSignSubmit', [token, 'msign0001', 'acceptance', accept]);
+  ok('Acceptance of Place needs initials on each page', r.body.ok === false && r.body.err === 'initials_required');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'acceptance', { ...accept, initials: { page1: SIG, page2: SIG }, fields: {} }]);
+  ok('… and the location', r.body.ok === false && r.body.err === 'field_required');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'acceptance', { ...accept, initials: { page1: SIG, page2: SIG } }]);
+  ok('… then it signs', r.body.ok && r.body.done.acceptance === true);
+  /* the Child Protection Agreement: one of two answers to the disclosure, role and dates, optional lines */
+  const cp = { name: 'Mo Signer', sig: SIG, fields: { role: 'Short-term team', dates: '10/01/2027 – 20/01/2027' } };
+  r = await call('portalSignSubmit', [token, 'msign0001', 'child', cp]);
+  ok('the Child Protection Agreement needs one of its two disclosure answers', r.body.ok === false && r.body.err === 'choice_required');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'child', { ...cp, choices: { disclose: 'maybe' } }]);
+  ok('… one of those two, nothing else', r.body.ok === false && r.body.err === 'choice_required');
+  r = await call('portalSignSubmit', [token, 'msign0001', 'child', { ...cp, fields: { dates: 'x' }, choices: { disclose: 'none' } }]);
+  ok('… role and dates are needed; the leader and interpreter lines are not', r.body.ok === false && r.body.err === 'field_required');
+  r = await call('portalSignSubmit', [token, 'leader', 'child', { ...cp, name: 'Sia Leader', choices: { disclose: 'private' } }]);
+  ok('"I have information to disclose privately" signs, and is flagged on the record for the director', r.body.ok && /disclose privately/.test(mem.candidates.find(c => c.id === 'cd_sign').log.map(l => l.text).join(' ')) && mem.candidates.find(c => c.id === 'cd_sign').portal.signed.leader.child.disclose === true);
+  r = await call('portalSignStatus', ['dara', '1234', 'cd_sign']);
+  const mo = r.body.people.find(p => p.key === 'msign0001'), lead = r.body.people.find(p => p.key === 'leader');
+  ok('staff see who signed what: three of five for the member, one for the leader', r.body.ok && Object.keys(mo.signed).sort().join() === 'acceptance,accident,photo' && Object.keys(lead.signed).join() === 'child' && r.body.link && r.body.link.createdAt);
+  r = await call('portalSignedPdf', ['dara', '1234', 'cd_sign', 'msign0001', 'acceptance']);
+  const pdf = r.body.ok ? Buffer.from(r.body.dataUrl.split(',')[1], 'base64') : Buffer.alloc(0);
+  ok('each signed one downloads as a PDF: the text, ticks, initials, signatures and who signed when', r.body.ok && pdf.slice(0, 5).toString() === '%PDF-' && /%%EOF\s*$/.test(pdf.slice(-10).toString('latin1')) && /Acceptance of Place - Mo Signer\.pdf/.test(r.body.name) && (pdf.toString('latin1').match(/\/Subtype \/Image/g) || []).length === 4 && pdf.toString('latin1').includes('Signed digitally by Mo Signer \\(Signing Church'), r.body && r.body.name);
+  r = await call('portalSignedPdf', ['dara', '1234', 'cd_sign', 'leader', 'photo']);
+  ok('nothing to download for one not signed', r.body.ok === false && r.body.err === 'not_signed');
+  r = await call('portalSignedPdf', ['tool.team', '2468', 'cd_sign', 'msign0001', 'photo']);
+  ok('an applicant cannot download them', r.body.ok === false);
+  r = await call('portalSaveLegalDocs', ['dara', '1234', { accident: false }]);
+  ok('only a portal admin turns a document off', r.body.ok === false && r.body.err === 'not_authorized');
+  r = await call('portalSaveLegalDocs', ['sina', '1234', { accident: false }, [{ name: 'Dara Pen', phone: '+855 12 000 000' }, { name: 'Sina Sok', phone: '' }]]);
+  ok('a portal admin can, and sets the reporting contacts', r.body.ok && r.body.docs.find(d => d.id === 'accident').on === false && r.body.contacts[0].name === 'Dara Pen' && r.body.contacts[0].role === 'Ministry leader or director' && r.body.contacts[1].name === 'Sina Sok');
+  r = await call('portalSignedPdf', ['dara', '1234', 'cd_sign', 'leader', 'child']);
+  const cpdf = r.body.ok ? Buffer.from(r.body.dataUrl.split(',')[1], 'base64').toString('latin1') : '';
+  ok('the Child Protection Agreement PDF holds its parts and the answer chosen', r.body.ok && cpdf.includes('Part G') && cpdf.includes('Nothing to disclose') && cpdf.includes('Short-term team'));
+  r = await call('portalSignOpen', [token]);
+  ok('… and the team is no longer asked to sign it, and sees the contacts', r.body.docs.map(d => d.id).join() === 'photo,liability,acceptance,child' && r.body.contacts[0].phone === '+855 12 000 000');
+  r = await call('portalSaveLegalDocs', ['sina', '1234', { accident: true }]);
+  ok('turning a document back on keeps the contacts', r.body.contacts[0].name === 'Dara Pen');
+  await call('portalSaveLegalDocs', ['sina', '1234', {}]);
+  const old = token;
+  r = await call('portalSignLink', ['dara', '1234', 'cd_sign']);
+  const r2 = await call('portalSignOpen', [old]);
+  ok('a new link turns the old one off; what was signed stays', r.body.ok && r.body.token !== old && r2.body.ok === false && Object.keys(r.body.people.find(p => p.key === 'msign0001').signed).length === 3);
+  /* any applicant, not only teams: one person, signing from a link or from their own dashboard */
+  r = await call('portalSignStatus', ['dara', '1234', 'cd_lone']);
+  ok('a single applicant’s record has the documents for them alone', r.body.ok && r.body.people.length === 1 && r.body.people[0].key === 'me' && r.body.people[0].name === 'Lou Lone', JSON.stringify(r.body));
+  r = await call('portalSignOpen', [{ user: 'lone.app', pin: '2468' }]);
+  ok('a signed-in applicant opens their documents with no link', r.body.ok && r.body.isTeam === false && r.body.team === 'Lou Lone' && r.body.people.length === 1 && r.body.prefill.role === 'Volunteer');
+  r = await call('portalSignSubmit', [{ user: 'lone.app', pin: '2468' }, 'me', 'photo', { name: 'Lou Lone', checks: { beyond: true, noPay: true, read: true }, sig: SIG }]);
+  ok('… and signs one', r.body.ok && r.body.done.photo === true && mem['tsign:cd_lone:me'] && mem['tsign:cd_lone:me'].docs.photo);
+  r = await call('portalSignOpen', [{ user: 'lone.app', pin: '9999' }]);
+  ok('… only with their own sign-in', r.body.ok === false);
+  r = await call('portalSignOpen', [{ user: 'dara', pin: '1234' }]);
+  ok('… and staff accounts are not applicants', r.body.ok === false);
+  mem.candidates = mem.candidates.filter(c => c.id !== 'cd_sign');
+  mem.candidates = mem.candidates.filter(c => c.id !== 'cd_lone'); mem.staff = mem.staff.filter(x => x.id !== 'st_lone');
+  Object.keys(mem).filter(k => /^tsign:cd_s|^legalSnap:|^legalDocs$/.test(k)).forEach(k => delete mem[k]);
 }
 
 console.log('=== the portal as a tool: meet our team, team strengths, resources ===');
