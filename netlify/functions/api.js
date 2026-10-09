@@ -3596,7 +3596,7 @@ function tripFromApp_(c, prev) {
     size: pick(a.size, prev && prev.size), males: pick(a.males, prev && prev.males), females: pick(a.females, prev && prev.females),
     couples: pick(a.couples, prev && prev.couples),
     focus: cut(a.focus, 200) || (prev && prev.focus) || '',
-    status: c.archived ? 'cancelled' : (prev && prev.status) || 'active'
+    status: c.archived && !c.archived.left ? 'cancelled' : (prev && prev.status === 'cancelled' && c.archived && c.archived.left ? 'active' : (prev && prev.status) || 'active')
   });
   const rec = cleanTrip_(merged, c.campus || PORTAL_DEFAULT_CAMPUS);
   if (!rec) return null;
@@ -3646,7 +3646,7 @@ async function saveTeamNumbers_(c, metrics, reached, by) {
    Database form asks for, and men / women reached — once staff have ticked
    Arrived (the card is hidden before that, so it doesn't confuse them). */
 async function portalSaveTeamNumbers(username, pin, metrics, reached) {
-  const a = await applicantCand_(username, pin); if (a.out) return a.out;
+  const a = await applicantCand_(username, pin, true); if (a.out) return a.out;
   if (a.cand.type !== 'team') return { ok: false, err: 'not_team' };
   if (a.cand.stage !== 'arrived') return { ok: false, err: 'not_arrived' };
   if (!(await saveTeamNumbers_(a.cand, metrics, reached, a.s.id))) return { ok: false, err: 'no_trip' };
@@ -5135,7 +5135,7 @@ function cleanCandidate_(c, prev, me) {
     // documents, references), which only the portal handlers write.
     messenger: PORTAL_MESSENGERS.indexOf(c.messenger) > -1 ? c.messenger : (prev ? (prev.messenger || '') : ''),
     portal: prev ? (prev.portal || null) : null,
-    log: prev ? (Array.isArray(prev.log) ? prev.log : []) : [], archived: prev ? (prev.archived || null) : null,
+    log: prev ? (Array.isArray(prev.log) ? prev.log : []) : [], archived: prev ? (prev.archived || null) : null, archiveOff: prev && prev.archiveOff ? true : undefined,
     created: prev ? prev.created : now, createdBy: prev ? prev.createdBy : me.id, updated: now, updatedBy: me.id
   };
 }
@@ -5194,11 +5194,11 @@ async function hrArchiveCandidate(username, pin, id, info) {
   if (idx === -1) return { ok: false, err: 'not_found' };
   if (!canHR_(g.s) && !portalMaySee_(g.s, rows[idx])) return { ok: false, err: 'not_authorized' };
   const now = new Date().toISOString();
-  if (info === null) rows[idx].archived = null;
+  if (info === null) { if (rows[idx].archived && rows[idx].archived.left) rows[idx].archiveOff = true; rows[idx].archived = null; }
   else rows[idx].archived = { at: now.slice(0, 10), reason: str_(info && info.reason, 300), by: g.s.id };
   rows[idx].updated = now; rows[idx].updatedBy = g.s.id;
   await writeJSON('candidates', rows);
-  await syncTeamTrip_(rows[idx], g.s.id, info === null ? 'active' : 'cancelled');   // a closed team application is a cancelled team
+  await syncTeamTrip_(rows[idx], g.s.id, info === null ? 'active' : 'cancelled');   // a closed team application is a cancelled team (one that left is archived by itself, not here)
   return { ok: true, candidate: rows[idx] };
 }
 
@@ -5282,6 +5282,7 @@ function portalStageIdx_(stage, type) { const i = (type === 'team' ? TEAM_STAGES
 /* What the applicant is told, derived on the server from the record so the
    dashboard and the staff view can never disagree about where someone is. */
 function portalStatus_(c) {
+  if (c.archived && c.archived.left) return 'completed';
   if (c.archived) return 'closed';
   const submitted = !!(c.portal && c.portal.submittedAt);
   if (c.type === 'team') return c.stage === 'new' ? (submitted ? 'pending' : 'draft') : c.stage === 'applied' ? 'pending' : c.stage;   // call1 | docs | call2 | practical | arrived
@@ -5908,10 +5909,42 @@ function portalMeOut_(s) {
    application or — for portal staff — everyone's. A bad PIN is 'auth' so the
    page knows to sign out; a staff member without portal access is told so
    and shown nothing. */
+/* ==================== a team that has left is archived by itself ====================
+   The day after a team's last date in Cambodia (the latest "to" on its
+   itinerary, else its Siem Reap dates), a team that arrived is archived:
+   archived.left holds that date, which files it in the archive by year and
+   quarter. Nothing is removed — documents (passports, flights, e-visas), the
+   names and photos, strengths and numbers all stay on the record, the Teams
+   Database keeps it as a team that came (not cancelled), and the team can
+   still add its final numbers. A team that never arrived is left for staff.
+   Staff can reopen one; it then stays open (archiveOff). Runs whenever the
+   portal boots, on Phnom Penh's date. */
+function pnpToday_() { return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10); }
+function teamLeaves_(c) {
+  const a = teamAnswers_(c), it = Array.isArray(a.itinerary) ? a.itinerary : [];
+  const ends = it.map(function (r) { return r && isoDate_(r.to); }).filter(Boolean).sort();
+  if (ends.length) return ends[ends.length - 1];
+  return isoDate_(a.departureKh) || isoDate_(a.departure) || '';
+}
+function sweepLeftTeams_(rows, today) {
+  today = today || pnpToday_();
+  let n = 0;
+  rows.forEach(function (c) {
+    if (!c || c.type !== 'team' || c.archived || c.archiveOff || c.stage !== 'arrived') return;
+    const left = teamLeaves_(c);
+    if (!left || left >= today) return;
+    c.archived = { at: today, reason: 'Left Cambodia on ' + left + ' — archived automatically', by: 'auto', left: left };
+    c.log = (Array.isArray(c.log) ? c.log : []).concat([{ at: new Date().toISOString(), by: 'auto', kind: 'note', text: 'Team left on ' + left + ' — archived automatically. Everything is kept.' }]).slice(-CAND_LOG_MAX);
+    c.updated = new Date().toISOString(); c.updatedBy = 'auto';
+    n++;
+  });
+  return n;
+}
 async function portalBoot(username, pin) {
   const s = await verifyStaff_(username, pin, true);
   if (!s) return { ok: false, err: 'auth' };
   const cands = await getCandidates_();
+  if (sweepLeftTeams_(cands)) await writeJSON('candidates', cands);
   if (isApplicant_(s)) {
     const cand = await candidateFor_(cands, s);
     if (!cand) return { ok: false, err: 'no_application' };
@@ -6115,13 +6148,13 @@ async function portalResetForm(username, pin, key) {
   await writeJSON('portalForms', stored);
   return { ok: true, forms: await getForms_() };
 }
-async function applicantCand_(username, pin) {
+async function applicantCand_(username, pin, leftOk) {
   const s = await verifyStaff_(username, pin, true);
   if (!s || !isApplicant_(s)) return { out: { ok: false, err: 'auth' } };
   const rows = await getCandidates_();
   const cand = await candidateFor_(rows, s);
   if (!cand) return { out: { ok: false, err: 'no_application' } };
-  if (cand.archived) return { out: { ok: false, err: 'closed' } };
+  if (cand.archived && !(leftOk && cand.archived.left)) return { out: { ok: false, err: 'closed' } };
   return { s: s, rows: rows, cand: cand };
 }
 /* Every change saves — the form is long and phones lose pages. */

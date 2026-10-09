@@ -834,6 +834,16 @@ forms, documents and references follow.
   `P.aview/strengths/tphotos` in with the boot and draws `applicantNavHtml_('data-pvaview')`
   outside the inert frame (`P.pv.aview`); Our team and Resources load with the staff member's own
   creds (`meetOn` / `resOn` in `bindTabs_`).
+- **A team that left archives itself (Oct 2026)**: `sweepLeftTeams_` runs on every `portalBoot` (Phnom Penh
+  date, `pnpToday_`): a team at stage `arrived`, not archived, without `archiveOff`, whose last date in
+  Cambodia (`teamLeaves_`: latest itinerary `to`) has passed gets `archived = {at, by:'auto', left}` and a
+  log note. Nothing is removed (docs, photos, strengths, numbers stay). `archived.left` means: status
+  `completed` ("Outreach complete", a thank-you note), `tripFromApp_` keeps the Teams Database entry
+  `active` (only a hand-closed team is `cancelled`), and `applicantCand_(…, leftOk)` still lets
+  `portalSaveTeamNumbers` through. Reopening it by hand sets `archiveOff` (kept by `cleanCandidate_`) so the
+  sweep leaves it. Page: the Teams tab's chip reads 🗄 Archive and groups by year (`<details
+  class=archYear>`, newest open) and quarter (`.archQ`, `archDate_` = left or at, `QUARTER_MONTHS`); the
+  record shows `#archBanner`.
 - **Staff side bar and menu (Oct 2026)**: the bar is a small ‹ to the GP app home (`#toGpApp`, name in
   `.srOnly`) · Applications · ☰ (`staffNavHtml_`, `P.menuOpen`, `#navMenu`); the menu is a drawer that
   slides in from the right over a backdrop (`#staffMenu` fixed, `#menuScrim`, `body.menuOn`; ✕, the
