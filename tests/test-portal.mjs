@@ -317,7 +317,10 @@ console.log('=== legal documents, signed on a phone ===');
   r = await call('portalSignSubmit', [token, 'msign0001', 'acceptance', { ...accept, initials: { page1: SIG, page2: SIG } }]);
   ok('… then it signs', r.body.ok && r.body.done.acceptance === true);
   /* the Child Protection Agreement: one of two answers to the disclosure, role and dates, optional lines */
-  const cp = { name: 'Mo Signer', sig: SIG, fields: { role: 'Short-term team', dates: '10/01/2027 – 20/01/2027' } };
+  const cpChecks = {}; ['readA', 'readB', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'readD', 'readE', 'readF'].forEach(k => { cpChecks[k] = true; });
+  r = await call('portalSignSubmit', [token, 'msign0001', 'child', { name: 'Mo Signer', sig: SIG, checks: { ...cpChecks, c8: false }, choices: { disclose: 'none' }, fields: { role: 'Short-term team', dates: '10/01/2027 – 20/01/2027' } }]);
+  ok('the Child Protection Agreement has a box to tick for each part as you read — every one is needed', r.body.ok === false && r.body.err === 'unticked');
+  const cp = { name: 'Mo Signer', sig: SIG, checks: cpChecks, fields: { role: 'Short-term team', dates: '10/01/2027 – 20/01/2027' } };
   r = await call('portalSignSubmit', [token, 'msign0001', 'child', cp]);
   ok('the Child Protection Agreement needs one of its two disclosure answers', r.body.ok === false && r.body.err === 'choice_required');
   r = await call('portalSignSubmit', [token, 'msign0001', 'child', { ...cp, choices: { disclose: 'maybe' } }]);

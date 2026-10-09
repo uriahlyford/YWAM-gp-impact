@@ -850,6 +850,8 @@ forms, documents and references follow.
   start "1. " are numbered sections, a size down from the Part headings; a list item "Lead: text" gets a bold
   lead-in; a paragraph with `style:'quote'` is set off with a bar. Portal: `legalHeadHtml_`, `legalHHtml_`,
   `legalListHtml_`, `legalReadHtml_` (read-only, every block type).
+  The Child Protection Agreement has a box to tick after each Part and each numbered commitment (`readA`…`readF`,
+  `c1`…`c8`), so people tick as they read; every box is needed to sign (`unticked`).
 - **Legal documents, signed on a phone (Oct 2026)**: YWAM Siem Reap's five forms (Photo Release, Accident
   Waiver, Liability Release Waiver, Acceptance of Place, Child Protection Agreement) live in `netlify/functions/legal-docs-default.js`
   as blocks (p / check / group / field / initial) with `sign {age, witness, guardian}` — English, verbatim
