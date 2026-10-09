@@ -844,6 +844,26 @@ forms, documents and references follow.
   sweep leaves it. Page: the Teams tab's chip reads 🗄 Archive and groups by year (`<details
   class=archYear>`, newest open) and quarter (`.archQ`, `archDate_` = left or at, `QUARTER_MONTHS`); the
   record shows `#archBanner`.
+- **Legal documents, signed on a phone (Oct 2026)**: YWAM Siem Reap's five forms (Photo Release, Accident
+  Waiver, Liability Release Waiver, Acceptance of Place, Child Protection Agreement) live in `netlify/functions/legal-docs-default.js`
+  as blocks (p / check / group / field / initial) with `sign {age, witness, guardian}` — English, verbatim
+  from the paper forms (the Khmer halves are not in yet). Staff make a team's link on the record's ✍️ Legal
+  tab (`portalSignLink`, token hashed as `portal.signLink.hash`, a new one turns the old off); anyone opens
+  `portal.html?sign=<token>` with no account (`P.view==='sign'`, `signHtml_` / `bindSign_`; a saved sign-in
+  is not booted), picks their name (`teamPhotoPeople_`), says if under 18, and signs each document:
+  ticks, lines, initials and signatures drawn on `.sigPad` canvases (`bindSigPads_`, saved as JPEG
+  base64 in `P.sign.pads`). `portalSignSubmit` checks everything and keeps the record per person in blob
+  `tsign:<candId>:<key>` plus a snapshot of the exact text (`legalSnap:<sha256>`); the candidate keeps only
+  `portal.signed[key][docId] = {at, name}` for the grid. `portalSignedPdf` builds the PDF on demand with
+  `netlify/functions/legal-pdf.js` (hand-written PDF: Helvetica WinAnsi text, ticks, the JPEGs, a footer).
+  A portal admin switches documents on/off on ✍️ Legal documents (`portalLegalDocs` /
+  `portalSaveLegalDocs`, blob `legalDocs {off, contacts}` — the Child Protection Agreement's Part F reporting
+  contacts). Every kind of applicant signs (`signPeople_`: a team's people, else just `me`), and from their own
+  dashboard once at `practical`/`arrived` (`legalCardHtml_` → `openMySign_`): the sign handlers take
+  `{user, pin}` in place of a token (`signFor_`), so the team link staff sent keeps working. Block kinds also
+  include h / list / choice (one of; `choices`) / contacts, and fields can be `optional` or `prefill`
+  (role, dates from `signPrefill_`). Choosing "disclose privately" on the agreement logs a note on the
+  record and flags `portal.signed[key].child.disclose`. Every test that copies api.js copies both new files too.
 - **The staff record in tabs (Oct 2026)**: `panelHtml_` keeps contact on top, then a sticky tab row
   (`#ptabs`, `[data-ptab]`, `P.ptab`, reset to overview per record via `P.ptabFor`): Overview (stage,
   owner, next step, team steps) · Trip · People · Documents (visa + docs + reference) · Numbers · Answers ·

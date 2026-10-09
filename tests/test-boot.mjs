@@ -23,6 +23,8 @@ fs.writeFileSync(TMP+'/package.json',JSON.stringify({type:'module'}));
 fs.copyFileSync(REPO+'/netlify/functions/api.js',TMP+'/api.js');
 fs.copyFileSync(REPO+'/netlify/functions/team-seed.js',TMP+'/team-seed.js'); // api.js imports it
 fs.copyFileSync(REPO+'/netlify/functions/portal-forms-default.js',TMP+'/portal-forms-default.js');
+fs.copyFileSync(REPO+'/netlify/functions/legal-docs-default.js',TMP+'/legal-docs-default.js');  // the legal forms teams sign
+fs.copyFileSync(REPO+'/netlify/functions/legal-pdf.js',TMP+'/legal-pdf.js');  // and the signed-PDF builder
 process.env.GP_LEADER_CODE='leadercode';
 const blobs=await import(TMP+'/node_modules/@netlify/blobs/index.js');
 const api=await import(TMP+'/api.js');
