@@ -604,6 +604,7 @@ async function open(viewport, query, seed) {
   ok('portal staff open the ☰ menu and get Staff access only — no Forms, no Admin access group', !(await page.$('#toForms')) && !!(await page.$('#toPreview')) && /Staff access/.test(await page.$eval('#staffMenu', e => e.textContent)) && !/Admin access/.test(await page.$eval('#staffMenu', e => e.textContent)));
   ok('but do get the GP app home link', !!(await page.$('#toGpApp')));
   ok('nor an Accounts button', !(await page.$('#toAccounts')));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
   await page.click('[data-open="cd_anna"]');
   await page.waitForSelector('#panel');
   const pan = await page.$eval('#panel', e => e.textContent);
@@ -1081,7 +1082,15 @@ async function open(viewport, query, seed) {
   }));
   ok('on a phone the header keeps only language and Sign out', JSON.stringify(bar.header) === JSON.stringify(['langBtn', 'outBtn']), JSON.stringify(bar.header));
   ok('the bar is just Applications and a ☰ menu — the rest sits in the menu', JSON.stringify(bar.nav) === JSON.stringify(['navCrm', 'navMenu']) && !(await page.$('#staffMenu')), JSON.stringify(bar.nav));
-  ok('and the bar starts with a way back to the GP app home', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent)));
+  ok('and the bar starts with a small ‹ back to the GP app home (named for screen readers)', await page.$eval('#staffNav > :first-child', a => a.id === 'toGpApp' && a.tagName === 'A' && a.getAttribute('href') === 'teams.html' && /GP app home/.test(a.textContent) && a.getBoundingClientRect().width <= 44 && /‹/.test(a.textContent)));
+  await page.click('#navMenu'); await page.waitForSelector('#staffMenu'); await page.waitForTimeout(350);
+  ok('☰ opens the menu as a panel on the side, over the page, with a backdrop', await page.$eval('#staffMenu', m => { const r = m.getBoundingClientRect(), cs = getComputedStyle(m); return cs.position === 'fixed' && Math.abs(r.right - innerWidth) < 1 && r.top === 0 && r.width < innerWidth; }) && !!(await page.$('#menuScrim')) && await page.evaluate(() => document.body.classList.contains('menuOn')), JSON.stringify(await page.$eval('#staffMenu', m => { const r = m.getBoundingClientRect(); return { pos: getComputedStyle(m).position, r: [r.left, r.top, r.right, r.width], w: innerWidth }; })));
+  await page.click('#menuScrim', { position: { x: 10, y: 400 } }); await page.waitForTimeout(150);
+  ok('tapping outside closes it', !(await page.$('#staffMenu')) && !(await page.evaluate(() => document.body.classList.contains('menuOn'))));
+  await page.click('#navMenu'); await page.waitForSelector('#staffMenu'); await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+  ok('… and so does Esc', !(await page.$('#staffMenu')));
+  await page.click('#navMenu'); await page.waitForSelector('#menuClose'); await page.click('#menuClose'); await page.waitForTimeout(150);
+  ok('… and ✕', !(await page.$('#staffMenu')));
   ok('every button is fully on screen, nothing scrolls sideways', bar.inView && bar.noScroll && await page.$eval('#toGpApp', a => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 0.5; }));
   if(!(await page.$('#toPreview'))){ await page.click('#navMenu'); await page.waitForSelector('#toPreview'); }
   await page.click('#toPreview');
