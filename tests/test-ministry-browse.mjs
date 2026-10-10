@@ -146,7 +146,7 @@ await p.route('**/.netlify/functions/api', r => {
   else if (/^getMy/.test(q.fn)) o = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
   r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
 });
-await p.addInitScript((u) => localStorage.setItem('gp-staff', JSON.stringify({ user: u, pin: '1234' })), BOOT_ADMIN.username);
+await p.addInitScript((u) => (localStorage.setItem('gp-cafe-view', 'numbers'), localStorage.setItem('gp-staff', JSON.stringify({ user: u, pin: '1234' }))), BOOT_ADMIN.username);
 await p.goto('http://localhost:4416/teams.html'); await p.waitForSelector('nav.bottom button', { timeout: 15000 });
 await p.waitForTimeout(700);
 await p.click('nav.bottom [data-tab="week"]');
@@ -200,8 +200,8 @@ ok('no console/page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 
 // an admin: every ministry on the campus, as Department / Ministry dropdowns
 bootAs = { ...BOOT_ADMIN, id: 'st_admin', name: 'Uriah', username: 'uriah', isAdmin: true, ministries: [] };
-await p.evaluate(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'uriah', pin: '1234' })));
-await p.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'uriah', pin: '1234' })));
+await p.evaluate(() => (localStorage.setItem('gp-cafe-view', 'numbers'), localStorage.setItem('gp-staff', JSON.stringify({ user: 'uriah', pin: '1234' }))));
+await p.addInitScript(() => (localStorage.setItem('gp-cafe-view', 'numbers'), localStorage.setItem('gp-staff', JSON.stringify({ user: 'uriah', pin: '1234' }))));
 await p.goto('http://localhost:4416/teams.html'); await p.waitForSelector('nav.bottom button', { timeout: 15000 });
 await p.waitForTimeout(700);
 await p.click('nav.bottom [data-tab="week"]'); await p.waitForTimeout(500);

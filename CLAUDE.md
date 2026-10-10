@@ -1350,6 +1350,47 @@ profile). `S.guest` with a stand-in `S.me` (`gpGuestMe_`, id 'guest') and EMPTY 
   admins and HR see "Profile unfinished" on anyone's profile, the everyone list, and
   signatures. Teammates see nothing of it — the contract half is HR's business.
 
+## My Ministry tools: the numbers as a by-product (Oct 2026)
+The direction: each My Ministry page becomes a tool that serves the ministry, and its weekly
+numbers fill themselves in from using it (like Teams and Hospitality). Two so far:
+- **Campus Leadership → "My week"** (`lwHtml_`/`bindLw_`; api `leadWeek`, `leadLogAdd`,
+  `leadLogDelete`, `leadReflectSave`, `leadPartnerSave/Delete`, `basePlantSave`). Anyone in
+  Campus Leadership with a ministry; the leadership board is the second tab. A quick log
+  (`LW_KINDS` → `LEAD_KINDS` metrics: one-on-ones with who, partner connections, church/base
+  talks, gospel hours, teaching, meetings), partners with "Connected", base plants with a
+  stage (not launched → Base Plants in Planning, Director or admin), and the Director's 1–10
+  reflection (`LEAD_RATINGS`). Blobs `leadLog`, `leadReflect`, `leadPartners`, `basePlants`.
+- **Community Service → Cafe** (`cafeHtml_`/`bindCafe_`; api `cafe*`). Today (opening
+  checklist → "We're open", closing checklist + cash), Till (menu → order → Charge; prices
+  come from the SERVER's menu, never the phone; gospel/salvation counters; expenses; undo),
+  Rota (the team fills shifts), Week (tiles, cups a day, best sellers), Set up (the cafe's
+  leader or an admin: menu, checklists, shifts). `cafe:<campus>` holds settings, each day
+  is `cafeDay:<campus>:<date>`. "The numbers" tab is the old page.
+- **Campus Leadership tabs:** My week · **Overview** · Board (`gp-lw-tab` remembers it; the
+  Cafe's tool/numbers choice is `gp-cafe-view`). **Overview** (`leadBaseHtml_`): for the
+  Director (or an admin) four glance tiles, then clear leaders (from each person's `leads`,
+  `ministryLeaders_`), next Tuesday, the money ahead, and every department's pulse folded;
+  a department overseer gets their pulse first, then their ministries' leaders. The bell's
+  "See them" opens Overview. **Board** keeps the Director's quarter, OKRs, the Monday
+  board, notes, and the **Tuesday** tab (`leadTuesHtml_`, api `saveLeadTuesday`): the next
+  eight Tuesdays, each with facilitator, translator (a person on the campus by id, or a
+  typed guest name) and topics — stored as `tues` on the leadership board doc.
+- **The money ahead** (`leadMoneyHtml_`; api `finProjGet`/`finProjSave`, blob `finProj:<campus>`)
+  is the leadership code's tier, like SENSITIVE: the latest Base Finances / Cash Reserve and a
+  six-month projection of money coming in and going out, with the month it runs short. The
+  phone keeps the code as `gp-leadercode` (the dashboard's own key); the server checks it on
+  every call and fails closed.
+- **HangPopok** (the cafe's real POS, a Cambodian cloud POS; no public API found): the leader
+  picks "Our till" in Set up (`settings.till`). In HangPopok mode the Till tab asks for the
+  day's sales, receipts and cups at closing (`cafePos` → `day.pos`), counted like in-app sales.
+  An automatic link waits on HangPopok offering an export or API.
+- **`toolSync_`** writes a week's totals into `entries` with `by: 'tool:lead'`/`'tool:cafe'`
+  (current year). A week with nothing logged clears ONLY rows the tool wrote — a number
+  someone typed by hand is never overwritten by an empty tool week.
+- Next (planned, not built): Community Schools / YDC — enrolment, attendance on each
+  student's profile, test scores, progress, who has paid → Students Enrolled, Days with
+  Classes, Passing Rate, etc.
+
 ## Admin → Arrivals & departures
 - **Invite a new group:** pick campus, department and (optionally) ministry → one link,
   `teams.html?reg=1&campus=…&dept=…&ministry=…` (`gpInviteLink_`). It opens the

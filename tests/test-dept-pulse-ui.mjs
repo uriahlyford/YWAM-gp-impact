@@ -71,6 +71,7 @@ async function open(user, opts) {
   page.on('console', m => { if (m.type() === 'error' && !/net::|ERR_/.test(m.text())) errors.push('CONSOLE ' + m.text()); });
   await page.route('**fonts.g**', r => r.abort());
   await page.addInitScript(a => {
+    localStorage.setItem('gp-cafe-view', 'numbers'); localStorage.setItem('gp-lw-tab', 'base');
     localStorage.setItem('gp-staff', JSON.stringify({ user: a.u, pin: '1234' }));
     if (a.km) localStorage.setItem('gp-lang', 'km');
   }, { u: user, km: !!opts.km });
@@ -136,7 +137,8 @@ const tiles = page => page.$$eval('.pulseCard .pulseTile', ts => ts.map(t => t.i
   await toMinistry(page);
   ok('the Campus Director sees every department', (await page.$$('.pulseCard')).length === 4);
   ok('each with its ministries folded away', (await page.$$('.pulseCard details.pulseMore')).length >= 3);
-  ok('and the quarter\'s own check-in', !!(await page.$('#dirQSave')));
+  await page.click('[data-lwtab="board"]'); await page.waitForTimeout(500);   // the quarter's check-in sits with the board, the pulse on Overview
+  ok('and the quarter\'s own check-in, a tab away', !!(await page.$('#dirQSave')));
   await page.fill('[data-dirq="Base Vision (1-10)"]', '70');
   await page.click('#dirQSave'); await page.waitForTimeout(300);
   ok('a 70 for a 1–10 score is caught', /goes from 1 to 10/.test(await page.$eval('#msg', e => e.textContent)) &&

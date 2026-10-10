@@ -140,7 +140,7 @@ await p.route('**/.netlify/functions/api', r => {
   else if (/^getMy/.test(q.fn)) o = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
   r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
 });
-await p.addInitScript((u) => localStorage.setItem('gp-staff', JSON.stringify({ user: u, pin: '1234' })), BOOT_ADMIN.username);
+await p.addInitScript((u) => { localStorage.setItem('gp-cafe-view', 'numbers'); localStorage.setItem('gp-lw-tab', 'board'); localStorage.setItem('gp-staff', JSON.stringify({ user: u, pin: '1234' })); }, BOOT_ADMIN.username);
 await p.goto('http://localhost:4419/teams.html'); await p.waitForSelector('nav.bottom button', { timeout: 15000 });
 await p.waitForTimeout(700);
 await p.click('nav.bottom [data-tab="week"]');

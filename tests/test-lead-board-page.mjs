@@ -77,7 +77,7 @@ async function open(who, viewport) {
     else if (/^getMy/.test(b.fn)) out = { ok: true, logs: [], goals: [], checkins: [], mentees: [], requests: [] };
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
   });
-  await page.addInitScript(u => localStorage.setItem('gp-staff', JSON.stringify({ user: u, pin: '1234' })), who.username);
+  await page.addInitScript(u => (localStorage.setItem('gp-lw-tab', 'board'), localStorage.setItem('gp-staff', JSON.stringify({ user: u, pin: '1234' }))), who.username);
   await page.goto('http://localhost:4490/teams.html', { waitUntil: 'load' });
   await page.waitForSelector('.hero', { timeout: 15000 });
   await page.waitForTimeout(500);
@@ -232,6 +232,7 @@ console.log('=== a phone: hold, then drag ===');
     const el = document.querySelector('[data-leadcard="' + id + '"]'); const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
     el.dispatchEvent(new TouchEvent(type, { touches: type === 'touchend' ? [] : [t], targetTouches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true }));
   }, [id, type, x, y]);
+  await page.$eval('[data-leadcol="doing"]', e => e.scrollIntoView({ block: 'center' })); await page.waitForTimeout(200);   // the board is below the fold on a phone
   const a = await (await page.$('[data-leadcard="c3"]')).boundingBox(), b = await (await page.$('[data-leadcol="doing"]')).boundingBox();
   await touch('c3', 'touchstart', a.x + 10, a.y + 10); await page.waitForTimeout(100);
   await touch('c3', 'touchmove', a.x + 10, a.y + 60);

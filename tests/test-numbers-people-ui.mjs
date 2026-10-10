@@ -74,6 +74,7 @@ async function open(user, opts) {
   page.on('console', m => { if (m.type() === 'error' && !/net::|ERR_/.test(m.text())) errors.push('CONSOLE ' + m.text()); });
   await page.route('**fonts.g**', r => r.abort());
   await page.addInitScript(a => {
+    localStorage.setItem('gp-cafe-view', 'numbers'); localStorage.setItem('gp-lw-tab', 'board');
     localStorage.setItem('gp-staff', JSON.stringify({ user: a.u, pin: '1234' }));
     if (a.km) localStorage.setItem('gp-lang', 'km');
   }, { u: user, km: !!opts.km });

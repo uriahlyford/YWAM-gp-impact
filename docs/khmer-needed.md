@@ -2927,3 +2927,165 @@ now). "Read" means "I have read this book".
 | Ask for days away, and see who is covering. | សុំថ្ងៃឈប់ ហើយមើលថាអ្នកណាជួសជំនួស។ |
 | Team directory | បញ្ជីក្រុម |
 | Everyone on the base: their ministries, goals, types and strengths. | មនុស្សគ្រប់គ្នានៅលើមូលដ្ឋាន៖ កិច្ចការបម្រើ គោលដៅ ប្រភេទ និងចំណុចខ្លាំងរបស់ពួកគេ។ |
+
+### Ministry tools: Campus Leadership “My week” and the Cafe tool
+
+| English | Khmer (draft) |
+|---|---|
+| Couldn’t load your week. | មិនអាចផ្ទុកសប្តាហ៍របស់អ្នកបានទេ។ |
+| These are your leadership numbers for the week — counted from what you log here. | ទាំងនេះជាលេខដឹកនាំរបស់អ្នកសម្រាប់សប្តាហ៍នេះ — រាប់ចេញពីអ្វីដែលអ្នកកត់ត្រានៅទីនេះ។ |
+| Log something | កត់ត្រាអ្វីមួយ |
+| With whom? | ជាមួយអ្នកណា? |
+| Which partner? | ដៃគូមួយណា? |
+| Someone new | អ្នកថ្មី |
+| Their name | ឈ្មោះរបស់គាត់ |
+| How many hours? | ប៉ុន្មានម៉ោង? |
+| When? | ពេលណា? |
+| Nothing logged this week yet. Tap above as things happen — it takes a second. | មិនទាន់មានអ្វីកត់ត្រាក្នុងសប្តាហ៍នេះនៅឡើយទេ។ ចុចខាងលើពេលមានរឿងកើតឡើង — ចំណាយតែមួយវិនាទីប៉ុណ្ណោះ។ |
+| End-of-week reflection | ការពិចារណាចុងសប្តាហ៍ |
+| How did the week go? 1 is poor, 10 is excellent. | សប្តាហ៍នេះយ៉ាងម៉េចដែរ? ១ គឺខ្សោយ ១០ គឺល្អឥតខ្ចោះ។ |
+| A line about the week (optional) | មួយបន្ទាត់អំពីសប្តាហ៍នេះ (មិនចាំបាច់) |
+| Update | ធ្វើបច្ចុប្បន្នភាព |
+| My partners | ដៃគូរបស់ខ្ញុំ |
+| Churches, supporters and friends of the base you keep in touch with. Add them once; tap “Connected” when you do. | ក្រុមជំនុំ អ្នកគាំទ្រ និងមិត្តភក្តិរបស់មូលដ្ឋាន ដែលអ្នករក្សាទំនាក់ទំនងជាមួយ។ បន្ថែមពួកគេម្តង រួចចុច “បានទាក់ទង” ពេលអ្នកទាក់ទង។ |
+| {n} days ago | {n} ថ្ងៃមុន |
+| Connected | បានទាក់ទង |
+| Church or organisation | ក្រុមជំនុំ ឬអង្គការ |
+| Base plants | ការបង្កើតមូលដ្ឋានថ្មី |
+| Places you are praying about or planning a new base. Those not yet launched count as Base Plants in Planning. | កន្លែងដែលអ្នកកំពុងអធិស្ឋាន ឬរៀបចំផែនការបង្កើតមូលដ្ឋានថ្មី។ កន្លែងដែលមិនទាន់ចាប់ផ្តើម រាប់ជាការរៀបចំផែនការបង្កើតមូលដ្ឋានថ្មី។ |
+| Name, e.g. YWAM Battambang | ឈ្មោះ ឧ. YWAM បាត់ដំបង |
+| No connection — try again when you are online. | គ្មានអ៊ីនធឺណិត — សូមព្យាយាមម្តងទៀតពេលអ្នកមានអ៊ីនធឺណិត។ |
+| Choose who it was with. | ជ្រើសរើសថាជាមួយអ្នកណា។ |
+| Choose the partner. | ជ្រើសរើសដៃគូ។ |
+| Type their name. | វាយឈ្មោះរបស់គាត់។ |
+| Remove this partner from your list? | ដកដៃគូនេះចេញពីបញ្ជីរបស់អ្នក? |
+| Remove this from the list? | ដកនេះចេញពីបញ្ជី? |
+| Type a name. | វាយឈ្មោះមួយ។ |
+| The cafe tool is for the cafe team. | ឧបករណ៍ហាងកាហ្វេ គឺសម្រាប់ក្រុមហាងកាហ្វេ។ |
+| Couldn’t load the cafe. | មិនអាចផ្ទុកហាងកាហ្វេបានទេ។ |
+| Open the cafe | បើកហាងកាហ្វេ |
+| We’re open | យើងបើកហើយ |
+| Closed at {time} | បានបិទនៅម៉ោង {time} |
+| cash {amount} | សាច់ប្រាក់ {amount} |
+| Open since {time} | បើកតាំងពីម៉ោង {time} |
+| Customers | អតិថិជន |
+| Cups | កែវ |
+| Takings | ចំណូល |
+| Expenses | ចំណាយ |
+| Go to the till | ទៅកន្លែងគិតលុយ |
+| Close for the day | បិទសម្រាប់ថ្ងៃនេះ |
+| Cash in the drawer ($) | សាច់ប្រាក់ក្នុងថត ($) |
+| Close for today | បិទថ្ងៃនេះ |
+| Open again | បើកម្តងទៀត |
+| Opening the cafe counts the day as open. Every sale, conversation and expense fills this week’s cafe numbers by itself. | ការបើកហាងកាហ្វេ រាប់ថ្ងៃនេះជាថ្ងៃបើកទ្វារ។ រាល់ការលក់ ការសន្ទនា និងការចំណាយ បំពេញលេខហាងកាហ្វេសប្តាហ៍នេះដោយខ្លួនឯង។ |
+| The cafe isn’t open yet today — open it on the Today tab first. | ហាងកាហ្វេមិនទាន់បើកថ្ងៃនេះនៅឡើយទេ — សូមបើកវានៅផ្ទាំង ថ្ងៃនេះ ជាមុនសិន។ |
+| Tap the menu to start an order. | ចុចលើម៉ឺនុយ ដើម្បីចាប់ផ្តើមការកុម្ម៉ង់។ |
+| Total | សរុប |
+| Charge | គិតលុយ |
+| Today’s orders | ការកុម្ម៉ង់ថ្ងៃនេះ |
+| Undo | មិនធ្វើវិញ |
+| No orders yet today. | មិនទាន់មានការកុម្ម៉ង់ថ្ងៃនេះនៅឡើយទេ។ |
+| Expense | ចំណាយ |
+| What for? e.g. milk, ice | សម្រាប់អ្វី? ឧ. ទឹកដោះគោ ទឹកកក |
+| Who is working the week of {date}. Tap a box to choose. | អ្នកណាធ្វើការក្នុងសប្តាហ៍ {date}។ ចុចលើប្រអប់ ដើម្បីជ្រើសរើស។ |
+| Week {n} — these are the numbers the cafe tool fills in. | សប្តាហ៍ទី {n} — ទាំងនេះជាលេខដែលឧបករណ៍ហាងកាហ្វេបំពេញឱ្យ។ |
+| Days open | ថ្ងៃបើកទ្វារ |
+| Cups sold | កែវដែលបានលក់ |
+| Profit | ប្រាក់ចំណេញ |
+| Gospel conversations | ការសន្ទនាអំពីដំណឹងល្អ |
+| Cups each day | កែវក្នុងមួយថ្ងៃៗ |
+| Best sellers | លក់ដាច់ជាងគេ |
+| Price | តម្លៃ |
+| cup | កែវ |
+| Add an item | បន្ថែមមុខទំនិញ |
+| Items ticked “cup” count as Cups Sold. | មុខទំនិញដែលបានធីក “កែវ” រាប់ជាកែវដែលបានលក់។ |
+| Opening checklist | បញ្ជីត្រួតពិនិត្យពេលបើក |
+| Closing checklist | បញ្ជីត្រួតពិនិត្យពេលបិទ |
+| Shifts (separated by commas) | វេនការងារ (បំបែកដោយសញ្ញាក្បៀស) |
+| The order is empty. | ការកុម្ម៉ង់នៅទទេ។ |
+| Only the cafe’s leader can change the menu. | មានតែអ្នកដឹកនាំហាងកាហ្វេទេ ដែលអាចផ្លាស់ប្តូរម៉ឺនុយបាន។ |
+| Sold | បានលក់ |
+| Undo this order? | បោះបង់ការកុម្ម៉ង់នេះ? |
+| Type the amount. | វាយចំនួនទឹកប្រាក់។ |
+| Leadership board | ផ្ទាំងដឹកនាំ |
+| Cafe tool | ឧបករណ៍ហាងកាហ្វេ |
+| The numbers | លេខ |
+| When the cafe tool is used, these numbers fill themselves in from it. | ពេលប្រើឧបករណ៍ហាងកាហ្វេ លេខទាំងនេះបំពេញដោយខ្លួនឯងពីវា។ |
+| Partner connection | ការទាក់ទងជាមួយដៃគូ |
+| Spoke at a church | បានចែកចាយនៅក្រុមជំនុំ |
+| Spoke at a YWAM base | បានចែកចាយនៅមូលដ្ឋាន YWAM |
+| Shared the gospel | បានចែកចាយដំណឹងល្អ |
+| Teaching prepped | បានរៀបចំការបង្រៀន |
+| Meeting led | បានដឹកនាំការប្រជុំ |
+| Department meeting | ការប្រជុំផ្នែក |
+| What you talked about (optional) | អ្វីដែលអ្នកបាននិយាយគ្នា (មិនចាំបាច់) |
+| Which church? | ក្រុមជំនុំណា? |
+| Which base? | មូលដ្ឋានណា? |
+| Where, and with whom? (optional) | នៅឯណា និងជាមួយអ្នកណា? (មិនចាំបាច់) |
+| Topic | ប្រធានបទ |
+| Which meeting? | ការប្រជុំណា? |
+| Which department? | ផ្នែកណា? |
+| Praying | កំពុងអធិស្ឋាន |
+| Exploring | កំពុងស្វែងយល់ |
+| Planning | កំពុងរៀបចំផែនការ |
+| Preparing | កំពុងត្រៀម |
+| Launched | បានចាប់ផ្តើម |
+| Base vision | ចក្ខុវិស័យមូលដ្ឋាន |
+| Communications | ការទំនាក់ទំនង |
+| Partner relationships | ទំនាក់ទំនងជាមួយដៃគូ |
+| Till | កន្លែងគិតលុយ |
+| Rota | តារាងវេន |
+| Set up | រៀបចំ |
+
+### Leadership Overview, the Tuesday meeting, the money ahead, and HangPopok at the cafe
+
+| English | Khmer (draft) |
+|---|---|
+| HangPopok totals are in for today. | ចំនួនសរុបពី HangPopok សម្រាប់ថ្ងៃនេះ បានបញ្ចូលហើយ។ |
+| HangPopok totals not entered yet — on the Till tab, at closing. | មិនទាន់បញ្ចូលចំនួនសរុបពី HangPopok នៅឡើយទេ — នៅផ្ទាំងកន្លែងគិតលុយ ពេលបិទ។ |
+| Enter the HangPopok totals | បញ្ចូលចំនួនសរុបពី HangPopok |
+| Today’s totals from HangPopok | ចំនួនសរុបថ្ងៃនេះពី HangPopok |
+| HangPopok is our till. At closing, copy these from its daily sales report — they count as this week’s sales. | HangPopok គឺជាកន្លែងគិតលុយរបស់យើង។ ពេលបិទ សូមចម្លងលេខទាំងនេះពីរបាយការណ៍លក់ប្រចាំថ្ងៃរបស់វា — វារាប់ជាការលក់ប្រចាំសប្តាហ៍នេះ។ |
+| Sales ($) | ការលក់ ($) |
+| Receipts | វិក្កយបត្រ |
+| Save the totals | រក្សាទុកចំនួនសរុប |
+| Saved at {time} by {name} | បានរក្សាទុកនៅម៉ោង {time} ដោយ {name} |
+| Our till | កន្លែងគិតលុយរបស់យើង |
+| This app | កម្មវិធីនេះ |
+| The till tab asks for the day’s totals from HangPopok. The menu below is only used when selling in this app. | ផ្ទាំងកន្លែងគិតលុយ សុំចំនួនសរុបប្រចាំថ្ងៃពី HangPopok។ ម៉ឺនុយខាងក្រោម ប្រើតែពេលលក់ក្នុងកម្មវិធីនេះប៉ុណ្ណោះ។ |
+| Sell from the menu here. If the cafe rings up sales in HangPopok, choose it — then the day’s totals are typed in at closing. | លក់ពីម៉ឺនុយនៅទីនេះ។ ប្រសិនបើហាងកាហ្វេគិតលុយក្នុង HangPopok សូមជ្រើសរើសវា — បន្ទាប់មកវាយបញ្ចូលចំនួនសរុបប្រចាំថ្ងៃពេលបិទ។ |
+| Type the totals first. | សូមវាយចំនួនសរុបជាមុនសិន។ |
+| Clear leaders | អ្នកដឹកនាំច្បាស់លាស់ |
+| Tuesday {date} | ថ្ងៃអង្គារ {date} |
+| Money ahead | ថវិកាខាងមុខ |
+| short in {month} | ខ្វះនៅខែ {month} |
+| ministries have a clear leader | កិច្ចការបម្រើមានអ្នកដឹកនាំច្បាស់លាស់ |
+| No leader yet: | មិនទាន់មានអ្នកដឹកនាំ៖ |
+| Every ministry has a leader. | កិច្ចការបម្រើនីមួយៗមានអ្នកដឹកនាំហើយ។ |
+| Who leads what | អ្នកណាដឹកនាំអ្វី |
+| A leader is set on each person’s profile by an admin. | អ្នកគ្រប់គ្រង (admin) កំណត់អ្នកដឹកនាំនៅលើប្រវត្តិរូបរបស់បុគ្គលម្នាក់ៗ។ |
+| Facilitating | សម្របសម្រួល |
+| Nobody yet | មិនទាន់មាននរណាម្នាក់ |
+| Translating | បកប្រែ |
+| Plan the Tuesdays | រៀបចំផែនការថ្ងៃអង្គារ |
+| Departments this week | ផ្នែកនានាក្នុងសប្តាហ៍នេះ |
+| At this rate the money runs short in {month}. | តាមល្បឿននេះ ថវិកានឹងខ្វះនៅខែ {month}។ |
+| In six months: {money} | ក្នុងរយៈពេលប្រាំមួយខែ៖ {money} |
+| That leadership code didn’t work. | កូដថ្នាក់ដឹកនាំនោះមិនត្រឹមត្រូវទេ។ |
+| Base finances need the leadership code. | ហិរញ្ញវត្ថុមូលដ្ឋាន ត្រូវការកូដថ្នាក់ដឹកនាំ។ |
+| Enter the leadership code | បញ្ចូលកូដថ្នាក់ដឹកនាំ |
+| Base finances | ហិរញ្ញវត្ថុមូលដ្ឋាន |
+| Cash reserve | ទុនបម្រុងសាច់ប្រាក់ |
+| Coming in | ចំណូល |
+| Going out | ចំណាយ |
+| Balance | សមតុល្យ |
+| Type what you expect to come in and go out each month. It starts from the latest Base Finances. | វាយអ្វីដែលអ្នករំពឹងថានឹងចូល និងចេញក្នុងមួយខែៗ។ វាចាប់ផ្តើមពីហិរញ្ញវត្ថុមូលដ្ឋានចុងក្រោយបំផុត។ |
+| The Tuesday morning meeting: who facilitates, who translates, and the topics to hit. | ការប្រជុំព្រឹកថ្ងៃអង្គារ៖ អ្នកណាសម្របសម្រួល អ្នកណាបកប្រែ និងប្រធានបទដែលត្រូវលើកឡើង។ |
+| next | បន្ទាប់ |
+| Someone else… | អ្នកផ្សេងទៀត… |
+| Facilitator | អ្នកសម្របសម្រួល |
+| Translator | អ្នកបកប្រែ |
+| Topics to hit | ប្រធានបទដែលត្រូវលើកឡើង |
+| e.g. Outreach week, prayer for the DTS | ឧ. សប្តាហ៍ចេញផ្សព្វផ្សាយ ការអធិស្ឋានសម្រាប់ DTS |
+| That’s plenty for one meeting. | នេះគ្រប់គ្រាន់ហើយសម្រាប់ការប្រជុំមួយ។ |
+| Tuesday morning meeting | ការប្រជុំព្រឹកថ្ងៃអង្គារ |

@@ -652,6 +652,68 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .guestFoot { text-align:center; } .guestFoot p { margin:0 0 12px; color:var(--muted); font-size:14px; line-height:1.5; }
 .gate { max-width:400px; margin:4vh auto 0; text-align:center; } .gate .gateIcon { font-size:38px; line-height:1; }
 .gate h3 { margin:12px 0 8px; font-size:19px; } .gate p { font-size:14px; line-height:1.55; color:var(--muted); margin:0 0 20px; }
+.lwTotals { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px; margin:10px 0 8px; }
+.lwTotal { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:8px 4px; text-align:center; opacity:.65; }
+.lwTotal.on { opacity:1; border-color:var(--accent); } .lwTotal span { display:block; font-size:18px; } .lwTotal b { display:block; font-size:18px; }
+.lwTotal small { display:block; font-size:10.5px; color:var(--muted); line-height:1.2; margin-top:2px; }
+.lwKinds { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+.lwKind { display:flex; align-items:center; gap:8px; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:12px; padding:10px; font:inherit; font-size:13.5px; font-weight:700; text-align:left; cursor:pointer; }
+.lwKind span { font-size:20px; } .lwKind.on { border-color:var(--accent); background:var(--surface2); }
+.lwForm { padding:14px; } .lwFormHead { font-size:16px; margin-bottom:4px; }
+.lwLog { padding:6px 14px; } .lwDay { font-size:12px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:10px 0 4px; }
+.lwRow, .lwPartner, .lwPlant { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--border); }
+.lwRowIcon { font-size:20px; } .lwRowText { flex:1; min-width:0; } .lwRowText b { display:block; font-size:14px; } .lwRowText span { display:block; font-size:12.5px; color:var(--muted); }
+.lwDel { border:0; background:none; color:var(--faint); font-size:20px; cursor:pointer; padding:2px 6px; }
+.lwPartner.due .lwRowText span { color:var(--bad); } .lwConnect { width:auto !important; margin:0 !important; padding:6px 10px !important; font-size:12.5px !important; }
+.lwPlant select { width:auto; max-width:130px; }
+.lwRate { margin:8px 0; } .lwRate > span { font-size:13.5px; font-weight:700; } .lwRateRow { display:grid; grid-template-columns:repeat(10, minmax(0,1fr)); gap:3px; margin-top:4px; }
+.lwRateBtn { border:1px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:8px; padding:7px 0; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.lwRateBtn.on { background:var(--accent); border-color:var(--accent); color:var(--pOnMark); }
+.cafeTabs { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:10px 0 12px; } .cafeTabs::-webkit-scrollbar { display:none; }
+.cafeTabs button { flex:0 0 auto; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:999px; padding:7px 12px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.cafeTabs button.on { background:var(--ink); color:var(--pOnMark); border-color:var(--ink); }
+.cafeStage { padding:14px; } .cafeStageHead { font-size:16px; margin-bottom:8px; }
+.cafeTick { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--border); font-size:14.5px; }
+.cafeTick input { width:20px; height:20px; flex:0 0 auto; margin-top:1px; } .cafeTick.on span { color:var(--muted); text-decoration:line-through; }
+.cafeStatus { border-radius:12px; padding:10px 14px; font-weight:700; margin:0 0 10px; background:var(--surface2); }
+.cafeMenu { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+.cafeItem { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:14px; padding:12px 6px; font:inherit; cursor:pointer; }
+.cafeItem.on { border-color:var(--accent); } .cafeItemEmoji { font-size:28px; } .cafeItem b { font-size:13px; text-align:center; line-height:1.2; } .cafeItem span { font-size:12.5px; color:var(--muted); }
+.cafeQty { position:absolute; top:6px; right:6px; min-width:22px; height:22px; border-radius:11px; background:var(--accent); color:var(--pOnMark) !important; font-weight:900; display:flex; align-items:center; justify-content:center; }
+.cafeOrder { padding:12px 14px; } .cafeLine { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--border); font-size:14px; }
+.cafeLine > span:first-child { flex:1; min-width:0; } .cafeLineQty { display:flex; align-items:center; gap:8px; font-weight:800; }
+.cafeLineQty button { width:28px; height:28px; border-radius:50%; border:1px solid var(--border2); background:var(--surface); color:var(--ink); font:inherit; font-weight:900; cursor:pointer; }
+.cafeTotal { display:flex; justify-content:space-between; font-size:18px; margin:8px 0 4px; }
+.cafeCounters { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin:12px 0; }
+.cafeCounter { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; margin:0; text-align:center; }
+.cafeCounterIcon { font-size:24px; } .cafeCounterName { font-size:12.5px; font-weight:700; color:var(--muted); }
+.cafeCounterRow { display:flex; align-items:center; gap:14px; } .cafeCounterRow b { font-size:22px; min-width:24px; }
+.cafeCounterRow button { width:36px; height:36px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); font:inherit; font-size:18px; font-weight:900; cursor:pointer; }
+.cafeRota { overflow-x:auto; } .cafeRota table { border-collapse:collapse; width:100%; min-width:520px; }
+.cafeRota th { font-size:12px; color:var(--muted); padding:4px; text-align:left; } .cafeRota td { padding:3px; }
+.cafeCell { width:100%; min-height:48px; border:1px solid var(--border2); background:var(--surface); color:var(--ink); border-radius:10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.cafeCell.on { border-color:var(--accent); } .faintPlus { color:var(--faint); font-size:18px; }
+.cafeBars { display:flex; align-items:flex-end; gap:6px; height:150px; padding:14px; }
+.cafeBar { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:3px; }
+.cafeBarFill { width:100%; background:var(--accent); border-radius:6px 6px 2px 2px; min-height:2px; } .cafeBarNum { font-size:11px; font-weight:800; } .cafeBarDay { font-size:11px; color:var(--muted); }
+.cafeMenuRow { display:flex; gap:6px; align-items:center; margin-bottom:6px; } .cafeMenuRow input[type=text] { flex:1; min-width:0; }
+.cafeEmojiIn { flex:0 0 46px !important; text-align:center; } .cafePriceIn { flex:0 0 70px; width:70px; } .cafeCupIn { font-size:12px; white-space:nowrap; }
+.cafePosGrid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:10px; } .cafePosGrid label { font-size:12.5px; font-weight:700; color:var(--muted); display:flex; flex-direction:column; gap:4px; min-width:0; } .cafePosGrid input { width:100%; min-width:0; }
+.lbGlance { margin-bottom:12px; } .lbGlance a.mmTile { text-decoration:none; color:inherit; } .lbTileWho { font-size:17px; overflow-wrap:anywhere; }
+.lbDeptLine { font-size:13.5px; line-height:1.45; padding:3px 0; border-top:1px solid var(--line); } .lbDeptLine:first-of-type { border-top:0; }
+.lbPulseFold { padding:12px; } .lbPulseFold > summary { cursor:pointer; list-style:none; } .lbPulseFold > summary::after { content:' ▾'; color:var(--muted); } .lbPulseFold[open] > summary { margin-bottom:10px; } .lbPulseFold .pulseCard { box-shadow:none; }
+.lbBig { margin:0; font-size:15px; } .lbBig b { font-size:22px; }
+.lbChips { display:flex; flex-wrap:wrap; gap:6px; } .lbChip { background:var(--surface2, var(--surface)); border:1px solid var(--border2); border-radius:999px; padding:4px 10px; font-size:13px; font-weight:700; }
+.lbChip small { font-weight:500; color:var(--muted); } .lbNone { color:var(--bad); font-weight:700; }
+.lbWho { display:flex; justify-content:space-between; gap:10px; padding:4px 0; font-size:14px; } .lbWho span { color:var(--muted); } .lbWho b { text-align:right; overflow-wrap:anywhere; }
+.lbTopics { margin:6px 0 0; padding-left:20px; font-size:14px; line-height:1.45; }
+.leadTue { padding:10px 12px; } .leadTue.next { border-color:var(--accent); }
+.leadTueHead { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; background:none; border:0; padding:2px 0; font:inherit; color:var(--ink); text-align:left; cursor:pointer; }
+.leadTueDate { font-weight:800; font-size:15px; } .leadTueNext { background:var(--accent); color:var(--pOnMark); border-radius:999px; padding:1px 8px; font-size:11.5px; margin-left:4px; vertical-align:middle; }
+.leadTueWho { font-size:13px; color:var(--muted); overflow-wrap:anywhere; } .leadTueForm { margin-top:8px; } .leadTueForm select, .leadTueForm input[type=text] { width:100%; margin-bottom:6px; }
+.lmTable { margin:10px 0 6px; } .lmRow { display:grid; grid-template-columns:62px minmax(0,1fr) minmax(0,1fr) 82px; gap:6px; align-items:center; padding:3px 0; font-size:13.5px; }
+.lmRow input { width:100%; min-width:0; padding:7px 6px; } .lmHead { font-size:12px; font-weight:700; color:var(--muted); } .lmBal { text-align:right; font-weight:700; } .lmBal.bad, .lmSum.bad { color:var(--bad); }
+.lmSum { font-weight:700; margin:4px 0; }
 .libTally { display:block; width:100%; margin-top:12px; text-align:left; border:0; border-radius:12px; padding:10px 12px; background:var(--surface2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
 .reqCard { padding:14px; } .reqCard.reqAlert { border:1.5px solid var(--bad); }
 .reqHead { display:flex; align-items:center; gap:10px; margin-bottom:8px; } .reqHeadIcon { font-size:24px; }
@@ -917,7 +979,7 @@ body.reading nav.bottom { display:none; }
 .teamDelete { color:var(--bad); }
 /* Campus Leadership: OKR dashboard and the Monday meeting board */
 .leadTabs { margin-bottom:12px; padding:3px; border-radius:12px; }
-.leadTabs .leadSeg { padding:8px 4px; font-size:13.5px; border-radius:9px; }
+.leadTabs .leadSeg { flex:1 1 auto; padding:8px 5px; font-size:13.5px; border-radius:9px; }
 .leadPace { height:6px; background:var(--surface2); border-radius:4px; overflow:hidden; margin:-4px 0 12px; }
 .leadPaceFill { height:100%; background:var(--faint); }
 .leadObj { margin-bottom:8px; }
@@ -6060,6 +6122,514 @@ function bindGuest_(){
   document.querySelectorAll('[data-guestcampus]').forEach(function(b){ b.onclick=function(){ gpTap(); S.me.campus=b.getAttribute('data-guestcampus'); lsSet('gp-guest-campus', S.me.campus); render(); }; });
 }
 
+/* ==================== ministry tools (My Ministry) ====================
+   My Ministry as a tool each ministry uses, with its numbers as a by-product
+   (Uriah, Oct 2026). Campus Leadership has "My week"; the Cafe has a till and
+   its day. Each saves its own records on the server, which works out the
+   week's totals and writes them into the ministry's numbers (toolSync_ in
+   api.js) — so nobody types Cups Sold or One-on-Ones Held. */
+function money_(n){ return '$'+(Number(n)||0).toFixed(2); }
+function shortTime_(iso){ var d=new Date(iso); return isNaN(d) ? '' : ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function staffName_(id){ var p=(S.roster||[]).filter(function(x){ return x.id===id; })[0]; return p ? p.name : (S.me && S.me.id===id ? S.me.name : ''); }
+
+/* ---------- Campus Leadership: My week ---------- */
+var LW_KINDS=[['oneonone','🤝','One-on-one'],['partner','🙏','Partner connection'],['church','⛪','Spoke at a church'],['base','🏠','Spoke at a YWAM base'],
+  ['gospel','📣','Shared the gospel'],['teaching','📖','Teaching prepped'],['meeting','👥','Meeting led'],['deptmeeting','🗂️','Department meeting']];
+var LW_NOTE={ oneonone:'What you talked about (optional)', partner:'What you talked about (optional)', church:'Which church?', base:'Which base?',
+  gospel:'Where, and with whom? (optional)', teaching:'Topic', meeting:'Which meeting?', deptmeeting:'Which department?' };
+var PLANT_STAGES_UI=[['praying','Praying'],['exploring','Exploring'],['planning','Planning'],['preparing','Preparing'],['launched','Launched']];
+S.lw=null; S.lwWeek=null; S.lwLoading=false; S.lwForm=null; S.lwTab=(lsGet('gp-lw-tab')==='board' || lsGet('gp-lw-tab')==='base' ? lsGet('gp-lw-tab') : 'week'); S.lwErr='';
+function lwKind_(k){ return LW_KINDS.filter(function(x){ return x[0]===k; })[0] || [k,'•',k]; }
+function lwLoad_(wk){
+  if(S.lwLoading) return; S.lwLoading=true; S.lwErr='';
+  run('leadWeek',[S.auth.user,S.auth.pin,wk],function(d){ S.lwLoading=false; if(d && d.ok && d.week===wk) S.lw=d; else S.lwErr=(d&&d.err)||'error'; if(S.view==='ministry') render(); },
+    function(e){ S.lwLoading=false; S.lwErr=String((e&&e.message)||'offline'); if(S.view==='ministry') render(); });
+}
+function lwDatesOf_(wk){ var mon=mondayOfWeek_(wk), out=[]; for(var i=0;i<7;i++){ var d=new Date(mon); d.setDate(d.getDate()+i); out.push(isoDateOf_(d)); } return out; }
+function lwHtml_(){
+  var wk=S.lwWeek||thisWeek(); S.lwWeek=wk;
+  if(!S.lw || S.lw.week!==wk){
+    if(S.lwErr) return '<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(t('Couldn’t load your week.'))+'</p><button class="btn ghost" id="lwRetry">'+esc(t('Try again'))+'</button></div>';
+    lwLoad_(wk); return '<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  }
+  var L=S.lw, now=thisWeek(), dates=lwDatesOf_(wk);
+  var h='<div class="weekNavRow"><button class="weekArrow" id="lwPrev"'+(wk<=1?' disabled':'')+' aria-label="'+esc(t('Previous week'))+'">‹</button>'+
+    '<div class="weekPill">'+esc(t('Week'))+' '+wk+' · '+esc(weekRangeShort_(wk))+'</div>'+
+    '<button class="weekArrow" id="lwNext"'+(wk>=now?' disabled':'')+' aria-label="'+esc(t('Next week'))+'">›</button></div>';
+  // the week's numbers, counted from what is logged below
+  var count=function(k){ return L.log.filter(function(r){ return r.kind===k; }).reduce(function(a,r){ return a+(Number(r.qty)||1); },0); };
+  h+='<div class="lwTotals">'+LW_KINDS.map(function(k){ var n=count(k[0]);
+    return '<div class="lwTotal'+(n?' on':'')+'"><span>'+k[1]+'</span><b>'+(k[0]==='gospel'?(Math.round(n*10)/10)+'h':n)+'</b><small>'+esc(t(k[2]))+'</small></div>'; }).join('')+'</div>';
+  h+='<p class="hint" style="margin:-2px 0 12px">'+esc(t('These are your leadership numbers for the week — counted from what you log here.'))+'</p>';
+  // quick log
+  h+='<h3>➕ '+esc(t('Log something'))+'</h3><div class="lwKinds">'+LW_KINDS.map(function(k){
+    return '<button class="lwKind'+(S.lwForm&&S.lwForm.kind===k[0]?' on':'')+'" data-lwkind="'+k[0]+'"><span>'+k[1]+'</span>'+esc(t(k[2]))+'</button>'; }).join('')+'</div>';
+  if(S.lwForm){
+    var f=S.lwForm, kk=lwKind_(f.kind);
+    h+='<div class="card lwForm"><div class="lwFormHead">'+kk[1]+' <b>'+esc(t(kk[2]))+'</b></div>';
+    if(f.kind==='oneonone'){
+      var people=(S.roster||[]).filter(function(p){ return p.id!==S.me.id && p.campus===S.me.campus; }).sort(function(a,b){ return a.name<b.name?-1:1; });
+      h+='<label class="f">'+esc(t('With whom?'))+'</label><select id="lwWho"><option value="">'+esc(t('— choose —'))+'</option>'+
+        people.map(function(p){ return '<option value="'+esc(p.id)+'"'+(f.who===p.id?' selected':'')+'>'+esc(p.name)+' · '+esc(t(p.dept))+'</option>'; }).join('')+'</select>';
+    } else if(f.kind==='partner'){
+      h+='<label class="f">'+esc(t('Which partner?'))+'</label><select id="lwWho"><option value="">'+esc(t('— choose —'))+'</option>'+
+        L.partners.map(function(p){ return '<option value="'+esc(p.id)+'"'+(f.who===p.id?' selected':'')+'>'+esc(p.name)+(p.org?' · '+esc(p.org):'')+'</option>'; }).join('')+
+        '<option value="__new"'+(f.who==='__new'?' selected':'')+'>+ '+esc(t('Someone new'))+'</option></select>'+
+        (f.who==='__new' ? '<input type="text" id="lwNewPartner" placeholder="'+esc(t('Their name'))+'" value="'+esc(f.newName||'')+'">' : '');
+    } else if(f.kind==='gospel'){
+      h+='<label class="f">'+esc(t('How many hours?'))+'</label><input type="number" id="lwQty" min="0.25" max="24" step="0.25" inputmode="decimal" value="'+esc(String(f.qty||1))+'">';
+    }
+    h+='<label class="f">'+esc(t(LW_NOTE[f.kind]))+'</label><input type="text" id="lwNote" maxlength="200" value="'+esc(f.note||'')+'">'+
+      '<label class="f">'+esc(t('When?'))+'</label><select id="lwDate">'+dates.filter(function(d){ return d<=todayStr(); }).map(function(d){
+        return '<option value="'+d+'"'+(f.date===d?' selected':'')+'>'+esc(teamDate_(d))+(d===todayStr()?' · '+esc(t('today')):'')+'</option>'; }).join('')+'</select>'+
+      '<div class="btnRow"><button class="btn" id="lwSave">'+esc(t('Save'))+'</button><button class="btn ghost" id="lwCancel">'+esc(t('Cancel'))+'</button></div></div>';
+  }
+  // the week, day by day
+  h+='<h3>🗓️ '+esc(t('This week'))+'</h3>';
+  if(!L.log.length) h+='<div class="card"><p class="sub" style="margin:0">'+esc(t('Nothing logged this week yet. Tap above as things happen — it takes a second.'))+'</p></div>';
+  else {
+    h+='<div class="card lwLog">'+dates.filter(function(d){ return L.log.some(function(r){ return r.date===d; }); }).map(function(d){
+      return '<div class="lwDay">'+esc(teamDate_(d))+'</div>'+L.log.filter(function(r){ return r.date===d; }).map(function(r){
+        var k=lwKind_(r.kind), who=r.kind==='oneonone' ? staffName_(r.who) : r.kind==='partner' ? r.whoName : '';
+        return '<div class="lwRow"><span class="lwRowIcon">'+k[1]+'</span><span class="lwRowText"><b>'+esc(t(k[2]))+(who?' · '+esc(who):'')+(r.kind==='gospel'?' · '+esc(String(r.qty))+'h':'')+'</b>'+
+          (r.note?'<span>'+esc(r.note)+'</span>':'')+'</span><button class="lwDel" data-lwdel="'+esc(r.id)+'" aria-label="'+esc(t('Remove'))+'">×</button></div>';
+      }).join(''); }).join('')+'</div>';
+  }
+  // the Campus Director's three ratings for the week
+  if(L.director){
+    var rf=L.reflect||{};
+    h+='<h3>🌅 '+esc(t('End-of-week reflection'))+'</h3><div class="card"><p class="sub" style="margin:0 0 8px">'+esc(t('How did the week go? 1 is poor, 10 is excellent.'))+'</p>'+
+      [['vision','Base vision'],['comms','Communications'],['partners','Partner relationships']].map(function(q){
+        var v=rf[q[0]]||'';
+        return '<div class="lwRate"><span>'+esc(t(q[1]))+'</span><div class="lwRateRow">'+[1,2,3,4,5,6,7,8,9,10].map(function(n){
+          return '<button class="lwRateBtn'+(Number(v)===n?' on':'')+'" data-lwrate="'+q[0]+'|'+n+'">'+n+'</button>'; }).join('')+'</div></div>';
+      }).join('')+'<input type="text" id="lwRateNote" maxlength="300" placeholder="'+esc(t('A line about the week (optional)'))+'" value="'+esc(rf.note||'')+'">'+
+      '<button class="btn" id="lwRateSave">'+esc(rf.at ? t('Update') : t('Save'))+'</button></div>';
+  }
+  // partners
+  h+='<h3>🙏 '+esc(t('My partners'))+'</h3><div class="card">';
+  if(!L.partners.length) h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Churches, supporters and friends of the base you keep in touch with. Add them once; tap “Connected” when you do.'))+'</p>';
+  h+=L.partners.map(function(p){
+    var ago = p.last ? Math.round((new Date(todayStr()+'T00:00:00') - new Date(p.last+'T00:00:00'))/86400000) : null;
+    return '<div class="lwPartner'+(ago===null||ago>30?' due':'')+'"><span class="lwRowText"><b>'+esc(p.name)+'</b><span>'+esc(p.org||'')+(p.org?' · ':'')+
+      esc(ago===null ? t('Not yet') : ago===0 ? t('today') : gpT('{n} days ago',{n:ago}))+'</span></span>'+
+      '<button class="btn ghost lwConnect" data-lwconnect="'+esc(p.id)+'">'+esc(t('Connected'))+'</button><button class="lwDel" data-lwpdel="'+esc(p.id)+'" aria-label="'+esc(t('Remove'))+'">×</button></div>';
+  }).join('');
+  h+='<div class="numIn" style="margin-top:8px"><input type="text" id="lwPName" placeholder="'+esc(t('Name'))+'"><input type="text" id="lwPOrg" placeholder="'+esc(t('Church or organisation'))+'">'+
+    '<button class="btn ghost" id="lwPAdd" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Add'))+'</button></div></div>';
+  // base plants (Campus Director)
+  if(L.director || S.me.isAdmin){
+    h+='<h3>🌱 '+esc(t('Base plants'))+'</h3><div class="card">';
+    if(!L.plants.length) h+='<p class="sub" style="margin:0 0 8px">'+esc(t('Places you are praying about or planning a new base. Those not yet launched count as Base Plants in Planning.'))+'</p>';
+    h+=L.plants.map(function(p){
+      return '<div class="lwPlant"><span class="lwRowText"><b>'+esc(p.name)+'</b><span>'+esc(p.place||'')+'</span></span>'+
+        '<select data-lwplant="'+esc(p.id)+'">'+PLANT_STAGES_UI.map(function(s){ return '<option value="'+s[0]+'"'+(p.stage===s[0]?' selected':'')+'>'+esc(t(s[1]))+'</option>'; }).join('')+'</select>'+
+        '<button class="lwDel" data-lwplantdel="'+esc(p.id)+'" aria-label="'+esc(t('Remove'))+'">×</button></div>';
+    }).join('');
+    h+='<div class="numIn" style="margin-top:8px"><input type="text" id="lwBName" placeholder="'+esc(t('Name, e.g. YWAM Battambang'))+'"><input type="text" id="lwBPlace" placeholder="'+esc(t('Place'))+'">'+
+      '<button class="btn ghost" id="lwBAdd" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Add'))+'</button></div></div>';
+  }
+  return h;
+}
+function bindLw_(){
+  var after=function(d){ S.lwBusy=false; if(d && d.ok){ S.lw=d; } else showMsg(t('Could not save — try again.')); render(); };
+  var call=function(fn,args){ if(S.lwBusy) return; S.lwBusy=true; run(fn,[S.auth.user,S.auth.pin].concat(args),after,function(){ S.lwBusy=false; showMsg(t('No connection — try again when you are online.')); }); };
+  var rt=document.getElementById('lwRetry'); if(rt) rt.onclick=function(){ S.lwErr=''; render(); };
+  var pv=document.getElementById('lwPrev'), nx=document.getElementById('lwNext');
+  if(pv) pv.onclick=function(){ gpTap(); S.lwWeek=Math.max(1,(S.lwWeek||thisWeek())-1); S.lwForm=null; render(); };
+  if(nx) nx.onclick=function(){ gpTap(); S.lwWeek=Math.min(thisWeek(),(S.lwWeek||thisWeek())+1); S.lwForm=null; render(); };
+  document.querySelectorAll('[data-lwkind]').forEach(function(b){ b.onclick=function(){ gpTap(); var k=b.getAttribute('data-lwkind');
+    var ds=lwDatesOf_(S.lwWeek).filter(function(d){ return d<=todayStr(); });
+    S.lwForm = (S.lwForm && S.lwForm.kind===k) ? null : { kind:k, date: ds.indexOf(todayStr())>-1 ? todayStr() : ds[ds.length-1], who:'', qty:1, note:'' }; render(); }; });
+  var keep=function(){ var f=S.lwForm; if(!f) return; var w=document.getElementById('lwWho'), q=document.getElementById('lwQty'), n=document.getElementById('lwNote'), dd=document.getElementById('lwDate'), np=document.getElementById('lwNewPartner');
+    if(w) f.who=w.value; if(q) f.qty=q.value; if(n) f.note=n.value; if(dd) f.date=dd.value; if(np) f.newName=np.value; };
+  var who=document.getElementById('lwWho'); if(who) who.onchange=function(){ keep(); if(S.lwForm.kind==='partner') render(); };
+  ['lwQty','lwNote','lwDate','lwNewPartner'].forEach(function(id){ var el=document.getElementById(id); if(el) el.oninput=el.onchange=keep; });
+  var cc=document.getElementById('lwCancel'); if(cc) cc.onclick=function(){ S.lwForm=null; render(); };
+  var sv=document.getElementById('lwSave');
+  if(sv) sv.onclick=function(){
+    keep(); var f=S.lwForm;
+    if(f.kind==='oneonone' && !f.who){ showMsg(t('Choose who it was with.')); return; }
+    if(f.kind==='partner' && !f.who){ showMsg(t('Choose the partner.')); return; }
+    var add=function(partnerId, partnerName){
+      call('leadLogAdd',[{ kind:f.kind, date:f.date, who: f.kind==='partner' ? partnerId : f.who, whoName: partnerName||'', qty:f.qty, note:f.note }]);
+      S.lwForm=null; };
+    if(f.kind==='partner' && f.who==='__new'){
+      var nm=String(f.newName||'').trim(); if(!nm){ showMsg(t('Type their name.')); return; }
+      S.lwBusy=true;
+      run('leadPartnerSave',[S.auth.user,S.auth.pin,{ name:nm },S.lwWeek],function(d){ S.lwBusy=false;
+        if(!d||!d.ok){ showMsg(t('Could not save — try again.')); return; }
+        S.lw=d; var p=d.partners.filter(function(x){ return x.name===nm; }).slice(-1)[0]; add(p&&p.id, nm); });
+      return;
+    }
+    var pn = f.kind==='partner' ? ((S.lw.partners.filter(function(p){ return p.id===f.who; })[0]||{}).name||'') : '';
+    add(f.who, pn);
+  };
+  document.querySelectorAll('[data-lwdel]').forEach(function(b){ b.onclick=function(){ call('leadLogDelete',[b.getAttribute('data-lwdel')]); }; });
+  var rate={}; var rf=(S.lw&&S.lw.reflect)||{}; ['vision','comms','partners'].forEach(function(k){ rate[k]=rf[k]||null; });
+  document.querySelectorAll('[data-lwrate]').forEach(function(b){ b.onclick=function(){ var v=b.getAttribute('data-lwrate').split('|'); S.lw.reflect=Object.assign({}, S.lw.reflect||{}); S.lw.reflect[v[0]]=Number(v[1]); render(); }; });
+  var rs=document.getElementById('lwRateSave'); if(rs) rs.onclick=function(){ var r=S.lw.reflect||{}; var note=document.getElementById('lwRateNote');
+    call('leadReflectSave',[S.lwWeek,{ vision:r.vision, comms:r.comms, partners:r.partners, note: note?note.value:'' }]); };
+  document.querySelectorAll('[data-lwconnect]').forEach(function(b){ b.onclick=function(){ gpTap(); var id=b.getAttribute('data-lwconnect'), p=S.lw.partners.filter(function(x){ return x.id===id; })[0]||{};
+    var ds=lwDatesOf_(S.lwWeek).filter(function(d){ return d<=todayStr(); });
+    call('leadLogAdd',[{ kind:'partner', who:id, whoName:p.name||'', date: ds.indexOf(todayStr())>-1 ? todayStr() : ds[ds.length-1] }]); }; });
+  document.querySelectorAll('[data-lwpdel]').forEach(function(b){ b.onclick=function(){ if(!confirm(t('Remove this partner from your list?'))) return; call('leadPartnerDelete',[b.getAttribute('data-lwpdel'), S.lwWeek]); }; });
+  var pa=document.getElementById('lwPAdd'); if(pa) pa.onclick=function(){ var n=document.getElementById('lwPName'), o=document.getElementById('lwPOrg');
+    if(!String(n.value).trim()){ showMsg(t('Type their name.')); return; } call('leadPartnerSave',[{ name:n.value, org:o.value }, S.lwWeek]); };
+  document.querySelectorAll('[data-lwplant]').forEach(function(sel){ sel.onchange=function(){ var p=S.lw.plants.filter(function(x){ return x.id===sel.getAttribute('data-lwplant'); })[0];
+    call('basePlantSave',[Object.assign({}, p, { stage:sel.value }), S.lwWeek]); }; });
+  document.querySelectorAll('[data-lwplantdel]').forEach(function(b){ b.onclick=function(){ if(!confirm(t('Remove this from the list?'))) return; call('basePlantSave',[{ id:b.getAttribute('data-lwplantdel'), remove:true }, S.lwWeek]); }; });
+  var ba=document.getElementById('lwBAdd'); if(ba) ba.onclick=function(){ var n=document.getElementById('lwBName'), pl=document.getElementById('lwBPlace');
+    if(!String(n.value).trim()){ showMsg(t('Type a name.')); return; } call('basePlantSave',[{ name:n.value, place:pl.value, stage:'praying' }, S.lwWeek]); };
+  document.querySelectorAll('[data-lwtab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.lwTab=b.getAttribute('data-lwtab'); lsSet('gp-lw-tab', S.lwTab); render(); }; });
+}
+
+/* ---------- the Cafe ---------- */
+S.cafe=null; S.cafeDate=null; S.cafeLoading=false; S.cafeErr=''; S.cafeTab='today'; S.cafeView=(lsGet('gp-cafe-view')==='numbers'?'numbers':'tool'); S.cafeOrder={}; S.cafeTicks={ open:{}, close:{} }; S.cafeCell=null; S.cafeEdit=null;
+function cafeLoad_(date){
+  if(S.cafeLoading) return; S.cafeLoading=true; S.cafeErr='';
+  run('cafeGet',[S.auth.user,S.auth.pin,date],function(d){ S.cafeLoading=false; if(d && d.ok && d.date===date) S.cafe=d; else S.cafeErr=(d&&d.err)||'error'; if(S.view==='ministry') render(); },
+    function(e){ S.cafeLoading=false; S.cafeErr=String((e&&e.message)||'offline'); if(S.view==='ministry') render(); });
+}
+function cafeHtml_(){
+  var date=S.cafeDate||todayStr(); S.cafeDate=date;
+  if(!S.cafe || S.cafe.date!==date){
+    if(S.cafeErr) return '<div class="card"><p class="sub" style="margin:0 0 8px">⚠️ '+esc(S.cafeErr==='not_authorized' ? t('The cafe tool is for the cafe team.') : t('Couldn’t load the cafe.'))+'</p><button class="btn ghost" id="cafeRetry">'+esc(t('Try again'))+'</button></div>';
+    cafeLoad_(date); return '<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  }
+  var C=S.cafe, tabs=[['today','☀️','Today'],['till','🧾','Till'],['rota','👥','Rota'],['week','📈','Week']].concat(C.canSetup?[['setup','⚙️','Set up']]:[]);
+  var h='<div class="cafeTabs">'+tabs.map(function(x){ return '<button class="'+(S.cafeTab===x[0]?'on':'')+'" data-cafetab="'+x[0]+'">'+x[1]+' '+esc(t(x[2]))+'</button>'; }).join('')+'</div>';
+  if(S.cafeTab==='till') return h+cafeTillHtml_(C);
+  if(S.cafeTab==='rota') return h+cafeRotaHtml_(C);
+  if(S.cafeTab==='week') return h+cafeWeekHtml_(C);
+  if(S.cafeTab==='setup' && C.canSetup) return h+cafeSetupHtml_(C);
+  return h+cafeTodayHtml_(C);
+}
+function cafeDayStats_(day){
+  var cups=0, takings=0; day.orders.forEach(function(o){ takings+=Number(o.total)||0; o.items.forEach(function(i){ if(i.cup) cups+=i.qty; }); });
+  var spent=day.expenses.reduce(function(a,e){ return a+(Number(e.amount)||0); },0), pos=day.pos||{};
+  return { cups:cups+(Number(pos.cups)||0), takings:takings+(Number(pos.sales)||0), spent:spent, customers:day.orders.length+(Number(pos.receipts)||0) };
+}
+function cafeTiles_(list){ return '<div class="mmGrid">'+list.map(function(x){ return '<div class="mmTile"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+esc(String(x[1]))+'</div></div>'; }).join('')+'</div>'; }
+function cafeTodayHtml_(C){
+  var d=C.day, st=cafeDayStats_(d), today=C.date===todayStr();
+  var h='<div class="weekNavRow"><button class="weekArrow" id="cafePrevDay" aria-label="'+esc(t('Previous day'))+'">‹</button><div class="weekPill">'+esc(teamDate_(C.date))+(today?' · '+esc(t('today')):'')+'</div>'+
+    '<button class="weekArrow" id="cafeNextDay"'+(today?' disabled':'')+' aria-label="'+esc(t('Next day'))+'">›</button></div>';
+  var list=function(kind, items){ return items.map(function(x,i){ var on=!!S.cafeTicks[kind][i];
+    return '<label class="cafeTick'+(on?' on':'')+'"><input type="checkbox" data-cafetick="'+kind+'|'+i+'"'+(on?' checked':'')+'> <span>'+esc(x)+'</span></label>'; }).join(''); };
+  if(!d.opened){
+    h+='<div class="card cafeStage"><div class="cafeStageHead">☀️ <b>'+esc(t('Open the cafe'))+'</b></div>'+list('open', C.settings.open)+
+      '<button class="btn" id="cafeOpenBtn">'+esc(t('We’re open'))+'</button></div>';
+  } else {
+    h+='<div class="cafeStatus '+(d.closed?'closed':'open')+'">'+(d.closed ? '🌙 '+esc(gpT('Closed at {time}',{time:shortTime_(d.closed.at)}))+(d.closed.cash!=null?' · '+esc(gpT('cash {amount}',{amount:money_(d.closed.cash)})):'')
+      : '🟢 '+esc(gpT('Open since {time}',{time:shortTime_(d.opened.at)}))+' · '+esc(staffName_(d.opened.by)))+'</div>';
+    h+=cafeTiles_([[t('Customers'), st.customers],[t('Cups'), st.cups],[t('Takings'), money_(st.takings)],[t('Expenses'), money_(st.spent)]]);
+    if(!d.closed){
+      if(C.settings.till==='hangpopok') h+='<div class="cafeStatus '+(d.pos?'open':'closed')+'">🧾 '+esc(d.pos ? t('HangPopok totals are in for today.') : t('HangPopok totals not entered yet — on the Till tab, at closing.'))+'</div>'+
+        '<button class="btn" id="cafeGoTill">🧾 '+esc(d.pos ? t('Go to the till') : t('Enter the HangPopok totals'))+'</button>';
+      else h+='<button class="btn" id="cafeGoTill">🧾 '+esc(t('Go to the till'))+'</button>';
+      h+='<div class="card cafeStage"><div class="cafeStageHead">🌙 <b>'+esc(t('Close for the day'))+'</b></div>'+list('close', C.settings.close)+
+        '<label class="f">'+esc(t('Cash in the drawer ($)'))+'</label><input type="number" inputmode="decimal" step="0.01" min="0" id="cafeCash">'+
+        '<button class="btn" id="cafeCloseBtn">'+esc(t('Close for today'))+'</button></div>';
+    } else h+='<button class="linkbtn" id="cafeReopen">'+esc(t('Open again'))+'</button>';
+  }
+  return h+'<p class="hint">'+esc(t('Opening the cafe counts the day as open. Every sale, conversation and expense fills this week’s cafe numbers by itself.'))+'</p>';
+}
+/* HangPopok is the cafe's till: no menu buttons here, just the day's three
+   totals copied from its daily sales report at closing. */
+function cafePosHtml_(C){
+  var d=C.day, p=d.pos||{}, v=function(x){ return x==null ? '' : esc(String(x)); };
+  return '<div class="card cafeStage"><div class="cafeStageHead">🧾 <b>'+esc(t('Today’s totals from HangPopok'))+'</b></div>'+
+    '<p class="sub" style="margin:0 0 8px">'+esc(t('HangPopok is our till. At closing, copy these from its daily sales report — they count as this week’s sales.'))+'</p>'+
+    '<div class="cafePosGrid"><label>'+esc(t('Sales ($)'))+'<input type="number" inputmode="decimal" step="0.01" min="0" id="cafePosSales" value="'+v(p.sales)+'"></label>'+
+    '<label>'+esc(t('Receipts'))+'<input type="number" inputmode="numeric" min="0" id="cafePosReceipts" value="'+v(p.receipts)+'"></label>'+
+    '<label>'+esc(t('Cups sold'))+'<input type="number" inputmode="numeric" min="0" id="cafePosCups" value="'+v(p.cups)+'"></label></div>'+
+    '<button class="btn" id="cafePosSave">'+esc(d.pos ? t('Update') : t('Save the totals'))+'</button>'+
+    (d.pos ? '<p class="hint" style="margin:6px 0 0">✓ '+esc(gpT('Saved at {time} by {name}',{time:shortTime_(d.pos.at), name:staffName_(d.pos.by)}))+'</p>' : '')+'</div>';
+}
+function cafeTillHtml_(C){
+  var d=C.day, menu=C.settings.menu, order=S.cafeOrder, total=0, n=0;
+  menu.forEach(function(m){ var q=order[m.id]||0; total+=q*(Number(m.price)||0); n+=q; });
+  var h=d.opened ? '' : '<div class="banner">☀️ '+esc(t('The cafe isn’t open yet today — open it on the Today tab first.'))+'</div>';
+  var hp=C.settings.till==='hangpopok';
+  if(hp) h+=cafePosHtml_(C);
+  else h+='<div class="cafeMenu">'+menu.map(function(m){ var q=order[m.id]||0;
+    return '<button class="cafeItem'+(q?' on':'')+'" data-cafeadd="'+esc(m.id)+'"><span class="cafeItemEmoji">'+esc(m.emoji||'☕')+'</span><b>'+esc(m.name)+'</b><span>'+money_(m.price)+'</span>'+(q?'<span class="cafeQty">'+q+'</span>':'')+'</button>'; }).join('')+'</div>';
+  if(!hp) h+='<div class="card cafeOrder"><div class="cafeOrderLines">'+(n ? menu.filter(function(m){ return order[m.id]; }).map(function(m){
+      return '<div class="cafeLine"><span>'+esc(m.emoji||'')+' '+esc(m.name)+'</span><span class="cafeLineQty"><button data-cafeminus="'+esc(m.id)+'">−</button>'+order[m.id]+'<button data-cafeadd="'+esc(m.id)+'">+</button></span><span>'+money_(order[m.id]*m.price)+'</span></div>'; }).join('')
+      : '<p class="sub" style="margin:0">'+esc(t('Tap the menu to start an order.'))+'</p>')+'</div>'+
+    '<div class="cafeTotal"><span>'+esc(t('Total'))+'</span><b>'+money_(total)+'</b></div>'+
+    '<div class="btnRow"><button class="btn" id="cafeCharge"'+(n&&!S.cafeBusy?'':' disabled')+'>'+esc(t('Charge'))+' '+money_(total)+'</button><button class="btn ghost" id="cafeClear"'+(n?'':' disabled')+'>'+esc(t('Clear'))+'</button></div></div>';
+  h+='<div class="cafeCounters">'+[['gospel','💬','Gospel conversations'],['salvations','🙌','Salvations']].map(function(x){
+    return '<div class="card cafeCounter"><span class="cafeCounterIcon">'+x[1]+'</span><span class="cafeCounterName">'+esc(t(x[2]))+'</span><span class="cafeCounterRow"><button data-cafecount="'+x[0]+'|-1" aria-label="−">−</button><b>'+(d[x[0]]||0)+'</b><button data-cafecount="'+x[0]+'|1" aria-label="+">+</button></span></div>'; }).join('')+'</div>';
+  if(!hp || d.orders.length) h+='<h3>🧾 '+esc(t('Today’s orders'))+' <small>· '+d.orders.length+'</small></h3>'+(d.orders.length ? '<div class="card">'+d.orders.slice(-6).reverse().map(function(o){
+      return '<div class="cafeLine"><span>'+esc(shortTime_(o.at))+' · '+esc(o.items.map(function(i){ return i.qty+'× '+i.name; }).join(', '))+'</span><span>'+money_(o.total)+'</span><button class="lwDel" data-cafevoid="'+esc(o.id)+'" aria-label="'+esc(t('Undo'))+'">×</button></div>'; }).join('')+'</div>'
+    : '<p class="sub">'+esc(t('No orders yet today.'))+'</p>');
+  h+='<h3>💸 '+esc(t('Expenses'))+'</h3><div class="card">'+d.expenses.map(function(e){
+      return '<div class="cafeLine"><span>'+esc(e.note||t('Expense'))+'</span><span>'+money_(e.amount)+'</span><button class="lwDel" data-cafeexpdel="'+esc(e.id)+'" aria-label="'+esc(t('Remove'))+'">×</button></div>'; }).join('')+
+    '<div class="numIn" style="margin-top:6px"><input type="number" inputmode="decimal" step="0.01" min="0" id="cafeExpAmt" placeholder="$" style="max-width:90px"><input type="text" id="cafeExpNote" placeholder="'+esc(t('What for? e.g. milk, ice'))+'">'+
+    '<button class="btn ghost" id="cafeExpAdd" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Add'))+'</button></div></div>';
+  return h;
+}
+function cafeTeam_(){
+  var team=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus && ((p.dept==='Community Service' && p.ministry==='Cafe') || (p.ministries||[]).indexOf('Community Service|Cafe')>-1); });
+  return team.length ? team : (S.roster||[]).filter(function(p){ return p.campus===S.me.campus; });
+}
+function cafeMonday_(date){ var d=new Date(date+'T00:00:00'); d.setDate(d.getDate()-((d.getDay()+6)%7)); return isoDateOf_(d); }
+function cafeRotaHtml_(C){
+  var wkKey=cafeMonday_(C.date), cells=(C.settings.roster||{})[wkKey]||{}, days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var h='<p class="sub">'+esc(gpT('Who is working the week of {date}. Tap a box to choose.',{date:teamDate_(wkKey)}))+'</p>';
+  h+='<div class="cafeRota"><table><thead><tr><th></th>'+days.map(function(d){ return '<th>'+esc(t(d))+'</th>'; }).join('')+'</tr></thead><tbody>'+
+    C.settings.shifts.map(function(sh,si){ return '<tr><th>'+esc(t(sh))+'</th>'+days.map(function(d,di){ var key=si+'|'+di, ids=cells[key]||[];
+      return '<td><button class="cafeCell'+(S.cafeCell===key?' on':'')+'" data-cafecell="'+key+'">'+(ids.length ? ids.map(function(id){ return esc(firstName_(staffName_(id)||'?')); }).join('<br>') : '<span class="faintPlus">+</span>')+'</button></td>'; }).join('')+'</tr>'; }).join('')+
+    '</tbody></table></div>';
+  if(S.cafeCell){
+    var p=S.cafeCell.split('|'), ids=cells[S.cafeCell]||[];
+    h+='<div class="card"><b>'+esc(t(C.settings.shifts[Number(p[0])]||''))+' · '+esc(t(days[Number(p[1])]))+'</b><div class="chips" style="margin-top:8px">'+cafeTeam_().map(function(x){
+      return '<button class="chip'+(ids.indexOf(x.id)>-1?' blue':'')+'" data-cafewho="'+esc(x.id)+'">'+esc(firstName_(x.name))+'</button>'; }).join('')+'</div>'+
+      '<button class="btn ghost" id="cafeCellDone">'+esc(t('Done'))+'</button></div>';
+  }
+  return h;
+}
+function cafeWeekHtml_(C){
+  var w=C.week, sum=function(k){ return w.reduce(function(a,d){ return a+(Number(d[k])||0); },0); };
+  var h='<p class="sub">'+esc(gpT('Week {n} — these are the numbers the cafe tool fills in.',{n:C.weekNo}))+'</p>';
+  h+=cafeTiles_([[t('Days open'), w.filter(function(d){ return d.open; }).length],[t('Cups sold'), sum('cups')],[t('Customers'), sum('customers')],
+    [t('Takings'), money_(sum('takings'))],[t('Expenses'), money_(sum('spent'))],[t('Profit'), money_(sum('takings')-sum('spent'))],
+    [t('Gospel conversations'), sum('gospel')],[t('Salvations'), sum('salvations')]]);
+  var max=Math.max.apply(null, w.map(function(d){ return d.cups; }).concat([1]));
+  h+='<h3>☕ '+esc(t('Cups each day'))+'</h3><div class="card cafeBars">'+w.map(function(d){ var dt=new Date(d.date+'T00:00:00');
+    return '<div class="cafeBar"><span class="cafeBarNum">'+(d.cups||'')+'</span><span class="cafeBarFill" style="height:'+Math.round(d.cups/max*100)+'%"></span><span class="cafeBarDay">'+esc(t(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()]))+'</span></div>'; }).join('')+'</div>';
+  var best={}; w.forEach(function(d){ Object.keys(d.best||{}).forEach(function(k){ best[k]=(best[k]||0)+d.best[k]; }); });
+  var top=Object.keys(best).sort(function(a,b){ return best[b]-best[a]; }).slice(0,3);
+  if(top.length) h+='<h3>🏆 '+esc(t('Best sellers'))+'</h3><div class="card">'+top.map(function(k,i){ return '<div class="cafeLine"><span>'+['🥇','🥈','🥉'][i]+' '+esc(k)+'</span><span>'+best[k]+'</span></div>'; }).join('')+'</div>';
+  return h;
+}
+function cafeSetupHtml_(C){
+  var E=S.cafeEdit || (S.cafeEdit={ menu:C.settings.menu.map(function(m){ return Object.assign({}, m); }), open:C.settings.open.join('\n'), close:C.settings.close.join('\n'), shifts:C.settings.shifts.join(', ') });
+  var hp=C.settings.till==='hangpopok';
+  var h='<h3>🧾 '+esc(t('Our till'))+'</h3><div class="campusSeg" style="max-width:none">'+[['app',t('This app')],['hangpopok','HangPopok']].map(function(x){
+      return '<button class="campusBtn'+((C.settings.till||'app')===x[0]?' on':'')+'" data-cafetill="'+x[0]+'">'+esc(x[1])+'</button>'; }).join('')+'</div>'+
+    '<p class="hint">'+esc(hp ? t('The till tab asks for the day’s totals from HangPopok. The menu below is only used when selling in this app.') : t('Sell from the menu here. If the cafe rings up sales in HangPopok, choose it — then the day’s totals are typed in at closing.'))+'</p>';
+  h+='<h3>🧾 '+esc(t('Menu'))+'</h3><div class="card">'+E.menu.map(function(m,i){
+    return '<div class="cafeMenuRow"><input type="text" data-cafemenu="'+i+'|emoji" value="'+esc(m.emoji||'')+'" class="cafeEmojiIn" aria-label="'+esc(t('Emoji'))+'"><input type="text" data-cafemenu="'+i+'|name" value="'+esc(m.name)+'" aria-label="'+esc(t('Name'))+'">'+
+      '<input type="number" step="0.05" min="0" data-cafemenu="'+i+'|price" value="'+esc(String(m.price))+'" class="cafePriceIn" aria-label="'+esc(t('Price'))+'">'+
+      '<label class="cafeCupIn"><input type="checkbox" data-cafemenu="'+i+'|cup"'+(m.cup?' checked':'')+'> '+esc(t('cup'))+'</label><button class="lwDel" data-cafemenudel="'+i+'" aria-label="'+esc(t('Remove'))+'">×</button></div>'; }).join('')+
+    '<button class="linkbtn inline" id="cafeMenuAdd">+ '+esc(t('Add an item'))+'</button><div class="hint">'+esc(t('Items ticked “cup” count as Cups Sold.'))+'</div></div>';
+  h+='<h3>☀️ '+esc(t('Opening checklist'))+'</h3><textarea id="cafeSetOpen" rows="6">'+esc(E.open)+'</textarea>';
+  h+='<h3>🌙 '+esc(t('Closing checklist'))+'</h3><textarea id="cafeSetClose" rows="6">'+esc(E.close)+'</textarea>';
+  h+='<label class="f">'+esc(t('Shifts (separated by commas)'))+'</label><input type="text" id="cafeSetShifts" value="'+esc(E.shifts)+'">';
+  return h+'<button class="btn" id="cafeSetSave">'+esc(t('Save'))+'</button>';
+}
+function bindCafe_(){
+  var done=function(d){ S.cafeBusy=false; if(d && d.ok){ S.cafe=d; } else showMsg(d && d.err==='empty' ? t('The order is empty.') : d && d.err==='not_leader' ? t('Only the cafe’s leader can change the menu.') : t('Could not save — try again.')); render(); };
+  var call=function(fn,args,then){ if(S.cafeBusy) return; S.cafeBusy=true; run(fn,[S.auth.user,S.auth.pin].concat(args),function(d){ done(d); if(then && d && d.ok) then(d); },function(){ S.cafeBusy=false; showMsg(t('No connection — try again when you are online.')); render(); }); };
+  var rt=document.getElementById('cafeRetry'); if(rt) rt.onclick=function(){ S.cafeErr=''; render(); };
+  document.querySelectorAll('[data-cafeview]').forEach(function(b){ b.onclick=function(){ gpTap(); S.cafeView=b.getAttribute('data-cafeview'); lsSet('gp-cafe-view', S.cafeView); render(); }; });
+  document.querySelectorAll('[data-cafetab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.cafeTab=b.getAttribute('data-cafetab'); S.cafeEdit=null; render(); }; });
+  var shift=function(n){ var d=new Date((S.cafeDate||todayStr())+'T00:00:00'); d.setDate(d.getDate()+n); var s=isoDateOf_(d); if(s>todayStr()) return; S.cafeDate=s; S.cafeTicks={open:{},close:{}}; render(); };
+  var pd=document.getElementById('cafePrevDay'), nd=document.getElementById('cafeNextDay');
+  if(pd) pd.onclick=function(){ shift(-1); }; if(nd) nd.onclick=function(){ shift(1); };
+  document.querySelectorAll('[data-cafetick]').forEach(function(c){ c.onchange=function(){ var v=c.getAttribute('data-cafetick').split('|'); S.cafeTicks[v[0]][v[1]]=c.checked; c.parentNode.classList.toggle('on', c.checked); }; });
+  var ticks=function(k){ return Object.keys(S.cafeTicks[k]).filter(function(i){ return S.cafeTicks[k][i]; }).map(Number); };
+  var ob=document.getElementById('cafeOpenBtn'); if(ob) ob.onclick=function(){ gpTap(); call('cafeOpen',[S.cafeDate, ticks('open')]); };
+  var cb=document.getElementById('cafeCloseBtn'); if(cb) cb.onclick=function(){ var c=document.getElementById('cafeCash'); call('cafeClose',[S.cafeDate, ticks('close'), c && c.value!=='' ? Number(c.value) : null]); };
+  var ro=document.getElementById('cafeReopen'); if(ro) ro.onclick=function(){ call('cafeReopen',[S.cafeDate]); };
+  var gt=document.getElementById('cafeGoTill'); if(gt) gt.onclick=function(){ gpTap(); S.cafeTab='till'; render(); };
+  document.querySelectorAll('[data-cafeadd]').forEach(function(b){ b.onclick=function(){ gpTap(); var id=b.getAttribute('data-cafeadd'); S.cafeOrder[id]=(S.cafeOrder[id]||0)+1; render(); }; });
+  document.querySelectorAll('[data-cafeminus]').forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-cafeminus'); S.cafeOrder[id]=Math.max(0,(S.cafeOrder[id]||0)-1); if(!S.cafeOrder[id]) delete S.cafeOrder[id]; render(); }; });
+  var cl=document.getElementById('cafeClear'); if(cl) cl.onclick=function(){ S.cafeOrder={}; render(); };
+  var ch=document.getElementById('cafeCharge'); if(ch) ch.onclick=function(){ var items=Object.keys(S.cafeOrder).map(function(id){ return { id:id, qty:S.cafeOrder[id] }; });
+    call('cafeSale',[S.cafeDate, items], function(){ S.cafeOrder={}; gpTap(); showMsg(t('Sold')); }); };
+  document.querySelectorAll('[data-cafevoid]').forEach(function(b){ b.onclick=function(){ if(!confirm(t('Undo this order?'))) return; call('cafeVoid',[S.cafeDate, b.getAttribute('data-cafevoid')]); }; });
+  document.querySelectorAll('[data-cafecount]').forEach(function(b){ b.onclick=function(){ gpTap(); var v=b.getAttribute('data-cafecount').split('|'); call('cafeCount',[S.cafeDate, v[0], Number(v[1])]); }; });
+  var ea=document.getElementById('cafeExpAdd'); if(ea) ea.onclick=function(){ var a=document.getElementById('cafeExpAmt'), n=document.getElementById('cafeExpNote');
+    if(!(Number(a.value)>0)){ showMsg(t('Type the amount.')); return; } call('cafeExpense',[S.cafeDate, Number(a.value), n.value, null]); };
+  document.querySelectorAll('[data-cafeexpdel]').forEach(function(b){ b.onclick=function(){ call('cafeExpense',[S.cafeDate, null, '', b.getAttribute('data-cafeexpdel')]); }; });
+  document.querySelectorAll('[data-cafecell]').forEach(function(b){ b.onclick=function(){ gpTap(); var k=b.getAttribute('data-cafecell'); S.cafeCell = S.cafeCell===k ? null : k; render(); }; });
+  document.querySelectorAll('[data-cafewho]').forEach(function(b){ b.onclick=function(){
+    var C=S.cafe, wkKey=cafeMonday_(C.date), cells=Object.assign({}, (C.settings.roster||{})[wkKey]||{}), ids=(cells[S.cafeCell]||[]).slice(), id=b.getAttribute('data-cafewho');
+    cells[S.cafeCell] = ids.indexOf(id)>-1 ? ids.filter(function(x){ return x!==id; }) : ids.concat([id]);
+    call('cafeSaveSettings',[{ roster:{ week:wkKey, cells:cells } }, C.date]); }; });
+  var cd=document.getElementById('cafeCellDone'); if(cd) cd.onclick=function(){ S.cafeCell=null; render(); };
+  document.querySelectorAll('[data-cafemenu]').forEach(function(inp){ inp.oninput=inp.onchange=function(){ var v=inp.getAttribute('data-cafemenu').split('|'), m=S.cafeEdit.menu[Number(v[0])];
+    m[v[1]] = v[1]==='cup' ? inp.checked : v[1]==='price' ? Number(inp.value) : inp.value; }; });
+  document.querySelectorAll('[data-cafemenudel]').forEach(function(b){ b.onclick=function(){ S.cafeEdit.menu.splice(Number(b.getAttribute('data-cafemenudel')),1); render(); }; });
+  var ma=document.getElementById('cafeMenuAdd'); if(ma) ma.onclick=function(){ S.cafeEdit.menu.push({ name:'', emoji:'☕', price:1, cup:true }); render(); };
+  ['cafeSetOpen','cafeSetClose','cafeSetShifts'].forEach(function(id){ var el=document.getElementById(id); if(el) el.oninput=function(){ S.cafeEdit[id==='cafeSetOpen'?'open':id==='cafeSetClose'?'close':'shifts']=el.value; }; });
+  document.querySelectorAll('[data-cafetill]').forEach(function(b){ b.onclick=function(){ gpTap(); call('cafeSaveSettings',[{ till:b.getAttribute('data-cafetill') }, S.cafeDate], function(){ showMsg(t('Saved')); }); }; });
+  var ps=document.getElementById('cafePosSave'); if(ps) ps.onclick=function(){
+    var g=function(id){ var el=document.getElementById(id); return el && el.value!=='' ? Number(el.value) : null; };
+    var x={ sales:g('cafePosSales'), receipts:g('cafePosReceipts'), cups:g('cafePosCups') };
+    if(x.sales==null && x.receipts==null && x.cups==null && !S.cafe.day.pos){ showMsg(t('Type the totals first.')); return; }
+    call('cafePos',[S.cafeDate, x], function(){ gpTap(); showMsg(t('Saved')); }); };
+  var ss=document.getElementById('cafeSetSave'); if(ss) ss.onclick=function(){ var E=S.cafeEdit;
+    call('cafeSaveSettings',[{ menu:E.menu.filter(function(m){ return String(m.name||'').trim(); }), open:E.open.split('\n'), close:E.close.split('\n'), shifts:E.shifts.split(',').map(function(x){ return x.trim(); }) }, S.cafeDate],
+      function(){ S.cafeEdit=null; showMsg(t('Saved')); }); };
+}
+
+/* ---------- Campus Leadership: Overview and the Tuesday meeting ----------
+   Oct 2026 (Uriah): what a Campus Director needs to stay on top of, on one
+   page and not many — each department's pulse (numbers in, staff, health,
+   OKRs), which ministries have a clear leader and which don't, who is
+   facilitating and translating on Tuesday, and — behind the leadership code,
+   like Base Finances everywhere else — the money ahead. A department
+   overseer sees the same for their own department. */
+function leadScopeDepts_(){
+  var all=Object.keys(getDepartments(S.me.campus)).filter(function(d){ return d!==BL_DEPT; });
+  if(S.me.ministry==='Campus Director' || S.me.isAdmin) return all;
+  return all.indexOf(S.me.ministry)>-1 ? [S.me.ministry] : all;
+}
+function leadIsDirector_(){ return !!(S.me && (S.me.ministry==='Campus Director' || S.me.isAdmin)); }
+function leadTuesdays_(n){ var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+((2-d.getDay()+7)%7)); var out=[]; for(var i=0;i<n;i++){ out.push(calIso_(d)); d.setDate(d.getDate()+7); } return out; }
+function leadTuesFor_(date){ return ((S.lead && S.lead.tues) || []).filter(function(x){ return x.date===date; })[0] || null; }
+function leadTuesWho_(p){ return p ? (p.id ? staffName_(p.id) : p.name) : ''; }
+function leadBaseHtml_(pulse){
+  var depts=getDepartments(S.me.campus), rows=[], scope=leadScopeDepts_(), many=scope.length>1;
+  var h='<div id="leadBase">'+(!many && pulse ? pulse : '');
+  scope.forEach(function(d){ Object.keys(depts[d]||{}).forEach(function(m){ rows.push({ dept:d, min:m, leaders:ministryLeaders_(S.me.campus, d, m) }); }); });
+  var none=rows.filter(function(r){ return !r.leaders.length; });
+  /* Numbers in this week, added up from the departments' pulse once it's here. */
+  var inN=0, ofN=0, pulseIn=true;
+  scope.forEach(function(d){ var P=S.pulse && S.pulse[d]; if(!P || !P.ok){ pulseIn=false; return; }
+    var mins=numbersDeptMinistries_(d), lg=(P.numbers.logged||{})[P.week]||[]; ofN+=mins.length; inN+=mins.filter(function(m){ return lg.indexOf(m)>-1; }).length; });
+  var next=leadTuesdays_(1)[0], tr=S.lead ? leadTuesFor_(next) : null;
+  /* At a glance (the Director's whole base): four numbers, each opening onto its section below. */
+  var pj=lmProject_();
+  if(many) h+='<div class="mmGrid lbGlance">'+
+    '<a class="mmTile" href="#lbLeaders"><div class="mmTileName">👑 '+esc(t('Clear leaders'))+'</div><div class="mmTileNum">'+(rows.length-none.length)+' / '+rows.length+'</div></a>'+
+    '<a class="mmTile" href="#lbPulse"><div class="mmTileName">📊 '+esc(t('Numbers in'))+'</div><div class="mmTileNum">'+(pulseIn && ofN ? inN+' / '+ofN : '…')+'</div></a>'+
+    '<a class="mmTile" href="#lbTues"><div class="mmTileName">🎤 '+esc(gpT('Tuesday {date}',{date:hospDate_(next)}))+'</div><div class="mmTileNum lbTileWho">'+esc(leadTuesWho_(tr && tr.facilitator) || '—')+'</div></a>'+
+    (leadIsDirector_() ? '<a class="mmTile" href="#leadMoney"><div class="mmTileName">💵 '+esc(t('Money ahead'))+'</div><div class="mmTileNum lbTileWho'+(pj && pj.short?' lbNone':'')+'">'+esc(!pj ? '🔒' : pj.short ? gpT('short in {month}',{month:lmMonthName_(pj.short)}) : lmMoney_(pj.end))+'</div></a>' : '')+
+    '</div>';
+  /* Clear leaders: the ones without, a line per department; who leads what folded. */
+  h+='<div class="card" id="lbLeaders"><div class="goalCardTitle" style="margin-bottom:6px">👑 '+esc(t('Clear leaders'))+'</div>'+
+    '<p class="lbBig"><b>'+(rows.length-none.length)+' / '+rows.length+'</b> '+esc(t('ministries have a clear leader'))+'</p>';
+  if(none.length){
+    h+='<div class="hint" style="margin:6px 0 2px">'+esc(t('No leader yet:'))+'</div>';
+    scope.forEach(function(d){ var list=none.filter(function(r){ return r.dept===d; }); if(!list.length) return;
+      h+='<div class="lbDeptLine">'+(scope.length>1?'<b>'+esc(t(d))+'</b> ':'')+esc(list.map(function(r){ return t(r.min); }).join(', '))+'</div>'; });
+  } else h+='<p class="sub" style="margin:4px 0 0">✓ '+esc(t('Every ministry has a leader.'))+'</p>';
+  h+='<details class="pulseMore"><summary>'+esc(t('Who leads what'))+'</summary>'+rows.map(function(r){
+      return '<div class="cafeLine"><span>'+esc(t(r.min))+'</span><span class="'+(r.leaders.length?'':'lbNone')+'">'+esc(r.leaders.length ? r.leaders.map(function(p){ return p.name; }).join(', ') : '—')+'</span></div>'; }).join('')+
+    '<p class="hint" style="margin:6px 0 0">'+esc(t('A leader is set on each person’s profile by an admin.'))+'</p></details></div>';
+  /* Tuesday morning. */
+  h+='<div class="card" id="lbTues"><div class="goalCardTitle" style="margin-bottom:6px">🎤 '+esc(gpT('Tuesday {date}',{date:hospDate_(next)}))+'</div>';
+  if(!S.lead) h+='<p class="sub" style="margin:0">'+esc(S.leadErr || t('Loading…'))+'</p>';
+  else {
+    h+='<div class="lbWho"><span>'+esc(t('Facilitating'))+'</span><b>'+esc(leadTuesWho_(tr && tr.facilitator) || t('Nobody yet'))+'</b></div>'+
+      '<div class="lbWho"><span>'+esc(t('Translating'))+'</span><b>'+esc(leadTuesWho_(tr && tr.translator) || t('Nobody yet'))+'</b></div>';
+    if(tr && tr.topics.length) h+='<ul class="lbTopics">'+tr.topics.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>';
+    h+='<button class="btn ghost" id="lbGoTues" style="margin-top:8px">'+esc(t('Plan the Tuesdays'))+'</button>';
+  }
+  h+='</div>';
+  if(leadIsDirector_()) h+=leadMoneyHtml_();
+  /* Each department's pulse last: one open for an overseer, folded for the Director. */
+  if(pulse && many) h+='<div id="lbPulse"><details class="card lbPulseFold"'+(S.lbPulseOpen?' open':'')+'><summary class="goalCardTitle">📊 '+esc(t('Departments this week'))+'</summary>'+pulse+'</details></div>';
+  return h+'</div>';
+}
+/* The money ahead. The leadership code is the one the dashboard already asks
+   for (kept on this phone as gp-leadercode); the server checks it on every call. */
+function lmMonths_(n){ var d=new Date(), out=[]; d.setDate(1); for(var i=0;i<n;i++){ out.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)); d.setMonth(d.getMonth()+1); } return out; }
+function lmMonthName_(k){ return t(MONTH_SHORT[Number(k.slice(5,7))-1]||'')+' '+k.slice(2,4); }
+function lmMoney_(v){ var n=Math.round(Number(v)||0); return (n<0?'−':'')+'$'+Math.abs(n).toLocaleString('en-US'); }
+function lmLoad_(code){
+  if(S.lmLoading) return; S.lmLoading=true;
+  run('finProjGet',[code, S.me.campus],function(d){ S.lmLoading=false; S.lm=d||{ ok:false }; S.lmEdit=null; if(S.view==='ministry') render(); },
+    function(){ S.lmLoading=false; S.lm={ ok:false, err:'offline' }; if(S.view==='ministry') render(); });
+}
+/* Six months on from the latest Base Finances: where it ends, and the first month below zero. */
+function lmProject_(){
+  if(!S.lm || !S.lm.ok) return null;
+  var L=S.lm.latest||{}, bf=L['Base Finances ($)'], bal=bf ? Number(bf.value) : 0, short='', E=S.lmEdit||S.lm.months||{};
+  var rows=lmMonths_(6).map(function(k){ var m=E[k]||{}; bal+=(Number(m.inc)||0)-(Number(m.exp)||0); if(bal<0 && !short) short=k; return { k:k, bal:bal }; });
+  return { rows:rows, end:bal, short:short };
+}
+/* Balances follow the typing without a re-render, so the next box keeps the tap. */
+function lmRecalc_(){
+  var pj=lmProject_(); if(!pj) return;
+  var spans=document.querySelectorAll('.lmBal');
+  pj.rows.forEach(function(r, i){ if(spans[i]){ spans[i].textContent=lmMoney_(r.bal); spans[i].classList.toggle('bad', r.bal<0); } });
+  var sum=document.querySelector('.lmSum'); if(sum){ sum.textContent=pj.short ? gpT('At this rate the money runs short in {month}.',{month:lmMonthName_(pj.short)}) : gpT('In six months: {money}',{money:lmMoney_(pj.end)}); sum.classList.toggle('bad', !!pj.short); }
+}
+function leadMoneyHtml_(){
+  var code=lsGet('gp-leadercode')||'';
+  var h='<div class="card" id="leadMoney"><div class="goalCardTitle" style="margin-bottom:6px">💵 '+esc(t('Money ahead'))+'</div>';
+  if(!code || (S.lm && S.lm.err==='not_leader')) return h+'<p class="sub" style="margin:0 0 8px">'+esc(S.lm && S.lm.err==='not_leader' ? t('That leadership code didn’t work.') : t('Base finances need the leadership code.'))+'</p>'+
+    '<button class="btn ghost" id="lmUnlock">🔒 '+esc(t('Enter the leadership code'))+'</button></div>';
+  if(!S.lm){ lmLoad_(code); return h+'<p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>'; }
+  if(!S.lm.ok) return h+'<p class="sub" style="margin:0 0 8px">'+esc(t('Couldn’t load this — pull down to try again.'))+'</p><button class="btn ghost" id="lmRetry">'+esc(t('Try again'))+'</button></div>';
+  var L=S.lm.latest||{}, bf=L['Base Finances ($)'], cr=L['Base Cash Reserve ($)'], months=lmMonths_(6);
+  var E=S.lmEdit || (S.lmEdit=JSON.parse(JSON.stringify(S.lm.months||{})));
+  h+='<div class="mmGrid">'+[[t('Base finances'), bf], [t('Cash reserve'), cr]].map(function(x){
+      return '<div class="mmTile"><div class="mmTileName">'+esc(x[0])+'</div><div class="mmTileNum">'+(x[1] ? lmMoney_(x[1].value) : '—')+'</div>'+
+        '<div class="hint" style="margin:0">'+esc(x[1] ? gpT('week {n}',{n:x[1].week}) : t('not entered yet'))+'</div></div>'; }).join('')+'</div>';
+  var bal=bf ? Number(bf.value) : 0, short='';
+  h+='<div class="lmTable"><div class="lmRow lmHead"><span></span><span>'+esc(t('Coming in'))+'</span><span>'+esc(t('Going out'))+'</span><span>'+esc(t('Balance'))+'</span></div>'+months.map(function(k){
+      var m=E[k]||{}; bal+=(Number(m.inc)||0)-(Number(m.exp)||0); if(bal<0 && !short) short=k;
+      return '<div class="lmRow"><span>'+esc(lmMonthName_(k))+'</span>'+
+        '<input type="number" inputmode="numeric" min="0" step="1" data-lmm="'+k+'|inc" value="'+(m.inc!=null?esc(String(m.inc)):'')+'" aria-label="'+esc(t('Coming in'))+'">'+
+        '<input type="number" inputmode="numeric" min="0" step="1" data-lmm="'+k+'|exp" value="'+(m.exp!=null?esc(String(m.exp)):'')+'" aria-label="'+esc(t('Going out'))+'">'+
+        '<span class="lmBal'+(bal<0?' bad':'')+'">'+lmMoney_(bal)+'</span></div>'; }).join('')+'</div>';
+  h+='<p class="lmSum'+(short?' bad':'')+'">'+esc(short ? gpT('At this rate the money runs short in {month}.',{month:lmMonthName_(short)}) : gpT('In six months: {money}',{money:lmMoney_(bal)}))+'</p>';
+  h+='<p class="hint" style="margin:0 0 8px">'+esc(t('Type what you expect to come in and go out each month. It starts from the latest Base Finances.'))+'</p>';
+  return h+'<button class="btn" id="lmSave">'+esc(t('Save'))+'</button></div>';
+}
+/* The Tuesday morning meeting: the next eight Tuesdays, each with who
+   facilitates, who translates and the topics to hit. */
+function leadTuesHtml_(){
+  var h='<div id="leadTues">';
+  if(!S.lead) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(S.leadErr || t('Loading…'))+'</p></div></div>';
+  h+='<p class="sub">'+esc(t('The Tuesday morning meeting: who facilitates, who translates, and the topics to hit.'))+'</p>';
+  leadTuesdays_(8).forEach(function(date, i){
+    var r=leadTuesFor_(date), open=S.ltOpen===date, fac=leadTuesWho_(r && r.facilitator), tr=leadTuesWho_(r && r.translator);
+    h+='<div class="card leadTue'+(i===0?' next':'')+'"><button class="leadTueHead" data-ltopen="'+date+'" aria-expanded="'+open+'">'+
+      '<span class="leadTueDate">'+esc(gpT('Tuesday {date}',{date:hospDate_(date)}))+(i===0?' <span class="leadTueNext">'+esc(t('next'))+'</span>':'')+'</span>'+
+      '<span class="leadTueWho">🎤 '+esc(fac || '—')+' · 🗣️ '+esc(tr || '—')+(r && r.topics.length ? ' · 📌 '+r.topics.length : '')+'</span></button>';
+    if(open) h+=leadTueFormHtml_(date, r);
+    else if(r && r.topics.length) h+='<ul class="lbTopics">'+r.topics.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>';
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+function leadTueFormHtml_(date, r){
+  var D=S.ltDraft;
+  if(!D || D.date!==date) D=S.ltDraft={ date:date, facilitator:r && r.facilitator ? Object.assign({}, r.facilitator) : null, translator:r && r.translator ? Object.assign({}, r.translator) : null, topics:r ? r.topics.slice() : [] };
+  var people=(S.roster||[]).filter(function(p){ return p.campus===S.me.campus; }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+  var pick=function(key, label){ var p=D[key], v=p ? (p.id || '__other') : '';
+    return '<label class="f">'+esc(label)+'</label><select data-ltwho="'+key+'"><option value="">—</option>'+people.map(function(x){ return '<option value="'+esc(x.id)+'"'+(v===x.id?' selected':'')+'>'+esc(x.name)+'</option>'; }).join('')+
+      '<option value="__other"'+(v==='__other'?' selected':'')+'>'+esc(t('Someone else…'))+'</option></select>'+
+      (v==='__other' ? '<input type="text" data-ltname="'+key+'" maxlength="60" value="'+esc(p.name||'')+'" placeholder="'+esc(t('Their name'))+'">' : ''); };
+  return '<div class="leadTueForm">'+pick('facilitator', t('Facilitator'))+pick('translator', t('Translator'))+
+    '<label class="f">'+esc(t('Topics to hit'))+'</label>'+D.topics.map(function(x, i){ return '<div class="cafeLine"><span>📌 '+esc(x)+'</span><button class="lwDel" data-lttopdel="'+i+'" aria-label="'+esc(t('Remove'))+'">×</button></div>'; }).join('')+
+    '<div class="numIn"><input type="text" id="ltTopic" maxlength="160" placeholder="'+esc(t('e.g. Outreach week, prayer for the DTS'))+'"><button class="btn ghost" id="ltTopicAdd" style="margin:0;width:auto;padding:9px 14px">'+esc(t('Add'))+'</button></div>'+
+    '<div class="btnRow"><button class="btn" id="ltSave">'+esc(t('Save'))+'</button><button class="btn ghost" id="ltCancel">'+esc(t('Cancel'))+'</button></div></div>';
+}
+function bindLeadTools_(){
+  var gt=document.getElementById('lbGoTues'); if(gt) gt.onclick=function(){ gpTap(); S.lwTab='board'; lsSet('gp-lw-tab','board'); S.leadTab='tues'; render(); window.scrollTo(0,0); };
+  var un=document.getElementById('lmUnlock'); if(un) un.onclick=function(){ var c=prompt(t('Enter leadership code')); if(!c) return; lsSet('gp-leadercode', c); S.lm=null; render(); };
+  var rt=document.getElementById('lmRetry'); if(rt) rt.onclick=function(){ S.lm=null; render(); };
+  document.querySelectorAll('[data-lmm]').forEach(function(inp){ inp.oninput=function(){ var v=inp.getAttribute('data-lmm').split('|'); S.lmEdit[v[0]]=S.lmEdit[v[0]]||{}; S.lmEdit[v[0]][v[1]] = inp.value==='' ? null : Number(inp.value); lmRecalc_(); }; });
+  var ls=document.getElementById('lmSave'); if(ls) ls.onclick=function(){ if(S.busy) return; S.busy=true;
+    run('finProjSave',[lsGet('gp-leadercode')||'', S.me.campus, S.lmEdit],function(d){ S.busy=false; if(d && d.ok){ S.lm=d; S.lmEdit=null; showMsg(t('Saved')); } else { if(d && d.err==='not_leader') S.lm=d; showMsg(t('Could not save')); } render(); },
+      function(){ S.busy=false; showMsg(t('No connection — try again when you are online.')); }); };
+  document.querySelectorAll('[data-ltopen]').forEach(function(b){ b.onclick=function(){ gpTap(); var d=b.getAttribute('data-ltopen'); S.ltOpen = S.ltOpen===d ? null : d; S.ltDraft=null; render(); }; });
+  var D=S.ltDraft; if(!D) return;
+  document.querySelectorAll('[data-ltwho]').forEach(function(sel){ sel.onchange=function(){ var k=sel.getAttribute('data-ltwho'), v=sel.value;
+    D[k] = !v ? null : v==='__other' ? { id:'', name:'' } : { id:v, name:'' }; render(); }; });
+  document.querySelectorAll('[data-ltname]').forEach(function(inp){ inp.oninput=function(){ D[inp.getAttribute('data-ltname')].name=inp.value; }; });
+  var addTopic=function(){ var el=document.getElementById('ltTopic'), v=(el.value||'').trim(); if(!v) return; if(D.topics.length>=15){ showMsg(t('That’s plenty for one meeting.')); return; } D.topics.push(v); render(); var n=document.getElementById('ltTopic'); if(n) n.focus(); };
+  var ta=document.getElementById('ltTopicAdd'); if(ta) ta.onclick=addTopic;
+  var ti=document.getElementById('ltTopic'); if(ti) ti.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); addTopic(); } };
+  document.querySelectorAll('[data-lttopdel]').forEach(function(b){ b.onclick=function(){ D.topics.splice(Number(b.getAttribute('data-lttopdel')),1); render(); }; });
+  var cc=document.getElementById('ltCancel'); if(cc) cc.onclick=function(){ S.ltOpen=null; S.ltDraft=null; render(); };
+  var sv=document.getElementById('ltSave'); if(sv) sv.onclick=function(){ if(S.busy) return;
+    var pend=(document.getElementById('ltTopic')||{}).value; if(pend && pend.trim() && D.topics.length<15) D.topics.push(pend.trim());
+    S.busy=true;
+    run('saveLeadTuesday',[S.auth.user,S.auth.pin,{ date:D.date, facilitator:D.facilitator, translator:D.translator, topics:D.topics }],function(d){ S.busy=false;
+      if(d && d.ok){ S.lead=d; S.ltOpen=null; S.ltDraft=null; showMsg(t('Saved')); } else showMsg(t('Could not save')); render(); },
+      function(){ S.busy=false; showMsg(t('No connection — try again when you are online.')); }); };
+}
 /* ==================== Team → Personalities ====================
    The team's mix of the sixteen types, added up from the types people have
    shared (rosterStaff_ carries avatar.type only while "Show my type to the team"
@@ -9164,7 +9734,7 @@ document.addEventListener('click', function(e){
   if(el.hasAttribute('data-numgo')){ gpTap(); open(el.getAttribute('data-numgo')); return; }
   if(el.hasAttribute('data-gonumbers')){ open(el.getAttribute('data-gonumbers')); return; }
   if(el.hasAttribute('data-gonumdept')){ S.bellOpen=false; if(typeof renderNotifPanel==='function') renderNotifPanel();
-    S.view='ministry'; S.mmTab='ministry'; S.mmBrowseDept=BL_DEPT; S.mmBrowseMinistry=el.getAttribute('data-gonumdept'); render(); window.scrollTo(0,0); return; }
+    S.view='ministry'; S.mmTab='ministry'; S.mmBrowseDept=BL_DEPT; S.mmBrowseMinistry=el.getAttribute('data-gonumdept'); S.lwTab='base'; S.lbPulseOpen=true; render(); window.scrollTo(0,0); return; }
   if(el.hasAttribute('data-numsave')){
     if(S.busy) return;
     var v=el.getAttribute('data-numsave'), i=v.lastIndexOf('|'), dept=v.slice(0,i), min=v.slice(i+1);
@@ -9724,7 +10294,25 @@ function myMinistryHtml(){
   if(S.leadShown){
     var pd = mine ? pulseDeptsForMe_() : [];
     var ph = pd.map(function(d){ return pulseCardHtml_(d, pd.length>1); }).join('');
+    /* Your own leadership row: "My week" first — the numbers come from it — and
+       the board, pulse and the Director's quarter a tab away. */
+    if(mine && S.me.dept===BL_DEPT && S.me.ministry){
+      var lwt=S.lwTab==='board' || S.lwTab==='base' ? S.lwTab : 'week';
+      h+='<div class="campusSeg" style="max-width:none">'+[['week','🗓️','My week'],['base','🧭','Overview'],['board','📋','Board']].map(function(x){
+        return '<button class="campusBtn'+(lwt===x[0]?' on':'')+'" data-lwtab="'+x[0]+'">'+x[1]+' '+esc(t(x[2]))+'</button>'; }).join('')+'</div>';
+      if(lwt==='week') return h+lwHtml_();
+      if(lwt==='base') return h+leadBaseHtml_(ph);
+      return h+(mine ? directorQuarterHtml_() : '')+leadSectionHtml_();
+    }
     return h+ph+(mine ? directorQuarterHtml_() : '')+leadSectionHtml_();
+  }
+  /* The Cafe runs its day here — open, sell, close, the rota — and its numbers
+     fill themselves in; the usual numbers are a tab away. */
+  if(sel.dept==='Community Service' && sel.min==='Cafe'){
+    h+='<div class="campusSeg" style="max-width:none"><button class="campusBtn'+(S.cafeView!=='numbers'?' on':'')+'" data-cafeview="tool">☕ '+esc(t('Cafe tool'))+'</button>'+
+      '<button class="campusBtn'+(S.cafeView==='numbers'?' on':'')+'" data-cafeview="numbers">📊 '+esc(t('The numbers'))+'</button></div>';
+    if(S.cafeView!=='numbers') return h+cafeHtml_();
+    h+='<p class="hint">'+esc(t('When the cafe tool is used, these numbers fill themselves in from it.'))+'</p>';
   }
 
   if(sel.dept==='Skills Training' && sel.min==='Hospitality' && canHospClient_()){
@@ -11721,12 +12309,13 @@ function leadOkrs_(){
 }
 function leadNextMonday_(){ var d=new Date(); d.setHours(12,0,0,0); var add=(8-d.getDay())%7; d.setDate(d.getDate()+add); return calIso_(d); }
 function leadSectionHtml_(){
-  var tab=S.leadTab==='board' || S.leadTab==='notes' ? S.leadTab : 'okrs';
+  var tab=S.leadTab==='board' || S.leadTab==='notes' || S.leadTab==='tues' ? S.leadTab : 'okrs';
   var h='<div class="leadFilters leadTabs" role="tablist">'+
     '<button class="leadSeg'+(tab==='okrs'?' on':'')+'" role="tab" data-leadtab="okrs" title="'+esc(t('Leadership OKRs'))+'">🎯 '+esc(t('OKRs'))+'</button>'+
     '<button class="leadSeg'+(tab==='board'?' on':'')+'" role="tab" data-leadtab="board" title="'+esc(t('Monday meetings'))+'">🗂️ '+esc(t('Board'))+'</button>'+
+    '<button class="leadSeg'+(tab==='tues'?' on':'')+'" role="tab" data-leadtab="tues" title="'+esc(t('Tuesday morning meeting'))+'">🎤 '+esc(t('Tuesday'))+'</button>'+
     '<button class="leadSeg'+(tab==='notes'?' on':'')+'" role="tab" data-leadtab="notes" title="'+esc(t('Meeting notes'))+'">📝 '+esc(t('Notes'))+'</button></div>';
-  return h+(tab==='board' ? leadBoardHtml_() : tab==='notes' ? leadNotesHtml_() : leadOkrDashHtml_());
+  return h+(tab==='board' ? leadBoardHtml_() : tab==='notes' ? leadNotesHtml_() : tab==='tues' ? leadTuesHtml_() : leadOkrDashHtml_());
 }
 function leadCardsFor_(okrId){ return ((S.lead && S.lead.cards) || []).filter(function(c){ return c.okrId===okrId; }); }
 function leadOkrDashHtml_(){
@@ -12023,7 +12612,7 @@ function bindLead_(){
   document.querySelectorAll('[data-leadtab]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadTab=b.getAttribute('data-leadtab'); render(); }; });
   document.querySelectorAll('#leadGoOkr').forEach(function(b){ b.onclick=function(){ gpTap(); S.mmTab='okr'; render(); }; });
   document.querySelectorAll('[data-leadobjcards]').forEach(function(b){ b.onclick=function(){ gpTap(); S.leadTab='board'; S.leadFilter='all'; render(); }; });
-  if((document.getElementById('leadBoard') || document.getElementById('leadOkrs') || document.getElementById('leadNotes')) && !S.lead && !S.leadLoading && !S.leadErr){
+  if((document.getElementById('leadBoard') || document.getElementById('leadOkrs') || document.getElementById('leadNotes') || document.getElementById('leadTues') || document.getElementById('leadBase')) && !S.lead && !S.leadLoading && !S.leadErr){
     S.leadLoading=true;
     run('getLeadBoard',[S.auth.user,S.auth.pin],function(d){ S.leadLoading=false; if(d && d.ok) S.lead=d; else S.leadErr=(d && d.err==='not_authorized') ? t('The meeting board is for Campus Leadership.') : t('Could not load'); render(); },
       function(e){ S.leadLoading=false; S.leadErr=(e && e.message) || t('Connection problem — try again.'); render(); });
@@ -14631,6 +15220,7 @@ function bindAway(){
   });
   bindHr();
   if(S.view==='library') bindLibrary_();
+  if(S.view==='ministry'){ bindLw_(); bindCafe_(); bindLeadTools_(); }
   if(S.view==='required') bindReqSign_();
   if(S.guest) bindGuest_();
   if(S.view==='mycontract') bindMyContract_();

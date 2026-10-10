@@ -4692,10 +4692,11 @@ async function getLeadDoc_(campus) {
     areas: Array.isArray(d.areas) ? d.areas : JSON.parse(JSON.stringify(LEAD_DEFAULT.areas)),
     standing: Array.isArray(d.standing) ? d.standing : JSON.parse(JSON.stringify(LEAD_DEFAULT.standing)),
     cards: Array.isArray(d.cards) ? d.cards : [],
-    notes: Array.isArray(d.notes) ? d.notes : []
+    notes: Array.isArray(d.notes) ? d.notes : [],
+    tues: Array.isArray(d.tues) ? d.tues : []
   };
 }
-function leadOut_(campus, d, extra) { return Object.assign({ ok: true, campus: campus, cols: d.cols, areas: d.areas, standing: d.standing, cards: d.cards, notes: d.notes }, extra || {}); }
+function leadOut_(campus, d, extra) { return Object.assign({ ok: true, campus: campus, cols: d.cols, areas: d.areas, standing: d.standing, cards: d.cards, notes: d.notes, tues: d.tues || [] }, extra || {}); }
 async function getLeadBoard(username, pin) {
   const a = await leadAuth_(username, pin); if (a.out) return a.out;
   return leadOut_(a.campus, await getLeadDoc_(a.campus));
@@ -7258,8 +7259,404 @@ async function adminLooseEnds(username, pin) {
   };
 }
 
+/* ==================== ministry tools: numbers as a by-product ====================
+   Uriah (Oct 2026): My Ministry should be a tool each ministry actually uses —
+   the numbers fall out of it instead of being typed. Two to start: Campus
+   Leadership's "My week" and the Cafe. Each keeps its own records, and after
+   every change works out that week's totals and writes them into `entries`
+   with by:'tool:<name>' (toolSync_), so the Base dashboard, the roll-ups and
+   My Ministry's Numbers tab all read them like any logged week. A week the
+   tool has nothing for is never touched; when a week's last record goes, only
+   the rows the tool wrote are cleared — a number someone typed stays. */
+async function toolSync_(campus, dept, ministry, week, values, tag) {
+  const rows = await getEntries_(), yr = currentYear_();
+  const updates = Object.keys(values).map(function (metric) {
+    const v = values[metric];
+    if (v !== null) return { metric: metric, value: v };
+    const had = rows.find(function (r) { return r.campus === campus && r.dept === dept && r.ministry === ministry && r.metric === metric &&
+      String(r.week) === String(week) && yearOf_(r) === yr; });
+    return (had && had.by === tag) ? { metric: metric, value: null } : null;
+  }).filter(Boolean);
+  if (updates.length) await saveMinistryInternal_(campus, dept, ministry, week, updates, tag);
+}
+function toolId_(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function toolDate_(v) { const d = isoDate_(v); if (!d) return ''; const t = Date.parse(d + 'T00:00:00Z'), now = Date.now();
+  return (t > now + 2 * 86400000 || t < now - 120 * 86400000) ? '' : d; }
+
+/* ---------- Campus Leadership: My week ----------
+   A leader's week as it happens: tap what you did (a one-on-one and with whom,
+   a partner you connected with, where you spoke, hours sharing the gospel, a
+   teaching prepped, a meeting led), and the leadership numbers count it. The
+   Campus Director also keeps the week's three ratings, partners and the base
+   plants being prayed about and planned. */
+const LEAD_KINDS = { oneonone: 'One-on-Ones Held', partner: 'Partner Connections', church: 'Spoke at Churches', base: 'Spoke at YWAM Bases',
+  gospel: 'Hours Sharing the Gospel', deptmeeting: 'Department Meetings Held', teaching: 'Teachings Prepped', meeting: 'Meetings Led' };
+const LEAD_RATINGS = { vision: 'Base Vision (1-10)', comms: 'Communications (1-10)', partners: 'Partner Relationships (1-10)' };
+const PLANT_STAGES = ['praying', 'exploring', 'planning', 'preparing', 'launched'];
+const LEAD_DIRECTOR = 'Campus Director';
+function canLeadTool_(s) { return !!(s && s.dept === 'Campus Leadership' && s.ministry); }
+async function leadSync_(s, week) {
+  const yr = currentYear_();
+  const mine = (await readJSON('leadLog', [])).filter(function (r) { return r.campus === s.campus && r.ministry === s.ministry && Number(r.week) === week && Number(r.year) === yr; });
+  const vals = {};
+  Object.keys(LEAD_KINDS).forEach(function (k) {
+    const n = mine.filter(function (r) { return r.kind === k; }).reduce(function (a, r) { return a + (Number(r.qty) || 1); }, 0);
+    vals[LEAD_KINDS[k]] = mine.length ? Math.round(n * 100) / 100 : null;
+  });
+  if (s.ministry === LEAD_DIRECTOR) {
+    const rf = (await readJSON('leadReflect', [])).find(function (r) { return r.campus === s.campus && r.ministry === s.ministry && Number(r.week) === week && Number(r.year) === yr; });
+    Object.keys(LEAD_RATINGS).forEach(function (k) { vals[LEAD_RATINGS[k]] = rf && rf[k] ? rf[k] : null; });
+    const plants = (await readJSON('basePlants', [])).filter(function (p) { return p.campus === s.campus && p.stage !== 'launched'; });
+    if (week === isoWeek_(new Date().toISOString().slice(0, 10))) vals['Base Plants in Planning'] = plants.length;
+  }
+  await toolSync_(s.campus, 'Campus Leadership', s.ministry, week, vals, 'tool:lead');
+}
+async function leadWeek(username, pin, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLeadTool_(s)) return { ok: false, err: 'not_leadership' };
+  const yr = currentYear_(), wk = finiteNum_(week, 1, 52) || isoWeek_(new Date().toISOString().slice(0, 10));
+  const log = (await readJSON('leadLog', [])).filter(function (r) { return r.staffId === s.id && Number(r.week) === wk && Number(r.year) === yr; })
+    .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.at < b.at ? -1 : 1); });
+  const rf = (await readJSON('leadReflect', [])).find(function (r) { return r.staffId === s.id && Number(r.week) === wk && Number(r.year) === yr; }) || null;
+  const partners = (await readJSON('leadPartners', [])).filter(function (p) { return p.staffId === s.id; }).sort(function (a, b) { return (a.last || '') < (b.last || '') ? -1 : 1; });
+  const director = s.ministry === LEAD_DIRECTOR || !!s.isAdmin;
+  const plants = director ? (await readJSON('basePlants', [])).filter(function (p) { return p.campus === s.campus; }) : [];
+  return { ok: true, week: wk, ministry: s.ministry, director: s.ministry === LEAD_DIRECTOR, log: log, reflect: rf, partners: partners, plants: plants };
+}
+async function leadLogAdd(username, pin, entry) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLeadTool_(s)) return { ok: false, err: 'not_leadership' };
+  const e = entry && typeof entry === 'object' ? entry : {};
+  if (!LEAD_KINDS[e.kind]) return { ok: false, err: 'bad_kind' };
+  const date = toolDate_(e.date || new Date().toISOString().slice(0, 10));
+  if (!date) return { ok: false, err: 'bad_date' };
+  const qty = e.kind === 'gospel' ? finiteNum_(e.qty, 0.25, 24) : 1;
+  if (qty == null) return { ok: false, err: 'bad_hours' };
+  const wk = isoWeek_(date), yr = Number(date.slice(0, 4));
+  const row = { id: toolId_('ll'), staffId: s.id, campus: s.campus, ministry: s.ministry, date: date, week: wk, year: yr, kind: e.kind, qty: qty,
+    who: str_(e.who, 60) || '', whoName: str_(e.whoName, 80) || '', note: str_(e.note, 200) || '', at: new Date().toISOString() };
+  const rows = await readJSON('leadLog', []); rows.push(row); await writeJSON('leadLog', rows);
+  if (e.kind === 'partner' && row.who) {
+    const ps = await readJSON('leadPartners', []), p = ps.find(function (x) { return x.id === row.who && x.staffId === s.id; });
+    if (p && (!p.last || p.last < date)) { p.last = date; await writeJSON('leadPartners', ps); }
+  }
+  if (yr === currentYear_()) await leadSync_(s, wk);
+  return leadWeek(username, pin, wk);
+}
+async function leadLogDelete(username, pin, id) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await readJSON('leadLog', []), hit = rows.find(function (r) { return r.id === id && r.staffId === s.id; });
+  if (!hit) return { ok: false, err: 'not_found' };
+  await writeJSON('leadLog', rows.filter(function (r) { return r !== hit; }));
+  if (Number(hit.year) === currentYear_()) await leadSync_(s, Number(hit.week));
+  return leadWeek(username, pin, Number(hit.week));
+}
+async function leadReflectSave(username, pin, week, ratings) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLeadTool_(s)) return { ok: false, err: 'not_leadership' };
+  const wk = finiteNum_(week, 1, 52); if (wk == null) return { ok: false, err: 'bad_week' };
+  const yr = currentYear_(), rows = await readJSON('leadReflect', []);
+  let r = rows.find(function (x) { return x.staffId === s.id && Number(x.week) === wk && Number(x.year) === yr; });
+  if (!r) { r = { staffId: s.id, campus: s.campus, ministry: s.ministry, week: wk, year: yr }; rows.push(r); }
+  Object.keys(LEAD_RATINGS).forEach(function (k) { const v = finiteNum_(ratings && ratings[k], 1, 10); r[k] = v == null ? null : Math.round(v); });
+  r.note = str_(ratings && ratings.note, 300) || ''; r.at = new Date().toISOString();
+  await writeJSON('leadReflect', rows);
+  await leadSync_(s, wk);
+  return leadWeek(username, pin, wk);
+}
+async function leadPartnerSave(username, pin, partner, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canLeadTool_(s)) return { ok: false, err: 'not_leadership' };
+  const p = partner && typeof partner === 'object' ? partner : {};
+  const name = str_(p.name, 80); if (!name) return { ok: false, err: 'no_name' };
+  const rows = await readJSON('leadPartners', []);
+  let hit = p.id ? rows.find(function (x) { return x.id === p.id && x.staffId === s.id; }) : null;
+  if (p.id && !hit) return { ok: false, err: 'not_found' };
+  if (!hit) { if (rows.filter(function (x) { return x.staffId === s.id; }).length >= 300) return { ok: false, err: 'too_many' };
+    hit = { id: toolId_('lp'), staffId: s.id, campus: s.campus, created: new Date().toISOString(), last: '' }; rows.push(hit); }
+  hit.name = name; hit.org = str_(p.org, 80) || ''; hit.notes = str_(p.notes, 300) || '';
+  await writeJSON('leadPartners', rows);
+  return leadWeek(username, pin, week);
+}
+async function leadPartnerDelete(username, pin, id, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  const rows = await readJSON('leadPartners', []);
+  if (!rows.some(function (x) { return x.id === id && x.staffId === s.id; })) return { ok: false, err: 'not_found' };
+  await writeJSON('leadPartners', rows.filter(function (x) { return !(x.id === id && x.staffId === s.id); }));
+  return leadWeek(username, pin, week);
+}
+async function basePlantSave(username, pin, plant, week) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!(s.isAdmin || (s.dept === 'Campus Leadership' && s.ministry === LEAD_DIRECTOR))) return { ok: false, err: 'not_authorized' };
+  const p = plant && typeof plant === 'object' ? plant : {};
+  const rows = await readJSON('basePlants', []);
+  let hit = p.id ? rows.find(function (x) { return x.id === p.id && x.campus === s.campus; }) : null;
+  if (p.id && !hit) return { ok: false, err: 'not_found' };
+  if (p.remove) { if (hit) await writeJSON('basePlants', rows.filter(function (x) { return x !== hit; })); }
+  else {
+    const name = str_(p.name, 80); if (!name) return { ok: false, err: 'no_name' };
+    if (!hit) { hit = { id: toolId_('bp'), campus: s.campus }; rows.push(hit); }
+    hit.name = name; hit.place = str_(p.place, 80) || ''; hit.stage = PLANT_STAGES.indexOf(p.stage) > -1 ? p.stage : 'praying';
+    hit.notes = str_(p.notes, 300) || ''; hit.updated = new Date().toISOString(); hit.by = s.id;
+    await writeJSON('basePlants', rows);
+  }
+  if (s.dept === 'Campus Leadership' && s.ministry === LEAD_DIRECTOR) await leadSync_(s, isoWeek_(new Date().toISOString().slice(0, 10)));
+  return leadWeek(username, pin, week);
+}
+
+/* ---------- the Cafe: open, sell, close ----------
+   A simple till and the day around it. Settings (menu, checklists, shifts,
+   the rota) are cafe:<campus>; each day is its own blob cafeDay:<campus>:<date>
+   — opened (and the opening list ticked), the orders, conversations and
+   salvations, expenses, closed with the cash in the drawer — so a busy
+   year never makes one blob heavy. Prices are the menu's, read on the server:
+   the phone says what was sold, not what it cost. The week's numbers follow:
+   Days Open, Cups Sold (items marked as a cup), Customers Served (orders),
+   Gospel Conversations, Salvations, Weekly Expenses and Weekly Profit
+   (takings less expenses). Total in Bank Account stays typed by hand. */
+const CAFE_DEPT = 'Community Service', CAFE_MIN = 'Cafe';
+const CAFE_DEFAULT = {
+  menu: [
+    { id: 'm1', name: 'Iced coffee', emoji: '🧋', price: 1.75, cup: true }, { id: 'm2', name: 'Hot coffee', emoji: '☕', price: 1.5, cup: true },
+    { id: 'm3', name: 'Latte', emoji: '🥛', price: 2.25, cup: true }, { id: 'm4', name: 'Iced tea', emoji: '🍹', price: 1.25, cup: true },
+    { id: 'm5', name: 'Smoothie', emoji: '🥤', price: 2.5, cup: true }, { id: 'm6', name: 'Pastry', emoji: '🥐', price: 1.5, cup: false }
+  ],
+  open: ['Unlock and turn on the lights and fans', 'Turn on the coffee machine and grinder', 'Check milk, ice, cups and lids', 'Count the cash float', 'Pray together for today'],
+  close: ['Clean the coffee machine and grinder', 'Wash cups, jugs and tools', 'Wipe tables and sweep', 'Take out the rubbish', 'Count the cash and lock the drawer', 'Turn off the machines, lights and fans'],
+  shifts: ['Morning', 'Afternoon'], roster: {}, till: 'app'
+};
+function canCafe_(s) { return !!(s && canLogFor_(s, s.campus, CAFE_DEPT, CAFE_MIN)); }
+function canCafeSetup_(s) { return !!(s && (s.isAdmin || isLeaderOf_(s, CAFE_DEPT, CAFE_MIN))); }
+async function cafeSettings_(campus) {
+  const v = await readJSON('cafe:' + campus, null);
+  return v && typeof v === 'object' && !Array.isArray(v) ? Object.assign({}, CAFE_DEFAULT, v) : JSON.parse(JSON.stringify(CAFE_DEFAULT));
+}
+function cafeDayBlank_(date) { return { date: date, opened: null, closed: null, orders: [], gospel: 0, salvations: 0, expenses: [], pos: null }; }
+async function cafeDay_(campus, date) {
+  const v = await readJSON('cafeDay:' + campus + ':' + date, null);
+  return v && typeof v === 'object' && !Array.isArray(v) ? Object.assign(cafeDayBlank_(date), v) : cafeDayBlank_(date);
+}
+function cafeDayTotals_(d) {
+  const cups = d.orders.reduce(function (a, o) { return a + o.items.reduce(function (b, i) { return b + (i.cup ? i.qty : 0); }, 0); }, 0);
+  const takings = d.orders.reduce(function (a, o) { return a + (Number(o.total) || 0); }, 0);
+  const spent = d.expenses.reduce(function (a, e) { return a + (Number(e.amount) || 0); }, 0);
+  const pos = d.pos || {};   // the day's totals typed from HangPopok, when that is the till
+  const touched = !!(d.opened || d.orders.length || d.gospel || d.salvations || d.expenses.length || d.closed || d.pos);
+  return { open: !!d.opened, cups: cups + (Number(pos.cups) || 0), customers: d.orders.length + (Number(pos.receipts) || 0),
+    takings: Math.round((takings + (Number(pos.sales) || 0)) * 100) / 100, spent: Math.round(spent * 100) / 100,
+    gospel: d.gospel || 0, salvations: d.salvations || 0, touched: touched };
+}
+function weekDates_(date) {
+  const d = new Date(date + 'T00:00:00Z'), mon = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 86400000), out = [];
+  for (let i = 0; i < 7; i++) out.push(new Date(mon.getTime() + i * 86400000).toISOString().slice(0, 10));
+  return out;
+}
+async function cafeWeek_(campus, date) {
+  const dates = weekDates_(date);
+  const days = await Promise.all(dates.map(function (d) { return cafeDay_(campus, d); }));
+  return days.map(function (d) { const t = cafeDayTotals_(d); t.date = d.date; t.best = {};
+    d.orders.forEach(function (o) { o.items.forEach(function (i) { t.best[i.name] = (t.best[i.name] || 0) + i.qty; }); }); return t; });
+}
+async function cafeSync_(campus, date) {
+  if (Number(date.slice(0, 4)) !== currentYear_()) return;
+  const wk = cafeWeekNo_(date), week = await cafeWeek_(campus, date);
+  const used = week.some(function (d) { return d.touched; });
+  const sum = function (k) { return week.reduce(function (a, d) { return a + d[k]; }, 0); };
+  const r2 = function (n) { return Math.round(n * 100) / 100; };
+  await toolSync_(campus, CAFE_DEPT, CAFE_MIN, wk, {
+    'Days Open': used ? week.filter(function (d) { return d.open; }).length : null,
+    'Cups Sold': used ? sum('cups') : null,
+    'Customers Served': used ? sum('customers') : null,
+    'Gospel Conversations': used ? sum('gospel') : null,
+    'Salvations': used ? sum('salvations') : null,
+    'Weekly Expenses ($)': used ? r2(sum('spent')) : null,
+    'Weekly Profit ($)': used ? r2(sum('takings') - sum('spent')) : null
+  }, 'tool:cafe');
+}
+function cafeWeekNo_(date) { return isoWeek_(date); }
+async function cafeAnswer_(s, date) {
+  const settings = await cafeSettings_(s.campus);
+  return { ok: true, date: date, settings: settings, day: await cafeDay_(s.campus, date), week: await cafeWeek_(s.campus, date),
+    canSetup: canCafeSetup_(s), weekNo: cafeWeekNo_(date) };
+}
+async function cafeGet(username, pin, date) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canCafe_(s)) return { ok: false, err: 'not_authorized' };
+  const d = toolDate_(date || new Date().toISOString().slice(0, 10)); if (!d) return { ok: false, err: 'bad_date' };
+  return cafeAnswer_(s, d);
+}
+/* One change to one day: read it, change it, write it, then the week's numbers. */
+async function cafeDayChange_(username, pin, date, fn) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canCafe_(s)) return { ok: false, err: 'not_authorized' };
+  const d = toolDate_(date); if (!d) return { ok: false, err: 'bad_date' };
+  const day = await cafeDay_(s.campus, d), settings = await cafeSettings_(s.campus);
+  const res = fn(day, settings, s);
+  if (res && res.err) return { ok: false, err: res.err };
+  await writeJSON('cafeDay:' + s.campus + ':' + d, day);
+  await cafeSync_(s.campus, d);
+  return cafeAnswer_(s, d);
+}
+function cafeTicks_(list, n) { return (Array.isArray(list) ? list : []).map(Number).filter(function (i) { return i >= 0 && i < n; }).slice(0, 60); }
+function cafeOpen(username, pin, date, done) {
+  return cafeDayChange_(username, pin, date, function (day, st, s) { day.opened = { at: new Date().toISOString(), by: s.id, done: cafeTicks_(done, st.open.length) }; });
+}
+function cafeClose(username, pin, date, done, cash) {
+  return cafeDayChange_(username, pin, date, function (day, st, s) {
+    const c = cash === '' || cash == null ? null : finiteNum_(cash, 0, 1e6);
+    if (cash !== '' && cash != null && c == null) return { err: 'bad_cash' };
+    day.closed = { at: new Date().toISOString(), by: s.id, done: cafeTicks_(done, st.close.length), cash: c };
+  });
+}
+function cafeReopen(username, pin, date) {
+  return cafeDayChange_(username, pin, date, function (day) { day.closed = null; });
+}
+function cafeSale(username, pin, date, items) {
+  return cafeDayChange_(username, pin, date, function (day, st, s) {
+    const menu = {}; st.menu.forEach(function (m) { menu[m.id] = m; });
+    const lines = (Array.isArray(items) ? items : []).map(function (i) { const m = menu[i && i.id], q = finiteNum_(i && i.qty, 1, 99);
+      return m && q ? { id: m.id, name: m.name, price: Number(m.price) || 0, qty: Math.round(q), cup: !!m.cup } : null; }).filter(Boolean).slice(0, 40);
+    if (!lines.length) return { err: 'empty' };
+    if (day.orders.length >= 2000) return { err: 'too_many' };
+    const total = Math.round(lines.reduce(function (a, l) { return a + l.price * l.qty; }, 0) * 100) / 100;
+    day.orders.push({ id: toolId_('co'), at: new Date().toISOString(), by: s.id, items: lines, total: total });
+  });
+}
+function cafeVoid(username, pin, date, orderId) {
+  return cafeDayChange_(username, pin, date, function (day) {
+    const n = day.orders.length; day.orders = day.orders.filter(function (o) { return o.id !== orderId; });
+    if (day.orders.length === n) return { err: 'not_found' };
+  });
+}
+function cafeCount(username, pin, date, kind, delta) {
+  return cafeDayChange_(username, pin, date, function (day) {
+    if (kind !== 'gospel' && kind !== 'salvations') return { err: 'bad_kind' };
+    const d = delta === -1 ? -1 : 1; day[kind] = Math.max(0, (Number(day[kind]) || 0) + d);
+  });
+}
+function cafeExpense(username, pin, date, amount, note, removeId) {
+  return cafeDayChange_(username, pin, date, function (day, st, s) {
+    if (removeId) { const n = day.expenses.length; day.expenses = day.expenses.filter(function (e) { return e.id !== removeId; }); if (day.expenses.length === n) return { err: 'not_found' }; return; }
+    const a = finiteNum_(amount, 0.01, 1e5); if (a == null) return { err: 'bad_amount' };
+    day.expenses.push({ id: toolId_('ce'), amount: Math.round(a * 100) / 100, note: str_(note, 120) || '', at: new Date().toISOString(), by: s.id });
+  });
+}
+async function cafeSaveSettings(username, pin, patch, date) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { ok: false };
+  if (!canCafe_(s)) return { ok: false, err: 'not_authorized' };
+  const st = await cafeSettings_(s.campus), p = patch && typeof patch === 'object' ? patch : {};
+  if (p.roster) {   // anyone on the cafe team may fill in the rota
+    const wk = str_(p.roster.week, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(wk || '')) return { ok: false, err: 'bad_week' };
+    const cells = {}; Object.keys(p.roster.cells || {}).slice(0, 100).forEach(function (k) {
+      if (/^\d{1,2}\|\d$/.test(k)) cells[k] = (Array.isArray(p.roster.cells[k]) ? p.roster.cells[k] : []).map(function (x) { return str_(x, 60); }).filter(Boolean).slice(0, 8); });
+    st.roster = Object.assign({}, st.roster || {}); st.roster[wk] = cells;
+    Object.keys(st.roster).sort().slice(0, -12).forEach(function (k) { delete st.roster[k]; });   // a quarter of weeks is plenty
+  }
+  if (p.menu || p.open || p.close || p.shifts || p.till) {
+    if (!canCafeSetup_(s)) return { ok: false, err: 'not_leader' };
+    if (p.menu) st.menu = (Array.isArray(p.menu) ? p.menu : []).map(function (m) { const name = str_(m && m.name, 40), price = finiteNum_(m && m.price, 0, 1000);
+      return name && price != null ? { id: str_(m.id, 30) || toolId_('m'), name: name, emoji: str_(m.emoji, 8) || '☕', price: Math.round(price * 100) / 100, cup: m.cup !== false } : null; }).filter(Boolean).slice(0, 40);
+    ['open', 'close'].forEach(function (k) { if (p[k]) st[k] = (Array.isArray(p[k]) ? p[k] : []).map(function (x) { return str_(x, 120); }).filter(Boolean).slice(0, 30); });
+    if (p.till) st.till = p.till === 'hangpopok' ? 'hangpopok' : 'app';
+    if (p.shifts) st.shifts = (Array.isArray(p.shifts) ? p.shifts : []).map(function (x) { return str_(x, 30); }).filter(Boolean).slice(0, 6);
+  }
+  await writeJSON('cafe:' + s.campus, st);
+  return cafeAnswer_(s, toolDate_(date) || new Date().toISOString().slice(0, 10));
+}
+
+/* The cafe's till may be HangPopok (a Cambodian cloud POS with no public API
+   yet): at closing someone copies the day's totals from its daily report —
+   sales, receipts and cups — and they count exactly like sales made here. */
+function cafePos(username, pin, date, totals) {
+  return cafeDayChange_(username, pin, date, function (day, st, s) {
+    const x = totals && typeof totals === 'object' ? totals : {};
+    const blank = function (v) { return v === '' || v == null; };
+    const sales = blank(x.sales) ? null : finiteNum_(x.sales, 0, 1e6), receipts = blank(x.receipts) ? null : finiteNum_(x.receipts, 0, 1e5),
+      cups = blank(x.cups) ? null : finiteNum_(x.cups, 0, 1e5);
+    if ((!blank(x.sales) && sales == null) || (!blank(x.receipts) && receipts == null) || (!blank(x.cups) && cups == null)) return { err: 'bad_number' };
+    day.pos = (sales == null && receipts == null && cups == null) ? null
+      : { sales: sales == null ? null : Math.round(sales * 100) / 100, receipts: receipts == null ? null : Math.round(receipts), cups: cups == null ? null : Math.round(cups),
+          at: new Date().toISOString(), by: s.id };
+  });
+}
+
+/* ---- Campus Leadership: the Tuesday morning meeting ----
+   Who facilitates, who translates and the topics to hit, one entry per
+   Tuesday, on the leadership board's own doc (so the same people see it).
+   A person is someone on this campus by id, or a typed name for a guest. */
+function tuesPerson_(p, ids) {
+  const id = str_(p && p.id, 60) || '';
+  if (id) return ids[id] ? { id: id, name: '' } : null;
+  const name = str_(p && p.name, 60) || '';
+  return name ? { id: '', name: name } : null;
+}
+async function saveLeadTuesday(username, pin, m) {
+  const a = await leadAuth_(username, pin); if (a.out) return a.out;
+  const x = m && typeof m === 'object' ? m : {};
+  const date = isoDate_(x.date);
+  if (!date || new Date(date + 'T12:00:00Z').getUTCDay() !== 2) return { ok: false, err: 'bad_date' };
+  const ids = {}; (await getStaff_()).forEach(function (p) { if (p.campus === a.campus && p.active !== false) ids[p.id] = 1; });
+  const d = await getLeadDoc_(a.campus);
+  const rec = { date: date, facilitator: tuesPerson_(x.facilitator, ids), translator: tuesPerson_(x.translator, ids),
+    topics: (Array.isArray(x.topics) ? x.topics : []).map(function (t) { return str_(t, 160); }).filter(Boolean).slice(0, 15),
+    updated: new Date().toISOString(), by: a.s.id };
+  d.tues = d.tues.filter(function (t) { return t.date !== date; });
+  if (rec.facilitator || rec.translator || rec.topics.length) d.tues.push(rec);
+  const cutoff = new Date(Date.now() - 182 * 86400000).toISOString().slice(0, 10);   // half a year back is plenty
+  d.tues = d.tues.filter(function (t) { return t.date >= cutoff; }).sort(function (p, q) { return p.date < q.date ? -1 : 1; }).slice(-80);
+  await writeJSON(leadKey_(a.campus), d);
+  return leadOut_(a.campus, d);
+}
+
+/* ---- Campus Leadership: the money ahead ----
+   The leadership code's own tier, exactly like SENSITIVE on the dashboard:
+   the latest Base Finances and Cash Reserve, and a month-by-month projection
+   of income and spending. Without the code there is nothing here at all. */
+async function finProjGet(code, campus) {
+  if (!isLeader_(code)) return { ok: false, err: 'not_leader' };
+  const c = HR_CAMPUSES.indexOf(campus) > -1 ? campus : null; if (!c) return { ok: false, err: 'bad_campus' };
+  const latest = {};
+  (await getEntries_()).forEach(function (r) {
+    if (r.campus !== c || SENSITIVE.indexOf(r.metric) === -1) return;
+    const v = Number(r.value); if (r.value === '' || r.value == null || isNaN(v)) return;
+    const k = (Number(r.year) || 0) * 100 + (Number(r.week) || 0);
+    if (!latest[r.metric] || k > latest[r.metric].k) latest[r.metric] = { k: k, value: v, week: Number(r.week), year: Number(r.year) };
+  });
+  Object.keys(latest).forEach(function (m) { delete latest[m].k; });
+  const p = await readJSON('finProj:' + c, {});
+  return { ok: true, campus: c, latest: latest, months: (p && p.months) || {}, updated: (p && p.updated) || '' };
+}
+async function finProjSave(code, campus, months) {
+  if (!isLeader_(code)) return { ok: false, err: 'not_leader' };
+  const c = HR_CAMPUSES.indexOf(campus) > -1 ? campus : null; if (!c) return { ok: false, err: 'bad_campus' };
+  const m = months && typeof months === 'object' ? months : {}, out = {};
+  Object.keys(m).slice(0, 36).forEach(function (k) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(k)) return;
+    const v = m[k] || {}, blank = function (x) { return x === '' || x == null; };
+    const inc = blank(v.inc) ? null : finiteNum_(v.inc, 0, 1e8), exp = blank(v.exp) ? null : finiteNum_(v.exp, 0, 1e8);
+    if (inc == null && exp == null) return;
+    out[k] = { inc: inc == null ? null : Math.round(inc), exp: exp == null ? null : Math.round(exp) };
+  });
+  await writeJSON('finProj:' + c, { months: out, updated: new Date().toISOString() });
+  return finProjGet(code, c);
+}
+
 const HANDLERS = {
   getMyBoot: function (a) { return getMyBoot(a[0], a[1]); },
+  cafePos: function (a) { return cafePos(a[0], a[1], a[2], a[3]); },
+  saveLeadTuesday: function (a) { return saveLeadTuesday(a[0], a[1], a[2]); },
+  finProjGet: function (a) { return finProjGet(a[0], a[1]); },
+  finProjSave: function (a) { return finProjSave(a[0], a[1], a[2]); },
   getData: function (a) { return getData(a[0], a[1]); },
   saveEntries: function (a) { return saveEntries(a[0], a[1], a[2], a[3], a[4]); },
   saveObjective: function (a) { return saveObjective(a[0], a[1], a[2], a[3]); },
@@ -7432,7 +7829,23 @@ const HANDLERS = {
   reqDocFile: function (a) { return reqDocFile(a[0], a[1], a[2]); },
   reqSign: function (a) { return reqSign(a[0], a[1], a[2], a[3], a[4], a[5]); },
   reqSignature: function (a) { return reqSignature(a[0], a[1], a[2], a[3]); },
-  reqStatusAll: function (a) { return reqStatusAll(a[0], a[1]); }
+  reqStatusAll: function (a) { return reqStatusAll(a[0], a[1]); },
+  leadWeek: function (a) { return leadWeek(a[0], a[1], a[2]); },
+  leadLogAdd: function (a) { return leadLogAdd(a[0], a[1], a[2]); },
+  leadLogDelete: function (a) { return leadLogDelete(a[0], a[1], a[2]); },
+  leadReflectSave: function (a) { return leadReflectSave(a[0], a[1], a[2], a[3]); },
+  leadPartnerSave: function (a) { return leadPartnerSave(a[0], a[1], a[2], a[3]); },
+  leadPartnerDelete: function (a) { return leadPartnerDelete(a[0], a[1], a[2], a[3]); },
+  basePlantSave: function (a) { return basePlantSave(a[0], a[1], a[2], a[3]); },
+  cafeGet: function (a) { return cafeGet(a[0], a[1], a[2]); },
+  cafeOpen: function (a) { return cafeOpen(a[0], a[1], a[2], a[3]); },
+  cafeClose: function (a) { return cafeClose(a[0], a[1], a[2], a[3], a[4]); },
+  cafeReopen: function (a) { return cafeReopen(a[0], a[1], a[2]); },
+  cafeSale: function (a) { return cafeSale(a[0], a[1], a[2], a[3]); },
+  cafeVoid: function (a) { return cafeVoid(a[0], a[1], a[2], a[3]); },
+  cafeCount: function (a) { return cafeCount(a[0], a[1], a[2], a[3], a[4]); },
+  cafeExpense: function (a) { return cafeExpense(a[0], a[1], a[2], a[3], a[4], a[5]); },
+  cafeSaveSettings: function (a) { return cafeSaveSettings(a[0], a[1], a[2], a[3]); }
 };
 
 export default async (req) => {

@@ -77,6 +77,7 @@ async function open(url) {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
   });
   await page.addInitScript(() => {
+    localStorage.setItem('gp-cafe-view', 'numbers'); localStorage.setItem('gp-lw-tab', 'board');
     localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' }));
     /* A signed-in session sends index.html straight to teams.html; this is the
        same flag the app itself sets when a leader chooses the dashboard. */

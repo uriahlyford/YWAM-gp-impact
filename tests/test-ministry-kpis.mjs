@@ -89,7 +89,7 @@ await page.route('**/api', function (r) {
   else if (b.fn === 'saveMyKpiDay' || b.fn === 'saveMyMinistry') out = MINISTRY;
   r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
 });
-await page.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })));
+await page.addInitScript(() => (localStorage.setItem('gp-cafe-view', 'numbers'), localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' }))));
 await page.goto(BASE + '/teams.html', { waitUntil: 'load' });
 await page.waitForSelector('nav.bottom button', { timeout: 15000 });
 await page.click('nav.bottom button:nth-child(1)');          // My week
@@ -182,7 +182,7 @@ function ok(name, cond, extra) {
     else if (b.fn === 'getData') out = BOOT.base;
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
   });
-  await p3.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })));
+  await p3.addInitScript(() => (localStorage.setItem('gp-cafe-view', 'numbers'), localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' }))));
   await p3.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await p3.waitForSelector('nav.bottom button', { timeout: 15000 });
   await p3.click('nav.bottom button:nth-child(1)');
@@ -341,7 +341,7 @@ function ok(name, cond, extra) {
     else if (b.fn === 'getData') out = BOOT.base;
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
   });
-  await p2.addInitScript(() => localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' })));
+  await p2.addInitScript(() => (localStorage.setItem('gp-cafe-view', 'numbers'), localStorage.setItem('gp-staff', JSON.stringify({ user: 'sreilea', pin: '1234' }))));
   await p2.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await p2.waitForSelector('nav.bottom button');
   await p2.click('nav.bottom button:nth-child(1)');
