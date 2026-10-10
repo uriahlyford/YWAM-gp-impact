@@ -770,7 +770,7 @@ button.reqRow { cursor:pointer; }
 .libInsightNum { flex:0 0 26px; height:26px; border-radius:50%; color:var(--pOnMark); font-weight:900; font-size:12.5px; display:flex; align-items:center; justify-content:center; }
 .libForUs { margin-top:20px; border-left:4px solid; } .libForUs p { margin:0; font-size:15px; line-height:1.6; }
 .libKicker { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
-.libReader { display:flex; flex-direction:column; min-height:calc(100vh - 230px); }
+.libReader { display:flex; flex-direction:column; }
 .libReaderTop { position:sticky; top:0; z-index:4; background:var(--bg); display:flex; align-items:center; gap:12px; padding:8px 0 10px; }
 .libReaderClose { flex:0 0 36px; height:36px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); font:inherit; font-size:15px; font-weight:800; cursor:pointer; }
 .libSegs { flex:1; display:flex; gap:3px; } .libSegs span { flex:1; height:4px; border-radius:2px; background:var(--surface2); } .libSegs span.on { background:var(--libc); }
@@ -785,12 +785,19 @@ button.reqRow { cursor:pointer; }
 .libReaderBody.libKm h2 { line-height:1.5; }
 .libHead.libKm .libVibe { line-height:1.7; }
 .libReaderKicker { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--libink); margin:14px 0 4px; }
-.libReaderBody { flex:1; padding-bottom:18px; }
+.libReaderBody { flex:1; padding-bottom:calc(96px + env(safe-area-inset-bottom)); }
 .libReaderBody h2 { font-size:24px; line-height:1.25; margin:4px 0 14px; letter-spacing:-.01em; }
 .libReaderBody p, .libSec p, .libForUs p { margin:0; } .libReaderBody p + p, .libSec p + p, .libForUs p + p { margin-top:12px; }
 .libReaderBody p { font-size:17.5px; line-height:1.7; }
 .libReaderEmoji { font-size:46px; line-height:1; margin:10px 0 6px; }
-.libReaderNav { position:sticky; bottom:calc(64px + env(safe-area-inset-bottom)); display:flex; gap:10px; background:var(--bg); padding:10px 0 6px; }
+/* Reading is full-screen (Uriah: the bar didn't stay at the bottom): the tab bar
+   steps aside while a book is open in the reader (body.reading) and Back / Next
+   are fixed to the bottom edge, above the phone's home bar. */
+body.reading nav.bottom { display:none; }
+.libReaderNav { position:fixed; left:0; right:0; bottom:0; z-index:11; background:var(--bg); border-top:1px solid var(--border);
+  padding:10px max(16px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+.libReaderNavIn { display:flex; gap:10px; max-width:608px; margin:0 auto; }
+.libReaderNavIn #libPrev { flex:0 0 32%; }
 .libReaderNav .btn { flex:1; padding:13px; font-size:15.5px; } .libReaderNav .btn:not(.ghost) { color:var(--pOnMark); }
 .libTry { margin:0; padding-left:20px; } .libTry li { font-size:16px; line-height:1.6; margin:5px 0; }
 .libOneLine { color:var(--pOnMark); border-radius:16px; padding:16px 18px; font-size:19px; font-weight:800; line-height:1.4; margin-top:6px; }
@@ -2893,6 +2900,7 @@ function render(){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+NAV_ICONS[tab[0]]+'</span>'+t(tab[1])+'</button>';
   }).join('');
   var m=document.getElementById('main');
+  document.body.classList.toggle('reading', S.view==='library' && !!S.libBook && S.libStep!=null);
   if(S.guest && S.view==='week') m.innerHTML=gpGuestHomeHtml_();
   else if(S.guest && (S.view==='team' || S.view==='health')) m.innerHTML=gpGuestLockHtml_(S.view);
   else if(S.view==='base') m.innerHTML=(S.guest ? gpGuestCampusHtml_() : '')+baseHtml();
@@ -5567,11 +5575,11 @@ function libReaderHtml_(b){
   else h+='<div class="libOneLine" style="background:'+sh.color+'"><span>'+esc(t('In one line'))+'</span>'+esc(T.oneLine)+'</div>'+
     '<div class="libKicker" style="margin-top:20px">✅ '+esc(t('Try this week'))+'</div><ul class="libTry">'+T.tryThis.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>'+
     '<div class="libKicker" style="margin-top:18px">🌏 '+esc(t('For us at GP'))+'</div>'+libParas_(T.forUs);
-  h+='</div><div class="libReaderNav">'+
+  h+='</div><div class="libReaderNav"><div class="libReaderNavIn">'+
     (k>0 ? '<button class="btn ghost" id="libPrev">← '+esc(t('Back'))+'</button>' : '')+
     (k<last ? '<button class="btn" id="libNext" style="background:'+sh.color+';border-color:'+sh.color+'">'+esc(t('Next'))+' →</button>'
             : '<button class="btn" id="libFinish" style="background:'+sh.color+';border-color:'+sh.color+'">✓ '+esc(t('Done — mark as read'))+'</button>')+
-    '</div></div>';
+    '</div></div></div>';
   return h;
 }
 function libGo_(step){

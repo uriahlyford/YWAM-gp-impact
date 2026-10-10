@@ -151,9 +151,15 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   for (let i = 0; i < AHN - 1; i++) { await page.click('#libNext'); await page.waitForTimeout(120); }
   r = await page.$eval('#libReader', e => e.innerText);
   ok('the last screen is the final summary: in one line, try this week, for us at GP', /Final summary/i.test(r) && /In one line/i.test(r) && /Try this week/i.test(r) && /For us at GP/i.test(r) && !!(await page.$('#libFinish')));
+  const barAt = () => page.evaluate(() => { const n = document.querySelector('.libReaderNav').getBoundingClientRect(); return { gap: Math.round(innerHeight - n.bottom), tabs: getComputedStyle(document.querySelector('nav.bottom')).display }; });
+  let bar = await barAt();
+  await page.evaluate(() => window.scrollTo(0, 99999)); await page.waitForTimeout(200);
+  const barEnd = await barAt();
+  ok('reading is full-screen: Back / Next sit at the very bottom, top or end of the page, the tab bar out of the way', bar.gap === 0 && barEnd.gap === 0 && bar.tabs === 'none', JSON.stringify([bar, barEnd]));
   ok('nothing in the reader scrolls sideways', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await page.screenshot({ path: OUT + '/summary.png' });
   await page.click('#libFinish'); await page.waitForTimeout(250);
+  ok('… and leaving the reader brings the tab bar back', await page.evaluate(() => getComputedStyle(document.querySelector('nav.bottom')).display !== 'none'));
   ok('Done marks it read, on this phone only, and clears the place', /Read again/.test(await page.$eval('#libStart', e => e.innerText)) &&
     await page.evaluate(() => !!JSON.parse(localStorage.getItem('gp-lib-read'))['atomic-habits'] && !JSON.parse(localStorage.getItem('gp-lib-progress') || '{}')['atomic-habits']));
   const next = await page.$eval('.btnRow [data-libbook]', e => e.getAttribute('data-libbook'));
