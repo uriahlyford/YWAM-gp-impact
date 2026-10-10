@@ -100,7 +100,7 @@ await page.waitForTimeout(400);
 
 /* ---------- 1. typing replaces, whatever the box arrived holding ---------- */
 {
-  await page.click('#goMinistryFromMe');
+  await page.click('nav.bottom [data-tab="ministry"]');
   await page.waitForTimeout(400);
   // the metric form is folded behind one button; it opens every section
 /* the boxes open on their own for a week with nothing in yet; tap only if they are folded */

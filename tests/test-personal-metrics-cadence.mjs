@@ -61,7 +61,7 @@ await p.goto('http://localhost:4418/teams.html'); await p.waitForSelector('nav.b
 await p.waitForTimeout(700);
 await p.click('nav.bottom [data-tab="week"]');
 await p.waitForTimeout(600);
-await p.click('#goMinistryFromMe');
+await p.click('nav.bottom [data-tab="ministry"]');
 await p.waitForTimeout(700);
 // the overseer's own leadership figures are the LAST pick, never the default — pick them
 await p.click('[data-mmpick="Campus Leadership|Community Service"]');

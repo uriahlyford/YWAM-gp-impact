@@ -145,7 +145,7 @@ await p.goto('http://localhost:4419/teams.html'); await p.waitForSelector('nav.b
 await p.waitForTimeout(700);
 await p.click('nav.bottom [data-tab="week"]');
 await p.waitForTimeout(600);
-await p.click('#goMinistryFromMe');
+await p.click('nav.bottom [data-tab="ministry"]');
 await p.waitForTimeout(700);
 // the metric form is folded behind one button now; it opens every section at once
 /* the boxes open on their own for a week with nothing in yet; tap only if they are folded */

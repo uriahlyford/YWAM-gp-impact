@@ -99,7 +99,7 @@ const ban = await page.$eval('#offlineBanner', e => e.innerText).catch(() => '')
 ok('a line says it is a copy, from when, and that saves will send later', /No connection — this is your page as it was on .*will send when you’re back online/.test(ban), ban);
 
 /* ---------- 4. numbers typed offline ---------- */
-await page.click('#goMinistryFromMe'); await page.waitForTimeout(800);
+await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(800);
 ok('the offline line is on My Ministry too', !!(await page.$('#offlineBanner')));
 await page.screenshot({ path: OUT + '/offline-ministry.png' });
 if (!(await page.$('[data-kpiweek]'))) { await page.click('#kpiInputBtn').catch(() => {}); await page.waitForTimeout(300); }

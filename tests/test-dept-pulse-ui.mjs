@@ -95,7 +95,7 @@ mem.entries = [{ campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe'
 const mon = new Date(NOW + 'T00:00:00Z'); mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7));
 const dd = n => { const x = new Date(mon); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 mem.trips = [{ id: 't1', staffId: 'st1', campus: 'siemreap', from: dd(1), to: dd(2), status: 'approved', reason: 'family' }];
-const toMinistry = async page => { await page.click('#goMinistryFromMe'); await page.waitForTimeout(1200); };
+const toMinistry = async page => { await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(1200); };
 const tiles = page => page.$$eval('.pulseCard .pulseTile', ts => ts.map(t => t.innerText.replace(/\s+/g, ' ').trim()));
 
 /* ---------- 1. the department leader's card ---------- */

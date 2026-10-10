@@ -81,7 +81,7 @@ async function open(who, viewport) {
   await page.goto('http://localhost:4490/teams.html', { waitUntil: 'load' });
   await page.waitForSelector('.hero', { timeout: 15000 });
   await page.waitForTimeout(500);
-  await page.click('#goMinistryFromMe'); await page.waitForTimeout(700);
+  await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(700);
   return { ctx, page, errors, sent, board };
 }
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);

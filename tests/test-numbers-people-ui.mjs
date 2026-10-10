@@ -102,7 +102,7 @@ const bellText = async page => {
   await page.click('#notifCloseBtn').catch(() => {}); await page.waitForTimeout(150);
   return t;
 };
-const toMinistry = async page => { await page.click('#goMinistryFromMe'); await page.waitForTimeout(700); };
+const toMinistry = async page => { await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(700); };
 
 /* ---------- 1. the numbers come first, and say whose they are ---------- */
 {

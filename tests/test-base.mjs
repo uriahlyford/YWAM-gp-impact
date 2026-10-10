@@ -157,7 +157,7 @@ await page.waitForTimeout(1200);
 
 // The app opens on My Home now, not Base — get there explicitly rather
 // than assuming it's the landing tab.
-await page.click('nav.bottom [data-tab="base"]');
+await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="base"]');   // Base is in the menu now
 await page.waitForTimeout(600);
 
 // Base's sections collapse into an accordion now (the redesign mockup);
@@ -183,7 +183,7 @@ await page.waitForTimeout(600);
 console.log('\n=== MY DATABASE ===');
 console.log('greeting shows:   ' + await page.$eval('.miniDashHead .baseMe', el => el.innerText.replace(/\n+/g, ' | ')));
 console.log('avatar present:   ' + await page.evaluate(() => !!document.querySelector('.miniDashHead .baseMe .avatar')));
-await page.click('nav.bottom [data-tab="base"]');
+await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="base"]');   // Base is in the menu now
 await page.waitForTimeout(600);
 
 // 3. compare against the dashboard's own section list
@@ -323,7 +323,7 @@ await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(1100);
 console.log('\n-- My Home --');
 console.log('OKR entry card: ' + await page.$$eval('#main h3', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
-await page.click('#goMinistryFromMe'); await page.waitForTimeout(400); await page.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
+await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(400); await page.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
 await page.waitForTimeout(1100);
 console.log('OKR heading:   ' + await page.$$eval('#main h3, #main h2', e => e.map(x => x.textContent.trim()).filter(x => /OKR/.test(x)).join(', ')));
 console.log('focus card:    ' + await page.$eval('.focusCard', e => e.innerText.replace(/\n+/g, ' | ').slice(0, 120)).catch(() => '(none on your own OKR page — the page is just the OKRs)'));
@@ -371,7 +371,7 @@ async function okrCardClick(re, sel) {
 console.log('\n=== OKR EDITOR (on its own page) ===');
 await page.click('nav.bottom [data-tab="week"]');
 await page.waitForTimeout(1000);
-await page.click('#goMinistryFromMe'); await page.waitForTimeout(400); await page.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
+await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(400); await page.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
 await page.waitForTimeout(1000);
 console.log('starting objectives: ' + await page.$$eval('.okrCard', e => e.length));
 console.log('edit + delete shown: ' + await page.evaluate(() =>

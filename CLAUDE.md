@@ -487,7 +487,9 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
 
 ## The hamburger menu, by role
 `renderMenu` draws sections, and leaves out a section with nothing in it:
-- everyone: **My Ministry**, **Leave Request**;
+- everyone: **Base** (first — it left the bottom bar, Oct 2026), **Leave Request**, My contract,
+  Profile & settings (My Ministry and the Library are in the bottom bar, not here; a guest's
+  menu keeps Library / Create my profile / Log in);
 - **Operations**: Weekly schedules (everyone), SR Hospitality (`canHospClient_`: the Hospitality
   ministry — members, leaders, the Skills Training overseer — and admins);
 - **Applications**: YWAM GP Portal (admins, portal staff / portal admins, the Outreach Teams
@@ -538,16 +540,24 @@ week strip / input: two tabs.
   phone they scroll across in their own row.
 - `test-lead-board.mjs` (server) and `test-lead-board-page.mjs` (browser) cover it.
 
+## The bottom bar (Oct 2026)
+My Home · **My Ministry** · Team · Health · **Library** (`data-tab`; My Ministry opens on its
+Numbers view, Library tapped while reading goes back to the shelves). **Base is in the ☰ menu**,
+and its key figures sit at the foot of My Home's card. A guest's bar is Look around · Base ·
+Team · Health · Library. Five tabs stay on one line down to 320px (labels ellipsize).
+
 ## My Home — the layout (reorganised Oct 2026)
 `homeHtml` in this order, each idea said once: the **large summary card** (kept large on
 purpose, with the background photo / colour option behind ⚙️: goals and their list,
-Health check-in, My Ministry — `#goMinistryFromMe` — Cooking / Chores, the streak,
-habits, My Health — `[data-gohealth]` opens the Health tab — mentor and time off),
+Cooking / Chores, the streak, habits, My Health — `[data-gohealth]` opens the Health tab —
+mentor and time off, then **the base at a glance** (`homeBaseHtml_`: the campus's staff,
+base health score and salvations this year, from `baseR()` like Base's hero; tap → Base).
+The Health check-in and My Ministry buttons left the card when both joined the bottom bar),
 Updates (three at most, "See all" opens the bell), Weekly Goals (headed by the week itself, no 👀 line), Habits ("Show
 streaks" inside the card), Annual goals (one card, `#goGoalsFromMe`, opens the Goals & Tasks page),
 Mentorship ("You're mentoring" only for a mentor), About me (Personality and Strengths
 tiles) and Leave / Profile & settings tiles. **Health and My Ministry have no section
-below** — the summary card has both (Uriah). OKRs are My Ministry's second tab.
+below** — both are in the bottom bar (Uriah). OKRs are My Ministry's second tab.
 - **Weekly Goals:** one card titled This week (or Last week); a small **Last week / This
   week** switch under the goals (`goalsWeekSwitchHtml_`, `data-goalswk`) — the only other
   week anyone opens is last week, to mark how it went; no adding goals to a past week.

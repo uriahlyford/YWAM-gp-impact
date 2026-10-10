@@ -92,7 +92,7 @@ const credCalls = () => CALLS.filter(c => c.args.some(a => a === '1234' || a ===
   await page.click('#lookAround'); await page.waitForTimeout(900);
   ok('it opens the app as a guest: the tour, the Library and the Base cards', await page.evaluate(() => S.guest === true) && !!(await page.$('.guestHero')) && !!(await page.$('#guestLibrary')) && !!(await page.$('#guestBase')));
   ok('every tool is listed with what it does, and a lock', (await page.$$('.guestTool')).length >= 8 && (await page.$$('.guestTool .guestLock')).length === (await page.$$('.guestTool')).length);
-  ok('the bottom bar has four tabs, the first "Look around"; no bell', (await page.$$('nav.bottom button')).length === 4 && /Look around/.test(await page.$eval('nav.bottom button', e => e.innerText)) && !(await page.$('#bellBtn')));
+  ok('the bottom bar has five tabs, the first "Look around", the Library last; no bell', (await page.$$('nav.bottom button')).length === 5 && !!(await page.$('nav.bottom [data-tab="library"]')) && /Look around/.test(await page.$eval('nav.bottom button', e => e.innerText)) && !(await page.$('#bellBtn')));
   await page.screenshot({ path: OUT + '/guest-home.png', fullPage: true });
 
   await page.click('#guestLibrary'); await page.waitForTimeout(1000);

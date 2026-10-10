@@ -122,7 +122,7 @@ console.log('=== who gets in ===');
 {
   const { ctx, page } = await open(KIM);
   ok('another ministry has no SR Hospitality in the menu', !(await menuItems(page)).includes('hosp'));
-  await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
+  await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(400);
   ok('… nor a button on My Ministry', !(await page.$('#goHosp')));
   await ctx.close();
 }
@@ -139,7 +139,7 @@ console.log('=== who gets in ===');
 console.log('=== a Hospitality member, on a phone ===');
 const { ctx, page, errors, sent, H } = await open(HANA);
 ok('the menu has SR Hospitality', (await menuItems(page)).includes('hosp'));
-await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
+await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(400);
 ok('My Ministry has the button', !!(await page.$('#goHosp')));
 await page.click('#goHosp'); await page.waitForTimeout(500);
 ok('it loads the book once', sent.filter(b => b.fn === 'getHospitality').length === 1);
@@ -389,7 +389,7 @@ console.log('=== desktop ===');
 console.log('=== a school: its students, in their beds ===');
 {
   const { ctx, page, errors, sent } = await open(HANA);
-  await page.click('#goMinistryFromMe'); await page.waitForTimeout(300);
+  await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(300);
   await page.click('#goHosp'); await page.waitForTimeout(500);
   await page.click('[data-hosptab="book"]'); await page.click('#hospNewBtn'); await page.waitForTimeout(200);
   ok('a guest booking has no people list', !(await page.$('#hospPeople')));
@@ -428,7 +428,7 @@ console.log('=== a school: its students, in their beds ===');
 console.log('=== staff beds ===');
 {
   const { ctx, page, errors, sent, H } = await open(HANA, { extra: [{ id: 'kst', category: 'staff', name: 'Kim Example', from: day(-100), to: '', permanent: true, males: 0, females: 0, count: 1, family: false, bedIds: ['m3'], notes: '', tripId: '' }] });
-  await page.click('#goMinistryFromMe'); await page.waitForTimeout(300);
+  await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(300);
   await page.click('#goHosp'); await page.waitForTimeout(500);
   await page.click('[data-hosptab="staff"]'); await page.waitForTimeout(300);
   ok('a Staff beds tab: every bed with a name box; staff already living here are filled in', (await page.$$('[data-hstaff]')).length >= 5 && await page.$eval('[data-hstaff="m3"]', i => i.value) === 'Kim Example');
@@ -457,7 +457,7 @@ console.log('=== staff beds ===');
   /* a team closed or deleted in the portal while its beds are booked */
   const kGone = { id: 'kgone', category: 'team', name: 'Closed Team', from: day(4), to: day(9), males: 2, females: 1, count: 3, family: false, bedIds: ['m1', 'm2', 'f0'], notes: '', tripId: 'ta_gone', permanent: false };
   const { ctx, page, errors, sent } = await open(HANA, { extra: [kGone], gone: [{ tripId: 'ta_gone', name: 'Closed Team', country: '', from: day(4), to: day(9), size: null, males: 2, females: 1, couples: null, pending: false, portalStage: '', candidateId: '', bookingId: 'kgone', people: [], cancelled: 'deleted', count: 3 }] });
-  await page.click('#goMinistryFromMe'); await page.waitForTimeout(300);
+  await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(300);
   await page.click('#goHosp'); await page.waitForTimeout(500);
   ok('the overview says a cancelled team still holds beds', /1 cancelled — free the beds/.test(await page.$eval('[data-hosptile="requests"]', e => e.textContent)));
   ok('… and the Requests tab counts it', /3/.test(await page.$eval('[data-hosptab="req"]', b => b.textContent)));

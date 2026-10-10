@@ -53,7 +53,7 @@ async function run(who, label) {
   await p.waitForTimeout(700);
   await p.click('nav.bottom [data-tab="week"]');
   await p.waitForTimeout(600);
-  await p.click('#goMinistryFromMe'); await p.waitForTimeout(400); await p.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
+  await p.click('nav.bottom [data-tab="ministry"]'); await p.waitForTimeout(400); await p.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
   await p.waitForTimeout(700);
   const r = await p.evaluate(() => {
     const text = document.querySelector('#main').innerText;
@@ -110,7 +110,7 @@ await p2.goto('http://localhost:4415/teams.html'); await p2.waitForSelector('nav
 await p2.waitForTimeout(700);
 await p2.click('nav.bottom [data-tab="week"]');
 await p2.waitForTimeout(600);
-await p2.click('#goMinistryFromMe'); await p2.waitForTimeout(400); await p2.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
+await p2.click('nav.bottom [data-tab="ministry"]'); await p2.waitForTimeout(400); await p2.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
 await p2.waitForTimeout(700);
 
 const beforeOpen = await p2.evaluate(() => document.querySelector('#main').innerText);

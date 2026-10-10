@@ -3089,3 +3089,10 @@ now). "Read" means "I have read this book".
 | e.g. Outreach week, prayer for the DTS | ឧ. សប្តាហ៍ចេញផ្សព្វផ្សាយ ការអធិស្ឋានសម្រាប់ DTS |
 | That’s plenty for one meeting. | នេះគ្រប់គ្រាន់ហើយសម្រាប់ការប្រជុំមួយ។ |
 | Tuesday morning meeting | ការប្រជុំព្រឹកថ្ងៃអង្គារ |
+
+### The Library is now ten-minute reads
+
+| English | Khmer (draft) |
+|---|---|
+| Ten-minute reads | ការអានរយៈពេលដប់នាទី |
+| Ten-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us. | ការអានរយៈពេលដប់នាទីពីសៀវភៅល្អបំផុតស្តីពីការដឹកនាំ វប្បធម៌ ទម្លាប់ និងការច្នៃប្រឌិត — គំនិតធំៗ រៀបចំសម្រាប់យើង។ |

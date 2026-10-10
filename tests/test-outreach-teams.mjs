@@ -96,7 +96,7 @@ async function open(who, opts) {
   await page.goto('http://localhost:4494/teams.html', { waitUntil: 'load' });
   await page.waitForSelector('.hero', { timeout: 15000 });
   await page.waitForTimeout(500);
-  await page.click('#goMinistryFromMe');
+  await page.click('nav.bottom [data-tab="ministry"]');
   await page.waitForTimeout(600);
   if (opts.pickTeams) { await page.click('[data-mmpick="Community Service|Outreach Teams"]'); await page.waitForTimeout(400); }
   // Outreach Teams is entered on its own Teams Database page, one tap off My Ministry

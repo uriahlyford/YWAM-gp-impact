@@ -141,7 +141,7 @@ async function open(campus) {
   ok('the Health tab is still underneath', !!(await page.$('#main [data-healthexport="health"]')));
 
   // Base tab's health row carries the same button.
-  await page.click('nav.bottom [data-tab="base"]');
+  await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="base"]');   // Base is in the menu now
   await page.waitForTimeout(500);
   await page.evaluate(() => { S.baseAcc.health = true; render(); });
   await page.waitForTimeout(300);

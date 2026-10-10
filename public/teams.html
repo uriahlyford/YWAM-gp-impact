@@ -578,6 +578,8 @@ nav.bottom { position:fixed; bottom:0; left:0; right:0; background:var(--navBg);
    the bar steps aside — see gpKeyboardWatch at the bottom of the page. */
 body.kbOpen nav.bottom { display:none; }
 nav.bottom button { flex:1; padding:10px 2px 8px; background:none; border:none; cursor:pointer; color:var(--muted); font-size:10.5px; }
+nav.bottom button { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }   /* five tabs: one line each, even at 320px */
+@media (max-width:360px){ nav.bottom button { font-size:9.5px; } }
 nav.bottom button .ic { display:block; font-size:20px; margin-bottom:2px; }
 nav.bottom button.on { color:var(--accent); font-weight:700; }
 
@@ -714,6 +716,10 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .lmTable { margin:10px 0 6px; } .lmRow { display:grid; grid-template-columns:62px minmax(0,1fr) minmax(0,1fr) 82px; gap:6px; align-items:center; padding:3px 0; font-size:13.5px; }
 .lmRow input { width:100%; min-width:0; padding:7px 6px; } .lmHead { font-size:12px; font-weight:700; color:var(--muted); } .lmBal { text-align:right; font-weight:700; } .lmBal.bad, .lmSum.bad { color:var(--bad); }
 .lmSum { font-weight:700; margin:4px 0; }
+.homeBase { display:block; width:100%; background:none; border:0; padding:4px 0 2px; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.homeBaseHead { display:flex; justify-content:space-between; gap:8px; font-size:12.5px; font-weight:800; letter-spacing:.3px; opacity:.85; } .homeBaseGo { font-weight:700; opacity:.8; }
+.homeBaseRow { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; margin-top:6px; } .homeBaseRow > span { display:flex; flex-direction:column; font-size:11.5px; opacity:.9; min-width:0; overflow-wrap:anywhere; }
+.homeBaseRow b { font-size:22px; line-height:1.1; font-weight:800; }
 .libTally { display:block; width:100%; margin-top:12px; text-align:left; border:0; border-radius:12px; padding:10px 12px; background:var(--surface2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
 .reqCard { padding:14px; } .reqCard.reqAlert { border:1.5px solid var(--bad); }
 .reqHead { display:flex; align-items:center; gap:10px; margin-bottom:8px; } .reqHeadIcon { font-size:24px; }
@@ -2953,10 +2959,14 @@ function render(){
     base: NAV_SVG_OPEN+'<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
     week: NAV_SVG_OPEN+'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>',
     team: NAV_SVG_OPEN+'<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3.5 20c.6-3.4 3-5.4 5.5-5.4s4.9 2 5.5 5.4"/><path d="M14.8 15c1.9.2 3.6 1.9 4.1 5"/></svg>',
-    health: NAV_SVG_OPEN+'<path d="M12 20.5s-7.5-4.6-9.8-9.6C.6 7.3 2.4 4 5.7 4c2 0 3.5 1.1 4.3 2.5C10.8 5.1 12.3 4 14.3 4c3.3 0 5.1 3.3 3.5 6.9C15.5 15.9 12 20.5 12 20.5Z"/></svg>'
+    health: NAV_SVG_OPEN+'<path d="M12 20.5s-7.5-4.6-9.8-9.6C.6 7.3 2.4 4 5.7 4c2 0 3.5 1.1 4.3 2.5C10.8 5.1 12.3 4 14.3 4c3.3 0 5.1 3.3 3.5 6.9C15.5 15.9 12 20.5 12 20.5Z"/></svg>',
+    ministry: NAV_SVG_OPEN+'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg>',
+    library: NAV_SVG_OPEN+'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>'
   };
-  var tabs=[['week','My Home'],['base','Base'],['team','Team'+(reqN?' ('+reqN+')':'')],['health','Health']];
-  if(S.guest) tabs=[['week','Look around'],['base','Base'],['team','Team'],['health','Health']];
+  /* Oct 2026 (Uriah): My Ministry takes Base's place and the Library joins the
+     bar; Base moves to the menu, and its key numbers sit on My Home's card. */
+  var tabs=[['week','My Home'],['ministry','My Ministry'],['team','Team'+(reqN?' ('+reqN+')':'')],['health','Health'],['library','Library']];
+  if(S.guest) tabs=[['week','Look around'],['base','Base'],['team','Team'],['health','Health'],['library','Library']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
     return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+NAV_ICONS[tab[0]]+'</span>'+t(tab[1])+'</button>';
@@ -3160,7 +3170,7 @@ function renderMenu(){
   if(!root) return;
   if(!S.menuOpen || !S.me){ root.innerHTML=''; return; }
   /* Sections, so the menu stays short to read. Everyone: Leave Request and
-     Profile & settings (My Ministry is on My Home's card, not here), then Operations (the weekly schedules; SR Hospitality for
+     Profile & settings (My Ministry and the Library are in the bottom bar; Base is here, first), then Operations (the weekly schedules; SR Hospitality for
      the Hospitality ministry and admins). Applications: the YWAM GP Portal,
      for admins, portal staff/admins and the Outreach Teams leader (S.me.portal,
      from the server). Admin: HR (admins, or anyone given hr) and the Admin
@@ -3170,11 +3180,12 @@ function renderMenu(){
   var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
   var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
   IC.mycontract='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>';
+  IC.base='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>';
   IC.library='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>';
   var sections= S.guest ? [
     { title:'', items:[it('library', t('Library')), it('guestreg', t('Create my profile')), it('guestlogin', t('Log in'))] }
   ] : [
-    { title:'', items:[it('leave', t('Leave Request')), it('mycontract', t('My contract')), it('library', t('Library')), it('profile', t('Profile & settings'))] },
+    { title:'', items:[it('base', t('Base')), it('leave', t('Leave Request')), it('mycontract', t('My contract')), it('profile', t('Profile & settings'))] },
     { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
     { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
     { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : []) }
@@ -3198,6 +3209,7 @@ function renderMenu(){
       var id=btn.getAttribute('data-menu-item');
       S.menuOpen=false;
       if(id==='ministry'){ S.view='ministry'; render(); }
+      else if(id==='base'){ S.view='base'; render(); window.scrollTo(0,0); }
       else if(id==='leave'){ S.view='leave'; render(); }
       else if(id==='mycontract'){ openMyContract_(); }
       else if(id==='library'){ S.view='library'; S.libBook=null; libLoad_(); render(); }
@@ -4648,10 +4660,6 @@ function miniDashboardHtml(){
         return '<div><span class="heroGoalDot" style="background:'+gpRingColor(goalItemPct(g))+'"></span>'+esc(g.text)+'</div>';
       }).join('')+'</div>':'')+
     '</button>'+
-    '<div class="heroQuick">'+
-      '<button id="dashToHealth">💚 '+esc(t('Health check-in'))+'</button>'+
-      '<button id="goMinistryFromMe">📊 '+esc(t('My Ministry'))+'</button>'+
-    '</div>'+
     (typeof dutyHtml==='function' ? schedHomeHtml_() : '')+
     '<div class="heroDivider"></div>'+
     '<div class="heroLabel">'+esc(t('WEEK'))+' '+wk+'</div>'+
@@ -4671,6 +4679,7 @@ function miniDashboardHtml(){
         '<button class="heroSubBtn" id="goLeaveFromMe">🌴 '+esc(t('Request time off'))+'</button>'+
       '</div>'+
     '</div>'+
+    homeBaseHtml_()+
   '</div>';
   h+=contractNoticeHtml_();
 
@@ -4692,6 +4701,22 @@ function miniDashboardHtml(){
   return h;
 }
 
+/* The base at a glance, at the foot of My Home's card (Base itself is in the
+   menu now): the staff, the base's health score and salvations this year —
+   the same figures, from the same rollup, as Base's own hero. Tap → Base. */
+function homeBaseHtml_(){
+  if(!S.base || !S.me || !S.me.campus) return '';
+  var R=baseR(), ids=[S.me.campus], staff=R.totalStaff(ids), hs=R.healthScore(ids), salv=R.headlineFor(ids,'Salvations');
+  return '<div class="heroDivider"></div>'+
+    '<button class="homeBase" id="dashToBase">'+
+      '<span class="homeBaseHead"><span>🏠 '+esc(t(campusName(S.me.campus)))+'</span><span class="homeBaseGo">'+esc(t('Base'))+' →</span></span>'+
+      '<span class="homeBaseRow">'+
+        '<span><b>'+(staff===null?'—':staff)+'</b>'+esc(t('Staff'))+'</span>'+
+        '<span><b>'+(hs===null?'—':hs.toFixed(1))+'</b>'+esc(t('Base health'))+'</span>'+
+        '<span><b>'+fmt(salv)+'</b>'+esc(t('Salvations'))+'</span>'+
+      '</span>'+
+    '</button>';
+}
 /* Recent updates for the personal dashboard — leave decisions on my own
    requests, a mentee's leave request waiting on me, and 1-on-1 activity.
    Purely computed from state already on the page (trips, tripRequests,
@@ -4933,7 +4958,7 @@ function aboutMeHtml_(){
       : homeTile_('gsStart', '💪', t('Strengths'), esc(t('Find your top 5 strengths')));
   }
   var nb=libBooksRead_();
-  tiles += homeTile_('libHomeTile', '📚', t('Library'), esc(nb ? gpT('{n} books read',{n:nb}) : t('Five-minute reads')));
+  tiles += homeTile_('libHomeTile', '📚', t('Library'), esc(nb ? gpT('{n} books read',{n:nb}) : t('Ten-minute reads')));
   return '<h3 id="sec-ptype">🧭 '+esc(t('About me'))+'</h3><div class="homeTiles" id="sec-strengths">'+tiles+'</div>';
 }
 var PCHEV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>';
@@ -5584,7 +5609,7 @@ function libraryHtml(){
   if(S.libShelf==='start' && !picks.length) S.libShelf='all';
   var readN=books.filter(function(x){ return read[x.id]; }).length;
   var h=back+'<h2>📚 '+esc(t('Library'))+'</h2>'+
-    '<p class="sub">'+esc(t('Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</p>'+
+    '<p class="sub">'+esc(t('Ten-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</p>'+
     '<div class="libProgress"><b>'+readN+'</b> / '+books.length+' '+esc(t('read'))+'<span class="libProgressBar"><span style="width:'+Math.round(readN/Math.max(1,books.length)*100)+'%"></span></span></div>'+
     '<div class="libShelves">'+[{id:'all', name:'All'}].concat(picks.length ? [{id:'start', name:'Start here', emoji:'⭐'}] : [], libShelvesShown_()).map(function(sh){
       return '<button class="libShelfBtn'+(S.libShelf===sh.id?' on':'')+'" data-libshelf="'+esc(sh.id)+'"'+(sh.color&&S.libShelf===sh.id?' style="background:'+sh.color+';border-color:'+sh.color+'"':'')+'>'+(sh.emoji?sh.emoji+' ':'')+esc(t(sh.name))+'</button>';
@@ -6098,7 +6123,7 @@ function gpGuestHomeHtml_(){
     '<p>'+esc(t('This is the GP app, as a guest. Read the Library, see how the base is doing, and see what every tool does. Nothing here is saved to an account.'))+'</p>'+
     gpGuestButtonsHtml_()+'</div>';
   h+='<button class="card guestBig" id="guestLibrary"><span class="guestBigIcon">📚</span><span style="flex:1"><b>'+esc(t('Library'))+'</b>'+
-    '<span>'+esc(nb ? gpT('{n} books read',{n:nb}) : t('Five-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</span></span>'+PCHEV+'</button>';
+    '<span>'+esc(nb ? gpT('{n} books read',{n:nb}) : t('Ten-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us.'))+'</span></span>'+PCHEV+'</button>';
   h+='<button class="card guestBig" id="guestBase"><span class="guestBigIcon">📈</span><span style="flex:1"><b>'+esc(t('Base'))+'</b>'+
     '<span>'+esc(t('How the base is doing this week — ministry numbers for Siem Reap and Poipet.'))+'</span></span>'+PCHEV+'</button>';
   h+='<h3>✨ '+esc(t('What staff use the app for'))+'</h3><div class="guestTools">'+GUEST_TOOLS.map(function(x){
@@ -14985,6 +15010,7 @@ function bindAway(){
   if(gl) gl.onclick=function(){ S.view='leave'; render(); };
   var mb=document.getElementById('ministryBack');
   if(mb) mb.onclick=function(){ S.view='week'; render(); };
+  var db=document.getElementById('dashToBase'); if(db) db.onclick=function(){ gpTap(); S.view='base'; render(); window.scrollTo(0,0); };
   var gm=document.getElementById('goMinistryFromMe');
   if(gm) gm.onclick=function(){ gpTap(); S.view='ministry'; S.mmTab='ministry'; render(); };
   document.querySelectorAll('[data-gohealth]').forEach(function(b){ b.onclick=function(){ gpTap(); S.view='health'; render(); }; });
@@ -15782,7 +15808,10 @@ function bind(){
   renderNotifPanel();
 
   document.querySelectorAll('[data-tab]').forEach(function(b){
-    b.onclick=function(){ gpTap(); S.view=b.getAttribute('data-tab'); S.mentee=null; S.person=null; render(); };
+    b.onclick=function(){ gpTap(); var v=b.getAttribute('data-tab');
+      if(v==='ministry') S.mmTab='ministry';
+      if(v==='library'){ if(S.view==='library'){ S.libBook=null; S.libStep=null; } libLoad_(); }
+      S.view=v; S.mentee=null; S.person=null; render(); };
   });
 
   /* Every figure on Base opens its own breakdown, from the same sheet the

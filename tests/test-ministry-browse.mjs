@@ -151,7 +151,7 @@ await p.goto('http://localhost:4416/teams.html'); await p.waitForSelector('nav.b
 await p.waitForTimeout(700);
 await p.click('nav.bottom [data-tab="week"]');
 await p.waitForTimeout(600);
-await p.click('#goMinistryFromMe');
+await p.click('nav.bottom [data-tab="ministry"]');
 await p.waitForTimeout(700);
 
 const chips = await p.$$eval('[data-mmpick]', b => b.map(x => x.getAttribute('data-mmpick')));
@@ -205,7 +205,7 @@ await p.addInitScript(() => (localStorage.setItem('gp-cafe-view', 'numbers'), lo
 await p.goto('http://localhost:4416/teams.html'); await p.waitForSelector('nav.bottom button', { timeout: 15000 });
 await p.waitForTimeout(700);
 await p.click('nav.bottom [data-tab="week"]'); await p.waitForTimeout(500);
-await p.click('#goMinistryFromMe'); await p.waitForTimeout(600);
+await p.click('nav.bottom [data-tab="ministry"]'); await p.waitForTimeout(600);
 const adm = await p.evaluate(() => ({
   chips: document.querySelectorAll('[data-mmpick]').length,
   depts: [].map.call(document.querySelectorAll('#mmBrowseDeptSel option'), o => o.value),

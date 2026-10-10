@@ -100,7 +100,7 @@ await p.goto('http://localhost:4414/teams.html'); await p.waitForSelector('nav.b
 for(const [tab,label] of [['base','Base'],['week','My Home'],['team','Team'],['health','Health']]){
   await visit(p,'tab: '+label,async p=>{await p.click(`nav.bottom [data-tab="${tab}"]`);await p.waitForTimeout(900);});
 }
-await visit(p,'Base: dept explorer',async p=>{await p.click('nav.bottom [data-tab="base"]');await p.waitForTimeout(700);
+await visit(p,'Base: dept explorer',async p=>{await p.click('#menuBtn'); await p.waitForTimeout(250); await p.click('[data-menu-item="base"]');   // Base is in the menu nowawait p.waitForTimeout(700);
   await p.click('[data-acc="explorer"]');await p.waitForTimeout(500); // the accordion row starts closed
   await p.selectOption('#baseDeptSel','Skills Training');await p.waitForTimeout(700);});
 await visit(p,'Base: drill a tile',async p=>{await p.click('#main .heroSubRow');await p.waitForTimeout(500);await p.click('#ddClose');});

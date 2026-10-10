@@ -70,7 +70,7 @@ async function open(who) {
 console.log('=== the leader’s page ===');
 {
   const { ctx, page, errors, sent } = await open(LEADER);
-  await page.click('#goMinistryFromMe');
+  await page.click('nav.bottom [data-tab="ministry"]');
   await page.waitForTimeout(600);
   const s = await page.evaluate(() => ({
     tabs: [].map.call(document.querySelectorAll('[data-mmtab]'), b => b.getAttribute('data-mmtab')),
@@ -142,7 +142,7 @@ console.log('=== the leader’s page ===');
 console.log('\n=== an ordinary member ===');
 {
   const { ctx, page, errors } = await open(MEMBER);
-  await page.click('#goMinistryFromMe');
+  await page.click('nav.bottom [data-tab="ministry"]');
   await page.waitForTimeout(600);
   const s = await page.evaluate(() => ({ editor: !!document.querySelector('[data-acc="kpiMetrics"]'), btn: !!document.querySelector('#kpiInputBtn'), personal: document.querySelectorAll('[data-personal]').length }));
   ok('a member gets no “Edit what we track” at all', !s.editor);
@@ -151,7 +151,7 @@ console.log('\n=== an ordinary member ===');
   // the OKR entry card on My Home lands on the OKR tab of the same page
   await page.click('#ministryBack');
   await page.waitForTimeout(400);
-  await page.click('#goMinistryFromMe'); await page.waitForTimeout(400); await page.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
+  await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(400); await page.click('[data-mmtab="okr"]');   // OKRs: My Ministry's second tab
   await page.waitForTimeout(500);
   ok('the OKRs card on My Home opens My Ministry on its OKR tab', await page.evaluate(() => S.view === 'ministry' && S.mmTab === 'okr' && !!document.querySelector('[data-mmtab="okr"].on')));
   ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));

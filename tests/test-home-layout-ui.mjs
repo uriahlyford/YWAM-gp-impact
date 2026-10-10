@@ -103,10 +103,11 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
   const heads = await page.$$eval('#main h3', hs => hs.map(h => h.innerText.trim()));
   ok('the sections, in order — no Health or My Ministry below the summary card', JSON.stringify(heads) === JSON.stringify(['🎯 Weekly Goals', '✅ Habits', 'Annual Goals · SMART', 'Mentorship', '🧭 About me']), heads.join(' | '));
   const card = await page.$eval('.myHero', e => e.innerText.replace(/\s+/g, ' '));
-  ok('the large summary card: goals and their list, Health check-in, My Ministry, streak, habits, health, mentor, time off',
-    /Weekly Goals 1\/3/.test(card) && /Plan the cafe menu/.test(card) && /Health check-in/.test(card) && /My Ministry/.test(card) &&
+  ok('the large summary card: goals and their list, streak, habits, health, mentor, time off, and the base at a glance (Health and My Ministry are in the bar now)',
+    /Weekly Goals 1\/3/.test(card) && /Plan the cafe menu/.test(card) && !/Health check-in/.test(card) && !(await page.$('#goMinistryFromMe')) && /Staff/.test(card) && /Base health/.test(card) &&
     /DAY STREAK/.test(card) && /Habits Today/.test(card) && /My Health 9\.2\/10/.test(card) && /Mentor Mealea Sok/.test(card) && /PERSONAL DAYS OFF LEFT 29/.test(card), card.slice(0, 220));
   ok('… with the photo and colour option behind the gear', !!(await page.$('#dashCustomizeBtn')));
+  await page.screenshot({ path: OUT + '/home-en.png', fullPage: true });
   ok('no quick-jump strip, no "My week" heading', !(await page.$('.quickBar')) && !/My week \d/.test(await page.$eval('#main', e => e.innerText)));
   const upd = await page.$$eval('#main .card .row', rs => rs.map(r => r.innerText).filter(x => /Announcement|leave request/.test(x)));
   ok('no Updates card on My Home — the bell has them, with its red dot', upd.length === 0 && !(await page.$('#notifSeeAll')) && !!(await page.$('#bellBtn .notifDot')));
@@ -139,7 +140,7 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
   await page.click('[data-menu-item="leave"]'); await page.waitForTimeout(400);
   ok('Leave Request in the menu opens the leave page', await page.evaluate(() => S.view === 'leave' && !S.menuOpen));
   await page.click('nav.bottom button[data-tab="week"]'); await page.waitForTimeout(300);
-  await page.click('#goMinistryFromMe'); await page.waitForTimeout(400);
+  await page.click('nav.bottom [data-tab="ministry"]'); await page.waitForTimeout(400);
   ok('the summary card’s My Ministry opens My Ministry', await page.evaluate(() => S.view === 'ministry'));
   await page.click('nav.bottom button[data-tab="week"]'); await page.waitForTimeout(300);
   await page.click('#goLeaveFromMe'); await page.waitForTimeout(400);

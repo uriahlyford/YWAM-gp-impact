@@ -84,14 +84,13 @@ const C = {}; vm.createContext(C); vm.runInContext(fs.readFileSync(PUBLIC + '/li
 const BOOKS = C.L.books;
 const START = C.L.startHere || [];
 const AH = BOOKS.find(b => b.id === 'atomic-habits'), AHN = AH.insights.length;
-const openLib = async page => { await page.click('#menuBtn'); await page.waitForTimeout(250); await page.click('[data-menu-item="library"]'); await page.waitForTimeout(900); };
+const openLib = async page => { await page.click('nav.bottom [data-tab="library"]'); await page.waitForTimeout(900); };
 {
   const { ctx, page } = await open('sreilea');
   const loadedAtStart = await page.evaluate(() => typeof GP_LIBRARY !== 'undefined');
   ok('the books are not loaded until the Library is opened', !loadedAtStart);
-  await page.click('#menuBtn'); await page.waitForTimeout(250);
-  ok('Library is in the menu', !!(await page.$('[data-menu-item="library"]')));
-  await page.click('[data-menu-item="library"]'); await page.waitForTimeout(900);
+  ok('Library is in the bottom bar', !!(await page.$('nav.bottom [data-tab="library"]')));
+  await page.click('nav.bottom [data-tab="library"]'); await page.waitForTimeout(900);
   const rows = await page.$$eval('.libSecHead', hs => hs.map(h => h.innerText.replace(/\s+/g, ' ')));
   const SHOWN = C.L.shelves.filter(x => x.id === 'gp').concat(C.L.shelves.filter(x => x.id !== 'gp'));
   ok('the home is rows: Start here, the GP guides, then one per shelf, each with See all', rows.length === 1 + SHOWN.length && /Start here/.test(rows[0]) && /Made at GP/.test(rows[1]) && rows.slice(1).every((r, i) => r.includes(SHOWN[i].name) && /See all/.test(r)), rows.join(' | '));

@@ -163,7 +163,7 @@ for (const [file, wait, label] of [
   if (file === 'teams.html') {
     // My Home, not Base, is what the app opens on now — get to Base
     // explicitly rather than assuming it's the landing tab.
-    await p.click('nav.bottom [data-tab="base"]');
+    await p.click('#menuBtn'); await p.waitForTimeout(250); await p.click('[data-menu-item="base"]');   // Base is in the menu now
     await p.waitForTimeout(500);
     // Base's sections collapse into an accordion now; open every row so its
     // figures are on screen to compare against the dashboard's, same as before.

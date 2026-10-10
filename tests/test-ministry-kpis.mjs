@@ -93,7 +93,7 @@ await page.addInitScript(() => (localStorage.setItem('gp-cafe-view', 'numbers'),
 await page.goto(BASE + '/teams.html', { waitUntil: 'load' });
 await page.waitForSelector('nav.bottom button', { timeout: 15000 });
 await page.click('nav.bottom button:nth-child(1)');          // My week
-await page.click('#goMinistryFromMe');                        // My Ministry — its own full page now
+await page.click('nav.bottom [data-tab="ministry"]');                        // My Ministry — its own full page now
 await page.waitForTimeout(300);
 // the metric form is folded behind one button now; it opens every section
 /* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
@@ -186,7 +186,7 @@ function ok(name, cond, extra) {
   await p3.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await p3.waitForSelector('nav.bottom button', { timeout: 15000 });
   await p3.click('nav.bottom button:nth-child(1)');
-  await p3.click('#goMinistryFromMe');
+  await p3.click('nav.bottom [data-tab="ministry"]');
   await p3.waitForTimeout(300);
 /* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
   if (!/Hide the metric form/.test(await p3.$eval('#kpiInputBtn', b => b.textContent))) await p3.click('#kpiInputBtn');
@@ -345,7 +345,7 @@ function ok(name, cond, extra) {
   await p2.goto(BASE + '/teams.html', { waitUntil: 'load' });
   await p2.waitForSelector('nav.bottom button');
   await p2.click('nav.bottom button:nth-child(1)');
-  await p2.click('#goMinistryFromMe');
+  await p2.click('nav.bottom [data-tab="ministry"]');
   await p2.waitForTimeout(300);
 /* the boxes open on their own for a week with nothing in yet; tap only if they are folded */
   if (!/Hide the metric form/.test(await p2.$eval('#kpiInputBtn', b => b.textContent))) await p2.click('#kpiInputBtn');
