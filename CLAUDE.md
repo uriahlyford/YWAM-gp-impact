@@ -461,6 +461,12 @@ quietest bucket named), Requests, Calendar, Bookings, Rooms.
   with `pending` from `pendingTeamIds_` and `bookingId` when a booking has its `tripId`.
   "Fits / Short by N" is worked out in the page (`hospFit_`: the tightest night of the
   stay against beds in use). Students aren't requests yet (no dates on the portal).
+- **A cancelled or deleted team with beds booked** (closed in the portal → its Teams Database row is
+  cancelled; deleted in the portal → `portalDeleteApplicant` cancels the row; or cancelled / deleted in the
+  Teams Database) is still listed by `hospRequests_` while its booking runs, as `cancelled: 'cancelled' |
+  'deleted'` with `bookingId` and `count`. The booking is never removed on its own: Requests shows these
+  first ("Cancelled — beds still booked") with **Free the beds** (`hospDelete` booking), the overview tile and
+  tab badge count them, and the booking card is marked. Individual applicants never make requests.
 - **Rights**: `canHosp_` — admins, and the Hospitality ministry: members (main or other
   ministry), its leaders, the Skills Training overseer. Not applicants, not inactive
   accounts. `getMyBoot`'s staff carries `hospitality`. Handlers: `getHospitality`,
@@ -844,6 +850,75 @@ forms, documents and references follow.
   sweep leaves it. Page: the Teams tab's chip reads 🗄 Archive and groups by year (`<details
   class=archYear>`, newest open) and quarter (`.archQ`, `archDate_` = left or at, `QUARTER_MONTHS`); the
   record shows `#archBanner`.
+- **Portal on phones and desktops (Oct 2026)**: the staff list/record grid is `minmax(0,1fr)` with
+  `.crm > * { min-width:0 }` — before, a long line in a record (its tabs, a chip row) stretched the column
+  to ~570px on a 360px phone and the page slid sideways, cutting things off. The header title wraps beside
+  the language / sign-out buttons under 420px (`.hbtns` never shrinks), roster names wrap instead of `…`,
+  and on screens ≥1200px the Applications page (`body.wideStaff`) widens to 1400px for the list beside a
+  record. Tests: "fits a phone" in test-portal-page.
+- **Legal documents look like the paper (Oct 2026)**: every document (signing screen, the admin's Read it
+  preview, the signed PDF) has the YWAM Siem Reap letterhead (`public/letterhead.jpg`, also inlined as
+  `LETTERHEAD_JPEG` in legal-pdf.js so the function needs no file read) and the title centred. Headings that
+  start "1. " are numbered sections, a size down from the Part headings; a list item "Lead: text" gets a bold
+  lead-in; a paragraph with `style:'quote'` is set off with a bar. Portal: `legalHeadHtml_`, `legalHHtml_`,
+  `legalListHtml_`, `legalReadHtml_` (read-only, every block type).
+  The Child Protection Agreement has a box to tick after each Part and each numbered commitment (`readA`…`readF`,
+  `c1`…`c8`), so people tick as they read; every box is needed to sign (`unticked`).
+- **My contract & staff signing (Oct 2026)**: ☰ → My contract (`S.view='mycontract'`, `myContractHtml` /
+  `bindMyContract_`, server `myContract`) — every staff member's own HR profile, read-only except their start
+  dates (`mySaveStart`, same rules as HR's via `applyStart_`): time in YWAM and on each campus, their contracts
+  and when the current one ends, and the legal documents. HR itself stays HR/admin-only. They sign on
+  `portal.html?staff=1[&doc=<id>]`, which reads the GP app's saved sign-in (`gp-staff`) and uses
+  `staffSignOpen` / `staffSignSubmit` (same screens and rules as applicants: `signRecord_` is shared), then
+  links back to `teams.html?view=mycontract`. Records: `staff.legal[docId]`, blob `ssign:<staffId>`. Forms
+  they signed as an applicant in the portal (their application by staffId or the same email, signed as 'me';
+  never a team's) are copied in by `syncPortalLegal_` as `{from:'portal', candId}`; `hrLegalPdf` reads those
+  from the portal's blob. The Child Protection Agreement is on everyone's Required list (`requiredFor_`
+  item `legal:child`). The "Finish your profile" card (papers HR asks everyone to sign) is at the top of My
+  contract (`reqMyContractCardHtml_`), not on My Home; a paper's page goes back to My contract.
+- **Staff contract, filled out in person (Oct 2026, Uriah)**: only HR/admin opens the Volunteer Staff Contract
+  (`STAFF_CONTRACT`, `sign.leader`). On someone's HR profile, **Fill out staff contract** — any time, also to
+  redo a paper contract (it starts from that contract's month and years) — picks the period and calls
+  `hrSendContract` (one waits at a time, `digital.status` awaiting_staff; starting again changes its period;
+  returns `contractId`), then opens `portal.html?staff=1&hr=<staffId>&doc=contract:<id>` on HR's own phone
+  (`hrContractOpen` / `hrContractSign`, HR only, `hrContractGate_`). The person reads, fills in and signs;
+  HR signs under "Approved by" (name prefilled from `approver`; `leaderName` + `leaderSig` required, else
+  `leader_required`) → signed at once, `approvedBy`, blob `scontract:<id>`.staff; the page goes back to
+  `teams.html?view=hr&hr=<staffId>`. Staff never sign the contract themselves (`staffSignOpen` /
+  `staffSignSubmit` are only the legal documents) and My contract lists only contracts in force. Only a
+  signed contract counts (`contractInForce_` / `hrInForce_`); `contractState_` adds `soon` (≤ HR_DUE_DAYS),
+  which drives the My contract notice on My Home (`contractNoticeHtml_`). The HR list (`hrHtml`) defaults to
+  **By contract end** (`hrByEnd_`: run out the longest ago first, then renew soon, then by end, no contract at
+  the bottom) with **By ministry** as the old grouping, and filter chips (`HR_FILTERS_`, `hrFilterHas_`):
+  All, Expired, Renew soon, Current, No contract, Paper only (current contract not yet digital); each row
+  says 📄 Paper or ✍️ Digital. PDFs: `hrLegalPdf`, `hrContractPdf` (HR, or the person for their
+  own — a contract only from their own record).
+- **Legal documents, signed on a phone (Oct 2026)**: YWAM Siem Reap's five forms (Photo Release, Accident
+  Waiver, Liability Release Waiver, Acceptance of Place, Child Protection Agreement) live in `netlify/functions/legal-docs-default.js`
+  as blocks (p / check / group / field / initial) with `sign {age, witness, guardian}` — English, verbatim
+  from the paper forms (the Khmer halves are not in yet). Staff make a team's link on the record's ✍️ Legal
+  tab (`portalSignLink`, token hashed as `portal.signLink.hash`, a new one turns the old off); anyone opens
+  `portal.html?sign=<token>` with no account (`P.view==='sign'`, `signHtml_` / `bindSign_`; a saved sign-in
+  is not booted), picks their name (`teamPhotoPeople_`), says if under 18, and signs each document:
+  ticks, lines, initials and signatures drawn on `.sigPad` canvases (`bindSigPads_`, saved as JPEG
+  base64 in `P.sign.pads`). `portalSignSubmit` checks everything and keeps the record per person in blob
+  `tsign:<candId>:<key>` plus a snapshot of the exact text (`legalSnap:<sha256>`); the candidate keeps only
+  `portal.signed[key][docId] = {at, name}` for the grid. `portalSignedPdf` builds the PDF on demand with
+  `netlify/functions/legal-pdf.js` (hand-written PDF: Helvetica WinAnsi text, ticks, the JPEGs, a footer).
+  A portal admin switches documents on/off on ✍️ Legal documents (`portalLegalDocs` /
+  `portalSaveLegalDocs`, blob `legalDocs {off, contacts}` — the Child Protection Agreement's Part F reporting
+  contacts). Every kind of applicant signs (`signPeople_`: a team's people, else just `me`), and from their own
+  dashboard once at `practical`/`arrived` (`legalCardHtml_` → `openMySign_`): the sign handlers take
+  `{user, pin}` in place of a token (`signFor_`), so the team link staff sent keeps working. Block kinds also
+  include h / list / choice (one of; `choices`) / contacts, and fields can be `optional` or `prefill`
+  (role, dates from `signPrefill_`). Choosing "disclose privately" on the agreement logs a note on the
+  record and flags `portal.signed[key].child.disclose`. Every test that copies api.js copies both new files too.
+- **The staff record in tabs (Oct 2026)**: `panelHtml_` keeps contact on top, then a sticky tab row
+  (`#ptabs`, `[data-ptab]`, `P.ptab`, reset to overview per record via `P.ptabFor`): Overview (stage,
+  owner, next step, team steps) · Trip · People · Documents (visa + docs + reference) · Numbers · Answers ·
+  Notes, only the tabs a record has; the actions sit in `.panelFoot`. Only the open tab is drawn, so a test
+  calls `ptab(page, id)` before reaching into one. Answers fold per form section (`.ansFold`, first
+  open, answered/asked) with `#ansQ` Find in answers (`answersHtml_(…, {fold, q})`, `answerText_`).
 - **Staff side bar and menu (Oct 2026)**: the bar is a small ‹ to the GP app home (`#toGpApp`, name in
   `.srOnly`) · Applications · ☰ (`staffNavHtml_`, `P.menuOpen`, `#navMenu`); the menu is a drawer that
   slides in from the right over a backdrop (`#staffMenu` fixed, `#menuScrim`, `body.menuOn`; ✕, the

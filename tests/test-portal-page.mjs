@@ -27,6 +27,11 @@ function ok(name, cond, extra) {
   if (cond) { pass++; console.log('ok   ' + name + (extra !== undefined ? '  → ' + extra : '')); }
   else { fail++; console.log('FAIL ' + name + (extra !== undefined ? '  → ' + extra : '')); }
 }
+/* the record is in tabs: open one before reaching into it */
+async function ptab(page, id) {
+  const b = await page.$('[data-ptab="' + id + '"]');
+  if (b) { await b.click(); await page.waitForSelector('[data-ptabbody="' + id + '"]', { timeout: 3000 }).catch(() => {}); }
+}
 const STEPS = (current) => {
   const ids = ['account', 'form', 'received', 'contact', 'docs', 'interview', 'accepted', 'practical', 'arrived'];
   const ci = ids.indexOf(current);
@@ -84,6 +89,18 @@ const FORMS = { dts: { ...FORM, isDefault: true }, dbs: { ...FORM, key: 'dbs' },
 let ANNA = { id: 'cd_anna', name: 'Anna Example', type: 'student', school: 'dts', stage: 'new', status: 'draft', submittedAt: null, updated: '2026-09-20T10:00:00Z', archived: null, steps: STEPS('form'), campus: 'siemreap', audience: 'international', needsVisa: true, refNeeded: true, formKey: 'dts', visa: {}, answers: {}, draftAt: null };
 const ME_APP = { id: 'st_anna', name: 'Anna Example', username: 'anna.b', email: 'anna@example.org', phone: '+46 70 000 0000', messenger: 'whatsapp', country: 'Sweden', type: 'student', school: 'dts' };
 const STAFF = [{ id: 'st_dara', name: 'Dara Pen', username: 'dara', campus: 'siemreap', isAdmin: false, portalAdmin: false, portalStaff: true, role: 'portal-staff' }, { id: 'st_sina', name: 'Sina Sok', username: 'sina', campus: 'siemreap', isAdmin: false, portalAdmin: true, portalStaff: false, role: 'portal-admin' }];
+/* legal documents: two short stand-ins with every kind of part */
+const SIGN_DOCS = [
+  { id: 'photo', title: 'Photo Release Form', blocks: [{ t: 'p', text: 'I give my permission to be photographed, {name}.' }, { t: 'check', id: 'agree', text: 'I agree.' }], sign: { witness: true } },
+  { id: 'acceptance', title: 'Acceptance of Place', blocks: [{ t: 'field', id: 'location', label: 'Location (Print Location)' }, { t: 'group', id: 'general', title: 'General', items: ['I will attend orientation.'] }, { t: 'initial', id: 'page1', label: 'Initial (page 1)' },
+    { t: 'h', text: 'Part F — Reporting contacts' }, { t: 'contacts' }, { t: 'list', items: ['Physical harm: I will not hit a child.'] },
+    { t: 'choice', id: 'disclose', options: [{ id: 'none', text: 'Nothing to disclose' }, { id: 'private', text: 'I have information to disclose privately' }] },
+    { t: 'field', id: 'role', label: 'Role or team', prefill: 'role' }, { t: 'field', id: 'interpreter', label: 'Interpreter name if used', optional: true }], sign: { age: true, guardian: true } }];
+const SIGN_EXTRA = { contacts: [{ role: 'Ministry leader or director', name: 'Dara Pen', phone: '+855 12 000 000' }, { role: 'Alternative senior leader', name: '', phone: '' }], prefill: { role: 'Short-term team — Grace Church Team', dates: '' } };
+let SIGN_DONE = {};
+let STAFF_DONE = {}, HR_DONE = {};      // key -> { docId: true }, as the server keeps it
+let SIGN_STATUS_DOCS = [{ id: 'photo', title: 'Photo Release Form' }, { id: 'acceptance', title: 'Acceptance of Place' }];
+let LEGAL_ON = { photo: true, acceptance: true };
 let ACCESS_STAFF = [{ id: 'st_sina', name: 'Sina Sok', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', portalStaff: false, portalAdmin: true, isAdmin: false, leadsTeams: false },
   { id: 'st_dara', name: 'Dara Pen', campus: 'siemreap', dept: 'Community Service', ministry: 'Cafe', portalStaff: true, portalAdmin: false, isAdmin: false, leadsTeams: false },
   { id: 'st_rithy', name: 'Rithy Team', campus: 'siemreap', dept: 'Community Service', ministry: 'Outreach Teams', portalStaff: false, portalAdmin: false, isAdmin: false, leadsTeams: true },
@@ -195,6 +212,30 @@ async function open(viewport, query, seed) {
       const o = b.args[2] || {};
       if (o.candidateId) { const c = CANDS.find(x => x.id === o.candidateId); out = c ? { ok: true, preview: 'record', role: 'applicant', me: { ...ME_APP, name: c.name, type: c.type, school: c.school }, application: { ...ANNA, id: c.id, name: c.name, type: c.type, school: c.school, stage: c.stage, status: c.status, submittedAt: c.stage === 'new' ? null : '2026-09-20T10:00:00Z', answers: (c.portal && c.portal.form && c.portal.form.answers) || {}, refNeeded: c.type !== 'team', formKey: c.type === 'student' ? c.school : c.type }, form: FORMS[c.type === 'student' ? c.school : c.type], strengths: c.type === 'team' ? { people: STRENGTH_PEOPLE(), results: STRENGTHS } : { people: [{ key: 'me', name: c.name, role: 'me' }], results: {} } } : { ok: false, err: 'not_found' }; }
       else out = { ok: true, preview: 'sample', role: 'applicant', me: { ...ME_APP, name: o.type === 'team' ? 'Sample Team' : 'Sample Applicant', type: o.type, school: o.school, country: o.audience === 'khmer' ? 'Cambodia' : 'Australia' }, application: { ...ANNA, id: 'preview', type: o.type, school: o.school, stage: o.stage, status: o.stage === 'new' ? 'draft' : o.stage === 'applied' ? 'pending' : o.stage, submittedAt: o.stage === 'new' ? null : '2026-09-20T10:00:00Z', audience: o.audience === 'khmer' ? 'khmer' : 'international', needsVisa: o.audience !== 'khmer', refNeeded: !(o.type === 'team' || (o.type === 'student' && o.audience === 'khmer')), formKey: o.type === 'student' ? o.school : o.type, docKinds: o.type === 'team' ? TEAM_DOCS : [], docs: [], members: o.type === 'team' && o.stage !== 'new' ? [{ id: 'msample01', name: 'Sam Sample', sex: 'm' }, { id: 'msample02', name: 'Mia Sample', sex: 'f' }] : [], steps: STEPS(o.stage === 'new' ? 'form' : 'contact') }, form: FORMS[o.type === 'student' ? o.school : o.type], strengths: { people: o.type === 'team' ? [{ key: 'leader', name: 'Sample Team', role: 'leader' }, { key: 'msample01', name: 'Sam Sample', role: 'member', sex: 'm' }, { key: 'msample02', name: 'Mia Sample', role: 'member', sex: 'f' }] : [{ key: 'me', name: 'Sample Applicant', role: 'me' }], results: {} } };
+    } else if (b.fn === 'portalSignOpen') {
+      out = b.args[0] && b.args[0].user === 'team.au' ? { ok: true, isTeam: true, team: 'Grace Church Team', ...SIGN_EXTRA, people: [{ key: 'leader', name: 'Lee Leader', done: SIGN_DONE.leader || {} }, { key: 'm1', name: 'Member One', done: SIGN_DONE.m1 || {} }], docs: SIGN_DOCS }
+        : b.args[0] === 'tok123' ? { ok: true, isTeam: true, team: 'Grace Church Team', ...SIGN_EXTRA, people: [{ key: 'leader', name: 'Lee Leader', done: SIGN_DONE.leader || {} }, { key: 'm1', name: 'Member One', done: SIGN_DONE.m1 || {} }], docs: SIGN_DOCS } : { ok: false, err: 'invalid' };
+    } else if (b.fn === 'staffSignOpen') {
+      out = u === 'andrew' ? { ok: true, staff: true, isTeam: false, team: 'Andrew Lee', ...SIGN_EXTRA, people: [{ key: 'me', name: 'Andrew Lee', done: STAFF_DONE }],
+        docs: SIGN_DOCS.slice(0, 1) } : { ok: false, err: 'invalid' };
+    } else if (b.fn === 'hrContractOpen') {
+      out = u === 'uriah' && b.args[2] === 'st_1' ? { ok: true, staff: true, hrSign: true, isTeam: false, team: 'Andrew Lee', approver: 'Uriah Lyford', contacts: [], prefill: { role: 'Cafe' }, people: [{ key: 'me', name: 'Andrew Lee', done: HR_DONE }],
+        docs: [{ id: 'contract:c9', title: 'Volunteer Staff Contract', period: '2 years · From 11/2026 to 11/2028', blocks: [{ t: 'period' }, { t: 'field', id: 'focus1', label: 'Area 1' }, { t: 'check', id: 'agree', text: 'I, {name}, agree.' }], sign: { leader: true } }] } : { ok: false, err: 'not_authorized' };
+    } else if (b.fn === 'hrContractSign') {
+      HR_DONE[b.args[4]] = true; out = { ok: true, done: HR_DONE };
+    } else if (b.fn === 'staffSignSubmit') {
+      STAFF_DONE[b.args[3]] = true; out = { ok: true, done: STAFF_DONE };
+    } else if (b.fn === 'portalSignSubmit') {
+      const [, key, docId] = b.args; SIGN_DONE[key] = { ...(SIGN_DONE[key] || {}), [docId]: true }; out = { ok: true, done: SIGN_DONE[key] };
+    } else if (b.fn === 'portalSignStatus' || b.fn === 'portalSignLink') {
+      out = { ok: true, link: b.fn === 'portalSignLink' ? { createdAt: '2026-10-09T01:00:00Z' } : null, docs: SIGN_STATUS_DOCS, people: [{ key: 'leader', name: 'Lee Leader', role: 'leader', signed: { photo: { at: '2026-10-09T02:00:00Z', name: 'Lee Leader' } } }, { key: 'm1', name: 'Member One', role: 'member', signed: {} }] };
+      if (b.fn === 'portalSignLink') out.token = 'abc999';
+    } else if (b.fn === 'portalSignedPdf') {
+      out = { ok: true, name: 'Photo Release Form - Lee Leader.pdf', mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,JVBERi0xLjQK' };
+    } else if (b.fn === 'portalLegalDocs' || b.fn === 'portalSaveLegalDocs') {
+      if (b.fn === 'portalSaveLegalDocs') { if (u !== 'sina') { out = { ok: false, err: 'not_authorized' }; } else if (b.args[2]) LEGAL_ON = { ...b.args[2] }; }
+      if (b.fn === 'portalSaveLegalDocs' && b.args[2] === null) { /* contacts only */ }
+      if (!out.err) out = { ok: true, canEdit: u === 'sina', contacts: (b.fn === 'portalSaveLegalDocs' && b.args[3]) ? b.args[3].map((c, i) => ({ role: ['Ministry leader or director', 'Alternative senior leader'][i], ...c })) : [{ role: 'Ministry leader or director', name: '', phone: '' }, { role: 'Alternative senior leader', name: '', phone: '' }], docs: SIGN_DOCS.map(d => ({ ...d, on: LEGAL_ON[d.id] !== false })) };
     } else if (b.fn === 'portalAccessList') {
       out = u === 'sina' ? { ok: true, canGrantAdmin: true, staff: ACCESS_STAFF } : { ok: false, err: 'not_authorized' };
     } else if (b.fn === 'portalSetAccess') {
@@ -593,6 +634,7 @@ async function open(viewport, query, seed) {
   const save = sent.filter(b => b.fn === 'hrSaveCandidate').pop();
   ok('Save goes through the CRM’s own handler with the whole record and the new stage and owner', save && save.args[2].id === 'cd_tom' && save.args[2].stage === 'interview' && save.args[2].assignedTo === 'st_sina' && save.args[2].phone === '+1 555 000 1111');
   await page.waitForSelector('#panel');
+  await ptab(page, 'notes');
   await page.fill('#p_note', 'Spoke today, very keen');
   await page.click('#addNote');
   await page.waitForTimeout(300);
@@ -607,8 +649,17 @@ async function open(viewport, query, seed) {
   await page.keyboard.press('Escape'); await page.waitForTimeout(100);
   await page.click('[data-open="cd_anna"]');
   await page.waitForSelector('#panel');
-  const pan = await page.$eval('#panel', e => e.textContent);
+  await ptab(page, 'answers');
+  let pan = await page.$eval('#panel', e => e.textContent);
   ok('the record panel shows the submitted answers under their questions', /Answers/.test(pan) && /Date of birth/.test(pan) && /1999-05-05/.test(pan) && /Long story/.test(pan) && /Music/.test(pan));
+  ok('the record is in tabs — a student has Overview, Documents, Legal, Answers and Notes, no trip or people', (await page.$$eval('[data-ptab]', b => b.map(x => x.getAttribute('data-ptab')).join())) === 'overview,docs,legal,answers,notes' && await page.$eval('[data-ptab="answers"]', b => b.classList.contains('on')));
+  ok('each form section of the answers is a fold, the first one open, with how many are answered', (await page.$$('.ansFold')).length >= 2 && await page.$eval('.ansFold', d => d.open) && /\d+\/\d+/.test(await page.$eval('.ansFold summary .n', e => e.textContent)));
+  await page.fill('#ansQ', 'music'); await page.waitForTimeout(120);
+  ok('Find in answers keeps only the questions that match, their sections open, and keeps the box', /Music/.test(await page.$eval('#ansBody', e => e.textContent)) && !/Date of birth/.test(await page.$eval('#ansBody', e => e.textContent)) && await page.$$eval('.ansFold', ds => ds.every(d => d.open)) && await page.evaluate(() => document.activeElement && document.activeElement.id === 'ansQ'));
+  await page.fill('#ansQ', 'zzqx'); await page.waitForTimeout(120);
+  ok('… and says when nothing matches', /Nothing in the answers matches/.test(await page.$eval('#ansBody', e => e.textContent)));
+  await page.fill('#ansQ', ''); await page.waitForTimeout(80);
+  await ptab(page, 'docs'); pan = await page.$eval('#panel', e => e.textContent);
   ok('and the visa ticks for an international applicant', (await page.$$eval('[data-visaflag]', c => c.map(x => x.getAttribute('data-visaflag')).join(','))) === 'flightsConfirmed,invitationSent');
   ok('and a Leader reference block with "No link made yet" and a button to make one', /Leader reference/.test(pan) && /No link made yet/.test(pan) && !!(await page.$('#refLinkStaff')));
   await page.click('#refLinkStaff');
@@ -619,6 +670,7 @@ async function open(viewport, query, seed) {
   await page.waitForTimeout(150);
   await page.click('[data-open="cd_tom"]');
   await page.waitForSelector('#panel');
+  await ptab(page, 'docs');
   ok('a received reference shows who sent it, with Read it', /Received from Pastor Example/.test(await page.$eval('#panel', e => e.textContent)) && !!(await page.$('#showRef')) && !(await page.$('#refLinkStaff')));
   await page.click('#showRef');
   await page.waitForTimeout(150);
@@ -627,10 +679,12 @@ async function open(viewport, query, seed) {
   await page.waitForTimeout(150);
   await page.click('[data-open="cd_anna"]');
   await page.waitForSelector('#panel');
+  await ptab(page, 'docs');
   await page.check('[data-visaflag="flightsConfirmed"]');
   await page.waitForTimeout(300);
   const vf = sent.filter(b => b.fn === 'portalSetVisaFlags').pop();
   ok('ticking flights confirmed goes through portalSetVisaFlags', vf && vf.args[2] === 'cd_anna' && vf.args[3].flightsConfirmed === true);
+  await ptab(page, 'answers');
   await page.click('#editAnswers');
   await page.waitForSelector('#saveAnswers');
   await page.fill('#s_leaderContact', '+46 70 999 0000');
@@ -646,7 +700,7 @@ async function open(viewport, query, seed) {
   const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
   await page.waitForSelector('.trow');
   await page.click('#navMenu'); await page.waitForSelector('#staffMenu');
-  ok('a portal admin finds Forms under Admin access in the ☰ menu, apart from Staff access', !!(await page.$('#toForms')) && /Staff access/.test(await page.$eval('#staffMenu', e => e.textContent)) && /Admin access/.test(await page.$eval('#staffMenu', e => e.textContent)) && (await page.$$eval('#staffMenu .menuGroup', g => g.map(x => [...x.querySelectorAll('button')].map(b => b.id).join(',')).join('|'))) === 'toPreview,toLink|toForms,toAccounts,toTeam,toResources,toAccess');
+  ok('a portal admin finds Forms under Admin access in the ☰ menu, apart from Staff access', !!(await page.$('#toForms')) && /Staff access/.test(await page.$eval('#staffMenu', e => e.textContent)) && /Admin access/.test(await page.$eval('#staffMenu', e => e.textContent)) && (await page.$$eval('#staffMenu .menuGroup', g => g.map(x => [...x.querySelectorAll('button')].map(b => b.id).join(',')).join('|'))) === 'toPreview,toLink|toForms,toAccounts,toTeam,toResources,toLegal,toAccess');
   if(!(await page.$('#toForms'))){ await page.click('#navMenu'); await page.waitForSelector('#toForms'); }
   await page.click('#toForms');
   await page.waitForSelector('#formSave');
@@ -894,7 +948,7 @@ async function open(viewport, query, seed) {
   await page.click('[data-whatfilter="team"]'); await page.waitForTimeout(200);
   const order = await page.$$eval('.trow .who', ws => ws.map(w => w.textContent).join('|'));
   ok('Teams come in the order they arrive: here now, then soonest first, then no dates yet, then already gone — not by last change', order === 'Here Now Team|Soon Team|Grace Church Team|No Dates Team|Gone Team', order);
-  ok('each dated team says when it comes', /from 1 Nov 2026/.test(await page.$eval('.trow[data-open="cd_tsoon"]', e => e.textContent)));
+  ok('each team row shows its dates in Cambodia, not when it applied', /In Cambodia 1 Nov 2026 – 10 Nov 2026/.test(await page.$eval('.trow[data-open="cd_tsoon"]', e => e.textContent)) && /Dates in Cambodia not set yet/.test(await page.$eval('.trow[data-open="cd_tnodate"]', e => e.textContent)) && !/\b1 Sept 2026\b/.test(await page.$eval('.trow[data-open="cd_tsoon"]', e => e.textContent)));
   await page.click('[data-whatfilter=""]'); await page.waitForTimeout(200);
   ok('the All tab keeps the latest change first', (await page.$eval('.trow .who', w => w.textContent)) === 'Gone Team');
   await ctx.close();
@@ -919,7 +973,138 @@ async function open(viewport, query, seed) {
   ok('each quarter lists its teams, latest to leave first, and says when they left', q3 === 'Summer Team|August Team' && /Q3 · Jul–Sep · 2/.test(await page.$eval('[data-archq="2026-Q3"]', e => e.textContent)) && /Left 20 Aug 2026/.test(await page.$eval('.trow[data-open="cd_a1"]', e => e.textContent)), q3);
   ok('a team closed by hand sits in the quarter it was closed, with no "Left"', /Called Off Team/.test(await page.$eval('[data-archyear="2026"]', e => e.textContent)) && !/Left/.test(await page.$eval('.trow[data-open="cd_a5"]', e => e.textContent)));
   await page.click('.trow[data-open="cd_a1"]'); await page.waitForSelector('#panel');
+  await ptab(page, 'docs');
   ok('the archived record says when the team left and that everything is kept, documents included', /Archived — the team left on 20 Aug 2026/.test(await page.$eval('#archBanner', e => e.textContent)) && /passports, flights, e-visas/.test(await page.$eval('#archBanner', e => e.textContent)) && /passports\.pdf/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)));
+  await ctx.close();
+}
+
+/* ---------- legal documents: a team signs on a phone, no account ---------- */
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?sign=tok123');
+  await page.waitForSelector('[data-signwho]', { timeout: 8000 });
+  ok('the signing link opens with no account: the team name and everyone on it to pick from', /Grace Church Team/.test(await page.$eval('#main', e => e.textContent)) && (await page.$$('[data-signwho]')).length === 2 && !(await page.$('#l_user')) && /0 of 2 signed/.test(await page.$eval('[data-signwho="m1"]', e => e.textContent)));
+  await page.click('[data-signwho="m1"]'); await page.waitForSelector('[data-signu18]');
+  ok('picking a name asks once whether they are under 18', /Hi Member One/.test(await page.$eval('#main', e => e.textContent)));
+  await page.click('[data-signu18="yes"]'); await page.waitForSelector('[data-signdoc="photo"]');
+  ok('then the first document: its text with their name in it, the box to tick, a signature box, and an optional witness', /Document 1 of 2/.test(await page.$eval('.signDoc', e => e.textContent)) && /photographed, Member One/.test(await page.$eval('.signDoc', e => e.textContent)) && !!(await page.$('[data-signcheck="agree"]')) && !!(await page.$('[data-sigpad="sig"]')) && !!(await page.$('.signWit')) && await page.$eval('#sign_name', i => i.value) === 'Member One');
+  ok('… under the YWAM Siem Reap letterhead, with the title centred as on the paper', !!(await page.$('.signDoc img.signLetterhead')) && await page.$eval('.signDoc .signTitle', e => e.textContent) === 'Photo Release Form' && await page.$eval('.signDoc .signTitle', e => getComputedStyle(e).textAlign) === 'center');
+  await page.click('#signSubmit'); await page.waitForTimeout(150);
+  ok('signing with nothing done marks what is missing in red and sends nothing', (await page.$$('.miss')).length >= 2 && !sent.some(b => b.fn === 'portalSignSubmit'));
+  const draw = async (sel) => { await page.$eval(sel, c => c.scrollIntoView({ block: 'center' })); const r = await page.$eval(sel, c => { const b = c.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; }); await page.mouse.move(r.x + 20, r.y + r.h * 0.7); await page.mouse.down(); for (let i = 1; i <= 12; i++) await page.mouse.move(r.x + 20 + i * (r.w - 40) / 12, r.y + r.h * (i % 2 ? 0.3 : 0.7)); await page.mouse.up(); };
+  await page.check('[data-signcheck="agree"]');
+  await draw('[data-sigpad="sig"]');
+  ok('drawing in the box marks it signed', await page.$eval('[data-sigpad="sig"]', c => c.closest('.sigWrap').classList.contains('signed')));
+  await page.click('#signSubmit'); await page.waitForSelector('[data-signdoc="acceptance"]', { timeout: 5000 });
+  const s1 = sent.filter(b => b.fn === 'portalSignSubmit').pop();
+  ok('Sign sends that document for that person: the tick, their name, the signature as a picture, no witness', s1 && s1.args[0] === 'tok123' && s1.args[1] === 'm1' && s1.args[2] === 'photo' && s1.args[3].checks.agree === true && s1.args[3].name === 'Member One' && /^\/9j\//.test(s1.args[3].sig) && s1.args[3].under18 === true && s1.args[3].witnessName === undefined);
+  ok('… and the next document opens, with a line to fill in, a ticked section, a box to initial, their age, and a parent or guardian to sign', /Document 2 of 2/.test(await page.$eval('.signDoc', e => e.textContent)) && !!(await page.$('[data-signfield="location"]')) && !!(await page.$('[data-signcheck="general"]')) && !!(await page.$('[data-sigpad="init:page1"]')) && !!(await page.$('#sign_age')) && !!(await page.$('[data-sigpad="guardianSig"]')) && (await page.$$('.signDot.done')).length === 1);
+  ok('the role line starts filled in, the interpreter line is optional, and the reporting contacts show', await page.$eval('[data-signfield="role"]', i => i.value) === 'Short-term team — Grace Church Team' && /optional/.test(await page.$eval('.signDoc', e => e.textContent)) && /Dara Pen · \+855 12 000 000/.test(await page.$eval('.signContacts', e => e.textContent)) && /Your leader will tell you on arrival/.test(await page.$eval('.signContacts', e => e.textContent)) && /Physical harm:/.test(await page.$eval('.signList b', e => e.textContent)));
+  await page.fill('[data-signfield="location"]', 'Siem Reap'); await page.check('[data-signcheck="general"]'); await page.fill('#sign_age', '16'); await page.fill('#sign_gname', 'Pat One');
+  await draw('[data-sigpad="init:page1"]'); await draw('[data-sigpad="sig"]'); await draw('[data-sigpad="guardianSig"]');
+  ok('the details typed survive drawing in the boxes', await page.$eval('[data-signfield="location"]', i => i.value) === 'Siem Reap' && await page.$eval('#sign_gname', i => i.value) === 'Pat One');
+  await page.click('#signSubmit'); await page.waitForTimeout(150);
+  ok('the disclosure needs one of its answers before it signs', !!(await page.$('.signChoice.miss')) && sent.filter(b => b.fn === 'portalSignSubmit').length === 1);
+  await page.check('[data-signchoice="disclose"][value="none"]');
+  await page.click('#signSubmit'); await page.waitForSelector('.signDone', { timeout: 5000 });
+  const s2 = sent.filter(b => b.fn === 'portalSignSubmit').pop();
+  ok('… and sends the answer, the role as filled, no interpreter', s2 && s2.args[3].choices.disclose === 'none' && s2.args[3].fields.role === 'Short-term team — Grace Church Team' && !s2.args[3].fields.interpreter);
+  ok('the last one sends the location, initials, age and the guardian with their signature', s2 && s2.args[2] === 'acceptance' && s2.args[3].fields.location === 'Siem Reap' && s2.args[3].checks.general === true && /^\/9j\//.test(s2.args[3].initials.page1) && s2.args[3].age === 16 && s2.args[3].guardianName === 'Pat One' && /^\/9j\//.test(s2.args[3].guardianSig));
+  ok('then: all signed, thank you — and a way for the next person', /All signed — thank you, Member!/.test(await page.$eval('.signDone', e => e.textContent)) && !!(await page.$('#signNext')));
+  await page.click('#signNext'); await page.waitForSelector('[data-signwho]');
+  ok('the names come back, Member One now all signed', /All signed/.test(await page.$eval('[data-signwho="m1"]', e => e.textContent)));
+  ok('no page errors on the phone', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+{
+  if (TEAM_APP) TEAM_APP.stage = 'arrived';
+  SIGN_DONE = {};
+  const { ctx, page } = await open({ width: 390, height: 844 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
+  await page.waitForSelector('#legalCard', { timeout: 8000 });
+  ok('once the team has arrived, its dashboard has the legal documents to read and sign', /YWAM sends your team the link/.test(await page.$eval('#legalCard', e => e.textContent)) && !!(await page.$('#openSign')));
+  await page.click('#openSign'); await page.waitForSelector('[data-signwho]', { timeout: 5000 });
+  const so = sent.filter(b => b.fn === 'portalSignOpen').pop();
+  ok('Read and sign opens the same signing, signed in — no link made, so the team’s link keeps working', so && so.args[0].user === 'team.au' && so.args[0].pin === '2468' && !sent.some(b => b.fn === 'portalSignLink') && !!(await page.$('#signHome')));
+  await page.click('#signHome'); await page.waitForSelector('#statusPill');
+  ok('… with a way back to the application', !!(await page.$('#legalCard')));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?sign=nope');
+  await page.waitForFunction(() => /doesn’t work any more/.test(document.querySelector('#main').textContent), null, { timeout: 8000 });
+  ok('a wrong or replaced link says so', true);
+  await ctx.close();
+}
+{
+  CANDS = JSON.parse(JSON.stringify(CANDS0));
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'dara', pin: '1234' })));
+  await page.waitForSelector('.trow'); await page.click('[data-whatfilter="team"]'); await page.waitForTimeout(150);
+  await page.click('[data-open="cd_team"]'); await page.waitForSelector('#panel');
+  await ptab(page, 'legal'); await page.waitForSelector('#legalTally', { timeout: 5000 });
+  ok('the team record has a Legal tab: who signed what, with a PDF next to each signed one', /0 of 2 have signed everything/.test(await page.$eval('#legalTally', e => e.textContent)) && /Lee Leader/.test(await page.$eval('.legalGrid', e => e.textContent)) && (await page.$$('[data-signpdf]')).length === 1 && /Not yet/.test(await page.$eval('[data-legalrow="m1"] ~ .lgCell', e => e.textContent)));
+  await page.click('#signMakeLink'); await page.waitForSelector('#signLinkBox');
+  ok('staff make the signing link, ready to copy and send', /\?sign=abc999$/.test(await page.$eval('#signLinkBox', i => i.value)) && !!(await page.$('#signCopy')));
+  await page.click('[data-signpdf]'); await page.waitForTimeout(300);
+  const pd = sent.filter(b => b.fn === 'portalSignedPdf').pop();
+  ok('PDF asks for that person’s signed document', pd && pd.args[2] === 'cd_team' && pd.args[3] === 'leader' && pd.args[4] === 'photo');
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 1280, height: 900 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('#navMenu'); await page.click('#navMenu'); await page.waitForSelector('#toLegal'); await page.click('#toLegal');
+  await page.waitForSelector('[data-legalon]', { timeout: 5000 });
+  ok('a portal admin sees the documents under Legal documents, each switched on, readable', (await page.$$('[data-legalon]')).length === 2 && await page.$eval('[data-legalon="photo"]', b => b.checked));
+  ok('… and the reporting contacts to fill in', (await page.$$('[data-legalct]')).length === 4);
+  await page.fill('[data-legalct="0|name"]', 'Dara Pen'); await page.fill('[data-legalct="0|phone"]', '+855 12 000 000');
+  await page.click('#legalCtSave'); await page.waitForTimeout(300);
+  const lc = sent.filter(b => b.fn === 'portalSaveLegalDocs').pop();
+  ok('Save sends the contacts and leaves the documents as they are', lc && lc.args[2] === null && lc.args[3][0].name === 'Dara Pen' && lc.args[3][0].phone === '+855 12 000 000');
+  await page.click('[data-legalpreview="acceptance"]'); await page.waitForSelector('.legalPreview');
+  ok('Read it shows the document', /orientation/.test(await page.$eval('.legalPreview', e => e.textContent)));
+  ok('… laid out like the paper: the letterhead, the title, headings, bullets with a bold lead-in, the choices and contacts', !!(await page.$('.legalPreview img.signLetterhead[src="letterhead.jpg"]')) && /Acceptance of Place/.test(await page.$eval('.legalPreview .signTitle', e => e.textContent)) && /Part F — Reporting contacts/.test(await page.$eval('.legalPreview .signH', e => e.textContent)) && await page.$eval('.legalPreview .signList li b', e => e.textContent) === 'Physical harm:' && /Nothing to disclose/.test(await page.$eval('.legalPreview', e => e.textContent)) && !!(await page.$('.legalPreview .signContacts')));
+  await page.click('[data-legalon="photo"]'); await page.waitForTimeout(300);
+  const sl = sent.filter(b => b.fn === 'portalSaveLegalDocs').pop();
+  ok('switching one off saves it', sl && sl.args[2].photo === false && sl.args[2].acceptance === true && !(await page.$eval('[data-legalon="photo"]', b => b.checked)));
+  await ctx.close();
+}
+
+/* ---------- the staff contract, filled out in person on HR's phone: they sign, HR approves ---------- */
+{
+  const draw = async (page, pad) => { const r = await page.$eval('[data-sigpad="' + pad + '"]', c => { c.scrollIntoView({ block: 'center' }); const b = c.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
+    await page.mouse.move(r.x + 20, r.y + 60); await page.mouse.down(); for (let i = 1; i <= 10; i++) await page.mouse.move(r.x + 20 + i * 25, r.y + (i % 2 ? 30 : 90)); await page.mouse.up(); };
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1&hr=st_1&doc=contract%3Ac9', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'uriah', pin: '1234' })));
+  await page.waitForSelector('[data-signdoc]', { timeout: 8000 });
+  const so = sent.filter(b => b.fn === 'hrContractOpen').pop();
+  ok('HR opens it with their own GP app sign-in for that person: the contract with its period, back to HR', so && so.args[0] === 'uriah' && so.args[2] === 'st_1' && /Staff contract/.test(await page.$eval('.gateTitle h2', e => e.textContent)) && /Volunteer Staff Contract/.test(await page.$eval('.signDoc', e => e.textContent)) && /Andrew Lee/.test(await page.$eval('.signPeriod', e => e.textContent)) && !!(await page.$('a[href="teams.html?view=hr&hr=st_1"]')));
+  ok('below their signature: Approved by, with HR’s name already in', /Approved by/.test(await page.$eval('.signLeader', e => e.textContent)) && await page.$eval('#sign_lname', i => i.value) === 'Uriah Lyford' && !!(await page.$('[data-sigpad="leaderSig"]')));
+  await page.fill('[data-signfield="focus1"]', 'Cafe'); await page.check('[data-signcheck="agree"]');
+  await draw(page, 'sig');
+  await page.click('#signSubmit'); await page.waitForTimeout(300);
+  ok('it will not go in until HR signs to approve', !sent.some(b => b.fn === 'hrContractSign'));
+  await draw(page, 'leaderSig');
+  await page.click('#signSubmit'); await page.waitForTimeout(400);
+  const ss = sent.filter(b => b.fn === 'hrContractSign').pop();
+  ok('signing sends theirs and HR’s, for that person', ss && ss.args[0] === 'uriah' && ss.args[2] === 'st_1' && ss.args[3] === 'me' && ss.args[4] === 'contract:c9' && ss.args[5].fields.focus1 === 'Cafe' && /^\/9j\//.test(ss.args[5].sig) && ss.args[5].leaderName === 'Uriah Lyford' && /^\/9j\//.test(ss.args[5].leaderSig));
+  ok('… then it is done, with the way back to HR', !!(await page.$('.signDone a[href="teams.html?view=hr&hr=st_1"]')));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'andrew', pin: '1234' })));
+  await page.waitForSelector('[data-signdoc]', { timeout: 8000 });
+  ok('a staff member’s own page has only the legal documents — no contract, back to My contract', !/Volunteer Staff Contract/.test(await page.evaluate(() => document.querySelector('#main').textContent)) && /Photo Release Form/.test(await page.$eval('.signDoc', e => e.textContent)) && !!(await page.$('a[href="teams.html?view=mycontract"]')));
+  await ctx.close();
+}
+{
+  Object.keys(STAFF_DONE).forEach(k => delete STAFF_DONE[k]);
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1&doc=photo', () => localStorage.setItem('gp-staff', JSON.stringify({ user: 'andrew', pin: '1234' })));
+  await page.waitForSelector('[data-signdoc]', { timeout: 8000 });
+  ok('from My contract, one document opens on its own', /Photo Release Form/.test(await page.$eval('.signDoc', e => e.textContent)) && !/Volunteer Staff Contract/.test(await page.evaluate(() => document.querySelector('#main').textContent)));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 390, height: 844 }, '?staff=1');
+  await page.waitForFunction(() => /Open this from the GP app/.test(document.querySelector('#main').textContent), null, { timeout: 8000 });
+  ok('without a GP app sign-in it says to open it from the GP app', !!(await page.$('a[href="teams.html"]')));
+  ok('no page errors (staff signing)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 
@@ -1027,20 +1212,27 @@ async function open(viewport, query, seed) {
   ok('and the row says what is next for them', /→ 1st call — getting to know each other/.test(await page.$eval('.trow[data-open="cd_team"]', e => e.textContent)));
   await page.click('[data-open="cd_team"]');
   await page.waitForSelector('#panel');
+  ok('a team record opens on Overview with every tab: Trip, People, Documents, Numbers, Answers, Notes', (await page.$$eval('[data-ptab]', b => b.map(x => x.getAttribute('data-ptab')).join())) === 'overview,trip,people,docs,numbers,legal,answers,notes' && await page.$eval('[data-ptab="overview"]', b => b.classList.contains('on')) && !!(await page.$('#p_stage')) && !(await page.$('#tripTotal')));
   const pan = await page.$eval('#panel', e => e.textContent);
-  ok('the record shows the trip: total in Cambodia, each place with dates and days, who handles the visa', /14 days · 10 Jan 2027 – 23 Jan 2027/.test(await page.$eval('#tripTotal', e => e.textContent)) && (await page.$$eval('.tripStay', r => r.map(x => x.textContent.replace(/\s+/g, ' ').trim()))).join(' | ') === '📍 YWAM Siem Reap10 Jan 2027 – 20 Jan 2027 · 11 days | 📍 Phnom Penh20 Jan 2027 – 23 Jan 2027 · 4 days' && /Arrives first at/.test(pan) && /we handle the visa/.test(pan));
+  await ptab(page, 'trip');
+  ok('the record shows the trip: total in Cambodia, each place with dates and days, who handles the visa', /14 days · 10 Jan 2027 – 23 Jan 2027/.test(await page.$eval('#tripTotal', e => e.textContent)) && (await page.$$eval('.tripStay', r => r.map(x => x.textContent.replace(/\s+/g, ' ').trim()))).join(' | ') === '📍 YWAM Siem Reap10 Jan 2027 – 20 Jan 2027 · 11 days | 📍 Phnom Penh20 Jan 2027 – 23 Jan 2027 · 4 days' && /Arrives first at/.test(await page.$eval('#panel', e => e.textContent)) && /we handle the visa/.test(await page.$eval('#panel', e => e.textContent)));
   const hosp = await page.$eval('#hospText', e => e.value);
   ok('and a ready-to-paste note for hospitality: name and where from, Siem Reap dates with days and nights, males, females, couples/families', hosp.split('\n').length === 5 && hosp.split('\n')[0] === 'Grace Church Team — Sydney, Australia' && /^Siem Reap: \w{3},? 10 Jan 2027 – \w{3},? 20 Jan 2027 \(11 days, 10 nights\)$/.test(hosp.split('\n')[1]) && hosp.split('\n').slice(2).join('|') === 'Males: 6|Females: 8|Couples / families: 2', JSON.stringify(hosp));
   ok('with a Copy button', !!(await page.$('#copyHosp')));
   ok('the trip block says whether flights are booked', /Flights booked\s*Not yet/.test(await page.$eval('#tripFlights', e => e.textContent)));
   ok('the record is headed by the sending church, with the leader named under it', /Grace Church Team/.test(await page.$eval('#panel h2', e => e.textContent)) && /Leader: Pat Leader/.test(pan));
+  await ptab(page, 'docs');
   ok('the record lists the team’s documents, with what is still needed — the names-and-photos row has no Upload, since those are made on the roster', /passports\.pdf/.test(await page.$eval('[data-dockind="passports"]', e => e.textContent)) && /Needed/.test(await page.$eval('[data-dockind="flights"]', e => e.textContent)) && !(await page.$('[data-docup="photo"]')));
+  await ptab(page, 'overview');
   ok('the stage picker has the team stages', (await page.$$eval('#p_stage option', o => o.map(x => x.value).join(','))) === 'new,applied,call1,docs,call2,practical,arrived');
   ok('and the Teams tab counts by them', /1st call/.test(await page.$eval('.tiles', e => e.textContent)) && /Awaiting documents/.test(await page.$eval('.tiles', e => e.textContent)) && !/Interview/.test(await page.$eval('.tiles', e => e.textContent)));
+  await ptab(page, 'docs');
   ok('staff upload the letter of invitation themselves', /You send this/.test(await page.$eval('[data-dockind="invitation"]', e => e.textContent)) && !!(await page.$('[data-docup="invitation"]')));
+  await ptab(page, 'overview');
   ok('the record shows the team’s steps with what is next', /Next: 1st call — getting to know each other · on us/.test(await page.$eval('#teamNext', e => e.textContent)));
   ok('staff tick the steps done outside the portal; the ones the portal sees tick themselves', (await page.$$eval('[data-teamstep]', c => c.map(x => x.getAttribute('data-teamstep')).join(','))) === 'call1,call2,arrived' && /ticks when they upload it/.test(await page.$eval('.flowList', e => e.textContent)));
   ok('no separate visa ticks for a team', !(await page.$('[data-visaflag]')));
+  await ptab(page, 'numbers');
   ok('a team not in the Teams Database yet says so, and offers to add it', /Not in the Teams Database yet/.test(await page.$eval('#teamDbState', e => e.textContent)) && !!(await page.$('#syncTeamBtn')));
   await page.click('#syncTeamBtn');
   await page.waitForSelector('[data-snum]');
@@ -1053,12 +1245,15 @@ async function open(viewport, query, seed) {
   const sn = sent.filter(b => b.fn === 'portalStaffSaveTeamNumbers').pop();
   ok('staff save them for that team', sn && sn.args[2] === 'cd_team' && sn.args[3]['People Served'] === 42 && sn.args[4].male === 8, JSON.stringify(sn && sn.args.slice(2)));
   ok('and they stay in the boxes', (await page.$eval('[data-snum="People Served"]', i => i.value)) === '42');
+  await ptab(page, 'overview');
   await page.check('[data-teamstep="call1"]');
   await page.waitForTimeout(400);
   const ts = sent.filter(b => b.fn === 'portalTeamStep').pop();
   ok('ticking the 1st call goes through portalTeamStep', ts && ts.args[2] === 'cd_team' && ts.args[3] === 'call1' && ts.args[4] === true, JSON.stringify(ts && ts.args.slice(2)));
   ok('and the record moves on to the documents', /Next: Passport copies for the whole team · waiting on the team/.test(await page.$eval('#teamNext', e => e.textContent)));
+  await ptab(page, 'docs');
   ok('the names-and-photos document has no upload on the record either: it lists files that came the old way and points to the roster', !(await page.$('[data-docup="photo"]')) && /team\.pdf/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && /Member Two\.png/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && /put each one on a person under Team members/.test(await page.$eval('[data-dockind="photo"]', e => e.textContent)) && !!(await page.$('[data-docup="passports"]')));
+  await ptab(page, 'people');
   await page.waitForSelector('#panelMembers .rosterRow', { timeout: 5000 });
   ok('the record shows the team’s faces — leader and members, each with a Photo button staff can use too — and a Team photo sheet button', (await page.$$('#panelMembers .rosterRow')).length >= 2 && !!(await page.$('#panelMembers [data-tphoto][data-tphotocand="cd_team"]')) && !!(await page.$('#teamSheetBtn')));
   await page.waitForSelector('#upPhotos [data-upuse]', { timeout: 5000 });
@@ -1070,14 +1265,19 @@ async function open(viewport, query, seed) {
   const gd = sent.filter(b => b.fn === 'portalGetDoc').pop(), sp = sent.filter(b => b.fn === 'portalSaveTeamPhoto').pop();
   ok('Use fetches the file, shrinks it and saves it as that person’s photo on this record — the face shows on the roster', (gd && sp && sp.args[2] === twoKey && sp.args[4] === 'cd_team' && /^[A-Za-z0-9+/=]+$/.test(sp.args[3])), JSON.stringify(sp && sp.args.slice(2, 3).concat(sp.args.slice(4))));
   ok('… it sends which upload it came from, and that upload is no longer offered', (typeof sp.args[5] === 'string' && sp.args[5].length > 0 && !(await page.$('#upPhotos'))));
+  await ptab(page, 'docs');
   ok('… the names-and-photos document row is still there while someone has no photo', !!(await page.$('[data-dockind="photo"]')));
+  await ptab(page, 'people');
   for (const k of await page.$$eval('#panelMembers .rosterRow', rs => rs.filter(r => !r.querySelector('img.avatar')).map(r => r.getAttribute('data-rosterkey')))) {
     await page.click('#panelMembers [data-tphoto="' + k + '"]');
     await page.setInputFiles('#tphotoInput', { name: k + '.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVQI12P4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64') });
     await page.waitForFunction(kk => !!document.querySelector('#panelMembers [data-rosterkey="' + kk + '"] img.avatar'), k, { timeout: 5000 });
   }
   await page.waitForFunction(() => /Everyone has a photo/.test((document.querySelector('#panelMembers') || {}).textContent || ''), null, { timeout: 5000 });
-  ok('once everyone has a photo, the names-and-photos document row and the uploads are hidden — the roster is the one place', !(await page.$('[data-dockind="photo"]')) && !(await page.$('#upPhotos')) && !!(await page.$('[data-dockind="passports"]')));
+  const noUps = !(await page.$('#upPhotos'));
+  await ptab(page, 'docs');
+  ok('once everyone has a photo, the names-and-photos document row and the uploads are hidden — the roster is the one place', !(await page.$('[data-dockind="photo"]')) && noUps && !!(await page.$('[data-dockind="passports"]')));
+  await ptab(page, 'people');
   await page.click('#teamSheetBtn'); await page.waitForTimeout(600);
   ok('the sheet is drawn and offered as a picture without a page error', !!(await page.$('#teamSheetBtn')) && errors.length === 0, errors.join(' | '));
   await ctx.close();
@@ -1262,6 +1462,27 @@ async function open(viewport, query, seed) {
 }
 
 ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+/* ---------- fits a phone: nothing cut off, nothing sliding sideways ---------- */
+{
+  const { ctx, page } = await open({ width: 360, height: 740 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'sina', pin: '1234' })));
+  await page.waitForSelector('.trow');
+  const head = await page.evaluate(() => { const t = document.querySelector('.brandTitle').getBoundingClientRect(), b = document.querySelector('.hbtns').getBoundingClientRect(); return t.right <= b.left && b.right <= innerWidth; });
+  ok('on a 360px phone the portal title never runs under the language and sign-out buttons', head);
+  await (await page.$$('.trow'))[2].click(); await page.waitForSelector('[data-ptab]');
+  for (const tab of ['overview', 'answers', 'notes']) {
+    await page.click('[data-ptab="' + tab + '"]'); await page.waitForTimeout(200);
+    const fit = await page.evaluate(() => ({ crm: document.querySelector('.crm').scrollWidth <= document.querySelector('.crm').clientWidth + 1, page: document.documentElement.scrollWidth <= innerWidth + 1, tabs: getComputedStyle(document.querySelector('.ptabs')).overflowX }));
+    ok('a staff record on a phone fits the screen (' + tab + ') — the record’s tabs scroll on their own', fit.crm && fit.page && fit.tabs === 'auto', JSON.stringify(fit));
+  }
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ width: 320, height: 700 }, '', () => localStorage.setItem('gp-portal', JSON.stringify({ user: 'team.au', pin: '2468' })));
+  await page.waitForSelector('#applicantNav');
+  ok('an applicant at 320px: the title wraps beside the buttons, nothing slides sideways', await page.evaluate(() => { const t = document.querySelector('.brandTitle').getBoundingClientRect(), b = document.querySelector('.hbtns').getBoundingClientRect(); return t.right <= b.left && document.documentElement.scrollWidth <= innerWidth + 1; }));
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 console.log(`\n${pass} passed, ${fail} failed`);

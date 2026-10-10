@@ -66,7 +66,8 @@ async function open(who, opts) {
   const H = FIXTURE(); let n = 0;
   if (opts.extra) H.bookings.push(...opts.extra);
   const hospOut = () => ({ ok: true, campus: 'siemreap', buildings: H.buildings, rooms: H.rooms, bookings: H.bookings,
-    requests: H.trips.map(q => ({ ...q, bookingId: (H.bookings.find(k => k.tripId === q.tripId) || {}).id || '' })) });
+    requests: H.trips.map(q => ({ ...q, bookingId: (H.bookings.find(k => k.tripId === q.tripId) || {}).id || '' }))
+      .concat((opts.gone || []).filter(q => H.bookings.some(k => k.id === q.bookingId))) });
   await ctx.route('**/.netlify/functions/api', r => {
     const b = JSON.parse(r.request().postData() || '{}'); sent.push(b);
     let out = { ok: true };
@@ -449,6 +450,24 @@ console.log('=== staff beds ===');
   await page.fill('[data-hf="to"]', day(42)); await page.dispatchEvent('[data-hf="to"]', 'change'); await page.waitForTimeout(200);
   ok('… and in the bed picker, even months ahead', await page.$eval('[data-hbed="f0"]', b => b.disabled && b.classList.contains('taken')));
   ok('no sideways scroll; no errors', !(await overflow(page)) && errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+{
+  /* a team closed or deleted in the portal while its beds are booked */
+  const kGone = { id: 'kgone', category: 'team', name: 'Closed Team', from: day(4), to: day(9), males: 2, females: 1, count: 3, family: false, bedIds: ['m1', 'm2', 'f0'], notes: '', tripId: 'ta_gone', permanent: false };
+  const { ctx, page, errors, sent } = await open(HANA, { extra: [kGone], gone: [{ tripId: 'ta_gone', name: 'Closed Team', country: '', from: day(4), to: day(9), size: null, males: 2, females: 1, couples: null, pending: false, portalStage: '', candidateId: '', bookingId: 'kgone', people: [], cancelled: 'deleted', count: 3 }] });
+  await page.click('#goMinistryFromMe'); await page.waitForTimeout(300);
+  await page.click('#goHosp'); await page.waitForTimeout(500);
+  ok('the overview says a cancelled team still holds beds', /1 cancelled — free the beds/.test(await page.$eval('[data-hosptile="requests"]', e => e.textContent)));
+  ok('… and the Requests tab counts it', /3/.test(await page.$eval('[data-hosptab="req"]', b => b.textContent)));
+  await page.click('[data-hosptab="req"]'); await page.waitForTimeout(200);
+  ok('Requests shows it first, marked deleted, with the beds still booked and a button to free them', /Cancelled — beds still booked/.test(await page.evaluate(() => document.body.textContent)) && /Deleted/.test(await page.$eval('[data-hospreq="ta_gone"]', e => e.textContent)) && /3 beds still booked/.test(await page.$eval('[data-hospreq="ta_gone"]', e => e.textContent)) && !!(await page.$('[data-hospfree="kgone"]')) && !(await page.$('[data-hospreq="ta_gone"] [data-hospbookreq]')));
+  page.once('dialog', d => d.accept());
+  await page.click('[data-hospfree="kgone"]'); await page.waitForTimeout(400);
+  const del = sent.filter(b => b.fn === 'hospDelete').pop();
+  ok('Free the beds deletes that booking, and the card goes', del && del.args[2] === 'booking' && del.args[3] === 'kgone' && !(await page.$('[data-hospreq="ta_gone"]')));
+  ok('no errors (cancelled team)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 

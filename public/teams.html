@@ -1035,6 +1035,7 @@ button.reqRow { cursor:pointer; }
 .hospBarPct small { font-weight:600; color:var(--accent); }
 .hospFit.ok { background:var(--goodSoft); border-color:var(--good); color:var(--good); }
 .hospFit.no { background:var(--badSoft); border-color:var(--bad); color:var(--bad); }
+.hospGone { border:1.5px solid var(--bad); }
 .hospCat { border-left:4px solid var(--accent); }
 .hospCat.guest { border-left-color:var(--good); }
 .hospCat.speaker { border-left-color:var(--amber); }
@@ -1178,10 +1179,20 @@ button.reqRow { cursor:pointer; }
 .hrChip.due { color:var(--amber); border-color:var(--amber); }
 .hrChip.expired { color:var(--bad); border-color:var(--bad); }
 .hrChip.archived { opacity:.7; }
+.mmTileSplit { font-size:12.5px; font-weight:600; color:var(--ink); margin-top:2px; }
 .hrBanner { margin-top:12px; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); font-size:14px; }
 .hrBanner.active { border-color:var(--good); }
 .hrBanner.due { border-color:var(--amber); }
 .hrBanner.expired { border-color:var(--bad); }
+.hrDigital { margin:8px 0 6px; padding:8px 10px; border-radius:10px; font-size:13.5px; background:var(--surface2); border:1px solid var(--border); }
+.hrDigital.waiting { border-color:var(--amber); } .hrDigital.done { border-color:var(--good); }
+.hrContractBtns { display:flex; gap:8px; flex-wrap:wrap; } .hrContractBtns .btn { flex:1 1 200px; }
+.hrLegalRow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:7px 0; border-top:1px solid var(--border); font-size:14px; }
+.hrLegalRow:first-of-type { border-top:0; } .hrLegalName { flex:1 1 200px; min-width:0; }
+.hrFlag { display:inline-block; margin-left:4px; padding:1px 7px; border-radius:9px; font-size:11.5px; color:var(--bad); border:1px solid var(--bad); }
+.contractNotice { display:flex; align-items:center; gap:12px; width:100%; text-align:left; color:var(--ink); font:inherit; border:1.5px solid var(--amber); cursor:pointer; }
+.contractNotice .rowSub { display:block; }
+.signDueIcon { font-size:24px; } .signDueGo { margin-left:auto; font-size:18px; color:var(--muted); }
 .hrToggle { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin:0 0 8px; }
 .hrFiles { margin-top:8px; }
 .hrFile { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13px; }
@@ -2674,6 +2685,11 @@ function afterLogin(){
   lsSet('gp-staff', JSON.stringify(S.auth));
   saveStaffCard();
   S.view='week';
+  /* back from signing on the portal: straight to My contract */
+  try { var qv=new URLSearchParams(location.search||'');
+    if(qv.get('view')==='mycontract'){ S.view='mycontract'; S.myc=null; }
+    /* back from filling out a contract with someone: their HR profile, fresh */
+    if(qv.get('view')==='hr' && qv.get('hr')){ S.view='hr'; S.hrTab='staff'; S.hrSub='person'; S.hrPersonId=qv.get('hr'); S.hrStaff=null; } } catch(e){}
   /* ONE request for everything this page needs. It used to be nine on top of the
      login — each verifying the same PIN, each re-rendering when it landed, so the
      page rebuilt itself nine times while it loaded. Sections that fail come back
@@ -2846,6 +2862,7 @@ function render(){
   else if(S.view==='ministry') m.innerHTML=myMinistryHtml();
   else if(S.view==='teamsdb') m.innerHTML=teamsDbHtml();
   else if(S.view==='hr') m.innerHTML=hrHtml();
+  else if(S.view==='mycontract') m.innerHTML=myContractHtml();
   else if(S.view==='hosp') m.innerHTML=hospHtml();
   else if(S.view==='sched') m.innerHTML=schedHtml();
   /* OKRs live on My Ministry's second tab now — anything still pointing at
@@ -3039,11 +3056,12 @@ function renderMenu(){
   var IC={"ministry":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01\"/></svg>","profile":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20.5c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg>","leave":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"16\" rx=\"2.5\"/><line x1=\"3.5\" y1=\"10\" x2=\"20.5\" y2=\"10\"/><path d=\"M8 8V3.5M16 8V3.5\"/><path d=\"M8.5 14.5l2 2 4-4\"/></svg>","sched":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18M9 9v12M15 9v12\"/></svg>","hosp":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 18V7\"/><path d=\"M3 14h18v4\"/><path d=\"M21 14v-2a3 3 0 0 0-3-3h-7v5\"/><circle cx=\"7\" cy=\"11\" r=\"2\"/></svg>","portal":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 4h11l5 5v11H4z\"/><path d=\"M15 4v5h5\"/><path d=\"M8 13h8M8 17h5\"/></svg>","hr":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2.5\"/><path d=\"M3 9h18\"/><path d=\"M8 2.5V6M16 2.5V6\"/><path d=\"M8 14h4M8 17.5h8\"/></svg>","admin":"<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z\"/><path d=\"M9 12l2 2 4-4\"/></svg>"};
   var it=function(id, label){ return { id:id, icon:IC[id], label:label }; };
   var hrN=(S.hrDue||0)+(S.hrFollowUps||0);
+  IC.mycontract='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>';
   IC.library='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>';
   var sections= S.guest ? [
     { title:'', items:[it('library', t('Library')), it('guestreg', t('Create my profile')), it('guestlogin', t('Log in'))] }
   ] : [
-    { title:'', items:[it('leave', t('Leave Request')), it('library', t('Library')), it('profile', t('Profile & settings'))] },
+    { title:'', items:[it('leave', t('Leave Request')), it('mycontract', t('My contract')), it('library', t('Library')), it('profile', t('Profile & settings'))] },
     { title:t('Operations'), items:[].concat(typeof dutyHtml==='function' ? [it('sched', t('Weekly schedules'))] : [], canHospClient_() ? [it('hosp', t('SR Hospitality'))] : []) },
     { title:t('Applications'), items:(S.me.isAdmin || S.me.portalStaff || S.me.portalAdmin || S.me.portal) ? [it('portal', t('YWAM GP Portal'))] : [] },
     { title:t('Admin'), items:[].concat((S.me.isAdmin || S.me.hr) ? [it('hr', t('HR')+(hrN ? ' · '+hrN : ''))] : [], S.me.isAdmin ? [it('admin', t('Admin'))] : []) }
@@ -3068,6 +3086,7 @@ function renderMenu(){
       S.menuOpen=false;
       if(id==='ministry'){ S.view='ministry'; render(); }
       else if(id==='leave'){ S.view='leave'; render(); }
+      else if(id==='mycontract'){ openMyContract_(); }
       else if(id==='library'){ S.view='library'; S.libBook=null; libLoad_(); render(); }
       else if(id==='guestreg' || id==='guestlogin'){ gpLeaveGuest_(id==='guestreg'); }
       else if(id==='profile'){ S.view='profile'; render(); }
@@ -4540,6 +4559,7 @@ function miniDashboardHtml(){
       '</div>'+
     '</div>'+
   '</div>';
+  h+=contractNoticeHtml_();
 
   if(open){
     h+='<div class="card">'+
@@ -5440,6 +5460,7 @@ function libOpen_(){ S.view='library'; S.libBook=null; S.libStep=null; S.libShel
    small picture; a new version of a paper asks everyone to sign again. */
 S.reqDocs=[]; S.required=null; S.reqDocId=null; S.reqOpened={}; S.reqAgree=false; S.reqName=''; S.reqSig=null; S.reqBusy=false;
 function reqItemLine_(x, other){
+  if(x.kind==='legal') return x.done ? gpT('Signed {date}',{date:teamDate_(String(x.at).slice(0,10))}) : other ? t('Not signed yet') : t('Read and sign — in My contract');
   if(x.kind==='contract'){
     if(other && !x.done) return x.state==='expired' ? t('Contract has run out') : t('No contract on file');
     return x.done ? gpT('On file — runs to {date}',{date:x.ends ? teamDate_(x.ends) : ''})
@@ -5452,22 +5473,27 @@ function reqTitle_(x){ return x.kind==='contract' ? t('Staff contract') : x.titl
 function reqRowsHtml_(R, opts){
   opts=opts||{};
   return R.items.map(function(x){
-    var tap = x.kind==='doc' && (opts.own || (opts.staffId && x.done));
-    var attrs = !tap ? '' : opts.own ? ' data-reqopen="'+esc(x.id)+'"' : ' data-reqsigof="'+esc(x.id)+'|'+esc(opts.staffId)+'"';
+    var mine = opts.own && (x.kind==='legal' || (x.kind==='contract' && x.done));
+    var tap = mine || (x.kind==='doc' && (opts.own || (opts.staffId && x.done)));
+    var attrs = !tap ? '' : mine ? ' data-reqmy="1"' : opts.own ? ' data-reqopen="'+esc(x.id)+'"' : ' data-reqsigof="'+esc(x.id)+'|'+esc(opts.staffId)+'"';
     return '<'+(tap?'button':'div')+' class="reqRow'+(x.done?' done':'')+'"'+attrs+'>'+
       '<span class="reqMark">'+(x.done?'✓':x.kind==='contract'?'📄':'✍️')+'</span>'+
       '<span class="reqText"><b>'+esc(reqTitle_(x))+'</b><span>'+esc(reqItemLine_(x, !!opts.staffId))+(tap && !opts.own ? ' · '+esc(t('View signature')) : '')+'</span></span>'+
       (tap?PCHEV:'')+'</'+(tap?'button':'div')+'>';
   }).join('');
 }
-/* My Home: only while something is left to do. */
-function reqHomeCardHtml_(){
+/* My contract: how much of the profile is done, and the papers HR asks
+   everyone to read and sign (the agreement and the contract are further down
+   the same page). */
+function reqMyContractCardHtml_(){
   var R=S.required;
-  if(!R || R.finished) return '';
+  if(!R) return '';
+  var papers={ items:(R.items||[]).filter(function(x){ return x.kind==='doc'; }) };
+  if(R.finished) return '<div class="reqOk" id="reqCard">✅ '+esc(t('Profile complete'))+'</div>';
   return '<div class="card reqCard" id="reqCard"><div class="reqHead"><span class="reqHeadIcon">✍️</span><span style="flex:1"><b>'+esc(t('Finish your profile'))+'</b>'+
     '<span class="reqHeadSub">'+esc(gpT('{n} of {m} done — every staff member signs these',{n:R.done, m:R.total}))+'</span></span></div>'+
     '<div class="reqBar"><span style="width:'+Math.round(R.done/Math.max(1,R.total)*100)+'%"></span></div>'+
-    reqRowsHtml_(R, { own:true })+'</div>';
+    (papers.items.length ? reqRowsHtml_(papers, { own:true }) : '')+'</div>';
 }
 /* My profile: always, done or not. */
 function reqProfileCardHtml_(){
@@ -5501,7 +5527,7 @@ function reqOpenDoc_(doc, btn){
 /* The page for one paper: read it, agree, name, signature, sign. */
 function reqSignHtml(){
   var doc=reqDocById_(S.reqDocId);
-  var back='<button class="linkbtn" id="reqBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+  var back='<button class="linkbtn" id="reqBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My contract'))+'</button>';
   if(!doc) return back+'<p class="sub">'+esc(t('This document is no longer on the list.'))+'</p>';
   var item=((S.required&&S.required.items)||[]).filter(function(x){ return x.id===doc.id; })[0]||{};
   var h=back+'<h2>✍️ '+esc(doc.title)+'</h2>';
@@ -5546,7 +5572,7 @@ function reqSigPad_(canvas, onChange){
 }
 function bindReqSign_(){
   var bk=document.getElementById('reqBack');
-  if(bk) bk.onclick=function(){ gpTap(); S.view='week'; S.reqDocId=null; render(); window.scrollTo(0,0); };
+  if(bk) bk.onclick=function(){ gpTap(); S.reqDocId=null; openMyContract_(); };
   var doc=reqDocById_(S.reqDocId); if(!doc) return;
   var rd=document.getElementById('reqRead');
   if(rd) rd.onclick=function(){ gpTap(); reqOpenDoc_(doc, rd); };
@@ -5592,6 +5618,7 @@ function reqShowSig_(docId, staffId, box){
 }
 /* Rows of a list that open the paper (yours) or a signature (admins / HR). */
 function bindReqRows_(){
+  document.querySelectorAll('[data-reqmy], #goMyContract').forEach(function(b){ b.onclick=function(){ gpTap(); openMyContract_(); }; });
   document.querySelectorAll('[data-reqopen]').forEach(function(b){
     b.onclick=function(){ gpTap(); S.reqDocId=b.getAttribute('data-reqopen'); S.reqAgree=false; S.reqName=''; S.reqSig=null; S.view='required'; render(); window.scrollTo(0,0); };
   });
@@ -6167,6 +6194,17 @@ function bindGStrengths(){
   };
 }
 
+function fmtDateShort_(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.toLocaleDateString(LANG==='km'?'km-KH':'en-GB',{ day:'numeric', month:'short', year:'numeric' }); }
+/* My Home: when their contract ends soon, or HR has sent a new one to sign —
+   tap through to My contract. (A missing or run-out contract is already on
+   the Finish your profile card.) */
+function contractNoticeHtml_(){
+  var R=S.required, c=R && (R.items||[]).filter(function(x){ return x.kind==='contract'; })[0];
+  if(!c) return '';
+  var msg = (c.done && c.soon) ? gpT('Your contract ends {date} — talk to HR about renewing',{date:teamDate_(c.ends)}) : '';
+  if(!msg) return '';
+  return '<button class="card contractNotice" id="goMyContract"><span class="signDueIcon">📄</span><span><b>'+esc(t('My contract'))+'</b><span class="rowSub">'+esc(msg)+'</span></span><span class="signDueGo">→</span></button>';
+}
 function homeHtml(){
   var wk=thisWeek();
   var phase=weekPhase();
@@ -6178,10 +6216,9 @@ function homeHtml(){
      strengths). Updates live in the bell (its red dot says when there is
      something new); Leave Request and Profile & settings are in the menu.
      The quick-jump chip strip is gone; the summary card's rows jump. */
-  /* Required papers first while any are left (Uriah: mandatory for every
-     profile) — it goes away once they are signed and the contract is on file. */
-  var h=reqHomeCardHtml_();
-  h+=miniDashboardHtml();
+  /* The papers to sign live in My contract (☰), not on My Home (Uriah);
+     a notice here only when the contract ends soon or a new one is ready. */
+  var h=miniDashboardHtml();
   h+=gpQueueBannerHtml_();
   h+=phaseBanner(phase, wk);
   h += goalsCardHtml(goalsViewWeek());
@@ -7760,7 +7797,7 @@ function bindHr(){
     S.hrLoading=true;
     run('hrList',[S.auth.user,S.auth.pin],function(d){
       S.hrLoading=false;
-      if(d && d.ok) S.hrStaff=d.staff;
+      if(d && d.ok){ S.hrStaff=d.staff; S.hrLegalDocs=d.legalDocs||[]; }
       else S.hrError = d && d.err==='not_authorized' ? t('Only HR or an admin can open this.') : (d && d.err) || t('The server answered without the staff list.');
       render();
     }, function(e){ S.hrLoading=false; S.hrError=(e && e.message) || t('Connection problem — try again.'); render(); });
@@ -7788,6 +7825,8 @@ function bindHr(){
   });
   var sa=document.getElementById('hrShowArchived');
   if(sa) sa.onchange=function(){ S.hrShowArchived=sa.checked; render(); };
+  document.querySelectorAll('[data-hrstatusf]').forEach(function(b){ b.onclick=function(){ gpTap(); S.hrStatusF=b.getAttribute('data-hrstatusf'); render(); }; });
+  document.querySelectorAll('[data-hrgroupby]').forEach(function(b){ b.onclick=function(){ gpTap(); S.hrGroupBy=b.getAttribute('data-hrgroupby'); render(); }; });
   var hs=document.getElementById('hrSearch');
   var hrFilter_=function(){
     var q=(S.hrSearch||'').trim().toLowerCase(), any=false;
@@ -7808,6 +7847,27 @@ function bindHr(){
   var pid=S.hrPersonId;
   var person=(S.hrStaff||[]).filter(function(x){ return x.id===pid; })[0];
   if(S.hrSub!=='person' || !person) return;
+  var sc=document.getElementById('hrSendContract');
+  if(sc) sc.onclick=function(){ gpTap(); var cur=hrCurrent_(person), paper=cur && !(cur.digital && cur.digital.status==='signed');
+    S.hrSendForm={ staffId:pid, from: paper ? cur.signed : todayStr().slice(0,7), years: paper ? cur.years : 2, redo: !!paper }; S.hrContractForm=null; render(); var el=document.getElementById('hrSendForm'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' }); };
+  var sf=document.getElementById('hr_send_from'); if(sf) sf.onchange=sf.oninput=function(){ S.hrSendForm.from=sf.value; };
+  var sy=document.getElementById('hr_send_years'); if(sy) sy.onchange=function(){ S.hrSendForm.years=Number(sy.value); };
+  var sx=document.getElementById('hrSendCancel'); if(sx) sx.onclick=function(){ S.hrSendForm=null; render(); };
+  var ss2=document.getElementById('hrSendSave');
+  if(ss2) ss2.onclick=function(){
+    if(S.busy) return; var f=S.hrSendForm; if(!f.from){ showMsg(t('Choose the month it starts.')); return; }
+    S.busy=true; render();
+    run('hrSendContract',[S.auth.user,S.auth.pin,pid,{ from:f.from, years:f.years }],function(d){
+      S.busy=false;
+      if(d && d.ok){ S.hrStaff=S.hrStaff.map(function(x){ return x.id===pid ? d.staff : x; }); S.hrSendForm=null;
+        location.href='portal.html?staff=1&hr='+encodeURIComponent(pid)+'&doc='+encodeURIComponent('contract:'+d.contractId); return; }
+      showMsg(hrFail_(d));
+      render();
+    }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  };
+  var openPdf_=function(b, fn, args){ b.disabled=true; run(fn, [S.auth.user,S.auth.pin].concat(args), function(d){ b.disabled=false; if(d && d.ok) hrOpenDataUrl_(d.dataUrl, d.name); else showMsg(hrFail_(d)); }, function(){ b.disabled=false; showMsg(t('Connection problem — try again.')); }); };
+  document.querySelectorAll('[data-hrlegalpdf]').forEach(function(b){ b.onclick=function(){ openPdf_(b, 'hrLegalPdf', [pid, b.getAttribute('data-hrlegalpdf')]); }; });
+  document.querySelectorAll('[data-hrcontractpdf]').forEach(function(b){ b.onclick=function(){ openPdf_(b, 'hrContractPdf', [pid, b.getAttribute('data-hrcontractpdf')]); }; });
   var ac=document.getElementById('hrAddContract');
   if(ac) ac.onclick=function(){ gpTap(); S.hrContractForm={ staffId:pid, id:'', signed:'', years:'', notes:'', campus:person.campus }; render(); var el=document.getElementById('hrContractForm'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
   document.querySelectorAll('[data-hredit]').forEach(function(b){
@@ -9128,7 +9188,10 @@ function teamsDashboardHtml_(campus, trips){
      countries they came from, then every other metric */
   var tiles=[{ name:t('Teams Hosted'), text:fmt(shown.length,''), has:shown.length>0 }];
   var vm=sum(function(tr){ return tripMetric_(tr, TEAM_AUTO_METRIC); }), ctry=teamCountries_(shown);
-  tiles.push({ name:t(TEAM_AUTO_METRIC), text:fmt(vm,''), has:vm!==null });
+  /* under the total, how many were men and how many women (each team's own head counts) */
+  var vmM=sum(function(tr){ return tr.males; }), vmF=sum(function(tr){ return tr.females; });
+  tiles.push({ name:t(TEAM_AUTO_METRIC), text:fmt(vm,''), has:vm!==null, id:'vmTile',
+    split: (vmM!==null || vmF!==null) ? gpT('{m} men · {w} women',{m:fmt(vmM,''), w:fmt(vmF,'')}) : '' });
   tiles.push({ name:t('Countries'), text:fmt(ctry.list.length,''), has:ctry.list.length>0 });
   metrics.forEach(function(m){ if(m===TEAM_AUTO_METRIC) return; var v=sum(function(tr){ return tripMetric_(tr, m); }); tiles.push({ name:t(m), text:fmt(v,m), has:v!==null }); });
   var rm=sum(function(tr){ return tr.reached&&tr.reached.male; }), rf=sum(function(tr){ return tr.reached&&tr.reached.female; });
@@ -9138,8 +9201,9 @@ function teamsDashboardHtml_(campus, trips){
   var list=S.mmDashAll?tiles:tiles.slice(0,6);
   var h='<h3>📈 '+esc(gpT('{period} at a glance',{period:teamPeriodLabel_()}))+'</h3><div class="mmGrid">';
   list.forEach(function(tl){
-    h+='<div class="mmTile'+(tl.has?'':' empty')+'"><div class="mmTileName">'+esc(tl.name)+'</div>'+
+    h+='<div class="mmTile'+(tl.has?'':' empty')+'"'+(tl.id?' id="'+tl.id+'"':'')+'><div class="mmTileName">'+esc(tl.name)+'</div>'+
       '<div class="mmTileNum">'+(tl.has?tl.text:'—')+'</div>'+
+      (tl.split ? '<div class="mmTileSplit">'+esc(tl.split)+'</div>' : '')+
       '<div class="mmTileSub">'+esc(gpT('{n} teams',{n:shown.length}))+'</div></div>';
   });
   h+='</div>';
@@ -9512,7 +9576,8 @@ function hrMonthLabel_(ym){ if(!ym) return ''; return t(MONTH_SHORT[Number(ym.sl
 function hrContractEnd_(c){ var y=Number(c.signed.slice(0,4)), m=Number(c.signed.slice(5,7))-1; return new Date(y, m+Math.round(Number(c.years)*12), 1); }
 function hrEndYm_(c){ var d=hrContractEnd_(c); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
 function hrDaysLeft_(c){ var now=new Date(); now.setHours(0,0,0,0); return Math.round((hrContractEnd_(c)-now)/86400000); }
-function hrCurrent_(p){ var l=p.contracts||[]; return l.length ? l[l.length-1] : null; }
+function hrInForce_(c){ return !c.digital || c.digital.status==='signed'; }
+function hrCurrent_(p){ var l=(p.contracts||[]).filter(hrInForce_); return l.length ? l[l.length-1] : null; }
 function hrStatus_(p){
   // label is the full sentence (banner, list line); short fits a chip
   if(p.archived) return { key:'archived', label:t('Archived'), short:t('Archived') };
@@ -9564,13 +9629,28 @@ function hrSpan_(since){
 }
 function hrYearsLabel_(n){ return Number(n)===1 ? t('1 year') : gpT('{n} years',{n:n}); }
 function hrYwamYears_(since){ var y=Number(since); if(!(y>=1960)) return 0; return Math.max(0, new Date().getFullYear()-y); }
+/* the HR list's filters: by where their contract stands, and who is still on paper */
+var HR_FILTERS_=[['all','All'],['expired','Expired'],['due','Renew soon'],['active','Current'],['none','No contract'],['paper','Paper only']];
+function hrIsDigital_(c){ return !!(c && c.digital && c.digital.status==='signed'); }
+function hrFilterHas_(p, f){
+  if(f==='all') return true;
+  var st=hrStatus_(p);
+  if(f==='paper'){ var c=hrCurrent_(p); return !!c && !hrIsDigital_(c); }
+  return st.key===f;
+}
+/* soonest end first (run out the longest ago at the very top), no contract last */
+function hrByEnd_(a, b){
+  var A=hrStatus_(a), B=hrStatus_(b), ra=A.days==null ? 1e9 : A.days, rb=B.days==null ? 1e9 : B.days;
+  return ra!==rb ? ra-rb : (a.name<b.name ? -1 : 1);
+}
 function hrStatusChip_(st){ return '<span class="hrChip '+st.key+'">'+esc(st.short)+'</span>'; }
 function hrRowHtml_(p){
   var st=hrStatus_(p), serving=hrServing_(p);
   return '<div data-hrrow="'+esc((p.name+' '+p.username).toLowerCase())+'"><button class="adminRow" data-hrperson="'+esc(p.id)+'">'+avatarHtml(p,'sm')+
     '<span class="adminRowText"><span class="rowName">'+esc(p.name)+'</span>'+
     '<span class="rowSub">'+esc(t(p.dept))+(p.ministry?' · '+esc(t(p.ministry)):'')+(serving?' · '+esc(serving):'')+(p.ywamSince?' · '+esc(gpT('{n} yrs in YWAM',{n:hrYwamYears_(p.ywamSince)})):'')+
-      ((st.key==='due'||st.key==='expired')?' · '+esc(st.label):'')+'</span></span>'+
+      ((st.key==='due'||st.key==='expired')?' · '+esc(st.label):'')+
+      (hrCurrent_(p) ? ' · '+(hrIsDigital_(hrCurrent_(p)) ? '✍️ '+esc(t('Digital')) : '📄 '+esc(t('Paper'))) : '')+'</span></span>'+
     hrStatusChip_(st)+'</button></div>';
 }
 function hrBackHtml_(to, label){
@@ -9623,12 +9703,22 @@ function hrHtml(){
   var shown = activeTab==='__other' ? other : pool.filter(function(x){ return x.campus===activeTab; });
   shown.sort(function(a,b){ return a.name<b.name?-1:1; });
   if(!shown.length) return h+'<p class="sub">'+esc(t('No accounts yet.'))+'</p>';
+  /* by contract: who has run out, who renews soon, then everyone else by when
+     theirs ends, no contract at the bottom — and who is still on paper */
+  var fs_=HR_FILTERS_.map(function(f){ return { id:f[0], label:t(f[1]), n:shown.filter(function(x){ return hrFilterHas_(x, f[0]); }).length }; });
+  var fon=fs_.some(function(f){ return f.id===S.hrStatusF; }) ? S.hrStatusF : 'all';
+  h+='<div class="deptChips hrStatusChips">'+fs_.map(function(f){ return '<button class="deptChip'+(fon===f.id?' on':'')+'" data-hrstatusf="'+f.id+'">'+esc(f.label)+' · '+f.n+'</button>'; }).join('')+'</div>';
+  var byMin = S.hrGroupBy==='ministry';
+  h+='<div class="leadFilters hrGroupBy"><button class="leadSeg'+(byMin?'':' on')+'" data-hrgroupby="end">'+esc(t('By contract end'))+'</button><button class="leadSeg'+(byMin?' on':'')+'" data-hrgroupby="ministry">'+esc(t('By ministry'))+'</button></div>';
+  var rows=shown.filter(function(x){ return hrFilterHas_(x, fon); });
   h+='<div id="hrList">';
-  staffGroups_(shown, activeTab==='__other' ? t('Other') : campusShort(activeTab)).forEach(function(g){
+  if(!rows.length) h+='<p class="sub">'+esc(t('No one here.'))+'</p>';
+  else if(byMin) staffGroups_(rows, activeTab==='__other' ? t('Other') : campusShort(activeTab)).forEach(function(g){
     if(!g.rows.length) return;
     h+='<div data-hrgroup="'+g.id+'"><div class="mentorLabel" style="margin:12px 0 6px">'+esc(g.label)+' · '+g.rows.length+'</div>'+
       '<div class="accCard adminList">'+g.rows.map(hrRowHtml_).join('')+'</div></div>';
   });
+  else h+='<div data-hrgroup="byend"><div class="accCard adminList" style="margin-top:10px">'+rows.slice().sort(hrByEnd_).map(hrRowHtml_).join('')+'</div></div>';
   h+='</div>';
   return h;
 }
@@ -9797,10 +9887,18 @@ function candPersonHtml_(c){
 function hrFileSize_(n){ n=Number(n)||0; return n>1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
 function hrContractCardHtml_(p, c, isCurrent){
   var h='<div class="card slim hrContract" data-hrcontract="'+esc(c.id)+'">';
-  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
+  h+='<div class="teamHead"><div style="min-width:0"><div class="rowName"><b>'+esc(c.digital && c.digital.status!=='signed' ? gpT('From {month}',{month:hrMonthLabel_(c.signed)}) : gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
     '<div class="rowSub">'+esc(gpT('Ends {month}',{month:hrMonthLabel_(hrEndYm_(c))}))+(isCurrent && !p.archived ? ' · '+esc(hrStatus_(p).label) : '')+'</div>'+
     (c.notes?'<div class="rowSub" style="margin-top:2px">'+esc(c.notes)+'</div>':'')+'</div>'+
     '<button class="linkbtn inline" data-hredit="'+esc(c.id)+'">'+esc(t('Edit'))+'</button></div>';
+  if(c.digital){
+    var dg=c.digital;
+    if(dg.status!=='signed') h+='<div class="hrDigital waiting">✍️ '+esc(gpT('Not signed yet — fill it out with {name}: they sign, then you sign to approve',{name:p.name}))+'</div>'+
+      '<a class="btn small" href="portal.html?staff=1&hr='+encodeURIComponent(p.id)+'&doc='+encodeURIComponent('contract:'+c.id)+'" data-hrfillout="'+esc(c.id)+'">✍️ '+esc(t('Fill out and sign now'))+'</a>';
+    else h+='<div class="hrDigital done">✅ '+esc(gpT('Signed by {name} · approved by {leader}',{name:dg.staffName||p.name, leader:dg.leaderName||''}))+'</div>'+
+      '<button class="btn ghost small" data-hrcontractpdf="'+esc(c.id)+'">📄 '+esc(t('Signed contract (PDF)'))+'</button>';
+    return h+'</div>';
+  }
   var files=c.files||[];
   if(files.length){
     h+='<div class="hrFiles">'+files.map(function(f){
@@ -9812,6 +9910,106 @@ function hrContractCardHtml_(p, c, isCurrent){
   }
   h+='<label class="btn ghost hrAttach">'+esc(t('Attach the signed contract'))+' (PDF / photo)'+
     '<input type="file" accept="application/pdf,image/*" data-hrattach="'+esc(c.id)+'" style="display:none"></label>';
+  return h+'</div>';
+}
+/* Fill out the Volunteer Staff Contract with them, in person, on this phone:
+   its first month and length (a paper one being redone keeps its own), then
+   the signing page — they sign, HR signs to approve. */
+function hrSendFormHtml_(p){
+  var f=S.hrSendForm;
+  return '<div class="card" id="hrSendForm"><h3 style="margin-top:0">✍️ '+esc(t('Fill out staff contract'))+'</h3><p class="sub" style="margin:0 0 8px">'+
+    esc(gpT('Do it together on this phone: {name} reads the Volunteer Staff Contract, fills in their commitment and signs. Then you sign to approve it, and it becomes their contract.',{name:p.name}))+'</p>'+
+    (f.redo ? '<p class="hint" style="margin:0 0 8px">'+esc(t('Redoing their paper contract? The month and years below are from it.'))+'</p>' : '')+
+    '<div class="teamGrid2"><div><label class="f">'+esc(t('From (month)'))+'</label><input type="month" id="hr_send_from" value="'+esc(f.from||'')+'"></div>'+
+    '<div><label class="f">'+esc(t('Years'))+'</label><select id="hr_send_years">'+[1,2,3].concat([1,2,3].indexOf(Number(f.years))===-1 ? [Number(f.years)] : []).map(function(y){ return '<option value="'+y+'"'+(Number(f.years)===y?' selected':'')+'>'+y+'</option>'; }).join('')+'</select></div></div>'+
+    '<button class="btn" id="hrSendSave"'+(S.busy?' disabled':'')+'>'+esc(gpT('Start — hand the phone to {name}',{name:(p.name||'').split(' ')[0]}))+'</button><button class="btn ghost" id="hrSendCancel">'+esc(t('Cancel'))+'</button></div>';
+}
+/* ==================== My contract (☰ menu, every staff member) ====================
+   Their own HR profile, read-only apart from their start dates: time in YWAM
+   and on each campus, their contracts and when the current one ends (HR
+   fills a new one out with them, in HR), and the legal documents —
+   the Child Protection Agreement and the forms applicants sign in the portal
+   — each signed here (or already in the portal) with its PDF. */
+function openMyContract_(){ S.view='mycontract'; S.myc=null; S.hrStartEdit=null; render(); window.scrollTo(0,0); }
+function myContractHtml(){
+  var back='<button class="linkbtn" id="mycBack" style="text-align:left;text-decoration:none;padding-left:0">← '+esc(t('My Home'))+'</button>';
+  var d=S.myc;
+  if(!d) return back+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div>';
+  if(!d.ok) return back+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Could not load — try again.'))+'</p></div>';
+  var p=d.me, st=hrStatus_(p), cur=hrCurrent_(p);
+  var h=back+'<h2 style="margin:4px 0 10px">📄 '+esc(t('My contract'))+'</h2>';
+  h+=reqMyContractCardHtml_();
+  h+='<div class="card"><div class="adminPersonHead">'+avatarHtml(p,'lg')+'<div style="min-width:0"><div class="pname">'+esc(p.name)+'</div>'+
+    '<div class="pmeta">'+esc(campusName(p.campus))+' · '+esc(t(p.dept))+(p.ministry?' · '+esc(t(p.ministry)):'')+(p.role?' · '+esc(p.role):'')+'</div>'+
+    hrStartsHtml_(p, true)+'</div></div>';
+  h+='<div class="hrBanner '+st.key+'">'+(st.key==='none'?'📝':st.key==='expired'?'🔴':st.key==='due'?'🟠':'🟢')+' <b>'+esc(st.key==='none' ? t('No contract on file yet — HR adds it') : st.key==='due' ? gpT('Ends in {n} days — talk to HR about renewing',{n:st.days}) : st.label)+'</b>'+
+    (cur ? '<span class="rowSub"> · '+esc(gpT('Signed {month}',{month:hrMonthLabel_(cur.signed)}))+' · '+esc(hrYearsLabel_(cur.years))+'</span>' : '')+'</div></div>';
+  var list=(p.contracts||[]).filter(function(c){ return !(c.digital && c.digital.status!=='signed'); }).slice().reverse();
+  h+='<h3>📄 '+esc(t('Contracts'))+'</h3>';
+  if(!list.length) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No contract on file yet. HR fills it out with you.'))+'</p></div>';
+  list.forEach(function(c){
+    var dg=c.digital;
+    h+='<div class="card slim hrContract" data-myc="'+esc(c.id)+'"><div class="rowName"><b>'+esc(gpT('Signed {month}',{month:hrMonthLabel_(c.signed)}))+'</b> · '+esc(hrYearsLabel_(c.years))+' <span class="hrCampusTag">'+esc(campusName(hrContractCampus_(p, c)))+'</span></div>'+
+      '<div class="rowSub">'+esc(gpT('Ends {month}',{month:hrMonthLabel_(hrEndYm_(c))}))+(cur && c.id===cur.id ? ' · '+esc(st.label) : '')+'</div>'+
+      (dg ? '<button class="btn ghost small" data-myccontractpdf="'+esc(c.id)+'">📄 '+esc(t('Signed contract (PDF)'))+'</button>'
+        : '<div class="rowSub" style="margin-top:4px">'+esc(t('On file with HR'))+'</div>')+'</div>';
+  });
+  var docs=d.legalDocs||[], l=p.legal||{}, n=docs.filter(function(x){ return l[x.id]; }).length;
+  h+='<h3>✍️ '+esc(t('Legal documents'))+' <small>· '+n+'/'+docs.length+'</small></h3><div class="card slim" id="mycLegal">';
+  if(!l.child) h+='<p class="sub" style="margin:0 0 6px">'+esc(t('Everyone reads and signs the revised Child Protection Agreement.'))+'</p>';
+  h+=docs.map(function(x){ var g=l[x.id];
+    return '<div class="hrLegalRow" data-myclegal="'+esc(x.id)+'"><span class="hrLegalName">'+(g?'✅':'⬜')+' '+esc(x.title)+'</span>'+
+      (g ? '<span class="rowSub">'+esc(fmtDateShort_(g.at))+(g.from==='portal'?' · '+esc(t('in the portal')):'')+'</span><button class="linkbtn inline" data-myclegalpdf="'+esc(x.id)+'">📄 PDF</button>'
+         : '<a class="btn small" href="portal.html?staff=1&doc='+encodeURIComponent(x.id)+'">'+esc(t('Read and sign'))+'</a>')+'</div>'; }).join('');
+  return h+'</div>';
+}
+function bindMyContract_(){
+  var bk=document.getElementById('mycBack'); if(bk) bk.onclick=function(){ gpTap(); S.view='week'; render(); window.scrollTo(0,0); };
+  if(!S.myc){
+    if(S.mycLoading) return; S.mycLoading=true;
+    run('myContract',[S.auth.user,S.auth.pin],function(d){ S.mycLoading=false; S.myc=d||{ ok:false }; if(d && d.required) S.required=d.required; render(); }, function(){ S.mycLoading=false; S.myc={ ok:false }; render(); });
+    return;
+  }
+  if(!S.myc.ok) return;
+  var p=S.myc.me;
+  var pdf=function(b, fn, args){ b.disabled=true; run(fn, [S.auth.user,S.auth.pin].concat(args), function(r){ b.disabled=false; if(r && r.ok) hrOpenDataUrl_(r.dataUrl, r.name); else showMsg(t('Could not open the file')); }, function(){ b.disabled=false; showMsg(t('Connection problem — try again.')); }); };
+  document.querySelectorAll('[data-myclegalpdf]').forEach(function(b){ b.onclick=function(){ pdf(b, 'hrLegalPdf', ['', b.getAttribute('data-myclegalpdf')]); }; });
+  document.querySelectorAll('[data-myccontractpdf]').forEach(function(b){ b.onclick=function(){ pdf(b, 'hrContractPdf', ['', b.getAttribute('data-myccontractpdf')]); }; });
+  /* their own start dates — the same boxes HR has */
+  document.querySelectorAll('[data-hrstartedit]').forEach(function(b){ b.onclick=function(){ gpTap(); var k=b.getAttribute('data-hrstartedit'), st=k==='ywam' ? null : hrStartOf_(p, k.slice(6));
+    S.hrStartEdit={ staffId:p.id, key:k, value: k==='ywam' ? (p.ywamSince==null?'':String(p.ywamSince)) : (st ? st.month : '') }; render(); var el=document.getElementById('hr_start'); if(el) el.focus(); }; });
+  var se=S.hrStartEdit && S.hrStartEdit.staffId===p.id ? S.hrStartEdit : null; if(!se) return;
+  var sin=document.getElementById('hr_start'); if(sin) sin.oninput=sin.onchange=function(){ se.value=sin.value; };
+  var scn=document.getElementById('hrStartCancel'); if(scn) scn.onclick=function(){ S.hrStartEdit=null; render(); };
+  var ss=document.getElementById('hrStartSave');
+  if(ss) ss.onclick=function(){
+    if(S.busy) return;
+    var v=String(se.value||'').trim(), body={};
+    if(se.key==='ywam'){
+      if(v && !(/^\d{4}$/.test(v) && Number(v)>=1960 && Number(v)<=new Date().getFullYear())){ showMsg(t('Started with YWAM: a year like 2003, or leave it empty.')); return; }
+      body.ywamSince = v ? Number(v) : '';
+    } else {
+      if(v && (!/^\d{4}-\d{2}$/.test(v) || v>todayStr().slice(0,7))){ showMsg(t('Pick the month you started here, or leave it empty.')); return; }
+      body.starts={}; body.starts[se.key.slice(6)]=v;
+    }
+    S.busy=true; ss.disabled=true;
+    run('mySaveStart',[S.auth.user,S.auth.pin,body],function(r){
+      S.busy=false;
+      if(r && r.ok){ S.myc.me=Object.assign({}, S.myc.me, r.staff); S.hrStartEdit=null; showMsg(t('Start dates saved')); }
+      else showMsg(r && r.err==='base_before_ywam' ? t('You can’t have started here before you joined YWAM.') : t('Could not save — try again.'));
+      render();
+    }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  };
+}
+/* the five legal documents each staff member signs once */
+function hrLegalHtml_(p){
+  var docs=S.hrLegalDocs||[]; if(!docs.length) return '';
+  var l=p.legal||{}, n=docs.filter(function(d){ return l[d.id]; }).length;
+  var h='<h3>✍️ '+esc(t('Legal documents'))+' <small>· '+n+'/'+docs.length+'</small></h3><div class="card slim" id="hrLegal">';
+  if(n<docs.length) h+='<p class="sub" style="margin:0 0 6px">'+esc(t('They sign these in My contract (☰ menu). Ones signed in the portal as an applicant count too.'))+'</p>';
+  h+=docs.map(function(d){ var s=l[d.id];
+    return '<div class="hrLegalRow" data-hrlegal="'+esc(d.id)+'"><span class="hrLegalName">'+(s?'✅':'⬜')+' '+esc(d.title)+(s && s.disclose ? ' <span class="hrFlag">'+esc(t('has something to disclose privately'))+'</span>' : '')+'</span>'+
+      (s ? '<span class="rowSub">'+esc(fmtDateShort_(s.at))+'</span><button class="linkbtn inline" data-hrlegalpdf="'+esc(d.id)+'">📄 PDF</button>' : '<span class="rowSub">'+esc(t('Not yet'))+'</span>')+'</div>'; }).join('');
   return h+'</div>';
 }
 function hrContractFormHtml_(p){
@@ -9832,7 +10030,7 @@ function hrContractFormHtml_(p){
 /* The starts in the profile at the top: In YWAM, then Serving YWAM GP (both
    campuses together) with each campus's time under it. Each has a small ✏️
    that opens right there; a campus they haven't served on can be added. */
-function hrStartsHtml_(p){
+function hrStartsHtml_(p, self){
   var e=S.hrStartEdit && S.hrStartEdit.staffId===p.id ? S.hrStartEdit : null;
   var edit=function(k, label){ return '<button class="linkbtn inline hrStartEdit" data-hrstartedit="'+esc(k)+'" aria-label="'+esc(label||t('Edit'))+'">✏️</button>'; };
   var box=function(input){ return '<div class="pmeta hrStartBox" id="hrStartBox">'+input+'<button class="btn small" id="hrStartSave">'+esc(t('Save'))+'</button><button class="linkbtn inline" id="hrStartCancel">'+esc(t('Cancel'))+'</button></div>'; };
@@ -9852,7 +10050,7 @@ function hrStartsHtml_(p){
   CAMPUSES.forEach(function(x){
     if(per.some(function(y){ return y.campus===x.id; })) return;
     if(e && e.key==='start:'+x.id){ h+=monthBox(x.id); return; }
-    h+='<button class="linkbtn inline hrAddCampus" data-hrstartedit="start:'+esc(x.id)+'">＋ '+esc(x.id===p.campus ? gpT('Add when they started in {campus}',{campus:campusName(x.id)}) : gpT('Add time in {campus}',{campus:campusName(x.id)}))+'</button>';
+    h+='<button class="linkbtn inline hrAddCampus" data-hrstartedit="start:'+esc(x.id)+'">＋ '+esc(x.id===p.campus ? gpT(self ? 'Add when you started in {campus}' : 'Add when they started in {campus}',{campus:campusName(x.id)}) : gpT('Add time in {campus}',{campus:campusName(x.id)}))+'</button>';
   });
   return h+'</div>';
 }
@@ -9878,7 +10076,10 @@ function hrPersonHtml_(p){
   if(!list.length && !S.hrContractForm) h+='<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No contract on file yet. Add the one from the paper folder.'))+'</p></div>';
   list.forEach(function(c){ h+=hrContractCardHtml_(p, c, cur && c.id===cur.id); });
   if(S.hrContractForm && S.hrContractForm.staffId===p.id) h+=hrContractFormHtml_(p);
-  else h+='<button class="btn" id="hrAddContract" style="margin-top:0">＋ '+esc(list.length ? t('Add a renewal') : t('Add a contract'))+'</button>';
+  else if(S.hrSendForm && S.hrSendForm.staffId===p.id) h+=hrSendFormHtml_(p);
+  else if(!p.archived) h+='<div class="hrContractBtns"><button class="btn" id="hrSendContract" style="margin-top:0">✍️ '+esc(t('Fill out staff contract'))+'</button>'+
+    '<button class="btn ghost" id="hrAddContract" style="margin-top:0">＋ '+esc(list.length ? t('Add a paper renewal') : t('Add a paper contract'))+'</button></div>';
+  h+=hrLegalHtml_(p);
 
   if(!p.archived){
     var d=S.hrArchiveDraft && S.hrArchiveDraft.staffId===p.id ? S.hrArchiveDraft : { at:todayStr(), reason:'' };
@@ -9940,7 +10141,9 @@ function hospDaily_(list, start, end, skip){
 }
 function hospReqNeed_(q){ var n=Number(q.size)||0; var mf=(Number(q.males)||0)+(Number(q.females)||0); return Math.max(n, mf); }
 // the team requests nobody has booked yet, as bookings-to-be (for "if they all come")
-function hospOpenReqs_(H){ return (H.requests||[]).filter(function(q){ return !q.bookingId; }).map(function(q){ return { id:'req_'+q.tripId, from:q.from, to:q.to, count:hospReqNeed_(q) }; }); }
+/* teams cancelled or deleted with beds still booked for them */
+function hospGoneReqs_(H){ return (H.requests||[]).filter(function(q){ return q.cancelled; }); }
+function hospOpenReqs_(H){ return (H.requests||[]).filter(function(q){ return !q.bookingId && !q.cancelled; }).map(function(q){ return { id:'req_'+q.tripId, from:q.from, to:q.to, count:hospReqNeed_(q) }; }); }
 /* Does a stay of `need` people over [from, to) fit? Against the tightest night. */
 function hospFit_(H, from, to, need, skip){
   var cap=hospCap_(H), d=hospDaily_(H.bookings, from, to, skip), peak=0;
@@ -9999,14 +10202,14 @@ function hospDashHtml_(H){
     if(k.from>=today && k.from<wkEnd) arriving+=Number(k.count)||0;
     if(!k.permanent && k.to>=today && k.to<wkEnd) leaving+=Number(k.count)||0;
   });
-  var waiting=hospOpenReqs_(H).length;
+  var waiting=hospOpenReqs_(H).length, goneN=hospGoneReqs_(H).length;
   h+='<button class="btn" id="hospNewBtn" style="margin-top:0">＋ '+esc(t('New booking'))+'</button>';
   var tile=function(id, name, num, sub){ return '<div class="mmTile" data-hosptile="'+id+'"><div class="mmTileName">'+esc(name)+'</div><div class="mmTileNum">'+esc(String(num))+'</div>'+(sub?'<div class="mmTileSub">'+esc(sub)+'</div>':'')+'</div>'; };
   h+='<div class="mmGrid">'+
     tile('tonight', t('Here tonight'), tonight, cap ? gpT('{pct}% full',{pct:Math.round(tonight/cap*100)}) : '')+
     tile('free', t('Beds free tonight'), Math.max(0,cap-tonight), gpT('of {n} beds',{n:cap}))+
     tile('arriving', t('Arriving in 7 days'), arriving, gpT('{n} leaving',{n:leaving}))+
-    tile('requests', t('Team requests'), waiting, waiting ? t('waiting for beds') : t('all booked'))+'</div>';
+    tile('requests', t('Team requests'), waiting, goneN ? gpT('{n} cancelled — free the beds',{n:goneN}) : waiting ? t('waiting for beds') : t('all booked'))+'</div>';
   // who is here tonight, by kind of guest
   var by={};
   H.bookings.forEach(function(k){ if(k.from<=today && today<hospEnd_(k)) by[k.category]=(by[k.category]||0)+(Number(k.count)||0); });
@@ -10047,6 +10250,10 @@ function hospDashHtml_(H){
   return h;
 }
 function hospReqCardHtml_(H, q){
+  if(q.cancelled) return '<div class="card slim hospReq hospGone" data-hospreq="'+esc(q.tripId)+'"><div class="rowName"><b>'+esc(q.name)+'</b> <span class="teamStat hospFit no" data-cancelled>✕ '+esc(q.cancelled==='deleted' ? t('Deleted') : t('Cancelled'))+'</span></div>'+
+    '<div class="rowSub">📅 '+esc(hospRange_(q))+(q.count?' · 🛏 '+esc(gpT('{n} beds still booked',{n:q.count})):'')+'</div>'+
+    '<div class="rowSub">'+esc(q.cancelled==='deleted' ? t('This team was deleted. Their beds are still booked — free them if they are not coming.') : t('This team was cancelled. Their beds are still booked — free them if they are not coming.'))+'</div>'+
+    '<div class="hospActions"><button class="btn small" data-hospfree="'+esc(q.bookingId)+'">'+esc(t('Free the beds'))+'</button><button class="btn ghost small" data-hospedit="'+esc(q.bookingId)+'">'+esc(t('Open booking'))+'</button></div></div>';
   var need=hospReqNeed_(q), f=hospFit_(H, q.from, q.to, need);
   var h='<div class="card slim hospReq" data-hospreq="'+esc(q.tripId)+'">';
   h+='<div class="rowName"><b>'+esc(q.name)+'</b>'+(q.pending?' <span class="teamStat pending" data-pending>⏳ '+esc(t('Pending'))+'</span>':'')+'</div>';
@@ -10064,7 +10271,8 @@ function hospReqsHtml_(H){
   var reqs=H.requests||[];
   var h='<p class="sub" style="margin:0 0 10px">'+esc(t('Every team in the Teams Database that hasn’t left yet. Pending teams applied on the portal and haven’t confirmed flights.'))+'</p>';
   if(!reqs.length) return h+'<div class="card slim"><p class="sub" style="margin:0">'+esc(t('No upcoming teams.'))+'</p></div>';
-  var open=reqs.filter(function(q){ return !q.bookingId; }), done=reqs.filter(function(q){ return q.bookingId; });
+  var gone=hospGoneReqs_(H), open=reqs.filter(function(q){ return !q.bookingId && !q.cancelled; }), done=reqs.filter(function(q){ return q.bookingId && !q.cancelled; });
+  if(gone.length) h+='<h3>'+esc(t('Cancelled — beds still booked'))+' <small>· '+gone.length+'</small></h3><div class="hospGrid">'+gone.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>'+(open.length?'<h3>'+esc(t('Waiting for beds'))+' <small>· '+open.length+'</small></h3>':'');
   h+='<div class="hospGrid">'+open.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>';
   if(done.length) h+='<h3>'+esc(t('Booked'))+' <small>· '+done.length+'</small></h3><div class="hospGrid">'+done.map(function(q){ return hospReqCardHtml_(H, q); }).join('')+'</div>';
   return h;
@@ -10073,7 +10281,8 @@ function hospBookingCardHtml_(H, k, idx){
   var c=hospCat_(k.category);
   var names=k.bedIds.map(function(id){ var x=idx[id]; return x ? x.room.name+' '+x.bed.label+(k.bedNames && k.bedNames[id] ? ' · '+k.bedNames[id] : '') : ''; }).filter(Boolean);
   var h='<button class="card slim hospBooking hospCat '+c[0]+'" data-hospedit="'+esc(k.id)+'">';
-  h+='<div class="rowName"><b>'+esc(k.name)+'</b> <span class="teamStat">'+c[2]+' '+esc(t(c[1]))+'</span></div>';
+  var gq=k.tripId && hospGoneReqs_(H).filter(function(q){ return q.bookingId===k.id; })[0];
+  h+='<div class="rowName"><b>'+esc(k.name)+'</b> <span class="teamStat">'+c[2]+' '+esc(t(c[1]))+'</span>'+(gq?' <span class="teamStat hospFit no" data-cancelled>✕ '+esc(gq.cancelled==='deleted' ? t('Deleted') : t('Cancelled'))+'</span>':'')+'</div>';
   h+='<div class="rowSub">📅 '+esc(hospRange_(k))+'</div>';
   h+='<div class="rowSub">👥 '+esc(hospPeople_(k))+((k.people||[]).length ? ' · '+esc(gpT('{n} named',{n:k.people.length})) : '')+'</div>';
   h+='<div class="rowSub">🛏 '+(names.length ? esc(names.join(', ')) : '')+
@@ -10664,7 +10873,7 @@ function hospHtml(){
   if(S.hospForm) return h+hospFormHtml_(H)+'</div>';
   if(S.hospRoom) return h+hospRoomFormHtml_(H)+'</div>';
   var tab=['dash','req','cal','book','staff','rooms'].indexOf(S.hospTab)>-1 ? S.hospTab : 'dash';
-  var nReq=hospOpenReqs_(H).length;
+  var nReq=hospOpenReqs_(H).length+hospGoneReqs_(H).length;
   h+='<div class="hospTabs">'+[['dash','📊','Overview'],['req','👥','Requests'],['cal','📅','Calendar'],['book','🛏','Bookings'],['staff','🛌','Staff'],['rooms','🏠','Rooms']].map(function(x){
     return '<button class="hospTab'+(tab===x[0]?' on':'')+'" data-hosptab="'+x[0]+'"><span>'+x[1]+'</span>'+esc(t(x[2]))+(x[0]==='req'&&nReq?' <b class="hospBadge">'+nReq+'</b>':'')+'</button>'; }).join('')+'</div>';
   if(tab==='req') h+=hospReqsHtml_(H);
@@ -10771,6 +10980,11 @@ function bindHosp(){
   document.querySelectorAll('[data-hospedit]').forEach(function(b){ b.onclick=function(){
     var k=S.hosp.bookings.filter(function(x){ return x.id===b.getAttribute('data-hospedit'); })[0];
     if(!k) return; gpTap(); S.hospForm=JSON.parse(JSON.stringify(k)); S.hospBedPick=null; render(); top('hospFormCard'); }; });
+  document.querySelectorAll('[data-hospfree]').forEach(function(b){ b.onclick=function(){
+    var id=b.getAttribute('data-hospfree'), k=(S.hosp.bookings||[]).filter(function(x){ return x.id===id; })[0];
+    if(!confirm(gpT('Free the beds booked for “{name}”? The booking is deleted.',{name:k ? k.name : ''}))) return;
+    send('hospDelete', ['booking', id], function(){ showMsg(t('Beds freed')); }, b);
+  }; });
   document.querySelectorAll('[data-hospbookreq]').forEach(function(b){ b.onclick=function(){
     var q=(S.hosp.requests||[]).filter(function(x){ return x.tripId===b.getAttribute('data-hospbookreq'); })[0];
     if(!q) return; gpTap();
@@ -14199,6 +14413,7 @@ function bindAway(){
   if(S.view==='library') bindLibrary_();
   if(S.view==='required') bindReqSign_();
   if(S.guest) bindGuest_();
+  if(S.view==='mycontract') bindMyContract_();
   bindReqRows_();
   ['libHomeTile','personBooks','profBooks'].forEach(function(id){ var b=document.getElementById(id); if(b) b.onclick=function(){ gpTap(); libOpen_(); }; });
   if(S.view==='admin' && S.adminSub==='groups') bindAdminGroups_();

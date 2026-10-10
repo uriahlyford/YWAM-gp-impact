@@ -48,7 +48,10 @@ header { display:flex; justify-content:space-between; align-items:center; gap:12
 .brandTitle { font-weight:600; font-size:16px; letter-spacing:.2px; white-space:nowrap; }
 .brandSub { display:none; }
 .hbtns { display:flex; gap:8px; align-items:center; }
-.hbtn { border:1px solid var(--border2); background:transparent; color:var(--ink); border-radius:999px; padding:7px 14px; font-size:13px; cursor:pointer; }
+.hbtn { border:1px solid var(--border2); background:transparent; color:var(--ink); border-radius:999px; padding:7px 14px; font-size:13px; cursor:pointer; white-space:nowrap; }
+/* on a phone the title gives way to the buttons — never under them */
+.hbtns { flex:0 0 auto; } .brandRow > div { min-width:0; } .brandTitle { overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:420px) { header { padding-left:14px; padding-right:14px; gap:8px; } .brandRow { gap:8px; } .logoImg { height:28px; } .brandTitle { font-size:15px; white-space:normal; line-height:1.15; } .hbtns { gap:6px; } .hbtn { padding:6px 10px; } }
 .hbtn:hover { border-color:var(--ink); }
 body.gate header { flex-direction:column; justify-content:center; gap:14px; border-bottom:0; padding:calc(48px + env(safe-area-inset-top)) 20px 8px; text-align:center; }
 body.gate .brandRow { flex-direction:column; gap:14px; }
@@ -59,6 +62,7 @@ body.gate .hbtns { position:absolute; top:calc(14px + env(safe-area-inset-top));
 body.gate main { padding-top:12px; }
 /* ---- type & layout ---- */
 main { padding:20px 16px 48px; max-width:1100px; margin:0 auto; }
+@media (min-width:1200px) { body.wideStaff main { max-width:1400px; } }
 h1 { font-size:28px; font-weight:700; letter-spacing:-.3px; margin:0 0 4px; line-height:1.15; }
 h2 { font-size:20px; font-weight:600; margin:0 0 4px; }
 h3 { font-size:13px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); margin:18px 0 10px; }
@@ -172,7 +176,7 @@ textarea { min-height:80px; resize:vertical; }
 .rosterRow:last-child { border-bottom:0; }
 .rosterRow.busy { opacity:.5; }
 .rosterName { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; font-size:14px; }
-.rosterName b { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rosterName b { font-weight:600; overflow-wrap:anywhere; }   /* a full name wraps, never cut off */
 .rosterTally { font-size:12.5px; color:var(--muted); margin:0 0 4px; }
 .avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; flex:0 0 44px; background:var(--surface2); }
 .avatar.ph { display:inline-flex; align-items:center; justify-content:center; color:var(--muted); font-weight:700; font-size:14px; border:1px dashed var(--border2); }
@@ -310,6 +314,49 @@ textarea { min-height:80px; resize:vertical; }
 .tripBox .kv, .hospBox { font-size:14px; }
 .hospBox { margin-top:10px; }
 .hospBox textarea { width:100%; margin-top:6px; font-family:inherit; font-size:14px; line-height:1.5; }
+.signPage { max-width:640px; }
+.signWho { display:grid; gap:8px; }
+.signWhoBtn { display:flex; justify-content:space-between; align-items:center; gap:10px; text-align:left; padding:12px 14px; border:1px solid var(--border); border-radius:var(--rSm); background:var(--surface); color:var(--ink); font:inherit; cursor:pointer; }
+.signWhoBtn:hover { border-color:var(--ink); } .signWhoBtn.done { opacity:.65; } .signWhoBtn .hint { margin:0; white-space:nowrap; }
+.signProg { display:flex; gap:6px; justify-content:center; margin:0 0 10px; }
+.signDot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; border:1px solid var(--border); color:var(--muted); background:var(--surface); }
+.signDot.on { border-color:var(--ink); color:var(--ink); } .signDot.done { background:var(--good); border-color:var(--good); color:#fff; }
+.signH { font-size:17px; margin:18px 0 6px; font-family:Georgia, 'Times New Roman', serif; font-weight:600; } .signH.num { font-size:15px; margin:14px 0 4px; }
+.signLetterhead { display:block; width:100%; max-width:460px; height:auto; margin:4px auto 8px; }
+.signTitle { text-align:center; margin:4px 0 14px; font-size:20px; line-height:1.3; } .signList { margin:0 0 10px; padding-left:20px; font-size:14.5px; line-height:1.55; } .signList li { margin:0 0 6px; }
+.signChoice { border-radius:var(--rSm); margin:0 0 6px; } .signChoice .signCheck input { border-radius:50%; }
+.signContacts { margin:0 0 10px; } .signPeriod { margin:0 0 10px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--rSm); }
+.signP { font-size:14.5px; line-height:1.6; margin:0 0 10px; } .signP.italic { font-style:italic; color:var(--muted); } .signP.quote { font-style:italic; border-left:3px solid var(--border); padding:4px 0 4px 12px; margin-left:2px; } .signP.bold { font-weight:700; }
+.signCheck { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:0 0 8px; border:1px solid var(--border); border-radius:var(--rSm); font-size:14.5px; line-height:1.5; cursor:pointer; }
+.signCheck input { width:20px; height:20px; flex:0 0 auto; margin-top:2px; accent-color:var(--ink); }
+.signGroup { border:1px solid var(--border); border-radius:var(--rSm); margin:0 0 10px; padding:2px 12px 4px; } .signGroup .signCheck { border:0; padding:8px 0 2px; margin:0; }
+.signGroup ul { margin:4px 0 8px; padding-left:22px; font-size:14px; line-height:1.55; } .signGroup li { margin:0 0 4px; }
+.miss, .signCheck.miss, .signGroup.miss, input.miss { border-color:var(--bad) !important; box-shadow:0 0 0 2px color-mix(in srgb, var(--bad) 25%, transparent); }
+.signHere { margin-top:16px; padding-top:12px; border-top:2px solid var(--ink); }
+.signGuard, .signWit { margin-top:14px; padding-top:10px; border-top:1px dashed var(--border2); } .signWit summary { cursor:pointer; font-weight:600; font-size:14px; }
+.sigWrap { margin:10px 0 4px; } .sigLabel { font-size:13px; font-weight:600; margin:0 0 4px; }
+.sigPad { display:block; width:100%; height:150px; border:1.5px dashed var(--border2); border-radius:var(--rSm); background:#fff; touch-action:none; cursor:crosshair; }
+.sigWrap.small .sigPad { max-width:260px; height:90px; } .sigWrap.signed .sigPad { border-style:solid; border-color:var(--good); } .sigWrap.miss .sigPad { border-color:var(--bad); border-style:solid; }
+.sigFoot { display:flex; justify-content:space-between; align-items:center; margin-top:2px; } .sigFoot .hint { margin:0; }
+.signDone { text-align:center; } .signBig { font-size:44px; }
+.legalGrid { display:grid; gap:0; border:1px solid var(--border); border-radius:var(--rSm); overflow-x:auto; font-size:13px; }
+.legalGrid > div { padding:7px 8px; border-bottom:1px solid var(--border); min-width:0; }
+.lgHead { font-weight:700; font-size:11.5px; color:var(--muted); background:var(--surface2); } .lgName { font-weight:600; }
+.lgCell { display:flex; flex-direction:column; gap:2px; } .lgCell.ok span { color:var(--good); font-weight:600; } .lgCell.no { color:var(--muted); }
+.legalDocRow { display:grid; grid-template-columns:40px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-top:1px solid var(--border); }
+.legalDocRow:first-child { border-top:0; } .legalPreview { padding:4px 0 10px 50px; font-size:14px; } .legalPreview ul { padding-left:20px; } .legalPreview { padding-left:0; } .legalPreview .legalPaper { border:1px solid var(--border); border-radius:var(--rSm); padding:14px; background:var(--card, #fff); }
+.ptabs { position:sticky; top:0; z-index:5; display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; margin:12px -4px 12px; padding:6px 4px; background:var(--surface); border-bottom:1px solid var(--border); }
+.ptabs::-webkit-scrollbar { display:none; }
+.ptab { flex:0 0 auto; border:1px solid var(--border); background:transparent; color:var(--muted); font:inherit; font-size:13px; font-weight:600; padding:7px 11px; border-radius:999px; cursor:pointer; white-space:nowrap; }
+.ptab:hover { color:var(--ink); } .ptab.on { background:var(--ink); color:var(--accentInk); border-color:var(--ink); }
+.ptab .n { display:inline-block; min-width:18px; padding:0 5px; margin-left:3px; border-radius:9px; font-size:11px; line-height:17px; text-align:center; background:var(--surface2); color:var(--ink); }
+.ptab.on .n { background:rgba(255,255,255,.22); color:inherit; }
+.ptabBody > h3:first-child, .ptabBody > .panelHead:first-child { margin-top:0; }
+.panelFoot { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border); }
+.ansFold { border:1px solid var(--border); border-radius:var(--rSm); margin:0 0 8px; }
+.ansFold > summary { cursor:pointer; padding:9px 12px; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px; }
+.ansFold > summary .n { margin-left:auto; color:var(--muted); font-weight:600; font-size:12px; }
+.ansFold > .ansSec { padding:0 12px 8px; }
 .staffNav { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 16px; padding:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); }
 .staffNavBtn { flex:1 1 auto; border:0; background:transparent; color:var(--muted); font:inherit; font-size:13.5px; font-weight:600; padding:9px 12px; border-radius:var(--rSm); cursor:pointer; white-space:nowrap; }
 .staffNavBtn:hover { color:var(--ink); }
@@ -358,7 +405,8 @@ body.menuOn { overflow:hidden; }
 .tile { background:var(--surface); border:1px solid var(--border); border-radius:var(--rSm); padding:12px 14px; }
 .tileNum { font-size:26px; font-weight:700; letter-spacing:-.5px; line-height:1.1; }
 .tileLbl { font-size:12px; color:var(--muted); margin-top:2px; }
-.crm { display:grid; grid-template-columns:1fr; gap:16px; align-items:start; }
+/* minmax(0,…) and min-width:0: a long line inside (the record's tabs, a chip row) must not stretch the column wider than the phone */
+.crm { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; align-items:start; } .crm > * { min-width:0; }
 .tools { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
 .tools input[type=text] { flex:1 1 200px; width:auto; padding:10px 14px; border-radius:999px; font-size:14px; }
 .tbl { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; }
@@ -379,7 +427,7 @@ body.menuOn { overflow:hidden; }
   main { padding:28px 24px 64px; }
   .choices { grid-template-columns:repeat(4,1fr); }
   .two { grid-template-columns:400px 1fr; gap:20px; }
-  .crm.open { grid-template-columns:1fr 420px; }
+  .crm.open { grid-template-columns:minmax(0,1fr) 420px; }
   .thead { display:grid; grid-template-columns:2fr 1.2fr 1fr 1fr auto; gap:12px; padding:10px 16px; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); font-weight:600; border-bottom:1px solid var(--border); }
   .trow { grid-template-columns:2fr 1.2fr 1fr 1fr auto; align-items:center; }
   .trow .stage { grid-column:auto; grid-row:auto; }
@@ -533,13 +581,21 @@ var P = { aview:'status', meet:null, teamEdit:null, menuOpen:false, access:null,
   if(qs.campus && CAMPUS_SCHOOLS[qs.campus] && isOpenCampus_(qs.campus)) P.campus=qs.campus;
   if(qs.apply && applyByKey_(qs.apply)){ P.apply=qs.apply; P.view='register'; if(!offeredAt_(applyByKey_(qs.apply), P.campus)) P.campus=DEFAULT_CAMPUS; }
   if(qs.ref){ P.view='ref'; P.refToken=String(qs.ref); }
+  if(qs.staff){
+    var gp=null; try { gp=JSON.parse(lsGet('gp-staff')||'null'); } catch(e){}
+    /* ?staff=1&hr=<staffId>: HR fills out the staff contract with that person on HR's own phone */
+    var hrId=qs.hr ? String(qs.hr) : '';
+    { P.view='sign'; P.sign={ only:qs.doc ? String(qs.doc) : '', staff:gp, hr:hrId, token:null, openFn:hrId ? 'hrContractOpen' : 'staffSignOpen', openArgs:gp ? [gp.user, gp.pin].concat(hrId ? [hrId] : []) : null, submitFn:hrId ? 'hrContractSign' : 'staffSignSubmit',
+      back:hrId ? 'teams.html?view=hr&hr='+encodeURIComponent(hrId) : 'teams.html?view=mycontract', data:gp ? null : { ok:false, err:'nostaff' }, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
+  }
+  if(qs.sign){ P.view='sign'; P.sign={ token:String(qs.sign), data:null, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; }
   if(qs.open) P.openCand=String(qs.open);   // portal.html?open=<candidateId> — the GP app's Teams Database links here
   var saved=null; try { saved=JSON.parse(lsGet('gp-portal')||'null'); } catch(e){}
-  if(saved && saved.user && saved.pin){ P.auth=saved; P.view='booting'; boot_(); }
+  if(saved && saved.user && saved.pin && !P.sign){ P.auth=saved; P.view='booting'; boot_(); }
 })();
 /* Is Google sign-in on? (GP_GOOGLE_CLIENT_ID on the server.) Asked once; the
    sign-in redraws when the answer lands. */
-run('portalAuthConfig', [], function(d){ if(d && d.ok){ P.authCfg=d; if(d.google) gsiLoad_(); if(!P.auth && P.view!=='booting' && P.view!=='ref') render(); } }, function(){});
+run('portalAuthConfig', [], function(d){ if(d && d.ok){ P.authCfg=d; if(d.google) gsiLoad_(); if(!P.auth && P.view!=='booting' && P.view!=='ref' && P.view!=='sign') render(); } }, function(){});
 /* The portal installs like the staff app: same service worker (network first,
    the last copy when offline), its own manifest. */
 (function(){
@@ -603,12 +659,13 @@ function render(){
   var v=P.view;
   /* The gate — everything before you are signed in — is the portal's name
      and logo on top and one card underneath; signed in, the bar goes slim. */
-  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts' && v!=='preview' && v!=='resources' && v!=='team' && v!=='access');
-  var staffView = P.auth && P.boot && P.boot.role!=='applicant' && (v==='crm'||v==='forms'||v==='accounts'||v==='preview'||v==='resources'||v==='team'||v==='access');
+  document.body.classList.toggle('gate', v!=='me' && v!=='crm' && v!=='form' && v!=='forms' && v!=='accounts' && v!=='preview' && v!=='resources' && v!=='team' && v!=='access' && v!=='legal');
+  var staffView = P.auth && P.boot && P.boot.role!=='applicant' && (v==='crm'||v==='forms'||v==='accounts'||v==='preview'||v==='resources'||v==='team'||v==='access'||v==='legal');
   var applicantTabs = P.auth && P.boot && P.boot.role==='applicant' && v==='me';
+  document.body.classList.toggle('wideStaff', !!(staffView && v==='crm'));   // the list and a record side by side want the room
   try { m.innerHTML = (staffView ? staffNavHtml_(v) : applicantTabs ? applicantNavHtml_() : '') + (v==='booting' ? '<p class="sub" style="text-align:center;padding:40px 0">'+esc(t('Loading…'))+'</p>'
     : v==='register' ? registerHtml_() : v==='choose' ? chooseHtml_() : v==='me' ? meTabHtml_() : v==='crm' ? crmHtml_() : v==='form' ? formHtml_() : v==='forms' ? formsHtml_() : v==='resources' ? resourcesAdminHtml_() : v==='team' ? teamAdminHtml_() : v==='access' ? accessHtml_() : v==='accounts' ? accountsHtml_() : v==='preview' ? previewHtml_()
-    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : loginHtml_())
+    : v==='noaccess' ? noAccessHtml_() : v==='ref' ? refHtml_() : v==='sign' ? signHtml_() : v==='legal' ? legalAdminHtml_() : loginHtml_())
     + (P.guideOpen && P.boot && typeof outreachGuideHtml==='function' ? guideOverlayHtml_() : '');
   document.body.classList.toggle('guideOn', !!(P.guideOpen && P.boot));
   document.body.classList.toggle('menuOn', !!P.menuOpen);
@@ -631,7 +688,7 @@ function staffNavHtml_(v){
   /* The bar keeps the two everyone uses — home and Applications — and a ☰ menu
      for the rest, in two groups: what staff access has, what admin access adds. */
   var staffItems=[['preview','toPreview','👁 '+t('View as applicant')],['link','toLink','🔗 '+t('Link for applicants')]];
-  var adminItems=[['forms','toForms','📝 '+t('Forms')],['accounts','toAccounts','👤 '+t('Accounts')],['team','toTeam','👥 '+t('Our team')],['resources','toResources','📚 '+t('Resources')],['access','toAccess','🔑 '+t('Who has access')]];
+  var adminItems=[['forms','toForms','📝 '+t('Forms')],['accounts','toAccounts','👤 '+t('Accounts')],['team','toTeam','👥 '+t('Our team')],['resources','toResources','📚 '+t('Resources')],['legal','toLegal','✍️ '+t('Legal documents')],['access','toAccess','🔑 '+t('Who has access')]];
   var here=staffItems.concat(admin ? adminItems : []).filter(function(x){ return x[0]===v; })[0];
   var item=function(x){ return '<button class="menuItem'+(v===x[0] || (x[0]==='link' && P.linkOpen)?' on':'')+'" id="'+x[1]+'">'+esc(x[2])+'</button>'; };
   /* Staff come here from the GP app; a small ‹ on the left takes them back to its home. */
@@ -681,6 +738,281 @@ function chooseHtml_(){
    A pastor or leader opens portal.html?ref=<token>. The server answers with
    the applicant's name and the reference form, or why the link no longer
    works; the whole form is one page with Submit at the bottom. */
+/* ==================== legal documents, signed on a phone ====================
+   portal.html?sign=<token>: no account. Pick your name from the team, say if
+   you are under 18 (a parent or guardian then signs the forms that ask for
+   it), then each document in turn: read it, tick the boxes, fill in the
+   lines, initial where the paper form has initials, and sign in the box with
+   a finger. Signed ones are skipped; at the end, the next person picks their
+   name. The server keeps what was signed and makes the PDF for staff. */
+/* on the applicant's dashboard once they are getting ready to come: sign here, signed in */
+function legalCardHtml_(app){
+  if(!app || !app.submittedAt || app.status==='closed' || ['practical','arrived'].indexOf(app.stage)===-1) return '';
+  var team=app.type==='team';
+  return '<div class="card" id="legalCard"><h3 style="margin-top:0">✍️ '+esc(t('Legal documents'))+'</h3><p class="sub" style="margin:0 0 8px">'+
+    esc(team ? t('Everyone on your team signs YWAM Siem Reap’s forms on their phone — YWAM sends your team the link. You can sign yours here.') : t('Before you start, read and sign YWAM Siem Reap’s forms here on your phone.'))+'</p>'+
+    '<button class="btn small" id="openSign">'+esc(t('Read and sign'))+'</button></div>';
+}
+function signDocDone_(d, key){ var p=(d.people||[]).filter(function(x){ return x.key===key; })[0]; return p ? p.done||{} : {}; }
+function signNeedsAge_(d){ return (d.docs||[]).some(function(x){ return x.sign && (x.sign.guardian || x.sign.age); }); }
+function sigPadHtml_(id, label, small){
+  return '<div class="sigWrap'+(small?' small':'')+'"><div class="sigLabel">'+esc(label)+'</div><canvas class="sigPad" data-sigpad="'+esc(id)+'" aria-label="'+esc(label)+'"></canvas>'+
+    '<div class="sigFoot"><span class="hint">✍️ '+esc(small ? t('Initial with your finger') : t('Sign with your finger'))+'</span><button type="button" class="linkbtn inline" data-sigclear="'+esc(id)+'">'+esc(t('Clear'))+'</button></div></div>';
+}
+function signHtml_(){
+  var S=P.sign, d=S.data;
+  var h='<div class="center signPage"><div class="gateTitle"><h2>✍️ '+esc(S.hr ? t('Staff contract') : t('Legal documents'))+'</h2>';
+  if(d===null) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  if(!d.ok) return h+'</div><div class="card"><p class="sub" style="margin:0">'+esc(d.err==='nostaff' || (S.staff && d.err==='invalid') ? t('Open this from the GP app, signed in.') : d.err==='closed' ? t('This team’s documents are closed.') : t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.'))+'</p>'+(S.openFn ? '<a class="btn small" href="teams.html" style="margin-top:10px">'+esc(t('Open the GP app'))+'</a>' : '')+'</div>'+langRowHtml_()+'</div>';
+  h+='<p class="sub">'+esc(d.isTeam===false ? gpT('For {team}. Read each one and sign it here on your phone.',{team:d.team}) : gpT('For {team}. Everyone signs their own — pick your name to start.',{team:d.team}))+'</p>'+(S.inApp ? '<button type="button" class="linkbtn inline" id="signHome">← '+esc(t('Back to my application'))+'</button>' : '')+(S.staff ? '<a class="linkbtn inline" href="'+esc(S.back)+'">← '+esc(S.hr ? t('Back to HR') : t('Back to My contract'))+'</a>' : '')+'</div>';
+  var docs=(d.docs||[]).filter(function(x){ return !S.only || x.id===S.only; });
+  if(!S.who && (d.people||[]).length===1) S.who=d.people[0].key;
+  /* who are you */
+  if(!S.who){
+    h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Who are you?'))+'</h3><div class="signWho">'+(d.people||[]).map(function(p){
+      var n=docs.filter(function(x){ return p.done && p.done[x.id]; }).length, all=n===docs.length;
+      return '<button type="button" class="signWhoBtn'+(all?' done':'')+'" data-signwho="'+esc(p.key)+'"><b>'+esc(p.name)+'</b><span class="hint">'+esc(all ? '✓ '+t('All signed') : gpT('{n} of {total} signed',{n:n, total:docs.length}))+'</span></button>'; }).join('')+'</div>'+
+      '<p class="hint" style="margin:10px 0 0">'+esc(t('Not on the list? Ask your team leader to add you under Your team members.'))+'</p></div>';
+    return h+langRowHtml_()+'</div>';
+  }
+  var me=(d.people||[]).filter(function(p){ return p.key===S.who; })[0]||{};
+  if(signNeedsAge_(d) && S.under18===null){
+    h+='<div class="card"><h3 style="margin-top:0">'+esc(gpT('Hi {name}!',{name:me.name}))+'</h3><p class="sub">'+esc(t('Are you under 18? If so, a parent or guardian signs two of the forms with you.'))+'</p>'+
+      '<div class="seg"><button type="button" data-signu18="no">'+esc(t('18 or older'))+'</button><button type="button" data-signu18="yes">'+esc(t('Under 18'))+'</button></div>'+
+      ((d.people||[]).length>1 ? '<button type="button" class="linkbtn" id="signBack" style="margin-top:12px">← '+esc(t('Not me'))+'</button>' : '')+'</div>';
+    return h+'</div>';
+  }
+  var done=signDocDone_(d, S.who), left=docs.filter(function(x){ return !done[x.id]; });
+  d.shown=docs;
+  if(!left.length || S.done){
+    h+='<div class="card signDone"><div class="signBig">🎉</div><h3 style="margin:4px 0">'+esc(gpT('All signed — thank you, {name}!',{name:(me.name||'').split(' ')[0]}))+'</h3><p class="sub">'+esc(t('YWAM Siem Reap has your signed forms. Nothing more to do.'))+'</p>'+
+      (S.staff ? '<a class="btn" href="'+esc(S.back)+'">'+esc(S.hr ? t('Back to HR') : t('Back to My contract'))+'</a>' : '')+
+      ((d.people||[]).length>1 ? '<button type="button" class="btn" id="signNext">'+esc(t('Someone else on the team? Pick your name'))+'</button>' : '')+(S.inApp ? '<button type="button" class="btn ghost" id="signHome" style="margin-left:6px">'+esc(t('Back to my application'))+'</button>' : '')+'</div>';
+    return h+'</div>';
+  }
+  var doc=left[0], k=docs.indexOf(doc), sign=doc.sign||{}, F=S.form, nm=F.name!=null ? F.name : me.name;
+  h+='<div class="signProg">'+docs.map(function(x, i){ return '<span class="signDot'+(done[x.id]?' done':(x===doc?' on':''))+'" title="'+esc(x.title)+'">'+(done[x.id]?'✓':(i+1))+'</span>'; }).join('')+'</div>';
+  h+='<div class="card signDoc" data-signdoc="'+esc(doc.id)+'"><div class="eyebrow">'+esc(gpT('Document {n} of {total}',{n:k+1, total:docs.length}))+'</div>'+legalHeadHtml_(doc.title);
+  (doc.blocks||[]).forEach(function(b){
+    if(b.t==='period') h+='<div class="signPeriod"><div class="kv"><b>'+esc(t('Volunteer name'))+'</b><span>'+esc(nm||'')+'</span></div><div class="kv"><b>'+esc(t('Period of contract'))+'</b><span>'+esc(doc.period||'')+'</span></div></div>';
+    else if(b.t==='h') h+=legalHHtml_(b.text);
+    else if(b.t==='list') h+=legalListHtml_(b.items);
+    else if(b.t==='choice') h+='<div class="signChoice'+(S.miss && S.miss[b.id]?' miss':'')+'" data-signchoicebox="'+esc(b.id)+'">'+(b.options||[]).map(function(o){ return '<label class="signCheck"><input type="radio" name="sc_'+esc(b.id)+'" data-signchoice="'+esc(b.id)+'" value="'+esc(o.id)+'"'+(F.choices && F.choices[b.id]===o.id?' checked':'')+'><span>'+esc(o.text)+'</span></label>'; }).join('')+'</div>';
+    else if(b.t==='contacts') h+='<div class="signContacts">'+(d.contacts||[]).map(function(c){ return '<div class="kv"><b>'+esc(c.role)+'</b><span>'+esc([c.name, c.phone].filter(Boolean).join(' · ') || t('Your leader will tell you on arrival.'))+'</span></div>'; }).join('')+'</div>';
+    else if(b.t==='p') h+='<p class="signP'+(b.style?' '+esc(b.style):'')+'">'+esc(String(b.text||'').split('{name}').join(nm||'________'))+'</p>';
+    else if(b.t==='check') h+='<label class="signCheck'+(S.miss && S.miss[b.id]?' miss':'')+'"><input type="checkbox" data-signcheck="'+esc(b.id)+'"'+(F.checks && F.checks[b.id]?' checked':'')+'><span>'+esc(b.text)+'</span></label>';
+    else if(b.t==='group') h+='<div class="signGroup'+(S.miss && S.miss[b.id]?' miss':'')+'"><label class="signCheck"><input type="checkbox" data-signcheck="'+esc(b.id)+'"'+(F.checks && F.checks[b.id]?' checked':'')+'><b>'+esc(b.title)+'</b></label><ul>'+(b.items||[]).map(function(it){ return '<li>'+esc(it)+'</li>'; }).join('')+'</ul></div>';
+    else if(b.t==='field'){ var fv=F.fields && F.fields[b.id]!=null ? F.fields[b.id] : ((b.prefill && d.prefill && d.prefill[b.prefill])||''); h+='<label class="f">'+esc(b.label)+(b.optional?' <span class="hint">('+esc(t('optional'))+')</span>':'')+'</label><input type="text" data-signfield="'+esc(b.id)+'" maxlength="120" value="'+esc(fv)+'"'+(S.miss && S.miss[b.id]?' class="miss"':'')+'>'; }
+    else if(b.t==='initial') h+=sigPadHtml_('init:'+b.id, b.label, true);
+  });
+  h+='<div class="signHere"><div class="eyebrow">'+esc(t('Sign here'))+'</div>'+
+    '<label class="f">'+esc(t('Full name'))+'</label><input type="text" id="sign_name" maxlength="120" value="'+esc(nm||'')+'">'+
+    (sign.age ? '<label class="f">'+esc(t('Age'))+'</label><input type="number" id="sign_age" min="1" max="120" inputmode="numeric" value="'+esc(F.age||'')+'" style="max-width:120px">' : '')+
+    sigPadHtml_('sig', t('Signature'))+
+    '<p class="hint" style="margin:6px 0 0">'+esc(gpT('Date: {date}',{date:fmtDate_(new Date().toISOString())}))+'</p>';
+  if(sign.guardian && S.under18) h+='<div class="signGuard"><div class="eyebrow">'+esc(t('Parent or guardian'))+'</div><label class="f">'+esc(t('Their full name'))+'</label><input type="text" id="sign_gname" maxlength="120" value="'+esc(F.guardianName||'')+'">'+sigPadHtml_('guardianSig', t('Parent or guardian signature'))+'</div>';
+  if(sign.leader) h+='<div class="signGuard signLeader"><div class="eyebrow">'+esc(t('Approved by'))+'</div><p class="hint" style="margin:0 0 6px">'+esc(gpT('When {name} has signed, hand the phone back: you sign to approve, and it becomes their contract.',{name:(me.name||'').split(' ')[0]}))+'</p>'+
+    '<label class="f">'+esc(t('Your full name'))+'</label><input type="text" id="sign_lname" maxlength="120" value="'+esc(F.leaderName!=null ? F.leaderName : (d.approver||''))+'"'+(S.miss && S.miss.leaderName?' class="miss"':'')+'>'+sigPadHtml_('leaderSig', t('Signature of UofN Leader'))+'</div>';
+  if(sign.witness) h+='<details class="signWit"'+(F.witnessOpen?' open':'')+'><summary>'+esc(t('Add a witness (optional)'))+'</summary><label class="f">'+esc(t('Witness full name'))+'</label><input type="text" id="sign_wname" maxlength="120" value="'+esc(F.witnessName||'')+'">'+sigPadHtml_('witnessSig', t('Witness signature'))+'</details>';
+  h+='</div>';
+  h+='<button type="button" class="btn" id="signSubmit"'+(S.busy?' disabled':'')+' style="margin-top:14px;width:100%">'+esc(S.busy ? t('Saving…') : (left.length>1 ? t('Sign and go to the next document') : t('Sign and finish')))+'</button>'+
+    ((d.people||[]).length>1 ? '<button type="button" class="linkbtn" id="signBack" style="margin-top:8px">← '+esc(t('Not me'))+'</button>' : '')+'</div>';
+  return h+'</div>';
+}
+function bindSigPads_(){
+  var S=P.sign;
+  document.querySelectorAll('[data-sigpad]').forEach(function(cv){
+    var id=cv.getAttribute('data-sigpad'), small=!!cv.closest('.sigWrap.small'), dpr=window.devicePixelRatio||1;
+    var w=cv.clientWidth||300, hgt=small?90:150;
+    cv.width=Math.round(w*dpr); cv.height=Math.round(hgt*dpr); cv.style.height=hgt+'px';
+    var ctx=cv.getContext('2d'); ctx.scale(dpr, dpr); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=2.4; ctx.strokeStyle='#111';
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,hgt);
+    var saved=S.pads[id];
+    if(saved){ var im=new Image(); im.onload=function(){ ctx.drawImage(im, 0, 0, w, hgt); }; im.src='data:image/jpeg;base64,'+saved; }
+    var drawing=false, last=null, inked=0;
+    var pt=function(e){ var r=cv.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; };
+    cv.onpointerdown=function(e){ drawing=true; last=pt(e); try{ cv.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); ctx.beginPath(); ctx.arc(last.x, last.y, 1.1, 0, Math.PI*2); ctx.fillStyle='#111'; ctx.fill(); };
+    cv.onpointermove=function(e){ if(!drawing) return; var p=pt(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); inked+=Math.abs(p.x-last.x)+Math.abs(p.y-last.y); last=p; e.preventDefault(); };
+    var end=function(){ if(!drawing) return; drawing=false;
+      if(inked<12 && !saved) return;   // a tap is not a signature
+      var out=document.createElement('canvas'); out.width=small?240:600; out.height=small?90:200;
+      var o=out.getContext('2d'); o.fillStyle='#fff'; o.fillRect(0,0,out.width,out.height); o.drawImage(cv, 0, 0, out.width, out.height);
+      S.pads[id]=out.toDataURL('image/jpeg', 0.7).split(',')[1]; saved=S.pads[id];
+      var wrap=cv.closest('.sigWrap'); if(wrap) wrap.classList.add('signed'), wrap.classList.remove('miss');
+    };
+    cv.onpointerup=end; cv.onpointercancel=end; cv.onpointerleave=end;
+    if(saved){ var wrap=cv.closest('.sigWrap'); if(wrap) wrap.classList.add('signed'); }
+    if(S.miss && S.miss[id]){ var wr=cv.closest('.sigWrap'); if(wr) wr.classList.add('miss'); }
+  });
+  document.querySelectorAll('[data-sigclear]').forEach(function(b){ b.onclick=function(){ delete S.pads[b.getAttribute('data-sigclear')]; keepSignForm_(); render(); }; });
+}
+function keepSignForm_(){
+  var F=P.sign.form, g=function(id){ var el=document.getElementById(id); return el ? el.value : undefined; };
+  if(g('sign_name')!==undefined) F.name=g('sign_name');
+  if(g('sign_age')!==undefined) F.age=g('sign_age');
+  if(g('sign_gname')!==undefined) F.guardianName=g('sign_gname');
+  if(g('sign_wname')!==undefined) F.witnessName=g('sign_wname');
+  if(g('sign_lname')!==undefined) F.leaderName=g('sign_lname');
+  var w=document.querySelector('.signWit'); if(w) F.witnessOpen=w.open;
+  F.checks=F.checks||{}; document.querySelectorAll('[data-signcheck]').forEach(function(c){ F.checks[c.getAttribute('data-signcheck')]=c.checked; });
+  F.fields=F.fields||{}; document.querySelectorAll('[data-signfield]').forEach(function(i){ F.fields[i.getAttribute('data-signfield')]=i.value; });
+  F.choices=F.choices||{}; document.querySelectorAll('[data-signchoice]:checked').forEach(function(i){ F.choices[i.getAttribute('data-signchoice')]=i.value; });
+}
+function bindSign_(){
+  if(P.view!=='sign') return;
+  var S=P.sign;
+  if(S.data===null && !S.loading){
+    S.loading=true;
+    run(S.openFn||'portalSignOpen', S.openArgs||[S.token], function(d){ S.loading=false; S.data=d||{ ok:false }; render(); }, function(){ S.loading=false; S.data={ ok:false, err:'network' }; render(); showMsg(t('Connection problem — try again.')); });
+    return;
+  }
+  document.querySelectorAll('[data-signwho]').forEach(function(b){ b.onclick=function(){ S.who=b.getAttribute('data-signwho'); S.under18=null; S.form={}; S.pads={}; S.done=false; S.miss=null; render(); window.scrollTo(0,0); }; });
+  document.querySelectorAll('[data-signu18]').forEach(function(b){ b.onclick=function(){ S.under18=b.getAttribute('data-signu18')==='yes'; render(); window.scrollTo(0,0); }; });
+  on_('signBack', function(){ S.who=null; S.under18=null; S.form={}; S.pads={}; S.miss=null; render(); window.scrollTo(0,0); });
+  on_('signNext', function(){ S.who=null; S.under18=null; S.form={}; S.pads={}; S.done=false; S.miss=null; render(); window.scrollTo(0,0); });
+  on_('signHome', function(){ P.sign=null; P.view='me'; render(); window.scrollTo(0,0); });
+  document.querySelectorAll('[data-signchoice]').forEach(function(c){ c.onchange=function(){ var box=c.closest('.signChoice'); if(box) box.classList.remove('miss'); }; });
+  document.querySelectorAll('[data-signcheck]').forEach(function(c){ c.onchange=function(){ var row=c.closest('.signCheck, .signGroup'); if(row && c.checked) row.classList.remove('miss'); if(c.closest('.signGroup') && c.checked) c.closest('.signGroup').classList.remove('miss'); }; });
+  bindSigPads_();
+  on_('signSubmit', function(){
+    keepSignForm_();
+    var d=S.data, done=signDocDone_(d, S.who), doc=(d.shown||d.docs||[]).filter(function(x){ return !done[x.id]; })[0]; if(!doc) return;
+    var F=S.form, sign=doc.sign||{}, miss={}, n=0;
+    (doc.blocks||[]).forEach(function(b){
+      if((b.t==='check'||b.t==='group') && !(F.checks && F.checks[b.id])){ miss[b.id]=1; n++; }
+      if(b.t==='field' && !b.optional && !String((F.fields||{})[b.id]||'').trim()){ miss[b.id]=1; n++; }
+      if(b.t==='choice' && !(F.choices && F.choices[b.id])){ miss[b.id]=1; n++; }
+      if(b.t==='initial' && !S.pads['init:'+b.id]){ miss['init:'+b.id]=1; n++; }
+    });
+    if(!String(F.name||'').trim()){ miss.name=1; n++; }
+    if(sign.age && !(Number(F.age)>0)){ miss.age=1; n++; }
+    if(!S.pads.sig){ miss.sig=1; n++; }
+    if(sign.leader && F.leaderName==null && d.approver) F.leaderName=d.approver;
+    if(sign.leader && (!String(F.leaderName||'').trim() || !S.pads.leaderSig)){ if(!String(F.leaderName||'').trim()) miss.leaderName=1; if(!S.pads.leaderSig) miss.leaderSig=1; n++; }
+    var u18 = S.under18 || (sign.age && Number(F.age)>0 && Number(F.age)<18);
+    if(sign.guardian && u18 && (!String(F.guardianName||'').trim() || !S.pads.guardianSig)){ if(!S.under18){ S.under18=true; } miss.guardianSig=1; n++; }
+    if(n){ S.miss=miss; render(); showMsg(n===1 ? t('One thing still to do — it is marked in red.') : gpT('{n} things still to do — they are marked in red.',{n:n})); var first=document.querySelector('.miss'); if(first) first.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+    var pay={ name:String(F.name).trim(), checks:F.checks||{}, choices:F.choices||{}, fields:F.fields||{}, sig:S.pads.sig, under18:!!u18, initials:{} };
+    (doc.blocks||[]).forEach(function(b){ if(b.t==='initial') pay.initials[b.id]=S.pads['init:'+b.id]; });
+    if(sign.age) pay.age=Number(F.age);
+    if(sign.leader){ pay.leaderName=String(F.leaderName).trim(); pay.leaderSig=S.pads.leaderSig; }
+    if(sign.guardian && u18){ pay.guardianName=String(F.guardianName).trim(); pay.guardianSig=S.pads.guardianSig; }
+    if(sign.witness && (String(F.witnessName||'').trim() || S.pads.witnessSig)){ pay.witnessName=String(F.witnessName||'').trim(); pay.witnessSig=S.pads.witnessSig||''; }
+    S.busy=true; render();
+    run(S.submitFn||'portalSignSubmit', (S.openArgs||[S.token]).concat([S.who, doc.id, pay]), function(r){
+      S.busy=false;
+      if(r && r.ok){
+        (d.people||[]).forEach(function(p){ if(p.key===S.who) p.done=r.done; });
+        S.miss=null; S.pads={}; S.form={ name:F.name, age:F.age, guardianName:F.guardianName };
+        if(typeof portalConfetti_==='function' && !(d.docs||[]).some(function(x){ return !r.done[x.id]; })) portalConfetti_();
+        showMsg(t('Signed')); render(); window.scrollTo(0,0); return;
+      }
+      var e=r && r.err;
+      showMsg(e==='leader_required' ? t('You need to add your name and sign to approve it.') : e==='witness_incomplete' ? t('A witness needs their name and signature — or leave the witness out.') : e==='guardian_required' ? t('A parent or guardian needs to add their name and sign.') : e==='invalid' ? t('This link doesn’t work any more — ask YWAM Siem Reap for a new one.') : t('Could not save — try again.'));
+      render();
+    }, function(){ S.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
+}
+/* the record's Legal tab: the team's link, and who signed what with each PDF */
+function legalBadge_(c){
+  var st=P.signStat && P.signStat.id===c.id ? P.signStat : null; if(!st || !st.docs.length) return '';
+  var all=st.people.filter(function(p){ return st.docs.every(function(d){ return p.signed[d.id]; }); }).length;
+  return all+'/'+st.people.length;
+}
+function signUrl_(token){ return location.origin + location.pathname + '?sign=' + token; }
+function panelLegalHtml_(c){
+  var st=P.signStat && P.signStat.id===c.id ? P.signStat : null;
+  var h='<h3 style="margin-top:0">✍️ '+esc(t('Legal documents'))+'</h3>';
+  if(!st) return h+'<p class="sub" id="legalLoading">'+esc(t('Loading…'))+'</p>';
+  if(!st.ok) return h+'<p class="sub">'+esc(t('Could not load'))+'</p>';
+  h+='<p class="sub" style="margin:0 0 8px">'+esc(c.type==='team' ? t('Send the team one link. Each person picks their name, reads and signs every document on their phone — no account needed.') : t('They sign these from their own dashboard once they are getting ready to come — or send them this link.'))+'</p>';
+  if(P.signToken && P.signTokenFor===c.id){
+    h+='<div class="linkRow"><input type="text" id="signLinkBox" readonly value="'+esc(signUrl_(P.signToken))+'" onclick="this.select()"><button class="btn small" id="signCopy">'+esc(t('Copy'))+'</button>'+(navigator.share ? '<button class="btn small ghost" id="signShare">📤 '+esc(t('Share'))+'</button>' : '')+'</div>'+
+      '<p class="hint">'+esc(t('Send it to the team’s group chat. Making a new link turns this one off.'))+'</p>';
+  } else {
+    h+=(st.link ? '<p class="hint" style="margin:0 0 6px">'+esc(gpT('A link was made on {date}. For security only a new link can be shown — making one turns the old one off.',{date:fmtDate_(st.link.createdAt)}))+'</p>' : '')+
+      '<button class="btn small" id="signMakeLink"'+(P.busy?' disabled':'')+'>🔗 '+esc(st.link ? t('Make a new signing link') : t('Make the signing link'))+'</button>';
+  }
+  if(!st.docs.length) return h+'<p class="hint">'+esc(t('No documents are switched on. A portal admin can turn them on under Legal documents.'))+'</p>';
+  var all=st.people.filter(function(p){ return st.docs.every(function(d){ return p.signed[d.id]; }); }).length;
+  h+='<p class="sub" style="margin:14px 0 6px" id="legalTally"><b>'+esc(gpT('{n} of {total} have signed everything',{n:all, total:st.people.length}))+'</b></p>';
+  h+='<div class="legalGrid" style="grid-template-columns:minmax(110px,1.4fr) repeat('+st.docs.length+', minmax(70px,1fr))"><div class="lgHead">'+esc(t('Name'))+'</div>'+st.docs.map(function(d){ return '<div class="lgHead">'+esc(d.title.replace(/ (Form|and Release of Liability Form)$/,''))+'</div>'; }).join('');
+  st.people.forEach(function(p){
+    h+='<div class="lgName" data-legalrow="'+esc(p.key)+'">'+esc(p.name)+'</div>'+st.docs.map(function(d){ var s=p.signed[d.id];
+      return s ? '<div class="lgCell ok"><span>✓ '+esc(fmtDate_(s.at))+'</span><button type="button" class="linkbtn inline" data-signpdf="'+esc(p.key+'|'+d.id)+'">📄 PDF</button></div>' : '<div class="lgCell no">'+esc(t('Not yet'))+'</div>'; }).join('');
+  });
+  return h+'</div>';
+}
+function bindLegalTab_(c){
+  if((!P.signStat || P.signStat.id!==c.id) && !P.signStatLoading){
+    P.signStatLoading=true;
+    run('portalSignStatus', [P.auth.user, P.auth.pin, c.id], function(d){ P.signStatLoading=false; P.signStat=Object.assign({ id:c.id }, d||{ ok:false }); render(); }, function(){ P.signStatLoading=false; P.signStat={ id:c.id, ok:false }; render(); });
+  }
+  on_('signMakeLink', function(){
+    var st=P.signStat; if(st && st.link && !confirm(t('Make a new link? The old one stops working.'))) return;
+    P.busy=true; render();
+    run('portalSignLink', [P.auth.user, P.auth.pin, c.id], function(d){ P.busy=false; if(d && d.ok){ P.signToken=d.token; P.signTokenFor=c.id; P.signStat=Object.assign({ id:c.id }, d); } else showMsg(t('Could not make the link')); render(); }, function(){ P.busy=false; showMsg(t('Connection problem — try again.')); render(); });
+  });
+  on_('signCopy', function(){ copyText_(signUrl_(P.signToken)); });
+  on_('signShare', function(){ try { navigator.share({ title:t('Legal documents'), text:gpT('{team}: please each sign the YWAM Siem Reap documents here — pick your name and sign on your phone.',{team:candName_(c)}), url:signUrl_(P.signToken) }); } catch(e){} });
+  document.querySelectorAll('[data-signpdf]').forEach(function(b){ b.onclick=function(){
+    var k=b.getAttribute('data-signpdf').split('|'); b.disabled=true;
+    run('portalSignedPdf', [P.auth.user, P.auth.pin, c.id, k[0], k[1]], function(d){ b.disabled=false; if(d && d.ok) openDataUrl_(d.dataUrl, d.name); else showMsg(t('Could not open the file')); }, function(){ b.disabled=false; showMsg(t('Connection problem — try again.')); });
+  }; });
+}
+/* the admin page: which documents teams are asked to sign, each readable */
+function legalAdminHtml_(){
+  var d=P.legalDocs;
+  var h='<div class="wide"><div class="panelHead"><div><h1 style="font-size:28px">✍️ '+esc(t('Legal documents'))+'</h1><p class="sub">'+esc(t('What each person on a team signs on their phone, from the signing link on the team’s record (Legal tab). Switch one off and teams are no longer asked to sign it.'))+'</p></div></div>';
+  if(!d) return h+'<div class="card"><p class="sub" style="margin:0">'+esc(t('Loading…'))+'</p></div></div>';
+  h+='<div class="card">'+(d.docs||[]).map(function(x){
+    return '<div class="legalDocRow" data-legaldoc="'+esc(x.id)+'"><label class="accessChk"><input type="checkbox" data-legalon="'+esc(x.id)+'"'+(x.on?' checked':'')+(d.canEdit?'':' disabled')+' aria-label="'+esc(t('Teams sign this'))+'"></label>'+
+      '<div class="accessWho"><b>'+esc(x.title)+'</b><span class="hint">'+esc(x.on ? t('Teams sign this') : t('Switched off'))+'</span></div><button type="button" class="linkbtn inline" data-legalpreview="'+esc(x.id)+'">'+esc(P.legalPreview===x.id ? t('Hide') : t('Read it'))+'</button></div>'+
+      (P.legalPreview===x.id ? '<div class="legalPreview"><div class="legalPaper">'+legalHeadHtml_(x.title)+legalReadHtml_(x.blocks, d.contacts)+
+        '<p>✍️ '+esc(t('Signature'))+(x.sign && x.sign.age ? ' · '+esc(t('Age')) : '')+(x.sign && x.sign.guardian ? ' · '+esc(t('Parent or guardian (under 18)')) : '')+(x.sign && x.sign.witness ? ' · '+esc(t('Witness (optional)')) : '')+'</p></div></div>' : '');
+  }).join('')+'</div>';
+  if(!d.canEdit) h+='<p class="hint">'+esc(t('Only a portal admin can switch documents on or off.'))+'</p>';
+  h+='<div class="card"><h3 style="margin-top:0">'+esc(t('Reporting contacts'))+'</h3><p class="sub" style="margin:0 0 8px">'+esc(t('Part F of the Child Protection Agreement: who to tell about a concern. Everyone signing sees these.'))+'</p>'+
+    (d.contacts||[]).map(function(c, i){ return '<label class="f">'+esc(c.role)+'</label><div class="teamGrid2"><input type="text" data-legalct="'+i+'|name" placeholder="'+esc(t('Name'))+'" value="'+esc(c.name||'')+'"'+(d.canEdit?'':' disabled')+'><input type="text" data-legalct="'+i+'|phone" placeholder="'+esc(t('Phone or contact method'))+'" value="'+esc(c.phone||'')+'"'+(d.canEdit?'':' disabled')+'></div>'; }).join('')+
+    (d.canEdit ? '<button class="btn small" id="legalCtSave" style="margin-top:10px">'+esc(t('Save'))+'</button>' : '')+'</div>';
+  return h+'</div>';
+}
+/* A legal document laid out like the paper: the YWAM Siem Reap letterhead and
+   the title centred on top, Part headings, numbered sections (1., 2. …) a size
+   down, bullets with a bold lead-in ("Physical harm: …"), and the quote set off. */
+function legalHeadHtml_(title){ return '<img class="signLetterhead" src="letterhead.jpg" alt="YWAM Siem Reap — Serve · Educate · Develop" width="800" height="190"><h3 class="signTitle">'+esc(title)+'</h3>'; }
+function legalHHtml_(text){ return '<h4 class="signH'+(/^\d+\.\s/.test(text||'')?' num':'')+'">'+esc(text)+'</h4>'; }
+function legalListHtml_(items){ return '<ul class="signList">'+(items||[]).map(function(it){ var m=/^([^:]{2,24}):\s(.*)$/.exec(it); return '<li>'+(m ? '<b>'+esc(m[1])+':</b> '+esc(m[2]) : esc(it))+'</li>'; }).join('')+'</ul>'; }
+/* read-only, for the admin's preview: what a signer sees, without the inputs */
+function legalReadHtml_(blocks, contacts){
+  return (blocks||[]).map(function(b){
+    if(b.t==='h') return legalHHtml_(b.text);
+    if(b.t==='list') return legalListHtml_(b.items);
+    if(b.t==='p') return '<p class="signP'+(b.style?' '+esc(b.style):'')+'">'+esc(b.text)+'</p>';
+    if(b.t==='check') return '<p class="signP">☐ '+esc(b.text)+'</p>';
+    if(b.t==='group') return '<p class="signP">☐ <b>'+esc(b.title)+'</b></p>'+legalListHtml_(b.items);
+    if(b.t==='choice') return (b.options||[]).map(function(o){ return '<p class="signP">◯ '+esc(o.text)+'</p>'; }).join('');
+    if(b.t==='contacts') return '<div class="signContacts">'+(contacts||[]).map(function(c){ return '<div class="kv"><b>'+esc(c.role)+'</b><span>'+esc([c.name, c.phone].filter(Boolean).join(' · ') || '—')+'</span></div>'; }).join('')+'</div>';
+    if(b.t==='field') return '<p class="signP">'+esc(b.label)+': ________</p>';
+    if(b.t==='initial') return '<p class="signP">✍️ '+esc(b.label)+'</p>';
+    return '';
+  }).join('');
+}
+function bindLegalAdmin_(){
+  if(P.view!=='legal') return;
+  if(!P.legalDocs){ if(P.legalLoading) return; P.legalLoading=true; run('portalLegalDocs', [P.auth.user, P.auth.pin], function(d){ P.legalLoading=false; P.legalDocs=d && d.ok ? d : { docs:[] }; render(); }, function(){ P.legalLoading=false; P.legalDocs={ docs:[] }; render(); }); return; }
+  document.querySelectorAll('[data-legalpreview]').forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-legalpreview'); P.legalPreview = P.legalPreview===id ? null : id; render(); }; });
+  on_('legalCtSave', function(){
+    var ct=(P.legalDocs.contacts||[]).map(function(){ return {}; });
+    document.querySelectorAll('[data-legalct]').forEach(function(i){ var p=i.getAttribute('data-legalct').split('|'); ct[Number(p[0])][p[1]]=i.value; });
+    run('portalSaveLegalDocs', [P.auth.user, P.auth.pin, null, ct], function(d){ if(d && d.ok){ P.legalDocs=d; showMsg(t('Saved')); } else showMsg(t('Could not save — try again.')); render(); }, function(){ showMsg(t('Connection problem — try again.')); });
+  });
+  document.querySelectorAll('[data-legalon]').forEach(function(box){ box.onchange=function(){
+    var on={}; P.legalDocs.docs.forEach(function(x){ on[x.id] = x.id===box.getAttribute('data-legalon') ? box.checked : x.on; });
+    box.disabled=true;
+    run('portalSaveLegalDocs', [P.auth.user, P.auth.pin, on], function(d){ if(d && d.ok){ P.legalDocs=d; showMsg(t('Saved')); } else showMsg(d && d.err==='not_authorized' ? t('Only a portal admin can do this') : t('Could not save — try again.')); render(); }, function(){ showMsg(t('Connection problem — try again.')); render(); });
+  }; });
+}
 function refHtml_(){
   var d=P.refData;
   var h='<div class="center"><div class="gateTitle"><h2>'+esc(t('Leader reference'))+'</h2>';
@@ -1217,6 +1549,7 @@ function meHtml_(){
       : '<p class="sub" style="margin:0 0 8px">'+esc(done ? gpT('{done} of {total} answered — pick up where you left off.',{done:done,total:total}) : t('A few sections about you, your faith and what you are applying for. Your answers save as you go.'))+'</p>'+
         '<button class="btn small" id="openForm">'+esc(done ? t('Continue my application') : t('Fill out my application'))+'</button>')+'</div>';
   if(app.refNeeded) h+='<div class="card" id="refCard"><h3 style="margin-top:0">🙏 '+esc(t('Leader reference'))+'</h3>'+refCardHtml_(app)+'</div>';
+  h+=legalCardHtml_(app);
   h+=membersCardHtml_(app);
   h+=visaCardHtml_(app);
   h+='<div class="card"><h3 style="margin-top:0">📎 '+esc(t('Documents'))+'</h3>'+
@@ -1251,6 +1584,12 @@ function meHtml_(){
 /* The Teams tab in the order they come: teams here now first, then the ones
    still to come (soonest first), then teams with no dates yet (latest change
    first), then teams already gone (most recent first). */
+/* a team's row says when it is in Cambodia, not when it last changed */
+function teamDatesLine_(c){
+  var tr=teamTrip_(c);
+  if(!tr || !tr.start) return t('Dates in Cambodia not set yet');
+  return gpT('In Cambodia {from} – {to}',{from:fmtDate_(tr.start), to:fmtDate_(tr.end||tr.start)});
+}
 function teamTrip_(c){ return tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); }
 function teamOrder_(a,b){
   var today=new Date().toISOString().slice(0,10);
@@ -1311,10 +1650,10 @@ function crmHtml_(){
     var owner=c.assignedTo && byId[c.assignedTo] ? byId[c.assignedTo].name : '—';
     var chat=chatHref_(c.messenger, c.phone);
     h+='<button class="trow'+(P.sel===c.id?' on':'')+'" data-open="'+esc(c.id)+'">'+
-      '<span><span class="who">'+esc(candName_(c))+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span>'+
+      '<span><span class="who">'+esc(candName_(c))+'</span><span class="meta sm"> · '+esc(applyLabel_(c.type, c.school))+'</span><span class="meta" style="display:block">'+esc(c.type==='team' ? teamDatesLine_(c) : fmtDate_(c.updated))+(c.hasAccount?'':' · '+esc(t('no account')))+'</span>'+
         (c.type==='team' && c.archived && c.archived.left ? '<span class="meta" style="display:block">🗄 '+esc(gpT('Left {date}',{date:fmtDate_(c.archived.left)}))+'</span>' : '')+
         (c.type==='team' && teamNext_(c) && !c.archived ? '<span class="meta nextStep" style="display:block">→ '+esc(t(TEAM_STEP_LABEL[teamNext_(c).id]||''))+'</span>' : '')+'</span>'+
-      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(c.type==='team' ? (function(){ var tr=tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); return (tr && tr.days ? ' · '+esc(gpT('{n} in Cambodia',{n:daysLabel_(tr.days)})) : '')+(tr && tr.start ? ' · '+esc(gpT('from {date}',{date:fmtDate_(tr.start)})) : ''); })() : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
+      '<span class="meta desk">'+esc(applyLabel_(c.type, c.school))+(c.type==='student' ? ' · '+esc(c.audience==='khmer'?t('Khmer'):t('International')) : '')+(c.type==='team' ? (function(){ var tr=tripOf_((c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}, campusName_(c.campus||DEFAULT_CAMPUS)); return (tr && tr.days ? ' · '+esc(gpT('{n} in Cambodia',{n:daysLabel_(tr.days)})) : ''); })() : '')+(P.campusFilter || campusChips.length<2 ?'':'<br>'+esc(campusShort_(c.campus)))+'</span>'+
       '<span class="stage"><span class="pill '+esc(c.status)+'">'+esc(t(STAGE_LABEL[c.stage]||c.stage))+'</span></span>'+
       '<span class="meta desk">'+esc(owner)+'</span>'+
       '<span class="desk">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(MESSENGER_LABEL[c.messenger]||t('Chat'))+'</a>':'')+'</span>'+
@@ -1345,28 +1684,45 @@ function panelHtml_(c, byId){
   if(c.type==='team' && c.archived && c.archived.left) h+='<div class="banner" id="archBanner" style="margin:10px 0 0">🗄 <b>'+esc(gpT('Archived — the team left on {date}.',{date:fmtDate_(c.archived.left)}))+'</b><br>'+esc(t('Everything is kept: passports, flights, e-visas and other documents, the names and photos, strengths and numbers.'))+'</div>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">'+(chat?'<a class="chatBtn" href="'+esc(chat)+'" target="_blank" rel="noopener" data-chat>💬 '+esc(gpT('Open {app} chat',{app:MESSENGER_LABEL[c.messenger]||t('chat')}))+'</a>':'')+
     (c.email?'<a class="chatBtn" href="mailto:'+esc(c.email)+'">✉️ '+esc(t('Email'))+'</a>':'')+'</div>';
+  /* The record in tabs, so nothing is a long scroll: contact on top, Overview first,
+     then only the tabs this record has (a team has its trip, people and numbers). */
+  if(P.ptabFor!==c.id){ P.ptabFor=c.id; P.ptab='overview'; P.ansQ=''; }
+  var ov='';
   h+='<div class="kv"><b>'+esc(t('Phone'))+'</b><span>'+esc(c.phone||'—')+'</span></div><div class="kv"><b>'+esc(t('Email'))+'</b><span>'+esc(c.email||'—')+'</span></div>'+
     '<div class="kv"><b>'+esc(t('Status shown to them'))+'</b><span>'+esc(t(STATUS_LABEL[c.status]||c.status))+'</span></div>';
-  h+='<label class="f">'+esc(t('Stage'))+'</label><select id="p_stage">'+stagesOf_(c.type).map(function(s){ return '<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+esc(t(STAGE_LABEL[s]||s))+'</option>'; }).join('')+'</select>';
-  h+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
-  h+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
-  h+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
-  h+=panelTeamFlowHtml_(c);
-  h+=panelTeamNumbersHtml_(c);
-  h+=panelMembersHtml_(c);
-  h+=panelTripHtml_(c);
-  h+=panelVisaHtml_(c);
-  h+=panelDocsHtml_(c);
-  h+=panelReferenceHtml_(c);
-  h+=panelAnswersHtml_(c);
+  ov+='<label class="f">'+esc(t('Stage'))+'</label><select id="p_stage">'+stagesOf_(c.type).map(function(s){ return '<option value="'+s+'"'+(c.stage===s?' selected':'')+'>'+esc(t(STAGE_LABEL[s]||s))+'</option>'; }).join('')+'</select>';
+  ov+='<label class="f">'+esc(t('Owner'))+'</label><select id="p_owner"><option value="">'+esc(t('— nobody yet —'))+'</option>'+P.boot.staff.map(function(s){ return '<option value="'+esc(s.id)+'"'+(c.assignedTo===s.id?' selected':'')+'>'+esc(s.name)+'</option>'; }).join('')+'</select>';
+  ov+='<label class="f">'+esc(t('Next step'))+'</label><input type="text" id="p_next" value="'+esc(c.nextStep||'')+'"><label class="f">'+esc(t('By'))+'</label><input type="date" id="p_date" value="'+esc(c.nextDate||'')+'">';
+  ov+='<button class="btn" id="saveCand"'+(P.busy?' disabled':'')+'>'+esc(P.busy?t('Saving…'):t('Save'))+'</button>';
+  ov+=panelTeamFlowHtml_(c);
+  var docsN=((c.portal && c.portal.docs)||[]).length, ppl=(c.portal && c.portal.members)||[];
+  var tabs=[
+    ['overview','📋',t('Overview'), ov, ''],
+    ['trip','✈️',t('Trip'), panelTripHtml_(c), ''],
+    ['people','👥',t('People'), panelMembersHtml_(c), c.type==='team' ? String(ppl.length) : ''],
+    ['docs','📎',t('Documents'), panelVisaHtml_(c)+panelDocsHtml_(c)+panelReferenceHtml_(c), docsN ? String(docsN) : ''],
+    ['numbers','📊',t('Numbers'), panelTeamNumbersHtml_(c), ''],
+    ['legal','✍️',t('Legal'), panelLegalHtml_(c), legalBadge_(c)],
+    ['answers','📝',t('Answers'), panelAnswersHtml_(c), ''],
+    ['notes','💬',t('Notes'), '', String((c.log||[]).filter(function(l){ return l.kind!=='stage'; }).length||'')]
+  ].filter(function(x){ return x[0]==='notes' || x[3]; });
+  if(!tabs.some(function(x){ return x[0]===P.ptab; })) P.ptab='overview';
+  h+='<nav class="ptabs" id="ptabs" role="tablist">'+tabs.map(function(x){ return '<button type="button" class="ptab'+(P.ptab===x[0]?' on':'')+'" data-ptab="'+x[0]+'" role="tab" aria-selected="'+(P.ptab===x[0])+'"><span aria-hidden="true">'+x[1]+'</span> '+esc(x[2])+(x[4] && x[4]!=='0' ? ' <span class="n">'+esc(x[4])+'</span>' : '')+'</button>'; }).join('')+'</nav>';
+  var cur=tabs.filter(function(x){ return x[0]===P.ptab; })[0];
+  if(P.ptab!=='notes'){ h+='<div class="ptabBody" data-ptabbody="'+esc(P.ptab)+'">'+cur[3]+'</div>'; }
+  else {
+  h+='<div class="ptabBody" data-ptabbody="notes">';
   h+='<h3>'+esc(t('Notes'))+'</h3><textarea id="p_note" placeholder="'+esc(t('Add a note…'))+'">'+esc(P.note)+'</textarea><button class="btn small ghost" id="addNote" style="margin-top:8px">'+esc(t('Add note'))+'</button>';
   var log=(c.log||[]).slice().reverse();
   h+='<ul class="log">'+(log.length ? log.map(function(l){ var who=byId[l.by] ? byId[l.by].name : (l.by===c.staffId ? c.name : '—');
     return '<li><span class="when">'+esc(fmtDate_(l.at))+' · '+esc(who)+'</span>'+(l.kind==='stage' ? '→ '+esc(t(STAGE_LABEL[l.text]||l.text)) : esc(l.text))+'</li>'; }).join('') : '<li class="empty">'+esc(t('No notes yet.'))+'</li>')+'</ul>';
+  h+='</div>';
+  }
+  h+='<div class="panelFoot">';
   h+='<button class="linkbtn" id="archiveCand">'+esc(c.archived ? t('Reopen this application') : t('Close this application'))+'</button>';
   h+='<button class="linkbtn" id="viewAsCand">👁 '+esc(t('View as this applicant'))+'</button>';
   if(P.boot.role==='portal-admin') h+='<button class="linkbtn danger" id="deleteCand">'+esc(c.hasAccount ? t('Delete this account and application') : t('Delete this application'))+'</button>';
-  h+='</div>';
+  h+='</div></div>';
   return h;
 }
 /* ==================== the application form (applicant side) ====================
@@ -1747,18 +2103,33 @@ function bindAccounts_(){
   });
 }
 /* Read-only answers, for the applicant after submitting and for staff. */
-function answersHtml_(form, answers, aud){
+/* opts.fold: each form section is a fold (staff record); opts.q: only the
+   questions whose label or answer has that text, their sections open. */
+function answerText_(q, v){
+  if(Array.isArray(v)) return v.map(function(r){ return r && typeof r==='object' ? [r.name, r.email, r.phone, r.place, r.from, r.to].filter(Boolean).join(' ') : r; }).join(' ');
+  return v==null ? '' : String(v);
+}
+function answersHtml_(form, answers, aud, opts){
   if(!form) return '';
-  var h='';
-  (form.sections||[]).forEach(function(sec){
+  opts=opts||{};
+  var h='', q0=String(opts.q||'').trim().toLowerCase(), hits=0;
+  (form.sections||[]).forEach(function(sec, si){
     var qs=askedIn_(sec, aud); if(!qs.length) return;
-    h+='<div class="ansSec"><div class="eyebrow">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){
+    if(q0) qs=qs.filter(function(q){ return (lt_(q.label)+' '+answerText_(q, answers[q.id])).toLowerCase().indexOf(q0)>-1; });
+    if(!qs.length) return;
+    hits+=qs.length;
+    if(opts.fold){
+      var filled=qs.filter(function(q){ return answered_(q, answers[q.id]); }).length;
+      h+='<details class="ansFold" data-anssec="'+si+'"'+(q0 || si===0 ? ' open' : '')+'><summary>'+esc(lt_(sec.title))+'<span class="n">'+filled+'/'+qs.length+'</span></summary><div class="ansSec">';
+    } else h+='<div class="ansSec"><div class="eyebrow">'+esc(lt_(sec.title))+'</div>';
+    h+=qs.map(function(q){
       var v=answers[q.id];
       if(q.type==='people'){ var ppl=(Array.isArray(v)?v:[]).filter(function(r){ return r && r.name; }); return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(ppl.length ? ppl.map(function(r){ return esc(r.name)+(r.email?' · '+esc(r.email):'')+(r.phone?' · '+esc(r.phone):''); }).join('<br>') : '<i>—</i>')+'</span></div>'; }
       if(q.type==='stays'){ var rows=Array.isArray(v)?v:[]; return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(rows.length ? rows.map(function(r, i){ var n=daysIncl_(r.from, r.to); return '📍 '+esc(i===0 ? (r.place||basePlace_()) : (r.place||'—'))+': '+esc(rangeLabel_(r.from, r.to))+(n?' ('+esc(daysLabel_(n))+')':''); }).join('<br>') : '<i>—</i>')+'</span></div>'; }
       var txt=Array.isArray(v)?v.join(', '):(v||'');
-      return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(txt?esc(txt):'<i>—</i>')+'</span></div>'; }).join('')+'</div>';
+      return '<div class="kv ans"><b>'+esc(lt_(q.label))+'</b><span>'+(txt?esc(txt):'<i>—</i>')+'</span></div>'; }).join('')+'</div>'+(opts.fold ? '</details>' : '');
   });
+  if(q0 && !hits) h='<p class="sub" style="margin:6px 0">'+esc(t('Nothing in the answers matches.'))+'</p>';
   return h;
 }
 /* ==================== the e-visa guide (applicant side) ====================
@@ -1975,7 +2346,9 @@ function schedulesCardHtml_(){
   }
   return h+'</div>';
 }
+function openMySign_(){ P.sign={ token:{ user:P.auth.user, pin:P.auth.pin }, inApp:true, data:null, who:null, under18:null, idx:0, form:{}, pads:{}, done:false }; P.view='sign'; render(); window.scrollTo(0,0); }
 function bindMembersAndSchedules_(){
+  on_('openSign', openMySign_);
   var app=P.boot && P.boot.application;
   on_('editMembers', function(){ var l=(app.members||[]).map(function(m){ return { id:m.id||'', name:m.name, sex:m.sex||'' }; }); if(!l.length) l=[{ name:'', sex:'' }]; P.members=l; render(); });
   /* the photos, once, for a submitted team */
@@ -2462,9 +2835,10 @@ function panelAnswersHtml_(c){
   if(P.editAnswers){
     (form.sections||[]).forEach(function(sec){ var qs=askedIn_(sec, c.audience); if(!qs.length) return; h+='<div class="eyebrow" style="margin-top:10px">'+esc(lt_(sec.title))+'</div>'+qs.map(function(q){ return questionHtml_(q, P.staffAnswers[q.id], 's_', false); }).join(''); });
     h+='<button class="btn small" id="saveAnswers"'+(P.busy?' disabled':'')+'>'+esc(t('Save answers'))+'</button> <button class="linkbtn inline" id="cancelAnswers">'+esc(t('Cancel'))+'</button>';
-  } else {
-    h+= Object.keys(answers).length ? answersHtml_(form, answers, c.audience) : '<p class="sub" style="margin:0">'+esc(t('Nothing answered yet.'))+'</p>';
-  }
+  } else if(Object.keys(answers).length){
+    h+='<input type="search" id="ansQ" placeholder="'+esc(t('Find in answers — a word, a name, a date'))+'" value="'+esc(P.ansQ||'')+'" style="margin:8px 0 6px">'+
+      '<div id="ansBody">'+answersHtml_(form, answers, c.audience, { fold:true, q:P.ansQ })+'</div>';
+  } else h+='<p class="sub" style="margin:0">'+esc(t('Nothing answered yet.'))+'</p>';
   return h;
 }
 /* For a team: how long they are in Cambodia, each place with its dates,
@@ -2562,6 +2936,10 @@ function panelVisaHtml_(c){
 }
 function bindPanelExtras_(){
   var c=selected_(); if(!c) return;
+  if(P.ptab==='legal') bindLegalTab_(c);
+  document.querySelectorAll('[data-ptab]').forEach(function(b){ b.onclick=function(){ P.ptab=b.getAttribute('data-ptab'); P.editAnswers=false; render(); var p=document.getElementById('ptabs'); if(p && p.getBoundingClientRect().top<0) p.scrollIntoView({ block:'start' }); }; });
+  var aq=document.getElementById('ansQ');
+  if(aq) aq.oninput=function(){ P.ansQ=aq.value; var form=(P.boot.forms||{})[c.formKey], answers=(c.portal && ((c.portal.form && c.portal.form.answers) || c.portal.draft)) || {}; var b=document.getElementById('ansBody'); if(b) b.innerHTML=answersHtml_(form, answers, c.audience, { fold:true, q:P.ansQ }); };
   if(c.type==='team' && P.tphotosFor!==c.id && !P.tphotosLoading){
     P.tphotosLoading=true;
     run('portalTeamPhotos', [P.auth.user, P.auth.pin, c.id], function(d){ P.tphotosLoading=false; P.tphotosFor=c.id; P.tphotosStaff = d && d.ok ? d : { people:[], photos:{} }; render(); }, function(){ P.tphotosLoading=false; P.tphotosFor=c.id; P.tphotosStaff={ people:[], photos:{} }; render(); });
@@ -2675,6 +3053,7 @@ function bind_(){
   on_('toForms', function(){ P.menuOpen=false; if(P.view==='forms') return; P.view='forms'; render(); });
   on_('toResources', function(){ P.menuOpen=false; if(P.view==='resources') return; P.view='resources'; P.resDraft=null; render(); });
   on_('toTeam', function(){ P.menuOpen=false; if(P.view==='team') return; P.view='team'; P.teamEdit=null; render(); });
+  on_('toLegal', function(){ P.menuOpen=false; if(P.view==='legal') return; P.view='legal'; P.legalDocs=null; P.legalPreview=null; render(); });
   on_('toAccess', function(){ P.menuOpen=false; if(P.view==='access') return; P.view='access'; P.access=null; P.accessQ=''; render(); });
   bindAccess_();
   bindTeamAdmin_();
@@ -2686,7 +3065,7 @@ function bind_(){
   document.querySelectorAll('[data-linkkind]').forEach(function(b){ b.onclick=function(){ P.linkKind=b.getAttribute('data-linkkind'); render(); copyText_(applyLinkUrl_(P.linkKind)); }; });
   on_('toPreview', function(){ P.menuOpen=false; if(P.view==='preview') return; P.view='preview'; P.pv.boot=null; P.pv.screen='me'; P.pv.sec=0; render(); });
   on_('toAccounts', function(){ P.menuOpen=false; if(P.view==='accounts') return; P.view='accounts'; P.accSel=null; P.accNew=false; P.accounts=null; render(); });
-  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindPreview_(); bindStays_(); bindPeople_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();
+  bindForm_(); bindForms_(); bindAccounts_(); bindRef_(); bindSign_(); bindLegalAdmin_(); bindPreview_(); bindStays_(); bindPeople_(); bindDocs_(); if(P.view==='crm') bindPanelExtras_();
 }
 /* Typing in the search box re-draws only the list, so the box keeps focus. */
 function renderList_(){

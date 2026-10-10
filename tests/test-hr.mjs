@@ -27,6 +27,8 @@ fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
 fs.copyFileSync(REPO + '/netlify/functions/team-seed.js', TMP + '/team-seed.js');
 fs.copyFileSync(REPO + '/netlify/functions/portal-forms-default.js', TMP + '/portal-forms-default.js'); // and the portal's shipped forms // api.js imports it
+fs.copyFileSync(REPO + '/netlify/functions/legal-docs-default.js', TMP + '/legal-docs-default.js');  // the legal forms teams sign
+fs.copyFileSync(REPO + '/netlify/functions/legal-pdf.js', TMP + '/legal-pdf.js');  // and the signed-PDF builder
 process.env.GP_LEADER_CODE = 'leadercode';
 process.env.GP_ADMIN_CODE = 'admincode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
@@ -183,6 +185,104 @@ r = await call('getMyBoot', ['yi', '1234']);
 ok('and they can sign in again', r.body.ok === true);
 r = await call('hrUnarchive', ['sina', '1234', 'st_dara']);
 ok('unarchiving someone who was never archived is refused', r.body.ok === false && r.body.err === 'not_archived');
+
+console.log('=== staff sign the legal documents and their contract in the app ===');
+{
+  const SIG = '/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAAUADwDASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAYFBAf/xAAsEAABAwIEBAUFAQAAAAAAAAABAAQFAgMGERMhFDFRcSMyQWGhEiJigZGx/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/APTkWTOz1qG0bZZu3bhxnpWW1o1GrLLPM8hzCycsYTXmqbwLWr0HjXyP8HwQgo38iyjbOs/dWW9vrcrAz7dVPHGfFE1QcLISVmnz36aNOjL8TV5j7bLpYYNiGt7iXdFyRd+t97Xqn+Hb4VCAKQAAABsAEGDG4vhn93h6nFTN0Ni3d06VYPTfYnsVvLjkomOlbOlIs7Lin0+unMjseY/SwDhWQi/uwzNXm9A5NHXjWewz3p+Sgq0UoMTykWRRiSDvW6BtxbLxbR9yOdI7qrBzAPVAREQEREBERAREQf/Z';
+  const req = (b) => (b.required || b.staff && b.staff.required || { items: [] }).items;
+  r = await call('myContract', ['andrew', '1234']);
+  ok('My contract: their own profile, the five legal documents, and their list', r.body.ok && r.body.me.id === 'st_andrew' && r.body.legalDocs.map(d => d.id).join() === 'photo,accident,liability,acceptance,child' && !!r.body.required);
+  let cpi = req(r.body).find(x => x.id === 'legal:child');
+  ok('… the Child Protection Agreement is on everyone’s list, not signed yet', cpi && cpi.kind === 'legal' && cpi.done === false);
+  r = await call('myContract', ['andrew', '0000']);
+  ok('… only with the right PIN', r.body.ok === false);
+  r = await call('staffSignOpen', ['andrew', '1234']);
+  ok('staff open their documents with their own sign-in: the five, for them alone', r.body.ok && r.body.staff === true && r.body.docs.map(d => d.id).join() === 'photo,accident,liability,acceptance,child' && r.body.people.length === 1 && r.body.people[0].name === 'Andrew Lee');
+  r = await call('staffSignOpen', ['andrew', '0000']);
+  ok('… only with the right PIN', r.body.ok === false);
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', 'photo', { name: 'Andrew Lee', checks: { beyond: true }, sig: SIG }]);
+  ok('the same rules as applicants: every box ticked', r.body.ok === false && r.body.err === 'unticked');
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', 'photo', { name: 'Andrew Lee', checks: { beyond: true, noPay: true, read: true }, sig: SIG }]);
+  ok('the Photo Release signs, once', r.body.ok && r.body.done.photo === true);
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', 'child', { name: 'Andrew Lee', checks: Object.fromEntries(['readA', 'readB', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'readD', 'readE', 'readF'].map(k => [k, true])), choices: { disclose: 'none' }, fields: { role: 'Cafe', dates: '2026' }, sig: SIG }]);
+  ok('the Child Protection Agreement signs', r.body.ok && r.body.done.child === true, JSON.stringify(r.body));
+  r = await call('myContract', ['andrew', '1234']);
+  cpi = req(r.body).find(x => x.id === 'legal:child');
+  ok('… and is ticked off on their list, with the date', cpi.done === true && !!cpi.at && r.body.me.legal.child && r.body.me.legal.photo);
+  r = await call('hrList', ['sina', '1234']);
+  let me = r.body.staff.find(x => x.id === 'st_andrew');
+  ok('HR sees it on their profile, with the list of documents', me.legal.photo && me.legal.photo.name === 'Andrew Lee' && r.body.legalDocs.length === 5);
+  r = await call('hrLegalPdf', ['sina', '1234', 'st_andrew', 'photo']);
+  ok('… and opens it as a PDF', r.body.ok && /^data:application\/pdf;base64,JVBER/.test(r.body.dataUrl));
+  r = await call('hrLegalPdf', ['andrew', '1234', '', 'photo']);
+  ok('staff can open their own', r.body.ok);
+  r = await call('hrLegalPdf', ['dara', '1234', 'st_andrew', 'photo']);
+  ok('… not someone else’s', r.body.ok === false && r.body.err === 'not_authorized');
+
+  /* documents they signed as an applicant in the portal count too */
+  mem.candidates = [
+    { id: 'c_dara', type: 'individual', name: 'Dara Pen', email: 'dara@example.org', portal: { signed: { me: { liability: { at: '2026-03-01T00:00:00.000Z', name: 'Dara Pen' } } } } },
+    { id: 'c_team', type: 'team', name: 'Fake Team', email: 'dara@example.org', portal: { signed: { me: { photo: { at: '2026-03-01T00:00:00.000Z', name: 'Dara Pen' } } } } },
+  ];
+  mem['tsign:c_dara:me'] = { docs: {} };
+  r = await call('adminUpdateStaff', ['uriah', '1234', 'st_dara', { email: 'dara@example.org' }]);
+  r = await call('myContract', ['dara', '1234']);
+  ok('a form they signed in the portal (same email) shows in My contract as signed there', r.body.ok && r.body.me.legal.liability && r.body.me.legal.liability.from === 'portal' && r.body.me.legal.liability.candId === 'c_dara', JSON.stringify(r.body.me && r.body.me.legal));
+  ok('… a team’s signatures do not count for a staff member', !r.body.me.legal.photo);
+  r = await call('staffSignOpen', ['dara', '1234']);
+  ok('… and is not asked again', r.body.people[0].done.liability === true && !r.body.people[0].done.photo);
+
+  /* their own start dates */
+  r = await call('mySaveStart', ['andrew', '1234', { ywamSince: 2015, starts: { poipet: '2019-02' } }]);
+  ok('staff set when they joined YWAM and their time in Poipet themselves', r.body.ok && r.body.staff.ywamSince === 2015, JSON.stringify(r.body));
+  r = await call('mySaveStart', ['andrew', '1234', { ywamSince: 1800 }]);
+  ok('… checked like HR’s', r.body.ok === false);
+  r = await call('mySaveStart', ['andrew', '0000', { ywamSince: 2016 }]);
+  ok('… only with the right PIN', r.body.ok === false);
+
+  /* the Volunteer Staff Contract — filled out in person on HR's phone: they sign, HR signs to approve */
+  r = await call('hrSendContract', ['dara', '1234', 'st_andrew', { from: '2026-11', years: 2 }]);
+  ok('only HR starts a staff contract', r.body.ok === false);
+  r = await call('hrSendContract', ['sina', '1234', 'st_andrew', { from: '2026-12', years: 1 }]);
+  const ctId = r.body.contractId;
+  ok('HR starts one — even with a contract on file (to redo a paper one) — waiting to be signed', r.body.ok && !!ctId && r.body.staff.contracts.find(c => c.id === ctId).digital.status === 'awaiting_staff');
+  r = await call('hrSendContract', ['sina', '1234', 'st_andrew', { from: '2026-11', years: 2 }]);
+  const ct = r.body.ok && r.body.staff.contracts.find(c => c.id === ctId);
+  ok('starting again changes the one waiting, it does not add another', r.body.ok && r.body.contractId === ctId && ct.signed === '2026-11' && ct.years === 2 && r.body.staff.contracts.filter(c => c.digital && c.digital.status === 'awaiting_staff').length === 1);
+  r = await call('myContract', ['andrew', '1234']);
+  let cti = req(r.body).find(x => x.kind === 'contract');
+  ok('until it is signed it does not count, and the staff member is not asked to sign it', cti.ends === '2029-10-01' && cti.toSign === undefined && cti.state === 'current', JSON.stringify(cti));
+  r = await call('staffSignOpen', ['andrew', '1234']);
+  ok('the staff member cannot open it on their own', r.body.ok && !r.body.docs.some(d => /^contract:/.test(d.id)));
+  r = await call('staffSignSubmit', ['andrew', '1234', 'me', 'contract:' + ctId, { name: 'Andrew Lee', sig: SIG }]);
+  ok('… nor sign it on their own', r.body.ok === false);
+  r = await call('hrContractOpen', ['dara', '1234', 'st_andrew']);
+  ok('only HR opens the signing page', r.body.ok === false && r.body.err === 'not_authorized');
+  r = await call('hrContractOpen', ['sina', '1234', 'st_andrew']);
+  const cdoc = r.body.docs[0];
+  ok('HR opens it for that person: the contract with its period, their name, and HR as the one approving', r.body.ok && r.body.hrSign === true && r.body.people[0].name === 'Andrew Lee' && r.body.approver === 'Sina Sok' && cdoc.id === 'contract:' + ctId && /2 years · From 11\/2026 to 11\/2028/.test(cdoc.period) && cdoc.sign.leader === true);
+  const cbody = { name: 'Andrew Lee', checks: { agree: true }, fields: { focus1: 'Cafe', future: 'lead a ministry' }, sig: SIG };
+  r = await call('hrContractSign', ['sina', '1234', 'st_andrew', 'me', cdoc.id, cbody]);
+  ok('it will not be signed without HR approving', r.body.ok === false && r.body.err === 'leader_required');
+  r = await call('hrContractSign', ['dara', '1234', 'st_andrew', 'me', cdoc.id, { ...cbody, leaderName: 'Dara Pen', leaderSig: SIG }]);
+  ok('… and only HR can approve', r.body.ok === false && r.body.err === 'not_authorized');
+  r = await call('hrContractSign', ['sina', '1234', 'st_andrew', 'me', cdoc.id, { ...cbody, leaderName: 'Sina Sok', leaderSig: SIG }]);
+  ok('they sign, HR signs to approve: done', r.body.ok);
+  r = await call('hrList', ['sina', '1234']);
+  me = r.body.staff.find(x => x.id === 'st_andrew');
+  const dg = me.contracts.find(c => c.id === ct.id).digital;
+  ok('… and it is their contract straight away, with both names and who approved it', dg.status === 'signed' && dg.staffName === 'Andrew Lee' && dg.leaderName === 'Sina Sok' && dg.approvedBy === 'st_hr');
+  r = await call('hrContractPdf', ['sina', '1234', 'st_andrew', ct.id]);
+  const pdf = r.body.ok ? Buffer.from(r.body.dataUrl.split(',')[1], 'base64').toString('latin1') : '';
+  ok('the signed contract is a PDF with the letterhead, both signatures and the commitment', r.body.ok && (pdf.match(/\/Subtype \/Image/g) || []).length === 3 && pdf.includes('Cafe') && pdf.includes('Sina Sok') && pdf.includes('Signature of UofN Leader'));
+  r = await call('hrContractPdf', ['andrew', '1234', '', ct.id]);
+  ok('they open their own signed contract', r.body.ok);
+  r = await call('hrContractPdf', ['dara', '1234', '', ct.id]);
+  ok('… nobody else can, even by its id', r.body.ok === false);
+  r = await call('myContract', ['andrew', '1234']);
+  cti = req(r.body).find(x => x.kind === 'contract');
+  ok('it now counts: their contract ends when the new one does', cti.done === true && cti.state === 'current' && cti.ends === '2028-11-01', JSON.stringify(cti));
+}
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

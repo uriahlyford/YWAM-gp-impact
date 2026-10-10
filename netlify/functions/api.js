@@ -24,6 +24,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import TEAM_SEED from './team-seed.js';
 import PORTAL_FORMS_DEFAULT from './portal-forms-default.js';
+import LEGAL_DOCS_DEFAULT, { STAFF_CONTRACT } from './legal-docs-default.js';
+import { buildSignedPdf, isJpeg as isJpeg_ } from './legal-pdf.js';
 
 const SENSITIVE = ['Base Finances ($)', 'Base Cash Reserve ($)'];
 
@@ -3939,9 +3941,29 @@ async function hospRequests_(campus, bookings) {
   (await getCandidates_()).forEach(function (c) { if (c && c.id) byCand[c.id] = c; });
   const booked = {};
   bookings.forEach(function (k) { if (k.tripId) booked[k.tripId] = k.id; });
-  return (await getTeamTrips_()).filter(function (t) {
-    return t.campus === campus && t.status !== 'cancelled' && t.from && t.to && t.to >= today;
-  }).map(function (t) {
+  /* a team whose application was deleted in the portal is gone too */
+  const goneCand = function (t) { return !!(t.candidateId && !byCand[t.candidateId]); };
+  const trips = await getTeamTrips_();
+  const live = trips.filter(function (t) {
+    return t.campus === campus && t.status !== 'cancelled' && !goneCand(t) && t.from && t.to && t.to >= today;
+  });
+  /* A team cancelled (closed in the portal, or cancelled in the Teams
+     Database) or deleted while its beds are booked: the booking stays until
+     someone frees the beds, so it shows here as cancelled. */
+  const liveIds = {}, tripById = {};
+  live.forEach(function (t) { liveIds[t.id] = 1; });
+  trips.forEach(function (t) { tripById[t.id] = t; });
+  const raw = {}; (await getTeamTripsRaw_()).forEach(function (r) { if (r && r.id) raw[r.id] = r; });
+  const gone = bookings.filter(function (k) { return k.tripId && !liveIds[k.tripId] && !k.permanent && k.to && k.to >= today; }).map(function (k) {
+    const t = tripById[k.tripId], r = raw[k.tripId];
+    const why = !t || (r && r.deleted) || goneCand(t) ? 'deleted' : t.status === 'cancelled' ? 'cancelled' : '';
+    if (!why || (t && t.campus !== campus)) return null;
+    return { tripId: k.tripId, name: (t && t.name) || k.name, country: (t && t.country) || '', from: k.from, to: k.to,
+      size: null, males: k.males == null ? null : k.males, females: k.females == null ? null : k.females, couples: null,
+      pending: false, portalStage: '', candidateId: t && !goneCand(t) ? t.candidateId || '' : '', bookingId: k.id, people: [],
+      cancelled: why, count: Number(k.count) || 0 };
+  }).filter(Boolean);
+  return live.map(function (t) {
     return {
       tripId: t.id, name: t.name, country: t.country || '', from: t.from, to: t.to,
       size: t.size == null ? null : t.size, males: t.males == null ? null : t.males, females: t.females == null ? null : t.females,
@@ -3950,7 +3972,7 @@ async function hospRequests_(campus, bookings) {
       candidateId: t.candidateId || '', bookingId: booked[t.id] || '',
       people: teamPeople_(t.candidateId && byCand[t.candidateId])
     };
-  }).sort(function (a, b) { return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; });
+  }).concat(gone).sort(function (a, b) { return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; });
 }
 async function hospAuth_(username, pin) {
   const s = await verifyStaff_(username, pin);
@@ -4872,8 +4894,20 @@ function cleanContract_(c, keepFiles) {
   return { id: str_(c.id, 60) || hrId_('ct'), signed: signed, years: Math.round(years * 4) / 4, notes: str_(c.notes, 500),
     campus: HR_CAMPUSES.indexOf(c.campus) > -1 ? c.campus : '',
     files: (Array.isArray(keepFiles) ? keepFiles : []).map(cleanFileMeta_).filter(Boolean).slice(0, HR_MAX_FILES),
-    added: str_(c.added, 40), addedBy: str_(c.addedBy, 60) };
+    added: str_(c.added, 40), addedBy: str_(c.addedBy, 60), digital: cleanDigital_(c.digital) };
 }
+/* A contract signed in the app: sent by HR (awaiting_staff), signed by the
+   staff member (awaiting_leader), countersigned by a UofN leader (signed).
+   The signatures live in blob 'scontract:<contractId>'. */
+const DIGITAL_STATUS = ['awaiting_staff', 'awaiting_leader', 'signed'];
+function cleanDigital_(d) {
+  if (!d || typeof d !== 'object' || DIGITAL_STATUS.indexOf(d.status) === -1) return undefined;
+  const o = { status: d.status };
+  ['sentAt', 'sentBy', 'staffSignedAt', 'staffName', 'leaderSignedAt', 'leaderName', 'leaderId', 'approvedBy'].forEach(function (k) { if (d[k]) o[k] = str_(d[k], 120); });
+  return o;
+}
+/* a contract counts — for "current" and the due count — once it is signed (paper ones always are) */
+function contractInForce_(c) { return !c.digital || c.digital.status === 'signed'; }
 function contractsOf_(s) {
   return (Array.isArray(s && s.contracts) ? s.contracts : []).map(function (c) { return cleanContract_(c, c && c.files); })
     .filter(Boolean).sort(function (a, b) { return a.signed < b.signed ? -1 : a.signed > b.signed ? 1 : 0; });
@@ -4891,7 +4925,7 @@ function hrDueCount_(rows) {
   let n = 0;
   (rows || []).forEach(function (r) {
     if (!r || r.active === false || r.archived) return;
-    const list = contractsOf_(r); if (!list.length) return;
+    const list = contractsOf_(r).filter(contractInForce_); if (!list.length) return;
     const days = Math.round((hrContractEnd_(list[list.length - 1]) - today) / 86400000);
     if (days <= HR_DUE_DAYS) n++;
   });
@@ -4900,6 +4934,7 @@ function hrDueCount_(rows) {
 function hrStaffOut_(s) {
   const out = adminStaffOut_(s);
   out.joined = s.joined || ''; out.photo = s.photo || ''; out.contracts = contractsOf_(s);
+  out.legal = s.legal && typeof s.legal === 'object' ? s.legal : {};
   out.ywamSince = ywamSinceOf_(s);
   out.starts = startsOf_(s);
   out.baseSince = out.starts[s.campus] || '';
@@ -4931,7 +4966,7 @@ async function hrList(username, pin) {
   if (!s) return { ok: false };
   if (!canHR_(s)) return { ok: false, err: 'not_authorized' };
   const rows = await getStaff_();
-  return { ok: true, staff: rows.filter(function (r) { return !isApplicant_(r); }).map(hrStaffOut_) };
+  return { ok: true, staff: rows.filter(function (r) { return !isApplicant_(r); }).map(hrStaffOut_), legalDocs: (await legalDocs_()).map(function (d) { return { id: d.id, title: d.title }; }) };
 }
 async function hrMutate_(username, pin, staffId, fn) {
   const s = await verifyStaff_(username, pin);
@@ -4966,8 +5001,23 @@ async function hrSaveContract(username, pin, staffId, contract) {
    the ones being changed; '' clears one. baseSince is the same as their
    own campus's start. */
 async function hrSaveStart(username, pin, staffId, dates) {
-  dates = dates && typeof dates === 'object' ? dates : {};
-  return hrMutate_(username, pin, staffId, function (rec) {
+  return hrMutate_(username, pin, staffId, function (rec) { return applyStart_(rec, dates); });
+}
+/* the person sets their own (My contract): when they joined YWAM and started on each campus */
+async function mySaveStart(username, pin, dates) {
+  const s = await verifyStaff_(username, pin);
+  if (!s || isApplicant_(s)) return { ok: false };
+  return mutateStaff_(function (rows) {
+    const rec = rows.find(function (r) { return r.id === s.id; });
+    if (!rec) return { abort: true, ok: false, err: 'not_found' };
+    const res = applyStart_(rec, dates);
+    if (res && res.abort) return res;
+    rec.updated = new Date().toISOString();
+    return { ok: true, staff: hrStaffOut_(rec) };
+  });
+}
+function applyStart_(rec, dates) {
+    dates = dates && typeof dates === 'object' ? dates : {};
     let ywam = rec.ywamSince == null ? null : rec.ywamSince;
     const starts = startsOf_(rec), now = new Date(), nowM = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2);
     if (dates.ywamSince !== undefined) {
@@ -4986,7 +5036,6 @@ async function hrSaveStart(username, pin, staffId, dates) {
     }
     if (ywam && Object.keys(starts).some(function (c) { return Number(starts[c].slice(0, 4)) < ywam; })) return { abort: true, ok: false, err: 'base_before_ywam' };
     rec.ywamSince = ywam; rec.starts = starts; rec.baseSince = starts[rec.campus] || '';
-  });
 }
 async function hrDeleteContract(username, pin, staffId, contractId) {
   const st = store();
@@ -5116,12 +5165,14 @@ async function getReqDocs_() {
    not run out (one running out soon is still done — HR's renewals list is
    where that shows). */
 function contractState_(s) {
-  const list = contractsOf_(s);
+  /* a contract HR has started but not yet signed with them doesn't count */
+  const list = contractsOf_(s).filter(contractInForce_);
   if (!list.length) return { done: false, state: 'none', ends: '' };
   const end = hrContractEnd_(list[list.length - 1]);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const ends = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-01';
-  return end > today ? { done: true, state: 'current', ends: ends } : { done: false, state: 'expired', ends: ends };
+  if (end <= today) return { done: false, state: 'expired', ends: ends };
+  return { done: true, state: 'current', ends: ends, soon: Math.round((end - today) / 86400000) <= HR_DUE_DAYS };
 }
 /* One person's list: each paper (signed for its current version?) and the
    contract. A paper with nothing to read yet (no file, no link) is not asked. */
@@ -5131,8 +5182,10 @@ function requiredFor_(s, docs) {
     const g = signed[d.id], ok = !!(g && Number(g.v) === d.version);
     return { id: d.id, kind: 'doc', title: d.title, done: ok, at: ok ? str_(g.at, 40) || '' : '', older: !!(g && !ok) };
   });
+  const cp = s && s.legal && s.legal.child;
+  items.push({ id: 'legal:child', kind: 'legal', title: 'Child Protection Agreement', done: !!cp, at: cp ? str_(cp.at, 40) : '' });
   const c = contractState_(s);
-  items.push({ id: 'contract', kind: 'contract', title: 'Staff contract', done: c.done, state: c.state, ends: c.ends });
+  items.push({ id: 'contract', kind: 'contract', title: 'Staff contract', done: c.done, state: c.state, ends: c.ends, soon: !!c.soon });
   const done = items.filter(function (x) { return x.done; }).length;
   return { items: items, done: done, total: items.length, finished: done === items.length };
 }
@@ -6651,6 +6704,367 @@ async function portalReferenceSubmit(token, answers) {
   await writeJSON('candidates', f.rows);
   return { ok: true, applicantName: f.cand.name };
 }
+/* ==================== legal documents, signed on a phone (Oct 2026) ====================
+   A team's people sign YWAM Siem Reap's forms (legal-docs-default.js) with no
+   account: staff make the team's signing link on the record (portalSignLink —
+   a random token, kept only as a sha256 hash, a new one turning the old one
+   off), anyone on the team opens portal.html?sign=<token>, picks their name
+   (the team's names and photos list — leader, co-leaders, members) and signs
+   each document in turn. Each signature keeps the exact text signed (a
+   snapshot, 'legalSnap:<hash>'), the ticks, details, initials and the
+   handwritten signature JPEGs, in one blob per person
+   ('tsign:<candidateId>:<key>'); the record keeps only who signed what and
+   when (portal.signed) for the grid on the record's Legal tab, where each
+   signed one downloads as a PDF built from those (legal-pdf.js). A portal
+   admin can turn a document off ('legalDocs' {off:[ids]}). */
+const SIG_MAX_B64 = 120 * 1024;
+/* who signs on a record: a team's people, or the applicant alone ('me') */
+function signPeople_(c) { return c.type === 'team' ? teamPhotoPeople_(c) : [{ key: 'me', name: c.name, role: 'me' }]; }
+/* the Child Protection Agreement's reporting contacts, set by a portal admin */
+const CONTACT_ROLES = ['Ministry leader or director', 'Alternative senior leader'];
+function legalContacts_(set) {
+  const got = Array.isArray(set && set.contacts) ? set.contacts : [];
+  return CONTACT_ROLES.map(function (role, i) { const c = got[i] || {}; return { role: role, name: dutyText_(c.name, 120), phone: dutyText_(c.phone, 60) }; });
+}
+/* what the role and dates lines start with on a record */
+function signPrefill_(c) {
+  const fmt = function (d) { return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : ''; };
+  if (c.type === 'team') {
+    const trip = tripFromApp_(c, null) || {};
+    return { role: 'Short-term team — ' + teamTitle_(c), dates: trip.from && trip.to ? fmt(trip.from) + ' – ' + fmt(trip.to) : '' };
+  }
+  return { role: c.type === 'student' ? String(c.school || '').toUpperCase() + ' student' : c.type === 'staff' ? 'Staff' : c.type === 'volunteer' ? 'Volunteer' : '', dates: '' };
+}
+async function legalDocs_(all) {
+  const set = await readJSON('legalDocs', { off: [] });
+  const off = Array.isArray(set && set.off) ? set.off : [];
+  return LEGAL_DOCS_DEFAULT.map(function (d) { return Object.assign({}, d, { on: off.indexOf(d.id) === -1, hash: crypto.createHash('sha256').update(JSON.stringify(d)).digest('hex') }); })
+    .filter(function (d) { return all || d.on; });
+}
+function signHash_(token) { return hashPin_(String(token), 'sign'); }
+function signBlobKey_(candId, key) { return 'tsign:' + candId + ':' + String(key).replace(/[^a-zA-Z0-9]/g, '_'); }
+function teamTitle_(c) { return dutyText_(teamAnswers_(c).teamName, 120) || c.name; }
+function pnpStamp_(iso) {
+  const d = new Date(new Date(iso).getTime() + 7 * 3600 * 1000), p = function (n) { return String(n).padStart(2, '0'); };
+  return { date: p(d.getUTCDate()) + '/' + p(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(), at: d.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()] + ' ' + d.getUTCFullYear() + ', ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ' (Phnom Penh time)' };
+}
+async function signStatus_(c) {
+  const docs = await legalDocs_();
+  const signed = (c.portal && c.portal.signed) || {};
+  return {
+    link: c.portal && c.portal.signLink ? { createdAt: c.portal.signLink.createdAt } : null,
+    docs: docs.map(function (d) { return { id: d.id, title: d.title }; }),
+    people: signPeople_(c).map(function (p) { return { key: p.key, name: p.name, role: p.role, signed: signed[p.key] || {} }; })
+  };
+}
+async function portalSignLink(username, pin, candidateId) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  return makeSignLink_(a, a.s.id);
+}
+/* an applicant signs from their own dashboard, signed in — no link, so a team
+   link staff already sent keeps working */
+async function signFor_(arg) {
+  if (arg && typeof arg === 'object') { const a = await applicantCand_(arg.user, arg.pin); return a.out ? null : { rows: a.rows, cand: a.cand }; }
+  return findSign_(arg);
+}
+async function makeSignLink_(a, by) {
+  const c = a.cand;
+  if (c.archived) return { ok: false, err: 'closed' };
+  const token = pinSalt_() + pinSalt_() + pinSalt_();
+  c.portal = c.portal || {};
+  c.portal.signLink = { hash: signHash_(token), createdAt: new Date().toISOString(), by: by };
+  c.updated = new Date().toISOString(); c.updatedBy = by;
+  await writeJSON('candidates', a.rows);
+  return Object.assign({ ok: true, token: token }, await signStatus_(c));
+}
+async function portalSignStatus(username, pin, candidateId) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  return Object.assign({ ok: true }, await signStatus_(a.cand));
+}
+async function findSign_(token) {
+  token = String(token || '');
+  if (!/^[a-f0-9]{24,128}$/.test(token)) return null;
+  const h = signHash_(token);
+  const rows = await getCandidates_();
+  const c = rows.find(function (x) { return x && x.portal && x.portal.signLink && x.portal.signLink.hash === h; });
+  return c ? { rows: rows, cand: c } : null;
+}
+/* the signer's side: the team, its people, the documents — nothing else about the team */
+async function portalSignOpen(token) {
+  const f = await signFor_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  if (f.cand.archived) return { ok: false, err: 'closed' };
+  const signed = (f.cand.portal && f.cand.portal.signed) || {};
+  const docs = await legalDocs_();
+  return {
+    ok: true, team: f.cand.type === 'team' ? teamTitle_(f.cand) : f.cand.name, isTeam: f.cand.type === 'team',
+    contacts: legalContacts_(await readJSON('legalDocs', {})), prefill: signPrefill_(f.cand),
+    people: signPeople_(f.cand).map(function (p) { const m = signed[p.key] || {}; const done = {}; docs.forEach(function (d) { if (m[d.id]) done[d.id] = true; }); return { key: p.key, name: p.name, done: done }; }),
+    docs: docs.map(function (d) { return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign || {} }; })
+  };
+}
+/* Everything a signature must have for this document — the ticks, the
+   choice, the lines, initials, the handwritten signature, age, a guardian
+   under 18, a witness if one was added — and the record kept for it, with a
+   snapshot of the exact text signed. Shared by applicants and staff. */
+async function signRecord_(doc, p, key) {
+  p = p && typeof p === 'object' ? p : {};
+  const sign = doc.sign || {};
+  const name = dutyText_(p.name, 120);
+  if (!name) return { err: 'name_required' };
+  const checks = {}, fields = {}, initials = {}, choices = {};
+  for (const b of doc.blocks) {
+    if (b.t === 'check' || b.t === 'group') { if (!(p.checks && p.checks[b.id] === true)) return { err: 'unticked', id: b.id }; checks[b.id] = true; }
+    if (b.t === 'choice') { const v = p.choices && p.choices[b.id]; if (!(b.options || []).some(function (o) { return o.id === v; })) return { err: 'choice_required', id: b.id }; choices[b.id] = v; }
+    if (b.t === 'field') { const v = dutyText_(p.fields && p.fields[b.id], 120); if (!v && !b.optional) return { err: 'field_required', id: b.id }; if (v) fields[b.id] = v; }
+    if (b.t === 'initial') { const v = p.initials && p.initials[b.id]; if (!isJpeg_(v) || v.length > SIG_MAX_B64) return { err: 'initials_required', id: b.id }; initials[b.id] = v; }
+  }
+  if (!isJpeg_(p.sig) || p.sig.length > SIG_MAX_B64) return { err: 'signature_required' };
+  let age = null;
+  if (sign.age) { age = finiteNum_(p.age, 1, 120); if (age == null) return { err: 'age_required' }; age = Math.round(age); }
+  const under18 = !!p.under18 || (age != null && age < 18);
+  let guardianName = '', guardianSig = '';
+  if (sign.guardian && under18) {
+    guardianName = dutyText_(p.guardianName, 120);
+    guardianSig = p.guardianSig;
+    if (!guardianName || !isJpeg_(guardianSig) || guardianSig.length > SIG_MAX_B64) return { err: 'guardian_required' };
+  }
+  let leaderName = '', leaderSig = '';
+  if (sign.leader) {
+    leaderName = dutyText_(p.leaderName, 120); leaderSig = p.leaderSig;
+    if (!leaderName || !isJpeg_(leaderSig) || leaderSig.length > SIG_MAX_B64) return { err: 'leader_required' };
+  }
+  let witnessName = '', witnessSig = '';
+  if (sign.witness && (p.witnessName || p.witnessSig)) {
+    witnessName = dutyText_(p.witnessName, 120); witnessSig = p.witnessSig || '';
+    if (!witnessName || !isJpeg_(witnessSig) || witnessSig.length > SIG_MAX_B64) return { err: 'witness_incomplete' };
+  }
+  const now = new Date().toISOString(), stamp = pnpStamp_(now);
+  const snapKey = 'legalSnap:' + doc.hash;
+  if (!(await readJSON(snapKey, null))) { const snap = Object.assign({}, doc); delete snap.on; delete snap.hash; await writeJSON(snapKey, snap); }
+  return { rec: { at: now, dateText: stamp.date, atText: stamp.at, name: name, age: age, under18: under18, guardianName: guardianName, guardianSig: guardianSig, witnessName: witnessName, witnessSig: witnessSig,
+    sig: p.sig, checks: checks, choices: choices, fields: fields, initials: initials, docHash: doc.hash, personKey: key,
+    leaderName: leaderName || undefined, leaderSig: leaderSig || undefined, leaderDateText: leaderName ? stamp.date : undefined,
+    contacts: doc.blocks.some(function (b) { return b.t === 'contacts'; }) ? legalContacts_(await readJSON('legalDocs', {})) : undefined } };
+}
+async function portalSignSubmit(token, key, docId, p) {
+  const f = await signFor_(token);
+  if (!f) return { ok: false, err: 'invalid' };
+  const c = f.cand;
+  if (c.archived) return { ok: false, err: 'closed' };
+  key = str_(key, 40);
+  const person = signPeople_(c).find(function (x) { return x.key === key; });
+  if (!person) return { ok: false, err: 'bad_person' };
+  const doc = (await legalDocs_()).find(function (d) { return d.id === str_(docId, 40); });
+  if (!doc) return { ok: false, err: 'bad_doc' };
+  const v = await signRecord_(doc, p, key);
+  if (v.err) return Object.assign({ ok: false }, v);
+  const now = v.rec.at, name = v.rec.name, choices = v.rec.choices;
+  const blobKey = signBlobKey_(c.id, key);
+  const mine = await readJSON(blobKey, { docs: {} });
+  mine.docs = mine.docs || {};
+  mine.docs[doc.id] = v.rec;
+  await writeJSON(blobKey, mine);
+  c.portal = c.portal || {};
+  c.portal.signed = c.portal.signed || {};
+  c.portal.signed[key] = Object.assign({}, c.portal.signed[key] || {});
+  c.portal.signed[key][doc.id] = { at: now, name: name };
+  if (choices.disclose === 'private') {
+    c.log = (Array.isArray(c.log) ? c.log : []).concat([{ at: now, by: 'sign', kind: 'note', text: name + ' signed the Child Protection Agreement and has information to disclose privately to the director before starting.' }]).slice(-CAND_LOG_MAX);
+    c.portal.signed[key][doc.id].disclose = true;
+  }
+  c.updated = now; c.updatedBy = 'sign';
+  await writeJSON('candidates', f.rows);
+  const done = {}; Object.keys(c.portal.signed[key]).forEach(function (d) { done[d] = true; });
+  return { ok: true, done: done };
+}
+/* ==================== staff sign in the GP app (Oct 2026) ====================
+   Campus and YAP staff sign the same five documents once, and a Volunteer
+   Staff Contract whenever HR sends one. They sign on portal.html?staff=1 with
+   their GP app sign-in (the same screens as applicants). Their records:
+   staff.legal = { docId: {at, name} } and blob 'ssign:<staffId>'; a contract's
+   signatures in blob 'scontract:<contractId>' { staff, leader }. */
+/* Documents a staff member signed as an applicant in the portal count here too:
+   their application (by account, or the same email) signed as 'me'. Copied
+   onto the staff record (from: 'portal') when they open My contract, so the
+   profile list sees them. */
+function portalLegalFor_(s, cands) {
+  const out = {}, em = String(s.email || '').toLowerCase();
+  (cands || []).forEach(function (c) {
+    if (!c || c.type === 'team') return;
+    if (!(c.staffId === s.id || (em && String(c.email || '').toLowerCase() === em))) return;
+    const m = (c.portal && c.portal.signed && c.portal.signed.me) || {};
+    Object.keys(m).forEach(function (d) { if (!out[d] || m[d].at > out[d].at) out[d] = { at: m[d].at, name: m[d].name, from: 'portal', candId: c.id }; });
+  });
+  return out;
+}
+async function syncPortalLegal_(s) {
+  const got = portalLegalFor_(s, await getCandidates_()), have = s.legal || {};
+  const add = Object.keys(got).filter(function (d) { return !have[d]; });
+  if (!add.length) return s;
+  let out = s;
+  await mutateStaff_(function (rows) {
+    const r = rows.find(function (x) { return x.id === s.id; }); if (!r) return { abort: true, ok: false };
+    r.legal = Object.assign({}, r.legal || {}); add.forEach(function (d) { r.legal[d] = got[d]; });
+    out = r; return { ok: true };
+  });
+  return out;
+}
+function contractPeriod_(c) {
+  const end = hrContractEnd_(c), p = function (n) { return String(n).padStart(2, '0'); };
+  const yrs = Number(c.years);
+  return (yrs === 1 ? '1 year' : yrs + ' years') + ' · From ' + c.signed.slice(5, 7) + '/' + c.signed.slice(0, 4) + ' to ' + p(end.getMonth() + 1) + '/' + end.getFullYear();
+}
+function contractDoc_(c) { return Object.assign({}, STAFF_CONTRACT, { id: 'contract:' + c.id, hash: crypto.createHash('sha256').update(JSON.stringify(STAFF_CONTRACT)).digest('hex') }); }
+async function staffSignOpen(username, pin) {
+  let s = await verifyStaff_(username, pin);
+  if (!s || isApplicant_(s)) return { ok: false, err: 'invalid' };
+  s = await syncPortalLegal_(s);
+  const legal = s.legal || {}, done = {};
+  const docs = (await legalDocs_()).map(function (d) { if (legal[d.id]) done[d.id] = true; return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign || {} }; });
+  return { ok: true, isTeam: false, staff: true, team: s.name, contacts: legalContacts_(await readJSON('legalDocs', {})),
+    prefill: { role: [s.role, s.ministry].filter(Boolean).join(' — ') || 'Staff', dates: '' },
+    people: [{ key: 'me', name: s.name, done: done }], docs: docs };
+}
+async function staffSignSubmit(username, pin, key, docId, p) {
+  const s = await verifyStaff_(username, pin);
+  if (!s || isApplicant_(s)) return { ok: false, err: 'invalid' };
+  docId = str_(docId, 80);
+  const doc = (await legalDocs_()).find(function (d) { return d.id === docId; });
+  if (!doc) return { ok: false, err: 'bad_doc' };
+  const v = await signRecord_(doc, p, 'me'); if (v.err) return Object.assign({ ok: false }, v);
+  const blob = await readJSON('ssign:' + s.id, { docs: {} }); blob.docs = blob.docs || {}; blob.docs[doc.id] = v.rec;
+  await writeJSON('ssign:' + s.id, blob);
+  return mutateStaff_(function (rows) {
+    const r = rows.find(function (x) { return x.id === s.id; }); if (!r) return { abort: true, ok: false, err: 'not_found' };
+    r.legal = Object.assign({}, r.legal || {}); r.legal[doc.id] = { at: v.rec.at, name: v.rec.name };
+    if (v.rec.choices && v.rec.choices.disclose === 'private') r.legal[doc.id].disclose = true;
+    r.updated = new Date().toISOString();
+    return { ok: true, done: staffDone_(r) };
+  });
+}
+function staffDone_(r) { const o = {}; Object.keys(r.legal || {}).forEach(function (k) { o[k] = true; }); return o; }
+/* The Volunteer Staff Contract, filled out in person: HR (an admin) opens
+   it on the person's HR profile with its first month and length — any time,
+   also to redo a contract first signed on paper — hands their phone over,
+   the person reads, fills in and signs, and HR signs to approve. Only then
+   is it one of their contracts. One waits at a time; starting again changes
+   its period. */
+async function hrSendContract(username, pin, staffId, period) {
+  period = period && typeof period === 'object' ? period : {};
+  const from = isoMonth_(period.from), years = finiteNum_(period.years, 0.25, 30);
+  if (!from || years == null) return { ok: false, err: 'bad_contract' };
+  let cid = '';
+  const out = await hrMutate_(username, pin, staffId, function (rec, me) {
+    const list = contractsOf_(rec), wait = list.filter(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; })[0];
+    if (wait) { wait.signed = from; wait.years = Math.round(years * 4) / 4; wait.digital = Object.assign({}, wait.digital, { sentAt: new Date().toISOString(), sentBy: me.id }); rec.contracts = list; cid = wait.id; return; }
+    if (list.length >= HR_MAX_CONTRACTS) return { abort: true, ok: false, err: 'too_many' };
+    cid = hrId_('ct');
+    rec.contracts = list.concat([{ id: cid, signed: from, years: Math.round(years * 4) / 4, notes: '', campus: HR_CAMPUSES.indexOf(rec.campus) > -1 ? rec.campus : '', files: [],
+      added: new Date().toISOString(), addedBy: me.id, digital: { status: 'awaiting_staff', sentAt: new Date().toISOString(), sentBy: me.id } }]);
+  });
+  return out && out.ok ? Object.assign(out, { contractId: cid }) : out;
+}
+async function hrContractGate_(username, pin, staffId) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { out: { ok: false, err: 'invalid' } };
+  if (!canHR_(me)) return { out: { ok: false, err: 'not_authorized' } };
+  const r = (await getStaff_()).find(function (x) { return x.id === str_(staffId, 60); });
+  if (!r) return { out: { ok: false, err: 'not_found' } };
+  return { me: me, r: r, wait: contractsOf_(r).filter(function (c) { return c.digital && c.digital.status === 'awaiting_staff'; }) };
+}
+/* the signing page, on HR's phone: the person signs, then HR approves */
+async function hrContractOpen(username, pin, staffId) {
+  const g = await hrContractGate_(username, pin, staffId); if (g.out) return g.out;
+  const docs = g.wait.map(function (c) { const d = contractDoc_(c); return { id: d.id, title: d.title, blocks: d.blocks, sign: d.sign, period: contractPeriod_(c) }; });
+  return { ok: true, isTeam: false, staff: true, hrSign: true, team: g.r.name, approver: g.me.name, contacts: [],
+    prefill: { role: [g.r.role, g.r.ministry].filter(Boolean).join(' — ') || 'Staff', dates: '' },
+    people: [{ key: 'me', name: g.r.name, done: {} }], docs: docs };
+}
+async function hrContractSign(username, pin, staffId, key, docId, p) {
+  const g = await hrContractGate_(username, pin, staffId); if (g.out) return g.out;
+  const c = g.wait.find(function (x) { return 'contract:' + x.id === str_(docId, 80); });
+  if (!c) return { ok: false, err: 'bad_doc' };
+  const v = await signRecord_(contractDoc_(c), p, 'me'); if (v.err) return Object.assign({ ok: false }, v);
+  v.rec.period = contractPeriod_(c);
+  await writeJSON('scontract:' + c.id, { staff: v.rec });
+  return mutateStaff_(function (rows) {
+    const r = rows.find(function (x) { return x.id === g.r.id; }); if (!r) return { abort: true, ok: false, err: 'not_found' };
+    r.contracts = contractsOf_(r).map(function (x) { if (x.id !== c.id) return x; x.digital = Object.assign({}, x.digital, { status: 'signed', staffSignedAt: v.rec.at, staffName: v.rec.name, leaderSignedAt: v.rec.at, leaderName: v.rec.leaderName, approvedBy: g.me.id }); return x; });
+    r.updated = new Date().toISOString();
+    return { ok: true, done: { [docId]: true }, staff: hrStaffOut_(r) };
+  });
+}
+/* My contract (the ☰ menu, every staff member): their profile as HR sees it —
+   time in YWAM, on each campus — their contracts and when to renew, and the
+   legal documents with what they signed (here or in the portal). Read-only
+   apart from their own start dates; contracts are HR's. */
+async function myContract(username, pin) {
+  let s = await verifyStaff_(username, pin);
+  if (!s || isApplicant_(s)) return { ok: false };
+  s = await syncPortalLegal_(s);
+  return { ok: true, me: hrStaffOut_(s), legalDocs: (await legalDocs_()).map(function (d) { return { id: d.id, title: d.title }; }), required: requiredFor_(s, await getReqDocs_()) };
+}
+/* the PDFs: HR for anyone, a staff member for their own */
+async function staffPdfGate_(username, pin, staffId) {
+  const s = await verifyStaff_(username, pin);
+  if (!s) return { out: { ok: false } };
+  const id = str_(staffId, 60) || s.id;
+  if (id !== s.id && !canHR_(s)) return { out: { ok: false, err: 'not_authorized' } };
+  const r = (await getStaff_()).find(function (x) { return x.id === id; });
+  if (!r) return { out: { ok: false, err: 'not_found' } };
+  return { s: s, r: r };
+}
+function pdfOut_(doc, rec, who) {
+  const pdf = buildSignedPdf({ doc: doc, record: rec, teamName: who });
+  const file = (doc.title + ' - ' + rec.name).replace(/[^A-Za-z0-9 ._-]/g, '').replace(/\s+/g, ' ').trim() + '.pdf';
+  return { ok: true, name: file, mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,' + pdf.toString('base64') };
+}
+async function hrLegalPdf(username, pin, staffId, docId) {
+  const g = await staffPdfGate_(username, pin, staffId); if (g.out) return g.out;
+  let rec = ((await readJSON('ssign:' + g.r.id, { docs: {} })).docs || {})[str_(docId, 40)];
+  const fromPortal = g.r.legal && g.r.legal[docId] && g.r.legal[docId].from === 'portal' ? g.r.legal[docId] : null;
+  if (!rec && fromPortal) rec = ((await readJSON(signBlobKey_(fromPortal.candId, 'me'), { docs: {} })).docs || {})[str_(docId, 40)];
+  if (!rec) return { ok: false, err: 'not_signed' };
+  const doc = (await readJSON('legalSnap:' + rec.docHash, null)) || LEGAL_DOCS_DEFAULT.find(function (d) { return d.id === docId; });
+  if (!doc) return { ok: false, err: 'no_doc' };
+  return pdfOut_(doc, rec, 'YWAM Siem Reap staff');
+}
+async function hrContractPdf(username, pin, staffId, contractId) {
+  const g = await staffPdfGate_(username, pin, staffId); if (g.out) return g.out;
+  /* only a contract on this person's own record */
+  if (!(g.r.contracts || []).some(function (c) { return c.id === contractId; })) return { ok: false, err: 'not_found' };
+  const blob = await readJSON('scontract:' + str_(contractId, 60), {});
+  if (!blob.staff) return { ok: false, err: 'not_signed' };
+  const doc = (await readJSON('legalSnap:' + blob.staff.docHash, null)) || STAFF_CONTRACT;
+  const rec = blob.staff;
+  return pdfOut_(doc, rec, 'YWAM Siem Reap staff');
+}
+async function portalSignedPdf(username, pin, candidateId, key, docId) {
+  const a = await portalStaffCand_(username, pin, candidateId); if (a.out) return a.out;
+  const c = a.cand;
+  const rec = ((await readJSON(signBlobKey_(c.id, str_(key, 40)), { docs: {} })).docs || {})[str_(docId, 40)];
+  if (!rec) return { ok: false, err: 'not_signed' };
+  const doc = (await readJSON('legalSnap:' + rec.docHash, null)) || LEGAL_DOCS_DEFAULT.find(function (d) { return d.id === docId; });
+  if (!doc) return { ok: false, err: 'no_doc' };
+  const pdf = buildSignedPdf({ doc: doc, record: rec, teamName: teamTitle_(c) });
+  const file = (doc.title + ' - ' + rec.name).replace(/[^A-Za-z0-9 ._-]/g, '').replace(/\s+/g, ' ').trim() + '.pdf';
+  return { ok: true, name: file, mime: 'application/pdf', dataUrl: 'data:application/pdf;base64,' + pdf.toString('base64') };
+}
+/* the documents, for the admin page: each with whether teams are asked to sign it */
+async function portalLegalDocs(username, pin) {
+  const g = await hrGate_(username, pin); if (g.out) return g.out;
+  return { ok: true, canEdit: isPortalAdmin_(g.s), contacts: legalContacts_(await readJSON('legalDocs', {})), docs: (await legalDocs_(true)).map(function (d) { return { id: d.id, title: d.title, on: d.on, blocks: d.blocks, sign: d.sign || {} }; }) };
+}
+async function portalSaveLegalDocs(username, pin, on, contacts) {
+  const me = await verifyStaff_(username, pin);
+  if (!me) return { ok: false };
+  if (!isPortalAdmin_(me)) return { ok: false, err: 'not_authorized' };
+  const prev = await readJSON('legalDocs', {});
+  const off = on && typeof on === 'object' ? LEGAL_DOCS_DEFAULT.map(function (d) { return d.id; }).filter(function (id) { return on[id] === false; }) : (Array.isArray(prev.off) ? prev.off : []);
+  await writeJSON('legalDocs', { off: off, contacts: Array.isArray(contacts) ? legalContacts_({ contacts: contacts }) : legalContacts_(prev), updated: new Date().toISOString(), by: me.id });
+  return portalLegalDocs(username, pin);
+}
 /* Staff-side writes on one record beyond the CRM's own: the visa flags the
    applicant watches for (flights confirmed, letter of invitation sent) and
    corrections to submitted answers. Same gate and scope as the CRM writes. */
@@ -6740,6 +7154,13 @@ async function portalDeleteApplicant(username, pin, candidateId) {
   for (const d of docs) { if (d && d.id) { try { await store().delete('pdoc:' + d.id); } catch (e) { /* already gone */ } try { await store().delete('hrfile:' + d.id); } catch (e) { /* already gone */ } } }
   rows.splice(idx, 1);
   await writeJSON('candidates', rows);
+  /* a team: its row in the Teams Database is cancelled, so it stops counting
+     and SR Hospitality shows any beds still booked for it as cancelled */
+  if (cand.type === 'team') {
+    const trips = await getTeamTripsRaw_();
+    const tr = trips.find(function (r) { return r && r.candidateId === cand.id && !r.deleted; });
+    if (tr && tr.status !== 'cancelled') { tr.status = 'cancelled'; tr.updated = new Date().toISOString(); tr.updatedBy = me.id; await writeJSON('teamTrips', trips); }
+  }
   let accountRemoved = false;
   if (cand.staffId) {
     const out = await mutateStaff_(function (all) {
@@ -6951,6 +7372,22 @@ const HANDLERS = {
   portalDeleteDoc: function (a) { return portalDeleteDoc(a[0], a[1], a[2]); },
   portalReferenceForm: function (a) { return portalReferenceForm(a[0]); },
   portalReferenceSubmit: function (a) { return portalReferenceSubmit(a[0], a[1]); },
+  portalSignLink: function (a) { return portalSignLink(a[0], a[1], a[2]); },
+  portalSignStatus: function (a) { return portalSignStatus(a[0], a[1], a[2]); },
+  portalSignOpen: function (a) { return portalSignOpen(a[0]); },
+  portalSignSubmit: function (a) { return portalSignSubmit(a[0], a[1], a[2], a[3]); },
+  portalSignedPdf: function (a) { return portalSignedPdf(a[0], a[1], a[2], a[3], a[4]); },
+  staffSignOpen: function (a) { return staffSignOpen(a[0], a[1]); },
+  staffSignSubmit: function (a) { return staffSignSubmit(a[0], a[1], a[2], a[3], a[4]); },
+  hrSendContract: function (a) { return hrSendContract(a[0], a[1], a[2], a[3]); },
+  hrContractOpen: function (a) { return hrContractOpen(a[0], a[1], a[2]); },
+  hrContractSign: function (a) { return hrContractSign(a[0], a[1], a[2], a[3], a[4], a[5]); },
+  myContract: function (a) { return myContract(a[0], a[1]); },
+  mySaveStart: function (a) { return mySaveStart(a[0], a[1], a[2]); },
+  hrLegalPdf: function (a) { return hrLegalPdf(a[0], a[1], a[2], a[3]); },
+  hrContractPdf: function (a) { return hrContractPdf(a[0], a[1], a[2], a[3]); },
+  portalLegalDocs: function (a) { return portalLegalDocs(a[0], a[1]); },
+  portalSaveLegalDocs: function (a) { return portalSaveLegalDocs(a[0], a[1], a[2], a[3]); },
   portalSetVisaFlags: function (a) { return portalSetVisaFlags(a[0], a[1], a[2], a[3]); },
   portalTeamStep: function (a) { return portalTeamStep(a[0], a[1], a[2], a[3], a[4]); },
   portalSaveTeamNumbers: function (a) { return portalSaveTeamNumbers(a[0], a[1], a[2], a[3]); },

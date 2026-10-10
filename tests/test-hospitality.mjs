@@ -31,6 +31,8 @@ fs.writeFileSync(TMP + '/package.json', JSON.stringify({ type: 'module' }));
 fs.copyFileSync(REPO + '/netlify/functions/api.js', TMP + '/api.js');
 fs.writeFileSync(TMP + '/team-seed.js', 'export default [];');   // no imported teams: only the ones below
 fs.copyFileSync(REPO + '/netlify/functions/portal-forms-default.js', TMP + '/portal-forms-default.js');
+fs.copyFileSync(REPO + '/netlify/functions/legal-docs-default.js', TMP + '/legal-docs-default.js');  // the legal forms teams sign
+fs.copyFileSync(REPO + '/netlify/functions/legal-pdf.js', TMP + '/legal-pdf.js');  // and the signed-PDF builder
 process.env.GP_LEADER_CODE = 'leadercode';
 process.env.GP_ADMIN_CODE = 'admincode';
 const blobs = await import(TMP + '/node_modules/@netlify/blobs/index.js');
@@ -168,6 +170,26 @@ r = await call('hospSave', [...H, 'booking', { category: 'team', name: soon.name
 ok('booking a team links it to its request', r.ok && r.requests.find(q => q.tripId === 'tt_soon').bookingId === r.saved.id);
 ok('a team is booked once', (await call('hospSave', [...H, 'booking', { category: 'team', name: 'Again', from: soon.from, to: soon.to, tripId: soon.tripId }])).err === 'already_booked');
 ok('a team request reaches nobody outside Hospitality', (await call('getHospitality', ['tom', '1234'])).requests === undefined);
+
+console.log('=== a team cancelled or deleted with beds booked ===');
+r = await call('hospSave', [...H, 'booking', { category: 'team', name: portalTeam.name, from: portalTeam.from, to: portalTeam.to, males: 4, females: 4, tripId: portalTeam.tripId }]);
+const cdBooking = r.saved.id;
+mem.teamTrips = mem.teamTrips.map(t => t.id === 'ta_cd1' ? { ...t, status: 'cancelled' } : t);   // closed in the portal
+r = await call('getHospitality', H);
+let gq = r.requests.find(q => q.tripId === 'ta_cd1');
+ok('a team closed in the portal still holding beds shows as cancelled, with its booking — not as waiting', gq && gq.cancelled === 'cancelled' && gq.bookingId === cdBooking && gq.count === 8 && gq.candidateId === 'cd1', JSON.stringify(gq));
+ok('… and the booking itself is untouched until someone frees the beds', r.bookings.some(k => k.id === cdBooking));
+ok('a cancelled team with no beds booked just drops off', !r.requests.some(q => q.tripId === 'tt_off'));
+mem.teamTrips = mem.teamTrips.map(t => t.id === 'ta_cd1' ? { ...t, status: 'active' } : t);
+mem.candidates = [];   // the application was deleted in the portal
+r = await call('getHospitality', H);
+gq = r.requests.find(q => q.tripId === 'ta_cd1');
+ok('a team whose application was deleted shows as deleted, with no link to the application', gq && gq.cancelled === 'deleted' && gq.bookingId === cdBooking && gq.candidateId === '', JSON.stringify(gq));
+mem.teamTrips = mem.teamTrips.filter(t => t.id !== 'ta_cd1');
+r = await call('getHospitality', H);
+ok('… and so does one removed from the Teams Database', r.requests.find(q => q.tripId === 'ta_cd1').cancelled === 'deleted');
+r = await call('hospDelete', [...H, 'booking', cdBooking]);
+ok('freeing the beds deletes the booking, and the request goes', r.ok && !r.bookings.some(k => k.id === cdBooking) && !(r.requests || []).some(q => q.tripId === 'ta_cd1'));
 
 console.log('=== the bed board: move, swap, place, take off ===');
 mem['hosp:siemreap'] = {
