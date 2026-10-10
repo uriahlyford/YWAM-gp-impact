@@ -1301,12 +1301,17 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
   When a summary changes in library.js, change its Khmer too — the test checks the shape.
 - **Loaded only when opened** (`libLoad_`, `data-optional` so a failed load says so on
   the page instead of the whole-app error screen); sw.js precaches it for offline reading.
-- **Covers are drawn, not fetched** (`libCoverHtml_`/`libMotif_`): one series look —
-  the shelf's colour with one of ten patterns (picked by place on the shelf so
-  neighbours differ, nudged by a hash of the id), the brand marigold as the one accent,
-  and the title in Koulen on paper below. Instant and offline; no image requests at all.
-  Colours live in `GP_LIBRARY.shelves` and `GP_LIBRARY.cover`. ISBNs stay in the data
-  for reference only.
+- **Covers nod to the real books, drawn by us** (Oct 2026): each book's `cover` in
+  library.js (built from covers.json) picks colours from `GP_LIBRARY.palette` (the app's
+  paper, ink, cobalt, marigold and the shelf hues), a type style (sans / serif / display),
+  title top or bottom, and a motif from `LIB_MOTIFS` in teams.html — the one idea its real
+  cover is known for (Start with Why's circle, Made to Stick's tape, the Tipping Point's
+  match, Purple Cow's cow), as our own simple SVG, never the publisher's art. Titles are
+  sized so the longest word never breaks, then `libFitTitles_` shrinks any that still
+  overflow in the font the phone actually has. Moving parts (`cv*` classes) animate only
+  while on screen (`libLiveCovers_`, IntersectionObserver) and never under reduced
+  motion. A book without a `cover` falls back to the shelf's patterned series cover.
+  Nothing is fetched; covers work offline.
 - **Laid out like a book-summary app:** the home is rows you swipe sideways (Continue
   reading, Start here, one per shelf, each with See all → a two-column grid), tiles with
   the cover on a tinted square; a book page with Start reading, What's it about, What's

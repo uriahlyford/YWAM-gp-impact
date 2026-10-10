@@ -52,6 +52,17 @@ var GP_LIBRARY = {
   "ink": "#17150F",
   "accent": "#FFB323"
  },
+ "palette": {
+  "paper": "#FAF6F0",
+  "ink": "#17150F",
+  "cobalt": "#1F44FF",
+  "marigold": "#FFB323",
+  "blue": "#2D6CB0",
+  "berry": "#B5475A",
+  "teal": "#1F8A6F",
+  "plum": "#6B4FA0",
+  "laterite": "#A4572A"
+ },
  "startHere": [
   "the-21-irrefutable-laws-of-leadership",
   "the-7-habits-of-highly-effective-people",
@@ -118,7 +129,16 @@ var GP_LIBRARY = {
     "Pick one younger staff member or student and meet with them on purpose this month to help them grow."
    ],
    "forUs": "On a mission base, most of us lead without big titles. You might lead a kitchen shift, a small group, a worship team or an outreach team for a few weeks. That is good news: influence grows through trust, faithfulness and care, not position. Jesus led this way too, by serving and by investing deeply in a few people. For Khmer and international staff, the Permission level matters a lot. People need to feel known and valued before they follow, and that takes time across languages and cultures. Leaders who keep their word, stay calm in problems and raise up others to lead after them are building something that will last long after their own season here ends.",
-   "oneLine": "Real leadership is influence, and it grows from the inside out."
+   "oneLine": "Real leadership is influence, and it grows from the inside out.",
+   "cover": {
+    "bg": "cobalt",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "blue",
+    "motif": "steps",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "first-break-all-the-rules",
@@ -173,7 +193,17 @@ var GP_LIBRARY = {
     "Encourage someone this week for one specific thing they did well."
    ],
    "forUs": "On base, we often put people where there is a gap, not where they fit. Gaps are real, and sometimes we all wash dishes. But leaders can still notice what each staff member and student is naturally good at — hospitality, teaching, details, prayer, encouragement — and lean into it when planning roles. The 12 questions are a great check for any ministry team. Do our new staff know what is expected? Do they have what they need? Does someone care about them as a person? Clear expectations and real care matter even more when Khmer and international staff work side by side with different ways of doing things. Seeing each person's God-given design is a way to honour the One who made them.",
-   "oneLine": "Great managers find each person's talent and build on it, instead of trying to fix them."
+   "oneLine": "Great managers find each person's talent and build on it, instead of trying to fix them.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "berry",
+    "b": "marigold",
+    "motif": "brokenline",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "good-to-great",
@@ -228,7 +258,17 @@ var GP_LIBRARY = {
     "Choose one small, steady push you will repeat every week instead of starting something new."
    ],
    "forUs": "Collins later wrote a short follow-up for non-profits. He noted that for them the 'economic engine' is more of a resource engine — time, money and support — than profit. For a mission base, the Hedgehog questions are powerful. What are we deeply passionate about? What can we do really well here in Cambodia? What keeps our people, volunteers and resources strong? Answering honestly may mean saying no to some good ideas. The Stockdale Paradox fits faith well: we trust God for the final outcome, and we also face hard facts honestly in prayer and planning. Humble leaders, the right people in the right seats and steady faithfulness will take a ministry further than a new idea every season.",
-   "oneLine": "Greatness comes from humble leaders, the right people, honest facts, clear focus and steady discipline."
+   "oneLine": "Greatness comes from humble leaders, the right people, honest facts, clear focus and steady discipline.",
+   "cover": {
+    "bg": "paper",
+    "fg": "berry",
+    "a": "berry",
+    "b": "ink",
+    "motif": "flywheel",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "never-split-the-difference",
@@ -283,7 +323,17 @@ var GP_LIBRARY = {
     "Swap one 'why' question for a 'how' or 'what' question this week."
    ],
    "forUs": "Negotiation is everywhere on a mission base — with landlords, vendors at the market, local officials, partner churches and even with each other about schedules, rooms and team plans. These tools are really about listening well, which is a deeply Christ-like skill. Jesus often answered with questions and noticed what people felt underneath their words. Across cultures, slowing down, naming feelings and asking 'how' questions can protect relationships and help everyone save face. In Khmer culture, a direct 'no' can be hard to say, so leaders may need extra patience and gentle questions to learn what someone really thinks. Use these skills to understand and serve people, never to trick or pressure them.",
-   "oneLine": "Make people feel truly understood first, and better agreements will follow."
+   "oneLine": "Make people feel truly understood first, and better agreements will follow.",
+   "cover": {
+    "bg": "ink",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "split",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "predictable-success",
@@ -333,7 +383,16 @@ var GP_LIBRARY = {
     "If you are in a messy growth season, choose one simple process to put in place this month."
    ],
    "forUs": "A mission base has many small 'organizations' inside it — a new cafe, a long-running DTS, an outreach that just started, a community project that has run for years. Each may be in a different stage, so each needs a different kind of leadership. A new ministry may need freedom and quick tries. A growing one may need simple systems. An older one may need fresh vision so it does not become a treadmill. Visionaries, doers and system-builders on our teams often frustrate each other, especially across cultures. Valuing each style, and asking God for unity, helps us grow without losing the life and passion that started the work in the first place.",
-   "oneLine": "Know your team's stage of growth, and balance vision, action and structure to stay healthy."
+   "oneLine": "Know your team's stage of growth, and balance vision, action and structure to stay healthy.",
+   "cover": {
+    "bg": "blue",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "curve",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "the-4-disciplines-of-execution",
@@ -383,7 +442,18 @@ var GP_LIBRARY = {
     "Start a 20-minute weekly check-in: report, review the scoreboard, make one commitment each."
    ],
    "forUs": "Base life is a strong whirlwind: guests arriving, meals, worship, school schedules, visa runs, sickness and surprises. Many good plans start at a staff meeting and are forgotten a month later. 4DX offers a gentle structure. If your ministry has a big goal — more Khmer leaders trained, a stronger cafe, better follow-up after outreach — pick one, choose a few simple actions you can control, and check in weekly. A whiteboard scoreboard in the office can bring Khmer and international staff together around one clear win, even with limited shared language. Keep it humble. Goals are tools to serve people well, and we still pray, rest and trust God with the results.",
-   "oneLine": "Pick one big goal, track the actions that drive it, keep score and check in every week."
+   "oneLine": "Pick one big goal, track the actions that drive it, keep score and check in every week.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "cobalt",
+    "b": "marigold",
+    "c": "teal",
+    "d": "berry",
+    "motif": "four",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "thou-shall-prosper",
@@ -437,7 +507,16 @@ var GP_LIBRARY = {
     "Look at your budget and decide on one clear, planned gift you will give this month."
    ],
    "forUs": "On a mission base we can feel awkward about money. Some of us run a cafe, a guesthouse or a small business, and many of us live on support from churches and friends. This book helps us see both as relational and honourable. Serving guests with excellence is ministry, not a distraction from it. Partners who give are real relationships to care for, not just bank deposits — so thank them, update them and pray for them. Lapin writes from a Jewish view, and we read him through our faith in Jesus. Still, Khmer and international staff alike can learn to handle money with honesty, generosity and joy, trusting God as the true provider.",
-   "oneLine": "Serve people well, keep your word, give generously, and money becomes a tool for good."
+   "oneLine": "Serve people well, keep your word, give generously, and money becomes a tool for good.",
+   "cover": {
+    "bg": "laterite",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "tablets",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "the-e-myth-revisited",
@@ -487,7 +566,16 @@ var GP_LIBRARY = {
     "Block one hour this week to work ON your ministry, not IN it."
    ],
    "forUs": "Our cafe, guesthouse, school office and kitchen all run better with simple systems. Staff come and go every few months, so if knowledge lives only in one person's head, it leaves with them. Written checklists in English and Khmer, with pictures where helpful, help new staff and volunteers serve well from day one. They also free leaders to think, pray and plan instead of putting out fires all day. This is not about being cold or businesslike. Good systems are a form of love: they protect people from burnout and make it easier for the next team to carry the work forward. Build so the ministry can thrive long after you leave.",
-   "oneLine": "Build simple systems so your work can thrive without you holding it all."
+   "oneLine": "Build simple systems so your work can thrive without you holding it all.",
+   "cover": {
+    "bg": "paper",
+    "fg": "berry",
+    "a": "berry",
+    "b": "ink",
+    "motif": "gears",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "the-tipping-point",
@@ -537,7 +625,16 @@ var GP_LIBRARY = {
     "Fix one small 'broken window' in your shared space this week, like a messy corner or a broken sign."
    ],
    "forUs": "When we want a new value or habit to spread on base, like prayer, hospitality or cleaning up together, we can think like Gladwell. Who are the trusted people, Khmer and international, that others listen to? Win them first. How can we make the message simple and sticky in both languages, maybe with a picture or a short phrase people repeat? Is our shared space saying the right thing about who we are?\n\nIn DTS and on outreach, small groups of people who really know each other spread faith and love more naturally than big meetings. And in a village or at the cafe, the right setting can open hearts. Small, faithful steps by the right people, with God's help, can bring real change in a team or a community.",
-   "oneLine": "The right people, a sticky message and the right setting can tip small ideas into big change."
+   "oneLine": "The right people, a sticky message and the right setting can tip small ideas into big change.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "marigold",
+    "b": "laterite",
+    "motif": "match",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "the-21-irrefutable-laws-of-leadership",
@@ -592,7 +689,18 @@ var GP_LIBRARY = {
     "Give away one responsibility you usually keep, and coach the person who takes it."
    ],
    "forUs": "On a YWAM base, many of us lead small teams for a short time, like a DTS outreach team, a ministry shift or a cafe crew. These laws remind us that leadership is about influence, trust and serving, which fits the way Jesus led. He had no official title, yet he changed the world through twelve people he trained.\n\nWhen we connect with hearts, give power away and raise up Khmer and international leaders to replace us, the work keeps growing even after we move on. Staff come and go often in missions, so this matters even more for us. The question for each of us is: who am I training right now?",
-   "oneLine": "Leadership is influence built on trust, and its best fruit is new leaders."
+   "oneLine": "Leadership is influence built on trust, and its best fruit is new leaders.",
+   "cover": {
+    "bg": "ink",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "bignum",
+    "text": "21",
+    "layout": "bottom",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "how-to-win-friends-and-influence-people",
@@ -647,7 +755,16 @@ var GP_LIBRARY = {
     "Before you correct someone, first tell them one specific thing they are doing well."
    ],
    "forUs": "In Cambodia, 'face' and respect matter a lot, which makes Carnegie's advice even more important. Correct people privately and gently, never in front of the group. Honour Khmer staff and elders by name, and say thank you in specific ways. Celebrate small wins in DTS, at the cafe and on outreach. Learn to say names well in both Khmer and English.\n\nInternational staff can learn a lot here from Khmer culture, which often already values politeness and saving face. And Khmer staff may find that warm, direct appreciation is a gift to foreign teammates far from home. In the end, this book is basically loving your neighbour, applied to everyday conversations.",
-   "oneLine": "Care about people sincerely, and influence will follow."
+   "oneLine": "Care about people sincerely, and influence will follow.",
+   "cover": {
+    "bg": "marigold",
+    "fg": "ink",
+    "a": "paper",
+    "b": "berry",
+    "motif": "smile",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "extreme-ownership",
@@ -702,7 +819,17 @@ var GP_LIBRARY = {
     "Explain the 'why' behind your next task or request, not just the 'what'."
    ],
    "forUs": "On a mission base it is easy to blame the schedule, the heat, the budget or 'other teams'. Ownership sounds like this: the outreach plan failed, that is on me, and here is how we fix it. It is close to what the Bible calls confession, and it builds trust fast. Nobody has to defend themselves, so everyone can focus on fixing the problem.\n\nCover and Move reminds every ministry, from DTS to the cafe to community work, that we are one team, not competitors. And because staff change often, Decentralized Command matters: train Khmer and international leaders to understand the 'why', so they can make good decisions without waiting for you.",
-   "oneLine": "Leaders take responsibility for everything, so their teams can win."
+   "oneLine": "Leaders take responsibility for everything, so their teams can win.",
+   "cover": {
+    "bg": "ink",
+    "fg": "marigold",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "chevrons",
+    "layout": "top",
+    "font": "display",
+    "upper": true
+   }
   },
   {
    "id": "thanks-for-the-feedback",
@@ -757,7 +884,16 @@ var GP_LIBRARY = {
     "Before a feedback conversation, agree together: is this appreciation, coaching or evaluation?"
    ],
    "forUs": "On a cross-cultural team, feedback is extra tricky. Some cultures are very direct, others are very indirect, and both can hurt by accident. A Khmer staff member may hint at a problem very gently, and an international teammate may miss it completely. Or a direct comment from a foreigner may feel like a loss of face.\n\nLearning to receive well, and to ask what someone really meant, helps Khmer and international staff trust each other. In DTS, staff reviews and outreach debriefs, growth starts with how we listen. And as followers of Jesus, our identity rests in God's love, so we can face hard feedback without fear and keep growing together.",
-   "oneLine": "You cannot control the feedback you get, but you can learn to receive it well."
+   "oneLine": "You cannot control the feedback you get, but you can learn to receive it well.",
+   "cover": {
+    "bg": "marigold",
+    "fg": "ink",
+    "a": "ink",
+    "b": "paper",
+    "motif": "bubbles",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "the-five-dysfunctions-of-a-team",
@@ -807,7 +943,16 @@ var GP_LIBRARY = {
     "Ask one teammate directly about a concern you have been avoiding, kindly and in private."
    ],
    "forUs": "In many cultures, including Khmer culture, open disagreement can feel rude, so artificial harmony is a real temptation on our base. People may smile and agree in a meeting, then share their real thoughts later with friends. Leaders can make it safer by being vulnerable first, by asking quieter people for their view one by one, and by thanking people who disagree respectfully.\n\nThe personal histories exercise works well with DTS teams and new staff, and it helps Khmer and international staff see each other as people, not just roles. And remember: everyone's first team is the whole base and its mission, not just their own ministry. When the cafe, the school and the outreach teams cheer for each other's results, the whole base grows stronger.",
-   "oneLine": "Build trust first; it opens the door to honest debate, real commitment, accountability and results."
+   "oneLine": "Build trust first; it opens the door to honest debate, real commitment, accountability and results.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "teal",
+    "b": "cobalt",
+    "motif": "pyramid",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "emotional-intelligence",
@@ -857,7 +1002,17 @@ var GP_LIBRARY = {
     "In your next conversation, watch the other person's face and tone, and ask how they are really doing."
    ],
    "forUs": "Mission life is emotional: culture stress, heat, tiredness, homesickness and living close together in community. Emotional intelligence helps us notice what is happening inside before it spills onto our teammates. A short walk before replying to a hard message can save a friendship.\n\nAcross languages, reading faces and tone with empathy is often how we understand each other best. Many Khmer people show feelings quietly, and many internationals show them openly, so we need to watch and ask with care. The Bible also calls us to be slow to anger and to weep with those who weep. Growing in these skills is part of growing in love, and the Holy Spirit helps us grow in self-control.",
-   "oneLine": "Know your feelings, manage them well, and read others with care."
+   "oneLine": "Know your feelings, manage them well, and read others with care.",
+   "cover": {
+    "bg": "cobalt",
+    "fg": "paper",
+    "a": "berry",
+    "b": "paper",
+    "motif": "pulse",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "leaders-eat-last",
@@ -907,7 +1062,17 @@ var GP_LIBRARY = {
     "Put your phone away in your next one-to-one meeting and give full attention."
    ],
    "forUs": "Jesus washed his disciples' feet, and servant leadership is at the heart of our mission. A base leader who protects staff from burnout, gossip and fear builds a team that can go out and serve Cambodia with joy. Safety inside the team gives courage for outreach outside. A team that feels protected can take risks for the gospel.\n\nFor us, building a Circle of Safety might mean defending a teammate who is being talked about, making sure Khmer and international staff are both heard, or checking on volunteers who are tired. It also means staying close: eating together, learning names and visiting people's homes. Sometimes it literally means letting the team eat first.",
-   "oneLine": "Make people feel safe, and they will trust you, follow you and serve together."
+   "oneLine": "Make people feel safe, and they will trust you, follow you and serve together.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "berry",
+    "b": "marigold",
+    "motif": "circlesafety",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "lean-in",
@@ -962,7 +1127,17 @@ var GP_LIBRARY = {
     "Look at how tasks are shared in your home or team, and make one change to make it fairer."
    ],
    "forUs": "At GP, many of our most gifted leaders, teachers and servants are women, both Khmer and international. Yet in many cultures, women can still hold back or be overlooked. Leaders can help in simple ways. Notice who sits at the side of the room in staff meetings, and invite them to the table. Give real chances to lead a DTS, an outreach team or a ministry, not only support roles. When a woman leads strongly, watch for the likeability bias in how we talk about her. Married couples on staff can model fair sharing of home and children, so both can serve well. When everyone uses their gifts fully, the whole body of Christ gets stronger.",
-   "oneLine": "Step forward with courage, and help make space for others to do the same."
+   "oneLine": "Step forward with courage, and help make space for others to do the same.",
+   "cover": {
+    "bg": "paper",
+    "fg": "berry",
+    "a": "berry",
+    "b": "ink",
+    "motif": "lean",
+    "layout": "top",
+    "font": "display",
+    "upper": true
+   }
   },
   {
    "id": "start-with-why",
@@ -1017,7 +1192,17 @@ var GP_LIBRARY = {
     "Look at one activity in your ministry and ask: does this clearly match our why?"
    ],
    "forUs": "YWAM has a strong why: to know God and to make Him known. But busy days on a base can make it fuzzy. Cleaning, cooking, paperwork and fixing the water pump can feel far from the mission. When we explain the why first, to DTS students, new staff or local partners, these tasks become part of the story. Use the celery test before starting a new project: does it truly fit our calling here in Cambodia? Make sure every ministry, in Siem Reap and Poipet, can say its why in simple words, in both Khmer and English. And when new staff arrive, tell the story of why GP began. People who share the belief will carry it further than any plan.",
-   "oneLine": "Start with your purpose; it is what inspires people to follow."
+   "oneLine": "Start with your purpose; it is what inspires people to follow.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "marigold",
+    "b": "berry",
+    "motif": "rings",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "boundaries",
@@ -1072,7 +1257,16 @@ var GP_LIBRARY = {
     "Ask a friend for help with one real boulder instead of carrying it alone."
    ],
    "forUs": "On a mission base, the needs never stop. Someone always needs a ride, a meal, a talk or an extra hand, and it is easy to feel guilty for resting or saying no. Some of us grew up in cultures where saying no to an elder or leader feels impossible. Others say no too quickly and keep everyone outside the fence. Talk as a team about what healthy boundaries look like, such as days off, sleep, family time and quiet evenings, so nobody has to fight for them alone. Leaders can protect their staff's limits instead of testing them. In DTS, help students learn the difference between a boulder and a backpack. Serving out of overflow lasts longer than serving out of exhaustion.",
-   "oneLine": "Own your life, help with the boulders, and let love — not guilt — drive your yes."
+   "oneLine": "Own your life, help with the boulders, and let love — not guilt — drive your yes.",
+   "cover": {
+    "bg": "teal",
+    "fg": "paper",
+    "a": "paper",
+    "b": "marigold",
+    "motif": "fence",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "the-power-of-moments",
@@ -1122,7 +1316,16 @@ var GP_LIBRARY = {
     "Look at your calendar for the next month and find one transition you can turn into a moment."
    ],
    "forUs": "YWAM life is full of natural moments: a DTS student's first day, the send-off before outreach, the return, graduation, a new staff member arriving or a long-term worker leaving. These are gifts, so let's not rush past them. Mix cultures in how we celebrate: Khmer hospitality, food and blessing alongside other traditions. Honour people in ways that fit them. For some, public praise feels great; for others, a quiet word means more. Remember the pits too. When a teammate is sick, grieving or far from home, showing up matters. And many spiritual moments are also defining moments, like a night of worship or a breakthrough on outreach. Make space for God to meet people, and do not fill every minute with programme.",
-   "oneLine": "Don't just wait for great moments — create them, especially at the peaks and transitions."
+   "oneLine": "Don't just wait for great moments — create them, especially at the peaks and transitions.",
+   "cover": {
+    "bg": "plum",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "spark",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "the-advantage",
@@ -1177,7 +1380,17 @@ var GP_LIBRARY = {
     "Pick one key message and repeat it clearly at least three times this week."
    ],
    "forUs": "A YWAM base can have many ministries, each doing good work but not always pulling in the same direction. Clarity helps everyone, especially staff working in a second language. Simple, repeated messages beat long, clever ones. Leaders from different cultures may avoid conflict in different ways, so building trust is step one. Make room for honest disagreement in leadership meetings, in ways that feel safe for Khmer and international leaders alike. Ask your leaders the six questions together, and pray over the answers. Then choose one rallying cry for the season, like preparing well for the next DTS. When the leadership team is united, the whole base feels safer and more peaceful.",
-   "oneLine": "Get your leaders united, get clear, say it again and again, and build it into how you work."
+   "oneLine": "Get your leaders united, get clear, say it again and again, and build it into how you work.",
+   "cover": {
+    "bg": "cobalt",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "arrowup",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "multipliers",
@@ -1227,7 +1440,17 @@ var GP_LIBRARY = {
     "Ask someone, 'What do you think we should do?' and wait for the full answer."
    ],
    "forUs": "On a mission base, older or more experienced staff can easily become the answer people without meaning to. In Khmer culture, younger staff may stay quiet out of respect, so leaders need to invite ideas on purpose, maybe in small groups or one-to-one rather than in front of everyone. Look for the native genius in each staff member and student, not only the gifts that are easy to see. Hand real responsibility to local staff and students, and when they bring a problem, gently give it back with your support. Watch for accidental diminishing too, like rescuing too fast. Jesus did this with his disciples: he sent them out before they felt ready, and trusted them to grow.",
-   "oneLine": "Lead in a way that makes others smarter, braver and more capable — not more dependent on you."
+   "oneLine": "Lead in a way that makes others smarter, braver and more capable — not more dependent on you.",
+   "cover": {
+    "bg": "berry",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "multiply",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "crucial-conversations",
@@ -1277,7 +1500,16 @@ var GP_LIBRARY = {
     "Practise one contrasting sentence: 'I don't want ___. I do want ___.'"
    ],
    "forUs": "Across cultures, crucial conversations look different. Many Khmer staff prefer indirect, private conversations that protect face, while some international staff are very direct. Neither is wrong, but each can make the other feel unsafe. Choose the right setting, start with respect, and maybe use a trusted go-between when that fits. Silence can look like agreement when it is not, so gently check understanding, especially when people are speaking in a second language. In DTS and on outreach teams, tension often builds quietly, so name it early and kindly. And check your stories before you act on them. Speaking the truth in love, as Paul writes in Ephesians, is exactly what this book is trying to teach.",
-   "oneLine": "Make it safe, check your story, and keep talking honestly when it matters most."
+   "oneLine": "Make it safe, check your story, and keep talking honestly when it matters most.",
+   "cover": {
+    "bg": "cobalt",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "bubbles",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "the-ideal-team-player",
@@ -1327,7 +1559,17 @@ var GP_LIBRARY = {
     "Do one practical thing this week to grow your weakest virtue."
    ],
    "forUs": "Humility is already a core value in YWAM and in Khmer culture, which is a great start. But humility without hunger can turn into waiting to be told, and hunger without people smarts can feel pushy across cultures. People smarts also means learning what respect looks like for someone from a different background, like how to greet an elder or when to speak directly. Use these three words when inviting new staff, building outreach teams and coaching DTS students. They are simple enough to remember in Khmer and English. Leaders can model them first, by serving quietly and asking for feedback. Jesus showed all three: he served humbly, worked with purpose and understood people deeply.",
-   "oneLine": "Look for — and become — someone who is humble, hungry and people smart."
+   "oneLine": "Look for — and become — someone who is humble, hungry and people smart.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "cobalt",
+    "b": "marigold",
+    "c": "berry",
+    "motif": "venn3",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "atomic-habits",
@@ -1377,7 +1619,17 @@ var GP_LIBRARY = {
     "Never miss twice: if you skip a day, make sure you do it the next day."
    ],
    "forUs": "On a mission base, life is already full of rhythms: chores, cooking, worship, classes, outreach. You could stack prayer onto your morning coffee, Khmer or English practice onto lunch, or a quick check-in with your team onto the end of a work duty. In a DTS, staff can help students choose one small habit, like reading one chapter a day, instead of a big plan they will drop after a week. Teams can shape their space too: a Bible on the table, phones away during meetings, the cafe's cleaning checklist where everyone can see it. And remember identity. We are not trying to earn God's love with good habits. We are already his children, and small daily choices are a way to live like it. The Habit Tracker in this app is built for exactly this.",
-   "oneLine": "Small habits + a good system + time = massive change."
+   "oneLine": "Small habits + a good system + time = massive change.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "marigold",
+    "b": "ink",
+    "motif": "dotsgrow",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "decisive",
@@ -1427,7 +1679,17 @@ var GP_LIBRARY = {
     "Before a big plan starts, ask your team: 'Imagine this failed. What went wrong?'"
    ],
    "forUs": "On a base we make big choices all the time: where to send an outreach team, who to invite onto staff, whether to start a new ministry. We pray first, and we listen for God. WRAP does not replace that. It can be a way to listen well. Widen the options before you vote on just one idea. Test plans with small steps, like running a cafe event once before making it weekly. Ask both Khmer and international staff for honest views, and ask in a way that makes bad news easy to share, because in many cultures people will not say no to a leader directly. Run a premortem before a DTS outreach team leaves. And agree on a check-in date in case you need to change course. Wisdom and good process work together.",
-   "oneLine": "Widen your options, test your ideas, get some distance, and plan for being wrong."
+   "oneLine": "Widen your options, test your ideas, get some distance, and plan for being wrong.",
+   "cover": {
+    "bg": "teal",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "fork",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "drive",
@@ -1482,7 +1744,17 @@ var GP_LIBRARY = {
     "Before a task, say out loud who it helps and why it matters."
    ],
    "forUs": "Most of us on a mission base are not here for the money, so purpose is already strong. Give staff real ownership of their area, like the cafe menu, a DTS lecture week or a community project, and let them decide how to do it. Help Khmer and international team members grow real skills through training, feedback and tasks that stretch them. Be careful with prizes and competitions in ministry, because they can sometimes take the joy out of serving. Keep connecting daily tasks like cooking, cleaning and admin to the bigger story of what God is doing in Cambodia. And a sincere 'thank you, that made a difference' often means more than any reward.",
-   "oneLine": "Pay people fairly, then give them freedom, room to grow and a reason that matters."
+   "oneLine": "Pay people fairly, then give them freedom, room to grow and a reason that matters.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "berry",
+    "b": "cobalt",
+    "motif": "rise",
+    "layout": "top",
+    "font": "display",
+    "upper": true
+   }
   },
   {
    "id": "getting-things-done",
@@ -1537,7 +1809,16 @@ var GP_LIBRARY = {
     "Put a 30-minute weekly review in your calendar and protect it."
    ],
    "forUs": "Base life is full of interruptions: a visitor at the gate, a student who needs to talk, a broken water pump, a message from a supporter. A simple capture habit means you can say 'yes, I will get to that' and really mean it. Ministry leaders can use a projects list for things like DTS planning or a cafe repair, with a clear next action for each. A 'waiting for' list helps across languages and cultures, because you can follow up kindly instead of forgetting. Leaders who run a weekly review forget fewer things, and their teams learn they can trust them. And with a clearer mind, it is easier to be fully present with God and with people.",
-   "oneLine": "Get it all out of your head, decide the next action, and review it every week."
+   "oneLine": "Get it all out of your head, decide the next action, and review it every week.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "teal",
+    "b": "ink",
+    "motif": "checklist",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "grit",
@@ -1592,7 +1873,17 @@ var GP_LIBRARY = {
     "Practise one skill for 20 minutes with a specific stretch goal and ask someone for feedback."
    ],
    "forUs": "Long-term missions need grit: learning Khmer or English, raising support, serving through hot seasons, slow results and team changes. Remember why you came, and keep your top goal clear even when smaller plans change. Treat language learning like deliberate practice: a clear stretch goal, short focused time, and feedback from a friend who speaks the language well. In DTS and schools, staff can be warm and demanding at the same time, cheering students on while believing they can do hard things. And on hard days, remember the third bricklayer. Washing dishes, teaching kids or fixing a pump can be part of building God's house. Our hope is not only in our own effort, but in his faithfulness.",
-   "oneLine": "Long-term passion and steady effort matter more than talent alone, and both can grow."
+   "oneLine": "Long-term passion and steady effort matter more than talent alone, and both can grow.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "teal",
+    "b": "marigold",
+    "motif": "mountain",
+    "layout": "top",
+    "font": "display",
+    "upper": true
+   }
   },
   {
    "id": "mindset",
@@ -1647,7 +1938,17 @@ var GP_LIBRARY = {
     "After a mistake, write down one specific thing you learned from it."
    ],
    "forUs": "Mission life puts us in new places all the time: a new language, a new culture, a new role. A growth mindset lets a Khmer staff member try leading worship in English, or a new missionary try speaking Khmer at the market, without fear of looking foolish. In DTS and schools, staff can praise students for effort and learning, not for being gifted. In outreach debriefs, teams can ask what they learned, not only whether it went well. Leaders can share their own mistakes first, which makes it safe for others. In cultures where losing face is painful, this needs extra kindness and private feedback. Most of all, we remember that God is patient with us as we grow. We can show that same patience to each other.",
-   "oneLine": "Believe your abilities can grow, and challenges and mistakes become ways to learn."
+   "oneLine": "Believe your abilities can grow, and challenges and mistakes become ways to learn.",
+   "cover": {
+    "bg": "marigold",
+    "fg": "ink",
+    "a": "teal",
+    "b": "ink",
+    "motif": "sprout",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "rich-dad-poor-dad",
@@ -1702,7 +2003,17 @@ var GP_LIBRARY = {
     "Set aside a small amount from every gift or payment before you spend anything else."
    ],
    "forUs": "Most of us live on support-raised budgets or modest local salaries, so we are not chasing wealth, and that is fine. Jesus warns us about loving money, and our security is in God. But money wisdom still matters. Knowing your cash flow, avoiding debt and saving a little each month help you stay on the field longer and serve with less stress. For Khmer staff, it can mean helping family wisely without taking loans you cannot repay. For international staff, it can mean being honest with supporters and planning ahead for trips home. Leaders can help their teams by teaching simple budgeting in a kind, practical way, without shame. Being faithful with what God provides, a little or a lot, is part of good stewardship.",
-   "oneLine": "Understand where your money comes from and where it goes, and grow things that put money in, not take it out."
+   "oneLine": "Understand where your money comes from and where it goes, and grow things that put money in, not take it out.",
+   "cover": {
+    "bg": "plum",
+    "fg": "marigold",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "coins",
+    "layout": "top",
+    "font": "display",
+    "upper": true
+   }
   },
   {
    "id": "think-like-a-freak",
@@ -1757,7 +2068,17 @@ var GP_LIBRARY = {
     "Look at one ongoing activity and ask: if we were not already doing this, would we start it today?"
    ],
    "forUs": "On a base it is easy to keep doing things because we always have. Why are fewer people coming to this event? What do our students and our Khmer neighbours really value, not just what they say to be polite? Be humble enough to say 'I don't know', and test small ideas before making big plans. When you share a vision with supporters or local leaders, tell real stories, not only numbers. And give yourself permission to stop a ministry activity that is no longer bearing fruit, so energy can go where God is moving. Stopping one good thing is not a failure if it makes room for what God is asking of us now.",
-   "oneLine": "Admit what you don't know, ask simpler questions, follow the incentives, and don't fear quitting."
+   "oneLine": "Admit what you don't know, ask simpler questions, follow the incentives, and don't fear quitting.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "marigold",
+    "b": "berry",
+    "motif": "apple",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "lead-like-jesus",
@@ -1806,7 +2127,16 @@ var GP_LIBRARY = {
     "Pick one person you lead and ask: what do you need from me to grow right now?"
    ],
    "forUs": "On a YWAM base almost everyone leads something: a DTS small group, a kitchen team, an outreach team, a ministry like the cafe. So this book is for all of us, not only base leaders. Try to notice ego in small places, like wanting your idea chosen, or avoiding a hard talk with a teammate because you fear their reaction. Coach new staff step by step. A new Khmer staff member and a new international volunteer may both be beginners in different ways, so give each the help they need. Give Khmer leaders real responsibility and trust, not just tasks. And guard your time with God, because a busy base can make even good leaders run on empty. Sometimes washing feet looks like cleaning up after a team meal when no one is watching.",
-   "oneLine": "Lead from a heart that serves, with a clear vision, patient coaching and daily time with God."
+   "oneLine": "Lead from a heart that serves, with a clear vision, patient coaching and daily time with God.",
+   "cover": {
+    "bg": "laterite",
+    "fg": "paper",
+    "a": "paper",
+    "b": "marigold",
+    "motif": "basin",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "the-4-hour-workweek",
@@ -1861,7 +2191,16 @@ var GP_LIBRARY = {
     "Write simple step-by-step notes for one task you always do, so someone else could do it."
    ],
    "forUs": "On a base, life is full of meetings, messages and small jobs that can crowd out the things only you can do: discipling, praying, preparing teaching, being present with people. Use the 80/20 question with your team: which activities really bear fruit, and which just keep us busy? Batch admin, and write down simple processes so new Khmer and international staff can step in with confidence. Plan real rest between schools and outreaches, instead of waiting until you are exhausted. Sabbath was God's idea long before mini-retirements, and it is a gift, not a reward. Our aim is not a four-hour week. It is to be faithful and fruitful without burning out.",
-   "oneLine": "Cut the busywork, focus on what bears fruit, and build real rest into life now."
+   "oneLine": "Cut the busywork, focus on what bears fruit, and build real rest into life now.",
+   "cover": {
+    "bg": "cobalt",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "hammock",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "the-7-habits-of-highly-effective-people",
@@ -1916,7 +2255,16 @@ var GP_LIBRARY = {
     "In one conversation, repeat back what the other person said before you give your opinion."
    ],
    "forUs": "A YWAM base is a picture of interdependence: Khmer and international staff from many cultures sharing a mission, a kitchen and a schedule. Habit 5 is gold here, because so many misunderstandings come from language and culture, not bad hearts. Make deposits in each other's emotional bank account, look for win-win when teams disagree, and value different cultural views as a way to find better solutions. Covey wrote for everyone, but much of this sounds like Jesus: serve, listen, keep your promises, and take time to be renewed by God. Try weekly planning around your roles in ministry, and protect time for prayer, rest and friendship before the urgent things fill your week.",
-   "oneLine": "Lead yourself from the inside out, then work with others in trust, and keep renewing yourself."
+   "oneLine": "Lead yourself from the inside out, then work with others in trust, and keep renewing yourself.",
+   "cover": {
+    "bg": "teal",
+    "fg": "paper",
+    "a": "paper",
+    "b": "marigold",
+    "motif": "compass",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "the-compound-effect",
@@ -1966,7 +2314,17 @@ var GP_LIBRARY = {
     "Write down your 'why' for one goal and put it somewhere you will see it daily."
    ],
    "forUs": "Mission work rarely has quick wins. Language learning, discipleship, trust between Khmer and international staff, and fruit in a village all come from small faithful steps over years. This book is a good reminder that the daily things count: a few new Khmer words, a short time in the Word, a kind word to a teammate, showing up for intercession. Think about your team's small habits too, like how you welcome new students or how you end a hard week together. Be patient in the slow middle, when nothing seems to change. Jesus said the kingdom is like a tiny seed that grows into a big tree. God often works through small and steady faithfulness.",
-   "oneLine": "Small, smart choices plus consistency plus time equals big change."
+   "oneLine": "Small, smart choices plus consistency plus time equals big change.",
+   "cover": {
+    "bg": "ink",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "expo",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "the-power-of-habit",
@@ -2016,7 +2374,17 @@ var GP_LIBRARY = {
     "Plan ahead for one hard moment: decide now what you will do when it comes."
    ],
    "forUs": "A base runs on shared habits: morning worship, intercession, meals, staff meetings, how we greet new students. Some help us and some just happen out of tradition. Ask your team which keystone habit could lift everything else, like a weekly team prayer time or eating lunch together across cultures. When you help a DTS student or teammate with a struggle, remember the golden rule: look for the real need behind the habit, and walk with them in community. Habits also cross cultures, so ask Khmer and international teammates which team habits feel natural to them. On outreach, plan ahead for hard moments, like tiredness or conflict, so the team already knows how it will respond. Lasting change often comes with faith and with friends.",
-   "oneLine": "Find the cue and the reward, change the routine, and lasting change becomes possible."
+   "oneLine": "Find the cue and the reward, change the routine, and lasting change becomes possible.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "cobalt",
+    "b": "marigold",
+    "c": "berry",
+    "motif": "loop",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "deep-work",
@@ -2071,7 +2439,17 @@ var GP_LIBRARY = {
     "Create a 3-step shutdown routine for the end of your work day and use it for one week."
    ],
    "forUs": "Base life is full of interruptions: someone at the door, a group chat, a guest who needs help. Those moments matter, and people come first. But preparing DTS teaching, writing a newsletter to supporters, or learning Khmer needs protected time. Agree as a team on some quiet hours, so everyone gets space to do their best work. Leaders can help by not expecting instant replies to every message, especially in the evening. Try one morning a week with no meetings, so deep tasks get the best hours, not the leftovers. Time alone with God is deep work too. Jesus often went to quiet places to pray, even when crowds were waiting for him.",
-   "oneLine": "Protect your focus, because your best work only happens when your whole mind is in the room."
+   "oneLine": "Protect your focus, because your best work only happens when your whole mind is in the room.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "marigold",
+    "b": "cobalt",
+    "motif": "depth",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "the-psychology-of-money",
@@ -2126,7 +2504,17 @@ var GP_LIBRARY = {
     "Write one sentence that describes what 'enough' looks like for you right now."
    ],
    "forUs": "Many missionaries live on support, and many local staff support whole families, so money can feel tight and personal. This book is not about getting rich. It helps us be wise with what God has given, avoid comparing ourselves with each other, and keep a little margin so one emergency does not become a crisis. It also reminds us that Khmer and international staff come with very different money stories, and both deserve respect. Be slow to judge how others spend. Generosity helps too. When we give, even a little, we learn to hold money with open hands. And remember that contentment is a Bible value too: Paul learned to be content with much or with little.",
-   "oneLine": "Good money choices come from patience, humility and knowing what is enough, not from being a genius."
+   "oneLine": "Good money choices come from patience, humility and knowing what is enough, not from being a genius.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "marigold",
+    "b": "laterite",
+    "c": "teal",
+    "motif": "cointree",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "made-to-stick",
@@ -2181,7 +2569,17 @@ var GP_LIBRARY = {
     "Ask a newcomer to explain your idea back to you to check for the curse of knowledge."
    ],
    "forUs": "We explain things all the time: teaching in DTS, sharing the gospel on outreach, training new staff, telling supporters what God is doing. Many listeners are hearing it in their second or third language, so simple and concrete matters even more. Watch for the curse of knowledge with YWAM words and Christian words that new students may not know. Jesus taught with seeds, coins, sheep and bread, things people could see every day. We can do the same with local examples, like rice fields, rain and family meals. Before you teach, ask a Khmer teammate to listen and tell you what was unclear. One clear point and one true story will often reach further than a long, perfect speech.",
-   "oneLine": "Make your message Simple, Unexpected, Concrete, Credible, Emotional and told as a Story, and people will remember it."
+   "oneLine": "Make your message Simple, Unexpected, Concrete, Credible, Emotional and told as a Story, and people will remember it.",
+   "cover": {
+    "bg": "cobalt",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "tape",
+    "layout": "top",
+    "font": "display",
+    "upper": true
+   }
   },
   {
    "id": "purple-cow",
@@ -2231,7 +2629,17 @@ var GP_LIBRARY = {
     "Change one small detail this week to be surprising in a good way."
    ],
    "forUs": "Think about our cafe, our guest hospitality, or the way we welcome DTS students on day one. Being remarkable does not need a big budget. It can be a guest remembered by name, a handwritten welcome note, or a song from the Khmer team. It can be an outreach team that listens first, or a school week that ends with a surprise thank-you for the cooks and cleaners. Godin's 'sneezers' are already among us: students who post photos, partners who tell their churches, neighbours who tell their friends. But being remarkable is not about showing off or competing with other ministries. For us, it starts with loving people so well, and so personally, that they cannot help talking about it. And when they do talk, we hope they see Jesus, not just us.",
-   "oneLine": "In a world full of 'very good', only the remarkable gets noticed, so build something worth talking about."
+   "oneLine": "In a world full of 'very good', only the remarkable gets noticed, so build something worth talking about.",
+   "cover": {
+    "bg": "plum",
+    "fg": "paper",
+    "a": "paper",
+    "b": "marigold",
+    "motif": "cow",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "switch-on-your-brain",
@@ -2281,7 +2689,16 @@ var GP_LIBRARY = {
     "Spend 10 minutes doing one thing with full focus: no switching, no phone."
    ],
    "forUs": "Mission life can bring stress, homesickness, culture shock and old wounds to the surface. Many of us arrive with thought patterns we did not know we had. This book can help us notice our thinking and bring it to God. In DTS, on outreach or in a staff team, we can help one another by asking gentle questions, praying together and speaking truth from the Bible. At the same time, this book is not a replacement for medical or mental health care, and some of its science is debated. If someone is really struggling, please help them find proper support too. Renewing the mind and getting good care can go together.",
-   "oneLine": "Leaf's message is that your thoughts matter and, with God's help, you can choose to renew them one day at a time."
+   "oneLine": "Leaf's message is that your thoughts matter and, with God's help, you can choose to renew them one day at a time.",
+   "cover": {
+    "bg": "ink",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "cobalt",
+    "motif": "switchon",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "building-a-storybrand",
@@ -2331,7 +2748,17 @@ var GP_LIBRARY = {
     "Turn your sign-up process into three simple steps and share them clearly."
    ],
    "forUs": "We share many messages at GP: DTS promotion, school brochures, cafe menus, outreach reports and newsletters to supporters. It is easy to make ourselves the hero of every story, telling how busy we are and how much we did. StoryBrand reminds us that students, guests, partners and local communities are the heroes, and we are guides who walk alongside them, pointing toward growth and toward God. In a supporter letter, we can tell the story of one student who grew, not just list our activities. On a DTS poster, we can show what a student will gain, with one clear next step. Clear, simple words also help Khmer and international readers who use English as a second language. And as followers of Jesus, being the guide and not the hero fits who we want to be anyway.",
-   "oneLine": "Make your audience the hero, be the guide, and say it so clearly anyone gets it."
+   "oneLine": "Make your audience the hero, be the guide, and say it so clearly anyone gets it.",
+   "cover": {
+    "bg": "paper",
+    "fg": "ink",
+    "a": "berry",
+    "b": "ink",
+    "motif": "map",
+    "layout": "top",
+    "font": "sans",
+    "upper": true
+   }
   },
   {
    "id": "the-war-of-art",
@@ -2381,7 +2808,16 @@ var GP_LIBRARY = {
     "When you finish, stop and let it go, without judging how good it was."
    ],
    "forUs": "On a busy base, Resistance often hides behind good things: one more meeting, one more chat, one more errand. It can keep us from prayer, language study, preparing a teaching or starting that new ministry idea God put on our heart. In DTS, it might look like putting off a hard but needed talk with a student. On outreach, it might look like staying busy so we do not have to share our faith. Pressfield writes from his own spiritual view, which is different from ours. But as followers of Jesus we can take the core lesson: be faithful every day, even in small things, and trust God to meet us in the work. We do not work to earn love or praise. We work as worship, and we leave the results to God.",
-   "oneLine": "Resistance is real, but showing up every day like a pro is how you beat it."
+   "oneLine": "Resistance is real, but showing up every day like a pro is how you beat it.",
+   "cover": {
+    "bg": "ink",
+    "fg": "paper",
+    "a": "berry",
+    "b": "marigold",
+    "motif": "brush",
+    "layout": "top",
+    "font": "serif"
+   }
   },
   {
    "id": "working-well-with-westerners",
@@ -2436,7 +2872,16 @@ var GP_LIBRARY = {
     "Invite a Western teammate to eat with you. Ask about their family, and share about yours."
    ],
    "forUs": "GP is a picture of Revelation 7:9: people from every nation and language, worshipping God together. That happens when we honour one another and learn each other's language of love.\n\nYour Khmer ways are not something to fix. Your patience, respect, loyalty and warm hospitality bless this base every day, and Westerners need them. You do not need to become Western. You only need to understand them, and help them understand you.\n\nRemember: these are tendencies, not rules. Every person is different, so ask, listen and stay curious. When something confuses you, believe the best and ask a friend. In meetings, on outreach and in the cafe, we learn this together, as one family in Christ.",
-   "oneLine": "Understand their ways, keep your own, and build a bridge of love."
+   "oneLine": "Understand their ways, keep your own, and build a bridge of love.",
+   "cover": {
+    "bg": "laterite",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "paper",
+    "motif": "bridge",
+    "layout": "top",
+    "font": "sans"
+   }
   },
   {
    "id": "working-well-with-cambodians",
@@ -2491,7 +2936,16 @@ var GP_LIBRARY = {
     "Say yes to the next invitation to a meal or family event. Go to listen and learn."
    ],
    "forUs": "At GP, Khmer and Western staff serve side by side in every ministry. Many Khmer staff already move between two cultures every day, and often adjust to us more than we adjust to them. We can honour that by learning too: some Khmer language, eating together, asking good questions and letting Khmer leaders lead.\n\nRemember that these patterns are tendencies, not rules. Your teammate is a person first, not a culture. When you are unsure, ask with humility.\n\nRevelation 7:9 shows people from every nation and language worshipping God together. That is our family. We are guests in Cambodia, and also brothers and sisters. Let us honour one another and learn each other's language of love.",
-   "oneLine": "Come as a learner, protect people's face, and let trust and Khmer leaders grow."
+   "oneLine": "Come as a learner, protect people's face, and let trust and Khmer leaders grow.",
+   "cover": {
+    "bg": "teal",
+    "fg": "paper",
+    "a": "marigold",
+    "b": "ink",
+    "motif": "angkor",
+    "layout": "top",
+    "font": "sans"
+   }
   }
  ]
 };

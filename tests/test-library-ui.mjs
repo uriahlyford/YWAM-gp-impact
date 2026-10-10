@@ -98,13 +98,15 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   const ids = new Set(await page.$$eval('.libTile', ts => ts.map(t => t.getAttribute('data-libbook'))));
   ok('every book is on its shelf’s row', ids.size === BOOKS.length && BOOKS.every(b => ids.has(b.id)), ids.size + ' of ' + BOOKS.length);
   const shelfRows = await page.$$eval('.libRow', rs => rs.slice(1).map(r => [...r.querySelectorAll('.libTile')].map(t => ({
-    id: t.getAttribute('data-libbook'), title: t.querySelector('.libCoverTitle').innerText, svg: t.querySelector('.libCoverArt svg').innerHTML,
+    id: t.getAttribute('data-libbook'), title: t.querySelector('.libCoverTitle').innerText, svg: t.querySelector('.libCover svg').innerHTML,
     ratio: (b => b.height / b.width)(t.querySelector('.libCover').getBoundingClientRect()), meta: t.querySelector('.libTileMeta').innerText }))));
   const flat = shelfRows.flat();
   ok('every book has a drawn cover with its title on it', flat.length === BOOKS.length && flat.every(c => c.title.toLowerCase() === BOOKS.find(b => b.id === c.id).title.toLowerCase() && c.svg.length > 50));
   ok('… all the same shape', flat.every(c => Math.abs(c.ratio - 1.5) < 0.02));
   ok('… and no two side by side on a shelf share a pattern', shelfRows.every(r => r.every((c, i) => i === 0 || c.svg !== r[i - 1].svg)));
   ok('under each: minutes and how many key ideas', flat.every(c => /5 min · 💡 \d/.test(c.meta)), flat[0].meta);
+  ok('each book has its own cover design — a motif, in the app’s colours', flat.every(c => /<(path|circle|rect|text|ellipse|line)/.test(c.svg)) && new Set(flat.map(c => c.svg)).size === flat.length);
+  ok('covers move only while on screen: the ones in view are live', await page.evaluate(() => { const v = [...document.querySelectorAll('.libCover.cv')].filter(e => { const r = e.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0; }); return v.length > 0 && v.every(e => e.classList.contains('live')); }));
   ok('no cover is fetched from anywhere — they show at once, offline too', imageFetches.length === 0 && !(await page.$('.libCover img')), imageFetches.slice(0, 3).join(' '));
   const clipped = await page.$$eval('.libCoverTitle', ts => ts.filter(t => { const lh = parseFloat(getComputedStyle(t).fontSize) * 1.02;   // a line clamped away, not Koulen's tall caps
       return t.scrollWidth > t.clientWidth + 1 || t.scrollHeight - t.clientHeight > lh * 0.5; }).map(t => t.innerText.replace(/\n/g, ' ') + ':' + (t.scrollHeight - t.clientHeight)));
