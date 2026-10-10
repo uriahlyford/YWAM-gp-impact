@@ -1278,24 +1278,28 @@ results saved then are still in `staff.strengths` but nothing reads them.)
   localStorage (`gp_gstr_draft`) until saved.
 - **Khmer:** all ~515 strings in `PENDING_KM` (docs/khmer-needed.md §53).
 
-## Library (public/library.js) — five-minute reads
+## Library (public/library.js) — ten-minute reads
 Menu → Library. All 44 books from Craig Groeschel's four leadership lists ("44 Books
 Every Leader Should Read", the current list Uriah sent — Lead Like Jesus, not Dalio's
 Principles), on four shelves (Lead & grow, People & culture, Habits & goals, Create &
 communicate). `GP_LIBRARY.startHere` is the "⭐ Start here" chip: ten to read first for
 leading at GP (culture, teams, hard conversations, vision, systems, execution).
-- **Our own words.** Each summary (vibe, big idea, 5–7 insights, try this week, "for us
+- **Our own words.** Each summary (vibe, big idea, 8–10 key ideas, try this week, "for us
   at GP", one line) is written for GP — no quotations, nothing from the books or any
   summary service. Brain and money claims are framed as the author's view where debated.
-  About 1,150–1,300 words each — an honest five minutes; each key idea has a story or
-  example from the book (ours are labelled "Simple everyday example").
+  About 2,000–2,500 words each (Oct 2026: lengthened towards Blinkist, `mins` 10) — each
+  key idea 180–240 words with a story or example from the book (ours are labelled
+  "Simple everyday example").
 - **Made at GP** (shelf `gp`, shown first after Start here): original guides written for
   GP — `original: true`, author "GP Library", no ISBN — so far Working Well with
-  Westerners (for Khmer staff) and Working Well with Cambodians (for Western staff). Their
+  Westerners (for Khmer staff) and Working Well with Cambodians (for Western staff), 11 key
+  ideas and ~3,000 words each (`mins` 14), mirroring each other on money, conflict, the
+  body and men and women, and learning each other's language. Their
   fine print says they are not published books and describe tendencies, not rules. Their
   Khmer entry has a `title` too (`libTitle_`), drawn in Kantumruy Pro on the cover.
 - **Khmer** (`public/library-km.js`, `GP_LIBRARY_KM`, keyed by book id, same parts in the
-  same order) is loaded only when someone reads in Khmer (`libLoadKm_`). The language
+  same order) is loaded only when someone reads in Khmer (`libLoadKm_`), and is NOT in the
+  service worker's install list (~1.8 MB raw) — it is kept offline after that first read. The language
   follows the app's unless switched on a book page (English | ខ្មែរ, `gp-lib-lang` on this
   phone). Written by Claude in plain spoken Khmer; "ministry" is កិច្ចការបម្រើ as in km.js.
   When a summary changes in library.js, change its Khmer too — the test checks the shape.

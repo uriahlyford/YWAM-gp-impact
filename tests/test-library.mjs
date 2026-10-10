@@ -22,14 +22,14 @@ const str = (v) => typeof v === 'string' && v.trim().length > 0;
 const bad = books.filter((b) => !(str(b.title) && str(b.author) && str(b.vibe) && str(b.bigIdea) && str(b.forUs) && str(b.oneLine) &&
   shelves.includes(b.shelf) && Number(b.mins) > 0 && Array.isArray(b.insights) && Array.isArray(b.tryThis)));
 ok('every book has every field, on a real shelf', bad.length === 0, bad.map((b) => b.id || b.title).join(', '));
-ok('5–7 insights, each with an emoji, a title and a body', books.every((b) => b.insights.length >= 5 && b.insights.length <= 7 && b.insights.every((x) => str(x.emoji) && str(x.title) && str(x.body))),
-  books.filter((b) => !(b.insights.length >= 5 && b.insights.length <= 7)).map((b) => b.id).join(', '));
+ok('8–12 key ideas, each with an emoji, a title and a body', books.every((b) => b.insights.length >= 8 && b.insights.length <= 12 && b.insights.every((x) => str(x.emoji) && str(x.title) && str(x.body))),
+  books.filter((b) => !(b.insights.length >= 8 && b.insights.length <= 12)).map((b) => b.id).join(', '));
 const thin = books.filter((b) => b.insights.some((x) => x.body.split(/\s+/).length < 100));
 ok('every key idea is worth its own screen (100+ words)', thin.length === 0, thin.map((b) => b.id).join(', '));
 ok('three things to try this week', books.every((b) => b.tryThis.length === 3 && b.tryThis.every(str)));
 const words = (b) => [b.vibe, b.bigIdea, b.forUs, b.oneLine].concat(b.insights.map((x) => x.title + ' ' + x.body), b.tryThis).join(' ').split(/\s+/).length;
-const long = books.filter((b) => words(b) < 900 || words(b) > 1500);
-ok('each is an honest five-minute read (900–1500 words)', long.length === 0, long.map((b) => b.id + ':' + words(b)).join(', ') || ('' + Math.min(...books.map(words)) + '–' + Math.max(...books.map(words)) + ' words'));
+const long = books.filter((b) => words(b) < 1900 || words(b) > (b.shelf === 'gp' ? 3500 : 2600));
+ok('each is an honest ten-minute read (about 2,000–2,500 words; the GP guides up to 3,400)', long.length === 0, long.map((b) => b.id + ':' + words(b)).join(', ') || ('' + Math.min(...books.map(words)) + '–' + Math.max(...books.map(words)) + ' words'));
 const isbn13 = (s) => /^97[89]\d{10}$/.test(s) && (10 - [...s.slice(0, 12)].reduce((a, d, i) => a + Number(d) * (i % 2 ? 3 : 1), 0) % 10) % 10 === Number(s[12]);
 const badIsbn = books.filter((b) => b.isbn && !isbn13(b.isbn));
 ok('an ISBN, when given, is a valid ISBN-13', badIsbn.length === 0, badIsbn.map((b) => b.id + ':' + b.isbn).join(', '));

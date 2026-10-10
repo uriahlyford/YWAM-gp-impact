@@ -104,7 +104,7 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   ok('every book has a drawn cover with its title on it', flat.length === BOOKS.length && flat.every(c => c.title.toLowerCase() === BOOKS.find(b => b.id === c.id).title.toLowerCase() && c.svg.length > 50));
   ok('… all the same shape', flat.every(c => Math.abs(c.ratio - 1.5) < 0.02));
   ok('… and no two side by side on a shelf share a pattern', shelfRows.every(r => r.every((c, i) => i === 0 || c.svg !== r[i - 1].svg)));
-  ok('under each: minutes and how many key ideas', flat.every(c => /5 min · 💡 \d/.test(c.meta)), flat[0].meta);
+  ok('under each: minutes and how many key ideas', flat.every(c => /1[04] min · 💡 \d/.test(c.meta)), flat[0].meta);
   ok('each book has its own cover design — a motif, in the app’s colours', flat.every(c => /<(path|circle|rect|text|ellipse|line)/.test(c.svg)) && new Set(flat.map(c => c.svg)).size === flat.length);
   ok('covers move only while on screen: the ones in view are live', await page.evaluate(() => { const v = [...document.querySelectorAll('.libCover.cv')].filter(e => { const r = e.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0; }); return v.length > 0 && v.every(e => e.classList.contains('live')); }));
   ok('no cover is fetched from anywhere — they show at once, offline too', imageFetches.length === 0 && !(await page.$('.libCover img')), imageFetches.slice(0, 3).join(' '));
@@ -121,7 +121,7 @@ const openLib = async page => { await page.click('#menuBtn'); await page.waitFor
   await page.screenshot({ path: OUT + '/shelf.png' });
   await page.click('[data-libbook="atomic-habits"]'); await page.waitForTimeout(400);
   const txt = await page.$eval('#main', e => e.innerText);
-  ok('a book page: cover, title, author, minutes, key ideas, the vibe line', !!(await page.$('.libHead .libCover')) && /Atomic Habits/.test(txt) && /James Clear/.test(txt) && /5-minute read/.test(txt) && new RegExp(AHN + ' key ideas').test(txt) && txt.includes(AH.vibe.slice(0, 24)));
+  ok('a book page: cover, title, author, minutes, key ideas, the vibe line', !!(await page.$('.libHead .libCover')) && /Atomic Habits/.test(txt) && /James Clear/.test(txt) && /10-minute read/.test(txt) && new RegExp(AHN + ' key ideas').test(txt) && txt.includes(AH.vibe.slice(0, 24)));
   ok('… Start reading, what it’s about, what’s inside and for us at GP',
     /Start reading/.test(await page.$eval('#libStart', e => e.innerText)) && /What’s it about\?/.test(txt) && (await page.$$('.libInsideItem')).length === AHN && /For us at GP/i.test(txt));
   await page.screenshot({ path: OUT + '/book.png' });
