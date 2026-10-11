@@ -108,6 +108,12 @@ mem.goals.push({ staffId: 'me', week: WK - 1, year: YR, items: [{ text: 'Visit t
     /DAY STREAK/.test(card) && /Habits Today/.test(card) && /My Health 9\.2\/10/.test(card) && /Mentor Mealea Sok/.test(card) && /PERSONAL DAYS OFF LEFT 29/.test(card), card.slice(0, 220));
   ok('… with the photo and colour option behind the gear', !!(await page.$('#dashCustomizeBtn')));
   await page.screenshot({ path: OUT + '/home-en.png', fullPage: true });
+  await page.evaluate(() => window.scrollTo(0, 0)); await page.click('#dashCustomizeBtn'); await page.waitForTimeout(500);
+  ok('⚙️ opens the colour and photo options where you can see them, not below the card', await page.evaluate(() => {
+    const el = document.getElementById('dashColorInput'); if (!el) return false; const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }));
+  await page.screenshot({ path: OUT + '/home-customize.png' });
+  await page.click('#dashCustomDone'); await page.waitForTimeout(300);
+  ok('… and Done closes them', !(await page.$('#dashCustom')));
   ok('no quick-jump strip, no "My week" heading', !(await page.$('.quickBar')) && !/My week \d/.test(await page.$eval('#main', e => e.innerText)));
   const upd = await page.$$eval('#main .card .row', rs => rs.map(r => r.innerText).filter(x => /Announcement|leave request/.test(x)));
   ok('no Updates card on My Home — the bell has them, with its red dot', upd.length === 0 && !(await page.$('#notifSeeAll')) && !!(await page.$('#bellBtn .notifDot')));

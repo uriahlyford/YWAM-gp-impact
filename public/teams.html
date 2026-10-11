@@ -2390,6 +2390,10 @@ function lsDel(k){ try { localStorage.removeItem(k); } catch(e){} }
 
 var LANG = (function(){ return lsGet('gp-lang') || 'en'; })();
 function t(s){ return LANG==='km' ? (BUILTIN_KM[s] || s) : s; }
+/* A bottom-bar tab is 64-86px wide: where the full Khmer is too long for it, a
+   shorter one is kept under 'Tab: <English>' in km.js (e.g. My Ministry →
+   ការបម្រើ). English and every other place keep the full label. */
+function navLabel_(s){ return (LANG==='km' && BUILTIN_KM['Tab: '+s]) || t(s); }
 function toggleLang(){
   LANG = LANG==='km' ? 'en' : 'km';
   lsSet('gp-lang', LANG);
@@ -2969,7 +2973,7 @@ function render(){
   if(S.guest) tabs=[['week','Look around'],['base','Base'],['team','Team'],['health','Health'],['library','Library']];
   nav.classList.remove('hidden');
   nav.innerHTML = tabs.map(function(tab){
-    return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+NAV_ICONS[tab[0]]+'</span>'+t(tab[1])+'</button>';
+    return '<button class="'+(S.view===tab[0]?'on':'')+'" data-tab="'+tab[0]+'"><span class="ic">'+NAV_ICONS[tab[0]]+'</span>'+navLabel_(tab[1])+'</button>';
   }).join('');
   var m=document.getElementById('main');
   document.body.classList.toggle('reading', S.view==='library' && !!S.libBook && S.libStep!=null);
@@ -4641,6 +4645,27 @@ function miniDashboardHtml(){
         '<span class="ic">⚙️</span></button>'+
     '</div>';
 
+  /* ⚙️ opens the colour / photo options right here, under the greeting —
+     below the card (where they were) they opened off the bottom of a phone's
+     screen, so the gear seemed to do nothing. */
+  if(open){
+    h+='<div class="card dashCustom" id="dashCustom">'+
+      '<div class="goalCardTitle" style="margin-bottom:4px">⚙️ '+esc(t('Customize dashboard'))+'</div>'+
+      '<label class="f">'+esc(t('Accent color'))+'</label>'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+        '<input type="color" id="dashColorInput" value="'+esc(color||'#1F44FF')+'" aria-label="'+esc(t('Choose color'))+'">'+
+        (color?'<button class="linkbtn" id="dashColorReset" style="width:auto;margin:0;padding:0">'+esc(t('Match app theme'))+'</button>':'')+
+      '</div>'+
+      '<label class="f">'+esc(t('Background image'))+'</label>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="btn ghost" id="dashBgBtn" style="width:auto;margin:0;padding:9px 14px">'+(bg?esc(t('Change image')):esc(t('Add image')))+'</button>'+
+        (bg?'<button class="btn ghost" id="dashBgClearBtn" style="width:auto;margin:0;padding:9px 14px">'+esc(t('Remove'))+'</button>':'')+
+      '</div>'+
+      '<input type="file" accept="image/*" id="dashBgInput" style="display:none">'+
+      '<button class="btn" id="dashCustomDone" style="margin-top:12px">'+esc(t('Done'))+'</button>'+
+    '</div>';
+  }
+
   /* Base's own hero, reused whole — same classes, same look, populated with
      personal figures instead of the base's. The streak leads because it's
      the one number here that's purely for the person holding the phone, the
@@ -4683,21 +4708,6 @@ function miniDashboardHtml(){
   '</div>';
   h+=contractNoticeHtml_();
 
-  if(open){
-    h+='<div class="card">'+
-      '<label class="f">'+esc(t('Accent color'))+'</label>'+
-      '<div style="display:flex;align-items:center;gap:12px">'+
-        '<input type="color" id="dashColorInput" value="'+esc(color||'#1F44FF')+'" aria-label="'+esc(t('Choose color'))+'">'+
-        (color?'<button class="linkbtn" id="dashColorReset" style="width:auto;margin:0;padding:0">'+esc(t('Match app theme'))+'</button>':'')+
-      '</div>'+
-      '<label class="f">'+esc(t('Background image'))+'</label>'+
-      '<div style="display:flex;gap:8px">'+
-        '<button class="btn ghost" id="dashBgBtn" style="width:auto;margin:0;padding:9px 14px">'+(bg?esc(t('Change image')):esc(t('Add image')))+'</button>'+
-        (bg?'<button class="btn ghost" id="dashBgClearBtn" style="width:auto;margin:0;padding:9px 14px">'+esc(t('Remove'))+'</button>':'')+
-      '</div>'+
-      '<input type="file" accept="image/*" id="dashBgInput" style="display:none">'+
-    '</div>';
-  }
   return h;
 }
 
@@ -15329,7 +15339,9 @@ function bindHome(){
      the background photo goes through the same resize-then-upload path
      as the profile photo. */
   var dcb=document.getElementById('dashCustomizeBtn');
-  if(dcb) dcb.onclick=function(){ S.dbCustomize=!S.dbCustomize; render(); };
+  if(dcb) dcb.onclick=function(){ gpTap(); S.dbCustomize=!S.dbCustomize; render();
+    var pn=document.getElementById('dashCustom'); if(pn && pn.scrollIntoView) pn.scrollIntoView({ block:'nearest', behavior:'smooth' }); };
+  var dcd=document.getElementById('dashCustomDone'); if(dcd) dcd.onclick=function(){ gpTap(); S.dbCustomize=false; render(); };
   var dci=document.getElementById('dashColorInput');
   if(dci) dci.onchange=function(){
     var c=dci.value;

@@ -3096,3 +3096,9 @@ now). "Read" means "I have read this book".
 |---|---|
 | Ten-minute reads | ការអានរយៈពេលដប់នាទី |
 | Ten-minute reads of the best books on leading, culture, habits and creativity — the big ideas, made for us. | ការអានរយៈពេលដប់នាទីពីសៀវភៅល្អបំផុតស្តីពីការដឹកនាំ វប្បធម៌ ទម្លាប់ និងការច្នៃប្រឌិត — គំនិតធំៗ រៀបចំសម្រាប់យើង។ |
+
+### Bottom bar: a short label where the full Khmer does not fit
+
+| English | Khmer (draft) |
+|---|---|
+| Tab: My Ministry (the bottom-bar tab only; elsewhere My Ministry stays កិច្ចការបម្រើរបស់ខ្ញុំ) | ការបម្រើ |

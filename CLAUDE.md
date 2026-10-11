@@ -544,11 +544,14 @@ week strip / input: two tabs.
 My Home · **My Ministry** · Team · Health · **Library** (`data-tab`; My Ministry opens on its
 Numbers view, Library tapped while reading goes back to the shelves). **Base is in the ☰ menu**,
 and its key figures sit at the foot of My Home's card. A guest's bar is Look around · Base ·
-Team · Health · Library. Five tabs stay on one line down to 320px (labels ellipsize).
+Team · Health · Library. Five tabs stay on one line down to 320px; where the full Khmer is
+too long for a tab, `navLabel_` uses a short one kept as 'Tab: <English>' in km.js
+(My Ministry → ការបម្រើ), and test-khmer checks no label overflows.
 
 ## My Home — the layout (reorganised Oct 2026)
 `homeHtml` in this order, each idea said once: the **large summary card** (kept large on
-purpose, with the background photo / colour option behind ⚙️: goals and their list,
+purpose, with the background photo / colour option behind ⚙️ — it opens right under the
+greeting, above the card, with a Done button: goals and their list,
 Cooking / Chores, the streak, habits, My Health — `[data-gohealth]` opens the Health tab —
 mentor and time off, then **the base at a glance** (`homeBaseHtml_`: the campus's staff,
 base health score and salvations this year, from `baseR()` like Base's hero; tap → Base).
