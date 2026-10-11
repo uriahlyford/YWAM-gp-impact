@@ -63,6 +63,7 @@ const SERVER = [
 
 const BROWSER = [
   'test-library-ui.mjs',  // Menu → Library: loads when opened, covers or drawn ones, shelves, book page, read ticks, Khmer, retry
+  'test-library-audio-ui.mjs', // 🎧 reads the screen aloud (phone's voice stood in), turns the page, ⏸, speed kept, stops on close, Khmer needs a Khmer voice
   'test-guest-ui.mjs',    // Look around without an account: the tour, the whole Library, Base (counts, no names), Team/Health locked, no credentials ever sent
   'test-required-ui.mjs', // books-read tally, "Finish your profile", read + sign with a drawn signature, admin view, HR → Required
   'test-ministry-tools-ui.mjs', // My week: log, partners, reflection, base plants; Cafe: open, till, counters, expenses, rota, close, set up; Khmer at 320px

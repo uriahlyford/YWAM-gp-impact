@@ -3102,3 +3102,12 @@ now). "Read" means "I have read this book".
 | English | Khmer (draft) |
 |---|---|
 | Tab: My Ministry (the bottom-bar tab only; elsewhere My Ministry stays កិច្ចការបម្រើរបស់ខ្ញុំ) | ការបម្រើ |
+
+### The Library read aloud
+
+| English | Khmer (draft) |
+|---|---|
+| Listen | ស្តាប់ |
+| Pause | ផ្អាក |
+| Speed | ល្បឿន |
+| This phone has no Khmer voice yet. Switch the book to English to listen, or add a Khmer voice in your phone’s settings. | ទូរស័ព្ទនេះមិនទាន់មានសំឡេងភាសាខ្មែរនៅឡើយទេ។ ប្តូរសៀវភៅទៅជាភាសាអង់គ្លេសដើម្បីស្តាប់ ឬបន្ថែមសំឡេងខ្មែរនៅក្នុងការកំណត់ទូរស័ព្ទរបស់អ្នក។ |

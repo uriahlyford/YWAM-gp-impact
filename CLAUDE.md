@@ -1303,6 +1303,13 @@ leading at GP (culture, teams, hard conversations, vision, systems, execution).
   About 2,000–2,500 words each (Oct 2026: lengthened towards Blinkist, `mins` 10) — each
   key idea 180–240 words with a story or example from the book (ours are labelled
   "Simple everyday example").
+- **Read aloud** (🎧, Oct 2026): `libAudio*` in teams.html use the phone's own voice
+  (speechSynthesis — free, offline, nothing stored). 🎧 Listen on a book page, or 🎧 in the
+  reader's top bar, reads the open screen in order (the paragraph lit, `.libSpeaking`),
+  turns the page at the end of each step and stops at the final summary; ⏸ stops; the
+  speed (0.8–1.5×) is kept as `gp-lib-rate`; leaving the reader stops it. Khmer needs a
+  Khmer voice on the phone (many Androids can add one; iPhones have none) — without it the
+  app says so rather than reading Khmer in an English voice. tests/test-library-audio-ui.mjs.
 - **Made at GP** (shelf `gp`, shown first after Start here): original guides written for
   GP — `original: true`, author "GP Library", no ISBN — so far Working Well with
   Westerners (for Khmer staff) and Working Well with Cambodians (for Western staff), 11 key

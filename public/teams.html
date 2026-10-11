@@ -720,6 +720,11 @@ nav.bottom button.on { color:var(--accent); font-weight:700; }
 .homeBaseHead { display:flex; justify-content:space-between; gap:8px; font-size:12.5px; font-weight:800; letter-spacing:.3px; opacity:.85; } .homeBaseGo { font-weight:700; opacity:.8; }
 .homeBaseRow { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; margin-top:6px; } .homeBaseRow > span { display:flex; flex-direction:column; font-size:11.5px; opacity:.9; min-width:0; overflow-wrap:anywhere; }
 .homeBaseRow b { font-size:22px; line-height:1.1; font-weight:800; }
+.libListen, .libRate { flex:0 0 auto; height:36px; min-width:36px; border-radius:999px; border:1.5px solid var(--border2); background:var(--surface); color:var(--ink); font:inherit; font-size:16px; cursor:pointer; padding:0 8px; }
+.libListen.on { background:var(--libc, var(--accent)); border-color:var(--libc, var(--accent)); color:var(--pOnMark); }
+.libRate { font-size:13px; font-weight:800; }
+.libListenCta { width:100%; margin-top:8px; border-radius:14px; }
+.libReaderBody .libSpeaking { background:var(--surface2); border-radius:8px; box-shadow:0 0 0 6px var(--surface2); transition:background .2s; }
 .libTally { display:block; width:100%; margin-top:12px; text-align:left; border:0; border-radius:12px; padding:10px 12px; background:var(--surface2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
 .reqCard { padding:14px; } .reqCard.reqAlert { border:1.5px solid var(--bad); }
 .reqHead { display:flex; align-items:center; gap:10px; margin-bottom:8px; } .reqHeadIcon { font-size:24px; }
@@ -2977,6 +2982,7 @@ function render(){
   }).join('');
   var m=document.getElementById('main');
   document.body.classList.toggle('reading', S.view==='library' && !!S.libBook && S.libStep!=null);
+  if(LIBA.on && !(S.view==='library' && S.libBook && S.libStep!=null)) libAudioStop_();
   if(S.guest && S.view==='week') m.innerHTML=gpGuestHomeHtml_();
   else if(S.guest && (S.view==='team' || S.view==='health')) m.innerHTML=gpGuestLockHtml_(S.view);
   else if(S.view==='base') m.innerHTML=(S.guest ? gpGuestCampusHtml_() : '')+baseHtml();
@@ -5647,7 +5653,8 @@ function libBookHtml_(b){
     '<div class="libVibe">'+esc(T.vibe)+'</div>'+
     '<div class="libStats"><span>⏱ '+esc(gpT('{n}-minute read',{n:b.mins||5}))+'</span><span>💡 '+esc(gpT('{n} key ideas',{n:b.insights.length}))+'</span>'+(read?'<span>✓ '+esc(t('Read'))+'</span>':'')+'</div></div>';
   h+='<button class="btn libCta" id="libStart" style="background:'+sh.color+';border-color:'+sh.color+'">'+
-    esc(at && !read ? gpT('Continue — key idea {n}',{n:Math.min(at, b.insights.length)}) : read ? t('Read again') : '▶ '+t('Start reading'))+'</button>';
+    esc(at && !read ? gpT('Continue — key idea {n}',{n:Math.min(at, b.insights.length)}) : read ? t('Read again') : '▶ '+t('Start reading'))+'</button>'+
+    (libAudioOk_() ? '<button class="btn ghost libListenCta" id="libListenStart">🎧 '+esc(t('Listen'))+'</button>' : '');
   h+='<div class="libSec'+(T.km?' libKm':'')+'"><h3>'+esc(t('What’s it about?'))+'</h3>'+libParas_(T.bigIdea)+'</div>';
   h+='<div class="libSec'+(T.km?' libKm':'')+'"><h3>'+esc(t('What’s inside'))+'</h3><div class="libInside">'+T.insights.map(function(x, k){
     return '<button class="libInsideItem" data-libstep="'+(k+1)+'"><span class="libInsightNum" style="background:'+sh.color+'">'+(k+1)+'</span><span>'+esc(x.emoji||'')+' '+esc(x.title)+'</span><span class="libInsideGo">›</span></button>';
@@ -5664,7 +5671,7 @@ function libReaderHtml_(b){
   var sh=libShelf_(b.shelf), T=libText_(b), n=b.insights.length, last=n+1, k=Math.max(0, Math.min(last, S.libStep|0));
   var segs=''; for(var j=0;j<=last;j++) segs+='<span'+(j<=k?' class="on"':'')+'></span>';
   var h='<div class="libReader" id="libReader" style="--libc:'+sh.color+';--libink:'+sh.ink+'">'+
-    '<div class="libReaderTop"><button class="libReaderClose" id="libClose" aria-label="'+esc(t('Close'))+'">✕</button><div class="libSegs">'+segs+'</div></div>'+
+    '<div class="libReaderTop"><button class="libReaderClose" id="libClose" aria-label="'+esc(t('Close'))+'">✕</button><div class="libSegs">'+segs+'</div>'+libAudioBtnsHtml_()+'</div>'+
     '<div class="libReaderBook"><span>'+esc(libTitle_(b))+' · '+esc(b.author)+'</span>'+libLangSwitch_()+'</div>'+
     '<div class="libReaderKicker">'+esc(k===0 ? t('Intro') : k<=n ? gpT('Key idea {n} of {m}',{n:k, m:n}) : t('Final summary'))+'</div><div class="libReaderBody'+(T.km?' libKm':'')+'">';
   if(k===0) h+='<h2>'+esc(T.vibe)+'</h2>'+libParas_(T.bigIdea);
@@ -5678,6 +5685,100 @@ function libReaderHtml_(b){
             : '<button class="btn" id="libFinish" style="background:'+sh.color+';border-color:'+sh.color+'">✓ '+esc(t('Done — mark as read'))+'</button>')+
     '</div></div></div>';
   return h;
+}
+/* ---------- The Library, read aloud (Oct 2026, Uriah: "an audio function
+   for all the books") ----------
+   The phone's own voice (speechSynthesis): nothing to download, works offline,
+   free. 🎧 reads the screen that is open — its heading, then each paragraph,
+   the one being read lit up — and at the end of a step turns the page by
+   itself, like Blinkist's audio, until the final summary. Speed is kept on the
+   phone (gp-lib-rate). A Khmer book needs a Khmer voice on the phone; without
+   one it says so rather than reading Khmer with an English voice. The screen
+   is kept awake while it plays where the phone allows (Wake Lock); a locked
+   phone stops the voice — that is the phone, not us. */
+var LIBA={ on:false, chunks:[], i:0, token:0, wake:null, key:'' };
+var LIB_RATES=[0.8, 1, 1.25, 1.5];
+function libAudioOk_(){ return typeof window!=='undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance!=='undefined'; }
+function libRate_(){ var r=Number(lsGet('gp-lib-rate')); return LIB_RATES.indexOf(r)>-1 ? r : 1; }
+function libVoice_(km){
+  var vs=[]; try { vs=window.speechSynthesis.getVoices()||[]; } catch(e){}
+  var want=km ? /^km/i : /^en/i;
+  var list=vs.filter(function(v){ return want.test(v.lang||''); });
+  if(!list.length) return null;
+  // a natural-sounding one where the phone has it
+  return list.filter(function(v){ return /natural|enhanced|premium|google|samantha|daniel|karen/i.test(v.name||''); })[0] || list.filter(function(v){ return v.localService; })[0] || list[0];
+}
+function libAudioBtnsHtml_(){
+  if(!libAudioOk_()) return '';
+  return '<button class="libListen'+(LIBA.on?' on':'')+'" id="libListen" aria-pressed="'+(LIBA.on?'true':'false')+'" aria-label="'+esc(LIBA.on ? t('Pause') : t('Listen'))+'">'+(LIBA.on?'⏸':'🎧')+'</button>'+
+    (LIBA.on ? '<button class="libRate" id="libRate" aria-label="'+esc(t('Speed'))+'">'+libRate_()+'×</button>' : '');
+}
+/* What's on the screen, in reading order — each piece remembers its element. */
+function libAudioChunks_(){
+  var root=document.getElementById('libReader'); if(!root) return [];
+  var out=[], kick=root.querySelector('.libReaderKicker');
+  if(kick) out.push({ el:null, text:kick.textContent });
+  root.querySelectorAll('.libReaderBody h2, .libReaderBody p, .libReaderBody li, .libReaderBody .libOneLine, .libReaderBody .libKicker').forEach(function(el){
+    var txt=(el.textContent||'').replace(/[✅🌏]/g,'').trim(); if(!txt) return;
+    // long paragraphs in sentence-sized pieces: some phones cut a long utterance short
+    var parts=txt.match(/[^.!?។៕]+[.!?។៕]*\s*/g) || [txt], cur='';
+    parts.forEach(function(sn){ if((cur+sn).length>220 && cur){ out.push({ el:el, text:cur }); cur=''; } cur+=sn; });
+    if(cur.trim()) out.push({ el:el, text:cur });
+  });
+  return out;
+}
+function libAudioMark_(el){
+  document.querySelectorAll('.libSpeaking').forEach(function(x){ x.classList.remove('libSpeaking'); });
+  if(el){ el.classList.add('libSpeaking'); var r=el.getBoundingClientRect(); if(r.top<80 || r.bottom>window.innerHeight-110) el.scrollIntoView({ block:'center', behavior:'smooth' }); }
+}
+function libAudioKey_(){ return S.libBook+'|'+S.libStep+'|'+libLang_(); }
+function libAudioPlay_(from){
+  if(!libAudioOk_()) return;
+  var b=libById_(S.libBook), T=b ? libText_(b) : null;
+  if(!b || S.libStep==null){ libAudioStop_(); return; }
+  var voice=libVoice_(T.km);
+  if(T.km && !voice){ libAudioStop_(); showMsg(t('This phone has no Khmer voice yet. Switch the book to English to listen, or add a Khmer voice in your phone’s settings.')); return; }
+  var token=++LIBA.token;
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  LIBA.on=true; LIBA.chunks=libAudioChunks_(); LIBA.i=Math.max(0, Math.min(LIBA.chunks.length, from|0)); LIBA.key=libAudioKey_();
+  if(!LIBA.wake && navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request('screen').then(function(w){ LIBA.wake=w; }, function(){});
+  var next=function(){
+    if(token!==LIBA.token || !LIBA.on) return;
+    if(LIBA.i>=LIBA.chunks.length){
+      // the end of this step: turn the page, or stop at the final summary
+      var last=b.insights.length+1;
+      if(S.libStep<last){ libGo_(S.libStep+1); } else { libAudioStop_(); render(); }
+      return;
+    }
+    var c=LIBA.chunks[LIBA.i++], u=new SpeechSynthesisUtterance(c.text);
+    u.lang=T.km ? 'km-KH' : 'en-US'; if(voice) u.voice=voice; u.rate=libRate_();
+    u.onend=function(){ setTimeout(next, 120); };
+    u.onerror=function(ev){ if(ev && (ev.error==='interrupted' || ev.error==='canceled')) return; setTimeout(next, 120); };
+    libAudioMark_(c.el);
+    window.speechSynthesis.speak(u);
+  };
+  next();
+}
+function libAudioStop_(){
+  LIBA.on=false; LIBA.token++;
+  try { if(libAudioOk_()) window.speechSynthesis.cancel(); } catch(e){}
+  if(LIBA.wake){ try { LIBA.wake.release(); } catch(e){} LIBA.wake=null; }
+  document.querySelectorAll('.libSpeaking').forEach(function(x){ x.classList.remove('libSpeaking'); });
+}
+function libAudioBind_(){
+  var ls=document.getElementById('libListen');
+  if(ls) ls.onclick=function(){ gpTap(); if(LIBA.on){ libAudioStop_(); render(); } else { LIBA.on=true; LIBA.key=''; render(); } };
+  var rt=document.getElementById('libRate');
+  if(rt) rt.onclick=function(){ gpTap(); var r=libRate_(), n=LIB_RATES[(LIB_RATES.indexOf(r)+1)%LIB_RATES.length]; lsSet('gp-lib-rate', String(n)); rt.textContent=n+'×';
+    if(LIBA.on) libAudioPlay_(Math.max(0, LIBA.i-1)); };   // the same sentence again, at the new speed
+  var lst=document.getElementById('libListenStart');
+  if(lst) lst.onclick=function(){ gpTap(); var id=S.libBook, at=libProg_()[id]; LIBA.on=true; LIBA.key=''; libGo_(at && !libRead_()[id] ? at : 0); };
+  if(!LIBA.on || !document.getElementById('libReader')) return;
+  if(LIBA.key===libAudioKey_()){
+    // the same screen drawn again (a notification, a tap elsewhere): keep reading, light the new copy
+    var fresh=libAudioChunks_();
+    if(fresh.length===LIBA.chunks.length){ LIBA.chunks=fresh; var c=LIBA.chunks[LIBA.i-1]; libAudioMark_(c && c.el); }
+  } else libAudioPlay_(0);   // a new step, or the book switched language
 }
 function libGo_(step){
   var b=libById_(S.libBook); if(!b) return;
@@ -5697,6 +5798,7 @@ function bindLibrary_(){
   document.querySelectorAll('[data-libbook]').forEach(function(b){ b.onclick=function(){ gpTap(); S.libBook=b.getAttribute('data-libbook'); S.libStep=null; render(); window.scrollTo(0,0); }; });
   document.querySelectorAll('[data-libstep]').forEach(function(b){ b.onclick=function(){ gpTap(); libGo_(+b.getAttribute('data-libstep')); }; });
   document.querySelectorAll('[data-liblang]').forEach(function(b){ b.onclick=function(){ gpTap(); lsSet('gp-lib-lang', b.getAttribute('data-liblang')); S.libKmError=false; render(); }; });
+  libAudioBind_();
   var st=document.getElementById('libStart');
   if(st) st.onclick=function(){ gpTap(); var id=S.libBook, at=libProg_()[id]; libGo_(at && !libRead_()[id] ? at : 0); };
   var mr=document.getElementById('libMarkRead');
